@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Details | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-light tl-theme">
+    <div class="dashboard-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header border-bottom border-light">
+                <a href="dashboard-team-leader.html" class="text-decoration-none text-white d-flex align-items-center gap-2">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Back to Dashboard</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1 id="pageTitle">Project: <span id="projectTitleDisplay">Loading...</span></h1>
+                    <p class="text-muted" id="projectUidDisplay">UID: ---</p>
+                </div>
+                <div class="header-right">
+                    <span class="badge bg-primary" id="stageBadge">Stage --</span>
+                </div>
+            </header>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card glass-card mb-4">
+                        <div class="card-header border-0 bg-transparent">
+                            <h5 class="mb-0">Project Info</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> <span id="projectDesc">---</span></p>
+                            <p><strong>Status:</strong> <span id="projectStatus">---</span></p>
+                            <h6>Team Members:</h6>
+                            <ul id="memberList" class="ps-3">
+                                <li>Loading...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card glass-card">
+                        <div class="card-header border-0 bg-transparent">
+                            <h5 class="mb-0">8-Stage Workflow Control</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Stage Panels -->
+                            <div class="accordion" id="stageAccordion">
+                                
+                                <!-- Stage 1 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stage1">
+                                            Stage 1: Identification & Problem Statement
+                                        </button>
+                                    </h2>
+                                    <div id="stage1" class="accordion-collapse collapse" data-bs-parent="#stageAccordion">
+                                        <div class="accordion-body">
+                                            <p>Review and refine the initial problem statement identified by the team.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stage 2 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stage2">
+                                            Stage 2: Data Validation
+                                        </button>
+                                    </h2>
+                                    <div id="stage2" class="accordion-collapse collapse" data-bs-parent="#stageAccordion">
+                                        <div class="accordion-body">
+                                            <p>Validate the data collected by team members.</p>
+                                            <div id="stage2Action" class="d-none mt-3">
+                                                <button class="btn btn-primary" onclick="projectDetails.proceedStage(2)">Validate & Proceed to Stage 3</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stage 3 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stage3">
+                                            Stage 3: RCA Workspace (Facilitator Guided)
+                                        </button>
+                                    </h2>
+                                    <div id="stage3" class="accordion-collapse collapse" data-bs-parent="#stageAccordion">
+                                        <div class="accordion-body">
+                                            <p>Full edit access to Root Cause Analysis tools.</p>
+                                            <button class="btn btn-outline-primary" onclick="window.location.href='workspace.html'">Go to QC Workspace</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stage 4 Proposal -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stage4">
+                                            Stage 4: Solution Proposal creation
+                                        </button>
+                                    </h2>
+                                    <div id="stage4" class="accordion-collapse collapse" data-bs-parent="#stageAccordion">
+                                        <div class="accordion-body">
+                                            <form id="proposalForm" class="d-none">
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label>Required Budget ($)</label>
+                                                        <input type="number" class="form-control" name="budget" required>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label>Estimated ROI (%)</label>
+                                                        <input type="number" class="form-control" name="roi" required>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label>Resource Plan</label>
+                                                    <textarea class="form-control" name="resources" rows="2" required></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label>KPI Targets (JSON format)</label>
+                                                    <textarea class="form-control" name="kpis" rows="2">{"productivity": "+10%"}</textarea>
+                                                </div>
+                                                <button type="submit" class="btn btn-success">Submit Proposal to Reviewer</button>
+                                            </form>
+                                            <div id="proposalReadonly" class="d-none">
+                                                <div class="alert alert-info">Proposal submitted. Awaiting Reviewer Decision.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stage 5 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stage5">
+                                            Stage 5: Reviewer Decision
+                                        </button>
+                                    </h2>
+                                    <div id="stage5" class="accordion-collapse collapse" data-bs-parent="#stageAccordion">
+                                        <div class="accordion-body">
+                                            <p>Project is under strategic review by senior management.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Stage 7 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stage7">
+                                            Stage 7: Impact Approval
+                                        </button>
+                                    </h2>
+                                    <div id="stage7" class="accordion-collapse collapse" data-bs-parent="#stageAccordion">
+                                        <div class="accordion-body">
+                                            <p>Compare KPI before and after implemented solution.</p>
+                                            <div id="stage7Action" class="d-none mt-3">
+                                                <button class="btn btn-success" onclick="projectDetails.proceedStage(7)">Approve Results</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stage 8 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stage8">
+                                            Stage 8: Finalization & Closure
+                                        </button>
+                                    </h2>
+                                    <div id="stage8" class="accordion-collapse collapse" data-bs-parent="#stageAccordion">
+                                        <div class="accordion-body">
+                                            <p>Standardizing the solution. Facilitator and Admin closure required.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/project_details.js"></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.ipynb_checkpoints
+.venv/
+venv/
+ENV/
+env/
+
+# Environment Variables (CRITICAL)
+.env
+.flaskenv
+
+# Docker
+.dockerignore
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project Specific
+backend/uploads/
+backend/*.log
+backend/output.txt
+backend/sql_output.txt
+backend/cleanup_log.txt
+backend/*.pyc
+migrations/

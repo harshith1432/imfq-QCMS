@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="appSidebar"></aside>
+        <main class="app-main">
+            <header class="app-navbar" id="appNavbar"></header>
+            
+            <div class="app-content">
+                <div class="ds-card">
+                    <div class="ds-card-header">
+                        <div>
+                            <h5 class="card-title">Organization Members</h5>
+                            <p class="text-sm text-muted">Manage users, roles, and access permissions for your organization.</p>
+                        </div>
+                        <button class="ds-btn ds-btn-primary" onclick="userMgmt.openAddModal()">
+                            <i data-lucide="user-plus" style="width:16px;height:16px;" class="me-2"></i> Add New Member
+                        </button>
+                    </div>
+                    <div class="ds-card-body" style="padding:0;">
+                        <div class="table-responsive">
+                            <table class="ds-table">
+                                <thead>
+                                    <tr>
+                                        <th>User Info</th>
+                                        <th>Role</th>
+                                        <th>Department</th>
+                                        <th>Status</th>
+                                        <th>Last Login</th>
+                                        <th style="text-align:right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userTableBody">
+                                    <tr><td colspan="6"><div class="skeleton skeleton-text" style="margin:20px;"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit User Modal -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Add New Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <input type="hidden" id="userId">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="ds-label">Full Name / Username *</label>
+                                <input type="text" class="ds-input" id="username" placeholder="johndoe" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="ds-label">Email Address *</label>
+                                <input type="email" class="ds-input" id="email" placeholder="john@company.com" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="ds-label">Role *</label>
+                                <select class="ds-input ds-select" id="roleSelect" required></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="ds-label">Department</label>
+                                <select class="ds-input ds-select" id="deptSelect"></select>
+                            </div>
+                            <div id="passwordArea" class="col-12">
+                                <label class="ds-label">Initial Password</label>
+                                <div class="input-group">
+                                    <input type="text" class="ds-input" id="password" value="QCMS@2024" style="border-top-right-radius:0;border-bottom-right-radius:0;">
+                                    <button type="button" class="btn btn-outline-secondary" style="border:1px solid var(--border-color);border-left:0;" onclick="userMgmt.generatePass()">Regen</button>
+                                </div>
+                                <p class="text-xs text-muted mt-1">User will be forced to change this on first login.</p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary" onclick="userMgmt.saveUser()">Save Member</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+        const userMgmt = {
+            roles: [],
+            departments: [],
+            
+            async init() {
+                QCMS.init();
+                
+
+                if (window.lucide) lucide.createIcons();
+                
+                await this.loadDependencies();
+                this.loadUsers();
+            },
+
+            async loadDependencies() {
+                try {
+                    const [roles, depts] = await Promise.all([
+                        api.get('/admin/roles'),
+                        api.get('/admin/departments')
+                    ]);
+                    this.roles = roles;
+                    this.departments = depts;
+                    
+                    document.getElementById('roleSelect').innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
+                    document.getElementById('deptSelect').innerHTML = '<option value="">None</option>' + depts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+                } catch (e) {
+                    QCMS.toast('Failed to load roles/departments', 'error');
+                }
+            },
+
+            async loadUsers() {
+                try {
+                    const users = await api.get('/admin/users');
+                    const body = document.getElementById('userTableBody');
+                    if (!users.length) {
+                        body.innerHTML = '<tr><td colspan="6" class="text-center py-5">No members found.</td></tr>';
+                        return;
+                    }
+                    body.innerHTML = users.map(u => `
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="width:36px;height:36px;border-radius:10px;background:var(--primary-100);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;">${u.username.substring(0,2).toUpperCase()}</div>
+                                    <div>
+                                        <div class="fw-bold" style="color:var(--text-primary);">${u.username}</div>
+                                        <div class="text-xs text-muted">${u.email}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${QCMS.badge(u.role, u.role === 'Admin' ? 'red' : 'blue')}</td>
+                            <td>${u.department || '<span class="text-muted">N/A</span>'}</td>
+                            <td>
+                                <span class="ds-badge-dot ${u.is_active ? 'green' : 'gray'}"></span>
+                                ${u.is_active ? 'Active' : 'Inactive'}
+                            </td>
+                            <td><span class="text-sm">${u.last_login ? QCMS.formatRelative(u.last_login) : 'Never'}</span></td>
+                            <td style="text-align:right;">
+                                <div class="dropdown">
+                                    <button class="ds-btn ds-btn-sm ds-btn-ghost p-1" data-bs-toggle="dropdown" data-bs-boundary="viewport">
+                                        <i data-lucide="more-vertical" style="width:16px;height:16px;"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                        <li><a class="dropdown-item text-sm" href="#" onclick="userMgmt.openEditModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Edit Details</a></li>
+                                        <li><a class="dropdown-item text-sm ${u.is_active ? 'text-danger' : 'text-success'}" href="#" onclick="userMgmt.toggleStatus(${u.id}, ${u.is_active})">
+                                            ${u.is_active ? 'Deactivate User' : 'Activate User'}
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    QCMS.toast('Failed to load users', 'error');
+                }
+            },
+
+            openAddModal() {
+                document.getElementById('modalTitle').textContent = 'Add New Member';
+                document.getElementById('userId').value = '';
+                document.getElementById('userForm').reset();
+                document.getElementById('passwordArea').style.display = 'block';
+                this.generatePass();
+                new bootstrap.Modal(document.getElementById('userModal')).show();
+            },
+
+            generatePass() {
+                const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$";
+                let pass = "";
+                for(let i=0; i<8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+                document.getElementById('password').value = "QCMS@" + pass;
+            },
+
+            openEditModal(u) {
+                document.getElementById('modalTitle').textContent = 'Edit Member';
+                document.getElementById('userId').value = u.id;
+                document.getElementById('username').value = u.username;
+                document.getElementById('email').value = u.email;
+                document.getElementById('roleSelect').value = u.role;
+                document.getElementById('deptSelect').value = u.department === 'N/A' ? '' : u.department;
+                document.getElementById('passwordArea').style.display = 'none';
+                new bootstrap.Modal(document.getElementById('userModal')).show();
+            },
+
+            async saveUser() {
+                const id = document.getElementById('userId').value;
+                const payload = {
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    role: document.getElementById('roleSelect').value,
+                    department: document.getElementById('deptSelect').value
+                };
+                
+                if (!id) payload.password = document.getElementById('password').value;
+
+                try {
+                    if (id) {
+                        await api.put(`/admin/users/${id}`, payload);
+                        QCMS.toast('User updated successfully', 'success');
+                    } else {
+                        await api.post('/admin/users', payload);
+                        QCMS.toast('User created successfully', 'success');
+                    }
+                    bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+                    this.loadUsers();
+                } catch (e) {
+    
+                }
+            },
+
+            async toggleStatus(id, current) {
+                try {
+                    await api.put(`/admin/users/${id}`, { is_active: !current });
+                    QCMS.toast(`User ${current ? 'deactivated' : 'activated'}`, 'success');
+                    this.loadUsers();
+                } catch (e) {
+                    QCMS.toast('Failed to update user status', 'error');
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => userMgmt.init());
+    </script>
+</body>
+</html>

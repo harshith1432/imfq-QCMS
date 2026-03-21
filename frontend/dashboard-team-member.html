@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Workstation | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar will be injected by components.js -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <!-- Navbar will be injected by components.js -->
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content">
+                <div class="content-header fade-in">
+                    <div>
+                        <h1 class="page-heading">My Workstation</h1>
+                        <p class="page-description">Manage your assigned projects, execute workflow steps, and track your contribution impact.</p>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="kpi-grid fade-in" id="kpiGrid">
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                </div>
+
+                <!-- Main Layout: Projects & Workstation -->
+                <div class="gap-grid gap-grid-2 fade-in" style="margin-top:var(--space-6);">
+                    <!-- Assigned Projects -->
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">My Projects</h5>
+                            <div class="ds-badge gray" id="projectCount">0 Assigned</div>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div style="max-height:500px; overflow-y:auto;" id="projectsList">
+                                <div class="p-4 text-center">
+                                    <div class="spinner-border spinner-border-sm text-primary opacity-25" role="status"></div>
+                                    <p class="text-xs text-muted mt-2">Loading projects...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Focused Workstation -->
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">Workstation Preview</h5>
+                            <div id="selectionHint" class="text-xs text-muted">Select a project to begin work</div>
+                        </div>
+                        <div class="ds-card-body" id="workstationArea">
+                            <div class="empty-state">
+                                <i class="empty-icon" data-lucide="layout-template"></i>
+                                <h5>Ready to Execute</h5>
+                                <p>Select a project from the left to view current stage requirements and take direct action.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Timeline -->
+                <div class="ds-card fade-in" style="margin-top:var(--space-6);">
+                    <div class="ds-card-header">
+                        <h5 class="card-title">My Recent Activity</h5>
+                        <button class="ds-btn ds-btn-ghost ds-btn-sm">View History</button>
+                    </div>
+                    <div class="ds-card-body">
+                        <div class="activity-feed" id="activityFeed">
+                            <div class="activity-item">
+                                <div class="activity-dot"><i data-lucide="clock" style="width:14px;height:14px;"></i></div>
+                                <div class="activity-content">
+                                    <p class="text-muted">Loading your recent contributions...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+    const tmDash = {
+        projects: [],
+
+        async init() {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                if (user.role !== 'Team Member') {
+                    const dashboards = {
+                        'Admin': 'dashboard-admin.html',
+                        'Team Leader': 'dashboard-team-leader.html',
+                        'Facilitator': 'dashboard-facilitator.html',
+                        'Reviewer': 'dashboard-reviewer.html'
+                    };
+                    window.location.href = dashboards[user.role] || 'login.html';
+                    return;
+                }
+            } else {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            if (typeof QCMS !== 'undefined' && QCMS.init) QCMS.init();
+            
+            this.loadProjects();
+            this.loadActivity();
+        },
+
+        async loadProjects() {
+            try {
+                this.projects = await api.get('/team-member/projects');
+                document.getElementById('projectCount').textContent = `${this.projects.length} Assigned`;
+                this.renderKPIs();
+                this.renderList();
+            } catch (e) {
+                console.error('Projects load failed', e);
+                document.getElementById('projectsList').innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Could not load projects.')}</div>`;
+            }
+        },
+
+        renderKPIs() {
+            const total = this.projects.length;
+            const active = this.projects.filter(p => !['Closed', 'Completed'].includes(p.status)).length;
+            const completed = total - active;
+            
+            document.getElementById('kpiGrid').innerHTML =
+                QCMS.kpiCard('My Assignments', total, 'folder', 'blue', 0) +
+                QCMS.kpiCard('Active Focus', active, 'activity', 'green') +
+                QCMS.kpiCard('My Contributions', completed, 'award', 'cyan');
+            if (window.lucide) lucide.createIcons();
+        },
+
+        renderList() {
+            const list = document.getElementById('projectsList');
+            if (!this.projects.length) {
+                list.innerHTML = `<div class="p-4">${QCMS.emptyState('inbox', 'No Assignments', 'You are not assigned to any projects yet.')}</div>`;
+                return;
+            }
+
+            list.innerHTML = this.projects.map(p => `
+                <div class="project-item fade-in" onclick="tmDash.selectProject(${p.id})">
+                    <div class="project-item-info">
+                        <div class="project-name">${p.title}</div>
+                        <div class="project-uid">${p.project_uid || 'UID-PENDING'} · ${QCMS.categoryBadge(p.category)}</div>
+                    </div>
+                    <div class="project-item-meta">
+                        ${QCMS.projectProgress(p.current_stage || p.stage || 1)}
+                    </div>
+                    <i data-lucide="chevron-right" class="project-item-arrow"></i>
+                </div>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
+        },
+
+        selectProject(id) {
+            const p = this.projects.find(proj => proj.id === id);
+            if (!p) return;
+
+            // Highlight selected
+            document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            const stageNames = ['','Problem Identification','Data Collection','Root Cause Analysis','Solution Proposal','Approval','Implementation','Impact Measurement','Closure & Standardization'];
+            const stage = p.current_stage || p.stage || 1;
+
+            document.getElementById('selectionHint').textContent = `Currently at Stage ${stage}`;
+            document.getElementById('workstationArea').innerHTML = `
+                <div class="workstation-preview fade-in">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h4 class="mb-1">${p.title}</h4>
+                            <div class="text-sm text-primary fw-semibold">${stageNames[stage]}</div>
+                        </div>
+                        ${QCMS.statusBadge(p.status || 'Active')}
+                    </div>
+                    
+                    <div class="mb-5">
+                        ${QCMS.stageStepper(stage)}
+                    </div>
+
+                    <div class="workstation-details ds-card bg-light border-0">
+                        <div class="ds-card-body">
+                            <h6 class="text-xs fw-bold text-muted text-uppercase mb-3">Action Required</h6>
+                            <p class="text-sm mb-4">You are currently in the <strong>${stageNames[stage]}</strong> phase. Please update the necessary documents and data to progress this project.</p>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-primary">
+                                    <i data-lucide="play" style="width:14px;height:14px;"></i> Open Workspace
+                                </a>
+                                <button class="ds-btn ds-btn-outline" onclick="QCMS.toast('Opening task details...', 'info')">
+                                    <i data-lucide="info" style="width:14px;height:14px;"></i> Stage Guidelines
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        },
+
+        async loadActivity() {
+            // Placeholder for activity feed
+            const feed = document.getElementById('activityFeed');
+            feed.innerHTML = `
+                <div class="activity-item fade-in">
+                    <div class="activity-dot"><i data-lucide="check" style="width:12px;height:12px;"></i></div>
+                    <div class="activity-content">
+                        <p>Welcome back! You have <strong>3</strong> projects requiring updates today.</p>
+                        <span class="activity-time">Just now</span>
+                    </div>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => tmDash.init());
+    </script>
+</body>
+</html>

@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Workspace | QCMS Enterprise</title>
+    <!-- Bootstrap 5 & Lucide Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --right-panel-width: 320px;
+            --header-height: 70px;
+        }
+
+        body {
+            background-color: var(--ds-bg-subtle, #f8fafc);
+            overflow-x: hidden;
+        }
+
+        /* 3-Panel Layout */
+        .workspace-wrapper {
+            display: flex;
+            height: calc(100vh - var(--header-height));
+            margin-top: var(--header-height);
+        }
+
+        .workspace-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            background: white;
+            border-bottom: 1px solid var(--ds-border-color, #e2e8f0);
+            z-index: 1030;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .left-panel {
+            width: var(--sidebar-width);
+            background: white;
+            border-right: 1px solid var(--ds-border-color, #e2e8f0);
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .center-panel {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            scroll-behavior: smooth;
+        }
+
+        .right-panel {
+            width: var(--right-panel-width);
+            background: white;
+            border-left: 1px solid var(--ds-border-color, #e2e8f0);
+            overflow-y: auto;
+            flex-shrink: 0;
+            padding: 1.5rem;
+        }
+
+        /* Stepper Styles */
+        .stepper-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .stepper-item:hover {
+            background-color: #f1f5f9;
+        }
+
+        .stepper-item.active {
+            background-color: #eff6ff;
+            border-left-color: var(--bs-primary);
+        }
+
+        .stepper-item.completed .stepper-icon {
+            background-color: #def7ec;
+            color: #03543f;
+        }
+
+        .stepper-item.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .stepper-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        /* Form Controls */
+        .form-label {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #475569;
+        }
+
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+        }
+
+        /* Evidence Upload Zone */
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover {
+            border-color: #3b82f6;
+            background: #f1f5f9;
+        }
+
+        /* Sticky Footer */
+        .workspace-footer {
+            position: sticky;
+            bottom: -2rem;
+            margin-top: 3rem;
+            padding: 1rem 0;
+            background: var(--ds-bg-subtle, #f8fafc);
+            border-top: 1px solid var(--ds-border-color, #e2e8f0);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="workspace-header">
+        <div class="d-flex align-items-center w-100">
+            <button class="btn btn-outline-secondary btn-sm me-3" onclick="window.location.href='/dashboard-team-member.html'">
+                <i data-lucide="arrow-left" class="size-4"></i>
+            </button>
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold" id="projectTitle">Loading Project...</h5>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="projectUid">ID: ---</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle" id="projectStatus">Active</span>
+                </div>
+                <div class="text-muted small d-flex gap-3">
+                    <span id="projectDept"><i data-lucide="building-2" class="size-4 d-inline me-1"></i>Dept</span>
+                    <span id="projectCategory"><i data-lucide="tag" class="size-4 d-inline me-1"></i>Category</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-4 text-end">
+                <div style="width: 180px;">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold">Overall Progress</span>
+                        <span class="small fw-semibold" id="progressPct">0%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div id="userInfoHeader"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="workspace-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="left-panel">
+            <div class="py-3">
+                <p class="px-4 text-uppercase small fw-bold text-muted mb-2 ls-wider">Methodology Stages</p>
+                <div id="stageStepper">
+                    <!-- Stages dynamically rendered -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="center-panel">
+            <div id="stageContent" class="fade-in">
+                <!-- Stage forms rendered here -->
+                <div class="d-flex justify-content-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+
+            <!-- Global Action Footer -->
+            <div class="workspace-footer">
+                <div class="text-muted small">
+                    <i data-lucide="check-circle" class="size-4 text-success d-inline me-1"></i>
+                    <span id="saveStatus">All changes saved</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light border" id="btnSaveDraft">Save Draft</button>
+                    <button class="btn btn-primary px-4" id="btnSubmitStage">
+                        Submit to Team Leader
+                        <i data-lucide="chevron-right" class="size-4 ms-2"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel: Project Details -->
+        <aside class="right-panel">
+            <div class="mb-4">
+                <h6 class="fw-bold mb-3 d-flex align-items-center">
+                    <i data-lucide="calendar" class="size-4 text-primary me-2"></i>
+                    Project Timeline
+                </h6>
+                <div class="card border-0 bg-light-subtle mb-2">
+                    <div class="card-body p-3">
+                        <p class="small text-muted mb-1">Target Date</p>
+                        <p class="fw-bold mb-0" id="targetDate">---</p>
+                    </div>
+                </div>
+                <div class="card border-0 bg-info-subtle mb-2">
+                    <div class="card-body p-3">
+                        <p class="small text-muted mb-1">Days Remaining</p>
+                        <p class="fw-bold mb-0 text-info" id="daysLeft">---</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h6 class="fw-bold mb-3 d-flex align-items-center">
+                    <i data-lucide="users" class="size-4 text-primary me-2"></i>
+                    Team Members
+                </h6>
+                <div id="teamGrid" class="vstack gap-2">
+                    <!-- Team members list -->
+                </div>
+            </div>
+
+            <div class="mt-auto pt-4 border-top">
+                <h6 class="fw-bold mb-3 d-flex align-items-center">
+                    <i data-lucide="message-square" class="size-4 text-primary me-2"></i>
+                    Comments & Activity
+                </h6>
+                <div class="mb-3">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" id="commentInput" class="form-control border-light bg-light" placeholder="Post a comment...">
+                        <button class="btn btn-primary" id="sendBtn">
+                            <i data-lucide="send" class="size-3"></i>
+                        </button>
+                    </div>
+                    <div class="activity-status text-muted x-small d-none" id="commentStatus">Sending...</div>
+                </div>
+                <div id="activityFeed" class="small overflow-auto" style="max-height: 280px;">
+                    <!-- Activity logs -->
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        // Global App State
+        const projectId = new URLSearchParams(window.location.search).get('id');
+        let currentProject = null;
+        let currentStageId = 1;
+        const currentUser = { id: 1, username: 'Current User' };
+
+        // UI Helpers
+        const QCMS = {
+            showNotification: (msg, type = 'info') => {
+                const toast = $(`
+                    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+                        <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : 'success'} border-0 show">
+                            <div class="d-flex">
+                                <div class="toast-body">${msg}</div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                $('body').append(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        };
+
+        const projectStages = [
+            { id: 1, title: 'Problem Identification', icon: 'search' },
+            { id: 2, title: 'Goal Setting', icon: 'target' },
+            { id: 3, title: 'Root Cause Analysis', icon: 'git-branch' },
+            { id: 4, title: 'Countermeasures', icon: 'shield' },
+            { id: 5, title: 'Implementation', icon: 'play' },
+            { id: 6, title: 'Verification of Results', icon: 'check-square' },
+            { id: 7, title: 'Standardization', icon: 'shield-check' },
+            { id: 8, title: 'Conclusion', icon: 'flag' }
+        ];
+
+        $(document).ready(async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('id');
+
+            if (!projectId) {
+                QCMS.showNotification('Error: No project ID provided', 'error');
+                setTimeout(() => window.location.href = '/dashboard-team-member.html', 2000);
+                return;
+            }
+
+            // Set user info in header
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            $('#userInfoHeader').html(`
+                <div class="user-pill d-flex align-items-center gap-2 px-2 py-1 border rounded bg-light">
+                    <div class="user-avatar-sm" style="width:28px; height:28px; background:var(--bs-primary); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
+                        ${(user.username || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div class="user-meta text-start">
+                        <div class="fw-bold" style="font-size:11px; line-height:1;">${user.username || 'User'}</div>
+                        <div class="text-muted" style="font-size:10px;">${user.role || 'Member'}</div>
+                    </div>
+                </div>
+            `);
+
+            await initWorkspace(projectId);
+            
+            // Auto-save event delegation
+            $(document).on('input change', '#stageContent input, #stageContent textarea, #stageContent select', () => {
+                triggerAutoSave();
+            });
+        });
+
+        async function initWorkspace(id) {
+            try {
+                // Fetch full project details
+                const response = await api.get(`/projects/${id}`);
+                currentProject = response.data;
+                
+                // Update Header
+                $('#projectTitle').text(currentProject.title);
+                $('#projectUid').text(currentProject.project_uid || `PRJ-${currentProject.id}`);
+                $('#projectStatus').text(currentProject.status).attr('class', `badge ${getStatusClass(currentProject.status)} border`);
+                $('#projectDept').html(`<i data-lucide="building-2" class="size-4 d-inline me-1"></i>${currentProject.department}`);
+                $('#projectCategory').html(`<i data-lucide="tag" class="size-4 d-inline me-1"></i>${currentProject.category}`);
+                
+                // Update Timeline & Info
+                $('#targetDate').text(currentProject.deadline || 'N/A');
+                updateDaysLeft(currentProject.deadline);
+                
+                renderStepper();
+                renderStage(currentProject.current_stage || 1);
+                renderTeam(currentProject.members || []);
+                loadActivity(id);
+                
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Init Error:', error);
+                QCMS.showNotification('Failed to load project workspace', 'error');
+            }
+        }
+
+        function getStatusClass(status) {
+            const map = {
+                'Draft': 'bg-secondary-subtle text-secondary border-secondary-subtle',
+                'Active': 'bg-primary-subtle text-primary border-primary-subtle',
+                'Pending Approval': 'bg-warning-subtle text-warning border-warning-subtle',
+                'Approved': 'bg-success-subtle text-success border-success-subtle',
+                'Closed': 'bg-dark-subtle text-dark border-dark-subtle'
+            };
+            return map[status] || 'bg-light text-dark';
+        }
+
+        function renderStepper() {
+            const $stepper = $('#stageStepper').empty();
+            const current = currentProject.current_stage || 1;
+
+            projectStages.forEach(stage => {
+                const isCompleted = stage.id < current;
+                const isActive = stage.id === current;
+                const isLocked = stage.id > current;
+                
+                const statusClass = isActive ? 'active' : (isCompleted ? 'completed' : 'locked');
+                
+                const $item = $(`
+                    <div class="stepper-item ${statusClass}" data-id="${stage.id}">
+                        <div class="stepper-icon">
+                            ${isCompleted ? '<i data-lucide="check" class="size-4"></i>' : stage.id}
+                        </div>
+                        <div class="stepper-label">
+                            <span class="d-block fw-semibold small">${stage.title}</span>
+                            <span class="x-small text-muted text-uppercase" style="font-size:10px;">${statusClass}</span>
+                        </div>
+                    </div>
+                `);
+
+                if (!isLocked) {
+                    $item.on('click', () => renderStage(stage.id));
+                }
+                $stepper.append($item);
+            });
+            lucide.createIcons();
+            
+            // Update Progress Bar (1-8 stages)
+            const progress = ((current - 1) / 8) * 100;
+            $('#progressBar').css('width', `${progress}%`);
+            $('#progressPct').text(`${Math.round(progress)}%`);
+        }
+
+        async function renderStage(stageId) {
+            currentStageId = stageId;
+            $('.stepper-item').removeClass('active');
+            $(`.stepper-item[data-id="${stageId}"]`).addClass('active');
+
+            const $container = $('#stageContent').html('<div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary"></div></div>');
+
+            try {
+                const html = await getStageTemplate(stageId);
+                $container.html(html);
+                
+                // Fetch data using the aliased route
+                const response = await api.get(`/workflow/projects/${currentProject.id}/stages/${stageId}`);
+                if (response.data && response.data.data) {
+                    fillFormData(response.data.data);
+                }
+                
+                // Check if this stage is historical (locked for editing)
+                if (stageId < currentProject.current_stage) {
+                    $container.find('input, textarea, select').prop('disabled', true);
+                    $('#btnSaveDraft, #btnSubmitStage').addClass('d-none');
+                } else {
+                    $('#btnSaveDraft, #btnSubmitStage').removeClass('d-none');
+                }
+                
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Stage Load Error:', error);
+                $container.html('<div class="alert alert-danger">Error loading stage content</div>');
+            }
+        }
+
+        async function getStageTemplate(id) {
+            const templates = {
+                1: `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h5 class="fw-bold mb-0">Stage 1: Problem Identification</h5>
+                            <p class="text-muted small mb-0">Defining the current situation and impact.</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="stageForm">
+                                <div class="row g-4">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Problem Statement</label>
+                                        <input type="text" class="form-control" name="problem_statement" placeholder="e.g., High rejection rate in Assembly Line B">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Detailed Description</label>
+                                        <textarea class="form-control" name="description" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Location</label>
+                                        <input type="text" class="form-control" name="location">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Frequency</label>
+                                        <select class="form-select" name="frequency_of_occurrence">
+                                            <option value="Daily">Daily</option>
+                                            <option value="Weekly">Weekly</option>
+                                            <option value="Monthly">Monthly</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Initial Impact Analysis</label>
+                                        <textarea class="form-control" name="initial_impact" rows="2"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Evidence Upload</label>
+                                        <div class="upload-zone" id="dropzone">
+                                            <i data-lucide="camera" class="size-8 text-primary mb-2"></i>
+                                            <p class="mb-1">Click to upload or drag & drop</p>
+                                            <p class="text-muted x-small">PNG, JPG, PDF up to 5MB</p>
+                                            <input type="file" id="evidenceFile" class="d-none">
+                                        </div>
+                                        <div id="filePreview" class="mt-3 d-none">
+                                            <div class="alert alert-info d-flex align-items-center mb-0">
+                                                <i data-lucide="file-text" class="size-4 me-2"></i>
+                                                <span id="fileName" class="small flex-grow-1 text-truncate"></span>
+                                                <button type="button" class="btn-close" id="btnRemoveFile"></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                2: `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h5 class="fw-bold mb-0">Stage 2: Goal Setting</h5>
+                            <p class="text-muted small mb-0">Define what success looks like for this project.</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="stageForm">
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Primary KPI</label>
+                                        <input type="text" class="form-control" name="kpi_to_improve" placeholder="e.g., Defect Rate (%)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Current Base Value</label>
+                                        <input type="number" class="form-control" name="current_value" step="0.01">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Target Value</label>
+                                        <input type="number" class="form-control" name="target_value" step="0.01">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Target Date</label>
+                                        <input type="date" class="form-control" name="deadline">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Justification for Goal</label>
+                                        <textarea class="form-control" name="justification" rows="3" placeholder="Why is this goal realistic and necessary?"></textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                3: `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h5 class="fw-bold mb-0">Stage 3: Root Cause Analysis</h5>
+                            <p class="text-muted small mb-0">Investigating the "Why" behind the problem.</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="stageForm">
+                                <div class="mb-4">
+                                    <h6 class="fw-bold small mb-3">5-Why Analysis</h6>
+                                    <div class="d-flex flex-column gap-3">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-0 small fw-bold">1</span>
+                                            <input type="text" class="form-control border-light" name="why1" placeholder="Why does this happen?">
+                                        </div>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-0 small fw-bold">2</span>
+                                            <input type="text" class="form-control border-light" name="why2">
+                                        </div>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-0 small fw-bold">3</span>
+                                            <input type="text" class="form-control border-light" name="why3">
+                                        </div>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-0 small fw-bold">4</span>
+                                            <input type="text" class="form-control border-light" name="why4">
+                                        </div>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-0 small fw-bold">5</span>
+                                            <input type="text" class="form-control border-light" name="why5">
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr class="my-4 opacity-25">
+                                <div class="mb-4">
+                                    <h6 class="fw-bold small mb-3">Fishbone Factors (Man, Machine, Material, Method)</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label x-small">Man (Human errors/skills)</label>
+                                            <input type="text" class="form-control form-control-sm" name="fishbone_man">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label x-small">Machine (Equipment issues)</label>
+                                            <input type="text" class="form-control form-control-sm" name="fishbone_machine">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label x-small">Material (Raw material quality)</label>
+                                            <input type="text" class="form-control form-control-sm" name="fishbone_material">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label x-small">Method (Process flaws)</label>
+                                            <input type="text" class="form-control form-control-sm" name="fishbone_method">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label fw-semibold small">Root Cause Conclusion</label>
+                                    <textarea class="form-control" name="root_cause_summary" rows="2" placeholder="The fundamental reason identified..."></textarea>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                4: `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h5 class="fw-bold mb-0">Stage 4: Countermeasures</h5>
+                            <p class="text-muted small mb-0">Planning the actions to address the root cause (3W1H).</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="stageForm">
+                                <div class="row g-4">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">What (Proposed Solution)</label>
+                                        <textarea class="form-control" name="proposed_solution" rows="2" placeholder="What specific action will be taken?"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">How (Implementation Method)</label>
+                                        <textarea class="form-control" name="how_details" rows="2" placeholder="How will this be implemented?"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Who (Responsible Person)</label>
+                                        <input type="text" class="form-control" name="responsible_person">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">When (Deadline)</label>
+                                        <input type="date" class="form-control" name="implementation_deadline">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="alert alert-warning x-small mb-0">
+                                            <i data-lucide="info" class="size-4 me-2"></i>
+                                            Submitting this stage triggers a review from the Team Leader.
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                5: `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h5 class="fw-bold mb-0">Stage 5: Implementation</h5>
+                            <p class="text-muted small mb-0">Executing the planned countermeasures.</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="stageForm">
+                                <div class="row g-4">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Action Log</label>
+                                        <textarea class="form-control" name="action_log" rows="5" placeholder="Document the steps taken, any deviations, and immediate observations..."></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Obstacles Encountered</label>
+                                        <textarea class="form-control" name="obstacles" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                6: `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h5 class="fw-bold mb-0">Stage 6: Verification of Results</h5>
+                            <p class="text-muted small mb-0">Measuring the impact of implementation.</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="stageForm">
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Achieved Value</label>
+                                        <input type="number" class="form-control" name="achieved_value" step="0.01">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold small">Total Savings (Estimated)</label>
+                                        <input type="text" class="form-control" name="savings">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Comparison with Baseline</label>
+                                        <textarea class="form-control" name="comparison_notes" rows="3" placeholder="How does current data compare to Stage 2 goals?"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Verification Evidence</label>
+                                        <div class="upload-zone" id="dropzone">
+                                            <i data-lucide="bar-chart-3" class="size-8 text-primary mb-2"></i>
+                                            <p class="mb-1">Upload Result Charts or Photos</p>
+                                            <p class="text-muted x-small">PNG, JPG, PDF up to 5MB</p>
+                                            <input type="file" id="evidenceFile" class="d-none">
+                                        </div>
+                                        <div id="filePreview" class="mt-3 d-none">
+                                            <div class="alert alert-info d-flex align-items-center mb-0">
+                                                <i data-lucide="file-text" class="size-4 me-2"></i>
+                                                <span id="fileName" class="small flex-grow-1 text-truncate"></span>
+                                                <button type="button" class="btn-close" id="btnRemoveFile"></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                7: `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h5 class="fw-bold mb-0">Stage 7: Standardization</h5>
+                            <p class="text-muted small mb-0">Sustaining the improvement through process changes.</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="stageForm">
+                                <div class="row g-4">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">New SOP / Work Instruction</label>
+                                        <textarea class="form-control" name="standard_details" rows="4"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Training Record Summary</label>
+                                        <textarea class="form-control" name="training_summary" rows="2" placeholder="Who was trained on the new process?"></textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                8: `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h5 class="fw-bold mb-0">Stage 8: Conclusion</h5>
+                            <p class="text-muted small mb-0">Final reflections and project closure.</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="stageForm">
+                                <div class="row g-4">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Lessons Learned</label>
+                                        <textarea class="form-control" name="lessons_learned" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Team Feedback / Challenges</label>
+                                        <textarea class="form-control" name="team_feedback" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold small">Future Potential Problems</label>
+                                        <textarea class="form-control" name="future_scope" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `
+            };
+            return templates[id] || `<div class="p-5 text-center text-muted bg-white rounded shadow-sm">
+                <i data-lucide="lock" class="size-12 mb-3 text-secondary opacity-25"></i>
+                <h5>Stage Data Missing</h5>
+                <p>Template for Stage ${id} not found.</p>
+            </div>`;
+        }
+
+        function fillFormData(data) {
+            Object.keys(data).forEach(key => {
+                const $field = $(`[name="${key}"]`);
+                if ($field.length) {
+                    $field.val(data[key]);
+                }
+            });
+            if (data.evidence) {
+                $('#filePreview').removeClass('d-none');
+                $('#fileName').text(data.evidence.split('/').pop());
+            }
+        }
+
+        function triggerAutoSave() {
+            $('#saveStatus').html('<span class="spinner-border spinner-border-sm me-1"></span>Saving...');
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(async () => {
+                await saveDraft(true);
+            }, 2000);
+        }
+
+        async function saveDraft(quiet = false) {
+            const formData = {};
+            $('#stageForm [name]').each(function() {
+                formData[$(this).attr('name')] = $(this).val();
+            });
+
+            try {
+                await api.post(`/workflow/projects/${currentProject.id}/stages/${currentStageId}`, formData);
+                $('#saveStatus').html('<i data-lucide="check-circle" class="size-4 text-success d-inline me-1"></i>All changes saved');
+                lucide.createIcons();
+                if (!quiet) QCMS.showNotification('Draft saved successfully');
+            } catch (e) {
+                $('#saveStatus').html('<i data-lucide="alert-circle" class="size-4 text-danger d-inline me-1"></i>Save failed');
+                lucide.createIcons();
+                if (!quiet) QCMS.showNotification('Failed to save draft', 'error');
+            }
+        }
+
+        function updateDaysLeft(deadline) {
+            if (!deadline) {
+                $('#targetDate').text('Not Set');
+                $('#daysLeft').text('No Deadline');
+                return;
+            }
+            const target = new Date(deadline);
+            const now = new Date();
+            const diff = target - now;
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            $('#targetDate').text(target.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }));
+            if (days < 0) {
+                $('#daysLeft').text(`${Math.abs(days)} days overdue`).addClass('text-danger').removeClass('text-info');
+            } else {
+                $('#daysLeft').text(`${days} days remaining`).addClass('text-info').removeClass('text-danger');
+            }
+        }
+
+        async function renderTeam(members) {
+            const $grid = $('#teamGrid').empty();
+            if (!members || members.length === 0) {
+                $grid.append('<p class="x-small text-muted">No members assigned</p>');
+                return;
+            }
+            members.forEach(m => {
+                $grid.append(`
+                    <div class="d-flex align-items-center p-2 rounded bg-light-subtle">
+                        <div class="user-avatar-sm" style="width:28px; height:28px; background:#e2e8f0; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold;">
+                            ${(m.username || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div class="ms-2">
+                            <p class="small fw-bold mb-0">${m.username}</p>
+                            <p class="x-small text-muted mb-0" style="font-size:10px;">Member</p>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        async function loadActivity(id) {
+            try {
+                const response = await api.get(`/projects/${id}/activity`);
+                const $feed = $('#activityFeed').empty();
+                if (!response.data || response.data.length === 0) {
+                    $feed.append('<p class="x-small text-muted text-center py-3">No recent activity</p>');
+                    return;
+                }
+                
+                response.data.forEach(log => {
+                    const isComment = log.type === 'comment' || log.action.includes('commented');
+                    const icon = isComment ? 'message-circle' : 'circle';
+                    const color = isComment ? 'var(--bs-info)' : 'var(--bs-primary)';
+                    
+                    $feed.append(`
+                        <div class="mb-3 border-start ps-3 py-1 position-relative" style="border-width: 2px !important; border-color: ${color} !important;">
+                            <span class="position-absolute start-0 top-0 translate-middle-x bg-white p-1">
+                                <div style="width:8px; height:8px; border-radius:50%; background:${color};"></div>
+                            </span>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="fw-semibold" style="font-size:11px;">${log.action}</div>
+                                <div class="text-muted" style="font-size:9px;">${new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                            </div>
+                            <div class="text-muted x-small">${log.details || ''}</div>
+                        </div>
+                    `);
+                });
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Activity failed:', error);
+            }
+        }
+
+        // Send Comment Logic
+        $(document).on('click', '#sendBtn', async function() {
+            const $input = $('#commentInput');
+            const comment = $input.val().trim();
+            if (!comment) return;
+
+            const $status = $('#commentStatus').removeClass('d-none');
+            const $btn = $(this).prop('disabled', true);
+
+            try {
+                await api.post(`/projects/${currentProject.id}/activity`, {
+                    action: `${currentUser.username} commented`,
+                    details: comment,
+                    type: 'comment'
+                });
+                $input.val('');
+                await loadActivity(currentProject.id);
+            } catch (error) {
+                showToast('Failed to post comment', 'error');
+            } finally {
+                $status.addClass('d-none');
+                $btn.prop('disabled', false);
+            }
+        });
+
+        $('#btnSaveDraft').on('click', () => saveDraft(false));
+
+        $('#btnSubmitStage').on('click', async () => {
+            if (!confirm('Submit this stage for Team Leader review? You will not be able to edit this stage until it is pushed back.')) return;
+
+            try {
+                $('#btnSubmitStage').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+                
+                // Final save before submit
+                await saveDraft(true);
+                
+                // Advanced to next stage (or trigger submission logic)
+                // For Stage 1-3, we typically just advance. Stage 4 needs approval.
+                const next = currentStageId + 1;
+                await api.post(`/workflow/projects/${currentProject.id}/transitions`, { stage: next });
+                
+                QCMS.showNotification(`Stage ${currentStageId} completed! Moving to Stage ${next}.`, 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } catch (e) {
+                QCMS.showNotification('Failed to submit stage', 'error');
+                $('#btnSubmitStage').prop('disabled', false).html('Submit to Team Leader <i data-lucide="chevron-right" class="size-4 ms-2"></i>');
+            }
+        });
+
+        // File handling
+        $(document).on('click', '#dropzone', () => $('#evidenceFile').click());
+        $(document).on('change', '#evidenceFile', async function() {
+            const file = this.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                QCMS.showNotification('File size exceeds 5MB limit', 'error');
+                return;
+            }
+
+            try {
+                $('#saveStatus').html('<span class="spinner-border spinner-border-sm me-1"></span>Uploading...');
+                const result = await api.uploadFile(file);
+                
+                // Save the file URL to the stage data
+                await api.post(`/workflow/projects/${currentProject.id}/stages/${currentStageId}`, { evidence: result.url });
+                
+                $('#filePreview').removeClass('d-none');
+                $('#fileName').text(file.name);
+                $('#saveStatus').html('<i data-lucide="check-circle" class="size-4 text-success d-inline me-1"></i>Evidence saved');
+                lucide.createIcons();
+            } catch (e) {
+                QCMS.showNotification('Upload failed', 'error');
+                $('#saveStatus').text('Upload failed');
+            }
+        });
+
+        $(document).on('click', '#btnRemoveFile', async (e) => {
+            e.stopPropagation();
+            if (!confirm('Remove this evidence?')) return;
+            try {
+                await api.post(`/workflow/projects/${currentProject.id}/stages/${currentStageId}`, { evidence: null });
+                $('#filePreview').addClass('d-none');
+                $('#evidenceFile').val('');
+                triggerAutoSave();
+            } catch (e) { QCMS.showNotification('Failed to remove file', 'error'); }
+        });
+    </script>
+</body>
+</html>

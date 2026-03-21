@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QCMS - Audit Queue</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i data-lucide="shield-check" class="logo-icon"></i>
+                <span class="logo-text">QCMS</span>
+            </div>
+        </div>
+        
+        <nav class="nav-menu">
+            <a href="dashboard.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="audit-queue.html" class="nav-item active">
+                <i data-lucide="clipboard-list"></i>
+                <span>Audit Queue</span>
+            </a>
+            <a href="projects.html" class="nav-item">
+                <i data-lucide="folder-kanban"></i>
+                <span>Projects</span>
+            </a>
+            <a href="analytics.html" class="nav-item">
+                <i data-lucide="bar-chart-3"></i>
+                <span>Analytics</span>
+            </a>
+            
+            <div class="nav-divider"></div>
+            
+            <!-- Conditional Admin Links -->
+            <div id="adminNav" style="display: none;">
+                <a href="user-management.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Users</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="nav-item logout-btn" onclick="auth.logout()">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Top Navigation Bar -->
+    <nav class="top-navbar">
+        <div class="navbar-left">
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" placeholder="Search audits...">
+            </div>
+        </div>
+        
+        <div class="navbar-right">
+            <button class="icon-btn">
+                <i data-lucide="bell"></i>
+                <span class="badge"></span>
+            </button>
+            <div class="user-profile">
+                <div class="user-info">
+                    <span class="user-name" id="userNameDisplay">Loading...</span>
+                    <span class="user-role" id="userRoleDisplay">User</span>
+                </div>
+                <div class="user-avatar" id="userAvatar">
+                    <i data-lucide="user"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <div class="page-container">
+            <header class="page-header">
+                <div>
+                    <h1 class="page-title">Audit & Validation Queue</h1>
+                    <p class="page-subtitle">Review and approve project stage transitions</p>
+                </div>
+            </header>
+
+            <div class="stats-grid mb-6">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Pending Audits</span>
+                        <div class="stat-icon bg-warning-light text-warning">
+                            <i data-lucide="clock"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">12</div>
+                    <div class="stat-footer">
+                        <span class="trend text-danger">
+                            <i data-lucide="trending-up"></i> +2 since yesterday
+                        </span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Avg. Review Time</span>
+                        <div class="stat-icon bg-primary-light text-primary">
+                            <i data-lucide="timer"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">4.2h</div>
+                    <div class="stat-footer">
+                        <span class="trend text-success">
+                            <i data-lucide="trending-down"></i> -15% this week
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+                <div class="data-card p-6 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="icon-box bg-warning-light text-warning large">
+                            <i data-lucide="alert-circle"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg text-main">Project #PRJ-2024-001 (D3 Validation)</h4>
+                            <p class="text-sm text-muted">Submitted by: Michael Chen • 2 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="btn btn-outline-sm">Review Details</button>
+                        <button class="btn btn-primary-sm">Approve</button>
+                    </div>
+                </div>
+
+                <div class="data-card p-6 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="icon-box bg-warning-light text-warning large">
+                            <i data-lucide="alert-circle"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg text-main">Project #PRJ-2024-042 (D5 Implementation)</h4>
+                            <p class="text-sm text-muted">Submitted by: Sarah Jenkins • 5 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="btn btn-outline-sm">Review Details</button>
+                        <button class="btn btn-primary-sm">Approve</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+             // Load Profile Header
+             const user = JSON.parse(localStorage.getItem('user'));
+            if (user) {
+                document.getElementById('userNameDisplay').textContent = user.full_name || user.username;
+                document.getElementById('userRoleDisplay').textContent = user.role;
+                if (user.role === 'Admin' || user.role === 'Quality Head' || user.role === 'Lead Auditor') {
+                    document.getElementById('adminNav').style.display = 'block';
+                }
+            }
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

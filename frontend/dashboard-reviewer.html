@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviewer Dashboard | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .detail-section { margin-bottom: 1.5rem; }
+        .detail-label { font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+        .detail-value { font-size: 0.95rem; color: var(--text-main); }
+        .kpi-badge { background: var(--bg-light); border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--radius-md); display: flex; flex-direction: column; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content">
+                <div class="content-header fade-in">
+                    <div>
+                        <h1 class="page-heading">Approval Workflow</h1>
+                        <p class="page-description">Review proposed solutions, evaluate feasibility, and provide formal decisions to drive project progression.</p>
+                    </div>
+                </div>
+
+                <!-- KPI Stats -->
+                <div class="kpi-grid fade-in" id="kpiGrid">
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                </div>
+
+                <div class="gap-grid gap-grid-3-1 fade-in" style="margin-top:var(--space-6);">
+                    <!-- Active Review Queue -->
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">Pending Approvals</h5>
+                            <span class="ds-badge orange" id="pendingCount">0 Pending</span>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div style="min-height:400px;" id="reviewQueueBody">
+                                <div class="p-5 text-center text-muted">Initialize Approval Queue...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Decision History (Recent) -->
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">Recent Decisions</h5>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div style="max-height:400px; overflow-y:auto;" id="decisionHistoryBody">
+                                <div class="p-4 text-center text-muted">Load History...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal fade" id="reviewModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Project Review & Approval</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <div class="row g-4">
+                        <div class="col-lg-8">
+                            <div id="modalProjectInfo"></div>
+                            
+                            <hr class="my-4">
+                            
+                            <div class="detail-section">
+                                <div class="detail-label">Problem Statement (Stage 1)</div>
+                                <div class="detail-value" id="detailProblem">--</div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <div class="detail-label">Root Cause Summary (Stage 3)</div>
+                                <div class="detail-value" id="detailRCA">--</div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <div class="detail-label">Proposed Solution (Stage 4)</div>
+                                <div class="detail-value" id="detailSolution">--</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4 border-start">
+                            <div class="detail-section">
+                                <div class="detail-label">Estimated Cost</div>
+                                <div class="detail-value fw-bold fs-5 text-primary" id="detailCost">₹0</div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <div class="detail-label">KPI targets</div>
+                                <div id="detailKPIs" class="d-grid gap-2"></div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-medium">Reviewer Comments <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="reviewComments" rows="5" placeholder="Enter your observations or requirements for approval..."></textarea>
+                            </div>
+
+                            <div class="ds-alert info mb-0">
+                                <div class="d-flex gap-2">
+                                    <i data-lucide="info" style="width:18px;height:18px;"></i>
+                                    <div class="text-sm">Approving moves this to <strong>Stage 6: Implementation</strong>. Revision or Rejection sends it back to <strong>Stage 4</strong>.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-4">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-ghost text-warning" id="revisionBtn">Request Revision</button>
+                    <button type="button" class="ds-btn ds-btn-danger" id="rejectBtn">Reject ❌</button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="approveBtn">Approve ✅</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+    const revDash = {
+        selectedProjectId: null,
+        reviewModal: null,
+
+        async init() {
+            QCMS.init();
+            this.reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+            
+            this.loadStats();
+            this.loadQueue();
+            this.loadHistory();
+
+            document.getElementById('approveBtn').onclick = () => this.submitDecision('Approved');
+            document.getElementById('rejectBtn').onclick = () => this.submitDecision('Rejected');
+            document.getElementById('revisionBtn').onclick = () => this.submitDecision('Revision');
+        },
+
+        async loadStats() {
+            try {
+                const stats = await api.get('/reviewer/stats');
+                document.getElementById('kpiGrid').innerHTML =
+                    QCMS.kpiCard('Pending Review', stats.pending_count || 0, 'clock', 'orange') +
+                    QCMS.kpiCard('Total Approved', stats.approved_count || 0, 'check-circle', 'green') +
+                    QCMS.kpiCard('Total Rejected', stats.rejected_count || 0, 'x-circle', 'red') +
+                    QCMS.kpiCard('Avg. Turnaround', stats.avg_turnaround_time || '0h', 'zap', 'blue');
+                if (window.lucide) lucide.createIcons();
+            } catch (e) { console.error(e); }
+        },
+
+        async loadQueue() {
+            try {
+                const projects = await api.get('/reviewer/pending');
+                const container = document.getElementById('reviewQueueBody');
+                document.getElementById('pendingCount').textContent = `${projects.length} Pending`;
+
+                if (!projects.length) {
+                    container.innerHTML = `<div class="p-5">${QCMS.emptyState('check-circle', 'Queue Clear', 'No projects are currently awaiting your approval.')}</div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="ds-table">
+                        <thead>
+                            <tr>
+                                <th>Project Details</th>
+                                <th>Department</th>
+                                <th>Submission</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>${projects.map(p => `
+                            <tr class="fade-in">
+                                <td>
+                                    <div class="fw-semibold text-primary">${p.title}</div>
+                                    <div class="text-xs text-muted">ID: ${p.project_id}</div>
+                                </td>
+                                <td><span class="ds-badge blue">${p.department}</span></td>
+                                <td><div class="text-sm">${QCMS.formatRelative(p.submitted_at)}</div></td>
+                                <td class="text-end">
+                                    <button class="ds-btn ds-btn-sm ds-btn-primary" onclick='revDash.openReview(${JSON.stringify(p).replace(/'/g, "&#39;")})'>Review</button>
+                                </td>
+                            </tr>
+                        `).join('')}</tbody>
+                    </table>
+                `;
+                if (window.lucide) lucide.createIcons();
+            } catch (e) { console.error(e); }
+        },
+
+        async loadHistory() {
+            try {
+                const history = await api.get('/reviewer/history');
+                const container = document.getElementById('decisionHistoryBody');
+                
+                if (!history.length) {
+                    container.innerHTML = `<div class="p-4 text-center text-muted small">No recent activity</div>`;
+                    return;
+                }
+
+                container.innerHTML = history.map(item => `
+                    <div class="p-3 border-bottom fade-in">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div class="fw-semibold text-sm text-truncate" style="max-width:150px;">${item.project_title}</div>
+                            ${QCMS.badge(item.decision, item.decision === 'Approved' ? 'green' : (item.decision === 'Revision' ? 'orange' : 'red'))}
+                        </div>
+                        <div class="text-xs text-muted">${QCMS.formatRelative(item.created_at)}</div>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        },
+
+        openReview(p) {
+            this.selectedProjectId = p.project_id;
+            document.getElementById('modalProjectInfo').innerHTML = `
+                <div class="fw-bold fs-4 text-primary">${p.title}</div>
+                <div class="text-sm text-muted">Department: ${p.department} | Submitted: ${new Date(p.submitted_at).toLocaleString()}</div>
+            `;
+            
+            document.getElementById('detailProblem').textContent = p.problem_statement;
+            document.getElementById('detailRCA').textContent = p.root_cause_summary;
+            document.getElementById('detailSolution').textContent = p.solution;
+            document.getElementById('detailCost').textContent = `₹${parseFloat(p.estimated_cost).toLocaleString()}`;
+            
+            const kpiContainer = document.getElementById('detailKPIs');
+            kpiContainer.innerHTML = '';
+            if (p.target_kpi && typeof p.target_kpi === 'object') {
+                Object.entries(p.target_kpi).forEach(([key, val]) => {
+                    kpiContainer.innerHTML += `
+                        <div class="kpi-badge">
+                            <span class="text-xs text-muted text-uppercase">${key}</span>
+                            <span class="fw-bold">${val}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                kpiContainer.innerHTML = '<div class="text-muted small">No KPI targets defined</div>';
+            }
+
+            document.getElementById('reviewComments').value = '';
+            this.reviewModal.show();
+            if (window.lucide) lucide.createIcons();
+        },
+
+        async submitDecision(decision) {
+            const comments = document.getElementById('reviewComments').value;
+            if (!comments) {
+                QCMS.toast('Reviewer comments are required for any decision.', 'warning');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to mark this project as ${decision}?`)) return;
+
+            try {
+                await api.post(`/reviewer/decision`, { 
+                    project_id: this.selectedProjectId, 
+                    decision, 
+                    comments 
+                });
+                QCMS.toast(`Project ${decision} successfully.`, 'success');
+                this.reviewModal.hide();
+                this.loadQueue();
+                this.loadStats();
+                this.loadHistory();
+            } catch (e) {
+                QCMS.toast(e.message || 'Failed to submit decision.', 'danger');
+            }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => revDash.init());
+    </script>
+</body>
+</html>

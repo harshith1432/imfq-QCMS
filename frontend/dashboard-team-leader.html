@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Leader Dashboard | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .ds-tab-group { display: flex; gap: 8px; }
+        .ds-tab {
+            background: white;
+            border: 1px solid var(--border-light);
+            padding: 6px 14px;
+            border-radius: var(--radius-md);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--transition-fast);
+        }
+        .ds-tab:hover:not(.active) {
+            border-color: var(--slate-300);
+            background: var(--bg-body);
+        }
+        .ds-tab.active {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.05);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .ds-tab i { width: 14px; height: 14px; color: var(--text-tertiary); }
+        .ds-tab.active i { color: var(--primary); }
+
+        /* Kanban / Pipeline Layout */
+        .kanban-wrapper {
+            margin-top: var(--space-2);
+            position: relative;
+            width: 100%;
+            overflow: hidden; /* Contain the scroll area */
+        }
+
+        .kanban-scroll-area {
+            display: flex;
+            gap: var(--space-4);
+            overflow-x: auto;
+            padding-bottom: var(--space-4);
+            scroll-behavior: smooth;
+            padding: 0 var(--space-1);
+        }
+
+        .kanban-scroll-area::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .kanban-scroll-area::-webkit-scrollbar-track {
+            background: var(--bg-body);
+            border-radius: 10px;
+        }
+
+        .kanban-scroll-area::-webkit-scrollbar-thumb {
+            background: var(--border-input);
+            border-radius: 10px;
+        }
+
+        .kanban-stage {
+            min-width: 280px;
+            max-width: 280px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+
+        .kanban-stage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-2) var(--space-1);
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 5;
+        }
+
+        .kanban-stage-title {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .kanban-stage-count {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            background: var(--bg-body);
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+        }
+
+        .kanban-stage-items {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            min-height: 100px;
+            padding: 2px;
+        }
+
+        .kanban-task-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition-base);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kanban-task-card:hover {
+            border-color: var(--primary-200);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .kanban-task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-2);
+        }
+
+        .kanban-task-id {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--primary);
+            background: var(--primary-50);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .kanban-task-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            margin-bottom: var(--space-3);
+        }
+
+        .kanban-task-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: var(--space-3);
+            padding-top: var(--space-3);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .kanban-task-meta {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .kanban-task-progress {
+            width: 40px;
+            height: 4px;
+            background: var(--bg-body);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        /* Validation Queue Enhancements */
+        .q-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--border-light);
+            transition: background var(--transition-fast);
+        }
+
+        .q-item:hover {
+            background: var(--bg-body);
+        }
+
+        .q-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            background: var(--warning-light);
+            color: var(--warning-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .q-info { flex: 1; min-width: 0; }
+        .q-title { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+        .q-meta { font-size: 0.75rem; color: var(--text-tertiary); }
+
+        /* General Modal Styling refinements */
+        .modal-content {
+            border: none;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+        }
+        .modal-header {
+            padding: var(--space-5) var(--space-6);
+            border-bottom: 1px solid var(--border-light);
+        }
+        .modal-body {
+            padding: var(--space-6);
+        }
+        .modal-footer {
+            padding: var(--space-5) var(--space-6);
+            background: var(--bg-body);
+            border-top: 1px solid var(--border-light);
+            border-bottom-left-radius: var(--radius-xl);
+            border-bottom-right-radius: var(--radius-xl);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar will be injected by components.js -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <!-- Navbar will be injected by components.js -->
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content">
+                <div class="content-header fade-in">
+                    <div>
+                        <h1 class="page-heading">Team Performance</h1>
+                        <p class="page-description">Oversee your team's project pipeline, validate stage completions, and manage project assignments.</p>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="kpi-grid fade-in" id="kpiGrid">
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                </div>
+
+                <!-- Pipeline Section -->
+                <div class="ds-card fade-in" style="margin-top:var(--space-6);">
+                    <div class="ds-card-header">
+                        <div class="d-flex align-items-center gap-3">
+                            <h5 class="card-title">Project Pipeline</h5>
+                            <div class="ds-tab-group">
+                                <button class="ds-tab active" onclick="tlDash.setView('kanban')" id="kanbanViewBtn">
+                                    <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Board
+                                </button>
+                                <button class="ds-tab" onclick="tlDash.setView('table')" id="tableViewBtn">
+                                    <i data-lucide="list" style="width:14px;height:14px;"></i> List
+                                </button>
+                            </div>
+                        </div>
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" id="initProjectBtn" style="display: none;" onclick="tlDash.openInitModal()">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Initialize Project
+                        </button>
+                    </div>
+                    <div class="ds-card-body" id="pipelineContainer" style="min-height:400px; padding: var(--space-4);">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary opacity-25" role="status"></div>
+                            <p class="text-xs text-muted mt-3">Fetching project data...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lower Layout: Queue & Team -->
+                <div class="gap-grid gap-grid-2 fade-in" style="margin-top:var(--space-6);">
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">Validation Queue</h5>
+                            <span class="ds-badge orange" id="queueCount">0</span>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div style="max-height:360px; overflow-y:auto;" id="validationBody">
+                                <div class="p-4 text-center">
+                                    <div class="skeleton-text skeleton mb-2"></div>
+                                    <div class="skeleton-text skeleton short mx-auto"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">My Team Status</h5>
+                            <button class="ds-btn ds-btn-ghost ds-btn-sm">View Workload</button>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div style="max-height:360px; overflow-y:auto;" id="teamBody">
+                        <table class="ds-table">
+                            <thead>
+                                <tr>
+                                    <th style="padding-left: 16px;">Member</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th class="text-end" style="padding-right: 16px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="membersList">
+                                <!-- Team members injected here -->
+                            </tbody>
+                        </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div class="modal fade" id="editProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <div class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;">
+                            <i data-lucide="edit-3" style="width:16px;height:16px;"></i>
+                        </div>
+                        Update Project Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editProjectId">
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                        <input type="text" class="ds-input" id="editProjectTitle" placeholder="Enter project title">
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="file-text"></i> Problem Summary</label>
+                        <textarea class="ds-input ds-textarea" id="editProjectDesc" rows="2" placeholder="Describe the current issue..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="tag"></i> category</label>
+                                <select class="ds-input ds-select" id="editProjectCategory">
+                                    <option value="Safety">Safety</option>
+                                    <option value="Quality">Quality</option>
+                                    <option value="Cost">Cost</option>
+                                    <option value="Productivity">Productivity</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="calendar"></i> Target Completion</label>
+                                <input type="date" class="ds-input" id="editProjectDeadline">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="users"></i> Assigned Team Members</label>
+                        <div class="member-selection-grid" id="editMemberCheckboxes" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 150px; overflow-y: auto; padding: 12px; background: var(--bg-body); border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+                            <!-- Members injected here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="updateProjectBtn">
+                        <i data-lucide="save" style="width:14px;height:14px;"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="deleteProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-body p-4 text-center">
+                    <div class="ds-icon-circle bg-red-soft text-red mx-auto mb-3" style="width:48px;height:48px;">
+                        <i data-lucide="alert-triangle"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Delete Project?</h5>
+                    <p class="text-muted text-sm mb-4">This action <b>cannot be undone</b>. All project workflow data will be permanently removed.</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-ghost flex-1" data-bs-dismiss="modal">Keep It</button>
+                        <button type="button" class="ds-btn ds-btn-danger flex-1" id="confirmDeleteBtn">Delete Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade" id="initModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <div class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;">
+                            <i data-lucide="plus" style="width:16px;height:16px;"></i>
+                        </div>
+                        Initialize New Project
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="initProjectForm">
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                            <input type="text" class="ds-input" id="projTitle" placeholder="e.g. Reduction in Weld Defects" required>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="file-text"></i> Problem Summary</label>
+                            <textarea class="ds-input ds-textarea" id="projDesc" rows="3" placeholder="Briefly describe the observation or problem..."></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="tag"></i> Strategic Focus</label>
+                                    <select class="ds-input ds-select" id="projCategory" required>
+                                        <option value="Quality">Quality</option>
+                                        <option value="Safety">Safety</option>
+                                        <option value="Productivity">Productivity</option>
+                                        <option value="Cost">Cost Reduction</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="calendar"></i> Target completion</label>
+                                    <input type="date" class="ds-input" id="projDeadline">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="users"></i> Implementation Team</label>
+                            <div class="member-selection-grid" id="memberCheckboxes" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 180px; overflow-y: auto; padding: 12px; background: var(--bg-body); border-radius: var(--radius-md); border: 1.5px solid var(--border-light);">
+                                <!-- Members injected here -->
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary" onclick="tlDash.initProject()">
+                        <i data-lucide="zap" style="width:14px;height:14px;"></i> Create & Launch
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+    const tlDash = {
+        projects: [],
+        members: [],
+        currentView: 'kanban',
+
+        async init() {
+            QCMS.init();
+            this.initModal = new bootstrap.Modal(document.getElementById('initModal'));
+            
+            const userStr = localStorage.getItem('user');
+            const user = JSON.parse(userStr || '{}');
+            const role = (user.role || '').trim().toLowerCase();
+            const canCreate = ['admin', 'team leader'].includes(role);
+            
+            console.log('[QCMS] TL Dashboard Init - Role:', role, 'Can create:', canCreate);
+            
+            const initBtn = document.getElementById('initProjectBtn');
+            if (initBtn) {
+                initBtn.style.display = canCreate ? 'inline-flex' : 'none';
+            }
+            
+            this.loadStats();
+            this.loadProjects();
+            this.loadValidation();
+            this.loadMembers();
+
+            this.editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
+            this.deleteModal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
+        },
+
+        async loadStats() {
+            try {
+                const stats = await api.get('/team-leader/dashboard');
+                document.getElementById('kpiGrid').innerHTML =
+                    QCMS.kpiCard('Active Pipeline', stats.total_projects || 0, 'folder-kanban', 'blue') +
+                    QCMS.kpiCard('Current Progress', stats.active_projects || 0, 'activity', 'green') +
+                    QCMS.kpiCard('Validation Queue', stats.pending_validations || 0, 'clock', 'orange') +
+                    QCMS.kpiCard('Impact Measured', stats.completed_projects || 0, 'award', 'cyan');
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                console.error('Stats failed', e);
+            }
+        },
+
+        async loadProjects() {
+            try {
+                this.projects = await api.get('/team-leader/projects');
+                this.renderProjects();
+            } catch (e) {
+                document.getElementById('pipelineContainer').innerHTML = QCMS.emptyState('inbox', 'No Projects Linked', 'Start a new project to lead your team.');
+            }
+        },
+
+        setView(view) {
+            this.currentView = view;
+            document.getElementById('kanbanViewBtn').classList.toggle('active', view === 'kanban');
+            document.getElementById('tableViewBtn').classList.toggle('active', view === 'table');
+            this.renderProjects();
+        },
+
+        renderProjects() {
+            const container = document.getElementById('pipelineContainer');
+            if (!this.projects.length) {
+                container.innerHTML = QCMS.emptyState('folder-kanban', 'No Projects Active', 'You haven\'t initialized any projects yet.');
+                return;
+            }
+
+            if (this.currentView === 'kanban') {
+                const stages = ['Problem ID','Data','RCA','Proposed','Approval','Executing','Impact','Closed'];
+                const grouped = Array.from({length: 8}, () => []);
+                this.projects.forEach(p => { 
+                    const s = (p.current_stage || p.stage || 1) - 1; 
+                    if(grouped[s]) grouped[s].push(p); 
+                });
+
+                container.innerHTML = `
+                    <div class="kanban-wrapper">
+                        <div class="kanban-scroll-area">
+                            ${stages.map((name, i) => `
+                                <div class="kanban-stage">
+                                    <div class="kanban-stage-header">
+                                        <span class="kanban-stage-title">Stage ${i+1}: ${name}</span>
+                                        <span class="kanban-stage-count">${grouped[i].length}</span>
+                                    </div>
+                                    <div class="kanban-stage-items">
+                                        ${grouped[i].map(p => {
+                                            const progress = Math.round(((p.current_stage || 1) / 8) * 100);
+                                            return `
+                                                <div class="kanban-task-card fade-in" onclick="window.location.href='workspace.html?project=${p.id}'">
+                                                    <div class="kanban-task-header">
+                                                        <span class="kanban-task-id">${p.project_uid || 'PRJ-XXXX'}</span>
+                                                        ${QCMS.categoryBadge(p.category)}
+                                                    </div>
+                                                    <div class="kanban-task-title">${p.title}</div>
+                                                    <div class="kanban-task-footer">
+                                                        <div class="kanban-task-meta">
+                                                            <i data-lucide="clock" style="width:12px;height:12px;"></i>
+                                                            ${p.deadline ? new Date(p.deadline).toLocaleDateString() : 'No date'}
+                                                        </div>
+                                                        <div class="kanban-task-progress" title="${progress}% Complete">
+                                                            <div class="progress-fill" style="width: ${progress}%"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                        ${grouped[i].length === 0 ? '<div class="text-center py-4 text-xs text-muted opacity-50">No Projects</div>' : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="ds-table">
+                            <thead><tr><th>Project Identifier</th><th>Strategic Focus</th><th>Current Stage</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                            <tbody>${this.projects.map(p => `
+                                <tr class="fade-in">
+                                    <td>
+                                        <div class="fw-semibold text-primary">${p.title}</div>
+                                        <div class="text-xs text-muted">${p.project_uid || 'UID-PENDING'}</div>
+                                    </td>
+                                    <td>${QCMS.categoryBadge(p.category)}</td>
+                                    <td>${QCMS.badge('Stage ' + (p.current_stage || 1), 'blue')}</td>
+                                    <td>${QCMS.statusBadge(p.status || 'Active')}</td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" title="Workspace">
+                                                <i data-lucide="external-link" style="width:14px;height:14px;"></i>
+                                            </a>
+                                            <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="tlDash.showEditModal(${p.id})" title="Edit">
+                                                <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
+                                            </button>
+                                            <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon text-danger" onclick="tlDash.confirmDelete(${p.id})" title="Delete">
+                                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}</tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            if (window.lucide) lucide.createIcons();
+        },
+
+        async loadValidation() {
+            try {
+                const queue = await api.get('/team-leader/queue');
+                document.getElementById('queueCount').textContent = queue.length || 0;
+                const body = document.getElementById('validationBody');
+                
+                if (!queue.length) {
+                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('check-circle', 'All Validated', 'No pending items in your queue.')}</div>`;
+                    return;
+                }
+
+                body.innerHTML = queue.map(q => `
+                    <div class="q-item fade-in">
+                        <div class="q-icon">
+                            <i data-lucide="file-check"></i>
+                        </div>
+                        <div class="q-info">
+                            <div class="q-title">${q.title}</div>
+                            <div class="q-meta">
+                                Stage ${q.stage} validation requested
+                                <span class="mx-1">•</span>
+                                ${QCMS.badge('ID: ' + (q.project_uid || 'P-001'), 'orange')}
+                            </div>
+                        </div>
+                        <a href="workspace.html?project=${q.project_id}" class="ds-btn ds-btn-sm ds-btn-primary">Verify</a>
+                    </div>
+                `).join('');
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                console.error('Queue load failed', e);
+            }
+        },
+        async loadMembers() {
+            try {
+                this.members = await api.get('/team-leader/members');
+                const tbody = document.getElementById('membersList');
+                if (!this.members.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No team members found.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = this.members.map(m => `
+                    <tr class="fade-in">
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="user-avatar" style="width:32px;height:32px;font-size:0.7rem; background: var(--primary-100); color: var(--primary-700); border: 1px solid var(--primary-200);">
+                                    ${(m.username||'UN').substring(0,2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div class="text-sm fw-semibold text-primary">${m.username}</div>
+                                    <div class="text-xs text-muted">${m.email || 'team-member@qcms.com'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <span class="ds-badge gray">${m.role || 'Member'}</span>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Populate checkboxes in modals
+                const cb = document.getElementById('memberCheckboxes');
+                const editCb = document.getElementById('editMemberCheckboxes');
+                
+                const cbHtml = this.members.map(m => `
+                    <label class="member-chip">
+                        <input type="checkbox" value="${m.id}" class="member-cb">
+                        <span>${m.username}</span>
+                    </label>
+                `).join('');
+
+                if (cb) cb.innerHTML = cbHtml;
+                if (editCb) editCb.innerHTML = cbHtml.replace(/member-cb/g, 'edit-member-cb');
+            } catch (e) {
+                console.error('Members load failed', e);
+            }
+        },
+
+        openInitModal() {
+            this.initModal.show();
+        },
+
+        async initProject() {
+            const form = document.getElementById('initProjectForm');
+            const data = {
+                title: document.getElementById('projTitle').value,
+                description: document.getElementById('projDesc').value,
+                category: document.getElementById('projCategory').value,
+                deadline: document.getElementById('projDeadline').value || null,
+                member_ids: [...document.querySelectorAll('.member-cb:checked')].map(c => parseInt(c.value))
+            };
+
+            if (!data.title || !data.category) return QCMS.toast('Project title and category are required', 'warning');
+
+            try {
+                await api.post('/team-leader/initialize', data);
+                QCMS.toast('Project initialized and broadcasted to team.', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('initModal')).hide();
+                this.init();
+            } catch (e) {
+                QCMS.toast(e.message, 'error');
+            }
+        },
+
+        showEditModal(id) {
+            const p = this.projects.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('editProjectId').value = p.id;
+            document.getElementById('editProjectTitle').value = p.title;
+            document.getElementById('editProjectCategory').value = p.category || 'Quality';
+            document.getElementById('editProjectDesc').value = p.description || '';
+            if (p.deadline) document.getElementById('editProjectDeadline').value = p.deadline.split('T')[0];
+            
+            // Pre-check members
+            const currentMemberIds = p.member_ids || [];
+            document.querySelectorAll('.edit-member-cb').forEach(cb => {
+                cb.checked = currentMemberIds.includes(parseInt(cb.value));
+            });
+
+            this.editModal.show();
+            document.getElementById('updateProjectBtn').onclick = () => this.handleUpdate();
+        },
+
+        async handleUpdate() {
+            const id = document.getElementById('editProjectId').value;
+            const payload = {
+                title: document.getElementById('editProjectTitle').value,
+                category: document.getElementById('editProjectCategory').value,
+                description: document.getElementById('editProjectDesc').value,
+                deadline: document.getElementById('editProjectDeadline').value || null,
+                member_ids: [...document.querySelectorAll('.edit-member-cb:checked')].map(c => parseInt(c.value))
+            };
+            try {
+                QCMS.setLoading('updateProjectBtn', true);
+                await api.patch(`/projects/${id}`, payload);
+                QCMS.toast('Project updated successfully', 'success');
+                this.editModal.hide();
+                this.loadProjects();
+            } catch (e) {
+                QCMS.toast(e.message || 'Update failed', 'danger');
+            } finally {
+                QCMS.setLoading('updateProjectBtn', false);
+            }
+        },
+
+        confirmDelete(id) {
+            this.deleteTargetId = id;
+            this.deleteModal.show();
+            document.getElementById('confirmDeleteBtn').onclick = () => this.handleDelete();
+        },
+
+        async handleDelete() {
+            try {
+                QCMS.setLoading('confirmDeleteBtn', true);
+                await api.delete(`/projects/${this.deleteTargetId}`);
+                QCMS.toast('Project and data removed permanently.', 'success');
+                this.deleteModal.hide();
+                this.loadProjects();
+                this.loadStats();
+            } catch (e) {
+                QCMS.toast(e.message || 'Deletion failed', 'danger');
+            } finally {
+                QCMS.setLoading('confirmDeleteBtn', false);
+            }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => tlDash.init());
+    </script>
+</body>
+</html>

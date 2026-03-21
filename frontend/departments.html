@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Departments | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content">
+                    <div class="header-actions">
+                        <div class="ds-search-box">
+                            <i data-lucide="search"></i>
+                            <input type="text" class="ds-input" placeholder="Find unit..." id="deptSearch">
+                        </div>
+                        <button class="ds-btn ds-btn-primary" style="height: 44px;" onclick="deptManager.openAddModal()">
+                            <i data-lucide="plus"></i> Add Department
+                        </button>
+                    </div>
+
+                <div class="ds-card fade-in" style="margin-top:var(--space-6);">
+                    <div class="ds-card-header bg-white border-0">
+                        <h5 class="card-title fw-bold">Registered Departments</h5>
+                    </div>
+                    <div class="ds-card-body p-0">
+                        <table class="ds-table">
+                            <thead>
+                                <tr>
+                                    <th>Department Name</th>
+                                    <th>Created At</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deptTableBody">
+                                <tr><td colspan="3" class="p-4 text-center text-muted">Loading departments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade" id="deptModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalTitle">Add Department</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <form id="deptForm">
+                        <input type="hidden" id="deptId">
+                        <div class="ds-field">
+                            <label class="ds-label text-xs fw-bold text-uppercase opacity-75">Department Name</label>
+                            <input type="text" class="ds-input" id="deptName" placeholder="e.g. Quality Assurance" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary px-4" onclick="deptManager.save()">Save Department</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+    const deptManager = {
+        async init() {
+            try {
+                if (typeof QCMS !== 'undefined') QCMS.init();
+                this.loadDepartments();
+            } catch (e) { console.error('Init failed:', e); }
+        },
+
+        async loadDepartments() {
+            try {
+                const depts = await api.get('/admin/departments');
+                const body = document.getElementById('deptTableBody');
+                if (!depts || !depts.length) {
+                    body.innerHTML = `<tr><td colspan="3">${QCMS.emptyState('building-2', 'No Departments', 'Start by adding a department to your organization.')}</td></tr>`;
+                    return;
+                }
+                body.innerHTML = depts.map(d => `
+                    <tr class="fade-in">
+                        <td><div class="fw-semibold text-slate-900">${d.name}</div></td>
+                        <td><span class="text-sm text-muted">${d.created_at ? QCMS.formatRelative(d.created_at) : 'Active'}</span></td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="nav-icon-btn d-inline-flex" data-bs-toggle="dropdown" data-bs-boundary="viewport" style="width:32px; height:32px;">
+                                    <i data-lucide="more-vertical" style="width:16px;"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-light">
+                                    <li><a class="dropdown-item" href="#" onclick="deptManager.openEditModal(${d.id}, '${d.name.replace(/'/g, "\\'")}')"><i data-lucide="edit-2" class="me-2" style="width:14px;"></i> Rename Unit</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="deptManager.delete(${d.id})"><i data-lucide="trash-2" class="me-2" style="width:14px;"></i> Remove Dept</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                const body = document.getElementById('deptTableBody');
+                body.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-danger">Failed to load departments.</td></tr>`;
+            }
+        },
+
+        openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Department';
+            document.getElementById('deptId').value = '';
+            document.getElementById('deptName').value = '';
+            new bootstrap.Modal(document.getElementById('deptModal')).show();
+        },
+
+        openEditModal(id, name) {
+            document.getElementById('modalTitle').textContent = 'Edit Department';
+            document.getElementById('deptId').value = id;
+            document.getElementById('deptName').value = name;
+            new bootstrap.Modal(document.getElementById('deptModal')).show();
+        },
+
+        async save() {
+            const id = document.getElementById('deptId').value;
+            const name = document.getElementById('deptName').value;
+            if (!name) return QCMS.toast('Name is required', 'warning');
+
+            try {
+                if (id) {
+                    await api.put(`/admin/departments/${id}`, { name });
+                    QCMS.toast('Department updated.', 'success');
+                } else {
+                    await api.post('/admin/departments', { name });
+                    QCMS.toast('Department created.', 'success');
+                }
+                bootstrap.Modal.getInstance(document.getElementById('deptModal')).hide();
+                this.loadDepartments();
+            } catch (e) {
+                QCMS.toast(e.message, 'error');
+            }
+        },
+
+        async delete(id) {
+            if (!confirm('Are you sure you want to remove this department? This cannot be undone.')) return;
+            try {
+                await api.delete(`/admin/departments/${id}`);
+                QCMS.toast('Department removed successfully.', 'success');
+                this.loadDepartments();
+            } catch (e) {
+                QCMS.toast(e.message, 'error');
+            }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => deptManager.init());
+    </script>
+</body>
+</html>

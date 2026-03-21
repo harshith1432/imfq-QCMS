@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Onboarding | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background: var(--bg-body); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--space-8) 0; }
+        .onboarding-card {
+            max-width: 640px; width: 100%; background: var(--bg-surface);
+            border-radius: var(--radius-xl); box-shadow: var(--shadow-lg);
+            padding: var(--space-8); margin: var(--space-4);
+        }
+        .step-indicator { display: flex; gap: 8px; margin-bottom: var(--space-6); justify-content: center; }
+        .step-dot { width: 32px; height: 6px; border-radius: 3px; background: var(--bg-hover); transition: all 0.3s; }
+        .step-dot.active { background: var(--primary); width: 48px; }
+        .form-step { display: none; animation: fadeIn 0.4s ease-out; }
+        .form-step.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="onboarding-card">
+        <div class="text-center mb-5">
+            <div style="width:48px;height:48px;border-radius:12px;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-3);">
+                <i data-lucide="building-2" style="width:24px;height:24px;"></i>
+            </div>
+            <h2 class="fw-bold">Register your Organization</h2>
+            <p class="text-muted">Set up your enterprise QMS instance in minutes.</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step-dot active" id="dot1"></div>
+            <div class="step-dot" id="dot2"></div>
+        </div>
+
+        <div id="errorMsg" style="display:none;padding:12px 16px;background:var(--error-50);border:1px solid var(--error-200);border-radius:var(--radius-md);color:var(--error);font-size:0.875rem;margin-bottom:var(--space-4);"></div>
+
+        <form id="onboardingForm">
+            <!-- Step 1: Company Profile -->
+            <div class="form-step active" id="step1">
+                <h5 class="mb-4 fw-bold">Company Profile</h5>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="ds-label">Company Name *</label>
+                        <input type="text" class="ds-input" id="company_name" placeholder="Acme Corp" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ds-label">Industry</label>
+                        <select class="ds-input ds-select" id="industry">
+                            <option value="Manufacturing">Manufacturing</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="IT/Software">IT/Software</option>
+                            <option value="Automotive">Automotive</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ds-label">Work Email *</label>
+                        <input type="email" class="ds-input" id="email" placeholder="admin@company.com" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="ds-label">Phone Number</label>
+                        <input type="tel" class="ds-input" id="phone" placeholder="+91 00000 00000">
+                    </div>
+                </div>
+                <div class="mt-5 text-end">
+                    <button type="button" class="ds-btn ds-btn-primary px-5" onclick="nextStep(2)">
+                        Next: Admin Setup <i data-lucide="arrow-right" class="ms-2" style="width:16px;height:16px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Admin Account -->
+            <div class="form-step" id="step2">
+                <h5 class="mb-4 fw-bold">Administrator Account</h5>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="ds-label">Full Name *</label>
+                        <input type="text" class="ds-input" id="admin_name" placeholder="John Doe" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="ds-label">Username *</label>
+                        <input type="text" class="ds-input" id="username" placeholder="admin_username" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ds-label">Password *</label>
+                        <input type="password" class="ds-input" id="password" placeholder="••••••••" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ds-label">Confirm Password *</label>
+                        <input type="password" class="ds-input" id="confirm_password" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div class="mt-5 d-flex justify-content-between">
+                    <button type="button" class="ds-btn ds-btn-outline" onclick="nextStep(1)">
+                        <i data-lucide="arrow-left" class="me-2" style="width:16px;height:16px;"></i> Back
+                    </button>
+                    <button type="submit" class="ds-btn ds-btn-primary px-5" id="submitBtn">
+                        Complete Registration <i data-lucide="check-circle" class="ms-2" style="width:16px;height:16px;"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <div class="text-center mt-5 pt-3 border-top">
+            <p class="text-sm text-muted">Already registered? <a href="login.html" class="text-primary fw-bold text-decoration-none">Sign in to your instance</a></p>
+        </div>
+    </div>
+
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (window.lucide) lucide.createIcons();
+
+        function nextStep(step) {
+            if (step === 2) {
+                // Simple validation for step 1
+                if (!document.getElementById('company_name').value || !document.getElementById('email').value) {
+                    showError("Please fill in company name and email.");
+                    return;
+                }
+            }
+            
+            document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active'));
+            
+            document.getElementById('step' + step).classList.add('active');
+            document.getElementById('dot' + step).classList.add('active');
+            hideError();
+        }
+
+        function showError(msg) {
+            const err = document.getElementById('errorMsg');
+            err.textContent = msg;
+            err.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+
+        document.getElementById('onboardingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm_password').value;
+            
+            if (password !== confirm) {
+                showError("Passwords do not match.");
+                return;
+            }
+
+            const payload = {
+                company_name: document.getElementById('company_name').value,
+                industry: document.getElementById('industry').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                admin_name: document.getElementById('admin_name').value,
+                username: document.getElementById('username').value,
+                password: password
+            };
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Submitting...';
+
+            try {
+                const response = await api.post('/auth/register-org', payload);
+                window.location.href = 'login.html?registered=1';
+            } catch (err) {
+                showError(err.message || "Registration failed. Please try again.");
+                btn.disabled = false;
+                btn.innerHTML = 'Complete Registration <i data-lucide="check-circle" class="ms-2" style="width:16px;height:16px;"></i>';
+            }
+        });
+    </script>
+</body>
+</html>

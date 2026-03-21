@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Repository | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .hover-bg:hover { background: rgba(0,0,0,0.02) !important; }
+        .leader-radio:checked + span { color: var(--ds-primary); font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content">
+                <div class="content-header fade-in">
+                    <div>
+                        <h1 class="page-heading">Project Repository</h1>
+                        <p class="page-description">Oversee all continuous improvement initiatives across the organization. Track progress, stages, and health metrics.</p>
+                    </div>
+                    <div class="content-header-actions">
+                        <button class="ds-btn ds-btn-primary" id="newProjectBtn" style="display: none;" onclick="projectsUI.showCreateModal()">
+                            <i data-lucide="plus"></i> New Project
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters & Stats Summary -->
+                <div class="ds-card mb-4 fade-in">
+                    <div class="ds-card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <div class="d-flex gap-2">
+                                <span class="ds-badge gray" id="totalCount">0 Projects</span>
+                                <span class="ds-badge green" id="completedCount">0 Completed</span>
+                                <span class="ds-badge blue" id="activeCount">0 Active</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <select class="ds-input ds-select" style="width:180px;" id="deptFilter">
+                                    <option value="">All Departments</option>
+                                </select>
+                                <select class="ds-input ds-select" style="width:150px;" id="statusFilter">
+                                    <option value="">All Status</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Closed">Closed</option>
+                                    <option value="On Hold">On Hold</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Table -->
+                <div class="ds-card fade-in">
+                    <div class="ds-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="ds-table">
+                                <thead>
+                                    <tr>
+                                        <th>Project Details</th>
+                                        <th>Current Stage</th>
+                                        <th>Efficiency</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="projectsTableBody">
+                                    <script>
+                                        document.write(QCMS.tableSkeleton(5, 5));
+                                    </script>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Project Modal -->
+    <div class="modal fade" id="createProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <i data-lucide="plus-circle" class="text-primary"></i>
+                        Initialize New Project
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                        <input type="text" class="ds-input" id="newProjectTitle" placeholder="e.g., Reduction of Rejection in Line A">
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="tag"></i> Category</label>
+                        <select class="ds-input ds-select" id="newProjectCategory">
+                            <option value="Safety">Safety</option>
+                            <option value="Quality">Quality</option>
+                            <option value="Cost">Cost</option>
+                            <option value="Productivity">Productivity</option>
+                        </select>
+                    </div>
+                    <div id="adminFields" style="display:none;">
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="building"></i> Target Department</label>
+                            <select class="ds-input ds-select" id="newProjectDept" onchange="projectsUI.loadTeamPool(this.value)">
+                                <option value="">Select Department</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="tlFields" style="display:none;">
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="building"></i> Department</label>
+                            <div class="ds-input bg-light border-0" id="tlDeptDisplay" style="padding: 10px 14px; font-weight: 500;">-</div>
+                        </div>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="help-circle"></i> Problem Statement</label>
+                        <input type="text" class="ds-input" id="newProjectProblemStatement" placeholder="e.g. Higher rejection rate in Assembly Line 4">
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="file-text"></i> Detailed Description</label>
+                        <textarea class="ds-input ds-textarea" id="newProjectDesc" rows="2" placeholder="Describe the problem in detail..."></textarea>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="calendar"></i> Target Completion Date</label>
+                        <input type="date" class="ds-input" id="newProjectDeadline">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="map-pin"></i> Physical Location</label>
+                                <input type="text" class="ds-input" id="newProjectLocation" placeholder="Factory Floor / Zone A">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="activity"></i> Frequency</label>
+                                <select class="ds-input ds-select" id="newProjectFrequency">
+                                    <option value="Daily">Daily</option>
+                                    <option value="Weekly">Weekly</option>
+                                    <option value="Occasional">Occasional</option>
+                                    <option value="Rare">Rare</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="upload-cloud"></i> Evidence Upload</label>
+                        <div class="upload-zone" id="evidenceUploadZone" onclick="document.getElementById('evidenceFile').click()">
+                            <i data-lucide="upload" style="width:24px;height:24px;margin-bottom:8px;opacity:0.5;"></i>
+                            <div class="text-xs fw-medium">Click to upload evidence</div>
+                            <div class="text-xs text-muted" id="uploadStatus">JPG, PNG, PDF (Max 16MB)</div>
+                        </div>
+                        <input type="file" id="evidenceFile" style="display:none" onchange="projectsUI.handleFileUpload(this.files[0])">
+                        <input type="hidden" id="newProjectEvidence">
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="trending-up"></i> Initial Impact</label>
+                        <textarea class="ds-input ds-textarea" id="newProjectImpact" rows="2" placeholder="Expected business impact..."></textarea>
+                    </div>
+                    <div class="ds-field mb-0">
+                        <label class="ds-label d-flex justify-content-between align-items-center">
+                            <span><i data-lucide="users"></i> Project Team Selection</span>
+                            <span class="text-xs text-muted fw-normal">Select 1 Leader & multiple Members</span>
+                        </label>
+                        <div class="border rounded-3 p-0 overflow-hidden" style="border: 1.5px solid var(--border-light) !important;">
+                            <div class="d-flex align-items-center px-3 py-2 bg-light border-bottom text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase;">
+                                <div style="width: 60px;">Leader</div>
+                                <div style="width: 60px;">Member</div>
+                                <div class="flex-1">User Name / Department</div>
+                            </div>
+                            <div id="teamPool" style="max-height: 250px; overflow-y: auto; background: white;">
+                                <div class="p-4 text-center text-muted text-xs">
+                                    <i data-lucide="info" class="mb-2 opacity-50" style="width:16px;"></i><br>
+                                    Select a department to see eligible members
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="saveProjectBtn">Create Project</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div class="modal fade" id="editProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <i data-lucide="edit-3" class="text-primary"></i>
+                        Update Project Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editProjectId">
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                        <input type="text" class="ds-input" id="editProjectTitle">
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="tag"></i> Category</label>
+                        <select class="ds-input ds-select" id="editProjectCategory">
+                            <option value="Safety">Safety</option>
+                            <option value="Quality">Quality</option>
+                            <option value="Cost">Cost</option>
+                            <option value="Productivity">Productivity</option>
+                        </select>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="file-text"></i> Problem Summary</label>
+                        <textarea class="ds-input ds-textarea" id="editProjectDesc" rows="3"></textarea>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="calendar"></i> Target Completion</label>
+                        <input type="date" class="ds-input" id="editProjectDeadline">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="updateProjectBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="deleteProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body p-4 text-center">
+                    <div class="ds-icon-circle bg-red-soft text-red mx-auto mb-3" style="width:48px;height:48px;">
+                        <i data-lucide="alert-triangle"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Delete Project?</h5>
+                    <p class="text-muted text-sm mb-4">This action <b>cannot be undone</b>. All project workflow data will be permanently removed.</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-ghost flex-1" data-bs-dismiss="modal">Keep It</button>
+                        <button type="button" class="ds-btn ds-btn-danger flex-1" id="confirmDeleteBtn">Delete Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+    const projectsUI = {
+        projects: [],
+        modal: null,
+
+        async init() {
+            QCMS.init();
+
+            
+            const userStr = localStorage.getItem('user');
+            const user = JSON.parse(userStr || '{}');
+            const role = (user.role || '').trim().toLowerCase();
+            this.isAdmin = role === 'admin';
+            this.isTL = role === 'team leader';
+            this.userDept = user.department || 'N/A';
+            
+            console.log('[QCMS] Current user role:', role, 'IsAdmin:', this.isAdmin, 'IsTL:', this.isTL);
+            
+            const addBtn = document.getElementById('newProjectBtn');
+            if (addBtn) {
+                addBtn.style.display = (this.isAdmin || this.isTL) ? 'inline-flex' : 'none';
+            }
+            
+            this.modal = new bootstrap.Modal(document.getElementById('createProjectModal'));
+            this.editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
+            this.deleteModal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
+            
+            await this.loadProjects();
+            this.loadDepartments();
+            
+            if (this.isAdmin) {
+                document.getElementById('adminFields').style.display = 'block';
+                document.getElementById('tlFields').style.display = 'none';
+                // Team pool will be loaded on department change
+            } else if (this.isTL) {
+                document.getElementById('adminFields').style.display = 'none';
+                document.getElementById('tlFields').style.display = 'block';
+                const deptDisplay = document.getElementById('tlDeptDisplay');
+                if (deptDisplay) deptDisplay.textContent = this.userDept;
+                // For TLs, we load team pool immediately for their department
+                this.loadTeamPool();
+            }
+            
+            document.getElementById('saveProjectBtn').onclick = () => this.handleCreate();
+            document.getElementById('deptFilter').onchange = () => this.renderTable();
+            document.getElementById('statusFilter').onchange = () => this.renderTable();
+        },
+
+        async loadDepartments() {
+            try {
+                const depts = await api.get('/admin/departments');
+                const select = document.getElementById('deptFilter');
+                select.innerHTML = '<option value="">All Departments</option>';
+                const createSelect = document.getElementById('newProjectDept');
+                createSelect.innerHTML = '<option value="">Select Department</option>';
+                
+                depts.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.name;
+                    opt.textContent = d.name;
+                    select.appendChild(opt);
+
+                    const createOpt = document.createElement('option');
+                    createOpt.value = d.id;
+                    createOpt.textContent = d.name;
+                    createSelect.appendChild(createOpt);
+                });
+            } catch (e) { console.error('Failed to load departments'); }
+        },
+
+        autoSelectMember(userId) {
+            const cb = document.querySelector(`.member-cb[value="${userId}"]`);
+            if (cb) cb.checked = true;
+        },
+
+        async handleFileUpload(file) {
+            if (!file) return;
+
+            const statusEl = document.getElementById('uploadStatus');
+            const zoneEl = document.getElementById('evidenceUploadZone');
+            const endpoint = this.isAdmin ? '/admin/upload-evidence' : '/team-leader/upload-evidence';
+
+            try {
+                statusEl.innerText = `Uploading ${file.name}...`;
+                zoneEl.style.opacity = '0.7';
+                zoneEl.style.pointerEvents = 'none';
+
+                const res = await api.uploadFile(endpoint, file);
+
+                document.getElementById('newProjectEvidence').value = res.url;
+                statusEl.innerHTML = `<span class="text-success"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> ${file.name} uploaded</span>`;
+                if (window.lucide) lucide.createIcons();
+                QCMS.toast('File uploaded successfully', 'success');
+            } catch (e) {
+                statusEl.innerText = 'Upload failed. Try again.';
+                QCMS.toast(e.message || 'Upload failed', 'danger');
+            } finally {
+                zoneEl.style.opacity = '1';
+                zoneEl.style.pointerEvents = 'auto';
+            }
+        },
+
+        async loadTeamPool(deptId) {
+            if (!deptId) {
+                document.getElementById('teamPool').innerHTML = '<div class="p-4 text-center text-muted text-xs">Select a department to see eligible members</div>';
+                return;
+            }
+            try {
+                document.getElementById('teamPool').innerHTML = '<div class="p-4 text-center"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+                
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const roleFilter = (user.role === 'Admin') ? 'Team Leader' : '';
+                const users = await api.getPotentialMembers(deptId, roleFilter);
+                const container = document.getElementById('teamPool');
+                
+                if (!users || users.length === 0) {
+                    container.innerHTML = '<div class="p-4 text-center text-muted text-xs">No eligible users found for this department.</div>';
+                    return;
+                }
+
+                container.innerHTML = users.map(u => `
+                    <div class="d-flex align-items-center px-3 py-2 border-bottom hover-bg transition-all">
+                        <div style="width: 60px;" class="d-flex justify-content-center">
+                            <input type="radio" name="projectLeader" value="${u.id}" class="leader-radio form-check-input" onchange="projectsUI.autoSelectMember(${u.id})">
+                        </div>
+                        <div style="width: 60px;" class="d-flex justify-content-center">
+                            <input type="checkbox" value="${u.id}" class="member-cb form-check-input">
+                        </div>
+                        <div class="flex-1 ms-2">
+                            <div class="text-xs fw-bold text-dark">${u.full_name || u.username}</div>
+                            <div class="text-muted" style="font-size:10px;">${u.role} · ${u.username}</div>
+                        </div>
+                    </div>
+                `).join('');
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                console.error('Team pool load failed', e);
+                QCMS.toast('Failed to load eligible users', 'danger');
+            }
+        },
+
+        async loadProjects() {
+            try {
+                this.projects = await api.get('/projects');
+                this.updateStats();
+                this.renderTable();
+            } catch (e) {
+                document.getElementById('projectsTableBody').innerHTML = 
+                    `<tr><td colspan="5">${QCMS.emptyState('alert-circle', 'Load Failed', 'Could not retrieve projects from the server.')}</td></tr>`;
+                if (window.lucide) lucide.createIcons();
+            }
+        },
+
+        updateStats() {
+            const total = this.projects.length;
+            const completed = this.projects.filter(p => p.status === 'Closed').length;
+            const active = total - completed;
+
+            document.getElementById('totalCount').textContent = `${total} Projects`;
+            document.getElementById('completedCount').textContent = `${completed} Completed`;
+            document.getElementById('activeCount').textContent = `${active} Active`;
+        },
+
+        renderTable() {
+            const dept = document.getElementById('deptFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const body = document.getElementById('projectsTableBody');
+
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const currentUserRole = (user.role || '').toLowerCase();
+            const isAdmin = currentUserRole === 'admin';
+            const isTL = currentUserRole === 'team leader';
+
+            let filtered = this.projects.filter(p => {
+                if (dept && p.department !== dept) return false;
+                if (status && p.status !== status) return false;
+                return true;
+            });
+
+            if (!filtered.length) {
+                const canCreate = ['admin', 'team leader'].includes(currentUserRole);
+                const msg = canCreate ? 'Try adjusting your filters or create a new project.' : 'Try adjusting your filters.';
+                body.innerHTML = `<tr><td colspan="5">${QCMS.emptyState('folder-open', 'No Match Found', msg)}</td></tr>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            body.innerHTML = filtered.map(p => {
+                // Anyone who is Admin, TL of same dept, or Creator can edit/delete
+                const canEdit = isAdmin || (isTL && p.department === user.department) || (p.creator === user.username);
+                
+                return `
+                <tr class="fade-in">
+                    <td>
+                        <div class="fw-semibold text-primary text-truncate" style="max-width:250px;" title="${p.title}">${p.title}</div>
+                        <div class="text-xs text-muted">ID: ${p.project_uid || 'N/A'} · ${p.department || 'General'}</div>
+                    </td>
+                    <td style="width:200px;">
+                        ${QCMS.projectProgress(p.current_stage || 1, 8)}
+                    </td>
+                    <td>
+                        <div class="text-sm fw-medium">${p.category || 'Quality'}</div>
+                        <div class="text-xs text-muted">Field / Category</div>
+                    </td>
+                    <td>${QCMS.statusBadge(p.status)}</td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-outline">Open Workspace</a>
+                            ${canEdit ? `
+                                <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="projectsUI.showEditModal(${p.id})" title="Edit"><i data-lucide="edit-2"></i></button>
+                                <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon text-danger" onclick="projectsUI.confirmDelete(${p.id})" title="Delete"><i data-lucide="trash-2"></i></button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+            if (window.lucide) lucide.createIcons();
+        },
+
+        showCreateModal() {
+            this.modal.show();
+        },
+
+        async handleCreate() {
+            const btnId = 'saveProjectBtn';
+            const leaderRadio = document.querySelector('.leader-radio:checked');
+            
+            const payload = { 
+                title: document.getElementById('newProjectTitle').value.trim(),
+                category: document.getElementById('newProjectCategory').value,
+                deadline: document.getElementById('newProjectDeadline').value || null,
+                department_id: this.isAdmin ? document.getElementById('newProjectDept').value : null,
+                team_leader_id: leaderRadio ? leaderRadio.value : (this.isTL ? JSON.parse(localStorage.getItem('user')).id : null),
+                problem_statement: document.getElementById('newProjectProblemStatement').value.trim(),
+                description: document.getElementById('newProjectDesc').value.trim(),
+                location: document.getElementById('newProjectLocation').value.trim(),
+                frequency: document.getElementById('newProjectFrequency').value,
+                evidence: document.getElementById('newProjectEvidence').value.trim(),
+                impact: document.getElementById('newProjectImpact').value.trim(),
+                member_ids: Array.from(document.querySelectorAll('.member-cb:checked')).map(cb => cb.value)
+            };
+
+            if (!payload.title) return QCMS.toast('Project title is required', 'warning');
+            if (!payload.team_leader_id) return QCMS.toast('Team Leader selection is mandatory', 'warning');
+            if (this.isAdmin && !payload.department_id) return QCMS.toast('Department selection is required', 'warning');
+
+            try {
+                QCMS.setLoading(btnId, true);
+                await api.post('/projects', payload);
+                QCMS.toast('Project initialized successfully', 'success');
+                this.modal.hide();
+                
+                // Reset UI
+                document.getElementById('newProjectTitle').value = '';
+                document.getElementById('newProjectProblemStatement').value = '';
+                document.getElementById('newProjectDesc').value = '';
+                document.getElementById('newProjectLocation').value = '';
+                document.getElementById('newProjectEvidence').value = '';
+                document.getElementById('newProjectImpact').value = '';
+                document.getElementById('newProjectDeadline').value = '';
+                document.getElementById('uploadStatus').innerText = 'JPG, PNG, PDF (Max 16MB)';
+                
+                document.getElementById('teamPool').innerHTML = '<div class="p-4 text-center text-muted text-xs">Select a department to see eligible members</div>';
+                await this.loadProjects();
+            } catch (e) {
+                QCMS.toast(e.message || 'Initialization failed', 'danger');
+            } finally {
+                QCMS.setLoading(btnId, false);
+            }
+        },
+
+        showEditModal(id) {
+            const p = this.projects.find(x => x.id === id);
+            if (!p) return;
+
+            document.getElementById('editProjectId').value = p.id;
+            document.getElementById('editProjectTitle').value = p.title;
+            document.getElementById('editProjectCategory').value = p.category || 'Quality';
+            document.getElementById('editProjectDesc').value = p.description || '';
+            // Handle date
+            if (p.deadline) {
+                document.getElementById('editProjectDeadline').value = p.deadline.split('T')[0];
+            }
+
+            this.editModal.show();
+            document.getElementById('updateProjectBtn').onclick = () => this.handleUpdate();
+        },
+
+        async handleUpdate() {
+            const id = document.getElementById('editProjectId').value;
+            const payload = {
+                title: document.getElementById('editProjectTitle').value,
+                category: document.getElementById('editProjectCategory').value,
+                description: document.getElementById('editProjectDesc').value,
+                deadline: document.getElementById('editProjectDeadline').value || null
+            };
+
+            try {
+                QCMS.setLoading('updateProjectBtn', true);
+                await api.patch(`/projects/${id}`, payload);
+                QCMS.toast('Project updated successfully', 'success');
+                this.editModal.hide();
+                await this.loadProjects();
+            } catch (e) {
+                QCMS.toast(e.message || 'Update failed', 'danger');
+            } finally {
+                QCMS.setLoading('updateProjectBtn', false);
+            }
+        },
+
+        confirmDelete(id) {
+            this.deleteTargetId = id;
+            this.deleteModal.show();
+            document.getElementById('confirmDeleteBtn').onclick = () => this.handleDelete();
+        },
+
+        async handleDelete() {
+            try {
+                QCMS.setLoading('confirmDeleteBtn', true);
+                await api.delete(`/projects/${this.deleteTargetId}`);
+                QCMS.toast('Project and associated data removed.', 'success');
+                this.deleteModal.hide();
+                await this.loadProjects();
+            } catch (e) {
+                QCMS.toast(e.message || 'Deletion failed', 'danger');
+            } finally {
+                QCMS.setLoading('confirmDeleteBtn', false);
+            }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => projectsUI.init());
+    </script>
+</body>
+</html>

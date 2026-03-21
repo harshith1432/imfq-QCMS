@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background: var(--bg-body);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-wrapper {
+            display: flex;
+            max-width: 920px;
+            width: 100%;
+            min-height: 540px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            margin: var(--space-4);
+        }
+
+        .login-branding {
+            flex: 1;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-700) 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: var(--space-8);
+        }
+
+        .login-branding h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: var(--space-4);
+            letter-spacing: -0.5px;
+        }
+
+        .login-branding p {
+            opacity: 0.85;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .login-branding .features {
+            margin-top: var(--space-6);
+        }
+
+        .login-branding .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: var(--space-3);
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .login-branding .feature-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .login-form-section {
+            flex: 1;
+            padding: var(--space-8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-form-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: var(--space-1);
+        }
+
+        .login-form-section .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: var(--space-6);
+        }
+
+        .input-group-icon {
+            position: relative;
+        }
+
+        .input-group-icon .icon-left {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+
+        .input-group-icon input {
+            padding-left: 42px;
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: var(--space-5);
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .login-footer a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        @media (max-width: 768px) {
+            .login-branding {
+                display: none;
+            }
+
+            .login-wrapper {
+                max-width: 440px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-wrapper">
+        <!-- Left: Branding -->
+        <div class="login-branding">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-6);">
+                <div
+                    style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;">
+                    <i data-lucide="shield-check" style="width:22px;height:22px;"></i>
+                </div>
+                <span style="font-weight:800;font-size:1.2rem;">QCMS</span>
+            </div>
+            <h1>Quality Management System</h1>
+            <p>Enterprise-grade solution for managing quality improvement projects across your organization with
+                structured 8-stage workflows.</p>
+            <div class="features">
+                <div class="feature-item">
+                    <div class="feature-icon"><i data-lucide="git-branch" style="width:16px;height:16px;"></i></div>
+                    8-Stage Workflow Engine
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i data-lucide="bar-chart-3" style="width:16px;height:16px;"></i></div>
+                    Real-time KPI Analytics
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i data-lucide="users" style="width:16px;height:16px;"></i></div>
+                    Role-based Collaboration
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i data-lucide="book-open" style="width:16px;height:16px;"></i></div>
+                    Knowledge Repository
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Form -->
+        <div class="login-form-section">
+            <h2>Welcome back</h2>
+            <p class="subtitle">Sign in to your QCMS account</p>
+
+            <div id="errorMsg"
+                style="display:none;padding:10px 14px;background:var(--error-50);border:1px solid var(--error-200);border-radius:var(--radius-md);color:var(--error);font-size:0.8125rem;margin-bottom:var(--space-4);">
+            </div>
+
+            <form id="loginForm" autocomplete="on">
+                <div class="ds-field">
+                    <label class="ds-label">Email ID</label>
+                    <div class="input-group-icon">
+                        <i data-lucide="user" class="icon-left" style="width:16px;height:16px;"></i>
+                        <input type="text" class="ds-input" id="username" placeholder="Enter your Email ID" required
+                            autocomplete="username">
+                    </div>
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label">Password</label>
+                    <div class="input-group-icon">
+                        <i data-lucide="lock" class="icon-left" style="width:16px;height:16px;"></i>
+                        <input type="password" class="ds-input" id="password" placeholder="Enter your password" required
+                            autocomplete="current-password">
+                    </div>
+                </div>
+                <div
+                    style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4);">
+                    <label
+                        style="display:flex;align-items:center;gap:6px;font-size:0.8125rem;color:var(--text-secondary);cursor:pointer;">
+                        <input type="checkbox" id="rememberMe"> Remember me
+                    </label>
+                    <a href="forgot-password.html"
+                        style="font-size:0.8125rem;color:var(--primary);text-decoration:none;font-weight:500;">Forgot
+                        password?</a>
+                </div>
+                <button type="submit" class="ds-btn ds-btn-primary" style="width:100%;padding:12px;font-size:0.9375rem;"
+                    id="loginBtn">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="login-footer">
+                Don't have an account? <a href="register.html">Sign up</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        if (window.lucide) lucide.createIcons();
+    </script>
+</body>
+
+</html>

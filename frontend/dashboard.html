@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting...</title>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        const userJson = localStorage.getItem('user');
+        if (userJson) {
+            const user = JSON.parse(userJson);
+            const role = user.role;
+            if (role === 'Admin') window.location.href = 'dashboard-admin.html';
+            else if (role === 'Reviewer') window.location.href = 'dashboard-reviewer.html';
+            else if (role === 'Facilitator') window.location.href = 'dashboard-facilitator.html';
+            else if (role === 'Team Leader') window.location.href = 'dashboard-team-leader.html';
+            else window.location.href = 'dashboard-team-member.html';
+        } else {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body>
+    <p>Please wait, redirecting to your dashboard...</p>
+</body>
+</html>

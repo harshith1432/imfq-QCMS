@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facilitator Dashboard | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .tool-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; margin:2px; }
+        .tool-done { background:#dcfce7; color:#166534; }
+        .tool-missing { background:#fef9c3; color:#854d0e; }
+        .gate-locked { background:#fee2e2; color:#991b1b; border-radius:8px; padding:8px 12px; font-size:12px; margin-top:8px; }
+        .gate-unlocked { background:#dcfce7; color:#166534; border-radius:8px; padding:8px 12px; font-size:12px; margin-top:8px; }
+        .impact-stat { text-align:center; padding:12px; border-radius:8px; background:#f8fafc; }
+        .impact-stat .val { font-size:1.5rem; font-weight:700; }
+        .impact-stat .lbl { font-size:11px; color:#6b7280; margin-top:2px; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+        <main class="app-main">
+            <header class="app-navbar" id="app-navbar"></header>
+            <div class="app-content">
+
+                <!-- Page Header -->
+                <div class="content-header fade-in">
+                    <div>
+                        <h1 class="page-heading">Methodology Oversight</h1>
+                        <p class="page-description">Guide teams through the 8-stage methodology. Validate RCA, approve impact results, and drive closure.</p>
+                    </div>
+                </div>
+
+                <!-- ─── KPI Widget Cards ─────────────────────────────── -->
+                <div class="kpi-grid fade-in" id="kpiGrid">
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                </div>
+
+                <!-- ─── TABS ─────────────────────────────────────────── -->
+                <div class="fade-in mt-4">
+                    <ul class="nav nav-tabs mb-4" id="facTabs">
+                        <li class="nav-item">
+                            <button class="nav-link active" data-tab="rca">
+                                <i data-lucide="search" style="width:14px;height:14px;margin-right:6px;"></i>RCA Workspace
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-tab="impact">
+                                <i data-lucide="bar-chart-3" style="width:14px;height:14px;margin-right:6px;"></i>Impact Review
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-tab="closure">
+                                <i data-lucide="archive" style="width:14px;height:14px;margin-right:6px;"></i>Closure
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-tab="pipeline">
+                                <i data-lucide="git-branch" style="width:14px;height:14px;margin-right:6px;"></i>Pipeline
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- ─── RCA Workspace Tab ──────────────────────────── -->
+                    <div id="tab-rca" class="tab-content-panel">
+                        <div class="ds-card">
+                            <div class="ds-card-header">
+                                <h5 class="card-title">🔬 RCA Coaching Queue — Stage 3</h5>
+                                <span class="ds-badge orange" id="rcaCount">Loading...</span>
+                            </div>
+                            <div class="ds-card-body p-0" id="rcaBody">
+                                <div class="p-4 text-center text-muted">Loading projects...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Impact Review Tab ─────────────────────────── -->
+                    <div id="tab-impact" class="tab-content-panel d-none">
+                        <div class="ds-card">
+                            <div class="ds-card-header">
+                                <h5 class="card-title">📊 Impact Verification — Stage 7</h5>
+                                <span class="ds-badge blue" id="impactCount">Loading...</span>
+                            </div>
+                            <div class="ds-card-body p-0" id="impactBody">
+                                <div class="p-4 text-center text-muted">Loading projects...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Closure Tab ───────────────────────────────── -->
+                    <div id="tab-closure" class="tab-content-panel d-none">
+                        <div class="ds-card">
+                            <div class="ds-card-header">
+                                <h5 class="card-title">📁 Standardization & Closure — Stage 8</h5>
+                                <span class="ds-badge green" id="closureCount">Loading...</span>
+                            </div>
+                            <div class="ds-card-body p-0" id="closureBody">
+                                <div class="p-4 text-center text-muted">Loading projects...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Pipeline Tab ──────────────────────────────── -->
+                    <div id="tab-pipeline" class="tab-content-panel d-none">
+                        <div class="ds-card">
+                            <div class="ds-card-header">
+                                <h5 class="card-title">🗺️ Project Pipeline — All Stages</h5>
+                                <span class="ds-badge" id="pipelineCount">Loading...</span>
+                            </div>
+                            <div class="ds-card-body p-0">
+                                <div style="max-height:600px; overflow-y:auto;">
+                                    <table class="ds-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Project</th>
+                                                <th>Department</th>
+                                                <th>Stage</th>
+                                                <th>Status</th>
+                                                <th class="text-end">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="pipelineBody">
+                                            <tr><td colspan="5" class="p-4 text-center text-muted">Loading pipeline...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ─── Add Note Modal ───────────────────────────────────────── -->
+    <div class="modal fade" id="noteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Add Facilitator Note</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="noteProjectId">
+                    <input type="hidden" id="noteStageNumber">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Note / Observation</label>
+                        <textarea class="form-control" id="noteText" rows="4" placeholder="Add your observation, guidance, or requirement for this stage..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitNote()">Add Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── RCA Validate Modal ───────────────────────────────────── -->
+    <div class="modal fade" id="validateRcaModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">✅ RCA Validation Note</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="ds-alert info mb-3">
+                        <div class="d-flex gap-2">
+                            <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
+                            <div class="text-sm">By adding this validation note, you confirm the Root Cause Analysis is complete and the project is eligible to advance to Stage 4 (Solution Design).</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="validateProjectId">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">RCA Validation Statement <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="validateNote" rows="4" placeholder="e.g. Root cause analysis complete. Fishbone, Pareto, and 5-Why all validated. Proceed to solution design."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitValidation()">Validate RCA & Unlock Stage 4</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Impact Approval Modal ────────────────────────────────── -->
+    <div class="modal fade" id="approveImpactModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">🎯 Approve Impact Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="ds-alert info mb-3">
+                        <div class="d-flex gap-2">
+                            <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
+                            <div class="text-sm">Approving will move this project to <strong>Stage 8: Standardization</strong>. This action cannot be undone.</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="approveImpactProjectId">
+                    <div id="approveImpactSummary" class="mb-3"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Baseline Value</label>
+                        <input class="form-control" type="number" id="baselineValue" placeholder="e.g. 120">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Final / Post Value</label>
+                        <input class="form-control" type="number" id="finalValue" placeholder="e.g. 85">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">KPI Label (e.g. Defect Rate)</label>
+                        <input class="form-control" type="text" id="kpiLabel" placeholder="Defect Rate">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitImpactApproval()">Approve Results → Stage 8</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Closure Sign-off Modal ───────────────────────────────── -->
+    <div class="modal fade" id="closureModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">📋 Closure Sign-Off</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="closureProjectId">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Lessons Learned <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="closureLessons" rows="3" placeholder="What did the team learn?"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Preventive Actions</label>
+                        <textarea class="form-control" id="closurePreventive" rows="2" placeholder="Actions to prevent recurrence..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitClosure()">Sign Off & Notify Admin</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+    const facDash = {
+        noteModal: null,
+        validateModal: null,
+        approveModal: null,
+        closureModal: null,
+
+        async init() {
+            QCMS.init();
+            this.noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
+            this.validateModal = new bootstrap.Modal(document.getElementById('validateRcaModal'));
+            this.approveModal = new bootstrap.Modal(document.getElementById('approveImpactModal'));
+            this.closureModal = new bootstrap.Modal(document.getElementById('closureModal'));
+
+            // Tab switching
+            document.querySelectorAll('[data-tab]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.add('d-none'));
+                    document.getElementById('tab-' + btn.dataset.tab).classList.remove('d-none');
+                });
+            });
+
+            this.loadStats();
+            this.loadRCA();
+            this.loadImpact();
+            this.loadClosure();
+            this.loadPipeline();
+        },
+
+        // ─── Stats ───────────────────────────────────────────────
+        async loadStats() {
+            try {
+                const s = await api.get('/facilitator/stats');
+                document.getElementById('kpiGrid').innerHTML =
+                    QCMS.kpiCard('Needs Guidance (Stage 3)', s.pending_rca || 0, 'search', 'orange') +
+                    QCMS.kpiCard('Pending Impact Review', s.pending_impact || 0, 'bar-chart-3', 'blue') +
+                    QCMS.kpiCard('Stalled Projects', s.stalled_projects || 0, 'alert-triangle', 'red') +
+                    QCMS.kpiCard('Avg KPI Improvement', s.avg_improvement || '0%', 'trending-up', 'green');
+                if (window.lucide) lucide.createIcons();
+            } catch (e) { console.error('Stats failed', e); }
+        },
+
+        // ─── RCA Workspace ───────────────────────────────────────
+        async loadRCA() {
+            try {
+                const projects = await api.get('/facilitator/rca-workspace');
+                document.getElementById('rcaCount').textContent = `${projects.length} Active`;
+                const body = document.getElementById('rcaBody');
+                if (!projects.length) {
+                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('check-circle', 'All Clear', 'No projects currently need RCA facilitation.')}</div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                body.innerHTML = `<div class="p-3 d-flex flex-column gap-3">
+                    ${projects.map(p => `
+                    <div class="border rounded p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="fw-semibold text-primary">${p.title}</div>
+                                <div class="text-xs text-muted">${p.dept}</div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="facDash.openNoteModal(${p.id}, 3)">
+                                    <i data-lucide="message-square" style="width:13px;height:13px;"></i> Note
+                                </button>
+                                ${p.has_validation_note ? 
+                                    `<span class="ds-badge green">RCA Validated ✓</span>` :
+                                    `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openValidateModal(${p.id})">Validate RCA</button>`
+                                }
+                                <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Open</a>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            ${Object.entries(p.qc_tools || {}).map(([k,v]) =>
+                                `<span class="tool-badge ${v ? 'tool-done' : 'tool-missing'}">${k.replace('_',' ')}</span>`
+                            ).join('')}
+                        </div>
+                        <div class="${p.has_validation_note ? 'gate-unlocked' : 'gate-locked'}">
+                            ${p.has_validation_note
+                                ? `✅ Validation Note: "${p.rca_validation_note}"`
+                                : `🔒 Stage 3→4 Blocked: Facilitator RCA Validation Note required`}
+                        </div>
+                    </div>`).join('')}
+                </div>`;
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                document.getElementById('rcaBody').innerHTML = `<div class="p-4 text-danger">Error loading RCA projects.</div>`;
+            }
+        },
+
+        // ─── Impact Review ───────────────────────────────────────
+        async loadImpact() {
+            try {
+                const projects = await api.get('/facilitator/impact-review');
+                document.getElementById('impactCount').textContent = `${projects.length} Pending`;
+                const body = document.getElementById('impactBody');
+                if (!projects.length) {
+                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('check-circle', 'All Verified', 'No projects in Stage 7 impact measurement.')}</div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                body.innerHTML = `<div class="p-3 d-flex flex-column gap-3">
+                    ${projects.map(p => {
+                        const pct = p.kpi_improvement_pct;
+                        const pctColor = pct > 0 ? '#16a34a' : pct < 0 ? '#dc2626' : '#6b7280';
+                        return `<div class="border rounded p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <div class="fw-semibold text-primary">${p.title}</div>
+                                    <span class="ds-badge ${p.approved ? 'green' : 'orange'}">${p.status || 'Pending'}</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="facDash.openNoteModal(${p.id}, 7)">
+                                        <i data-lucide="message-square" style="width:13px;height:13px;"></i> Note
+                                    </button>
+                                    ${!p.approved ? `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openApproveModal(${p.id})">Approve Results</button>` : `<span class="ds-badge green">✓ Approved</span>`}
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-4"><div class="impact-stat"><div class="val text-muted">${p.baseline?.value ?? '—'}</div><div class="lbl">Baseline</div></div></div>
+                                <div class="col-4"><div class="impact-stat"><div class="val" style="color:${pctColor}">${pct != null ? (pct > 0 ? '+' : '') + pct + '%' : '—'}</div><div class="lbl">KPI Change</div></div></div>
+                                <div class="col-4"><div class="impact-stat"><div class="val text-success">${p.final?.value ?? '—'}</div><div class="lbl">Final</div></div></div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                document.getElementById('impactBody').innerHTML = `<div class="p-4 text-danger">Error loading impact projects.</div>`;
+            }
+        },
+
+        // ─── Closure ─────────────────────────────────────────────
+        async loadClosure() {
+            try {
+                const projects = await api.get('/facilitator/closure-projects');
+                document.getElementById('closureCount').textContent = `${projects.length} Active`;
+                const body = document.getElementById('closureBody');
+                if (!projects.length) {
+                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('archive', 'Queue Empty', 'No projects are currently in Stage 8.')}</div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                body.innerHTML = `<table class="ds-table"><thead><tr>
+                    <th>Project</th><th>SOP</th><th>Lessons</th><th>Training</th><th>Facilitator Sign-off</th><th class="text-end">Action</th>
+                </tr></thead><tbody>
+                    ${projects.map(p => `<tr>
+                        <td><div class="fw-semibold">${p.title}</div></td>
+                        <td><span class="ds-badge ${p.sop_status === 'Uploaded' ? 'green' : 'orange'}">${p.sop_status}</span></td>
+                        <td>${p.has_lessons ? '✅' : '—'}</td>
+                        <td>${p.has_training_records ? '✅' : '—'}</td>
+                        <td>${p.facilitator_signoff ? '<span class="ds-badge green">Signed Off</span>' : '<span class="ds-badge orange">Pending</span>'}</td>
+                        <td class="text-end">
+                            ${!p.facilitator_signoff ? `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openClosureModal(${p.id})">Sign Off</button>` : ''}
+                            <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ms-1">View</a>
+                        </td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+            } catch (e) {
+                document.getElementById('closureBody').innerHTML = `<div class="p-4 text-danger">Error loading closure projects.</div>`;
+            }
+        },
+
+        // ─── Pipeline ─────────────────────────────────────────────
+        async loadPipeline() {
+            try {
+                const projects = await api.get('/facilitator/projects');
+                document.getElementById('pipelineCount').textContent = `${projects.length} Projects`;
+                const body = document.getElementById('pipelineBody');
+                if (!projects.length) {
+                    body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">No active projects found.</td></tr>`;
+                    return;
+                }
+                const stageColors = { 1:'gray',2:'gray',3:'orange',4:'blue',5:'cyan',6:'blue',7:'purple',8:'green' };
+                body.innerHTML = projects.map(p => `<tr>
+                    <td><div class="fw-semibold">${p.title}</div><div class="text-xs text-muted">${p.uid}</div></td>
+                    <td><span class="text-sm">${p.dept}</span></td>
+                    <td><span class="ds-badge ${stageColors[p.stage] || 'gray'}">Stage ${p.stage}</span></td>
+                    <td><span class="text-sm text-muted">${p.status}</span></td>
+                    <td class="text-end"><a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Open</a></td>
+                </tr>`).join('');
+            } catch (e) {
+                document.getElementById('pipelineBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Error loading pipeline.</td></tr>`;
+            }
+        },
+
+        // ─── Modals ───────────────────────────────────────────────
+        openNoteModal(projectId, stage) {
+            document.getElementById('noteProjectId').value = projectId;
+            document.getElementById('noteStageNumber').value = stage;
+            document.getElementById('noteText').value = '';
+            this.noteModal.show();
+        },
+
+        async submitNote() {
+            const projectId = document.getElementById('noteProjectId').value;
+            const stage = document.getElementById('noteStageNumber').value;
+            const text = document.getElementById('noteText').value.trim();
+            if (!text) return QCMS.toast('Note text is required', 'warning');
+            try {
+                await api.post('/facilitator/notes', { project_id: parseInt(projectId), stage_number: parseInt(stage), note_text: text });
+                this.noteModal.hide();
+                QCMS.toast('Note added successfully', 'success');
+            } catch (e) { QCMS.toast('Failed to add note', 'error'); }
+        },
+
+        openValidateModal(projectId) {
+            document.getElementById('validateProjectId').value = projectId;
+            document.getElementById('validateNote').value = '';
+            this.validateModal.show();
+            if (window.lucide) lucide.createIcons();
+        },
+
+        async submitValidation() {
+            const projectId = document.getElementById('validateProjectId').value;
+            const note = document.getElementById('validateNote').value.trim();
+            if (!note) return QCMS.toast('Validation note is required', 'warning');
+            try {
+                await api.post(`/facilitator/rca/${projectId}/validate`, { validation_note: note });
+                this.validateModal.hide();
+                QCMS.toast('RCA Validated! Stage 4 is now unlocked.', 'success');
+                this.loadRCA();
+                this.loadStats();
+            } catch (e) { QCMS.toast(e.msg || 'Validation failed', 'error'); }
+        },
+
+        openApproveModal(projectId) {
+            document.getElementById('approveImpactProjectId').value = projectId;
+            document.getElementById('baselineValue').value = '';
+            document.getElementById('finalValue').value = '';
+            document.getElementById('kpiLabel').value = '';
+            this.approveModal.show();
+            if (window.lucide) lucide.createIcons();
+        },
+
+        async submitImpactApproval() {
+            const projectId = document.getElementById('approveImpactProjectId').value;
+            const baseline = parseFloat(document.getElementById('baselineValue').value);
+            const final = parseFloat(document.getElementById('finalValue').value);
+            const label = document.getElementById('kpiLabel').value.trim() || 'KPI';
+            if (isNaN(baseline) || isNaN(final)) return QCMS.toast('Please enter baseline and final values', 'warning');
+            try {
+                // Step 1: Submit post-data
+                await api.post(`/facilitator/impact/${projectId}/post-data`, {
+                    baseline_data: { value: baseline, label },
+                    final_data: { value: final, label }
+                });
+                // Step 2: Approve
+                await api.post(`/facilitator/impact/${projectId}/approve`, {});
+                this.approveModal.hide();
+                QCMS.toast('Impact approved! Project advanced to Stage 8.', 'success');
+                this.loadImpact();
+                this.loadClosure();
+                this.loadStats();
+            } catch (e) { QCMS.toast(e.msg || 'Approval failed', 'error'); }
+        },
+
+        openClosureModal(projectId) {
+            document.getElementById('closureProjectId').value = projectId;
+            document.getElementById('closureLessons').value = '';
+            document.getElementById('closurePreventive').value = '';
+            this.closureModal.show();
+        },
+
+        async submitClosure() {
+            const projectId = document.getElementById('closureProjectId').value;
+            const lessons = document.getElementById('closureLessons').value.trim();
+            const preventive = document.getElementById('closurePreventive').value.trim();
+            if (!lessons) return QCMS.toast('Lessons learned is required', 'warning');
+            try {
+                await api.post(`/facilitator/closure/${projectId}/complete`, { lessons_learned: lessons, preventive_actions: preventive });
+                this.closureModal.hide();
+                QCMS.toast('Closure signed off! Admin has been notified.', 'success');
+                this.loadClosure();
+                this.loadStats();
+            } catch (e) { QCMS.toast(e.msg || 'Closure sign-off failed', 'error'); }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => facDash.init());
+    </script>
+</body>
+</html>

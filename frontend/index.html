@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QCMS Enterprise | Quality Management Reimagined</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --hero-bg: #f8fafc;
+        }
+        .lp-navbar {
+            padding: var(--space-4) 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .hero-section {
+            padding: 120px 0 80px;
+            background: radial-gradient(circle at 70% 30%, var(--primary-50) 0%, transparent 50%),
+                        radial-gradient(circle at 10% 80%, #f0f9ff 0%, transparent 40%);
+            overflow: hidden;
+        }
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -1.5px;
+            color: var(--text-primary);
+            margin-bottom: var(--space-6);
+        }
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: var(--space-8);
+            line-height: 1.6;
+        }
+        .feature-card {
+            padding: var(--space-8);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            transition: all 0.3s var(--ease-out);
+            height: 100%;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-200);
+        }
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--primary-50);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--space-5);
+        }
+        .cta-banner {
+            background: var(--primary-900);
+            color: white;
+            padding: 80px 0;
+            border-radius: var(--radius-2xl);
+            margin: 80px 0;
+            text-align: center;
+        }
+        @media (max-width: 991px) {
+            .hero-title { font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="lp-navbar">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <div class="icon-box mb-0" style="width:36px; height:36px; border-radius:8px; background:var(--primary);">
+                    <i data-lucide="shield-check" style="width:20px; height:20px; color:white;"></i>
+                </div>
+                <span class="fw-extrabold fs-4 text-primary tracking-tight">QCMS <span class="text-muted fw-normal">Enterprise</span></span>
+            </div>
+            <div class="d-flex gap-3 align-items-center">
+                <a href="login.html" class="ds-btn ds-btn-ghost ds-btn-sm text-primary fw-bold">Sign In</a>
+                <a href="register.html" class="ds-btn ds-btn-primary ds-btn-sm px-4">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 fade-in">
+                    <div class="ds-badge blue mb-4">Version 3.0 Now Live</div>
+                    <h1 class="hero-title">Precision Quality <br><span class="text-primary">Management</span> at Scale.</h1>
+                    <p class="hero-subtitle">Optimize your organizational efficiency with our structured 8-stage workflow engine. Built for enterprise excellence, designed for modern teams.</p>
+                    <div class="d-flex gap-3">
+                        <a href="register.html" class="ds-btn ds-btn-primary px-5 py-3 fs-5">Start Free Trial</a>
+                        <a href="#features" class="ds-btn ds-btn-outline px-4 py-3 fs-5">Watch Demo</a>
+                    </div>
+                    <div class="mt-5 d-flex align-items-center gap-4 opacity-60">
+                        <span class="text-xs fw-bold text-uppercase tracking-widest">Trusted By Leaders</span>
+                        <div class="d-flex gap-4">
+                            <i data-lucide="award" style="width:20px;"></i>
+                            <i data-lucide="globe" style="width:20px;"></i>
+                            <i data-lucide="zap" style="width:20px;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 d-none d-lg-block fade-in" style="animation-delay: 0.2s;">
+                    <div class="position-relative">
+                        <!-- Mockup Image / Illustration -->
+                        <div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 40px 80px rgba(0,0,0,0.1); border: 1px solid var(--border-subtle);">
+                             <div class="d-flex gap-2 mb-3">
+                                 <div style="width:12px; height:12px; border-radius:50%; background:#ff5f56;"></div>
+                                 <div style="width:12px; height:12px; border-radius:50%; background:#ffbd2e;"></div>
+                                 <div style="width:12px; height:12px; border-radius:50%; background:#27c93f;"></div>
+                             </div>
+                             <div style="height: 380px; background: #f8fafc; border-radius: 8px; display: flex; flex-direction: column;">
+                                 <div class="p-3 border-bottom d-flex gap-3">
+                                     <div style="width:120px; height:10px; background:#e2e8f0; border-radius:5px;"></div>
+                                     <div style="width:80px; height:10px; background:#e2e8f0; border-radius:5px;"></div>
+                                 </div>
+                                 <div class="p-3 d-flex flex-wrap gap-3">
+                                     <div style="width:30%; height:100px; background:white; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.02);"></div>
+                                     <div style="width:30%; height:100px; background:white; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.02);"></div>
+                                     <div style="width:30%; height:100px; background:white; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.02);"></div>
+                                     <div style="width:100%; height:180px; background:white; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.02);"></div>
+                                 </div>
+                             </div>
+                        </div>
+                        <!-- Floating Badge -->
+                        <div class="position-absolute" style="bottom: -20px; right: -20px; background: var(--success); color: white; padding: 15px 25px; border-radius: 15px; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);">
+                            <div class="d-flex align-items-center gap-2">
+                                <i data-lucide="trending-up" style="width:18px;"></i>
+                                <span class="fw-bold">+42% Efficiency</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="py-5" style="background: white;">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <h2 class="fw-extrabold fs-1 mb-3">Engineered for Quality</h2>
+                <p class="text-muted fs-5 mx-auto" style="max-width: 600px;">Every tool you need to maintain the highest standards across your industrial operations.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="icon-box"><i data-lucide="git-branch" size="24"></i></div>
+                        <h4 class="fw-bold">8-Stage Workflow</h4>
+                        <p class="text-muted">Structured project lifecycle from problem identification to standardization.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="icon-box"><i data-lucide="layers" size="24"></i></div>
+                        <h4 class="fw-bold">Role-Based Dashboards</h4>
+                        <p class="text-muted">Custom workspaces for Admins, Reviewers, Facilitators, and Team members.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="icon-box"><i data-lucide="database" size="24"></i></div>
+                        <h4 class="fw-bold">Knowledge Repo</h4>
+                        <p class="text-muted">Centralized repository for SOPs, lessons learned, and project history.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <div class="cta-banner">
+            <h2 class="fw-extrabold fs-1 mb-3">Ready to transform your quality culture?</h2>
+            <p class="opacity-80 fs-5 mb-5">Join hundreds of manufacturing leaders using QCMS Enterprise.</p>
+            <a href="register.html" class="ds-btn ds-btn-secondary px-5 py-3 fs-5" style="border-radius: 12px; background: white; color: var(--primary-900); font-weight:700;">Create Your Free Account</a>
+        </div>
+    </div>
+
+    <footer class="py-5 border-top">
+        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-4">
+            <div class="d-flex align-items-center gap-2">
+                <div style="width:32px; height:32px; border-radius:8px; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center;">
+                    <i data-lucide="shield-check" style="width:18px; height:18px;"></i>
+                </div>
+                <span class="fw-bold text-primary">QCMS Enterprise</span>
+            </div>
+            <div class="d-flex gap-4 text-muted fs-7">
+                <a href="#" class="text-reset text-decoration-none">Privacy Policy</a>
+                <a href="#" class="text-reset text-decoration-none">Terms of Service</a>
+                <a href="#" class="text-reset text-decoration-none">Contact Sales</a>
+            </div>
+            <p class="text-muted fs-7 mb-0">&copy; 2026 QCMS Precision Core. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

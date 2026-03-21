@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .hover-bg:hover {
+            background: rgba(0, 0, 0, 0.02) !important;
+        }
+
+        .leader-radio:checked+span {
+            color: var(--ds-primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar will be injected by components.js -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <!-- Navbar will be injected by components.js -->
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content">
+                <div class="content-header fade-in">
+                    <h1 class="page-heading">Organization Overview</h1>
+                    <p class="page-description">Manage projects, monitor activity, and oversee system users across your
+                        organization.</p>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="kpi-grid fade-in" id="kpiGrid">
+                    <div class="kpi-card">
+                        <div class="skeleton-card skeleton"></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="skeleton-card skeleton"></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="skeleton-card skeleton"></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="skeleton-card skeleton"></div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="gap-grid gap-grid-2 fade-in" style="margin-top:var(--space-6);">
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">Workflow Distribution</h5>
+                            <span class="ds-badge gray">Real-time</span>
+                        </div>
+                        <div class="ds-card-body">
+                            <div class="chart-placeholder">
+                                <canvas id="stageChart" height="280"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">Project Categories</h5>
+                        </div>
+                        <div class="ds-card-body">
+                            <div class="chart-placeholder">
+                                <canvas id="categoryChart" height="280"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tables Row -->
+                <div class="gap-grid gap-grid-2 fade-in" style="margin-top:var(--space-6);">
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">Recent Projects</h5>
+                            <div class="d-flex gap-2">
+                                <select class="ds-input ds-select"
+                                    style="width:auto; height:32px; padding:0 32px 0 12px; font-size:0.75rem;"
+                                    id="statusFilter" onchange="adminDash.filterProjects()">
+                                    <option value="">All Status</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Closed">Closed</option>
+                                </select>
+                                <a href="projects.html" class="ds-btn ds-btn-ghost ds-btn-sm">View All</a>
+                                <button class="ds-btn ds-btn-primary ds-btn-sm" id="initProjectBtn"
+                                    style="display: none;" onclick="adminDash.openInitModal()">
+                                    <i data-lucide="plus" style="width:14px;height:14px;"></i> Initialize Project
+                                </button>
+                            </div>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div style="max-height:400px; overflow-y:auto;">
+                                <table class="ds-table" id="projectsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Project</th>
+                                            <th>Current Stage</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="projectsBody">
+                                        <tr>
+                                            <td colspan="4">
+                                                <div class="p-4" id="projects-loader">
+                                                    <table class="w-100">
+                                                        <tbody id="projectsSkeleton"></tbody>
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <h5 class="card-title">System Audit Log</h5>
+                            <a href="audit-logs.html" class="ds-btn ds-btn-ghost ds-btn-sm">View Full Log</a>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div style="max-height:400px; overflow-y:auto;" id="auditBody">
+                                <div class="activity-feed p-4" id="auditFeed">
+                                    <div class="skeleton-text skeleton mb-3"></div>
+                                    <div class="skeleton-text skeleton mb-3"></div>
+                                    <div class="skeleton-text skeleton short mb-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Table -->
+                <div class="ds-card fade-in" style="margin-top:var(--space-6);">
+                    <div class="ds-card-header">
+                        <h5 class="card-title">Key Stakeholders</h5>
+                        <div class="d-flex gap-2">
+                            <a href="users.html" class="ds-btn ds-btn-ghost ds-btn-sm">Manage Users</a>
+                            <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="adminDash.openAddUserModal()">
+                                <i data-lucide="user-plus" style="width:14px; height:14px;"></i>
+                                Add Member
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ds-card-body p-0">
+                        <table class="ds-table">
+                            <thead>
+                                <tr>
+                                    <th>Member</th>
+                                    <th>Role</th>
+                                    <th>Department</th>
+                                    <th>System Status</th>
+                                    <th>Last Active</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersBody">
+                                <tr>
+                                    <td colspan="5" class="p-4 text-center text-muted">Initialize User Data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div class="modal fade" id="editProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <i data-lucide="edit-3" class="text-primary"></i>
+                        Update Project Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editProjectId">
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                        <input type="text" class="ds-input" id="editProjectTitle">
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="tag"></i> category</label>
+                        <select class="ds-input ds-select" id="editProjectCategory">
+                            <option value="Safety">Safety</option>
+                            <option value="Quality">Quality</option>
+                            <option value="Cost">Cost</option>
+                            <option value="Productivity">Productivity</option>
+                        </select>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="file-text"></i> Problem Summary</label>
+                        <textarea class="ds-input ds-textarea" id="editProjectDesc" rows="3"></textarea>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="calendar"></i> Target Completion</label>
+                        <input type="date" class="ds-input" id="editProjectDeadline">
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="users"></i> Assign Team Leaders</label>
+                        <div class="member-selection-grid" id="editMemberCheckboxes"
+                            style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 150px; overflow-y: auto; padding: 10px; background: var(--bg-body); border-radius: 8px;">
+                            <!-- Members injected here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="updateProjectBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="deleteProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body p-4 text-center">
+                    <div class="ds-icon-circle bg-red-soft text-red mx-auto mb-3" style="width:48px;height:48px;">
+                        <i data-lucide="alert-triangle"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Delete Project?</h5>
+                    <p class="text-muted text-sm mb-4">This action <b>cannot be undone</b>. All project workflow data
+                        will be permanently removed.</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-ghost flex-1" data-bs-dismiss="modal">Keep
+                            It</button>
+                        <button type="button" class="ds-btn ds-btn-danger flex-1" id="confirmDeleteBtn">Delete
+                            Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade" id="closeProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Close Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-base">Are you sure you want to close project <strong id="closeProjectTitle"
+                            class="text-primary"></strong>?</p>
+                    <div class="ds-badge orange" style="margin-top:8px;">Archiving to Knowledge Repository</div>
+                    <p class="text-xs text-muted mt-3">Closing a project moves all data (SOPs, KPI results, lessons
+                        learned) into the Knowledge Repository for long-term storage and organizational learning.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary" onclick="adminDash.confirmClose()">Confirm Closure</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Provision New User Access</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="quickUserForm">
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="user"></i> Username / Identity</label>
+                            <input type="text" class="ds-input" id="new_username" placeholder="e.g. jdoe" required>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="mail"></i> Email Address</label>
+                            <input type="email" class="ds-input" id="new_email" placeholder="john.doe@org.com" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="shield"></i> System Role</label>
+                                    <select class="ds-input ds-select" id="new_role" required>
+                                        <option value="Team Member">Team Member</option>
+                                        <option value="Team Leader">Team Leader</option>
+                                        <option value="Facilitator">Facilitator</option>
+                                        <option value="Reviewer">Reviewer</option>
+                                        <option value="Admin">Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="building"></i> Department</label>
+                                    <select class="ds-input ds-select" id="new_dept" required>
+                                        <option value="Manufacturing">Manufacturing</option>
+                                        <option value="Quality Control">Quality Control</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="HR">HR</option>
+                                        <option value="IT">IT</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ds-field p-3" style="background:var(--bg-body); border-radius:var(--radius-md);">
+                            <label class="ds-label"><i data-lucide="key"></i> Temporary Access Credentials</label>
+                            <div class="d-flex gap-2">
+                                <input type="text" class="ds-input" id="new_password" value="QCMS@Pass2026" required
+                                    readonly style="background:white;">
+                                <button type="button" class="ds-btn ds-btn-outline ds-btn-icon" title="Regenerate"
+                                    onclick="document.getElementById('new_password').value = 'QCMS@' + Math.random().toString(36).substring(7).toUpperCase()">
+                                    <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-muted mt-2">The user will be prompted to change their password upon
+                                first login.</p>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary" onclick="adminDash.saveQuickUser()">Provision Access</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Administrative Project Override Modal -->
+    <div class="modal fade" id="initModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Administrative Project Override</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="initProjectForm">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                                    <input type="text" class="ds-input" id="projTitle"
+                                        placeholder="e.g. Reduction in Weld Defects" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="tag"></i> Strategic Category</label>
+                                    <select class="ds-input ds-select" id="projCategory" required>
+                                        <option value="Quality">Quality</option>
+                                        <option value="Safety">Safety</option>
+                                        <option value="Productivity">Productivity</option>
+                                        <option value="Cost">Cost Reduction</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="building"></i> Target Department</label>
+                                    <select class="ds-input ds-select" id="projDept" required
+                                        onchange="adminDash.loadTeamPool(this.value)">
+                                        <option value="">Select Department</option>
+                                        <!-- Departments injected here -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="alert-circle"></i> Problem Statement</label>
+                            <input type="text" class="ds-input" id="projProblemStatement"
+                                placeholder="What exactly is the gap?">
+                        </div>
+
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="file-text"></i> Detailed Description</label>
+                            <textarea class="ds-input" id="projDesc" rows="2"
+                                placeholder="Describe the current situation and context..."></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="map-pin"></i> Physical Location</label>
+                                    <input type="text" class="ds-input" id="projLocation"
+                                        placeholder="e.g. Line 4, Assembly Shop">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="refresh-cw"></i> Frequency of
+                                        Occurrence</label>
+                                    <input type="text" class="ds-input" id="projFrequency"
+                                        placeholder="e.g. Daily, Monthly, Shift-wise">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="camera"></i> Evidence / Attachment (Upload)</label>
+                            <div class="upload-zone" id="evidenceUploadZone" onclick="document.getElementById('evidenceFile').click()" style="cursor: pointer;">
+                                <input type="file" id="evidenceFile" style="display:none" onchange="adminDash.handleFileUpload(this.files[0])">
+                                <div class="upload-content text-center py-3" style="border: 2px dashed var(--border-subtle); border-radius: 8px; background: var(--bg-body);">
+                                    <i data-lucide="upload-cloud" class="text-muted mb-1" style="width: 20px; height: 20px;"></i>
+                                    <p class="text-xs text-muted mb-0" id="uploadStatus">Click to upload document or image</p>
+                                </div>
+                            </div>
+                            <input type="hidden" id="projEvidence">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="trending-down"></i> Initial Impact /
+                                        Severity</label>
+                                    <input type="text" class="ds-input" id="projImpact"
+                                        placeholder="e.g. High scrap rate / Safety risk">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="calendar"></i> Target Completion
+                                        Date</label>
+                                    <input type="date" class="ds-input" id="projDeadline">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="users"></i> Project Team Selection (Select
+                                Leader)</label>
+                            <div class="team-selection-container"
+                                style="background: var(--bg-body); border-radius: 12px; border: 1px solid var(--border-subtle); overflow: hidden;">
+                                <div
+                                    class="team-header d-flex px-3 py-2 border-bottom bg-light text-xs fw-bold text-muted">
+                                    <div style="width: 40px;">Ldr</div>
+                                    <div style="width: 40px;">Mem</div>
+                                    <div>User Name / Role</div>
+                                </div>
+                                <div id="teamPool" style="max-height: 200px; overflow-y: auto; padding: 4px;">
+                                    <div class="p-4 text-center text-muted text-xs">Select a department to see eligible
+                                        members</div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <div class="flex-grow-1 text-xs text-muted">
+                        <i data-lucide="info" style="width:12px;height:12px;"></i> This project will bypass normal
+                        creation and go straight to initialization.
+                    </div>
+                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary" id="initSubmitBtn"
+                        onclick="adminDash.initProject()">Initialize & Assign</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+        const adminDash = {
+            allProjects: [],
+            closeTargetId: null,
+
+            async init() {
+                QCMS.init();
+                this.initModal = new bootstrap.Modal(document.getElementById('initModal'));
+
+                const userStr = localStorage.getItem('user');
+                const user = JSON.parse(userStr || '{}');
+                const role = (user.role || '').trim().toLowerCase();
+                const canCreate = ['admin', 'team leader'].includes(role);
+
+                console.log('[QCMS] Admin Dashboard Init - Role:', role, 'Can create:', canCreate);
+
+                const initBtn = document.getElementById('initProjectBtn');
+                if (initBtn) {
+                    initBtn.style.display = canCreate ? 'inline-flex' : 'none';
+                }
+
+                await this.loadStats();
+                await this.loadProjects();
+                this.loadDepartments();
+                this.loadUsers();
+                this.loadAuditLog();
+
+                // Initialize modals for editing and deletion
+                this.editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
+                this.deleteModal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
+            },
+
+            showInitialSkeletons() {
+                document.getElementById('projectsBody').innerHTML = `<tr><td colspan="4">${QCMS.tableSkeleton(5)}</td></tr>`;
+                document.getElementById('usersBody').innerHTML = `<tr><td colspan="5">${QCMS.tableSkeleton(3)}</td></tr>`;
+            },
+
+            async loadStats() {
+                try {
+                    const stats = await api.get('/admin/stats');
+                    document.getElementById('kpiGrid').innerHTML =
+                        QCMS.kpiCard('Active Pipeline', stats.active_projects || 0, 'folder-kanban', 'blue') +
+                        QCMS.kpiCard('Team Stakeholders', stats.total_members || 0, 'users', 'purple') +
+                        QCMS.kpiCard('Pending Tasks', stats.pending_validations || 0, 'clock', 'orange') +
+                        QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green');
+                    if (window.lucide) lucide.createIcons();
+
+                    // Chart data typically comes from the same stats endpoint or a separate one
+                    // For now, we'll use the projects data to build charts for maximum accuracy
+                } catch (e) {
+                    console.error('Stats load failed', e);
+                }
+            },
+
+            async loadProjects() {
+                try {
+                    const projects = await api.get('/admin/all-projects');
+                    this.allProjects = projects;
+                    this.renderProjects(projects);
+                    this.renderCategoryChart(projects);
+                    this.renderStageChart(projects);
+                } catch (e) {
+                    document.getElementById('projectsBody').innerHTML = `<tr><td colspan="4"><div class="p-4 text-center text-muted">Unable to load projects.</div></td></tr>`;
+                }
+            },
+
+            renderProjects(projects) {
+                const body = document.getElementById('projectsBody');
+                if (!projects || !projects.length) {
+                    body.innerHTML = `<tr><td colspan="4">${QCMS.emptyState('inbox', 'Clean Slate', 'No projects found in your organization.')}</td></tr>`;
+                    return;
+                }
+                body.innerHTML = projects.slice(0, 10).map(p => `
+                <tr class="fade-in">
+                    <td>
+                        <div class="fw-semibold text-primary">${p.title}</div>
+                        <div class="text-xs text-muted">${p.project_uid || 'PRJ-2026-001'} · ${p.department || 'General'}</div>
+                    </td>
+                    <td>${QCMS.badge('Stage ' + (p.stage || 1), 'blue')}</td>
+                    <td>${QCMS.statusBadge(p.status || 'Active')}</td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                        ${p.stage >= 8 && p.status !== 'Closed' ?
+                        `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="adminDash.openCloseModal(${p.id}, '${p.title.replace(/'/g, "\\'")}')">Complete</button>`
+                        : `<a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" title="Workspace"><i data-lucide="external-link" style="width:16px;height:16px;"></i></a>`
+                    }
+                        <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="adminDash.showEditModal(${p.id})" title="Edit"><i data-lucide="edit-2"></i></button>
+                        <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon text-danger" onclick="adminDash.confirmDelete(${p.id})" title="Delete"><i data-lucide="trash-2"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+                if (window.lucide) lucide.createIcons();
+            },
+
+            filterProjects() {
+                const f = document.getElementById('statusFilter').value;
+                const filtered = f ? this.allProjects.filter(p => p.status === f) : this.allProjects;
+                this.renderProjects(filtered);
+            },
+
+            renderCategoryChart(projects) {
+                const chartArea = document.getElementById('categoryChart').parentElement;
+                if (!projects || projects.length === 0) {
+                    chartArea.innerHTML = QCMS.chartPlaceholder('Strategic Distribution');
+                    return;
+                }
+
+                const cats = {};
+                projects.forEach(p => {
+                    const c = p.category || 'Unassigned';
+                    cats[c] = (cats[c] || 0) + 1;
+                });
+
+                chartArea.innerHTML = '<canvas id="categoryChart" height="280"></canvas>';
+                const ctx = document.getElementById('categoryChart');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(cats),
+                        datasets: [{
+                            data: Object.values(cats),
+                            backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'],
+                            borderWidth: 4,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { usePointStyle: true, padding: 20, font: { size: 11, weight: 500 } }
+                            }
+                        }
+                    }
+                });
+            },
+
+            renderStageChart(projects) {
+                const chartArea = document.getElementById('stageChart').parentElement;
+                if (!projects || projects.length === 0) {
+                    chartArea.innerHTML = QCMS.chartPlaceholder('Workflow Metrics');
+                    return;
+                }
+
+                const stageCounts = Array(8).fill(0);
+                projects.forEach(p => {
+                    const s = (p.stage || 1) - 1;
+                    if (s >= 0 && s < 8) stageCounts[s]++;
+                });
+
+                chartArea.innerHTML = '<canvas id="stageChart" height="280"></canvas>';
+                const ctx = document.getElementById('stageChart');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'],
+                        datasets: [{
+                            label: 'Projects',
+                            data: stageCounts,
+                            backgroundColor: '#2563eb',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, grid: { display: false } },
+                            x: { grid: { display: false } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            },
+
+            async loadAuditLog() {
+                try {
+                    const logs = await api.get('/admin/audit-logs');
+                    const feed = document.getElementById('auditFeed');
+                    if (!logs || !logs.length) {
+                        feed.innerHTML = QCMS.emptyState('shield', 'All Quiet', 'No security events to report.');
+                        return;
+                    }
+                    feed.innerHTML = logs.slice(0, 8).map(l => `
+                    <div class="activity-item fade-in">
+                        <div class="activity-dot"><i data-lucide="user-check" style="width:14px;height:14px;"></i></div>
+                        <div class="activity-content">
+                            <p><span class="fw-semibold text-primary">${l.user}</span> executed <span class="text-muted">${l.action.replace(/_/g, ' ').toLowerCase()}</span></p>
+                            <span class="activity-time">${QCMS.formatRelative(l.timestamp)} · ${l.target}</span>
+                        </div>
+                    </div>
+                `).join('');
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    document.getElementById('auditFeed').innerHTML = '<p class="text-muted p-3">Audit log unavailable.</p>';
+                }
+            },
+
+            async loadUsers() {
+                try {
+                    const users = await api.get('/admin/users');
+                    document.getElementById('usersBody').innerHTML = users.slice(0, 8).map(u => `
+                    <tr class="fade-in">
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="user-avatar" style="width:32px;height:32px; font-size:0.7rem;">${(u.username || 'UN').substring(0, 2).toUpperCase()}</div>
+                                <div class="truncate">
+                                    <div class="fw-semibold text-sm">${u.username}</div>
+                                    <div class="text-xs text-muted">${u.email}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${QCMS.badge(u.role, u.role === 'Admin' ? 'red' : 'blue')}</td>
+                        <td><span class="text-sm font-medium">${u.department || 'Corporate'}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="ds-badge-dot ${u.is_active ? 'green' : 'gray'}"></span>
+                                <span class="text-xs fw-medium">${u.is_active ? 'Authorized' : 'Suspended'}</span>
+                            </div>
+                        </td>
+                        <td><span class="text-xs text-muted">${u.last_login ? QCMS.formatRelative(u.last_login) : 'Inactive'}</span></td>
+                    </tr>
+                `).join('');
+                } catch (e) {
+                    document.getElementById('usersBody').innerHTML = '<tr><td colspan="5" class="p-4 text-center text-muted">User registry unavailable.</td></tr>';
+                }
+            },
+
+            openCloseModal(id, title) {
+                this.closeTargetId = id;
+                document.getElementById('closeProjectTitle').textContent = title;
+                new bootstrap.Modal(document.getElementById('closeProjectModal')).show();
+            },
+
+            async confirmClose() {
+                try {
+                    await api.post(`/admin/projects/${this.closeTargetId}/close`);
+                    QCMS.toast('Project finalized and moved to archive.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('closeProjectModal')).hide();
+                    this.init();
+                } catch (e) {
+                    QCMS.toast(e.message, 'error');
+                }
+            },
+
+            openAddUserModal() {
+                new bootstrap.Modal(document.getElementById('addUserModal')).show();
+            },
+
+            async saveQuickUser() {
+                const payload = {
+                    username: document.getElementById('new_username').value,
+                    email: document.getElementById('new_email').value,
+                    role: document.getElementById('new_role').value,
+                    dept_name: document.getElementById('new_dept').value,
+                    password: document.getElementById('new_password').value
+                };
+                if (!payload.username || !payload.email) return QCMS.toast('Please fill all fields', 'warning');
+
+                try {
+                    await api.post('/admin/users', payload);
+                    QCMS.toast('New member provisioned successfully.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+                    this.loadUsers();
+                    this.loadStats();
+                } catch (e) {
+                    QCMS.toast(e.message, 'error');
+                }
+            },
+
+            async loadDepartments() {
+                try {
+                    const depts = await api.get('/admin/departments');
+                    const select = document.getElementById('projDept');
+                    if (select) {
+                        select.innerHTML = '<option value="">Select Department</option>' +
+                            depts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                    }
+                } catch (e) {
+                    console.error('Dept load failed', e);
+                }
+            },
+
+            async loadTeamPool(deptId) {
+                if (!deptId) return;
+                try {
+                    // Fetch all potential candidates (TLs and TMs) for this department
+                    // Fetch only Team Leaders for Admins per request
+                    const users = await api.getPotentialMembers(deptId, 'Team Leader');
+                    const container = document.getElementById('teamPool');
+                    if (container) {
+                        if (users.length === 0) {
+                            container.innerHTML = '<div class="p-4 text-center text-muted text-xs">No eligible members found in this department</div>';
+                            return;
+                        }
+                        container.innerHTML = users.map(u => `
+                        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom hover-bg">
+                            <div style="width: 40px;">
+                                <input type="radio" name="projectLeader" value="${u.id}" class="leader-radio" required onclick="adminDash.autoSelectMember('${u.id}')">
+                            </div>
+                            <div style="width: 40px;">
+                                <input type="checkbox" value="${u.id}" class="member-cb" id="cb-${u.id}">
+                            </div>
+                            <div class="flex-grow-1">
+                                <span class="text-xs fw-medium d-block">${u.full_name || u.username}</span>
+                                <span class="text-xxs text-muted uppercase">${u.username} • ${u.role || 'Member'}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                        if (window.lucide) lucide.createIcons();
+                    }
+                } catch (e) {
+                    QCMS.toast('Failed to load team candidates', 'danger');
+                }
+            },
+
+            autoSelectMember(userId) {
+                const cb = document.getElementById(`cb-${userId}`);
+                if (cb) cb.checked = true;
+            },
+
+            async handleFileUpload(file) {
+                if (!file) return;
+
+                const statusEl = document.getElementById('uploadStatus');
+                const zoneEl = document.getElementById('evidenceUploadZone');
+
+                try {
+                    statusEl.innerText = `Uploading ${file.name}...`;
+                    zoneEl.style.opacity = '0.7';
+                    zoneEl.style.pointerEvents = 'none';
+
+                    // Use the admin or team-leader upload endpoint based on context
+                    // dashboard-admin always uses admin endpoint
+                    const res = await api.uploadFile('/admin/upload-evidence', file);
+
+                    document.getElementById('projEvidence').value = res.url;
+                    statusEl.innerHTML = `<span class="text-success"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> ${file.name} uploaded</span>`;
+                    if (window.lucide) lucide.createIcons();
+                    QCMS.toast('File uploaded successfully', 'success');
+                } catch (e) {
+                    statusEl.innerText = 'Upload failed. Try again.';
+                    QCMS.toast(e.message || 'Upload failed', 'danger');
+                } finally {
+                    zoneEl.style.opacity = '1';
+                    zoneEl.style.pointerEvents = 'auto';
+                }
+            },
+
+
+            openInitModal() {
+                new bootstrap.Modal(document.getElementById('initModal')).show();
+            },
+
+            async initProject() {
+                const leaderRadio = document.querySelector('.leader-radio:checked');
+                const data = {
+                    title: document.getElementById('projTitle').value,
+                    category: document.getElementById('projCategory').value,
+                    department_id: document.getElementById('projDept').value,
+                    team_leader_id: leaderRadio ? leaderRadio.value : null,
+                    problem_statement: document.getElementById('projProblemStatement').value,
+                    description: document.getElementById('projDesc').value,
+                    location: document.getElementById('projLocation').value,
+                    frequency: document.getElementById('projFrequency').value,
+                    evidence: document.getElementById('projEvidence').value,
+                    impact: document.getElementById('projImpact').value,
+                    deadline: document.getElementById('projDeadline').value || null,
+                    member_ids: Array.from(document.querySelectorAll('.member-cb:checked')).map(cb => cb.value)
+                };
+
+                if (!data.title) return QCMS.toast('Project title is required', 'warning');
+                if (!data.team_leader_id) return QCMS.toast('Team Leader assignment is mandatory.', 'warning');
+                if (!data.department_id) return QCMS.toast('Department is required.', 'warning');
+
+                try {
+                    QCMS.setLoading('initSubmitBtn', true);
+                    await api.post('/projects', data);
+                    
+                    QCMS.toast('Project initialized successfully.', 'success');
+                    
+                    // Close Modal
+                    const modalEl = document.getElementById('initModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInstance.hide();
+
+                    // Refresh Data
+                    this.loadProjects();
+                    this.loadStats();
+                    
+                    // Reset Form
+                    document.getElementById('initProjectForm').reset();
+                    document.getElementById('teamPool').innerHTML = '<div class="p-4 text-center text-muted text-xs">Select a department to see eligible members</div>';
+                } catch (e) {
+                    QCMS.toast(e.message || 'Initialization failed', 'danger');
+                } finally {
+                    QCMS.setLoading('initSubmitBtn', false);
+                }
+            },
+
+            showEditModal(id) {
+                const p = this.allProjects.find(x => x.id === id);
+                if (!p) return;
+                document.getElementById('editProjectId').value = p.id;
+                document.getElementById('editProjectTitle').value = p.title;
+                document.getElementById('editProjectCategory').value = p.category || 'Quality';
+                document.getElementById('editProjectDesc').value = p.description || '';
+                if (p.deadline) document.getElementById('editProjectDeadline').value = p.deadline.split('T')[0];
+
+                // Pre-check members
+                const currentMemberIds = p.member_ids || [];
+                document.querySelectorAll('.edit-member-cb').forEach(cb => {
+                    cb.checked = currentMemberIds.includes(parseInt(cb.value));
+                });
+
+                this.editModal.show();
+                document.getElementById('updateProjectBtn').onclick = () => this.handleUpdate();
+            },
+
+            async handleUpdate() {
+                const id = document.getElementById('editProjectId').value;
+                const payload = {
+                    title: document.getElementById('editProjectTitle').value,
+                    category: document.getElementById('editProjectCategory').value,
+                    description: document.getElementById('editProjectDesc').value,
+                    deadline: document.getElementById('editProjectDeadline').value || null,
+                    member_ids: [...document.querySelectorAll('.edit-member-cb:checked')].map(c => parseInt(c.value))
+                };
+                try {
+                    QCMS.setLoading('updateProjectBtn', true);
+                    await api.patch(`/projects/${id}`, payload);
+                    QCMS.toast('Project updated successfully', 'success');
+                    this.editModal.hide();
+                    this.loadProjects();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Update failed', 'danger');
+                } finally {
+                    QCMS.setLoading('updateProjectBtn', false);
+                }
+            },
+
+            confirmDelete(id) {
+                this.deleteTargetId = id;
+                this.deleteModal.show();
+                document.getElementById('confirmDeleteBtn').onclick = () => this.handleDelete();
+            },
+
+            async handleDelete() {
+                try {
+                    QCMS.setLoading('confirmDeleteBtn', true);
+                    await api.delete(`/projects/${this.deleteTargetId}`);
+                    QCMS.toast('Project and data removed permanently.', 'success');
+                    this.deleteModal.hide();
+                    this.loadProjects();
+                    this.loadStats();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Deletion failed', 'danger');
+                } finally {
+                    QCMS.setLoading('confirmDeleteBtn', false);
+                }
+            }
+        };
+        ;
+
+        document.addEventListener('DOMContentLoaded', () => adminDash.init());
+    </script>
+</body>
+
+</html>
