@@ -322,9 +322,14 @@ def update_project_stage(id, stage_num):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
         
-    # RBAC: TL or assigned members
+    # RBAC: TL, Admin, Facilitator or assigned members
     is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first()
-    if not is_member and user.role.name != 'Admin':
+    is_admin_or_global_role = user and user.role and user.role.name in ['Admin', 'Team Leader', 'Facilitator']
+    is_project_owner = project.creator_id == user_id
+    is_project_leader = project.team_leader_id == user_id
+    is_project_facilitator = project.facilitator_id == user_id
+    
+    if not any([is_member, is_admin_or_global_role, is_project_owner, is_project_leader, is_project_facilitator]):
         return jsonify({"msg": "Unauthorized"}), 403
 
     from ..models import (
