@@ -1,113 +1,261 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Organization Onboarding | QCMS Enterprise</title>
+    <title>Register | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background: var(--bg-body); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--space-8) 0; }
-        .onboarding-card {
-            max-width: 640px; width: 100%; background: var(--bg-surface);
-            border-radius: var(--radius-xl); box-shadow: var(--shadow-lg);
-            padding: var(--space-8); margin: var(--space-4);
+        body {
+            background: var(--ds-bg-mesh);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            overflow-x: hidden;
         }
-        .step-indicator { display: flex; gap: 8px; margin-bottom: var(--space-6); justify-content: center; }
-        .step-dot { width: 32px; height: 6px; border-radius: 3px; background: var(--bg-hover); transition: all 0.3s; }
-        .step-dot.active { background: var(--primary); width: 48px; }
-        .form-step { display: none; animation: fadeIn 0.4s ease-out; }
-        .form-step.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .onboarding-container {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .onboarding-header {
+            text-align: center;
+            margin-bottom: var(--ds-space-14);
+        }
+
+        .onboarding-header h1 {
+            font-size: 3.25rem;
+            font-weight: 850;
+            letter-spacing: -0.05em;
+            color: var(--ds-text-main);
+            margin-bottom: var(--ds-space-2);
+        }
+
+        .onboarding-header p {
+            font-size: 1.125rem;
+            color: var(--ds-text-secondary);
+            font-weight: 500;
+        }
+
+        .onboarding-card {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--ds-text-main);
+            margin-bottom: var(--ds-space-8);
+            display: block;
+        }
+
+        .ds-field {
+            margin-bottom: var(--ds-space-6);
+        }
+
+        .ds-label {
+            font-size: 0.8125rem;
+            font-weight: 650;
+            margin-bottom: var(--ds-space-3);
+            color: var(--ds-text-secondary);
+            display: block;
+        }
+
+        .form-step {
+            display: none;
+            width: 100%;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .form-step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .onboarding-footer {
+            width: 100%;
+            text-align: center;
+            margin-top: var(--ds-space-16);
+            padding-top: var(--ds-space-8);
+            border-top: 1px solid var(--ds-border-color);
+            font-size: 0.9375rem;
+            color: var(--ds-text-secondary);
+        }
+
+        .onboarding-footer a {
+            color: var(--ds-accent);
+            font-weight: 700;
+            text-decoration: none;
+            margin-left: 0.25rem;
+        }
+
+        .onboarding-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .onboarding-header h1 {
+                font-size: 2.25rem;
+            }
+            body {
+                padding: 2rem 1.5rem;
+            }
+        }
     </style>
 </head>
-<body>
-    <div class="onboarding-card">
-        <div class="text-center mb-5">
-            <div style="width:48px;height:48px;border-radius:12px;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-3);">
-                <i data-lucide="building-2" style="width:24px;height:24px;"></i>
-            </div>
-            <h2 class="fw-bold">Register your Organization</h2>
-            <p class="text-muted">Set up your enterprise QMS instance in minutes.</p>
+
+<body class="fade-in">
+    <div class="onboarding-container">
+        <!-- Header -->
+        <div class="onboarding-header">
+            <h1>Register your Organization</h1>
+            <p>Set up your enterprise QMS instance in minutes.</p>
         </div>
 
-        <div class="step-indicator">
-            <div class="step-dot active" id="dot1"></div>
-            <div class="step-dot" id="dot2"></div>
+        <div id="errorMsg" class="ds-toast error mb-5" style="display:none; width: 100%; min-width: auto; animation: none;">
+            <i data-lucide="alert-circle"></i>
+            <span></span>
         </div>
 
-        <div id="errorMsg" style="display:none;padding:12px 16px;background:var(--error-50);border:1px solid var(--error-200);border-radius:var(--radius-md);color:var(--error);font-size:0.875rem;margin-bottom:var(--space-4);"></div>
+        <div class="onboarding-card glass-card" style="padding: var(--ds-space-12); border-radius: var(--ds-radius-xl); border: 1px solid var(--ds-border-color); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px);">
+            <form id="onboardingForm">
+                <!-- Step 1: Company Profile -->
+                <div class="form-step active" id="step1">
+                    <span class="section-title">Company Profile</span>
+                    
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <label class="ds-label"><i data-lucide="building" class="w-4 h-4 mr-2"></i> Company Name *</label>
+                            <input type="text" class="ds-input" id="company_name" placeholder="Acme Corp" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="ds-label"><i data-lucide="factory" class="w-4 h-4 mr-2"></i> Industry</label>
+                            <select class="ds-input ds-select" id="industry">
+                                <option value="Manufacturing">Manufacturing</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="IT/Software">IT/Software</option>
+                                <option value="Automotive">Automotive</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Education">Education</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="ds-label"><i data-lucide="mail" class="w-4 h-4 mr-2"></i> Work Email *</label>
+                            <div class="d-flex gap-2">
+                                <input type="email" class="ds-input" id="email" placeholder="admin@gmail.com" required>
+                                <button type="button" class="ds-btn ds-btn-outline-primary" id="sendOtpBtn" onclick="sendOtp()" style="white-space: nowrap; font-size: 0.8125rem;">
+                                    Send OTP
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12" id="otpSection" style="display: none;">
+                            <div class="ds-card glass-card" style="padding: var(--ds-space-8); background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-primary); border-radius: var(--ds-radius-lg);">
+                                <label class="ds-label mb-3">
+                                    <i data-lucide="shield-check" class="inline-block w-4 h-4 mr-2 text-primary opacity-70"></i>
+                                    Verification Code
+                                </label>
+                                <div class="d-flex gap-3 align-items-center">
+                                    <input type="text" class="ds-input" id="otp_code" placeholder="000000" maxlength="6" style="letter-spacing: 0.5em; text-align: center; font-weight: 800; font-size: 1.25rem; width: 220px; background: rgba(255,255,255,0.05);">
+                                    <button type="button" class="ds-btn ds-btn-primary px-4" id="verifyOtpBtn" onclick="verifyOtp()">
+                                        Verify Code
+                                    </button>
+                                    <span id="otpSuccess" class="text-success fw-bold d-inline-flex align-items-center" style="display: none;">
+                                        <i data-lucide="check-circle" class="me-2"></i> Verified
+                                    </span>
+                                </div>
+                                <p class="small text-white-50 mt-3 mb-0">Please enter the 6-digit code sent to your work email.</p>
+                            </div>
+                        </div>
 
-        <form id="onboardingForm">
-            <!-- Step 1: Company Profile -->
-            <div class="form-step active" id="step1">
-                <h5 class="mb-4 fw-bold">Company Profile</h5>
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label class="ds-label">Company Name *</label>
-                        <input type="text" class="ds-input" id="company_name" placeholder="Acme Corp" required>
+                        <div class="col-12">
+                            <label class="ds-label"><i data-lucide="phone" class="w-4 h-4 mr-2"></i> Phone Number</label>
+                            <input type="tel" class="ds-input" id="phone" placeholder="+91 00000 00000">
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="ds-label">Industry</label>
-                        <select class="ds-input ds-select" id="industry">
-                            <option value="Manufacturing">Manufacturing</option>
-                            <option value="Healthcare">Healthcare</option>
-                            <option value="IT/Software">IT/Software</option>
-                            <option value="Automotive">Automotive</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="ds-label">Work Email *</label>
-                        <input type="email" class="ds-input" id="email" placeholder="admin@company.com" required>
-                    </div>
-                    <div class="col-12">
-                        <label class="ds-label">Phone Number</label>
-                        <input type="tel" class="ds-input" id="phone" placeholder="+91 00000 00000">
-                    </div>
-                </div>
-                <div class="mt-5 text-end">
-                    <button type="button" class="ds-btn ds-btn-primary px-5" onclick="nextStep(2)">
-                        Next: Admin Setup <i data-lucide="arrow-right" class="ms-2" style="width:16px;height:16px;"></i>
-                    </button>
-                </div>
-            </div>
 
-            <!-- Step 2: Admin Account -->
-            <div class="form-step" id="step2">
-                <h5 class="mb-4 fw-bold">Administrator Account</h5>
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label class="ds-label">Full Name *</label>
-                        <input type="text" class="ds-input" id="admin_name" placeholder="John Doe" required>
-                    </div>
-                    <div class="col-12">
-                        <label class="ds-label">Username *</label>
-                        <input type="text" class="ds-input" id="username" placeholder="admin_username" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="ds-label">Password *</label>
-                        <input type="password" class="ds-input" id="password" placeholder="••••••••" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="ds-label">Confirm Password *</label>
-                        <input type="password" class="ds-input" id="confirm_password" placeholder="••••••••" required>
+                    <div class="mt-5 pt-3 text-end">
+                        <button type="button" class="ds-btn ds-btn-primary px-5 ds-btn-lg" id="nextToStep2" onclick="nextStep(2)" disabled title="Please verify your email first">
+                            Next: Admin Setup <i data-lucide="arrow-right" class="ms-2" style="width:18px; height:18px;"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="mt-5 d-flex justify-content-between">
-                    <button type="button" class="ds-btn ds-btn-outline" onclick="nextStep(1)">
-                        <i data-lucide="arrow-left" class="me-2" style="width:16px;height:16px;"></i> Back
-                    </button>
-                    <button type="submit" class="ds-btn ds-btn-primary px-5" id="submitBtn">
-                        Complete Registration <i data-lucide="check-circle" class="ms-2" style="width:16px;height:16px;"></i>
-                    </button>
-                </div>
-            </div>
-        </form>
 
-        <div class="text-center mt-5 pt-3 border-top">
-            <p class="text-sm text-muted">Already registered? <a href="login.html" class="text-primary fw-bold text-decoration-none">Sign in to your instance</a></p>
+                <!-- Step 2: Admin Account -->
+                <div class="form-step" id="step2">
+                    <span class="section-title">Administrator Account</span>
+                    
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <label class="ds-label"><i data-lucide="user" class="w-4 h-4 mr-2"></i> Full Name *</label>
+                            <input type="text" class="ds-input" id="admin_name" placeholder="John Doe" required>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="ds-label"><i data-lucide="user-plus" class="w-4 h-4 mr-2"></i> Username *</label>
+                            <input type="text" class="ds-input" id="username" placeholder="admin_username" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="ds-label"><i data-lucide="lock" class="w-4 h-4 mr-2"></i> Password *</label>
+                            <div class="position-relative">
+                                <input type="password" class="ds-input pe-5" id="password" placeholder="••••••••" required>
+                                <button type="button" class="btn position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-3 text-white-50" onclick="togglePassword('password', this)">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="ds-label"><i data-lucide="shield-check" class="w-4 h-4 mr-2"></i> Confirm Password *</label>
+                            <div class="position-relative">
+                                <input type="password" class="ds-input pe-5" id="confirm_password" placeholder="••••••••" required>
+                                <button type="button" class="btn position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-3 text-white-50" onclick="togglePassword('confirm_password', this)">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-3 d-flex justify-content-between align-items:center;">
+                        <button type="button" class="ds-btn ds-btn-ghost px-4" onclick="nextStep(1)">
+                            <i data-lucide="arrow-left" class="me-2" style="width:18px; height:18px;"></i> Back to Profile
+                        </button>
+                        <button type="submit" class="ds-btn ds-btn-primary px-5 ds-btn-lg" id="submitBtn">
+                            Complete Registration <i data-lucide="check-circle" class="ms-2" style="width:18px; height:18px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="onboarding-footer">
+            Already registered? <a href="login.html">Sign in to your instance</a>
         </div>
     </div>
 
@@ -115,31 +263,114 @@
     <script>
         if (window.lucide) lucide.createIcons();
 
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = 'password';
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
         function nextStep(step) {
             if (step === 2) {
                 // Simple validation for step 1
                 if (!document.getElementById('company_name').value || !document.getElementById('email').value) {
-                    showError("Please fill in company name and email.");
+                    showError("Please fill in company name and work email.");
                     return;
                 }
             }
             
             document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active'));
-            
             document.getElementById('step' + step).classList.add('active');
-            document.getElementById('dot' + step).classList.add('active');
+            
+            if (window.lucide) lucide.createIcons();
             hideError();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function showError(msg) {
             const err = document.getElementById('errorMsg');
-            err.textContent = msg;
-            err.style.display = 'block';
+            err.querySelector('span').textContent = msg;
+            err.style.display = 'flex';
         }
 
         function hideError() {
             document.getElementById('errorMsg').style.display = 'none';
+        }
+
+        let isEmailVerified = false;
+
+        async function sendOtp() {
+            const email = document.getElementById('email').value;
+            if (!email || !email.includes('@')) {
+                showError("Please enter a valid work email.");
+                return;
+            }
+
+            const btn = document.getElementById('sendOtpBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "Sending...";
+            hideError();
+
+            try {
+                const response = await api.post('/auth/request-registration-otp', { email });
+                document.getElementById('otpSection').style.display = 'block';
+                document.getElementById('email').disabled = true;
+                btn.innerText = "Resend OTP";
+                setTimeout(() => { btn.disabled = false; }, 30000); // 30s cooldown
+                
+                if (window.lucide) lucide.createIcons();
+                showNotification(response.msg, 'success');
+            } catch (err) {
+                showError(err.message || "Failed to send OTP.");
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
+
+        async function verifyOtp() {
+            const email = document.getElementById('email').value;
+            const otp = document.getElementById('otp_code').value;
+            
+            if (!otp || otp.length !== 6) {
+                showError("Please enter the 6-digit code.");
+                return;
+            }
+
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true;
+            hideError();
+
+            try {
+                const response = await api.post('/auth/verify-registration-otp', { email, otp });
+                isEmailVerified = true;
+                document.getElementById('otpSuccess').style.display = 'inline-flex';
+                document.getElementById('otp_code').disabled = true;
+                btn.style.display = 'none';
+                document.getElementById('nextToStep2').disabled = false;
+                document.getElementById('nextToStep2').title = "";
+                
+                if (window.lucide) lucide.createIcons();
+                showNotification(response.msg, 'success');
+            } catch (err) {
+                showError(err.message || "Verification failed.");
+                btn.disabled = false;
+            }
+        }
+
+        function showNotification(msg, type) {
+            // Helper for local notifications if QCMS not fully ready
+            if (window.QCMS && QCMS.toast) {
+                QCMS.toast(msg, type);
+            } else {
+                alert(msg);
+            }
         }
 
         document.getElementById('onboardingForm').addEventListener('submit', async (e) => {
@@ -165,17 +396,27 @@
 
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
+            const originalContent = btn.innerHTML;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Submitting...';
 
             try {
-                const response = await api.post('/auth/register-org', payload);
-                window.location.href = 'login.html?registered=1';
+                // Check if api exists
+                if (typeof api !== 'undefined') {
+                    await api.post('/auth/register-org', payload);
+                    window.location.href = 'login.html?registered=1';
+                } else {
+                    console.error("API module not loaded");
+                    showError("System configuration error. Please contact support.");
+                    btn.disabled = false;
+                    btn.innerHTML = originalContent;
+                }
             } catch (err) {
                 showError(err.message || "Registration failed. Please try again.");
                 btn.disabled = false;
-                btn.innerHTML = 'Complete Registration <i data-lucide="check-circle" class="ms-2" style="width:16px;height:16px;"></i>';
+                btn.innerHTML = originalContent;
             }
         });
     </script>
 </body>
+
 </html>

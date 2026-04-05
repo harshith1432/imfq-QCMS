@@ -4,20 +4,27 @@
 
 const reviewer = {
     selectedProposalId: null,
+    pendingAudits: [],
 
     init() {
         console.log("Reviewer Module Initialized");
         this.bindEvents();
-        this.loadStats();
-        this.loadQueue();
-        this.renderStrategicChart();
         
+        // Determine which page we're on for targeted logic
+        const path = window.location.pathname;
+        if (path.includes('audit-queue.html')) {
+            this.initAuditQueue();
+        } else if (path.includes('dashboard-reviewer.html')) {
+            this.initDashboard();
+        }
+
         if (window.lucide) {
             window.lucide.createIcons();
         }
     },
 
     bindEvents() {
+        // Generic dashboard events
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -29,8 +36,17 @@ const reviewer = {
 
         // Wire logout button
         document.getElementById('logoutBtn')?.addEventListener('click', () => {
-            logout();
+            QCMS.logout();
         });
+    },
+
+    /**
+     * DASHBOARD LOGIC
+     */
+    initDashboard() {
+        this.loadStats();
+        this.loadQueue();
+        this.renderStrategicChart();
     },
 
     showSection(sectionId) {
@@ -59,12 +75,14 @@ const reviewer = {
     async loadStats() {
         try {
             const stats = await api.get('/reviewer/stats');
-
-            document.getElementById('queueCount').textContent = stats.queue || 0;
-            document.getElementById('pendingBadge').textContent = stats.queue || 0;
-            document.getElementById('approvedCount').textContent = stats.approved || 0;
-            document.getElementById('totalSavings').textContent = typeof stats.savings === 'number' ? `$${stats.savings.toLocaleString()}` : stats.savings || '$0';
-            document.getElementById('avgRoi').textContent = stats.roi || '0%';
+            // Support both dashboard and audit-queue structures
+            const pendingCountEl = document.getElementById('queueCount') || document.getElementById('kpi-pending-audits');
+            const approvedCountEl = document.getElementById('approvedCount');
+            
+            if (document.getElementById('queueCount')) document.getElementById('queueCount').textContent = stats.pending_count || 0;
+            if (document.getElementById('pendingBadge')) document.getElementById('pendingBadge').textContent = stats.pending_count || 0;
+            if (document.getElementById('approvedCount')) document.getElementById('approvedCount').textContent = stats.approved_count || 0;
+            if (document.getElementById('totalSavings')) document.getElementById('totalSavings').textContent = stats.avg_turnaround_time || '0h';
         } catch (err) {
             console.error("Failed to load stats", err);
         }
@@ -72,137 +90,257 @@ const reviewer = {
 
     async loadQueue() {
         const priorityContainer = document.getElementById('priorityQueueList');
-        const fullTable = document.getElementById('fullQueueTable');
-
         try {
-            const proposals = await api.get('/reviewer/queue');
-
-            if (proposals.length > 0) {
-                if (priorityContainer) {
+            const proposals = await api.get('/reviewer/pending');
+            if (priorityContainer) {
+                if (proposals.length > 0) {
                     priorityContainer.innerHTML = proposals.map(p => `
                         <div class="p-3 mb-3 border rounded-3 bg-white d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="mb-1">${p.title}</h6>
-                                <small class="text-muted">${p.dept} | ROI: ${p.roi || 0}% | Budget: $${(p.budget || 0).toLocaleString()}</small>
+                                <small class="text-muted">${p.department} | Submitted: ${QCMS.formatRelative(p.submitted_at)}</small>
                             </div>
-                            <button class="btn btn-sm btn-primary" onclick="reviewer.openReview(${p.id})">Review</button>
+                            <button class="btn btn-sm btn-primary" onclick="reviewer.openReview(${p.project_id})">Review</button>
                         </div>
                     `).join('');
-                }
-
-                if (fullTable) {
-                    fullTable.innerHTML = proposals.map(p => `
-                        <tr>
-                            <td><strong>${p.title}</strong></td>
-                            <td>${p.dept}</td>
-                            <td>${p.team_leader}</td>
-                            <td><span class="text-success fw-bold">${p.roi || 0}%</span></td>
-                            <td><button class="btn btn-sm btn-primary" onclick="reviewer.openReview(${p.id})">Review</button></td>
-                        </tr>
-                    `).join('');
-                }
-            } else {
-                if (priorityContainer) {
+                } else {
                     priorityContainer.innerHTML = '<div class="text-center text-muted p-4">No proposals awaiting review.</div>';
                 }
             }
         } catch (err) {
             console.error("Failed to load queue", err);
-            if (priorityContainer) {
-                priorityContainer.innerHTML = '<div class="text-center text-danger p-4">Failed to load approval queue.</div>';
+        }
+    },
+
+    /**
+     * AUDIT QUEUE PAGE LOGIC
+     */
+    async initAuditQueue() {
+        this.fetchAuditStats();
+        this.fetchAuditQueue();
+
+        // Listen for global search
+        window.addEventListener('qcms-global-search', (e) => {
+            this.filterAuditQueue(e.detail.query);
+        });
+    },
+
+    async fetchAuditStats() {
+        try {
+            const stats = await api.get('/reviewer/stats');
+            const pendingContainer = document.getElementById('kpi-pending-audits');
+            const avgContainer = document.getElementById('kpi-avg-review');
+
+            if (pendingContainer) {
+                pendingContainer.innerHTML = QCMS.kpiCard('Pending Audits', stats.pending_count || 0, 'clock', 'orange');
             }
+            if (avgContainer) {
+                avgContainer.innerHTML = QCMS.kpiCard('Avg. Review Time', stats.avg_turnaround_time || '—', 'timer', 'blue');
+            }
+            if (window.lucide) lucide.createIcons();
+        } catch (err) {
+            console.error("Failed to fetch audit stats", err);
+        }
+    },
+
+    async fetchAuditQueue() {
+        const container = document.getElementById('auditQueueList');
+        if (!container) return;
+
+        try {
+            container.innerHTML = `<div class="p-5 text-center"><div class="spinner-border text-primary"></div><p class="mt-2 text-secondary">Loading audits...</p></div>`;
+            const audits = await api.get('/reviewer/pending');
+            this.pendingAudits = audits;
+            this.renderAuditQueue(audits);
+        } catch (err) {
+            console.error("Failed to fetch audit queue", err);
+            container.innerHTML = QCMS.emptyState('Connection Error', 'Unable to reach the server. Please try again later.', 'wifi-off');
+        }
+    },
+
+    renderAuditQueue(audits) {
+        const container = document.getElementById('auditQueueList');
+        if (!container) return;
+
+        if (audits.length === 0) {
+            container.innerHTML = QCMS.emptyState('Queue is Empty', 'All projects have been reviewed and validated. Good job!', 'check-circle');
+            return;
+        }
+
+        container.innerHTML = audits.map(audit => `
+            <div class="glass-card ds-card p-4 mb-3 fade-in audit-item" data-id="${audit.project_id}">
+                <div class="h-stack justify-content-between align-items-center">
+                    <div class="h-stack gap-4 align-items-center">
+                        <div class="kpi-icon-box" style="background: rgba(var(--ds-orange-rgb), 0.1); color: var(--ds-orange); border-color: rgba(var(--ds-orange-rgb), 0.15); width: 48px; height: 48px;">
+                            <i data-lucide="file-warning"></i>
+                        </div>
+                        <div class="v-stack">
+                            <h4 class="ds-text-main fw-bold mb-1" style="font-size: 1.1rem;">${audit.title}</h4>
+                            <div class="h-stack gap-2 flex-wrap">
+                                <span class="ds-badge gray text-xs">${audit.department}</span>
+                                <span class="text-xs text-muted opacity-50">•</span>
+                                <span class="ds-text-tertiary text-xs">Submitted ${QCMS.formatRelative(audit.submitted_at)}</span>
+                                <span class="text-xs text-muted opacity-50">•</span>
+                                <span class="ds-text-secondary text-xs">Est. Cost: ₹${(audit.estimated_cost || 0).toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="h-stack gap-2">
+                        <button class="ds-btn ds-btn-ghost text-sm py-2 px-3" onclick="reviewer.openReview(${audit.project_id})">
+                            <i data-lucide="eye" style="width:14px; height:14px; margin-right:6px;"></i> Review
+                        </button>
+                        <button class="ds-btn ds-btn-primary text-sm py-2 px-3" onclick="reviewer.quickApprove(${audit.project_id})">
+                            <i data-lucide="check" style="width:14px; height:14px; margin-right:6px;"></i> Approve
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        if (window.lucide) lucide.createIcons();
+    },
+
+    filterAuditQueue(query) {
+        const q = (query || '').toLowerCase();
+        const items = document.querySelectorAll('.audit-item');
+        let hasVisible = false;
+
+        items.forEach(item => {
+            const text = item.innerText.toLowerCase();
+            const visible = text.includes(q);
+            item.style.display = visible ? '' : 'none';
+            if (visible) hasVisible = true;
+        });
+
+        const empty = document.getElementById('searchEmptyState');
+        if (!hasVisible && items.length > 0) {
+            if (!empty) {
+                const el = document.createElement('div');
+                el.id = 'searchEmptyState';
+                el.innerHTML = QCMS.emptyState('No results found', `No audits match "${q}"`, 'search-x');
+                document.getElementById('auditQueueList').appendChild(el);
+            } else {
+                empty.style.display = 'block';
+            }
+        } else if (empty) {
+            empty.style.display = 'none';
         }
     },
 
     openReview(id) {
         this.selectedProposalId = id;
-        const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+        const project = this.pendingAudits.find(a => a.project_id === id);
         
-        // Load proposal details from API
-        api.get(`/team-leader/projects/${id}`).then(data => {
+        const modalEl = document.getElementById('reviewModal');
+        if (!modalEl) {
+            console.error("Review modal not found in DOM");
+            return;
+        }
+
+        const modal = new bootstrap.Modal(modalEl);
+        
+        // Show loading state
+        document.getElementById('proposalDetailView').innerHTML = `
+            <div class="text-center p-5">
+                <div class="spinner-grow text-primary" role="status"></div>
+                <p class="mt-3 text-secondary">Fetching context...</p>
+            </div>
+        `;
+        
+        // Fetch detailed project context
+        api.get(`/reviewer/pending`).then(allPending => {
+            const data = allPending.find(p => p.project_id === id);
+            if (!data) throw new Error("Project not found in pending list");
+
             document.getElementById('proposalDetailView').innerHTML = `
-                <div class="row">
-                    <div class="col-md-8">
-                        <h4>${data.title}</h4>
-                        <p class="text-muted">${data.description || 'No description provided'}</p>
-                        <hr>
-                        ${data.proposal ? `
-                        <div class="mb-3">
-                            <h6>Budget Required</h6>
-                            <p class="fw-bold text-primary">$${(data.proposal.budget || 0).toLocaleString()}</p>
-                        </div>
-                        <div class="mb-3">
-                            <h6>Estimated ROI</h6>
-                            <p class="fw-bold text-success">${data.proposal.roi || 0}%</p>
-                        </div>
-                        <div class="mb-3">
-                            <h6>Resource Plan</h6>
-                            <p>${data.proposal.resources || 'Not specified'}</p>
-                        </div>
-                        ` : '<p class="text-muted">No proposal data available</p>'}
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card bg-light border-0">
-                            <div class="card-body">
-                                <h6>Project Info</h6>
-                                <p class="mb-1"><strong>Stage:</strong> ${data.stage}</p>
-                                <p class="mb-1"><strong>Status:</strong> ${data.status}</p>
-                                <p class="mb-1"><strong>Team:</strong> ${data.members ? data.members.map(m => m.name).join(', ') : 'None'}</p>
+                <div class="v-stack gap-4">
+                    <header class="reviewer-header p-3 glass-panel rounded-3 mb-2" style="background: rgba(var(--ds-primary-rgb), 0.05);">
+                        <h5 class="fw-bold mb-1">${data.title}</h5>
+                        <div class="text-secondary text-sm">${data.department} | Submitted ${QCMS.formatRelative(data.submitted_at)}</div>
+                    </header>
+
+                    <section class="review-context-section">
+                        <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Goal & Problem Statement</h6>
+                        <div class="p-3 border rounded-3 bg-light text-sm">${data.problem_statement || 'No problem statement provided.'}</div>
+                    </section>
+
+                    <section class="review-context-section">
+                        <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Root Cause Analysis</h6>
+                        <div class="p-3 border rounded-3 bg-light text-sm">${data.root_cause_summary || 'No root cause summary provided.'}</div>
+                    </section>
+
+                    <section class="review-context-section">
+                        <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Proposed Solution & ROI</h6>
+                        <div class="p-3 border rounded-3 bg-light text-sm mb-3">${data.solution || 'No solution details provided.'}</div>
+                        <div class="h-stack gap-4">
+                            <div class="kpi-stat">
+                                <div class="text-xs text-muted mb-1">Est. Cost</div>
+                                <div class="fw-bold text-primary">₹${(data.estimated_cost || 0).toLocaleString()}</div>
+                            </div>
+                            <div class="kpi-stat">
+                                <div class="text-xs text-muted mb-1">Target Action</div>
+                                <div class="fw-bold text-success">Stage 8 Transition</div>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             `;
         }).catch(err => {
-            document.getElementById('proposalDetailView').innerHTML = '<p class="text-danger">Failed to load proposal details.</p>';
+            console.error(err);
+            document.getElementById('proposalDetailView').innerHTML = '<p class="text-danger p-4">Failed to load detailed context. Please try again.</p>';
         });
         
         modal.show();
     },
 
-    async submitDecision(decision) {
-        const comments = document.getElementById('reviewerComments').value;
+    quickApprove(id) {
+        this.selectedProposalId = id;
+        if (confirm("Are you sure you want to approve this project immediately?")) {
+            this.submitDecision('Approved', "Quick approval via queue list.");
+        }
+    },
+
+    async submitDecision(decision, providedComments = null) {
+        const comments = providedComments || document.getElementById('reviewerComments')?.value;
         if (!comments && (decision === 'Rejected' || decision === 'Revision')) {
             alert("Please provide comments for rejection or revision.");
             return;
         }
 
         try {
-            const result = await api.post(`/reviewer/approve/${this.selectedProposalId}`, {
+            QCMS.setLoading('btn-approve', true);
+            const result = await api.post(`/reviewer/decision`, {
+                project_id: this.selectedProposalId,
                 decision: decision,
-                comments: comments
+                comments: comments || "Approved"
             });
             
-            alert(result.msg || `Project ${decision} successfully.`);
-            const modal = bootstrap.Modal.getInstance(document.getElementById('reviewModal'));
-            modal.hide();
-            this.loadQueue();
-            this.loadStats();
+            QCMS.toast(`Project ${decision} successfully.`, 'success');
+            
+            // Close modal if open
+            const modalEl = document.getElementById('reviewModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            // Clear inputs
+            if (document.getElementById('reviewerComments')) document.getElementById('reviewerComments').value = '';
+
+            // Reload data
+            this.fetchAuditQueue();
+            this.fetchAuditStats();
+            this.loadQueue(); // If on dashboard
         } catch (err) {
-            alert("Failed to submit decision: " + (err.message || 'Unknown error'));
+            QCMS.toast("Failed to submit decision: " + (err.message || 'Unknown error'), 'error');
+        } finally {
+            QCMS.setLoading('btn-approve', false);
         }
-    },
-
-    renderStrategicChart() {
-        const ctx = document.getElementById('strategicChart');
-        if (!ctx) return;
-
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Prod', 'Quality', 'Safety', 'Cost'],
-                datasets: [{
-                    data: [40, 30, 15, 15],
-                    backgroundColor: ['#4f46e5', '#34d399', '#f87171', '#fbbf24']
-                }]
-            },
-            options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
-        });
     }
 };
 
+// Initialize the reviewer module
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.location.pathname.includes('dashboard-reviewer.html')) {
-        reviewer.init();
-    }
+    reviewer.init();
 });
+

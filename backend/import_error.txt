@@ -1,0 +1,49 @@
+﻿python : Traceback 
+(most recent call last):
+At line:1 char:1
++ python -c "from app 
+import create_app; 
+create_app(); 
+print('OK')" 2>& ...
++ ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo      
+        : NotSpecified  
+  : (Traceback (most    
+ recent call last)::    
+String) [], RemoteE    
+xception
+    + FullyQualifiedErr 
+   orId : NativeComman  
+  dError
+ 
+  File "<string>", line 
+1, in <module>
+    from app import 
+create_app; 
+create_app(); 
+print('OK')
+                        
+        ~~~~~~~~~~^^
+  File "D:\projects soft
+wares\imfq\backend\app\_
+_init__.py", line 56, 
+in create_app
+    from 
+.routes.admin_routes 
+import admin_bp
+  File "D:\projects soft
+wares\imfq\backend\app\r
+outes\admin_routes.py", 
+line 7, in <module>
+    from ..models 
+import (
+    ...<3 lines>...
+    )
+ImportError: cannot 
+import name 'Stage3RCA' 
+from 'app.models' 
+(D:\projects softwares\i
+mfq\backend\app\models.p
+y)

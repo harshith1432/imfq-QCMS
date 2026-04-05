@@ -23,9 +23,10 @@ def get_projects():
     if role == 'Admin':
         pass # Full access within organization
     elif role == 'Facilitator':
-        query = query.filter(Project.status != 'Archived')
+        # Facilitators see projects they are assigned to
+        query = query.filter(Project.facilitator_id == user.id)
     elif role == 'Reviewer':
-        query = query.filter(Project.current_stage == 5)
+        query = query.filter(Project.status.in_(['Pending Approval', 'Active']))
     elif role == 'Team Leader':
         # TL sees projects they are the assigned TL OR a member of
         query = query.join(ProjectMember).filter(
@@ -84,7 +85,12 @@ def get_potential_members():
         if role == 'Admin':
             tl_role = Role.query.filter_by(name='Team Leader').first()
             tm_role = Role.query.filter_by(name='Team Member').first()
-            q = q.filter(User.role_id.in_([tl_role.id, tm_role.id]))
+            fa_role = Role.query.filter_by(name='Facilitator').first()
+            rv_role = Role.query.filter_by(name='Reviewer').first()
+            
+            # Combine roles for unified selection pool (Admin can assign anyone)
+            allowed_role_ids = [r.id for r in [tl_role, tm_role, fa_role, rv_role] if r]
+            q = q.filter(User.role_id.in_(allowed_role_ids))
         elif role == 'Team Leader':
             tm_role = Role.query.filter_by(name='Team Member').first()
             q = q.filter_by(role_id=tm_role.id)
@@ -126,6 +132,10 @@ def create_project():
         dept_id = user.department_id
 
     try:
+        # Check if facilitator_id is provided and valid (not empty string)
+        fid_val = data.get('facilitator_id')
+        facilitator_id = int(fid_val) if fid_val is not None and str(fid_val).strip() != "" else None
+
         new_project = Project(
             project_uid=project_uid,
             title=data['title'],
@@ -133,6 +143,7 @@ def create_project():
             category=data.get('category', 'Quality'),
             creator_id=user_id,
             team_leader_id=team_leader_id,
+            facilitator_id=facilitator_id, # Safely parsed integer or None
             org_id=user.org_id,
             department_id=dept_id,
             deadline=datetime.strptime(data['deadline'], '%Y-%m-%d').date() if data.get('deadline') else None,
@@ -163,9 +174,9 @@ def create_project():
             )
             db.session.add(tracker)
         
-        # 4. Initialize Stage 1 Problem data (Module 1)
-        from ..models import Stage1Problem
-        stage1 = Stage1Problem(
+        # 4. Initialize Stage 1 Problem data
+        from ..models import Stage1Identification
+        stage1 = Stage1Identification(
             project_id=new_project.id,
             org_id=user.org_id,
             problem_statement=data.get('problem_statement', data['title']),
@@ -226,11 +237,11 @@ def get_project_details(id):
     if role == 'Admin':
         authorized = True
     elif role == 'Facilitator':
-        authorized = (project.status != 'Archived')
+        authorized = (project.facilitator_id == user.id)
     elif role == 'Reviewer':
-        authorized = (project.current_stage == 5)
+        authorized = (project.status == 'Pending Approval' or project.current_stage in [5, 7])
     elif role == 'Team Leader':
-        authorized = (project.department_id == user.department_id)
+        authorized = (project.team_leader_id == user.id or project.department_id == user.department_id)
     elif role == 'Team Member':
         is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first()
         authorized = (is_member is not None)
@@ -248,7 +259,15 @@ def get_project_details(id):
         "status": project.status,
         "department": project.department.name if project.department else "N/A",
         "creator": project.creator.username if project.creator else "System",
-        "created_at": project.created_at.isoformat() + "Z"
+        "creator_id": project.creator_id,
+        "created_at": project.created_at.isoformat() + "Z",
+        "facilitator_id": project.facilitator_id,
+        "facilitator_name": project.facilitator.full_name if project.facilitator else (project.facilitator.username if project.facilitator else None),
+        "team_leader_id": project.team_leader_id,
+        "team_leader_name": project.team_leader.full_name if project.team_leader else (project.team_leader.username if project.team_leader else None),
+        "department_id": project.department_id,
+        "deadline": project.deadline.isoformat() if project.deadline else None,
+        "member_ids": [m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()]
     }), 200
 
 @project_bp.route('/<int:id>/activity', methods=['GET'])
@@ -308,6 +327,13 @@ def update_project(id):
     if 'title' in data: project.title = data['title']
     if 'description' in data: project.description = data['description']
     if 'category' in data: project.category = data['category']
+    if 'department_id' in data: project.department_id = data['department_id']
+    if 'facilitator_id' in data:
+        fid = data['facilitator_id']
+        project.facilitator_id = int(fid) if fid is not None and str(fid).strip() != "" else None
+    if 'team_leader_id' in data:
+        project.team_leader_id = data['team_leader_id']
+
     if 'deadline' in data:
         try:
             if data['deadline']:
@@ -357,23 +383,23 @@ def delete_project(id):
         
         # Import additional models for manual cleanup
         from ..models import (
-            Stage1Problem, Stage2Data, Stage3RCA,
-            Stage4Solution, Stage5Approval, Stage6Implementation, 
-            Stage7Impact, Stage8Standardization, KnowledgeRepository,
+            Stage1Identification, Stage2Selection, Stage3Analysis,
+            Stage4Causes, Stage5RootCause, Stage6DataAnalysis, 
+            Stage7Development, Stage8Implementation, KnowledgeRepository,
             ProjectStageTracker
         )
         
         # Manually clear workflow and tracker data
         ProjectStageTracker.query.filter_by(project_id=id).delete()
         
-        Stage1Problem.query.filter_by(project_id=id).delete()
-        Stage2Data.query.filter_by(project_id=id).delete()
-        Stage3RCA.query.filter_by(project_id=id).delete()
-        Stage4Solution.query.filter_by(project_id=id).delete()
-        Stage5Approval.query.filter_by(project_id=id).delete()
-        Stage6Implementation.query.filter_by(project_id=id).delete()
-        Stage7Impact.query.filter_by(project_id=id).delete()
-        Stage8Standardization.query.filter_by(project_id=id).delete()
+        Stage1Identification.query.filter_by(project_id=id).delete()
+        Stage2Selection.query.filter_by(project_id=id).delete()
+        Stage3Analysis.query.filter_by(project_id=id).delete()
+        Stage4Causes.query.filter_by(project_id=id).delete()
+        Stage5RootCause.query.filter_by(project_id=id).delete()
+        Stage6DataAnalysis.query.filter_by(project_id=id).delete()
+        Stage7Development.query.filter_by(project_id=id).delete()
+        Stage8Implementation.query.filter_by(project_id=id).delete()
         KnowledgeRepository.query.filter_by(project_id=id).delete()
         
         # Finally delete the project itself

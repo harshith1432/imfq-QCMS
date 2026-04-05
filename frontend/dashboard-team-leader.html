@@ -1,240 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Team Leader Dashboard | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .ds-tab-group { display: flex; gap: 8px; }
-        .ds-tab {
-            background: white;
-            border: 1px solid var(--border-light);
-            padding: 6px 14px;
-            border-radius: var(--radius-md);
-            font-size: 0.8125rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all var(--transition-fast);
-        }
-        .ds-tab:hover:not(.active) {
-            border-color: var(--slate-300);
-            background: var(--bg-body);
-        }
-        .ds-tab.active {
-            border-color: var(--primary);
-            background: rgba(37, 99, 235, 0.05);
-            color: var(--primary);
-            font-weight: 600;
-        }
-        .ds-tab i { width: 14px; height: 14px; color: var(--text-tertiary); }
-        .ds-tab.active i { color: var(--primary); }
-
-        /* Kanban / Pipeline Layout */
+        /* Team Leader Specific Layout tweaks - standardized */
         .kanban-wrapper {
-            margin-top: var(--space-2);
-            position: relative;
-            width: 100%;
-            overflow: hidden; /* Contain the scroll area */
+            padding: var(--ds-space-6);
+            overflow-x: auto;
+            background: rgba(var(--ds-primary-rgb), 0.01);
+            border-radius: var(--ds-radius-lg);
         }
 
         .kanban-scroll-area {
             display: flex;
-            gap: var(--space-4);
-            overflow-x: auto;
-            padding-bottom: var(--space-4);
-            scroll-behavior: smooth;
-            padding: 0 var(--space-1);
-        }
-
-        .kanban-scroll-area::-webkit-scrollbar {
-            height: 8px;
-        }
-
-        .kanban-scroll-area::-webkit-scrollbar-track {
-            background: var(--bg-body);
-            border-radius: 10px;
-        }
-
-        .kanban-scroll-area::-webkit-scrollbar-thumb {
-            background: var(--border-input);
-            border-radius: 10px;
+            gap: var(--ds-space-6);
+            min-height: 500px;
+            padding-bottom: var(--ds-space-4);
         }
 
         .kanban-stage {
-            min-width: 280px;
-            max-width: 280px;
-            flex-shrink: 0;
+            flex: 0 0 320px;
             display: flex;
             flex-direction: column;
-            gap: var(--space-3);
+            gap: var(--ds-space-4);
         }
 
         .kanban-stage-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: var(--space-2) var(--space-1);
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 5;
+            padding: var(--ds-space-3) var(--ds-space-4);
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-md);
+            backdrop-filter: blur(8px);
         }
 
         .kanban-stage-title {
-            font-size: 0.8125rem;
+            font-size: 0.75rem;
             font-weight: 700;
-            color: var(--text-primary);
             text-transform: uppercase;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.05em;
+            color: var(--ds-text-secondary);
         }
 
         .kanban-stage-count {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-tertiary);
-            background: var(--bg-body);
+            background: var(--ds-accent);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
             padding: 2px 8px;
-            border-radius: var(--radius-full);
-        }
-
-        .kanban-stage-items {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-3);
-            min-height: 100px;
-            padding: 2px;
+            border-radius: 20px;
         }
 
         .kanban-task-card {
-            background: white;
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-lg);
-            padding: var(--space-4);
-            box-shadow: var(--shadow-sm);
-            transition: all var(--transition-base);
+            background: var(--ds-bg-card);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-md);
+            padding: var(--ds-space-4);
             cursor: pointer;
-            position: relative;
-            overflow: hidden;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: var(--ds-shadow-sm);
         }
 
         .kanban-task-card:hover {
-            border-color: var(--primary-200);
-            box-shadow: var(--shadow-md);
             transform: translateY(-2px);
-        }
-
-        .kanban-task-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: var(--space-2);
+            box-shadow: var(--ds-shadow);
+            border-color: var(--ds-accent);
         }
 
         .kanban-task-id {
-            font-size: 0.65rem;
+            font-size: 10px;
             font-weight: 700;
-            color: var(--primary);
-            background: var(--primary-50);
-            padding: 2px 6px;
-            border-radius: 4px;
+            color: var(--ds-text-tertiary);
+            letter-spacing: 0.05em;
         }
 
         .kanban-task-title {
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             font-weight: 600;
-            color: var(--text-primary);
+            color: var(--ds-text-main);
             line-height: 1.4;
-            margin-bottom: var(--space-3);
         }
 
-        .kanban-task-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: var(--space-3);
-            padding-top: var(--space-3);
-            border-top: 1px solid var(--border-light);
-        }
-
-        .kanban-task-meta {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .kanban-task-progress {
-            width: 40px;
-            height: 4px;
-            background: var(--bg-body);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: var(--primary);
-            border-radius: 2px;
-        }
-
-        /* Validation Queue Enhancements */
         .q-item {
             display: flex;
             align-items: center;
-            gap: var(--space-3);
-            padding: var(--space-4);
-            border-bottom: 1px solid var(--border-light);
-            transition: background var(--transition-fast);
+            gap: var(--ds-space-4);
+            padding: var(--ds-space-4) var(--ds-space-5);
+            border-bottom: 1px solid var(--ds-border-color);
+            transition: background 0.2s ease;
         }
 
         .q-item:hover {
-            background: var(--bg-body);
+            background: rgba(var(--ds-accent-rgb), 0.03);
         }
 
         .q-icon {
             width: 40px;
             height: 40px;
-            border-radius: var(--radius-md);
-            background: var(--warning-light);
-            color: var(--warning-dark);
+            border-radius: 12px;
+            background: rgba(var(--ds-orange-rgb), 0.1);
+            color: rgb(var(--ds-orange-rgb));
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
 
-        .q-info { flex: 1; min-width: 0; }
-        .q-title { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
-        .q-meta { font-size: 0.75rem; color: var(--text-tertiary); }
+        .q-info {
+            flex: 1;
+            min-width: 0;
+        }
 
-        /* General Modal Styling refinements */
-        .modal-content {
-            border: none;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-xl);
+        .q-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--ds-text-main);
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-truncate: ellipsis;
         }
-        .modal-header {
-            padding: var(--space-5) var(--space-6);
-            border-bottom: 1px solid var(--border-light);
-        }
-        .modal-body {
-            padding: var(--space-6);
-        }
-        .modal-footer {
-            padding: var(--space-5) var(--space-6);
-            background: var(--bg-body);
-            border-top: 1px solid var(--border-light);
-            border-bottom-left-radius: var(--radius-xl);
-            border-bottom-right-radius: var(--radius-xl);
+
+        .q-meta {
+            font-size: 0.75rem;
+            color: var(--ds-text-tertiary);
+            display: flex;
+            align-items: center;
         }
     </style>
+
 </head>
 <body>
     <div class="app-layout">
@@ -243,26 +151,26 @@
 
         <main class="app-main">
             <!-- Navbar will be injected by components.js -->
-            <header class="app-navbar" id="app-navbar"></header>
+            <header class="glass-navbar" id="app-navbar"></header>
 
-            <div class="app-content">
-                <div class="content-header fade-in">
-                    <div>
-                        <h1 class="page-heading">Team Performance</h1>
-                        <p class="page-description">Oversee your team's project pipeline, validate stage completions, and manage project assignments.</p>
+            <div class="app-content-inner fade-in-up">
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Team Performance</h1>
+                            <p class="ds-text-secondary mb-0">Oversee your team's project pipeline, validate stage completions, and manage project assignments.</p>
+                        </div>
                     </div>
-                </div>
+                </header>
 
                 <!-- KPI Cards -->
-                <div class="kpi-grid fade-in" id="kpiGrid">
+                <div class="kpi-grid fade-in section-spacing" id="kpiGrid">
                     <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                    <!-- ... -->
                 </div>
 
                 <!-- Pipeline Section -->
-                <div class="ds-card fade-in" style="margin-top:var(--space-6);">
+                <div class="glass-card fade-in section-spacing">
                     <div class="ds-card-header">
                         <div class="d-flex align-items-center gap-3">
                             <h5 class="card-title">Project Pipeline</h5>
@@ -275,11 +183,11 @@
                                 </button>
                             </div>
                         </div>
-                        <button class="ds-btn ds-btn-primary ds-btn-sm" id="initProjectBtn" style="display: none;" onclick="tlDash.openInitModal()">
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" id="initProjectBtn" data-roles="Admin,Team Leader" onclick="tlDash.openInitModal()">
                             <i data-lucide="plus" style="width:14px;height:14px;"></i> Initialize Project
                         </button>
                     </div>
-                    <div class="ds-card-body" id="pipelineContainer" style="min-height:400px; padding: var(--space-4);">
+                    <div class="ds-card-body p-0" id="pipelineContainer" style="min-height:400px;">
                         <div class="text-center py-5">
                             <div class="spinner-border text-primary opacity-25" role="status"></div>
                             <p class="text-xs text-muted mt-3">Fetching project data...</p>
@@ -287,43 +195,44 @@
                     </div>
                 </div>
 
-                <!-- Lower Layout: Queue & Team -->
-                <div class="gap-grid gap-grid-2 fade-in" style="margin-top:var(--space-6);">
-                    <div class="ds-card">
+                <div class="gap-grid gap-grid-2 fade-in section-spacing">
+                    <div class="glass-card">
                         <div class="ds-card-header">
-                            <h5 class="card-title">Validation Queue</h5>
+                            <div class="h-stack gap-3">
+                                <i data-lucide="clipboard-check" class="text-orange" style="width:20px;height:20px;"></i>
+                                <h5 class="card-title mb-0">Validation Queue</h5>
+                            </div>
                             <span class="ds-badge orange" id="queueCount">0</span>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div style="max-height:360px; overflow-y:auto;" id="validationBody">
-                                <div class="p-4 text-center">
-                                    <div class="skeleton-text skeleton mb-2"></div>
-                                    <div class="skeleton-text skeleton short mx-auto"></div>
-                                </div>
+                            <div style="max-height:400px; overflow-y:auto;" id="validationBody">
+                                <!-- Validation items injected here -->
                             </div>
                         </div>
                     </div>
 
-                    <div class="ds-card">
+                    <div class="glass-card">
                         <div class="ds-card-header">
-                            <h5 class="card-title">My Team Status</h5>
+                            <div class="h-stack gap-3">
+                                <i data-lucide="users" class="text-blue" style="width:20px;height:20px;"></i>
+                                <h5 class="card-title mb-0">My Team Status</h5>
+                            </div>
                             <button class="ds-btn ds-btn-ghost ds-btn-sm">View Workload</button>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div style="max-height:360px; overflow-y:auto;" id="teamBody">
-                        <table class="ds-table">
-                            <thead>
-                                <tr>
-                                    <th style="padding-left: 16px;">Member</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th class="text-end" style="padding-right: 16px;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="membersList">
-                                <!-- Team members injected here -->
-                            </tbody>
-                        </table>
+                            <div style="max-height:400px; overflow-y:auto;" id="teamBody">
+                                <table class="ds-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="padding-left: 24px;">Member</th>
+                                            <th>Role</th>
+                                            <th class="text-end" style="padding-right: 24px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="membersList">
+                                        <!-- Team members injected here -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -332,13 +241,12 @@
         </main>
     </div>
 
-    <!-- Edit Project Modal -->
     <div class="modal fade" id="editProjectModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+            <div class="modal-content glass-card">
                 <div class="modal-header">
                     <h5 class="modal-title d-flex align-items-center gap-2">
-                        <div class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;">
+                        <div class="ds-icon-circle bg-blue-soft text-blue" style="width:32px;height:32px;">
                             <i data-lucide="edit-3" style="width:16px;height:16px;"></i>
                         </div>
                         Update Project Details
@@ -394,10 +302,10 @@
     <!-- Confirm Delete Modal -->
     <div class="modal fade" id="deleteProjectModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content">
-                <div class="modal-body p-4 text-center">
-                    <div class="ds-icon-circle bg-red-soft text-red mx-auto mb-3" style="width:48px;height:48px;">
-                        <i data-lucide="alert-triangle"></i>
+            <div class="modal-content glass-card">
+                <div class="modal-body p-5 text-center">
+                    <div class="ds-icon-circle bg-red-soft text-red mx-auto mb-4" style="width:56px;height:56px;">
+                        <i data-lucide="alert-triangle" style="width:24px;height:24px;"></i>
                     </div>
                     <h5 class="fw-bold mb-2">Delete Project?</h5>
                     <p class="text-muted text-sm mb-4">This action <b>cannot be undone</b>. All project workflow data will be permanently removed.</p>
@@ -410,10 +318,9 @@
         </div>
     </div>
 
-    <!-- Modals -->
     <div class="modal fade" id="initModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+            <div class="modal-content glass-card">
                 <div class="modal-header">
                     <h5 class="modal-title d-flex align-items-center gap-2">
                         <div class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;">
@@ -475,7 +382,8 @@
     <script src="assets/js/components.js"></script>
     <script>
     const tlDash = {
-        projects: [],
+        projectsData: [],
+        queueData: [],
         members: [],
         currentView: 'kanban',
 
@@ -500,8 +408,33 @@
             this.loadValidation();
             this.loadMembers();
 
+            // Global search listener
+            window.addEventListener('qcms-global-search', (e) => {
+                this.handleGlobalSearch(e.detail.query);
+            });
+
             this.editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
             this.deleteModal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
+        },
+
+        handleGlobalSearch(query) {
+            const q = query.toLowerCase().trim();
+            if (!q) {
+                this.projects = [...this.projectsData];
+                this.queue = [...this.queueData];
+            } else {
+                this.projects = this.projectsData.filter(p => 
+                    (p.title || '').toLowerCase().includes(q) ||
+                    (p.project_uid || '').toLowerCase().includes(q) ||
+                    (p.category || '').toLowerCase().includes(q)
+                );
+                this.queue = this.queueData.filter(item => 
+                    (item.title || '').toLowerCase().includes(q) ||
+                    (item.project_uid || '').toLowerCase().includes(q)
+                );
+            }
+            this.renderProjects();
+            this.renderValidation();
         },
 
         async loadStats() {
@@ -520,7 +453,9 @@
 
         async loadProjects() {
             try {
-                this.projects = await api.get('/team-leader/projects');
+                const data = await api.get('/team-leader/projects');
+                this.projectsData = data || [];
+                this.projects = [...this.projectsData];
                 this.renderProjects();
             } catch (e) {
                 document.getElementById('pipelineContainer').innerHTML = QCMS.emptyState('inbox', 'No Projects Linked', 'Start a new project to lead your team.');
@@ -536,13 +471,13 @@
 
         renderProjects() {
             const container = document.getElementById('pipelineContainer');
-            if (!this.projects.length) {
-                container.innerHTML = QCMS.emptyState('folder-kanban', 'No Projects Active', 'You haven\'t initialized any projects yet.');
+            if (!this.projects || !this.projects.length) {
+                container.innerHTML = QCMS.emptyState('folder-kanban', 'No Projects Matched', 'Try searching for something else.');
                 return;
             }
 
             if (this.currentView === 'kanban') {
-                const stages = ['Problem ID','Data','RCA','Proposed','Approval','Executing','Impact','Closed'];
+                const stages = ['Identification','Selection','Analysis','Causes','Root Cause','Data Analysis','Development','Implementation'];
                 const grouped = Array.from({length: 8}, () => []);
                 this.projects.forEach(p => { 
                     const s = (p.current_stage || p.stage || 1) - 1; 
@@ -580,7 +515,7 @@
                                                 </div>
                                             `;
                                         }).join('')}
-                                        ${grouped[i].length === 0 ? '<div class="text-center py-4 text-xs text-muted opacity-50">No Projects</div>' : ''}
+                                         ${grouped[i].length === 0 ? `<div class="text-center py-4 text-xs text-muted opacity-50">Empty Lane</div>` : ''}
                                     </div>
                                 </div>
                             `).join('')}
@@ -588,6 +523,10 @@
                     </div>
                 `;
             } else {
+                if (!this.projects || !this.projects.length) {
+                    container.innerHTML = `<div class="p-5">${QCMS.emptyState('folder-kanban', 'No Projects matches', 'Try searching for something else or starting a new project pipeline.')}</div>`;
+                    return;
+                }
                 container.innerHTML = `
                     <div class="table-responsive">
                         <table class="ds-table">
@@ -606,10 +545,10 @@
                                             <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" title="Workspace">
                                                 <i data-lucide="external-link" style="width:14px;height:14px;"></i>
                                             </a>
-                                            <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="tlDash.showEditModal(${p.id})" title="Edit">
+                                            <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="tlDash.showEditModal(${p.id})" title="Edit" data-roles="admin,team leader">
                                                 <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
                                             </button>
-                                            <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon text-danger" onclick="tlDash.confirmDelete(${p.id})" title="Delete">
+                                            <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon text-danger" onclick="tlDash.confirmDelete(${p.id})" title="Delete" data-roles="admin">
                                                 <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                                             </button>
                                         </div>
@@ -621,63 +560,76 @@
                 `;
             }
             if (window.lucide) lucide.createIcons();
+            QCMS.enforceUIPermissions();
         },
 
         async loadValidation() {
             try {
-                const queue = await api.get('/team-leader/queue');
-                document.getElementById('queueCount').textContent = queue.length || 0;
-                const body = document.getElementById('validationBody');
-                
-                if (!queue.length) {
-                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('check-circle', 'All Validated', 'No pending items in your queue.')}</div>`;
-                    return;
-                }
-
-                body.innerHTML = queue.map(q => `
-                    <div class="q-item fade-in">
-                        <div class="q-icon">
-                            <i data-lucide="file-check"></i>
-                        </div>
-                        <div class="q-info">
-                            <div class="q-title">${q.title}</div>
-                            <div class="q-meta">
-                                Stage ${q.stage} validation requested
-                                <span class="mx-1">•</span>
-                                ${QCMS.badge('ID: ' + (q.project_uid || 'P-001'), 'orange')}
-                            </div>
-                        </div>
-                        <a href="workspace.html?project=${q.project_id}" class="ds-btn ds-btn-sm ds-btn-primary">Verify</a>
-                    </div>
-                `).join('');
-                if (window.lucide) lucide.createIcons();
+                const data = await api.get('/team-leader/queue');
+                this.queueData = data || [];
+                this.queue = [...this.queueData];
+                this.renderValidation();
             } catch (e) {
                 console.error('Queue load failed', e);
             }
+        },
+
+        renderValidation() {
+            const queue = this.queue || [];
+            document.getElementById('queueCount').textContent = queue.length || 0;
+            const body = document.getElementById('validationBody');
+            
+            if (!queue.length) {
+                body.innerHTML = `<div class="p-4">${QCMS.emptyState('check-circle', 'All Validated', 'No pending items matching search or requirements.')}</div>`;
+                return;
+            }
+
+            body.innerHTML = queue.map(q => `
+                <div class="q-item fade-in">
+                    <div class="q-icon">
+                        <i data-lucide="file-check"></i>
+                    </div>
+                    <div class="q-info">
+                        <div class="q-title">${q.title}</div>
+                        <div class="q-meta">
+                            Stage ${q.stage} validation requested
+                            <span class="mx-1">•</span>
+                            ${QCMS.badge('ID: ' + (q.project_uid || 'P-001'), 'orange')}
+                        </div>
+                    </div>
+                    <a href="workspace.html?project=${q.project_id}" class="ds-btn ds-btn-sm ds-btn-primary">Verify</a>
+                </div>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
         },
         async loadMembers() {
             try {
                 this.members = await api.get('/team-leader/members');
                 const tbody = document.getElementById('membersList');
                 if (!this.members.length) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No team members found.</td></tr>';
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">${QCMS.emptyState('users', 'No Team Members', 'You haven\'t added any stakeholders to your team yet.')}</td></tr>`;
                     return;
                 }
                 tbody.innerHTML = this.members.map(m => `
                     <tr class="fade-in">
-                        <td>
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="user-avatar" style="width:32px;height:32px;font-size:0.7rem; background: var(--primary-100); color: var(--primary-700); border: 1px solid var(--primary-200);">
+                        <td style="padding-left: 24px;">
+                            <div class="h-stack gap-3">
+                                <div class="user-avatar-sm" style="width:34px;height:34px; border-radius:10px; background: rgba(var(--ds-primary-rgb), 0.05); color: var(--ds-primary); border: 1px solid var(--ds-border-color); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px;">
                                     ${(m.username||'UN').substring(0,2).toUpperCase()}
                                 </div>
-                                <div>
-                                    <div class="text-sm fw-semibold text-primary">${m.username}</div>
-                                    <div class="text-xs text-muted">${m.email || 'team-member@qcms.com'}</div>
+                                <div class="v-stack">
+                                    <div class="text-sm fw-bold" style="color: var(--ds-text-main);">${m.username}</div>
+                                    <div class="text-xxs text-muted">${m.email || 'team-member@qcms.com'}</div>
                                 </div>
                             </div>
                         </td>
-                        <td class="text-end">
+                        <td>
                             <span class="ds-badge gray">${m.role || 'Member'}</span>
+                        </td>
+                        <td class="text-end" style="padding-right: 24px;">
+                            <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm">
+                                <i data-lucide="more-horizontal" style="width:14px;height:14px;"></i>
+                            </button>
                         </td>
                     </tr>
                 `).join('');
@@ -717,7 +669,7 @@
             if (!data.title || !data.category) return QCMS.toast('Project title and category are required', 'warning');
 
             try {
-                await api.post('/team-leader/initialize', data);
+                await api.post('/projects', data);
                 QCMS.toast('Project initialized and broadcasted to team.', 'success');
                 bootstrap.Modal.getInstance(document.getElementById('initModal')).hide();
                 this.init();
@@ -779,8 +731,12 @@
                 await api.delete(`/projects/${this.deleteTargetId}`);
                 QCMS.toast('Project and data removed permanently.', 'success');
                 this.deleteModal.hide();
-                this.loadProjects();
+                // Enforce RBAC visibility
+                QCMS.enforceUIPermissions();
+
+                // Load Initial Data
                 this.loadStats();
+                this.loadProjects();
             } catch (e) {
                 QCMS.toast(e.message || 'Deletion failed', 'danger');
             } finally {

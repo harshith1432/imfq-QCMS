@@ -68,14 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
             tabsContainer.innerHTML = '';
             
             const stageNames = [
-                "1. Problem Identification",
-                "2. Data Collection",
-                "3. Root Cause Analysis",
-                "4. Solution Proposal",
-                "5. Review & Approval",
-                "6. Implementation",
-                "7. Impact Measurement",
-                "8. Standardization"
+                "1. Identification",
+                "2. Selection",
+                "3. Analysis",
+                "4. Causes",
+                "5. Root Cause",
+                "6. Data Analysis",
+                "7. Development",
+                "8. Implementation"
             ];
 
             const currentStage = this.project.current_stage || this.project.stage || 1;

@@ -20,10 +20,15 @@ const api = {
         });
 
         if (response.status === 401) {
-            localStorage.removeItem('token');
-            if (!window.location.pathname.includes('login.html')) {
-                window.location.href = 'login.html';
+            if (typeof window.logout === 'function') {
+                window.logout();
+            } else {
+                localStorage.removeItem('token');
+                if (!window.location.pathname.includes('login.html')) {
+                    window.location.href = 'login.html';
+                }
             }
+            return;
         }
 
         const data = await response.json();
@@ -71,5 +76,15 @@ const api = {
         const formData = new FormData();
         formData.append('file', file);
         return this.post(endpoint, formData);
+    },
+
+    showNotification: function(message, type = 'info') {
+        if (window.QCMS && QCMS.toast) {
+            QCMS.toast(message, type);
+        } else {
+            console.log(`[Notification] ${type}: ${message}`);
+            // Fallback for pages without components.js
+            alert(message);
+        }
     }
 };

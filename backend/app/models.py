@@ -42,11 +42,28 @@ class User(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'))
     is_active = db.Column(db.Boolean, default=True)
+    is_verified = db.Column(db.Boolean, default=False)
     is_temp_password = db.Column(db.Boolean, default=False)
+    verification_token = db.Column(db.String(255), unique=True, nullable=True)
+    reset_token = db.Column(db.String(255), unique=True, nullable=True)
+    otp_token = db.Column(db.String(10), nullable=True)
+    otp_expiry = db.Column(db.DateTime, nullable=True)
+    token_expiry = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='Active') # Active, Inactive
+    profile_picture = db.Column(db.String(255), nullable=True)
+    banner_image = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     deactivated_at = db.Column(db.DateTime)
+
+class EmailVerification(db.Model):
+    __tablename__ = 'email_verifications'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    otp = db.Column(db.String(6), nullable=False)
+    is_verified = db.Column(db.Boolean, default=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Project(db.Model):
     __tablename__ = 'projects'
@@ -59,6 +76,7 @@ class Project(db.Model):
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'))
     category = db.Column(db.String(20))  # Safety, Quality, Productivity, Cost
     team_leader_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    facilitator_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     deadline = db.Column(db.Date, nullable=True)
     current_stage = db.Column(db.Integer, default=1)
     status = db.Column(db.String(20), default='In Progress')
@@ -74,6 +92,7 @@ class Project(db.Model):
     department = db.relationship('Department', backref='projects_in_dept', lazy=True)
     creator = db.relationship('User', foreign_keys=[creator_id], backref='created_projects')
     team_leader = db.relationship('User', foreign_keys=[team_leader_id], backref='led_projects')
+    facilitator = db.relationship('User', foreign_keys=[facilitator_id], backref='facilitated_projects')
 
 class ProjectMember(db.Model):
     __tablename__ = 'project_members'
@@ -114,57 +133,76 @@ class ProjectWorkflow(db.Model):
 # STAGE-SPECIFIC MODELS (8-STAGE WORKFLOW)
 # ============================
 
-class Stage1Problem(db.Model):
-    __tablename__ = 'stage_1_problem'
+class Stage1Identification(db.Model):
+    __tablename__ = 'stage_1_identification'
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    problem_list = db.Column(db.JSON) # List of identified problems
     problem_statement = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
-    evidence = db.Column(db.Text)
+    evidence = db.Column(db.String(500))
     location = db.Column(db.String(255))
-    frequency_of_occurrence = db.Column(db.String(100))
+    frequency_of_occurrence = db.Column(db.String(255))
     initial_impact = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    project_ref = db.relationship('Project', backref=db.backref('stage1_problem', uselist=False))
+    project_ref = db.relationship('Project', backref=db.backref('stage1_identification', uselist=False))
 
-class Stage2Data(db.Model):
-    __tablename__ = 'stage_2_data'
+class Stage2Selection(db.Model):
+    __tablename__ = 'stage_2_selection'
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
-    raw_data = db.Column(db.JSON)
+    selection_criteria = db.Column(db.JSON) # Scores for each problem
+    selected_problem = db.Column(db.Text)
+    facilitator_validation = db.Column(db.Boolean, default=False)
+    validation_note = db.Column(db.Text)
+    project_ref = db.relationship('Project', backref=db.backref('stage2_selection', uselist=False))
+
+class Stage3Analysis(db.Model):
+    __tablename__ = 'stage_3_analysis'
+    id = db.Column(db.Integer, primary_key=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    current_status = db.Column(db.Text)
+    data_points = db.Column(db.JSON)
     baseline_kpi = db.Column(db.Float)
-    data_method = db.Column(db.String(100))
-    findings_summary = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    project_ref = db.relationship('Project', backref=db.backref('stage2_data', uselist=False))
-class Stage4Solution(db.Model):
-    __tablename__ = 'stage_4_solution'
-    id = db.Column(db.Integer, primary_key=True)
-    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
-    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
-    budget_required = db.Column(db.Float, default=0.0)
-    estimated_roi = db.Column(db.Float, default=0.0)
-    resource_plan = db.Column(db.Text)
-    kpi_targets = db.Column(db.JSON)
-    implementation_plan = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    project_ref = db.relationship('Project', backref=db.backref('stage4_solution', uselist=False))
+    project_ref = db.relationship('Project', backref=db.backref('stage3_analysis', uselist=False))
 
-class Stage5Approval(db.Model):
-    __tablename__ = 'stage_5_approval'
+class Stage4Causes(db.Model):
+    __tablename__ = 'stage_4_causes'
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
-    stage_id = db.Column(db.Integer, default=5)
+    brainstorming_data = db.Column(db.JSON)
+    potential_causes = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    project_ref = db.relationship('Project', backref=db.backref('stage4_causes', uselist=False))
+class Stage7Development(db.Model):
+    __tablename__ = 'stage_7_development'
+    id = db.Column(db.Integer, primary_key=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    solution_details = db.Column(db.Text)
+    action_plan = db.Column(db.JSON)
+    estimated_cost = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    project_ref = db.relationship('Project', backref=db.backref('stage7_development', uselist=False))
+
+class ProjectReview(db.Model):
+    __tablename__ = 'project_reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    stage_number = db.Column(db.Integer)
     reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     status = db.Column(db.String(20), default='Pending')
     decision = db.Column(db.String(20)) # Approve / Reject
     comments = db.Column(db.Text)
     decided_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    project_ref = db.relationship('Project', backref=db.backref('stage5_approval', uselist=False))
+    project_ref = db.relationship('Project', backref=db.backref('reviews', lazy=True))
 
 class KPIMetric(db.Model):
     __tablename__ = 'kpi_metrics'
@@ -194,72 +232,53 @@ class AuditLog(db.Model):
     # Relationships
     user = db.relationship('User', backref='logs')
 
-class Stage3RCA(db.Model):
-    __tablename__ = 'stage_3_rca'
+class Stage5RootCause(db.Model):
+    __tablename__ = 'stage_5_root_cause'
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     fishbone_data = db.Column(db.JSON)
     why_analysis = db.Column(db.JSON)
-    pareto_data = db.Column(db.JSON)
-    histogram_data = db.Column(db.JSON)
-    control_chart_data = db.Column(db.JSON)
-    scatter_data = db.Column(db.JSON)
-    checksheet_data = db.Column(db.JSON)
-    flowchart_data = db.Column(db.JSON)
-    fives_audit_data = db.Column(db.JSON)
-    pokayoke_data = db.Column(db.JSON)
     root_cause_summary = db.Column(db.Text)
-    rca_validation_note = db.Column(db.Text)  # Facilitator must fill this to unlock Stage 3→4
-    facilitator_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    facilitator_validation = db.Column(db.Boolean, default=False)
+    validation_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    project_ref = db.relationship('Project', backref=db.backref('stage3_rca', lazy=True))
+    project_ref = db.relationship('Project', backref=db.backref('stage5_root_cause', uselist=False))
 
-class Stage6Implementation(db.Model):
-    __tablename__ = 'stage_6_implementation'
+class Stage6DataAnalysis(db.Model):
+    __tablename__ = 'stage_6_data_analysis'
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
-    action_plan = db.Column(db.Text)
-    actual_cost = db.Column(db.Float, default=0.0)
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
-    execution_notes = db.Column(db.Text)
+    validation_data = db.Column(db.JSON)
+    inference = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    project_ref = db.relationship('Project', backref=db.backref('stage6_implementation', uselist=False))
+    project_ref = db.relationship('Project', backref=db.backref('stage6_data_analysis', uselist=False))
 
-class Stage7Impact(db.Model):
-    __tablename__ = 'stage_7_impact'
+# Stage 7 and 8 have been repurposed as individual models above
+
+class Stage8Implementation(db.Model):
+    __tablename__ = 'stage_8_implementation'
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    results_data = db.Column(db.JSON)
     baseline_data = db.Column(db.JSON)
     final_data = db.Column(db.JSON)
     kpi_improvement_pct = db.Column(db.Float)
-    cost_savings = db.Column(db.Float)
-    productivity_gain = db.Column(db.Float)
-    impact_vouchers = db.Column(db.Text)
-    status = db.Column(db.String(20), default='Pending')  # Pending / Approved — Facilitator only
+    cost_savings = db.Column(db.Float, default=0.0)
+    productivity_gain = db.Column(db.Float, default=0.0)
+    impact_vouchers = db.Column(db.JSON)
+    status = db.Column(db.String(30), default='Pending')
     approved_by = db.Column(db.Integer, db.ForeignKey('users.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    project_ref = db.relationship('Project', backref=db.backref('stage7_impact', lazy=True))
-
-class Stage8Standardization(db.Model):
-    __tablename__ = 'stage_8_standardization'
-    id = db.Column(db.Integer, primary_key=True)
-    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
-    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
-    sop_url = db.Column(db.String(500))
-    training_records = db.Column(db.JSON)
-    preventive_actions = db.Column(db.Text)
+    sop_details = db.Column(db.Text)
     lessons_learned = db.Column(db.Text)
+    preventive_actions = db.Column(db.Text)
+    training_records = db.Column(db.Text)
     facilitator_validation = db.Column(db.Boolean, default=False)
     admin_closure = db.Column(db.Boolean, default=False)
-    closure_report_path = db.Column(db.String(500))
-    final_pdf_report = db.Column(db.String(500))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    project_ref = db.relationship('Project', backref=db.backref('stage8_standardization', uselist=False))
+    project_ref = db.relationship('Project', backref=db.backref('stage8_implementation', uselist=False))
 
 # ============================
 # MODULE 6: Knowledge Repository
@@ -313,3 +332,17 @@ class FacilitatorNote(db.Model):
 
     project_ref = db.relationship('Project', backref=db.backref('facilitator_notes', lazy=True))
     author = db.relationship('User', backref='facilitator_notes')
+
+# ============================
+# Backward-Compatible Aliases
+# ============================
+# These map old model names (used throughout routes) to the new 8-stage models.
+# This avoids breaking dozens of route files that still import the old names.
+Stage1Problem = Stage1Identification
+Stage3RCA = Stage5RootCause
+Stage4Solution = Stage7Development
+Stage5Approval = ProjectReview
+Stage6Implementation = Stage8Implementation
+Stage7Impact = Stage8Implementation
+Stage8Standardization = Stage8Implementation
+

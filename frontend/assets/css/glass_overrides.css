@@ -1,0 +1,51 @@
+/* ==================== 
+   QCMS Glassmorphism v2.0
+   ==================== */
+:root {
+    /* Enhanced Palette */
+    --primary: #6366f1;
+    --primary-glow: rgba(99, 102, 241, 0.5);
+    --secondary: #ec4899;
+    --accent: #8b5cf6;
+    
+    /* Advanced Mesh Gradient Background */
+    --grad-mesh: radial-gradient(at 0% 0%, hsla(253,16%,15%,1) 0, transparent 50%), 
+                 radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                 radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%),
+                 radial-gradient(at 0% 100%, hsla(253,16%,15%,1) 0, transparent 50%),
+                 radial-gradient(at 100% 100%, hsla(225,39%,30%,1) 0, transparent 50%);
+                 
+    --bg-body: #0f172a; /* Darker base for glass to pop */
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+}
+
+body {
+    background: var(--bg-body) var(--grad-mesh) !important;
+    background-attachment: fixed !important;
+    background-size: cover !important;
+    color: var(--text-primary);
+}
+
+/* Base Overrides for Glassmorphism */
+.lp-navbar {
+    background: rgba(15, 23, 42, 0.6) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.feature-card, .ds-card, .kpi-card {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1) !important;
+}
+
+.feature-card:hover, .ds-card:hover, .kpi-card:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    transform: translateY(-8px) scale(1.02) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.4) !important;
+}

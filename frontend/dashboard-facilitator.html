@@ -1,76 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facilitator Dashboard | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .tool-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; margin:2px; }
-        .tool-done { background:#dcfce7; color:#166534; }
-        .tool-missing { background:#fef9c3; color:#854d0e; }
-        .gate-locked { background:#fee2e2; color:#991b1b; border-radius:8px; padding:8px 12px; font-size:12px; margin-top:8px; }
-        .gate-unlocked { background:#dcfce7; color:#166534; border-radius:8px; padding:8px 12px; font-size:12px; margin-top:8px; }
-        .impact-stat { text-align:center; padding:12px; border-radius:8px; background:#f8fafc; }
-        .impact-stat .val { font-size:1.5rem; font-weight:700; }
-        .impact-stat .lbl { font-size:11px; color:#6b7280; margin-top:2px; }
+        /* Role-specific minor tweaks can stay here if absolutely necessary, 
+           but most are now in design-system.css */
     </style>
 </head>
 <body>
     <div class="app-layout">
         <aside class="app-sidebar" id="app-sidebar"></aside>
         <main class="app-main">
-            <header class="app-navbar" id="app-navbar"></header>
-            <div class="app-content">
+            <header class="glass-navbar" id="app-navbar"></header>
+            <div class="app-content-inner fade-in-up">
 
                 <!-- Page Header -->
-                <div class="content-header fade-in">
-                    <div>
-                        <h1 class="page-heading">Methodology Oversight</h1>
-                        <p class="page-description">Guide teams through the 8-stage methodology. Validate RCA, approve impact results, and drive closure.</p>
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Methodology Oversight</h1>
+                            <p class="ds-text-secondary mb-0">Guide teams through the 8-stage methodology. Validate RCA, approve impact results, and drive closure.</p>
+                        </div>
                     </div>
+                </header>
+
+                <!-- KPI Widget Cards -->
+                <div class="kpi-grid fade-in section-spacing" id="kpiGrid">
+                    <!-- Dynamic injection via components.js -->
                 </div>
 
-                <!-- ─── KPI Widget Cards ─────────────────────────────── -->
-                <div class="kpi-grid fade-in" id="kpiGrid">
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                </div>
+                <!-- TABS -->
+                <div class="fade-in section-spacing">
+                    <div class="ds-tab-group mb-4" id="facTabs">
+                        <button class="ds-btn-tab active" data-tab="rca">
+                            <i data-lucide="search" style="width:16px;height:16px;margin-right:6px;"></i> RCA Workspace
+                        </button>
+                        <button class="ds-btn-tab" data-tab="impact">
+                            <i data-lucide="bar-chart-3" style="width:16px;height:16px;margin-right:6px;"></i> Impact Review
+                        </button>
+                        <button class="ds-btn-tab" data-tab="closure">
+                            <i data-lucide="archive" style="width:16px;height:16px;margin-right:6px;"></i> Closure
+                        </button>
+                        <button class="ds-btn-tab" data-tab="pipeline">
+                            <i data-lucide="git-branch" style="width:16px;height:16px;margin-right:6px;"></i> Pipeline
+                        </button>
+                    </div>
 
-                <!-- ─── TABS ─────────────────────────────────────────── -->
-                <div class="fade-in mt-4">
-                    <ul class="nav nav-tabs mb-4" id="facTabs">
-                        <li class="nav-item">
-                            <button class="nav-link active" data-tab="rca">
-                                <i data-lucide="search" style="width:14px;height:14px;margin-right:6px;"></i>RCA Workspace
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-tab="impact">
-                                <i data-lucide="bar-chart-3" style="width:14px;height:14px;margin-right:6px;"></i>Impact Review
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-tab="closure">
-                                <i data-lucide="archive" style="width:14px;height:14px;margin-right:6px;"></i>Closure
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-tab="pipeline">
-                                <i data-lucide="git-branch" style="width:14px;height:14px;margin-right:6px;"></i>Pipeline
-                            </button>
-                        </li>
-                    </ul>
-
-                    <!-- ─── RCA Workspace Tab ──────────────────────────── -->
+                    <!-- RCA Workspace Tab -->
                     <div id="tab-rca" class="tab-content-panel">
-                        <div class="ds-card">
+                        <div class="glass-card">
                             <div class="ds-card-header">
-                                <h5 class="card-title">🔬 RCA Coaching Queue — Stage 3</h5>
+                                <h5 class="card-title">🔬 RCA Coaching Queue — Stage 5</h5>
                                 <span class="ds-badge orange" id="rcaCount">Loading...</span>
                             </div>
                             <div class="ds-card-body p-0" id="rcaBody">
@@ -79,11 +68,11 @@
                         </div>
                     </div>
 
-                    <!-- ─── Impact Review Tab ─────────────────────────── -->
+                    <!-- Impact Review Tab -->
                     <div id="tab-impact" class="tab-content-panel d-none">
-                        <div class="ds-card">
+                        <div class="glass-card">
                             <div class="ds-card-header">
-                                <h5 class="card-title">📊 Impact Verification — Stage 7</h5>
+                                <h5 class="card-title">📊 Impact Verification — Stage 8</h5>
                                 <span class="ds-badge blue" id="impactCount">Loading...</span>
                             </div>
                             <div class="ds-card-body p-0" id="impactBody">
@@ -92,9 +81,9 @@
                         </div>
                     </div>
 
-                    <!-- ─── Closure Tab ───────────────────────────────── -->
+                    <!-- Closure Tab -->
                     <div id="tab-closure" class="tab-content-panel d-none">
-                        <div class="ds-card">
+                        <div class="glass-card">
                             <div class="ds-card-header">
                                 <h5 class="card-title">📁 Standardization & Closure — Stage 8</h5>
                                 <span class="ds-badge green" id="closureCount">Loading...</span>
@@ -105,15 +94,15 @@
                         </div>
                     </div>
 
-                    <!-- ─── Pipeline Tab ──────────────────────────────── -->
+                    <!-- Pipeline Tab -->
                     <div id="tab-pipeline" class="tab-content-panel d-none">
-                        <div class="ds-card">
+                        <div class="glass-card">
                             <div class="ds-card-header">
                                 <h5 class="card-title">🗺️ Project Pipeline — All Stages</h5>
-                                <span class="ds-badge" id="pipelineCount">Loading...</span>
+                                <span class="ds-badge blue" id="pipelineCount">Loading...</span>
                             </div>
                             <div class="ds-card-body p-0">
-                                <div style="max-height:600px; overflow-y:auto;">
+                                <div class="table-responsive">
                                     <table class="ds-table">
                                         <thead>
                                             <tr>
@@ -125,7 +114,7 @@
                                             </tr>
                                         </thead>
                                         <tbody id="pipelineBody">
-                                            <tr><td colspan="5" class="p-4 text-center text-muted">Loading pipeline...</td></tr>
+                                            <tr><td colspan="5" class="p-4 text-center text-muted">Loading pipeline data...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -173,7 +162,7 @@
                     <div class="ds-alert info mb-3">
                         <div class="d-flex gap-2">
                             <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
-                            <div class="text-sm">By adding this validation note, you confirm the Root Cause Analysis is complete and the project is eligible to advance to Stage 4 (Solution Design).</div>
+                            <div class="text-sm">By adding this validation note, you confirm the Root Cause Analysis is complete and the project is eligible to advance to Stage 6 (Data Analysis).</div>
                         </div>
                     </div>
                     <input type="hidden" id="validateProjectId">
@@ -184,7 +173,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitValidation()">Validate RCA & Unlock Stage 4</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitValidation()">Validate RCA & Unlock Stage 6</button>
                 </div>
             </div>
         </div>
@@ -202,7 +191,7 @@
                     <div class="ds-alert info mb-3">
                         <div class="d-flex gap-2">
                             <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
-                            <div class="text-sm">Approving will move this project to <strong>Stage 8: Standardization</strong>. This action cannot be undone.</div>
+                            <div class="text-sm">Approving will mark this project as <strong>Pending Closure</strong>. This action cannot be undone.</div>
                         </div>
                     </div>
                     <input type="hidden" id="approveImpactProjectId">
@@ -223,7 +212,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitImpactApproval()">Approve Results → Stage 8</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitImpactApproval()">Approve Results → Pending Closure</button>
                 </div>
             </div>
         </div>
@@ -265,6 +254,13 @@
         validateModal: null,
         approveModal: null,
         closureModal: null,
+        
+        // Cache for search
+        rcaData: [],
+        impactData: [],
+        closureData: [],
+        pipelineData: [],
+        currentSearchQuery: '',
 
         async init() {
             QCMS.init();
@@ -283,11 +279,36 @@
                 });
             });
 
+            // Global search listener
+            window.addEventListener('qcms-global-search', (e) => {
+                this.handleGlobalSearch(e.detail.query);
+            });
+
             this.loadStats();
             this.loadRCA();
             this.loadImpact();
             this.loadClosure();
             this.loadPipeline();
+            
+            // Enforce RBAC visibility
+            QCMS.enforceUIPermissions();
+        },
+
+        handleGlobalSearch(query) {
+            this.currentSearchQuery = query.toLowerCase();
+            this.renderRCA(this.filterData(this.rcaData));
+            this.renderImpact(this.filterData(this.impactData));
+            this.renderClosure(this.filterData(this.closureData));
+            this.renderPipeline(this.filterData(this.pipelineData));
+        },
+
+        filterData(data) {
+            if (!this.currentSearchQuery) return data;
+            return data.filter(p => 
+                (p.title && p.title.toLowerCase().includes(this.currentSearchQuery)) ||
+                (p.dept && p.dept.toLowerCase().includes(this.currentSearchQuery)) ||
+                (p.uid && p.uid.toLowerCase().includes(this.currentSearchQuery))
+            );
         },
 
         // ─── Stats ───────────────────────────────────────────────
@@ -295,7 +316,7 @@
             try {
                 const s = await api.get('/facilitator/stats');
                 document.getElementById('kpiGrid').innerHTML =
-                    QCMS.kpiCard('Needs Guidance (Stage 3)', s.pending_rca || 0, 'search', 'orange') +
+                    QCMS.kpiCard('Needs Guidance (Stage 5)', s.pending_rca || 0, 'search', 'orange') +
                     QCMS.kpiCard('Pending Impact Review', s.pending_impact || 0, 'bar-chart-3', 'blue') +
                     QCMS.kpiCard('Stalled Projects', s.stalled_projects || 0, 'alert-triangle', 'red') +
                     QCMS.kpiCard('Avg KPI Improvement', s.avg_improvement || '0%', 'trending-up', 'green');
@@ -307,144 +328,168 @@
         async loadRCA() {
             try {
                 const projects = await api.get('/facilitator/rca-workspace');
-                document.getElementById('rcaCount').textContent = `${projects.length} Active`;
-                const body = document.getElementById('rcaBody');
-                if (!projects.length) {
-                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('check-circle', 'All Clear', 'No projects currently need RCA facilitation.')}</div>`;
-                    if (window.lucide) lucide.createIcons();
-                    return;
-                }
-                body.innerHTML = `<div class="p-3 d-flex flex-column gap-3">
-                    ${projects.map(p => `
-                    <div class="border rounded p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <div class="fw-semibold text-primary">${p.title}</div>
-                                <div class="text-xs text-muted">${p.dept}</div>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="facDash.openNoteModal(${p.id}, 3)">
-                                    <i data-lucide="message-square" style="width:13px;height:13px;"></i> Note
-                                </button>
-                                ${p.has_validation_note ? 
-                                    `<span class="ds-badge green">RCA Validated ✓</span>` :
-                                    `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openValidateModal(${p.id})">Validate RCA</button>`
-                                }
-                                <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Open</a>
-                            </div>
-                        </div>
-                        <div class="d-flex flex-wrap gap-1 mb-2">
-                            ${Object.entries(p.qc_tools || {}).map(([k,v]) =>
-                                `<span class="tool-badge ${v ? 'tool-done' : 'tool-missing'}">${k.replace('_',' ')}</span>`
-                            ).join('')}
-                        </div>
-                        <div class="${p.has_validation_note ? 'gate-unlocked' : 'gate-locked'}">
-                            ${p.has_validation_note
-                                ? `✅ Validation Note: "${p.rca_validation_note}"`
-                                : `🔒 Stage 3→4 Blocked: Facilitator RCA Validation Note required`}
-                        </div>
-                    </div>`).join('')}
-                </div>`;
-                if (window.lucide) lucide.createIcons();
+                this.rcaData = projects;
+                this.renderRCA(this.filterData(this.rcaData));
             } catch (e) {
                 document.getElementById('rcaBody').innerHTML = `<div class="p-4 text-danger">Error loading RCA projects.</div>`;
             }
+        },
+
+        renderRCA(projects) {
+            document.getElementById('rcaCount').textContent = `${projects.length} Active`;
+            const body = document.getElementById('rcaBody');
+            if (!projects.length) {
+                const msg = this.currentSearchQuery ? `No projects matching "${this.currentSearchQuery}"` : 'No projects currently need RCA facilitation or stage 5 coaching.';
+                body.innerHTML = `<div class="p-4">${QCMS.emptyState('search', 'All Clear', msg)}</div>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+            body.innerHTML = `<div class="p-3 d-flex flex-column gap-3">
+                ${projects.map(p => `
+                <div class="border rounded p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="fw-semibold text-primary">${p.title}</div>
+                            <div class="text-xs text-muted">${p.dept}</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="facDash.openNoteModal(${p.id}, 5)">
+                                <i data-lucide="message-square" style="width:13px;height:13px;"></i> Note
+                            </button>
+                            ${p.has_validation_note ? 
+                                `<span class="ds-badge green">RCA Validated ✓</span>` :
+                                `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openValidateModal(${p.id})">Validate RCA</button>`
+                            }
+                            <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Open</a>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        ${Object.entries(p.qc_tools || {}).map(([k,v]) =>
+                            `<span class="tool-badge ${v ? 'tool-done' : 'tool-missing'}">${k.replace('_',' ')}</span>`
+                        ).join('')}
+                    </div>
+                    <div class="${p.has_validation_note ? 'gate-unlocked' : 'gate-locked'}">
+                        ${p.has_validation_note
+                            ? `✅ Validation Note: "${p.rca_validation_note}"`
+                            : `🔒 Stage 5→6 Blocked: Facilitator RCA Validation Note required`}
+                    </div>
+                </div>`).join('')}
+            </div>`;
+            if (window.lucide) lucide.createIcons();
         },
 
         // ─── Impact Review ───────────────────────────────────────
         async loadImpact() {
             try {
                 const projects = await api.get('/facilitator/impact-review');
-                document.getElementById('impactCount').textContent = `${projects.length} Pending`;
-                const body = document.getElementById('impactBody');
-                if (!projects.length) {
-                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('check-circle', 'All Verified', 'No projects in Stage 7 impact measurement.')}</div>`;
-                    if (window.lucide) lucide.createIcons();
-                    return;
-                }
-                body.innerHTML = `<div class="p-3 d-flex flex-column gap-3">
-                    ${projects.map(p => {
-                        const pct = p.kpi_improvement_pct;
-                        const pctColor = pct > 0 ? '#16a34a' : pct < 0 ? '#dc2626' : '#6b7280';
-                        return `<div class="border rounded p-3">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div>
-                                    <div class="fw-semibold text-primary">${p.title}</div>
-                                    <span class="ds-badge ${p.approved ? 'green' : 'orange'}">${p.status || 'Pending'}</span>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="facDash.openNoteModal(${p.id}, 7)">
-                                        <i data-lucide="message-square" style="width:13px;height:13px;"></i> Note
-                                    </button>
-                                    ${!p.approved ? `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openApproveModal(${p.id})">Approve Results</button>` : `<span class="ds-badge green">✓ Approved</span>`}
-                                </div>
-                            </div>
-                            <div class="row g-2">
-                                <div class="col-4"><div class="impact-stat"><div class="val text-muted">${p.baseline?.value ?? '—'}</div><div class="lbl">Baseline</div></div></div>
-                                <div class="col-4"><div class="impact-stat"><div class="val" style="color:${pctColor}">${pct != null ? (pct > 0 ? '+' : '') + pct + '%' : '—'}</div><div class="lbl">KPI Change</div></div></div>
-                                <div class="col-4"><div class="impact-stat"><div class="val text-success">${p.final?.value ?? '—'}</div><div class="lbl">Final</div></div></div>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>`;
-                if (window.lucide) lucide.createIcons();
+                this.impactData = projects;
+                this.renderImpact(this.filterData(this.impactData));
             } catch (e) {
                 document.getElementById('impactBody').innerHTML = `<div class="p-4 text-danger">Error loading impact projects.</div>`;
             }
+        },
+
+        renderImpact(projects) {
+            document.getElementById('impactCount').textContent = `${projects.length} Pending`;
+            const body = document.getElementById('impactBody');
+            if (!projects.length) {
+                const msg = this.currentSearchQuery ? `No projects matching "${this.currentSearchQuery}"` : 'No projects in Stage 8 impact measurement pipeline.';
+                body.innerHTML = `<div class="p-4">${QCMS.emptyState('search', 'All Verified', msg)}</div>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+            body.innerHTML = `<div class="p-3 d-flex flex-column gap-3">
+                ${projects.map(p => {
+                    const pct = p.kpi_improvement_pct;
+                    const pctColor = pct > 0 ? '#16a34a' : pct < 0 ? '#dc2626' : '#6b7280';
+                    return `<div class="border rounded p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <div class="fw-semibold text-primary">${p.title}</div>
+                                <span class="ds-badge ${p.approved ? 'green' : 'orange'}">${p.status || 'Pending'}</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="facDash.openNoteModal(${p.id}, 8)">
+                                    <i data-lucide="message-square" style="width:13px;height:13px;"></i> Note
+                                </button>
+                                ${!p.approved ? `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openApproveModal(${p.id})">Approve Results</button>` : `<span class="ds-badge green">✓ Approved</span>`}
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-4"><div class="impact-stat"><div class="val text-muted">${p.baseline?.value ?? '—'}</div><div class="lbl">Baseline</div></div></div>
+                            <div class="col-4"><div class="impact-stat"><div class="val" style="color:${pctColor}">${pct != null ? (pct > 0 ? '+' : '') + pct + '%' : '—'}</div><div class="lbl">KPI Change</div></div></div>
+                            <div class="col-4"><div class="impact-stat"><div class="val text-success">${p.final?.value ?? '—'}</div><div class="lbl">Final</div></div></div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+            if (window.lucide) lucide.createIcons();
         },
 
         // ─── Closure ─────────────────────────────────────────────
         async loadClosure() {
             try {
                 const projects = await api.get('/facilitator/closure-projects');
-                document.getElementById('closureCount').textContent = `${projects.length} Active`;
-                const body = document.getElementById('closureBody');
-                if (!projects.length) {
-                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('archive', 'Queue Empty', 'No projects are currently in Stage 8.')}</div>`;
-                    if (window.lucide) lucide.createIcons();
-                    return;
-                }
-                body.innerHTML = `<table class="ds-table"><thead><tr>
-                    <th>Project</th><th>SOP</th><th>Lessons</th><th>Training</th><th>Facilitator Sign-off</th><th class="text-end">Action</th>
-                </tr></thead><tbody>
-                    ${projects.map(p => `<tr>
-                        <td><div class="fw-semibold">${p.title}</div></td>
-                        <td><span class="ds-badge ${p.sop_status === 'Uploaded' ? 'green' : 'orange'}">${p.sop_status}</span></td>
-                        <td>${p.has_lessons ? '✅' : '—'}</td>
-                        <td>${p.has_training_records ? '✅' : '—'}</td>
-                        <td>${p.facilitator_signoff ? '<span class="ds-badge green">Signed Off</span>' : '<span class="ds-badge orange">Pending</span>'}</td>
-                        <td class="text-end">
-                            ${!p.facilitator_signoff ? `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openClosureModal(${p.id})">Sign Off</button>` : ''}
-                            <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ms-1">View</a>
-                        </td>
-                    </tr>`).join('')}
-                </tbody></table>`;
+                this.closureData = projects;
+                this.renderClosure(this.filterData(this.closureData));
             } catch (e) {
                 document.getElementById('closureBody').innerHTML = `<div class="p-4 text-danger">Error loading closure projects.</div>`;
             }
+        },
+
+        renderClosure(projects) {
+            document.getElementById('closureCount').textContent = `${projects.length} Active`;
+            const body = document.getElementById('closureBody');
+            if (!projects.length) {
+                const msg = this.currentSearchQuery ? `No projects matching "${this.currentSearchQuery}"` : 'No projects are currently in the Stage 8 closure phase.';
+                body.innerHTML = `<div class="p-4">${QCMS.emptyState('search', 'Queue Empty', msg)}</div>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+            body.innerHTML = `<table class="ds-table"><thead><tr>
+                <th>Project</th><th>SOP</th><th>Lessons</th><th>Training</th><th>Facilitator Sign-off</th><th class="text-end">Action</th>
+            </tr></thead><tbody>
+                ${projects.map(p => `<tr>
+                    <td><div class="fw-semibold">${p.title}</div></td>
+                    <td><span class="ds-badge ${p.sop_status === 'Uploaded' ? 'green' : 'orange'}">${p.sop_status}</span></td>
+                    <td>${p.has_lessons ? '✅' : '—'}</td>
+                    <td>${p.has_training_records ? '✅' : '—'}</td>
+                    <td>${p.facilitator_signoff ? '<span class="ds-badge green">Signed Off</span>' : '<span class="ds-badge orange">Pending</span>'}</td>
+                    <td class="text-end">
+                        ${!p.facilitator_signoff ? `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openClosureModal(${p.id})">Sign Off</button>` : ''}
+                        <a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ms-1">View</a>
+                    </td>
+                </tr>`).join('')}
+            </tbody></table>`;
         },
 
         // ─── Pipeline ─────────────────────────────────────────────
         async loadPipeline() {
             try {
                 const projects = await api.get('/facilitator/projects');
-                document.getElementById('pipelineCount').textContent = `${projects.length} Projects`;
-                const body = document.getElementById('pipelineBody');
-                if (!projects.length) {
-                    body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">No active projects found.</td></tr>`;
-                    return;
-                }
-                const stageColors = { 1:'gray',2:'gray',3:'orange',4:'blue',5:'cyan',6:'blue',7:'purple',8:'green' };
-                body.innerHTML = projects.map(p => `<tr>
-                    <td><div class="fw-semibold">${p.title}</div><div class="text-xs text-muted">${p.uid}</div></td>
-                    <td><span class="text-sm">${p.dept}</span></td>
-                    <td><span class="ds-badge ${stageColors[p.stage] || 'gray'}">Stage ${p.stage}</span></td>
-                    <td><span class="text-sm text-muted">${p.status}</span></td>
-                    <td class="text-end"><a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Open</a></td>
-                </tr>`).join('');
+                this.pipelineData = projects;
+                this.renderPipeline(this.filterData(this.pipelineData));
             } catch (e) {
                 document.getElementById('pipelineBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Error loading pipeline.</td></tr>`;
             }
+        },
+
+        renderPipeline(projects) {
+            document.getElementById('pipelineCount').textContent = `${projects.length} Projects`;
+            const body = document.getElementById('pipelineBody');
+            if (!projects.length) {
+                const msg = this.currentSearchQuery ? `No results for "${this.currentSearchQuery}"` : 'No active projects found in your oversight pipeline.';
+                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${QCMS.emptyState('search', 'No Projects matches', msg)}</td></tr>`;
+                return;
+            }
+            const stageColors = { 1:'gray',2:'gray',3:'orange',4:'blue',5:'cyan',6:'blue',7:'purple',8:'green' };
+            body.innerHTML = projects.map(p => `<tr>
+                <td><div class="fw-semibold">${p.title}</div><div class="text-xs text-muted">${p.uid}</div></td>
+                <td><span class="text-sm">${p.dept}</span></td>
+                <td><span class="ds-badge ${stageColors[p.stage] || 'gray'}">Stage ${p.stage}</span></td>
+                <td><span class="text-sm text-muted">${p.status}</span></td>
+                <td class="text-end"><a href="workspace.html?project=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Open</a></td>
+            </tr>`).join('');
         },
 
         // ─── Modals ───────────────────────────────────────────────

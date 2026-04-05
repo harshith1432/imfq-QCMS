@@ -1,519 +1,306 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Knowledge Repository | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .repo-hero {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            color: white;
-            padding: 3rem 0;
-            border-radius: 0 0 2rem 2rem;
-            margin-bottom: 2rem;
-        }
-        .repo-hero h1 { font-size: 2.2rem; font-weight: 700; }
-        .repo-hero p { opacity: 0.8; }
-        
-        .search-box {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            backdrop-filter: blur(10px);
-        }
-        .search-box input {
-            background: rgba(255,255,255,0.15);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            border-radius: 0.75rem;
-            padding: 0.75rem 1.25rem;
-            font-size: 1.1rem;
-        }
-        .search-box input::placeholder { color: rgba(255,255,255,0.5); }
-        .search-box input:focus { background: rgba(255,255,255,0.2); color: white; box-shadow: none; border-color: #4cc9f0; }
-        .search-box select {
-            background: rgba(255,255,255,0.15);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            border-radius: 0.75rem;
-        }
-        .search-box select option { color: #333; }
-        
-        .project-card {
-            border: none;
-            border-radius: 1rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-        .project-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-        }
-        .project-card .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 1rem 1.25rem;
-        }
-        .project-card .kpi-badge {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border-radius: 2rem;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.8rem;
-        }
-        .project-card .saving-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #10b981;
-        }
-        .project-card .kpi-value {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #3b82f6;
-        }
-        
-        .category-badge {
-            padding: 0.3rem 0.8rem;
-            border-radius: 2rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .category-badge.Safety { background: #fef3c7; color: #b45309; }
-        .category-badge.Quality { background: #dbeafe; color: #1d4ed8; }
-        .category-badge.Productivity { background: #d1fae5; color: #047857; }
-        .category-badge.Cost { background: #fce7f3; color: #be185d; }
-        
-        .detail-section {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-        }
-        .stage-timeline {
-            display: flex;
-            gap: 0;
-            overflow-x: auto;
-            padding: 1rem 0;
-        }
-        .stage-step {
-            text-align: center;
-            flex: 1;
-            min-width: 100px;
-            position: relative;
-        }
-        .stage-step::after {
-            content: '';
-            position: absolute;
-            top: 18px;
-            right: -50%;
-            width: 100%;
-            height: 3px;
-            background: #e5e7eb;
-            z-index: 0;
-        }
-        .stage-step:last-child::after { display: none; }
-        .stage-step.completed::after { background: #10b981; }
-        .stage-dot {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #e5e7eb;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 0.5rem;
-            font-size: 0.8rem;
-            font-weight: 700;
-            position: relative;
-            z-index: 1;
-        }
-        .stage-step.completed .stage-dot { background: #10b981; color: white; }
-
-        .sop-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            transition: background 0.2s;
-        }
-        .sop-card:hover { background: #f9fafb; }
-
-        .pagination-custom .page-link {
-            border-radius: 0.5rem;
-            margin: 0 0.15rem;
-            border: none;
-            color: #6366f1;
-        }
-        .pagination-custom .page-item.active .page-link {
-            background: #6366f1;
-            color: white;
-        }
+        /* Styles moved to design-system.css and global components */
     </style>
 </head>
-<body class="bg-light">
-    <!-- Navigation -->
-    <nav class="navbar navbar-dark" style="background: #1a1a2e;">
-        <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="dashboard.html">
-                <i data-lucide="shield-check"></i>
-                <span>QCMS Enterprise</span>
-            </a>
-            <div class="d-flex align-items-center gap-3">
-                <a href="dashboard.html" class="btn btn-sm btn-outline-light">
-                    <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Dashboard
-                </a>
-                <button class="btn btn-sm btn-outline-danger" id="logoutBtn">Logout</button>
-            </div>
-        </div>
-    </nav>
 
-    <!-- Hero Section -->
-    <div class="repo-hero">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6">
-                    <h1><i data-lucide="book-open" style="width:32px;height:32px;"></i> Knowledge Repository</h1>
-                    <p class="mb-0">Centralized archive of all completed quality projects. Learn from past solutions, prevent repeated problem-solving, and promote best practices.</p>
-                </div>
-                <div class="col-lg-6">
-                    <div class="search-box">
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <input type="text" class="form-control" id="searchInput" placeholder="Search by keyword, project name, root cause...">
-                            </div>
-                            <div class="col-md-4">
-                                <select class="form-select" id="filterDept">
-                                    <option value="">All Departments</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <select class="form-select" id="filterCategory">
-                                    <option value="">All Categories</option>
-                                    <option value="Safety">Safety</option>
-                                    <option value="Quality">Quality</option>
-                                    <option value="Productivity">Productivity</option>
-                                    <option value="Cost">Cost Reduction</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <button class="btn btn-light w-100 fw-bold" onclick="repoApp.search()">
-                                    <i data-lucide="search" style="width:16px;height:16px;"></i> Search
-                                </button>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+        <main class="app-main">
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner">
+                <!-- Standardized Header -->
+                <header class="ds-header-layout section-spacing px-0">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Knowledge Repository</h1>
+                            <p class="ds-text-secondary mb-0">Centralized archive of all completed quality projects. Learn from past solutions and promote best practices.</p>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Standardized Search Area -->
+                <div class="glass-card ds-card mb-4">
+                    <div class="ds-card-body p-4">
+                        <div class="h-stack justify-content-between flex-wrap gap-3">
+                            <div class="h-stack gap-3">
+                                <div class="v-stack">
+                                    <label class="ds-label mb-2">DEPARTMENT</label>
+                                    <select class="ds-input ds-select" id="filterDept" style="width: 200px;">
+                                        <option value="">All Departments</option>
+                                    </select>
+                                </div>
+                                <div class="v-stack">
+                                    <label class="ds-label mb-2">CATEGORY</label>
+                                    <select class="ds-input ds-select" id="filterCategory" style="width: 180px;">
+                                        <option value="">All Categories</option>
+                                        <option value="Safety">Safety</option>
+                                        <option value="Quality">Quality</option>
+                                        <option value="Productivity">Productivity</option>
+                                        <option value="Cost">Cost Reduction</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <div class="ds-tab-group mb-4">
+                    <button class="ds-btn-tab active" data-tab="browse" onclick="repoApp.showTab('browse', this)">
+                        <i data-lucide="grid" style="width:16px;height:16px; stroke-width: 2.2;"></i>
+                        <span>Browse Projects</span>
+                    </button>
+                    <button class="ds-btn-tab" data-tab="sop" onclick="repoApp.showTab('sop', this)">
+                        <i data-lucide="file-text" style="width:16px;height:16px; stroke-width: 2.2;"></i>
+                        <span>SOP Library</span>
+                    </button>
+                </div>
+
+                <div id="browseSection">
+                    <div class="corporate-grid" id="projectGrid"></div>
+                    <nav class="mt-5 d-flex justify-content-center">
+                        <div id="pagination" class="d-flex gap-2"></div>
+                    </nav>
+                </div>
+
+                <div id="sopSection" style="display:none;">
+                    <div class="corporate-grid" id="sopGrid"></div>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
 
-    <!-- Main Content -->
-    <div class="container pb-5">
-        <!-- Tabs -->
-        <ul class="nav nav-pills mb-4" id="repoTabs">
-            <li class="nav-item">
-                <a class="nav-link active" href="#" data-tab="browse" onclick="repoApp.showTab('browse')">
-                    <i data-lucide="grid" style="width:16px;height:16px;"></i> Browse Projects
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#" data-tab="sop" onclick="repoApp.showTab('sop')">
-                    <i data-lucide="file-text" style="width:16px;height:16px;"></i> SOP Library
-                </a>
-            </li>
-        </ul>
-
-        <!-- Browse Section -->
-        <div id="browseSection">
-            <div class="row g-4" id="projectGrid">
-                <div class="col-12 text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-2 text-muted">Loading archived projects...</p>
+    <!-- Detail Modal -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content glass-card">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title fw-bold" id="detailTitle">Project Title</h5>
+                        <p class="text-xs text-muted mb-0" id="detailMeta">Category • Archived on</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-            </div>
-
-            <!-- Pagination -->
-            <nav class="mt-4 d-flex justify-content-center">
-                <ul class="pagination pagination-custom" id="pagination"></ul>
-            </nav>
-        </div>
-
-        <!-- SOP Library Section -->
-        <div id="sopSection" style="display:none;">
-            <div class="row g-3" id="sopGrid">
-                <!-- SOPs loaded dynamically -->
-            </div>
-        </div>
-
-        <!-- Detail Modal -->
-        <div class="modal fade" id="detailModal" tabindex="-1">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content" style="border-radius:1rem; overflow:hidden;">
-                    <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none;">
-                        <div>
-                            <h5 class="modal-title" id="detailTitle">Project Title</h5>
-                            <small id="detailMeta">Category • Archived on</small>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body bg-light" id="detailBody">
-                        <!-- Detail content loaded dynamically -->
-                    </div>
+                <div class="modal-body" id="detailBody">
+                    <!-- Loaded dynamically -->
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="assets/js/api.js"></script>
-    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components.js"></script>
     <script>
-    const repoApp = {
-        currentPage: 1,
-        perPage: 12,
+        const repoApp = {
+            currentPage: 1,
+            perPage: 12,
 
-        async init() {
-            this.loadDepartments();
-            this.search();
-            document.getElementById('searchInput').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') this.search();
-            });
-            document.getElementById('logoutBtn')?.addEventListener('click', () => logout());
-            if (window.lucide) lucide.createIcons();
-        },
-
-        async loadDepartments() {
-            try {
-                const depts = await api.get('/admin/departments');
-                const select = document.getElementById('filterDept');
-                depts.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = typeof d === 'object' ? d.id : d;
-                    opt.textContent = typeof d === 'object' ? d.name : d;
-                    select.appendChild(opt);
-                });
-            } catch (e) { /* Departments might require admin role */ }
-        },
-
-        async search(page = 1) {
-            this.currentPage = page;
-            const keyword = document.getElementById('searchInput').value;
-            const dept = document.getElementById('filterDept').value;
-            const category = document.getElementById('filterCategory').value;
-
-            let params = `page=${page}&per_page=${this.perPage}`;
-            if (keyword) params += `&q=${encodeURIComponent(keyword)}`;
-            if (dept) params += `&department_id=${dept}`;
-            if (category) params += `&category=${category}`;
-
-            const grid = document.getElementById('projectGrid');
-            grid.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>';
-
-            try {
-                const result = await api.get(`/repository/search?${params}`);
-                this.renderGrid(result.results, result.total, result.pages);
-            } catch (err) {
-                grid.innerHTML = '<div class="col-12 text-center py-5"><p class="text-muted">No archived projects found. Projects appear here after Admin closes them at Stage 8.</p></div>';
-            }
-        },
-
-        renderGrid(projects, total, pages) {
-            const grid = document.getElementById('projectGrid');
-            
-            if (!projects || projects.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-12 text-center py-5">
-                        <i data-lucide="inbox" style="width:64px;height:64px;" class="text-muted mb-3 d-block mx-auto"></i>
-                        <h5 class="text-muted">No archived projects found</h5>
-                        <p class="text-muted">Try different search criteria or check back later.</p>
-                    </div>`;
+            async init() {
+                QCMS.init();
+                const searchInput = document.getElementById('globalSearchInput');
+                if (searchInput) {
+                    searchInput.placeholder = "Search repository...";
+                    searchInput.oninput = () => this.onSearchInput();
+                }
+                this.loadDepartments();
+                this.search();
                 if (window.lucide) lucide.createIcons();
-                return;
-            }
+            },
 
-            grid.innerHTML = projects.map(p => `
-                <div class="col-lg-4 col-md-6">
-                    <div class="card project-card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1 text-truncate" style="max-width: 200px;">${p.title}</h6>
-                                ${p.category ? `<span class="kpi-badge">${p.category}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="row text-center mb-3">
-                                <div class="col-6">
-                                    <small class="text-muted d-block">KPI Improvement</small>
-                                    <span class="kpi-value">${p.kpi_improvement_pct || 0}%</span>
+            searchTimeout: null,
+            onSearchInput() {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => this.search(1), 300);
+            },
+
+            async loadDepartments() {
+                try {
+                    const depts = await api.get('/admin/departments');
+                    const select = document.getElementById('filterDept');
+                    depts.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.id;
+                        opt.textContent = d.name;
+                        select.appendChild(opt);
+                    });
+                } catch (e) { }
+            },
+
+            async search(page = 1) {
+                this.currentPage = page;
+                const keyword = document.getElementById('globalSearchInput')?.value || '';
+                const dept = document.getElementById('filterDept').value;
+                const category = document.getElementById('filterCategory').value;
+
+                let params = `page=${page}&per_page=${this.perPage}`;
+                if (keyword) params += `&q=${encodeURIComponent(keyword)}`;
+                if (dept) params += `&department_id=${dept}`;
+                if (category) params += `&category=${category}`;
+
+                const grid = document.getElementById('projectGrid');
+                grid.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>';
+
+                try {
+                    const result = await api.get(`/repository/search?${params}`);
+                    this.renderGrid(result.results, result.total, result.pages);
+                } catch (err) {
+                    grid.innerHTML = '<div class="col-12 text-center py-5"><p class="text-muted">No archived projects found.</p></div>';
+                }
+            },
+            renderGrid(projects, total, pages) {
+                const grid = document.getElementById('projectGrid');
+                const query = document.getElementById('globalSearchInput')?.value || '';
+
+                if (!projects || projects.length === 0) {
+                    if (query) {
+                        grid.innerHTML = `<div class="col-12 py-5 px-3">
+                            ${QCMS.emptyState('No Projects Found', `We couldn't find any projects matching "${query}".`, 'search-x')}
+                        </div>`;
+                    } else {
+                        grid.innerHTML = `<div class="col-12 py-5 px-3">
+                            ${QCMS.emptyState('Archive Empty', 'No archived projects are currently available for the selected filters.', 'folder-search')}
+                        </div>`;
+                    }
+                    if (window.lucide) lucide.createIcons();
+                    document.getElementById('pagination').innerHTML = '';
+                    return;
+                }
+
+                grid.innerHTML = projects.map(p => `
+                <div class="glass-card ds-card fade-in h-100">
+                    <div class="ds-card-header h-stack justify-content-between">
+                        ${QCMS.categoryBadge(p.category || 'General')}
+                        <small class="text-xs text-secondary fw-bold uppercase opacity-60">${p.department_name}</small>
+                    </div>
+                    <div class="ds-card-body p-4">
+                        <h5 class="fw-bold mb-3" style="font-size: 1.1rem; color: var(--ds-text-main);">${p.title}</h5>
+                        <p class="text-sm ds-text-secondary mb-4 line-clamp-2">${p.problem_summary || 'No summary available.'}</p>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <div class="glass-panel p-2 text-center" style="background: rgba(var(--ds-primary-rgb), 0.03); border-radius: 10px; border: 1px solid var(--ds-border-color);">
+                                    <small class="text-muted d-block text-xxs uppercase mb-1">KPI Improvement</small>
+                                    <span class="fw-bold text-accent" style="font-size: 1rem;">${p.kpi_improvement_pct || 0}%</span>
                                 </div>
-                                <div class="col-6">
-                                    <small class="text-muted d-block">Cost Savings</small>
-                                    <span class="saving-value">$${(p.cost_savings || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="col-6">
+                                <div class="glass-panel p-2 text-center" style="background: rgba(var(--ds-green-rgb), 0.03); border-radius: 10px; border: 1px solid var(--ds-border-color);">
+                                    <small class="text-muted d-block text-xxs uppercase mb-1">Cost Savings</small>
+                                    <span class="fw-bold text-green" style="font-size: 1rem;">₹${(p.cost_savings || 0).toLocaleString()}</span>
                                 </div>
                             </div>
-                            <div class="d-flex gap-2 mt-auto">
-                                <button class="btn btn-sm btn-primary flex-fill" onclick="repoApp.viewDetail(${p.id})">
-                                    <i data-lucide="eye" style="width:14px;height:14px;"></i> View Details
-                                </button>
-                            </div>
                         </div>
-                        <div class="card-footer bg-transparent border-top-0 text-muted small">
-                            Archived: ${p.archived_at ? new Date(p.archived_at).toLocaleDateString() : 'N/A'}
-                        </div>
+                        
+                        <button class="ds-btn ds-btn-secondary w-100" onclick="repoApp.viewDetail(${p.id})">
+                            <i data-lucide="external-link" style="width:14px;height:14px;"></i> View Solution
+                        </button>
                     </div>
                 </div>
             `).join('');
 
-            // Pagination
-            const pag = document.getElementById('pagination');
-            let pagHtml = '';
-            for (let i = 1; i <= pages; i++) {
-                pagHtml += `<li class="page-item ${i === this.currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="repoApp.search(${i})">${i}</a>
-                </li>`;
-            }
-            pag.innerHTML = pagHtml;
+                let pagHtml = '';
+                for (let i = 1; i <= pages; i++) {
+                    pagHtml += `<button class="ds-btn ${i === this.currentPage ? 'ds-btn-primary' : 'ds-btn-secondary'} ds-btn-sm" 
+                            style="min-width:40px;" onclick="repoApp.search(${i})">${i}</button>`;
+                }
+                document.getElementById('pagination').innerHTML = pagHtml;
+                if (window.lucide) lucide.createIcons();
+            },
 
-            if (window.lucide) lucide.createIcons();
-        },
+            async viewDetail(entryId) {
+                try {
+                    const detail = await api.get(`/repository/${entryId}`);
+                    document.getElementById('detailTitle').textContent = detail.title;
+                    document.getElementById('detailMeta').textContent = `${detail.category || 'General'} • Archived ${new Date(detail.archived_at).toLocaleDateString()}`;
 
-        async viewDetail(entryId) {
-            try {
-                const detail = await api.get(`/repository/${entryId}`);
-                
-                document.getElementById('detailTitle').textContent = detail.title;
-                document.getElementById('detailMeta').textContent = `${detail.category || 'General'} • Archived ${detail.archived_at ? new Date(detail.archived_at).toLocaleDateString() : ''}`;
-                
-                // Build stage timeline
-                const stages = ['Problem ID', 'Data', 'RCA', 'Proposal', 'Approval', 'Implement', 'Impact', 'Closure'];
-                const timeline = stages.map((s, i) => `
+                    const stages = ['Identification', 'Selection', 'Analysis', 'Causes', 'Root Cause', 'Data Analysis', 'Development', 'Implementation'];
+                    const timeline = stages.map((s, i) => `
                     <div class="stage-step completed">
-                        <div class="stage-dot">${i+1}</div>
-                        <small>${s}</small>
+                        <div class="stage-dot">${i + 1}</div>
+                        <small class="text-xxs d-block mt-1">${s}</small>
                     </div>
                 `).join('');
 
-                document.getElementById('detailBody').innerHTML = `
-                    <div class="detail-section">
-                        <h6 class="text-muted mb-3">STAGE PROGRESSION</h6>
+                    document.getElementById('detailBody').innerHTML = `
+                    <div class="glass-panel p-4 mb-4">
+                        <h6 class="text-xxs fw-bold uppercase text-muted mb-3">Project Lifecycle</h6>
                         <div class="stage-timeline">${timeline}</div>
                     </div>
-                    
-                    <div class="row">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="detail-section">
-                                <h6 class="text-muted">PROBLEM SUMMARY</h6>
-                                <p>${detail.problem_summary || 'Not documented'}</p>
+                            <div class="glass-panel p-4 h-100">
+                                <h6 class="text-xxs fw-bold uppercase text-muted">Problem Statement</h6>
+                                <p class="mb-0 text-sm">${detail.problem_summary || 'N/A'}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="detail-section">
-                                <h6 class="text-muted">ROOT CAUSE</h6>
-                                <p>${detail.root_cause || 'Not documented'}</p>
+                            <div class="glass-panel p-4 h-100">
+                                <h6 class="text-xxs fw-bold uppercase text-muted">Root Cause</h6>
+                                <p class="mb-0 text-sm">${detail.root_cause || 'N/A'}</p>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="detail-section">
-                        <h6 class="text-muted">SOLUTION SUMMARY</h6>
-                        <p>${detail.solution_summary || 'Not documented'}</p>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="detail-section text-center">
-                                <small class="text-muted">KPI Improvement</small>
-                                <h3 class="text-primary">${detail.kpi_improvement_pct || 0}%</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="detail-section text-center">
-                                <small class="text-muted">Cost Savings</small>
-                                <h3 class="text-success">$${(detail.cost_savings || 0).toLocaleString()}</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="detail-section text-center">
-                                <small class="text-muted">SOP</small>
-                                ${detail.sop_path ? `<a href="${detail.sop_path}" class="btn btn-sm btn-outline-primary">Download</a>` : '<span class="text-muted">N/A</span>'}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="detail-section text-center">
-                                <small class="text-muted">Closure Report</small>
-                                ${detail.closure_report_path ? `<a href="${detail.closure_report_path}" class="btn btn-sm btn-outline-primary">Download</a>` : '<span class="text-muted">N/A</span>'}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${detail.tags && detail.tags.length > 0 ? `
-                    <div class="detail-section">
-                        <h6 class="text-muted">TAGS</h6>
-                        ${detail.tags.map(t => `<span class="badge bg-soft-primary text-primary me-1">${t}</span>`).join('')}
-                    </div>` : ''}
                 `;
+                    new bootstrap.Modal(document.getElementById('detailModal')).show();
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) { QCMS.toast('Failed to load details', 'error'); }
+            },
 
-                new bootstrap.Modal(document.getElementById('detailModal')).show();
-                if (window.lucide) lucide.createIcons();
-            } catch (err) {
-                alert('Failed to load project details');
-            }
-        },
+            showTab(tab, btn) {
+                document.querySelectorAll('.ds-btn-tab').forEach(b => b.classList.remove('active'));
+                if (btn) btn.classList.add('active');
 
-        showTab(tab) {
-            document.querySelectorAll('#repoTabs .nav-link').forEach(l => l.classList.remove('active'));
-            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-            
-            document.getElementById('browseSection').style.display = tab === 'browse' ? '' : 'none';
-            document.getElementById('sopSection').style.display = tab === 'sop' ? '' : 'none';
-            
-            if (tab === 'sop') this.loadSOPs();
-        },
+                document.getElementById('browseSection').style.display = tab === 'browse' ? '' : 'none';
+                document.getElementById('sopSection').style.display = tab === 'sop' ? '' : 'none';
+                if (tab === 'sop') this.loadSOPs();
+            },
 
-        async loadSOPs() {
-            const grid = document.getElementById('sopGrid');
-            try {
-                const sops = await api.get('/repository/sop-library');
-                
-                if (sops.length === 0) {
-                    grid.innerHTML = '<div class="col-12 text-center py-5"><p class="text-muted">No SOPs available yet.</p></div>';
-                    return;
-                }
+            async loadSOPs() {
+                try {
+                    const sops = await api.get('/repository/sop-library');
+                    const grid = document.getElementById('sopGrid');
+                    if (!sops.length) { grid.innerHTML = '<div class="col-12 text-center p-5 text-muted">No SOPs found</div>'; return; }
 
-                grid.innerHTML = sops.map(s => `
-                    <div class="col-md-4">
-                        <div class="sop-card">
+                    grid.innerHTML = sops.map(s => `
+                    <div class="glass-card p-3 fade-in">
+                        <div class="d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-3">
-                                <div style="width:48px;height:48px;background:#eff6ff;border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                                    <i data-lucide="file-text" style="color:#3b82f6;"></i>
+                                <div class="glass-icon-container" style="background: rgba(var(--ds-accent-rgb), 0.1); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                                    <i data-lucide="file-text" class="text-accent" style="width:20px; height:20px;"></i>
                                 </div>
-                                <div class="flex-fill">
-                                    <h6 class="mb-0">${s.title}</h6>
-                                    <small class="text-muted">${s.category || 'General'}</small>
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-sm">${s.title}</h6>
+                                    <small class="text-xxs text-secondary uppercase opacity-60 font-inter">${s.category || 'Standard'}</small>
                                 </div>
-                                <a href="${s.sop_path}" class="btn btn-sm btn-outline-primary">
-                                    <i data-lucide="download" style="width:14px;height:14px;"></i>
-                                </a>
                             </div>
+                            <a href="${s.sop_path}" class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" target="_blank" title="Download">
+                                <i data-lucide="download"></i>
+                            </a>
                         </div>
                     </div>
                 `).join('');
-
-                if (window.lucide) lucide.createIcons();
-            } catch (err) {
-                grid.innerHTML = '<p class="text-danger">Failed to load SOP library</p>';
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) { }
             }
-        }
-    };
-
-    document.addEventListener('DOMContentLoaded', () => repoApp.init());
+        };
+        document.addEventListener('DOMContentLoaded', () => repoApp.init());
     </script>
 </body>
+
 </html>

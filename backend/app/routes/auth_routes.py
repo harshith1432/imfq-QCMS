@@ -1,8 +1,19 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
-from ..models import User, Role, Department, Organization, db
+from ..models import User, Role, Department, Organization, EmailVerification, db
+import random
 from .. import bcrypt
-from datetime import timedelta
+from ..utils.email_utils import EmailUtils
+from datetime import timedelta, datetime
+import os
+from werkzeug.utils import secure_filename
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -23,6 +34,11 @@ def register_org():
     if User.query.filter_by(username=username).first():
         return jsonify({"msg": "Username already taken"}), 400
 
+    # Check if verified in EmailVerification
+    verification = EmailVerification.query.filter_by(email=email).first()
+    if not verification or not verification.is_verified:
+        return jsonify({"msg": "Email not verified. Please verify your email first."}), 400
+    
     # 1. Create Organization
     new_org = Organization(
         name=data.get('company_name'),
@@ -44,19 +60,100 @@ def register_org():
         email=email,
         hashed_password=hashed_pw,
         role_id=admin_role.id,
-        status='Active'
+        status='Active',
+        is_verified=True # Already verified via OTP
     )
     db.session.add(admin_user)
+    
+    # Clean up verification record
+    db.session.delete(verification)
+    
     db.session.commit()
     
-    return jsonify({"msg": "Organization and Admin account created successfully"}), 201
+    return jsonify({"msg": "Organization and Admin account created successfully."}), 201
+
+@auth_bp.route('/request-registration-otp', methods=['POST'])
+def request_registration_otp():
+    data = request.get_json()
+    email = data.get('email')
+    
+    if not email:
+        return jsonify({"msg": "Email is required"}), 400
+        
+    # Check if email is already taken
+    if Organization.query.filter_by(email=email).first():
+        return jsonify({"msg": "An organization with this email is already registered."}), 400
+        
+    # Generate 6-digit OTP
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    
+    # Update or create verification record
+    verification = EmailVerification.query.filter_by(email=email).first()
+    if verification:
+        verification.otp = otp
+        verification.is_verified = False
+        verification.expires_at = datetime.utcnow() + timedelta(minutes=10)
+    else:
+        verification = EmailVerification(
+            email=email,
+            otp=otp,
+            expires_at = datetime.utcnow() + timedelta(minutes=10)
+        )
+        db.session.add(verification)
+    
+    # Send email
+    subject = "Verify Your Email - IMFQ Registration"
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #2563eb;">Verify Your Email</h2>
+        <p>Thank you for choosing IMFQ. Please use the following One-Time Password (OTP) to verify your work email and continue with your organization registration:</p>
+        <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 8px; border-radius: 5px; margin: 25px 0; color: #1e40af;">
+            {otp}
+        </div>
+        <p>This code will expire in 10 minutes.</p>
+        <p>If you did not request this, please ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 12px; color: #6b7280;">&copy; {datetime.now().year} IMFQ Enterprise. All rights reserved.</p>
+    </div>
+    """
+    EmailUtils.send_email(email, subject, html)
+    
+    db.session.commit()
+    return jsonify({"msg": "Verification code sent to your email."}), 200
+
+@auth_bp.route('/verify-registration-otp', methods=['POST'])
+def verify_registration_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+    
+    if not email or not otp:
+        return jsonify({"msg": "Email and OTP are required"}), 400
+        
+    verification = EmailVerification.query.filter_by(email=email, otp=otp).first()
+    
+    if not verification:
+        return jsonify({"msg": "Invalid verification code."}), 400
+        
+    if verification.expires_at < datetime.utcnow():
+        return jsonify({"msg": "Verification code has expired. Please request a new one."}), 400
+        
+    verification.is_verified = True
+    db.session.commit()
+    
+    return jsonify({"msg": "Email verified successfully. You can now proceed."}), 200
 
 @auth_bp.route('/register', methods=['POST'])
 @jwt_required()
+# DEPRECATED: Use /api/admin/users instead for audit logging and standardized creation.
 def register():
     # Only Admin can create users in their own org
-    current_user_id = get_jwt_identity()
-    admin = User.query.get(current_user_id)
+    identity = get_jwt_identity()
+    try:
+        current_user_id = int(identity)
+    except (ValueError, TypeError):
+        return jsonify({"message": "Invalid user identity"}), 401
+    admin = db.session.get(User, current_user_id)
     if admin.role.name != 'Admin':
         return jsonify({"msg": "Unauthorized"}), 403
 
@@ -91,14 +188,19 @@ def register():
         role_id=role.id,
         department_id=dept_id,
         is_temp_password=True,
+        is_verified=True,  # Users created by Admin are pre-verified
         status='Active'
     )
     
     db.session.add(new_user)
+    
+    # Send email with temporary password
+    EmailUtils.send_temp_password_email(new_user, temp_password)
+    
     db.session.commit()
     
     return jsonify({
-        "msg": "User created successfully",
+        "msg": "User created successfully. Credentials sent to their email.",
         "temp_password": temp_password if not data.get('password') else "provided by admin"
     }), 201
 
@@ -116,6 +218,11 @@ def login():
     ).first()
     
     if user and bcrypt.check_password_hash(user.hashed_password, data['password']):
+        # If it's a temporary password, allow login (they will be asked to change it)
+        # OR if they are verified
+        if not user.is_verified and not user.is_temp_password:
+            return jsonify({"msg": "Please verify your email address before logging in"}), 403
+            
         # Scoped access token
         access_token = create_access_token(
             identity=str(user.id),
@@ -155,7 +262,9 @@ def get_profile():
         "department": user.dept.name if user.dept else None,
         "org_id": user.org_id,
         "org_name": user.organization.name,
-        "status": user.status
+        "status": user.status,
+        "profile_picture": user.profile_picture,
+        "banner_image": user.banner_image
     }), 200
 
 @auth_bp.route('/profile', methods=['PUT'])
@@ -163,16 +272,85 @@ def get_profile():
 def update_profile():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
-    data = request.get_json()
     
     if not user:
         return jsonify({"msg": "User not found"}), 404
         
-    if 'full_name' in data:
-        user.full_name = data['full_name']
+    if request.is_json:
+        data = request.get_json()
+        if 'full_name' in data:
+            user.full_name = data['full_name']
+    else:
+        if 'full_name' in request.form:
+            user.full_name = request.form['full_name']
+            
+        if 'profile_picture' in request.files:
+            file = request.files['profile_picture']
+            if file and file.filename != '' and allowed_file(file.filename):
+                filename = secure_filename(f"avatar_{user.id}_{file.filename}")
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                user.profile_picture = f"/uploads/{filename}"
+                
+        if 'banner_image' in request.files:
+            file = request.files['banner_image']
+            if file and file.filename != '' and allowed_file(file.filename):
+                filename = secure_filename(f"banner_{user.id}_{file.filename}")
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                user.banner_image = f"/uploads/{filename}"
         
     db.session.commit()
-    return jsonify({"msg": "Profile updated successfully", "full_name": user.full_name}), 200
+    return jsonify({
+        "msg": "Profile updated successfully", 
+        "full_name": user.full_name,
+        "profile_picture": user.profile_picture,
+        "banner_image": user.banner_image
+    }), 200
+
+@auth_bp.route('/public-profile/<int:user_id>', methods=['GET'])
+@jwt_required()
+def get_public_profile(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+        
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "full_name": user.full_name or user.username,
+        "role_name": user.role.name,
+        "department": user.dept.name if user.dept else None,
+        "profile_picture": user.profile_picture,
+        "banner_image": user.banner_image
+    }), 200
+
+@auth_bp.route('/request-password-otp', methods=['POST'])
+@jwt_required()
+def request_password_otp():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    data = request.get_json()
+    
+    current_password = data.get('current_password')
+    if not current_password:
+        return jsonify({"msg": "Current password required"}), 400
+        
+    if not bcrypt.check_password_hash(user.hashed_password, current_password):
+        return jsonify({"msg": "Invalid current password"}), 401
+        
+    # Generate 6-digit OTP
+    import random
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    
+    user.otp_token = otp
+    user.otp_expiry = datetime.utcnow() + timedelta(minutes=10)
+    db.session.commit()
+    
+    # Send OTP email
+    EmailUtils.send_otp_email(user, otp)
+    
+    return jsonify({"msg": "OTP sent to your email"}), 200
 
 @auth_bp.route('/change-password', methods=['PUT'])
 @jwt_required()
@@ -183,15 +361,31 @@ def change_password():
     
     current_password = data.get('current_password')
     new_password = data.get('new_password')
+    otp = data.get('otp')
     
-    if not current_password or not new_password:
-        return jsonify({"msg": "Current and new password required"}), 400
+    if not current_password or not new_password or not otp:
+        return jsonify({"msg": "Current password, new password, and OTP required"}), 400
         
     if not bcrypt.check_password_hash(user.hashed_password, current_password):
         return jsonify({"msg": "Invalid current password"}), 401
         
+    # Verify OTP
+    if user.otp_token != otp:
+        return jsonify({"msg": "Invalid OTP"}), 400
+        
+    if user.otp_expiry < datetime.utcnow():
+        return jsonify({"msg": "OTP has expired"}), 400
+        
     user.hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
     user.is_temp_password = False
+    
+    # Clear OTP
+    user.otp_token = None
+    user.otp_expiry = None
+    
+    # Send notification email
+    EmailUtils.send_password_change_notification(user)
+    
     db.session.commit()
     
     return jsonify({"msg": "Password updated successfully"}), 200
@@ -224,11 +418,11 @@ def forgot_password():
     user = User.query.filter_by(email=email).first()
     
     if user:
-        # In a real app, send a reset email here
-        # For this prototype, we return a success message
-        return jsonify({"msg": "Reset link sent to your email"}), 200
+        EmailUtils.send_reset_password_email(user)
+        db.session.commit()
+        return jsonify({"msg": "Password reset link sent to your email"}), 200
     
-    return jsonify({"msg": "Email not found"}), 404
+    return jsonify({"msg": "If that email exists in our system, a reset link has been sent."}), 200
 
 @auth_bp.route('/seed-roles', methods=['POST'])
 def seed_roles():
@@ -240,3 +434,53 @@ def seed_roles():
             db.session.add(Role(name=r_name))
     db.session.commit()
     return jsonify({"msg": "Enterprise roles seeded"}), 200
+
+@auth_bp.route('/verify-email/<token>', methods=['GET'])
+def verify_email(token):
+    user = User.query.filter_by(verification_token=token).first()
+    
+    if not user:
+        return jsonify({"msg": "Invalid or expired verification token"}), 400
+        
+    if user.token_expiry < datetime.utcnow():
+        return jsonify({"msg": "Verification token has expired"}), 400
+        
+    user.is_verified = True
+    user.verification_token = None
+    user.token_expiry = None
+    db.session.commit()
+    
+    return """
+    <html>
+        <body style="font-family: Arial; text-align: center; padding-top: 50px;">
+            <h1 style="color: #2563eb;">Verification Successful!</h1>
+            <p>Your email has been verified. You can now log in to the application.</p>
+            <a href="http://localhost:3000/login" style="color: #2563eb;">Go to Login</a>
+        </body>
+    </html>
+    """, 200
+
+@auth_bp.route('/reset-password-confirm', methods=['POST'])
+def reset_password_confirm():
+    data = request.get_json()
+    token = data.get('token')
+    new_password = data.get('new_password')
+    
+    if not token or not new_password:
+        return jsonify({"msg": "Token and new password required"}), 400
+        
+    user = User.query.filter_by(reset_token=token).first()
+    
+    if not user:
+        return jsonify({"msg": "Invalid or expired reset token"}), 400
+        
+    if user.token_expiry < datetime.utcnow():
+        return jsonify({"msg": "Reset link has expired"}), 400
+        
+    user.hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    user.reset_token = None
+    user.token_expiry = None
+    user.is_temp_password = False
+    db.session.commit()
+    
+    return jsonify({"msg": "Password reset successfully. You can now log in with your new password."}), 200

@@ -3,8 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 from ..models import (
     User, Project, Department,
-    Stage3RCA, Stage4Solution, Stage6Implementation,
-    Stage7Impact, Stage8Standardization,
+    Stage5RootCause, Stage7Development, Stage8Implementation,
     FacilitatorNote, AuditLog, db
 )
 from functools import wraps
@@ -46,8 +45,8 @@ def get_stats():
     user = User.query.get(get_jwt_identity())
     org_id = user.org_id
 
-    pending_rca = Project.query.filter_by(org_id=org_id, current_stage=3, status='In Progress').count()
-    pending_impact = Project.query.filter_by(org_id=org_id, current_stage=7).count()
+    pending_rca = Project.query.filter_by(org_id=org_id, current_stage=5, status='In Progress').count()
+    pending_impact = Project.query.filter_by(org_id=org_id, current_stage=8).count()
 
     # Stalled: In Progress for > 3 days without any movement
     stalled_cutoff = datetime.utcnow() - timedelta(days=3)
@@ -57,18 +56,17 @@ def get_stats():
         Project.created_at < stalled_cutoff
     ).count()
 
-    impacts = Stage7Impact.query.filter(
-        Stage7Impact.org_id == org_id,
-        Stage7Impact.kpi_improvement_pct.isnot(None)
+    # Use Stage8Implementation for impact statistics
+    from ..models import Stage8Implementation
+    impacts = Stage8Implementation.query.filter(
+        Stage8Implementation.org_id == org_id,
+        Stage8Implementation.results_data.isnot(None)
     ).all()
     avg_improvement = 0
     if impacts:
         avg_improvement = round(sum([i.kpi_improvement_pct or 0 for i in impacts]) / len(impacts), 1)
 
-    total_savings = sum([
-        i.cost_savings or 0
-        for i in Stage7Impact.query.filter_by(org_id=org_id).all()
-    ])
+    total_savings = 0 # Placeholder for financial impact if needed
 
     return jsonify({
         "pending_rca": pending_rca,
@@ -107,15 +105,17 @@ def get_all_projects():
     return jsonify(result)
 
 
-# ─── 3. RCA Workspace (Stage 3) ───────────────────────────────
+# ─── 3. RCA Workspace (Stage 5) ───────────────────────────────
 @facilitator_bp.route('/rca-workspace', methods=['GET'])
+@facilitator_bp.route('/rca-projects', methods=['GET'])
 @facilitator_required
 def get_rca_workspace():
     user = User.query.get(get_jwt_identity())
-    projects = Project.query.filter_by(org_id=user.org_id, current_stage=3).all()
+    projects = Project.query.filter_by(org_id=user.org_id, current_stage=5).all()
     result = []
     for p in projects:
-        rca = Stage3RCA.query.filter_by(project_id=p.id).first()
+        from ..models import Stage5RootCause
+        rca = Stage5RootCause.query.filter_by(project_id=p.id).first()
         dept = Department.query.get(p.department_id)
 
         qc_tools = {}
@@ -148,16 +148,18 @@ def get_rca_workspace():
     return jsonify(result)
 
 
-# ─── 4. Impact Review (Stage 7) ───────────────────────────────
+# ─── 4. Impact Review (Stage 8) ───────────────────────────────
 @facilitator_bp.route('/impact-review', methods=['GET'])
+@facilitator_bp.route('/impact-projects', methods=['GET'])
 @facilitator_required
 def get_impact_review():
     user = User.query.get(get_jwt_identity())
-    projects = Project.query.filter_by(org_id=user.org_id, current_stage=7).all()
+    projects = Project.query.filter_by(org_id=user.org_id, current_stage=8).all()
     result = []
     for p in projects:
-        impact = Stage7Impact.query.filter_by(project_id=p.id).first()
-        s4 = Stage4Solution.query.filter_by(project_id=p.id).first()
+        from ..models import Stage8Implementation, Stage7Development
+        impact = Stage8Implementation.query.filter_by(project_id=p.id).first()
+        s7 = Stage7Development.query.filter_by(project_id=p.id).first()
 
         # Auto-calculate KPI improvement %
         kpi_pct = None
@@ -180,7 +182,7 @@ def get_impact_review():
             "baseline": impact.baseline_data if impact else None,
             "final": impact.final_data if impact else None,
             "kpi_improvement_pct": kpi_pct or (impact.kpi_improvement_pct if impact else 0),
-            "kpi_target": s4.kpi_targets if s4 else {},
+            "kpi_target": s7.action_plan if s7 else {},
             "cost_savings": impact.cost_savings if impact else 0,
             "status": impact.status if impact else "Pending",
             "approved": impact.status == "Approved" if impact else False
@@ -196,11 +198,11 @@ def get_closure_projects():
     projects = Project.query.filter_by(org_id=user.org_id, current_stage=8).all()
     result = []
     for p in projects:
-        std = Stage8Standardization.query.filter_by(project_id=p.id).first()
+        std = Stage8Implementation.query.filter_by(project_id=p.id).first()
         result.append({
             "id": p.id,
             "title": p.title,
-            "sop_status": "Uploaded" if std and std.sop_url else "Pending",
+            "sop_status": "Uploaded" if std and std.sop_details else "Pending",
             "has_training_records": bool(std and std.training_records),
             "has_lessons": bool(std and std.lessons_learned),
             "facilitator_signoff": std.facilitator_validation if std else False,
@@ -252,7 +254,7 @@ def add_note():
     return jsonify({"msg": "Note added"}), 201
 
 
-# ─── 8. RCA Validation (Stage 3 Gate) ────────────────────────
+# ─── 8. RCA Validation (Stage 5 Gate) ────────────────────────
 @facilitator_bp.route('/rca/<int:project_id>/validate', methods=['POST'])
 @facilitator_required
 def validate_rca(project_id):
@@ -264,12 +266,13 @@ def validate_rca(project_id):
         return jsonify({"msg": "validation_note is required"}), 400
 
     project = Project.query.get_or_404(project_id)
-    if project.current_stage != 3:
-        return jsonify({"msg": "Project is not in Stage 3"}), 400
+    if project.current_stage != 5:
+        return jsonify({"msg": "Project is not in Stage 5"}), 400
 
-    rca = Stage3RCA.query.filter_by(project_id=project_id).first()
+    from ..models import Stage5RootCause
+    rca = Stage5RootCause.query.filter_by(project_id=project_id).first()
     if not rca:
-        rca = Stage3RCA(project_id=project_id, org_id=project.org_id)
+        rca = Stage5RootCause(project_id=project_id, org_id=project.org_id)
         db.session.add(rca)
 
     rca.rca_validation_note = validation_note
@@ -279,12 +282,12 @@ def validate_rca(project_id):
     db.session.commit()
 
     return jsonify({
-        "msg": "RCA Validated. Project is now eligible to advance to Stage 4.",
+        "msg": "RCA Validated. Project is now eligible to advance to Stage 6.",
         "rca_validation_note": validation_note
     }), 200
 
 
-# ─── 9. Stage 7 Post-Data Entry ───────────────────────────────
+# ─── 9. Stage 8 Post-Data Entry ───────────────────────────────
 @facilitator_bp.route('/impact/<int:project_id>/post-data', methods=['POST'])
 @facilitator_required
 def add_post_data(project_id):
@@ -292,12 +295,13 @@ def add_post_data(project_id):
     data = request.get_json()
 
     project = Project.query.get_or_404(project_id)
-    if project.current_stage != 7:
-        return jsonify({"msg": "Project is not in Stage 7"}), 400
+    if project.current_stage != 8:
+        return jsonify({"msg": "Project is not in Stage 8"}), 400
 
-    impact = Stage7Impact.query.filter_by(project_id=project_id).first()
+    from ..models import Stage8Implementation
+    impact = Stage8Implementation.query.filter_by(project_id=project_id).first()
     if not impact:
-        impact = Stage7Impact(project_id=project_id, org_id=project.org_id)
+        impact = Stage8Implementation(project_id=project_id, org_id=project.org_id)
         db.session.add(impact)
 
     # Update allowed fields (Facilitator cannot touch financial fields directly)
@@ -323,19 +327,20 @@ def add_post_data(project_id):
     return jsonify({"msg": "Post-implementation data saved", "kpi_improvement_pct": impact.kpi_improvement_pct}), 200
 
 
-# ─── 10. Approve Stage 7 Results → Advance to Stage 8 ────────
+# ─── 10. Approve Stage 8 Results → Mark Final Approval ────────
 @facilitator_bp.route('/impact/<int:project_id>/approve', methods=['POST'])
 @facilitator_required
 def approve_impact(project_id):
     user = User.query.get(get_jwt_identity())
 
     project = Project.query.get_or_404(project_id)
-    if project.current_stage != 7:
-        return jsonify({"msg": "Project is not in Stage 7"}), 400
+    if project.current_stage != 8:
+        return jsonify({"msg": "Project is not in Stage 8"}), 400
 
-    impact = Stage7Impact.query.filter_by(project_id=project_id).first()
+    from ..models import Stage8Implementation
+    impact = Stage8Implementation.query.filter_by(project_id=project_id).first()
     if not impact:
-        return jsonify({"msg": "No Stage 7 data found. Please enter post-implementation data first."}), 400
+        return jsonify({"msg": "No Stage 8 data found. Please enter post-implementation data first."}), 400
 
     if not impact.final_data:
         return jsonify({"msg": "Post-implementation data must be entered before approving."}), 400
@@ -343,21 +348,14 @@ def approve_impact(project_id):
     impact.status = 'Approved'
     impact.approved_by = user.id
 
-    # Advance project to Stage 8
-    project.current_stage = 8
-    project.status = 'In Progress'
+    # Mark as ready for closure
+    project.status = 'Pending Closure'
 
-    # Auto-create Stage 8 record
-    s8 = Stage8Standardization.query.filter_by(project_id=project_id).first()
-    if not s8:
-        s8 = Stage8Standardization(project_id=project_id, org_id=project.org_id)
-        db.session.add(s8)
-
-    log_action(user.org_id, user.id, "Stage 7 Approved by Facilitator → Advanced to Stage 8", project_id)
+    log_action(user.org_id, user.id, "Stage 8 Approved by Facilitator → Pending Closure", project_id)
     db.session.commit()
 
     return jsonify({
-        "msg": "Stage 7 results approved. Project advanced to Stage 8: Standardization.",
+        "msg": "Stage 8 results approved. Project is now pending final closure.",
         "current_stage": 8
     }), 200
 
@@ -373,9 +371,10 @@ def complete_closure(project_id):
     if project.current_stage != 8:
         return jsonify({"msg": "Project is not in Stage 8"}), 400
 
-    s8 = Stage8Standardization.query.filter_by(project_id=project_id).first()
+    from ..models import Stage8Implementation
+    s8 = Stage8Implementation.query.filter_by(project_id=project_id).first()
     if not s8:
-        s8 = Stage8Standardization(project_id=project_id, org_id=project.org_id)
+        s8 = Stage8Implementation(project_id=project_id, org_id=project.org_id)
         db.session.add(s8)
 
     # Update closure fields

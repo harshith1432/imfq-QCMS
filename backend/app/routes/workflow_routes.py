@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models import (
-    Project, db, AuditLog,
-    Stage1Problem, Stage2Data, Stage3RCA, 
-    Stage4Solution, Stage5Approval, Stage6Implementation, 
-    Stage7Impact, Stage8Standardization
+    Project, db, AuditLog, ProjectReview,
+    Stage1Identification, Stage2Selection, Stage3Analysis, 
+    Stage4Causes, Stage5RootCause, Stage6DataAnalysis, 
+    Stage7Development, Stage8Implementation
 )
 from ..middleware import role_required
 from datetime import datetime
@@ -13,14 +13,14 @@ workflow_bp = Blueprint('workflow', __name__)
 
 # Helper to map stage IDs to models
 STAGE_MODEL_MAP = {
-    1: Stage1Problem,
-    2: Stage2Data,
-    3: Stage3RCA,
-    4: Stage4Solution,
-    5: Stage5Approval,
-    6: Stage6Implementation,
-    7: Stage7Impact,
-    8: Stage8Standardization
+    1: Stage1Identification,
+    2: Stage2Selection,
+    3: Stage3Analysis,
+    4: Stage4Causes,
+    5: Stage5RootCause,
+    6: Stage6DataAnalysis,
+    7: Stage7Development,
+    8: Stage8Implementation
 }
 
 def log_action(org_id, user_id, action, project_id=None, details=None):
@@ -87,63 +87,56 @@ def update_stage_data(project_id, stage_id):
     
     return jsonify({"msg": f"Stage {stage_id} data updated"}), 200
 
-@workflow_bp.route('/<int:project_id>/submit', methods=['POST'])
+@workflow_bp.route('/<int:project_id>/submit-for-review', methods=['POST'])
 @jwt_required()
-def submit_for_approval(project_id):
+def submit_for_review(project_id):
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
     
-    if project.current_stage != 4:
-        return jsonify({"msg": "Only Stage 4 (Solutions) can be submitted for approval"}), 400
-        
-    project.status = 'Pending Approval'
-    project.current_stage = 5  # Move to Stage 5 for Reviewer
+    # Generic submission helper for Reviewer/Facilitator
+    # For now, we mainly use it for Final Solution Approval (Stage 7)
+    if project.current_stage == 7:
+        project.status = 'Pending Approval'
+        review = ProjectReview.query.filter_by(project_id=project_id, stage_number=7, status='Pending').first()
+        if not review:
+            review = ProjectReview(project_id=project_id, org_id=project.org_id, stage_number=7)
+            db.session.add(review)
+        db.session.commit()
+        return jsonify({"msg": "Project submitted for Reviewer Approval"}), 200
     
-    # Ensure Stage 5 entry exists
-    approval = Stage5Approval.query.filter_by(project_id=project_id).first()
-    if not approval:
-        approval = Stage5Approval(project_id=project_id, org_id=project.org_id)
-        db.session.add(approval)
-    
-    approval.status = 'Pending'
-    log_action(project.org_id, user_id, "Submitted for Review (Stage 5)", project_id)
-    db.session.commit()
-    
-    return jsonify({"msg": "Project submitted to Reviewer (Stage 5)"}), 200
+    return jsonify({"msg": "No specific submission logic for this stage"}), 200
 
 @workflow_bp.route('/<int:project_id>/approve', methods=['POST'])
 @jwt_required()
 @role_required(['Reviewer', 'Admin'])
-def approve_stage(project_id):
-    data = request.get_json() # {status: 'Approved'/'Rejected', 'comments': '...'}
+def approve_project(project_id):
+    data = request.get_json() # {status: 'Approved'/'Rejected', 'comments': '...', 'stage': 7}
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
+    target_stage = data.get('stage', project.current_stage)
     
-    if project.current_stage != 4 or project.status != 'Pending Approval':
-        return jsonify({"msg": "Project is not in a submittable state for approval"}), 400
+    review = ProjectReview.query.filter_by(project_id=project_id, stage_number=target_stage, status='Pending').first()
+    if not review:
+        return jsonify({"msg": "No pending review record found"}), 404
         
-    approval = Stage5Approval.query.filter_by(project_id=project_id, status='Pending').first()
-    if not approval:
-        return jsonify({"msg": "No pending approval record found"}), 404
-        
-    approval.status = 'Completed'
-    approval.decision = data['status'] # 'Approved' or 'Rejected'
-    approval.comments = data.get('comments')
-    approval.reviewer_id = user_id
-    approval.decided_at = datetime.utcnow()
+    review.status = 'Completed'
+    review.decision = data['status']
+    review.comments = data.get('comments')
+    review.reviewer_id = user_id
+    review.decided_at = datetime.utcnow()
     
     if data['status'] == 'Approved':
         project.status = 'In Progress'
-        # In a strict 8-stage, after approval in 5, we jump to 6 for implementation
-        project.current_stage = 6 
-        log_action(project.org_id, user_id, "Project Approved", project_id)
+        # Automatic advancement if approved at Stage 7
+        if target_stage == 7:
+            project.current_stage = 8
+            log_action(project.org_id, user_id, "Project Approved for Implementation", project_id)
     else:
         project.status = 'Rejected'
         log_action(project.org_id, user_id, "Project Rejected", project_id, data.get('comments'))
         
     db.session.commit()
-    
-    return jsonify({"msg": f"Project {data['status'].lower()}"}), 200
+    return jsonify({"msg": f"Decision: {data['status']}"}), 200
     
 @workflow_bp.route('/projects/<int:project_id>/transitions', methods=['POST'])
 @jwt_required()
@@ -159,39 +152,31 @@ def advance_stage(project_id):
     if new_stage > 8:
         return jsonify({"msg": "Project has reached the final workflow stage (Stage 8). Final administrative closure must be performed by a Facilitator."}), 400
 
-    # ─── Workflow Gate: Stage 3 → 4 ─────────────────────────────
-    # Requires Facilitator RCA Validation Note
-    if new_stage == 4:
-        rca = Stage3RCA.query.filter_by(project_id=project_id).first()
-        if not rca or not rca.rca_validation_note:
+    # ─── Workflow Gate: Stage 2 → 3 ─────────────────────────────
+    # Requires Facilitator Validation
+    if new_stage == 3:
+        s2 = Stage2Selection.query.filter_by(project_id=project_id).first()
+        if not s2 or not s2.facilitator_validation:
             return jsonify({
-                "msg": "Stage 3 cannot close. A Facilitator must add an RCA Validation Note before the project can advance to Stage 4."
+                "msg": "Stage 2 Selection must be validated by a Facilitator before advancing to Analysis."
             }), 403
 
-    # ─── Workflow Gate: Stage 6 → 7 ─────────────────────────────
-    # Requires Stage 6 Implementation end_date
-    if new_stage == 7:
-        s6 = Stage6Implementation.query.filter_by(project_id=project_id).first()
-        if not s6 or not s6.end_date:
+    # ─── Workflow Gate: Stage 5 → 6 ─────────────────────────────
+    # Requires Facilitator RCA Validation
+    if new_stage == 6:
+        s5 = Stage5RootCause.query.filter_by(project_id=project_id).first()
+        if not s5 or not s5.facilitator_validation:
             return jsonify({
-                "msg": "Stage 6 (Implementation) end date must be filled before advancing to Stage 7 (Impact Measurement)."
-            }), 400
+                "msg": "Root Cause Analysis (Stage 5) must be validated by a Facilitator before Data Analysis."
+            }), 403
 
     # ─── Workflow Gate: Stage 7 → 8 ─────────────────────────────
-    # Exclusively controlled by Facilitator — stage_7.status must be 'Approved'
+    # Requires Reviewer Approval
     if new_stage == 8:
-        s7 = Stage7Impact.query.filter_by(project_id=project_id).first()
-        if not s7 or s7.status != 'Approved':
+        review = ProjectReview.query.filter_by(project_id=project_id, stage_number=7, decision='Approved').first()
+        if not review:
             return jsonify({
-                "msg": "Stage 7 results must be approved by a Facilitator before the project can advance to Stage 8."
-            }), 403
-
-    # ─── General Gate: Stage 6+ requires Stage 5 Approval ───────
-    if new_stage >= 6 and new_stage != 8:  # Stage 8 already gated above
-        approval = Stage5Approval.query.filter_by(project_id=project_id).first()
-        if not approval or approval.decision != 'Approved':
-            return jsonify({
-                "msg": "Phase Gate: Transition to Stage 6 (Implementation) requires formal Reviewer Approval (Stage 5)."
+                "msg": "Stage 7 Solution must be formally approved by a Reviewing Officer before Implementation (Stage 8)."
             }), 403
 
     project.current_stage = new_stage
@@ -199,6 +184,25 @@ def advance_stage(project_id):
     db.session.commit()
     
     return jsonify({"msg": f"Advanced to Stage {new_stage}", "current_stage": project.current_stage}), 200
+
+@workflow_bp.route('/projects/<int:project_id>/reviews', methods=['GET'])
+@jwt_required()
+def get_project_reviews(project_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(Project.query.get(project_id).org_id if Project.query.get(project_id) else None) 
+    # Actually just check org match
+    project = Project.query.get_or_404(project_id)
+    reviews = ProjectReview.query.filter_by(project_id=project_id).order_by(ProjectReview.created_at.desc()).all()
+    
+    return jsonify([{
+        "id": r.id,
+        "stage_number": r.stage_number,
+        "status": r.status,
+        "decision": r.decision,
+        "comments": r.comments,
+        "reviewer_id": r.reviewer_id,
+        "decided_at": r.decided_at.isoformat() + "Z" if r.decided_at else None
+    } for r in reviews]), 200
 
 # Legacy/Frontend Compatibility Aliases
 @workflow_bp.route('/projects/<int:project_id>/stages/<int:stage_id>', methods=['GET'])

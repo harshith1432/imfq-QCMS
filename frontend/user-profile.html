@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile | QCMS Enterprise</title>
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
+    <style>
+        .profile-hero {
+            background: linear-gradient(135deg, var(--ds-primary) 0%, #4facfe 100%);
+            height: 180px;
+            border-radius: 20px 20px 0 0;
+            position: relative;
+            margin-bottom: 80px;
+        }
+
+        .profile-avatar-wrapper {
+            position: absolute;
+            bottom: -60px;
+            left: 50px;
+            padding: 8px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .profile-avatar {
+            width: 110px;
+            height: 110px;
+            border-radius: 20px;
+            background: var(--ds-bg-subtle);
+            border: 2px solid var(--ds-border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: var(--ds-transition);
+        }
+
+        .profile-avatar i {
+            font-size: 3.5rem;
+            color: var(--ds-text-placeholder);
+        }
+
+        .profile-info-header {
+            padding-left: 170px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .badge-role {
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .role-admin { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        .role-team_leader { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .role-team_member { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+        .role-reviewer { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+        .role-facilitator { background: #fae8ff; color: #a11d33; border: 1px solid #f5d0fe; }
+    </style>
+</head>
+<body class="ds-light">
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Navbar -->
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <!-- Page Content -->
+            <div class="app-content fade-in-up">
+                <div class="ds-container">
+                    <!-- Standardized Header -->
+                    <header class="ds-header-layout section-spacing">
+                        <div class="h-stack justify-content-between w-100">
+                            <div class="v-stack">
+                                <h1 class="ds-title mb-0">Stakeholder Profile</h1>
+                                <p class="ds-text-secondary mb-0">View organizational role, department, and system activity for this member.</p>
+                            </div>
+                            <button class="ds-btn ds-btn-ghost" onclick="history.back()">
+                                <i data-lucide="arrow-left" style="width:16px; height:16px; margin-right:8px;"></i> Back
+                            </button>
+                        </div>
+                    </header>
+
+                    <!-- Profile Card -->
+                    <div class="ds-card glass-card" style="padding: 0; overflow: hidden; border: none; box-shadow: var(--ds-shadow-lg);">
+                        <div class="profile-hero" id="profile-banner-container">
+                            <div class="profile-avatar-wrapper">
+                                <div class="profile-avatar" id="profile-avatar-container">
+                                    <img id="avatar-preview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                    <i class="fas fa-user-circle" id="avatar-icon"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="padding: 0 48px 48px 48px;">
+                            <div class="profile-info-header" id="profile-header-content">
+                                <div>
+                                    <div id="profile-hero-content" style="display: none;">
+                                        <div class="ds-overline text-primary" id="profile-department" style="margin-bottom: 4px;"></div>
+                                        <h1 class="ds-h3" id="profile-full-name" style="margin-bottom: 4px;"></h1>
+                                        <p class="ds-text-tertiary" id="profile-username"></p>
+                                    </div>
+                                    
+                                    <div id="profile-loading-skeleton">
+                                        <div class="skeleton-text skeleton" style="width: 120px; height: 14px; margin-bottom: 8px;"></div>
+                                        <div class="skeleton-text skeleton" style="width: 200px; height: 32px; margin-bottom: 8px;"></div>
+                                        <div class="skeleton-subtext skeleton" style="width: 250px;"></div>
+                                    </div>
+                                </div>
+                                <div id="role-badge-container">
+                                    <div class="skeleton" style="width: 100px; height: 32px; border-radius: 20px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/components.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            QCMS.init();
+            lucide.createIcons();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const userId = urlParams.get('id');
+
+            if (!userId) {
+                api.showNotification('Invalid user profile link.', 'error');
+                return;
+            }
+
+            await loadPublicProfile(userId);
+        });
+
+        async function loadPublicProfile(userId) {
+            try {
+                const response = await api.get(`/auth/public-profile/${userId}`);
+                if (response) {
+                    const skeleton = document.getElementById('profile-loading-skeleton');
+                    const heroContent = document.getElementById('profile-hero-content');
+                    if (skeleton) skeleton.style.display = 'none';
+                    if (heroContent) heroContent.style.display = 'block';
+
+                    document.getElementById('profile-department').textContent = response.department || 'No Department';
+                    document.getElementById('profile-full-name').textContent = response.full_name || response.username;
+                    document.getElementById('profile-username').textContent = '@' + response.username;
+
+                    if (response.profile_picture) {
+                        document.getElementById('avatar-icon').style.display = 'none';
+                        const avatarImg = document.getElementById('avatar-preview');
+                        avatarImg.src = response.profile_picture;
+                        avatarImg.style.display = 'block';
+                    }
+                    if (response.banner_image) {
+                        const bannerContainer = document.getElementById('profile-banner-container');
+                        bannerContainer.style.background = `url(${response.banner_image}) center/cover no-repeat`;
+                    }
+
+                    const badgeContainer = document.getElementById('role-badge-container');
+                    if (badgeContainer) {
+                        const role = response.role_name || 'Member';
+                        const roleClass = `role-${role.toLowerCase().replace(/ /g, '_')}`;
+                        badgeContainer.innerHTML = `<span class="badge-role ${roleClass}">${role}</span>`;
+                    }
+                    
+                    if (window.lucide) lucide.createIcons();
+                }
+            } catch (error) {
+                console.error('Profile fetch failed:', error);
+                api.showNotification('Could not load user profile.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

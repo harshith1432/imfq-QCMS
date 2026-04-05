@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Repository | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .stalled-row { background: rgba(239, 68, 68, 0.05) !important; border-left: 3px solid #ef4444 !important; }
-        .stalled-badge { color: #ef4444; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-left: 8px; }
-        .efficiency-progress { height: 6px; background: var(--border-light); border-radius: 3px; overflow: hidden; margin-top: 4px; width: 100px; }
-        .efficiency-fill { height: 100%; background: var(--ds-success); }
+        .stalled-badge { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-left: 8px; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .efficiency-progress { height: 6px; background: rgba(var(--ds-primary-rgb), 0.05); border-radius: 3px; overflow: hidden; margin-top: 4px; width: 100px; }
+        .efficiency-fill { height: 100%; background: var(--ds-accent); }
+        .ds-label { font-size: 12px !important; letter-spacing: 0.02em !important; }
     </style>
 </head>
 <body>
@@ -21,16 +26,18 @@
         <main class="app-main">
             <header class="app-navbar" id="app-navbar"></header>
 
-            <div class="app-content">
-                <div class="content-header fade-in">
-                    <div>
-                        <h1 class="page-heading">Project Repository</h1>
-                        <p class="page-description">Real-time database of all QCMS initiatives. Monitor progress, efficiency, and identify stalled projects across the organization.</p>
+            <div class="app-content-inner">
+                <header class="ds-header-layout section-spacing px-0">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Project Repository</h1>
+                            <p class="ds-text-secondary mb-0">Real-time database of all QCMS initiatives. Monitor progress, efficiency, and identify stalled projects across the organization.</p>
+                        </div>
                     </div>
-                </div>
+                </header>
 
                 <!-- Summary Stats Section -->
-                <div class="row g-4 mb-4 fade-in" id="repoStats">
+                <div class="row g-4 mb-4" id="repoStats">
                     <div class="col-md-3">
                         <div class="ds-card p-3 h-100 skeleton">
                             <div style="height: 100px;"></div>
@@ -54,10 +61,11 @@
                 </div>
 
                 <!-- Filters & Search -->
-                <div class="ds-card mb-4 fade-in">
+                <div class="glass-card mb-4 fade-in">
                     <div class="ds-card-body p-4">
-                        <div class="row g-4 d-flex align-items-end">
-                            <div class="col-md-3">
+                        <div class="row g-4 align-items-end">
+
+                            <div class="col-lg-2 col-md-4">
                                 <label class="ds-label mb-2">
                                     <i data-lucide="building-2"></i> DEPARTMENT
                                 </label>
@@ -65,7 +73,7 @@
                                     <option value="">All Departments</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-lg-2 col-md-4">
                                 <label class="ds-label mb-2">
                                     <i data-lucide="activity"></i> STATUS
                                 </label>
@@ -77,37 +85,25 @@
                                     <option value="On Hold">On Hold</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-lg-2 col-md-4">
                                 <label class="ds-label mb-2">
                                     <i data-lucide="layers"></i> STAGE
                                 </label>
                                 <select class="ds-input ds-select" id="stageFilter">
                                     <option value="">All Stages</option>
                                     <option value="1">Stage 1: Identification</option>
-                                    <option value="2">Stage 2: Observation</option>
+                                    <option value="2">Stage 2: Selection</option>
                                     <option value="3">Stage 3: Analysis</option>
-                                    <option value="4">Stage 4: Solutions</option>
-                                    <option value="5">Stage 5: Approval</option>
-                                    <option value="6">Stage 6: Execution</option>
-                                    <option value="7">Stage 7: Review</option>
-                                    <option value="8">Stage 8: Closure</option>
+                                    <option value="4">Stage 4: Causes</option>
+                                    <option value="5">Stage 5: Root Cause</option>
+                                    <option value="6">Stage 6: Data Analysis</option>
+                                    <option value="7">Stage 7: Development</option>
+                                    <option value="8">Stage 8: Implementation</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <label class="ds-label mb-2">
-                                    <i data-lucide="tag"></i> CATEGORY
-                                </label>
-                                <select class="ds-input ds-select" id="categoryFilter">
-                                    <option value="">All categories</option>
-                                    <option value="Safety">Safety</option>
-                                    <option value="Quality">Quality</option>
-                                    <option value="Cost">Cost</option>
-                                    <option value="Productivity">Productivity</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-lg-2 col-md-12">
                                 <button class="ds-btn ds-btn-primary w-100" onclick="repoUI.loadData()">
-                                    <i data-lucide="refresh-cw"></i> Refresh Repository
+                                    <i data-lucide="refresh-cw"></i> Sync Data
                                 </button>
                             </div>
                         </div>
@@ -152,6 +148,10 @@
 
         async init() {
             QCMS.init();
+            const searchInput = document.getElementById('globalSearchInput');
+            if (searchInput) {
+                searchInput.placeholder = "Search projects...";
+            }
 
             
             const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -178,18 +178,24 @@
         },
 
         setupFilterListeners() {
-            ['deptFilter', 'statusFilter', 'stageFilter', 'categoryFilter'].forEach(id => {
-                document.getElementById(id).addEventListener('change', () => this.loadData());
+            ['globalSearchInput', 'deptFilter', 'statusFilter', 'stageFilter'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (id === 'globalSearchInput') {
+                    el.addEventListener('input', QCMS.debounce(() => this.loadData(), 400));
+                } else {
+                    el.addEventListener('change', () => this.loadData());
+                }
             });
         },
 
         async loadData() {
             try {
                 const filters = {
+                    q: document.getElementById('globalSearchInput')?.value || '',
                     department_id: document.getElementById('deptFilter').value,
                     status: document.getElementById('statusFilter').value,
-                    stage: document.getElementById('stageFilter').value,
-                    category: document.getElementById('categoryFilter').value
+                    stage: document.getElementById('stageFilter').value
                 };
 
                 const res = await api.getRepositoryProjects(filters);
@@ -199,7 +205,7 @@
             } catch (e) {
                 QCMS.toast('Failed to sync repository data', 'danger');
                 document.getElementById('repoTableBody').innerHTML = 
-                    `<tr><td colspan="6">${QCMS.emptyState('alert-circle', 'Sync Error', e.message)}</td></tr>`;
+                    `<tr><td colspan="6">${QCMS.emptyState('System Error', e.message, 'alert-circle')}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
             }
         },
@@ -207,17 +213,17 @@
         renderStats(stats) {
             const container = document.getElementById('repoStats');
             container.innerHTML = `
-                <div class="col-md-3">
-                    ${QCMS.kpiCard('Total Repository', stats.total, 'database', 'blue')}
+                <div class="col-md-3 col-sm-6">
+                    ${QCMS.kpiCard('Total Projects', stats.total, 'layers', 'blue')}
                 </div>
-                <div class="col-md-3">
-                    ${QCMS.kpiCard('Active Initiatives', stats.active, 'activity', 'green')}
+                <div class="col-md-3 col-sm-6">
+                    ${QCMS.kpiCard('Active Apps', stats.active, 'activity', 'green')}
                 </div>
-                <div class="col-md-3">
-                    ${QCMS.kpiCard('Completed Projects', stats.completed, 'check-circle', 'cyan')}
+                <div class="col-md-3 col-sm-6">
+                    ${QCMS.kpiCard('Completed', stats.completed, 'check-circle', 'cyan')}
                 </div>
-                <div class="col-md-3">
-                    ${QCMS.kpiCard('Stalled (No Update)', stats.stalled, 'clock', 'red')}
+                <div class="col-md-3 col-sm-6">
+                    ${QCMS.kpiCard('Stalled', stats.stalled, 'clock', 'red')}
                 </div>
             `;
             if (window.lucide) lucide.createIcons();
@@ -225,8 +231,18 @@
 
         renderTable() {
             const body = document.getElementById('repoTableBody');
+            const query = document.getElementById('globalSearchInput')?.value || '';
+            
             if (!this.data.length) {
-                body.innerHTML = `<tr><td colspan="6">${QCMS.emptyState('search', 'No results Match', 'Try broadening your search criteria.')}</td></tr>`;
+                if (query) {
+                    body.innerHTML = `<tr><td colspan="6" class="text-center py-5">
+                        ${QCMS.emptyState('No Results', `We couldn't find any projects matching "${query}"`, 'search-x')}
+                    </td></tr>`;
+                } else {
+                    body.innerHTML = `<tr><td colspan="6" class="text-center py-5">
+                        ${QCMS.emptyState('Archive Empty', 'No projects match your current filters.', 'layers')}
+                    </td></tr>`;
+                }
                 if (window.lucide) lucide.createIcons();
                 return;
             }
@@ -234,17 +250,17 @@
             body.innerHTML = this.data.map(p => `
                 <tr class="${p.is_stalled ? 'stalled-row' : ''} fade-in">
                     <td>
-                        <div class="d-flex align-items-center">
-                            <div>
-                                <div class="fw-bold text-dark d-flex align-items-center">
-                                    ${p.title}
-                                    ${p.is_stalled ? '<span class="stalled-badge">Stalled</span>' : ''}
-                                </div>
-                                <div class="text-xs text-muted d-flex align-items-center gap-1">
-                                    <span class="fw-bold text-primary">${p.project_uid}</span> · 
-                                    ${QCMS.categoryBadge(p.category)} · 
-                                    ${p.department}
-                                </div>
+                        <div class="v-stack">
+                            <div class="h-stack gap-2 align-items-center mb-1">
+                                <span class="fw-bold text-dark">${p.title}</span>
+                                ${p.is_stalled ? '<span class="stalled-badge">Stalled</span>' : ''}
+                            </div>
+                            <div class="h-stack gap-2 align-items-center text-xs opacity-75">
+                                <span class="fw-bold text-accent">${p.project_uid}</span>
+                                <span class="text-muted">•</span>
+                                ${QCMS.categoryBadge(p.category)}
+                                <span class="text-muted">•</span>
+                                <span class="text-muted">${p.department}</span>
                             </div>
                         </div>
                     </td>

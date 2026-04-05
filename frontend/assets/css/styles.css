@@ -1,7 +1,7 @@
 :root {
-    /* Precision Core Light Theme */
-    --primary: #0061FF;
-    --primary-hover: #0056E0;
+    /* Precision Core Light Theme (Neutralized) */
+    --primary: #334155;
+    --primary-hover: #1e293b;
     --bg-app: #F8F9FA;
     --bg-sidebar: #1E2632;
     --bg-card: #FFFFFF;

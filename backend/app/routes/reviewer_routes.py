@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.models import User, Project, Stage5Approval, Stage4Solution, Stage1Problem, Stage3RCA, Department, db
+from app.models import User, Project, ProjectReview, Stage1Identification, Stage5RootCause, Stage7Development, Department, db
 from functools import wraps
 from datetime import datetime
 
@@ -23,9 +23,10 @@ def reviewer_required(f):
 def get_stats():
     user = User.query.get(get_jwt_identity())
     
-    pending_count = Project.query.filter_by(org_id=user.org_id, current_stage=5).count()
+    pending_count = Project.query.filter_by(org_id=user.org_id, current_stage=7).count()
     
-    approvals = Stage5Approval.query.filter_by(org_id=user.org_id).all()
+    from app.models import ProjectReview
+    approvals = ProjectReview.query.filter_by(org_id=user.org_id).all()
     approved_count = len([a for a in approvals if a.decision == 'Approved'])
     rejected_count = len([a for a in approvals if a.decision == 'Rejected'])
     
@@ -52,26 +53,31 @@ def get_pending_approvals():
     
     pending_projects = Project.query.filter_by(
         org_id=user.org_id,
-        current_stage=5
+        current_stage=7
     ).all()
     
     result = []
     for p in pending_projects:
-        s1 = Stage1Problem.query.filter_by(project_id=p.id).first()
-        s3 = Stage3RCA.query.filter_by(project_id=p.id).first()
-        s4 = Stage4Solution.query.filter_by(project_id=p.id).first()
+        from app.models import Stage1Identification, Stage5RootCause, Stage7Development
+        s1 = Stage1Identification.query.filter_by(project_id=p.id).first()
+        s5 = Stage5RootCause.query.filter_by(project_id=p.id).first()
+        s7 = Stage7Development.query.filter_by(project_id=p.id).first()
         dept = Department.query.get(p.department_id)
+        tl = User.query.get(p.creator_id) if p.creator_id else None
         
         result.append({
             "project_id": p.id,
+            "project_uid": p.project_uid,
             "title": p.title,
             "department": dept.name if dept else "N/A",
             "problem_statement": s1.problem_statement if s1 else "N/A",
-            "root_cause_summary": s3.root_cause_summary if s3 else "N/A",
-            "solution": s4.implementation_plan if s4 else "N/A",
-            "estimated_cost": s4.budget_required if s4 else 0,
-            "target_kpi": s4.kpi_targets if s4 else {},
-            "submitted_at": s4.created_at.isoformat() + "Z" if s4 and s4.created_at else p.created_at.isoformat() + "Z"
+            "root_cause_summary": s5.root_cause_summary if s5 else "N/A",
+            "solution": s7.solution_details if s7 else "N/A",
+            "estimated_cost": s7.estimated_cost if s7 else 0,
+            "target_kpi": s7.action_plan if s7 else {},
+            "submitted_at": s7.created_at.isoformat() + "Z" if s7 and s7.created_at else p.created_at.isoformat() + "Z",
+            "team_leader": tl.full_name or tl.username if tl else "Unassigned",
+            "team_leader_pic": tl.profile_picture if tl else None
         })
         
     return jsonify(result)
@@ -95,15 +101,16 @@ def process_decision():
         
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
     
-    if project.current_stage != 5:
-        return jsonify({"msg": "Project is not in Stage 5"}), 400
+    if project.current_stage != 7:
+        return jsonify({"msg": "Project is not in Stage 7"}), 400
         
-    approval = Stage5Approval.query.filter_by(project_id=project_id).first()
+    from app.models import ProjectReview
+    approval = ProjectReview.query.filter_by(project_id=project_id, stage_number=7).first()
     if not approval:
-        approval = Stage5Approval(
+        approval = ProjectReview(
             project_id=project_id,
             org_id=user.org_id,
-            stage_id=5,
+            stage_number=7,
             reviewer_id=user.id
         )
         db.session.add(approval)
@@ -114,11 +121,11 @@ def process_decision():
     approval.status = 'Completed' if decision == 'Approved' else 'Action Required'
     
     if decision == 'Approved':
-        project.current_stage = 6
+        project.current_stage = 8
         project.status = 'Approved'
     else:
-        # Rejected or Revision -> back to Stage 3 (User Request)
-        project.current_stage = 3
+        # Rejected or Revision -> back to Stage 7 for the team to fix
+        project.current_stage = 7
         project.status = 'Revision Required' if decision == 'Revision' else 'Rejected'
         
     # Log action
@@ -138,7 +145,8 @@ def process_decision():
 @reviewer_required
 def get_history():
     user = User.query.get(get_jwt_identity())
-    history = Stage5Approval.query.filter_by(org_id=user.org_id).order_by(Stage5Approval.decided_at.desc()).limit(10).all()
+    from app.models import ProjectReview
+    history = ProjectReview.query.filter_by(org_id=user.org_id).order_by(ProjectReview.decided_at.desc()).limit(10).all()
     
     result = []
     for h in history:
@@ -172,9 +180,9 @@ def process_decision_alias(project_id):
         return jsonify({"msg": "Comments are required"}), 400
         
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
-    approval = Stage5Approval.query.filter_by(project_id=project_id).first()
+    approval = ProjectReview.query.filter_by(project_id=project_id, stage_number=7).first()
     if not approval:
-        approval = Stage5Approval(project_id=project_id, org_id=user.org_id, reviewer_id=user.id)
+        approval = ProjectReview(project_id=project_id, org_id=user.org_id, stage_number=7, reviewer_id=user.id)
         db.session.add(approval)
     
     approval.decision = decision
@@ -182,10 +190,10 @@ def process_decision_alias(project_id):
     approval.decided_at = datetime.utcnow()
     
     if decision == 'Approved':
-        project.current_stage = 6
+        project.current_stage = 8
         project.status = 'Approved'
     else:
-        project.current_stage = 4
+        project.current_stage = 7
         project.status = 'Revision Required' if decision == 'Revision' else 'Rejected'
     
     db.session.commit()

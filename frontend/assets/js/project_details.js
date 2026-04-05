@@ -6,7 +6,8 @@ const projectDetails = {
     projectId: new URLSearchParams(window.location.search).get('id'),
 
     init() {
-        console.log("Team Leader Project Details Initialized");
+        if (typeof QCMS !== 'undefined') QCMS.init();
+        
         if (!this.projectId) {
             window.location.href = 'dashboard-team-leader.html';
             return;
@@ -28,20 +29,33 @@ const projectDetails = {
             document.getElementById('projectDesc').textContent = data.description;
             document.getElementById('projectStatus').textContent = data.status;
 
+            // Render Stepper
+            const stepper = document.getElementById('stepperContainer');
+            if (stepper && typeof QCMS !== 'undefined') {
+                stepper.innerHTML = QCMS.stageStepper(data.stage);
+            }
+
             const memberList = document.getElementById('memberList');
             memberList.innerHTML = '';
-            if (data.members.length === 0) {
-                 memberList.innerHTML = '<li>No members assigned</li>';
+            if (!data.members || data.members.length === 0) {
+                 memberList.innerHTML = '<div class="text-xs text-muted">No stakeholders assigned.</div>';
             } else {
                  data.members.forEach(m => {
-                    memberList.innerHTML += `<li>${m.name}</li>`;
+                    const initials = m.name.substring(0, 2).toUpperCase();
+                    memberList.innerHTML += `
+                        <div class="h-stack gap-2 glass-panel px-2 py-1" style="border-radius: 8px; background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-border-color);">
+                            <div class="ds-avatar ds-avatar-xs" style="width:20px; height:20px; font-size:9px;">${initials}</div>
+                            <span class="text-xs fw-bold ds-text-main">${m.name}</span>
+                        </div>
+                    `;
                  });
             }
 
             this.setupStages(data.stage, data.proposal);
+            if (window.lucide) lucide.createIcons();
         } catch (err) {
             console.error(err);
-            alert('Failed to load project details: ' + err.message);
+            QCMS.toast('Critical: Failed to synchronize project state.', 'error');
         }
     },
 
@@ -85,10 +99,10 @@ const projectDetails = {
             await api.post(`/team-leader/action/${this.projectId}/proceed`, {
                 stage: currentStageValue
             });
-            alert('Project successfully advanced to the next stage.');
-            this.loadDetails(); // Reload to reflect new stage
+            QCMS.toast(`Operational stage ${currentStageValue} validated. Proceeding to next phase.`, 'success');
+            this.loadDetails();
         } catch (err) {
-            alert('Failed to proceed: ' + err.message);
+            QCMS.toast('State transition failed: ' + err.message, 'error');
         }
     },
 
@@ -113,10 +127,10 @@ const projectDetails = {
             };
 
             await api.post(`/team-leader/submit-proposal/${this.projectId}`, payload);
-            alert('Proposal submitted successfully! It is now with the Reviewer.');
+            QCMS.toast('Strategic proposal dispatched to Reviewer.', 'success');
             this.loadDetails();
         } catch (err) {
-            alert('Failed to submit proposal: ' + err.message);
+            QCMS.toast('Proposal submission failed: ' + err.message, 'error');
         }
     }
 };

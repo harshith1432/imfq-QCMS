@@ -15,7 +15,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             dept_id: data.dept_id,
             is_temp_password: data.is_temp_password
         }));
-        
+
         if (data.is_temp_password) {
             window.location.href = 'reset-password.html';
             return;
@@ -54,10 +54,10 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
     if (successMsg) successMsg.style.display = 'none';
 
     try {
-        await api.post('/auth/register', { 
-            username, 
-            email, 
-            password, 
+        await api.post('/auth/register', {
+            username,
+            email,
+            password,
             role: 'Team Member' // Default role for self-registration
         });
         if (successMsg) {
@@ -83,12 +83,12 @@ function logout() {
 function checkAuth() {
     const token = localStorage.getItem('token');
     const path = window.location.pathname;
-    
+
     // Improved detection including extensionless paths
-    const isAuthPage = path.includes('login') || 
-                       path.includes('register') || 
-                       path.includes('reset-password');
-    
+    const isAuthPage = path.includes('login') ||
+        path.includes('register') ||
+        path.includes('reset-password');
+
     if (!token && !isAuthPage && !path.endsWith('/') && !path.includes('index.html')) {
         window.location.href = 'login.html';
         return;

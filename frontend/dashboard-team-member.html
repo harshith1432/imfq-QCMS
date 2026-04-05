@@ -1,13 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Workstation | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-</head>
+    <style>
+        .project-item {
+            padding: var(--ds-space-4);
+            border-bottom: 1px solid var(--ds-border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-4);
+        }
+
+        .project-item:hover {
+            background: rgba(var(--ds-primary-rgb), 0.02);
+            padding-left: var(--ds-space-6);
+        }
+
+        .project-item.active {
+            background: rgba(var(--ds-primary-rgb), 0.05);
+            border-left: 4px solid var(--ds-primary);
+        }
+
+        .project-name {
+            font-weight: 700;
+            color: var(--ds-text-main);
+            font-size: 0.9rem;
+        }
+
+        .project-uid {
+            font-size: 0.75rem;
+            color: var(--ds-text-tertiary);
+            margin-top: 2px;
+        }
+
+        .project-item-meta {
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .project-item-arrow {
+            color: var(--ds-text-tertiary);
+            opacity: 0.5;
+        }
+
+        .workstation-preview {
+            padding: var(--ds-space-6);
+        }
+
+        .workstation-details {
+            background: rgba(var(--ds-primary-rgb), 0.02);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-lg);
+            padding: var(--ds-space-6);
+        }
+    </style>
+
 <body>
     <div class="app-layout">
         <!-- Sidebar will be injected by components.js -->
@@ -15,27 +74,31 @@
 
         <main class="app-main">
             <!-- Navbar will be injected by components.js -->
-            <header class="app-navbar" id="app-navbar"></header>
+            <header class="glass-navbar" id="app-navbar"></header>
 
-            <div class="app-content">
-                <div class="content-header fade-in">
-                    <div>
-                        <h1 class="page-heading">My Workstation</h1>
-                        <p class="page-description">Manage your assigned projects, execute workflow steps, and track your contribution impact.</p>
+            <div class="app-content-inner fade-in-up">
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">My Workstation</h1>
+                            <p class="ds-text-secondary mb-0">Manage your assigned projects, execute workflow steps, and
+                                track your contribution impact.</p>
+                        </div>
                     </div>
-                </div>
+                </header>
 
                 <!-- KPI Cards -->
-                <div class="kpi-grid fade-in" id="kpiGrid">
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                <div class="kpi-grid fade-in section-spacing" id="kpiGrid">
+                    <div class="kpi-card">
+                        <div class="skeleton-card skeleton"></div>
+                    </div>
+                    <!-- ... -->
                 </div>
 
                 <!-- Main Layout: Projects & Workstation -->
-                <div class="gap-grid gap-grid-2 fade-in" style="margin-top:var(--space-6);">
+                <div class="gap-grid gap-grid-2 fade-in section-spacing">
                     <!-- Assigned Projects -->
-                    <div class="ds-card">
+                    <div class="glass-card">
                         <div class="ds-card-header">
                             <h5 class="card-title">My Projects</h5>
                             <div class="ds-badge gray" id="projectCount">0 Assigned</div>
@@ -43,7 +106,8 @@
                         <div class="ds-card-body p-0">
                             <div style="max-height:500px; overflow-y:auto;" id="projectsList">
                                 <div class="p-4 text-center">
-                                    <div class="spinner-border spinner-border-sm text-primary opacity-25" role="status"></div>
+                                    <div class="spinner-border spinner-border-sm text-primary opacity-25" role="status">
+                                    </div>
                                     <p class="text-xs text-muted mt-2">Loading projects...</p>
                                 </div>
                             </div>
@@ -51,7 +115,7 @@
                     </div>
 
                     <!-- Focused Workstation -->
-                    <div class="ds-card">
+                    <div class="glass-card">
                         <div class="ds-card-header">
                             <h5 class="card-title">Workstation Preview</h5>
                             <div id="selectionHint" class="text-xs text-muted">Select a project to begin work</div>
@@ -60,14 +124,15 @@
                             <div class="empty-state">
                                 <i class="empty-icon" data-lucide="layout-template"></i>
                                 <h5>Ready to Execute</h5>
-                                <p>Select a project from the left to view current stage requirements and take direct action.</p>
+                                <p>Select a project from the left to view current stage requirements and take direct
+                                    action.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Activity Timeline -->
-                <div class="ds-card fade-in" style="margin-top:var(--space-6);">
+                <div class="glass-card fade-in section-spacing">
                     <div class="ds-card-header">
                         <h5 class="card-title">My Recent Activity</h5>
                         <button class="ds-btn ds-btn-ghost ds-btn-sm">View History</button>
@@ -75,7 +140,8 @@
                     <div class="ds-card-body">
                         <div class="activity-feed" id="activityFeed">
                             <div class="activity-item">
-                                <div class="activity-dot"><i data-lucide="clock" style="width:14px;height:14px;"></i></div>
+                                <div class="activity-dot"><i data-lucide="clock" style="width:14px;height:14px;"></i>
+                                </div>
                                 <div class="activity-content">
                                     <p class="text-muted">Loading your recent contributions...</p>
                                 </div>
@@ -91,66 +157,66 @@
     <script src="assets/js/api.js"></script>
     <script src="assets/js/components.js"></script>
     <script>
-    const tmDash = {
-        projects: [],
+        const tmDash = {
+            projects: [],
 
-        async init() {
-            const userStr = localStorage.getItem('user');
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                if (user.role !== 'Team Member') {
-                    const dashboards = {
-                        'Admin': 'dashboard-admin.html',
-                        'Team Leader': 'dashboard-team-leader.html',
-                        'Facilitator': 'dashboard-facilitator.html',
-                        'Reviewer': 'dashboard-reviewer.html'
-                    };
-                    window.location.href = dashboards[user.role] || 'login.html';
+            async init() {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    if (user.role !== 'Team Member') {
+                        const dashboards = {
+                            'Admin': 'dashboard-admin.html',
+                            'Team Leader': 'dashboard-team-leader.html',
+                            'Facilitator': 'dashboard-facilitator.html',
+                            'Reviewer': 'dashboard-reviewer.html'
+                        };
+                        window.location.href = dashboards[user.role] || 'login.html';
+                        return;
+                    }
+                } else {
+                    window.location.href = 'login.html';
                     return;
                 }
-            } else {
-                window.location.href = 'login.html';
-                return;
-            }
 
-            if (typeof QCMS !== 'undefined' && QCMS.init) QCMS.init();
-            
-            this.loadProjects();
-            this.loadActivity();
-        },
+                if (typeof QCMS !== 'undefined' && QCMS.init) QCMS.init();
 
-        async loadProjects() {
-            try {
-                this.projects = await api.get('/team-member/projects');
-                document.getElementById('projectCount').textContent = `${this.projects.length} Assigned`;
-                this.renderKPIs();
-                this.renderList();
-            } catch (e) {
-                console.error('Projects load failed', e);
-                document.getElementById('projectsList').innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Could not load projects.')}</div>`;
-            }
-        },
+                this.loadProjects();
+                this.loadActivity();
+            },
 
-        renderKPIs() {
-            const total = this.projects.length;
-            const active = this.projects.filter(p => !['Closed', 'Completed'].includes(p.status)).length;
-            const completed = total - active;
-            
-            document.getElementById('kpiGrid').innerHTML =
-                QCMS.kpiCard('My Assignments', total, 'folder', 'blue', 0) +
-                QCMS.kpiCard('Active Focus', active, 'activity', 'green') +
-                QCMS.kpiCard('My Contributions', completed, 'award', 'cyan');
-            if (window.lucide) lucide.createIcons();
-        },
+            async loadProjects() {
+                try {
+                    this.projects = await api.get('/team-member/projects');
+                    document.getElementById('projectCount').textContent = `${this.projects.length} Assigned`;
+                    this.renderKPIs();
+                    this.renderList();
+                } catch (e) {
+                    console.error('Projects load failed', e);
+                    document.getElementById('projectsList').innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Could not load projects.')}</div>`;
+                }
+            },
 
-        renderList() {
-            const list = document.getElementById('projectsList');
-            if (!this.projects.length) {
-                list.innerHTML = `<div class="p-4">${QCMS.emptyState('inbox', 'No Assignments', 'You are not assigned to any projects yet.')}</div>`;
-                return;
-            }
+            renderKPIs() {
+                const total = this.projects.length;
+                const active = this.projects.filter(p => !['Closed', 'Completed'].includes(p.status)).length;
+                const completed = total - active;
 
-            list.innerHTML = this.projects.map(p => `
+                document.getElementById('kpiGrid').innerHTML =
+                    QCMS.kpiCard('My Assignments', total, 'folder', 'blue') +
+                    QCMS.kpiCard('Active Focus', active, 'activity', 'green') +
+                    QCMS.kpiCard('My Contributions', completed, 'award', 'cyan');
+                if (window.lucide) lucide.createIcons();
+            },
+
+            renderList() {
+                const list = document.getElementById('projectsList');
+                if (!this.projects.length) {
+                    list.innerHTML = `<div class="p-4">${QCMS.emptyState('inbox', 'No Assignments', 'You are not assigned to any projects yet.')}</div>`;
+                    return;
+                }
+
+                list.innerHTML = this.projects.map(p => `
                 <div class="project-item fade-in" onclick="tmDash.selectProject(${p.id})">
                     <div class="project-item-info">
                         <div class="project-name">${p.title}</div>
@@ -162,22 +228,22 @@
                     <i data-lucide="chevron-right" class="project-item-arrow"></i>
                 </div>
             `).join('');
-            if (window.lucide) lucide.createIcons();
-        },
+                if (window.lucide) lucide.createIcons();
+            },
 
-        selectProject(id) {
-            const p = this.projects.find(proj => proj.id === id);
-            if (!p) return;
+            selectProject(id) {
+                const p = this.projects.find(proj => proj.id === id);
+                if (!p) return;
 
-            // Highlight selected
-            document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+                // Highlight selected
+                document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
+                event.currentTarget.classList.add('active');
 
-            const stageNames = ['','Problem Identification','Data Collection','Root Cause Analysis','Solution Proposal','Approval','Implementation','Impact Measurement','Closure & Standardization'];
-            const stage = p.current_stage || p.stage || 1;
+                const stageNames = ['', 'Identification', 'Selection', 'Analysis', 'Causes', 'Root Cause (RCA)', 'Data Analysis', 'Development', 'Implementation'];
+                const stage = p.current_stage || p.stage || 1;
 
-            document.getElementById('selectionHint').textContent = `Currently at Stage ${stage}`;
-            document.getElementById('workstationArea').innerHTML = `
+                document.getElementById('selectionHint').textContent = `Currently at Stage ${stage}`;
+                document.getElementById('workstationArea').innerHTML = `
                 <div class="workstation-preview fade-in">
                     <div class="d-flex justify-content-between align-items-start mb-4">
                         <div>
@@ -208,13 +274,13 @@
                     </div>
                 </div>
             `;
-            if (window.lucide) lucide.createIcons();
-        },
+                if (window.lucide) lucide.createIcons();
+            },
 
-        async loadActivity() {
-            // Placeholder for activity feed
-            const feed = document.getElementById('activityFeed');
-            feed.innerHTML = `
+            async loadActivity() {
+                // Placeholder for activity feed
+                const feed = document.getElementById('activityFeed');
+                feed.innerHTML = `
                 <div class="activity-item fade-in">
                     <div class="activity-dot"><i data-lucide="check" style="width:12px;height:12px;"></i></div>
                     <div class="activity-content">
@@ -223,11 +289,12 @@
                     </div>
                 </div>
             `;
-            if (window.lucide) lucide.createIcons();
-        }
-    };
+                if (window.lucide) lucide.createIcons();
+            }
+        };
 
-    document.addEventListener('DOMContentLoaded', () => tmDash.init());
+        document.addEventListener('DOMContentLoaded', () => tmDash.init());
     </script>
 </body>
+
 </html>

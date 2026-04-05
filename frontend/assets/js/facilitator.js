@@ -43,9 +43,9 @@ const facilitator = {
             const titles = {
                 overview: { main: "Facilitator Console", sub: "Guide, Analyze, and Validate Quality Projects" },
                 projects: { main: "All Projects", sub: "Cross-department Project Visibility" },
-                rca: { main: "RCA Workspace", sub: "Stage 3: Root Cause Analysis Tools" },
-                impact: { main: "Impact Measurement", sub: "Stage 7: Validating KPI Improvements" },
-                closure: { main: "Project Closure", sub: "Stage 8: Standardization & Lessons Learned" },
+                rca: { main: "RCA Workspace", sub: "Stage 5: Root Cause Analysis Tools" },
+                impact: { main: "Impact Measurement", sub: "Stage 8: Validating KPI Improvements" },
+                closure: { main: "Project Closure", sub: "Stage 8: Implementation & Lessons Learned" },
                 analytics: { main: "KPI Analytics", sub: "Strategic Performance Insights" }
             };
 
@@ -68,7 +68,7 @@ const facilitator = {
             document.getElementById('pendingRcaCount').textContent = stats.pending_rca || 0;
             document.getElementById('pendingImpactCount').textContent = stats.pending_impact || 0;
             document.getElementById('avgImprovement').textContent = stats.avg_improvement || '0%';
-            document.getElementById('totalSavings').textContent = typeof stats.total_savings === 'number' ? `$${stats.total_savings.toLocaleString()}` : '$0';
+            document.getElementById('totalSavings').textContent = typeof stats.total_savings === 'number' ? `₹${stats.total_savings.toLocaleString()}` : '₹0';
         } catch (err) {
             console.error("Failed to load stats", err);
         }
@@ -88,9 +88,9 @@ const facilitator = {
 
             table.innerHTML = projects.map(p => {
                 let action = 'View';
-                if (p.stage === 3) action = 'Review RCA';
-                else if (p.stage === 7) action = 'Validate Impact';
-                else if (p.stage === 8) action = 'Closure Review';
+                if (p.stage === 5) action = 'Review RCA';
+                else if (p.stage === 8) action = 'Validate Impact';
+                else if (p.stage === 8 && p.status === 'Pending Closure') action = 'Closure Review';
 
                 return `
                     <tr>
@@ -116,7 +116,7 @@ const facilitator = {
             data: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
                 datasets: [{
-                    label: 'Cost Savings ($)',
+                    label: 'Cost Savings (₹)',
                     data: [12000, 19000, 15000, 25000, 22000, 30000],
                     borderColor: '#4f46e5',
                     tension: 0.4,

@@ -3,14 +3,14 @@ let currentStageId = 1;
 const projectId = new URLSearchParams(window.location.search).get('id');
 
 const stages = [
-    { title: "Stage 1: Problem Identification", description: "Define the problem and its scope." },
-    { title: "Stage 2: Data Collection", description: "Gather facts and historical data." },
-    { title: "Stage 3: Root Cause Analysis", description: "Identify underlying causes (Fishbone/5-Why)." },
-    { title: "Stage 4: Solution Proposal", description: "Propose actionable solutions." },
-    { title: "Stage 5: Approval Workflow", description: "Wait for reviewer validation." },
-    { title: "Stage 6: Implementation", description: "Track the solution rollout." },
-    { title: "Stage 7: Impact Measurement", description: "Measure success vs baseline." },
-    { title: "Stage 8: Standardization", description: "Finalize and close project." }
+    { title: "Stage 1: Identification", description: "Define the problem and its scope." },
+    { title: "Stage 2: Selection", description: "Select the project and set objectives." },
+    { title: "Stage 3: Analysis", description: "Analyze the problem with data and charts." },
+    { title: "Stage 4: Causes", description: "Identify potential causes (Fishbone/5-Why)." },
+    { title: "Stage 5: Root Cause (RCA)", description: "Validate and confirm the root cause." },
+    { title: "Stage 6: Data Analysis", description: "Verify root cause with data-driven analysis." },
+    { title: "Stage 7: Development", description: "Develop and propose the solution." },
+    { title: "Stage 8: Implementation", description: "Implement, measure impact, and close." }
 ];
 
 async function initWorkspace() {

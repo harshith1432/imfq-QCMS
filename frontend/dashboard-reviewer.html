@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reviewer Dashboard | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .detail-section { margin-bottom: 1.5rem; }
-        .detail-label { font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
-        .detail-value { font-size: 0.95rem; color: var(--text-main); }
-        .kpi-badge { background: var(--bg-light); border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--radius-md); display: flex; flex-direction: column; }
+        /* Detail styles moved to design-system.css */
     </style>
 </head>
 <body>
@@ -19,45 +20,46 @@
         <aside class="app-sidebar" id="app-sidebar"></aside>
 
         <main class="app-main">
-            <header class="app-navbar" id="app-navbar"></header>
+            <header class="glass-navbar" id="app-navbar"></header>
 
-            <div class="app-content">
-                <div class="content-header fade-in">
-                    <div>
-                        <h1 class="page-heading">Approval Workflow</h1>
-                        <p class="page-description">Review proposed solutions, evaluate feasibility, and provide formal decisions to drive project progression.</p>
+            <div class="app-content-inner fade-in-up">
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Approval Workflow</h1>
+                            <p class="ds-text-secondary mb-0">Review proposed solutions, evaluate feasibility, and provide formal decisions.</p>
+                        </div>
                     </div>
-                </div>
+                </header>
 
                 <!-- KPI Stats -->
-                <div class="kpi-grid fade-in" id="kpiGrid">
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
-                    <div class="kpi-card"><div class="skeleton-card skeleton"></div></div>
+                <div class="kpi-grid fade-in section-spacing" id="kpiGrid">
+                    <!-- Dynamic injection via components.js -->
                 </div>
 
-                <div class="gap-grid gap-grid-3-1 fade-in" style="margin-top:var(--space-6);">
+                <div class="gap-grid gap-grid-3-1 fade-in section-spacing">
                     <!-- Active Review Queue -->
-                    <div class="ds-card">
-                        <div class="ds-card-header">
+                    <div class="glass-card">
+                        <div class="ds-card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title">Pending Approvals</h5>
-                            <span class="ds-badge orange" id="pendingCount">0 Pending</span>
+                            <div class="h-stack gap-3">
+                                <span class="ds-badge orange" id="pendingCount">0 Pending</span>
+                            </div>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div style="min-height:400px;" id="reviewQueueBody">
+                            <div style="min-height:500px;" id="reviewQueueBody">
                                 <div class="p-5 text-center text-muted">Initialize Approval Queue...</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Decision History (Recent) -->
-                    <div class="ds-card">
+                    <div class="glass-card">
                         <div class="ds-card-header">
-                            <h5 class="card-title">Recent Decisions</h5>
+                            <h5 class="card-title">Recent Activity</h5>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div style="max-height:400px; overflow-y:auto;" id="decisionHistoryBody">
+                            <div style="max-height:540px; overflow-y:auto;" id="decisionHistoryBody">
                                 <div class="p-4 text-center text-muted">Load History...</div>
                             </div>
                         </div>
@@ -88,17 +90,17 @@
                             </div>
                             
                             <div class="detail-section">
-                                <div class="detail-label">Root Cause Summary (Stage 3)</div>
+                                <div class="detail-label">Root Cause Summary (Stage 5)</div>
                                 <div class="detail-value" id="detailRCA">--</div>
                             </div>
                             
                             <div class="detail-section">
-                                <div class="detail-label">Proposed Solution (Stage 4)</div>
+                                <div class="detail-label">Proposed Solution (Stage 7)</div>
                                 <div class="detail-value" id="detailSolution">--</div>
                             </div>
                         </div>
                         
-                        <div class="col-lg-4 border-start">
+                        <div class="col-lg-4 border-left">
                             <div class="detail-section">
                                 <div class="detail-label">Estimated Cost</div>
                                 <div class="detail-value fw-bold fs-5 text-primary" id="detailCost">₹0</div>
@@ -110,14 +112,14 @@
                             </div>
                             
                             <div class="mb-4">
-                                <label class="form-label fw-medium">Reviewer Comments <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="reviewComments" rows="5" placeholder="Enter your observations or requirements for approval..."></textarea>
+                                <label class="ds-label">Reviewer Comments <span class="text-danger">*</span></label>
+                                <textarea class="ds-input ds-textarea" id="reviewComments" rows="5" placeholder="Enter your observations or requirements for approval..."></textarea>
                             </div>
 
                             <div class="ds-alert info mb-0">
                                 <div class="d-flex gap-2">
                                     <i data-lucide="info" style="width:18px;height:18px;"></i>
-                                    <div class="text-sm">Approving moves this to <strong>Stage 6: Implementation</strong>. Revision or Rejection sends it back to <strong>Stage 4</strong>.</div>
+                                    <div class="text-sm">Approving moves this to <strong>Stage 8: Implementation</strong>. Revision or Rejection sends it back to <strong>Stage 7</strong>.</div>
                                 </div>
                             </div>
                         </div>
@@ -125,9 +127,15 @@
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-4">
                     <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="ds-btn ds-btn-ghost text-warning" id="revisionBtn">Request Revision</button>
-                    <button type="button" class="ds-btn ds-btn-danger" id="rejectBtn">Reject ❌</button>
-                    <button type="button" class="ds-btn ds-btn-primary" id="approveBtn">Approve ✅</button>
+                    <button type="button" class="ds-btn ds-btn-ghost text-warning" id="revisionBtn">
+                        <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i> Request Revision
+                    </button>
+                    <button type="button" class="ds-btn ds-btn-danger" id="rejectBtn">
+                        <i data-lucide="x" style="width:16px;height:16px;"></i> Reject
+                    </button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="approveBtn">
+                        <i data-lucide="check" style="width:16px;height:16px;"></i> Approve Project
+                    </button>
                 </div>
             </div>
         </div>
@@ -140,6 +148,7 @@
     const revDash = {
         selectedProjectId: null,
         reviewModal: null,
+        queueData: [],
 
         async init() {
             QCMS.init();
@@ -149,19 +158,37 @@
             this.loadQueue();
             this.loadHistory();
 
+            window.addEventListener('qcms-global-search', (e) => {
+                this.handleGlobalSearch(e.detail.query);
+            });
+
             document.getElementById('approveBtn').onclick = () => this.submitDecision('Approved');
             document.getElementById('rejectBtn').onclick = () => this.submitDecision('Rejected');
             document.getElementById('revisionBtn').onclick = () => this.submitDecision('Revision');
+        },
+
+        handleGlobalSearch(query) {
+            const q = query.toLowerCase().trim();
+            if (!q) {
+                this.queue = [...this.queueData];
+            } else {
+                this.queue = this.queueData.filter(item => 
+                    (item.title || '').toLowerCase().includes(q) ||
+                    (item.project_id || '').toString().includes(q) ||
+                    (item.department || '').toLowerCase().includes(q)
+                );
+            }
+            this.renderQueue();
         },
 
         async loadStats() {
             try {
                 const stats = await api.get('/reviewer/stats');
                 document.getElementById('kpiGrid').innerHTML =
-                    QCMS.kpiCard('Pending Review', stats.pending_count || 0, 'clock', 'orange') +
-                    QCMS.kpiCard('Total Approved', stats.approved_count || 0, 'check-circle', 'green') +
-                    QCMS.kpiCard('Total Rejected', stats.rejected_count || 0, 'x-circle', 'red') +
-                    QCMS.kpiCard('Avg. Turnaround', stats.avg_turnaround_time || '0h', 'zap', 'blue');
+                    QCMS.kpiCard('Pending Review', stats.pending_count || 0, 'clock', 'orange', null, 'audit-queue.html') +
+                    QCMS.kpiCard('Total Approved', stats.approved_count || 0, 'check-circle', 'green', null, 'audit-queue.html') +
+                    QCMS.kpiCard('Total Rejected', stats.rejected_count || 0, 'x-circle', 'red', null, 'audit-queue.html') +
+                    QCMS.kpiCard('Avg. Turnaround', stats.avg_turnaround_time || '0h', 'zap', 'blue', null, 'analytics.html');
                 if (window.lucide) lucide.createIcons();
             } catch (e) { console.error(e); }
         },
@@ -169,42 +196,72 @@
         async loadQueue() {
             try {
                 const projects = await api.get('/reviewer/pending');
-                const container = document.getElementById('reviewQueueBody');
-                document.getElementById('pendingCount').textContent = `${projects.length} Pending`;
+                this.queueData = projects || [];
+                this.queue = [...this.queueData];
+                this.renderQueue();
+            } catch (e) { console.error(e); }
+        },
 
-                if (!projects.length) {
-                    container.innerHTML = `<div class="p-5">${QCMS.emptyState('check-circle', 'Queue Clear', 'No projects are currently awaiting your approval.')}</div>`;
-                    if (window.lucide) lucide.createIcons();
-                    return;
-                }
+        renderQueue() {
+            const container = document.getElementById('reviewQueueBody');
+            const projects = this.queue || [];
+            document.getElementById('pendingCount').textContent = `${projects.length} Pending`;
 
-                container.innerHTML = `
+            if (!projects.length) {
+                container.innerHTML = `<div class="p-5">${QCMS.emptyState('Queue Clear', 'No projects matching your search.', 'check-circle')}</div>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="table-responsive">
                     <table class="ds-table">
                         <thead>
                             <tr>
-                                <th>Project Details</th>
-                                <th>Department</th>
-                                <th>Submission</th>
-                                <th class="text-end">Action</th>
+                                <th style="width: 45%;">Project Detail</th>
+                                <th style="width: 20%;">Stakeholders</th>
+                                <th style="width: 20%;">Submission Details</th>
+                                <th class="text-end" style="width: 15%;">Action</th>
                             </tr>
                         </thead>
                         <tbody>${projects.map(p => `
-                            <tr class="fade-in">
+                            <tr class="fade-in data-row">
                                 <td>
-                                    <div class="fw-semibold text-primary">${p.title}</div>
-                                    <div class="text-xs text-muted">ID: ${p.project_id}</div>
+                                    <div class="v-stack">
+                                        <div class="fw-bold ds-text-main">${p.title}</div>
+                                        <div class="h-stack gap-2 mt-1">
+                                            <span class="ds-badge ghost text-xxs font-mono">${p.project_uid || ('PRJ-' + p.project_id)}</span>
+                                            <span class="ds-badge blue text-xxs">${p.department}</span>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td><span class="ds-badge blue">${p.department}</span></td>
-                                <td><div class="text-sm">${QCMS.formatRelative(p.submitted_at)}</div></td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        ${QCMS.renderAvatar({username: p.team_leader || 'TL'}, 28)}
+                                        <div class="v-stack">
+                                            <div class="text-xs fw-semibold text-truncate" style="max-width:100px;">${p.team_leader || 'Lead'}</div>
+                                            <div class="text-xxs text-muted">Team Leader</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="v-stack">
+                                        <div class="text-xs fw-semibold">${QCMS.formatDate(p.submitted_at)}</div>
+                                        <div class="text-xxs text-muted">${QCMS.formatTime(p.submitted_at)}</div>
+                                    </div>
+                                </td>
                                 <td class="text-end">
-                                    <button class="ds-btn ds-btn-sm ds-btn-primary" onclick='revDash.openReview(${JSON.stringify(p).replace(/'/g, "&#39;")})'>Review</button>
+                                    <button class="ds-btn ds-btn-sm ds-btn-primary" onclick='revDash.openReview(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+                                        <span>Review</span>
+                                        <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                    </button>
                                 </td>
                             </tr>
                         `).join('')}</tbody>
                     </table>
-                `;
-                if (window.lucide) lucide.createIcons();
-            } catch (e) { console.error(e); }
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
         },
 
         async loadHistory() {
@@ -218,12 +275,19 @@
                 }
 
                 container.innerHTML = history.map(item => `
-                    <div class="p-3 border-bottom fade-in">
-                        <div class="d-flex justify-content-between align-items-start mb-1">
-                            <div class="fw-semibold text-sm text-truncate" style="max-width:150px;">${item.project_title}</div>
+                    <div class="p-3 border-bottom fade-in hover-bg" style="transition: background 0.2s;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="ds-avatar-initials sm rounded-circle bg-light border text-xxs fw-bold">
+                                    ${(item.project_title || 'P').substring(0, 1)}
+                                </div>
+                                <div class="v-stack">
+                                    <div class="fw-bold text-sm text-truncate" style="max-width:180px;">${item.project_title}</div>
+                                    <div class="text-xxs ds-text-secondary">${QCMS.formatDate(item.created_at)} · ${QCMS.formatTime(item.created_at)}</div>
+                                </div>
+                            </div>
                             ${QCMS.badge(item.decision, item.decision === 'Approved' ? 'green' : (item.decision === 'Revision' ? 'orange' : 'red'))}
                         </div>
-                        <div class="text-xs text-muted">${QCMS.formatRelative(item.created_at)}</div>
                     </div>
                 `).join('');
             } catch (e) { console.error(e); }
@@ -232,28 +296,34 @@
         openReview(p) {
             this.selectedProjectId = p.project_id;
             document.getElementById('modalProjectInfo').innerHTML = `
-                <div class="fw-bold fs-4 text-primary">${p.title}</div>
-                <div class="text-sm text-muted">Department: ${p.department} | Submitted: ${new Date(p.submitted_at).toLocaleString()}</div>
+                <div class="v-stack gap-1">
+                    <div class="fw-bold fs-4 ds-text-main">${p.title}</div>
+                    <div class="h-stack gap-2 text-xs ds-text-secondary">
+                        <span class="ds-badge-dot blue"></span> ${p.department} 
+                        <span class="mx-1">•</span> 
+                        <i data-lucide="clock" style="width:12px;height:12px;"></i> Submitted ${QCMS.formatDate(p.submitted_at)} at ${QCMS.formatTime(p.submitted_at)}
+                    </div>
+                </div>
             `;
             
-            document.getElementById('detailProblem').textContent = p.problem_statement;
-            document.getElementById('detailRCA').textContent = p.root_cause_summary;
-            document.getElementById('detailSolution').textContent = p.solution;
-            document.getElementById('detailCost').textContent = `₹${parseFloat(p.estimated_cost).toLocaleString()}`;
+            document.getElementById('detailProblem').textContent = p.problem_statement || 'No problem statement provided';
+            document.getElementById('detailRCA').textContent = p.root_cause_summary || 'Analysis pending';
+            document.getElementById('detailSolution').textContent = p.solution || 'No solution details available';
+            document.getElementById('detailCost').textContent = `₹${parseFloat(p.estimated_cost || 0).toLocaleString()}`;
             
             const kpiContainer = document.getElementById('detailKPIs');
             kpiContainer.innerHTML = '';
             if (p.target_kpi && typeof p.target_kpi === 'object') {
                 Object.entries(p.target_kpi).forEach(([key, val]) => {
                     kpiContainer.innerHTML += `
-                        <div class="kpi-badge">
-                            <span class="text-xs text-muted text-uppercase">${key}</span>
-                            <span class="fw-bold">${val}</span>
+                        <div class="kpi-badge glass-panel p-2 rounded-3 border">
+                            <div class="text-xs text-muted text-uppercase fw-bold" style="font-size:9px;">${key.replace(/_/g, ' ')}</div>
+                            <div class="fw-bold ds-text-main">${val}</div>
                         </div>
                     `;
                 });
             } else {
-                kpiContainer.innerHTML = '<div class="text-muted small">No KPI targets defined</div>';
+                kpiContainer.innerHTML = '<div class="ds-alert gray py-2 text-xs">No KPI targets defined</div>';
             }
 
             document.getElementById('reviewComments').value = '';

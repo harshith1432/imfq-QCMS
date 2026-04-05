@@ -8,6 +8,20 @@ with app.app_context():
     admin_user = os.getenv('ADMIN_USERNAME', 'admin')
     admin_pass = os.getenv('ADMIN_PASSWORD', 'admin123')
 
+    # 0.5 Ensure default organization exists
+    org_email = 'admin@example.com'
+    org = Organization.query.filter_by(email=org_email).first()
+    if not org:
+        org = Organization(
+            name='QCMS Enterprise',
+            industry='Technology',
+            admin_name='System Admin',
+            email=org_email
+        )
+        db.session.add(org)
+        db.session.commit()
+        print(f"Created organization: {org.name}")
+
     # 1. Ensure roles exist
     roles_list = ['Admin', 'Reviewer', 'Facilitator', 'Team Leader', 'Team Member']
     role_objs = {}
@@ -21,11 +35,12 @@ with app.app_context():
 
     # 2. Ensure default department exists
     dept_name = 'Quality Assurance'
-    dept = Department.query.filter_by(name=dept_name).first()
+    dept = Department.query.filter_by(name=dept_name, org_id=org.id).first()
     if not dept:
-        dept = Department(name=dept_name)
+        dept = Department(name=dept_name, org_id=org.id)
         db.session.add(dept)
         db.session.commit()
+        print(f"Created department: {dept_name}")
 
     # 3. Create users
     users_data = [
@@ -44,7 +59,8 @@ with app.app_context():
                 email=email,
                 hashed_password=bcrypt.generate_password_hash(password).decode('utf-8'),
                 role_id=role_objs[role_name].id,
-                department_id=dept.id
+                department_id=dept.id,
+                org_id=org.id
             )
             db.session.add(user)
             print(f"Created user: {username} with role {role_name}")
@@ -52,6 +68,7 @@ with app.app_context():
             # Update role, password and department if exists
             user.role_id = role_objs[role_name].id
             user.department_id = dept.id
+            user.org_id = org.id
             user.hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             print(f"Updated user: {username}")
     

@@ -1,83 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile | QCMS Enterprise</title>
     <!-- Modern Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <style>
-        .profile-hero {
-            background: linear-gradient(135deg, var(--ds-primary) 0%, #4facfe 100%);
-            height: 180px;
-            border-radius: 20px 20px 0 0;
-            position: relative;
-            margin-bottom: 80px;
-        }
-
-        .profile-avatar-wrapper {
-            position: absolute;
-            bottom: -60px;
-            left: 50px;
-            padding: 8px;
-            background: white;
-            border-radius: 28px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        .profile-avatar {
-            width: 110px;
-            height: 110px;
-            border-radius: 20px;
-            background: var(--ds-bg-subtle);
-            border: 2px solid var(--ds-border-subtle);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            transition: var(--ds-transition);
-        }
-
-        .profile-avatar i {
-            font-size: 3.5rem;
-            color: var(--ds-text-placeholder);
-        }
-
-        .profile-info-header {
-            padding-left: 170px;
-            min-height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
         .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 40px;
             margin-top: 30px;
-        }
-
-        .profile-section-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--ds-text-main);
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            letter-spacing: -0.01em;
-        }
-
-        .profile-section-title i {
-            width: 18px;
-            height: 18px;
-            color: var(--ds-primary);
         }
 
         .badge-role {
@@ -87,7 +34,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
         .role-admin { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
@@ -97,37 +44,14 @@
         .form-actions {
             margin-top: 48px;
             padding-top: 32px;
-            border-top: 1px solid var(--ds-border-subtle);
+            border-top: 1px solid var(--ds-border-color);
             display: flex;
             justify-content: flex-end;
             gap: 16px;
         }
-
-        /* Utility Classes (Missing in Design System) */
-        .d-flex { display: flex !important; }
-        .d-md-flex { display: flex !important; }
-        .align-items-center { align-items: center !important; }
-        .justify-content-between { justify-content: space-between !important; }
-        .justify-content-end { justify-content: flex-end !important; }
-        .gap-2 { gap: 8px !important; }
-        .gap-3 { gap: 12px !important; }
-        .gap-4 { gap: 16px !important; }
-        .m-0 { margin: 0 !important; }
-        .mt-4 { margin-top: 16px !important; }
-        .mb-4 { margin-bottom: 16px !important; }
-        .mx-2 { margin-left: 8px !important; margin-right: 8px !important; }
-        .my-4 { margin-top: 16px !important; margin-bottom: 16px !important; }
-        .p-4 { padding: 16px !important; }
-        .pt-3 { padding-top: 12px !important; }
-        .px-2 { padding-left: 8px !important; padding-right: 8px !important; }
-        .px-5 { padding-left: 32px !important; padding-right: 32px !important; }
-        .py-1 { padding-top: 4px !important; padding-bottom: 4px !important; }
-        .d-none { display: none !important; }
-        .position-relative { position: relative !important; }
-        .position-absolute { position: absolute !important; }
-        .clickable { cursor: pointer !important; }
     </style>
 </head>
+
 <body class="ds-light">
     <div class="app-layout">
         <!-- Sidebar -->
@@ -138,15 +62,40 @@
             <!-- Navbar -->
             <header class="app-navbar" id="app-navbar"></header>
 
-            <!-- Page Content -->
-            <div class="app-content">
+            <div class="app-content-inner fade-in-up">
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">My Account</h1>
+                            <p class="ds-text-secondary mb-0">Manage your profile, security settings, and organizational identity.</p>
+                        </div>
+                    </div>
+                </header>
+
                 <div class="ds-container">
                     <!-- Profile Card -->
-                    <div class="ds-card" style="padding: 0; overflow: hidden; border: none; box-shadow: var(--ds-shadow-lg);">
-                        <div class="profile-hero">
+                    <div class="ds-card glass-card p-0"
+                        style="overflow: hidden; border: none; box-shadow: var(--ds-shadow-lg);">
+                        <div class="profile-hero" id="profile-banner-container">
+                            <button class="ds-btn ds-btn-sm"
+                                style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.4); color: white;"
+                                onclick="document.getElementById('banner-input').click()">
+                                <i class="fas fa-camera" style="margin-right: 6px;"></i> Edit Cover
+                            </button>
+                            <input type="file" id="banner-input" class="d-none"
+                                accept="image/png, image/jpeg, image/jpg, image/gif" onchange="previewBanner(event)">
                             <div class="profile-avatar-wrapper">
                                 <div class="profile-avatar" id="profile-avatar-container">
-                                    <i class="fas fa-user-circle"></i>
+                                    <img id="avatar-preview" src=""
+                                        style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                    <i class="fas fa-user-circle" id="avatar-icon"></i>
+                                    <div class="avatar-edit-overlay"
+                                        onclick="document.getElementById('avatar-input').click()">
+                                        <i class="fas fa-camera" style="font-size: 1rem; color: white;"></i>
+                                    </div>
+                                    <input type="file" id="avatar-input" class="d-none"
+                                        accept="image/png, image/jpeg, image/jpg, image/gif"
+                                        onchange="previewAvatar(event)">
                                 </div>
                             </div>
                         </div>
@@ -155,19 +104,23 @@
                             <div class="profile-info-header" id="profile-header-content">
                                 <div>
                                     <div id="profile-hero-content" style="display: none;">
-                                        <div class="ds-overline text-primary" id="profile-org-name" style="margin-bottom: 4px;"></div>
+                                        <div class="ds-overline text-primary" id="profile-org-name"
+                                            style="margin-bottom: 4px;"></div>
                                         <h1 class="ds-h3" id="profile-full-name" style="margin-bottom: 4px;"></h1>
                                         <p class="ds-text-tertiary" id="profile-display-email"></p>
                                     </div>
-                                    
+
                                     <div id="profile-loading-skeleton">
-                                        <div class="skeleton-text skeleton" style="width: 120px; height: 14px; margin-bottom: 8px;"></div>
-                                        <div class="skeleton-text skeleton" style="width: 200px; height: 32px; margin-bottom: 8px;"></div>
+                                        <div class="skeleton-text skeleton"
+                                            style="width: 120px; height: 14px; margin-bottom: 8px;"></div>
+                                        <div class="skeleton-text skeleton"
+                                            style="width: 200px; height: 32px; margin-bottom: 8px;"></div>
                                         <div class="skeleton-subtext skeleton" style="width: 250px;"></div>
                                     </div>
                                 </div>
                                 <div id="role-badge-container">
-                                    <div class="skeleton" style="width: 100px; height: 32px; border-radius: 20px;"></div>
+                                    <div class="skeleton" style="width: 100px; height: 32px; border-radius: 20px;">
+                                    </div>
                                 </div>
                             </div>
 
@@ -180,19 +133,23 @@
                                         <i data-lucide="user"></i>
                                         Account Details
                                     </h3>
-                                    
+
                                     <div class="ds-field">
                                         <label class="ds-label">Display Name</label>
-                                        <input type="text" class="ds-input" id="profile-name" placeholder="Loading your name...">
+                                        <input type="text" class="ds-input" id="profile-name"
+                                            placeholder="Loading your name...">
                                     </div>
 
                                     <div class="ds-field mt-4">
                                         <label class="ds-label">System Email</label>
                                         <div class="position-relative">
-                                            <input type="email" class="ds-input" id="profile-email" disabled style="padding-right: 40px;">
-                                            <i data-lucide="lock" class="position-absolute" style="right: 12px; top: 12px; width: 16px; color: var(--ds-text-placeholder);"></i>
+                                            <input type="email" class="ds-input" id="profile-email" disabled
+                                                style="padding-right: 40px;">
+                                            <i data-lucide="lock" class="position-absolute"
+                                                style="right: 12px; top: 12px; width: 16px; color: var(--ds-text-placeholder);"></i>
                                         </div>
-                                        <span class="ds-helper-text">Managed by enterprise directory. Contact IT for changes.</span>
+                                        <span class="ds-helper-text">Managed by enterprise directory. Contact IT for
+                                            changes.</span>
                                     </div>
                                 </div>
 
@@ -205,31 +162,54 @@
 
                                     <div class="ds-field">
                                         <label class="ds-label">Password Protection</label>
-                                        <div class="ds-card-flat d-flex align-items-center justify-content-between p-4" style="background: var(--ds-bg-subtle); border: 1px solid var(--ds-border-subtle); border-radius: 12px; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                                        <div class="ds-card-flat d-flex align-items-center justify-content-between p-4"
+                                            style="background: var(--ds-bg-subtle); border: 1px solid var(--ds-border-subtle); border-radius: 12px; display: flex !important; justify-content: space-between !important; align-items: center !important;">
                                             <div>
-                                                <p class="ds-text-main fw-700 m-0" style="font-weight: 700;">Account Password</p>
-                                                <p class="ds-text-secondary ds-text-xs m-0">Secure your session with a strong password</p>
+                                                <p class="ds-text-main fw-700 m-0" style="font-weight: 700;">Account
+                                                    Password</p>
+                                                <p class="ds-text-secondary ds-text-xs m-0">Secure your session with a
+                                                    strong password</p>
                                             </div>
-                                            <button class="ds-btn ds-btn-secondary ds-btn-sm" id="toggle-pw-btn" onclick="togglePasswordReset()" style="min-width: 80px;">Update</button>
+                                            <button class="ds-btn ds-btn-secondary ds-btn-sm" id="toggle-pw-btn"
+                                                onclick="togglePasswordReset()" style="min-width: 80px;">Update</button>
                                         </div>
 
                                         <!-- Password Reset Fields (Inline) -->
-                                        <div class="ds-card-flat mt-4 d-none" id="password-reset-options" style="background: white; border: 1.5px solid var(--ds-primary-subtle); border-radius: 12px; padding: 24px; box-shadow: var(--ds-shadow-sm);">
+                                        <div class="ds-card-flat mt-4 d-none" id="password-reset-options"
+                                            style="background: white; border: 1.5px solid var(--ds-primary-subtle); border-radius: 12px; padding: 24px; box-shadow: var(--ds-shadow-sm);">
                                             <form id="change-password-form">
                                                 <div class="ds-field mb-4">
                                                     <label class="ds-label">Current Passcode</label>
-                                                    <input type="password" class="ds-input" id="current-password" placeholder="••••••••">
+                                                    <input type="password" class="ds-input" id="current-password"
+                                                        placeholder="••••••••">
                                                 </div>
                                                 <div class="ds-field mb-4">
                                                     <label class="ds-label">New Credentials</label>
-                                                    <div class="info-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
-                                                        <input type="password" class="ds-input" id="new-password" placeholder="New password">
-                                                        <input type="password" class="ds-input" id="confirm-password" placeholder="Confirm password">
+                                                    <div class="info-grid"
+                                                        style="grid-template-columns: 1fr 1fr; gap: 16px;">
+                                                        <input type="password" class="ds-input" id="new-password"
+                                                            placeholder="New password">
+                                                        <input type="password" class="ds-input" id="confirm-password"
+                                                            placeholder="Confirm password">
                                                     </div>
                                                 </div>
+                                                <div class="ds-field mb-4 d-none" id="otp-field-container">
+                                                    <label class="ds-label">Verify Email OTP</label>
+                                                    <div class="position-relative">
+                                                        <input type="text" class="ds-input" id="password-otp"
+                                                            placeholder="6-digit code" maxlength="6"
+                                                            style="letter-spacing: 4px; font-weight: bold; text-align: center;">
+                                                        <i data-lucide="mail" class="position-absolute"
+                                                            style="right: 12px; top: 12px; width: 16px; color: var(--ds-text-placeholder);"></i>
+                                                    </div>
+                                                    <span class="ds-helper-text">Enter the 6-digit code sent to your
+                                                        email.</span>
+                                                </div>
                                                 <div class="d-flex justify-content-end gap-3 pt-3">
-                                                    <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" onclick="togglePasswordReset()">Discard</button>
-                                                    <button type="submit" class="ds-btn ds-btn-primary ds-btn-sm">Apply Update</button>
+                                                    <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm"
+                                                        onclick="togglePasswordReset()">Discard</button>
+                                                    <button type="submit" class="ds-btn ds-btn-primary ds-btn-sm"
+                                                        id="apply-update-btn">Apply Update</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -237,10 +217,12 @@
 
                                     <div class="ds-field mt-4">
                                         <label class="ds-label">Access Controls</label>
-                                        <div class="ds-card-flat d-flex align-items-center justify-content-between p-4" style="background: var(--ds-bg-subtle); opacity: 0.6; border: 1px dashed var(--ds-border-subtle); border-radius: 12px;">
+                                        <div class="ds-card-flat d-flex align-items-center justify-content-between p-4"
+                                            style="background: var(--ds-bg-subtle); opacity: 0.6; border: 1px dashed var(--ds-border-subtle); border-radius: 12px;">
                                             <div>
                                                 <p class="ds-text-main fw-700 m-0">Device Governance</p>
-                                                <p class="ds-text-secondary ds-text-xs m-0">Monitor active sessions and devices</p>
+                                                <p class="ds-text-secondary ds-text-xs m-0">Monitor active sessions and
+                                                    devices</p>
                                             </div>
                                             <div class="ds-status-badge ds-status-pending">Restricted</div>
                                         </div>
@@ -250,7 +232,8 @@
 
                             <div class="form-actions">
                                 <button class="ds-btn ds-btn-ghost" onclick="location.reload()">Reset</button>
-                                <button class="ds-btn ds-btn-primary px-5" id="save-profile-btn" onclick="updateProfile()">
+                                <button class="ds-btn ds-btn-primary px-5" id="save-profile-btn"
+                                    onclick="updateProfile()">
                                     Commit Changes
                                 </button>
                             </div>
@@ -271,108 +254,24 @@
             lucide.createIcons();
 
             await loadProfile();
+
+            // Password Change Form Listener
+            const passwordForm = document.getElementById('change-password-form');
+            if (passwordForm) {
+                passwordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await handlePasswordChange(e);
+                });
+            }
         });
 
-        async function loadProfile() {
-            try {
-                const response = await api.get('/auth/me');
-                if (response) {
-                    // Populate Header & Hide skeletons
-                                        const skeleton = document.getElementById('profile-loading-skeleton');
-                                        const heroContent = document.getElementById('profile-hero-content');
-                                        if (skeleton) skeleton.style.display = 'none';
-                                        if (heroContent) heroContent.style.display = 'block';
-
-                                        const orgEl = document.getElementById('profile-org-name');
-                                        if (orgEl) {
-                                            orgEl.textContent = response.org_name || 'Organization Name';
-                                        }
-
-                                        document.getElementById('profile-full-name').textContent = response.full_name || response.username;
-                                        document.getElementById('profile-display-email').textContent = response.email;
-
-                    // Populate Input Fields
-                    const nameInput = document.getElementById('profile-name');
-                    const emailInput = document.getElementById('profile-email');
-                    if (nameInput) nameInput.value = response.full_name || response.username;
-                    if (emailInput) emailInput.value = response.email;
-
-                    // Render Role Badge
-                    const badgeContainer = document.getElementById('role-badge-container');
-                    if (badgeContainer) {
-                        const role = response.role_name || 'Member';
-                        const roleClass = `role-${role.toLowerCase().replace(/ /g, '_')}`;
-                        badgeContainer.innerHTML = `<span class="badge-role ${roleClass}">${role}</span>`;
-                    }
-                    
-                    if (window.lucide) lucide.createIcons();
-                }
-            } catch (error) {
-                console.error('Profile hydration failed:', error);
-                api.showNotification('Session fetch failed. Please re-authenticate.', 'error');
-            }
-        }
-
-        async function updateProfile() {
-            const saveBtn = document.getElementById('save-profile-btn');
-            const newName = document.getElementById('profile-name').value;
-
-            if (!newName.trim()) {
-                api.showNotification('Identity requires a valid Display Name.', 'warning');
-                return;
-            }
-
-            try {
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<span class="ds-spinner-sm"></span> Syncing...';
-                
-                const response = await api.put('/auth/profile', { full_name: newName });
-                if (response) {
-                    api.showNotification('Profile synchronization complete.', 'success');
-                    
-                    // Local state update
-                    document.getElementById('profile-full-name').textContent = newName;
-                    const user = JSON.parse(localStorage.getItem('user'));
-                    user.full_name = newName;
-                    localStorage.setItem('user', JSON.stringify(user));
-                    
-                    // Navbar refresh
-                    QCMS.renderNavbar();
-                }
-            } catch (error) {
-                api.showNotification(error.message || 'Synchronization failed.', 'error');
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = 'Commit Changes';
-            }
-        }
-
-        function togglePasswordReset() {
-            const section = document.getElementById('password-reset-options');
-            const btn = document.getElementById('toggle-pw-btn');
-            
-            if (section.classList.contains('d-none')) {
-                section.classList.remove('d-none');
-                btn.textContent = 'Cancel';
-                btn.style.backgroundColor = '#f1f5f9';
-                btn.style.color = '#475569';
-            } else {
-                section.classList.add('d-none');
-                btn.textContent = 'Update';
-                btn.style.backgroundColor = '';
-                btn.style.color = '';
-                document.getElementById('change-password-form').reset();
-            }
-            if (window.lucide) lucide.createIcons();
-        }
-
-        document.getElementById('change-password-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const submitBtn = e.target.querySelector('button[type="submit"]');
+        async function handlePasswordChange(e) {
+            const submitBtn = document.getElementById('apply-update-btn');
             const currentPass = document.getElementById('current-password').value;
             const newPass = document.getElementById('new-password').value;
             const confirmPass = document.getElementById('confirm-password').value;
+            const otpInput = document.getElementById('password-otp');
+            const otpContainer = document.getElementById('otp-field-container');
 
             if (!currentPass || !newPass || !confirmPass) {
                 api.showNotification('All password fields are required.', 'warning');
@@ -389,26 +288,206 @@
                 return;
             }
 
+            if (!otpRequested) {
+                // Step 1: Request OTP
+                try {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="ds-spinner-sm"></span> Sending OTP...';
+
+                    const response = await api.post('/auth/request-password-otp', {
+                        current_password: currentPass
+                    });
+
+                    if (response) {
+                        api.showNotification('OTP sent! Please check your email.', 'success');
+                        otpRequested = true;
+                        otpContainer.classList.remove('d-none');
+                        submitBtn.textContent = 'Verify & Update';
+                    }
+                } catch (error) {
+                    api.showNotification(error.message || 'OTP request failed.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    if (!otpRequested) submitBtn.textContent = 'Apply Update';
+                }
+            } else {
+                // Step 2: Verify OTP and Change Password
+                const otp = otpInput.value;
+                if (!otp || otp.length !== 6) {
+                    api.showNotification('Please enter the 6-digit OTP code.', 'warning');
+                    return;
+                }
+
+                try {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="ds-spinner-sm"></span> Updating...';
+
+                    const response = await api.put('/auth/change-password', {
+                        current_password: currentPass,
+                        new_password: newPass,
+                        otp: otp
+                    });
+
+                    if (response) {
+                        api.showNotification('Authentication credentials updated successfully.', 'success');
+                        togglePasswordReset(); // Hide section and reset form
+                    }
+                } catch (error) {
+                    api.showNotification(error.message || 'Credential update failed.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Verify & Update';
+                }
+            }
+        }
+
+        async function loadProfile() {
             try {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="ds-spinner-sm"></span> Updating...';
-                
-                const response = await api.put('/auth/change-password', {
-                    current_password: currentPass,
-                    new_password: newPass
-                });
-                
+                const response = await api.get('/auth/me');
                 if (response) {
-                    api.showNotification('Authentication credentials updated.', 'success');
-                    togglePasswordReset(); // Hide section and reset form
+                    // Populate Header & Hide skeletons
+                    const skeleton = document.getElementById('profile-loading-skeleton');
+                    const heroContent = document.getElementById('profile-hero-content');
+                    if (skeleton) skeleton.style.display = 'none';
+                    if (heroContent) heroContent.style.display = 'block';
+
+                    const orgEl = document.getElementById('profile-org-name');
+                    if (orgEl) {
+                        orgEl.textContent = response.org_name || 'Organization Name';
+                    }
+
+                    document.getElementById('profile-full-name').textContent = response.full_name || response.username;
+                    document.getElementById('profile-display-email').textContent = response.email;
+
+                    if (response.profile_picture) {
+                        document.getElementById('avatar-icon').style.display = 'none';
+                        const avatarImg = document.getElementById('avatar-preview');
+                        avatarImg.src = response.profile_picture;
+                        avatarImg.style.display = 'block';
+                    }
+                    if (response.banner_image) {
+                        const bannerContainer = document.getElementById('profile-banner-container');
+                        bannerContainer.style.background = `url(${response.banner_image}) center/cover no-repeat`;
+                    }
+
+                    // Populate Input Fields
+                    const nameInput = document.getElementById('profile-name');
+                    const emailInput = document.getElementById('profile-email');
+                    if (nameInput) nameInput.value = response.full_name || response.username;
+                    if (emailInput) emailInput.value = response.email;
+
+                    // Render Role Badge
+                    const badgeContainer = document.getElementById('role-badge-container');
+                    if (badgeContainer) {
+                        const role = response.role_name || 'Member';
+                        const roleClass = `role-${role.toLowerCase().replace(/ /g, '_')}`;
+                        badgeContainer.innerHTML = `<span class="badge-role ${roleClass}">${role}</span>`;
+                    }
+
+                    if (window.lucide) lucide.createIcons();
                 }
             } catch (error) {
-                api.showNotification(error.message || 'Credential update failed.', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Apply Update';
+                console.error('Profile hydration failed:', error);
+                api.showNotification('Session fetch failed. Please re-authenticate.', 'error');
             }
-        });
+        }
+
+        async function updateProfile() {
+            const saveBtn = document.getElementById('save-profile-btn');
+            const newName = document.getElementById('profile-name').value;
+            const bannerInput = document.getElementById('banner-input');
+            const avatarInput = document.getElementById('avatar-input');
+
+            if (!newName.trim()) {
+                api.showNotification('Identity requires a valid Display Name.', 'warning');
+                return;
+            }
+
+            try {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="ds-spinner-sm"></span> Syncing...';
+
+                const formData = new FormData();
+                formData.append('full_name', newName);
+                if (bannerInput.files[0]) formData.append('banner_image', bannerInput.files[0]);
+                if (avatarInput.files[0]) formData.append('profile_picture', avatarInput.files[0]);
+
+                const response = await api.put('/auth/profile', formData);
+                if (response) {
+                    api.showNotification('Profile synchronization complete.', 'success');
+
+                    // Local state update
+                    document.getElementById('profile-full-name').textContent = newName;
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    user.full_name = newName;
+                    if (response.profile_picture) user.profile_picture = response.profile_picture;
+                    if (response.banner_image) user.banner_image = response.banner_image;
+                    localStorage.setItem('user', JSON.stringify(user));
+
+                    // Navbar refresh
+                    QCMS.renderNavbar();
+                }
+            } catch (error) {
+                api.showNotification(error.message || 'Synchronization failed.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Commit Changes';
+            }
+        }
+
+        function previewBanner(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('profile-banner-container').style.background = `url(${e.target.result}) center/cover no-repeat`;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function previewAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('avatar-icon').style.display = 'none';
+                    const img = document.getElementById('avatar-preview');
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        let otpRequested = false;
+
+        function togglePasswordReset() {
+            const section = document.getElementById('password-reset-options');
+            const btn = document.getElementById('toggle-pw-btn');
+            const otpContainer = document.getElementById('otp-field-container');
+            const submitBtn = document.getElementById('apply-update-btn');
+
+            if (section.classList.contains('d-none')) {
+                section.classList.remove('d-none');
+                btn.textContent = 'Cancel';
+                btn.style.backgroundColor = '#f1f5f9';
+                btn.style.color = '#475569';
+                otpRequested = false;
+                otpContainer.classList.add('d-none');
+                submitBtn.textContent = 'Apply Update';
+            } else {
+                section.classList.add('d-none');
+                btn.textContent = 'Update';
+                btn.style.backgroundColor = '';
+                btn.style.color = '';
+                document.getElementById('change-password-form').reset();
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
     </script>
+
 </body>
+
 </html>

@@ -1,133 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
-    <div class="app-layout">
-        <aside class="app-sidebar" id="app-sidebar"></aside>
+<body class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
 
-        <main class="app-main">
-            <header class="app-navbar" id="app-navbar"></header>
-
-            <div class="app-content">
-                <div class="content-header fade-in">
-                    <h1 class="page-heading">System Settings</h1>
-                    <p class="page-description">Configure your organization profile and global system parameters.</p>
+    <main class="app-main">
+        <header class="app-navbar" id="app-navbar"></header>
+        
+        <div class="app-content-inner">
+            <header class="ds-header-layout section-spacing px-0">
+                <div class="h-stack justify-content-between w-100">
+                    <div class="v-stack">
+                        <h1 class="ds-title mb-0">System Settings</h1>
+                        <p class="ds-text-secondary mb-0">Configure your organization profile and global system parameters.</p>
+                    </div>
                 </div>
+            </header>
 
-                <div class="row fade-in" style="margin-top:var(--space-6);">
-                    <div class="col-lg-8">
-                        <div class="ds-card">
-                            <div class="ds-card-header">
-                                <h5 class="card-title">Organization Profile</h5>
-                                <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="settingsManager.save()">
-                                    Save Changes
-                                </button>
-                            </div>
-                            <div class="ds-card-body">
-                                <form id="orgForm">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="ds-field">
-                                                <label class="ds-label">Organization Name</label>
-                                                <input type="text" class="ds-input" id="org_name" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="ds-field">
-                                                <label class="ds-label">Industry Sector</label>
-                                                <select class="ds-input ds-select" id="org_industry">
-                                                    <option value="Manufacturing">Manufacturing</option>
-                                                    <option value="Automotive">Automotive</option>
-                                                    <option value="Pharmaceutical">Pharmaceutical</option>
-                                                    <option value="Technology">Technology</option>
-                                                    <option value="Service">Service</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="ds-field">
-                                                <label class="ds-label">Contact Email</label>
-                                                <input type="email" class="ds-input" id="org_email" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="ds-field">
-                                                <label class="ds-label">Phone Number</label>
-                                                <input type="text" class="ds-input" id="org_phone">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="ds-field">
-                                        <label class="ds-label">Primary Administrator</label>
-                                        <input type="text" class="ds-input" id="admin_name" readonly style="background:var(--bg-body);">
-                                        <p class="text-xs text-muted mt-2">To change the primary administrator, please contact support.</p>
-                                    </div>
-                                </form>
-                            </div>
+            <div class="row fade-in">
+                <div class="col-lg-8">
+                    <div class="glass-card ds-card mb-4">
+                        <div class="ds-card-header h-stack justify-content-between p-4">
+                            <h5 class="mb-0 fw-bold">Organization Profile</h5>
+                            <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="settingsManager.save()">
+                                Save Changes
+                            </button>
                         </div>
-                        
-                        <div class="ds-card mt-4">
-                            <div class="ds-card-header">
-                                <h5 class="card-title">System Preferences</h5>
-                            </div>
-                            <div class="ds-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <div>
-                                        <div class="fw-semibold">Auto-Archive Projects</div>
-                                        <p class="text-xs text-muted mb-0">Automatically archive projects to Knowledge Repository upon final approval.</p>
+                        <div class="ds-card-body p-4">
+                            <form id="orgForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="ds-field">
+                                            <label class="ds-label">ORGANIZATION NAME</label>
+                                            <input type="text" class="ds-input" id="org_name" required>
+                                        </div>
                                     </div>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" checked disabled>
+                                    <div class="col-md-6">
+                                        <div class="ds-field">
+                                            <label class="ds-label">INDUSTRY SECTOR</label>
+                                            <select class="ds-input ds-select" id="org_industry">
+                                                <option value="Manufacturing">Manufacturing</option>
+                                                <option value="Automotive">Automotive</option>
+                                                <option value="Pharmaceutical">Pharmaceutical</option>
+                                                <option value="Technology">Technology</option>
+                                                <option value="Service">Service</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <div class="fw-semibold">Email Notifications</div>
-                                        <p class="text-xs text-muted mb-0">Send automated reports and stage updates to stakeholders.</p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="ds-field">
+                                            <label class="ds-label">CONTACT EMAIL</label>
+                                            <input type="email" class="ds-input" id="org_email" required>
+                                        </div>
                                     </div>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" checked disabled>
+                                    <div class="col-md-6">
+                                        <div class="ds-field">
+                                            <label class="ds-label">OFFICE PHONE</label>
+                                            <input type="text" class="ds-input" id="org_phone">
+                                        </div>
                                     </div>
+                                </div>
+                                <div class="ds-field">
+                                    <label class="ds-label">PRIMARY ADMINISTRATOR</label>
+                                    <input type="text" class="ds-input" id="admin_name" readonly style="background: rgba(var(--ds-primary-rgb), 0.02);">
+                                    <p class="text-xs ds-text-secondary mt-2">Primary administrative credentials are managed at the enterprise account level.</p>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card ds-card mb-4">
+                        <div class="ds-card-header h-stack p-4">
+                            <h5 class="mb-0 fw-bold">System Preferences</h5>
+                        </div>
+                        <div class="ds-card-body p-4">
+                            <div class="h-stack justify-content-between mb-4">
+                                <div class="v-stack">
+                                    <div class="fw-bold ds-text-main">Auto-Archive Projects</div>
+                                    <p class="text-xs ds-text-secondary mb-0">Automatically archive projects to Knowledge Repository upon final approval.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked disabled>
+                                </div>
+                            </div>
+                            <div class="h-stack justify-content-between">
+                                <div class="v-stack">
+                                    <div class="fw-bold ds-text-main">Enterprise Notifications</div>
+                                    <p class="text-xs ds-text-secondary mb-0">Send automated reports and stage updates to all organizational stakeholders.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked disabled>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="col-lg-4">
-                        <div class="ds-card">
-                            <div class="ds-card-header">
-                                <h5 class="card-title">Quick Links</h5>
-                            </div>
-                            <div class="ds-card-body">
-                                <nav class="sidebar-nav" style="padding:0;">
-                                    <a href="profile.html" class="sidebar-link">
-                                        <i class="link-icon" data-lucide="user"></i>
-                                        <span>My Account Details</span>
-                                    </a>
-                                    <a href="users.html" class="sidebar-link">
-                                        <i class="link-icon" data-lucide="users"></i>
-                                        <span>Manage Access Control</span>
-                                    </a>
-                                    <a href="audit-logs.html" class="sidebar-link">
-                                        <i class="link-icon" data-lucide="shield"></i>
-                                        <span>Privacy & Security Logs</span>
-                                    </a>
-                                </nav>
-                            </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="glass-card ds-card">
+                        <div class="ds-card-header p-4">
+                            <h5 class="mb-0 fw-bold">Quick Navigation</h5>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <nav class="sidebar-nav px-2 pb-3">
+                                <a href="user-profile.html" class="sidebar-link">
+                                    <i class="link-icon" data-lucide="user"></i>
+                                    <span>Personal Account Profile</span>
+                                </a>
+                                <a href="users.html" class="sidebar-link">
+                                    <i class="link-icon" data-lucide="users"></i>
+                                    <span>Stakeholder Management</span>
+                                </a>
+                                <a href="audit-logs.html" class="sidebar-link">
+                                    <i class="link-icon" data-lucide="shield-check"></i>
+                                    <span>System Security Logs</span>
+                                </a>
+                            </nav>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
+    </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -136,19 +143,35 @@
     <script>
     const settingsManager = {
         async init() {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const user = JSON.parse(userStr);
+            if (user.role !== 'Admin') {
+                QCMS.toast('Access Denied: Admin privileges required.', 'error');
+                setTimeout(() => window.location.href = 'dashboard-' + roleToSlug(user.role) + '.html', 2000);
+                return;
+            }
+
             QCMS.init();
             this.loadSettings();
         },
 
         async loadSettings() {
             try {
+                console.log('[QCMS] Initializing organization settings fetch...');
                 const settings = await api.get('/admin/org-settings');
+                console.log('[QCMS] Settings data received:', settings);
+                
                 document.getElementById('org_name').value = settings.name || '';
                 document.getElementById('org_industry').value = settings.industry || 'Manufacturing';
                 document.getElementById('org_email').value = settings.email || '';
                 document.getElementById('org_phone').value = settings.phone || '';
                 document.getElementById('admin_name').value = settings.admin_name || 'System Admin';
             } catch (e) {
+                console.error('[QCMS] Error fetching organization settings:', e);
                 QCMS.toast('Failed to load organization settings.', 'error');
             }
         },

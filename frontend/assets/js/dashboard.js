@@ -30,10 +30,10 @@ const dashboard = {
             // Map data to UI elements if they exist
             const mappings = {
                 'totalProjects': summary.total_projects || 0,
-                'totalSavings': `$${(summary.total_savings || 0).toLocaleString()}`,
+                'totalSavings': `₹${(summary.total_savings || 0).toLocaleString()}`,
                 'successRate': `${summary.success_rate || 0}%`,
                 'adminUserCount': summary.user_count || 0,
-                'qhOrgSavings': `$${(summary.org_savings || 0).toLocaleString()}`,
+                'qhOrgSavings': `₹${(summary.org_savings || 0).toLocaleString()}`,
                 'laPendingAudits': summary.pending_audits || 0,
                 'laComplianceScore': `${summary.compliance_score || 0}%`,
                 'pmResourceUtil': '94%', // Mocked for now
@@ -75,7 +75,7 @@ const dashboard = {
                     <td class="font-medium">${p.title}</td>
                     <td><span class="stage-pill">Stage ${p.current_stage}</span></td>
                     <td><span class="status-pill ${p.status.toLowerCase().replace(' ', '-')}">${p.status}</span></td>
-                    <td class="font-mono text-success">$${(p.financial_impact || 0).toLocaleString()}</td>
+                    <td class="font-mono text-success">₹${(p.financial_impact || 0).toLocaleString()}</td>
                     <td class="text-right">
                         <button class="btn btn-secondary btn-sm" onclick="window.location.href='workspace.html?id=${p.id}'">
                             <i data-lucide="external-link"></i> Open
@@ -104,7 +104,7 @@ const dashboard = {
             data: {
                 labels: data.length ? data.map(d => d.month) : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
                 datasets: [{
-                    label: 'Impact ($)',
+                    label: 'Impact (₹)',
                     data: data.length ? data.map(d => d.amount) : [12000, 19000, 15000, 25000, 22000, 30000],
                     borderColor: '#6366f1',
                     borderWidth: 3,

@@ -1,66 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Member Directory | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
-    <div class="app-layout">
-        <aside class="app-sidebar" id="app-sidebar"></aside>
+<body class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
 
-        <main class="app-main">
-            <header class="app-navbar" id="app-navbar"></header>
+    <main class="app-main">
+        <header class="app-navbar" id="app-navbar"></header>
 
-            <div class="app-content">
-                <div class="content-header fade-in">
-                    <div class="d-flex justify-content-between align-items-end w-100">
-                        <div>
-                            <h1 class="page-heading">Organization Directory</h1>
-                            <p class="page-description">Manage user roles, departments, and system access across the organization.</p>
-                        </div>
-                    <div class="header-actions">
-                        <div class="ds-search-box">
-                            <i data-lucide="search"></i>
-                            <input type="text" class="ds-input" placeholder="Find member..." id="userSearch">
-                        </div>
-                        <button class="ds-btn ds-btn-primary" style="height: 44px;" onclick="Users.openAddModal()">
-                            <i data-lucide="user-plus"></i> Add Stakeholder
-                        </button>
-                    </div>
+        <div class="app-content-inner">
+            <header class="ds-header-layout section-spacing px-0">
+                <div class="h-stack justify-content-between w-100">
+                    <div class="v-stack">
+                        <h1 class="ds-title mb-0">Organization Directory</h1>
+                        <p class="ds-text-secondary mb-0">Manage user roles, departments, and system access across the organization.</p>
                     </div>
                 </div>
+            </header>
 
-                <div class="ds-card mt-4 fade-in">
-                    <div class="ds-card-header bg-white border-0">
-                        <div class="ds-tab-group">
-                            <button class="ds-btn-tab active" onclick="Users.filter('all')">All Stakeholders</button>
-                            <button class="ds-btn-tab" onclick="Users.filter('active')">Active Members</button>
-                        </div>
+            <div class="glass-card ds-card mb-4">
+                <div class="ds-card-header h-stack justify-content-between p-4">
+                    <div class="v-stack">
+                        <h5 class="mb-0 fw-bold">Member Registry</h5>
+                        <p class="text-xs ds-text-secondary mb-0">Stakeholder access and role tracking</p>
                     </div>
-                    <div class="ds-card-body p-0">
-                        <table class="ds-table">
+                    <div class="h-stack gap-3">
+                        <div class="ds-tab-group">
+                            <button class="ds-btn-tab active" onclick="Users.filter('all')">All</button>
+                            <button class="ds-btn-tab" onclick="Users.filter('active')">Active</button>
+                        </div>
+
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="Users.openAddModal()">
+                            <i data-lucide="user-plus"></i> Add Member
+                        </button>
+                    </div>
+                </div>
+                <div class="ds-card-body p-0">
+                    <div class="table-responsive">
+                        <table class="ds-table ds-table-hover">
                             <thead>
                                 <tr>
                                     <th>Identity</th>
-                                    <th>Assigned Role</th>
+                                    <th>Role</th>
                                     <th>Department</th>
-                                    <th>System Status</th>
-                                    <th>Last Synchronized</th>
+                                    <th>State</th>
+                                    <th>Last Active</th>
                                     <th class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="usersBody">
                                 <!-- Loaded via script -->
+                                <tr><td colspan="6" class="p-5 text-center text-muted">Synchronizing directory...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
+    </main>
     </div>
 
     <!-- User Action Dropdown Menu Template -->
@@ -76,26 +83,39 @@
     <!-- Add User Modal -->
     <div class="modal fade" id="userModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
+            <div class="modal-content glass-card ds-card">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
                     <h5 class="modal-title fw-bold">Provision Access</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body pt-3">
+                <div class="modal-body p-4">
                     <form id="userForm">
                         <div class="ds-field">
-                            <label class="ds-label text-xs fw-bold text-uppercase opacity-75">Display Name / Identity</label>
+                            <label class="ds-label">DISPLAY NAME / IDENTITY</label>
                             <input type="text" class="ds-input" id="username" placeholder="e.g. John Doe" required>
                         </div>
                         <div class="ds-field">
-                            <label class="ds-label text-xs fw-bold text-uppercase opacity-75">Enterprise Email</label>
+                            <label class="ds-label">ENTERPRISE EMAIL</label>
                             <input type="email" class="ds-input" id="email" placeholder="john@company.com" required>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="ds-field">
-                                    <label class="ds-label text-xs fw-bold text-uppercase opacity-75">Organizational Role</label>
-                                    <select class="ds-input ds-select" id="role">
+                                    <label class="ds-label">SYSTEM ROLE</label>
+                                    <div class="ds-custom-select" id="roleSelect">
+                                        <button type="button" class="ds-custom-select-trigger" onclick="dsSelectToggle('roleSelect')">
+                                            <span class="ds-custom-select-value">Team Member</span>
+                                            <i data-lucide="chevron-down"></i>
+                                        </button>
+                                        <div class="ds-custom-select-panel">
+                                            <div class="ds-custom-select-option selected" onclick="dsSelectPick('roleSelect','role','Team Member',this)">Team Member</div>
+                                            <div class="ds-custom-select-option" onclick="dsSelectPick('roleSelect','role','Team Leader',this)">Team Leader</div>
+                                            <div class="ds-custom-select-option" onclick="dsSelectPick('roleSelect','role','Facilitator',this)">Facilitator</div>
+                                            <div class="ds-custom-select-option" onclick="dsSelectPick('roleSelect','role','Reviewer',this)">Reviewer</div>
+                                            <div class="ds-custom-select-option" onclick="dsSelectPick('roleSelect','role','Admin',this)">Admin</div>
+                                        </div>
+                                    </div>
+                                    <select id="role" style="display:none;">
                                         <option value="Team Member">Team Member</option>
                                         <option value="Team Leader">Team Leader</option>
                                         <option value="Facilitator">Facilitator</option>
@@ -106,26 +126,43 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="ds-field">
-                                    <label class="ds-label text-xs fw-bold text-uppercase opacity-75">Department</label>
-                                    <select class="ds-input ds-select" id="department">
-                                         <option value="Manufacturing">Manufacturing</option>
-                                         <option value="Quality Control">Quality Control</option>
-                                         <option value="Maintenance">Maintenance</option>
-                                         <option value="Operations">Operations</option>
+                                    <label class="ds-label">DEPARTMENT</label>
+                                    <div class="ds-custom-select" id="deptSelect">
+                                        <button type="button" class="ds-custom-select-trigger" onclick="dsSelectToggle('deptSelect')">
+                                            <span class="ds-custom-select-value">Manufacturing</span>
+                                            <i data-lucide="chevron-down"></i>
+                                        </button>
+                                        <div class="ds-custom-select-panel">
+                                            <div class="ds-custom-select-option selected" onclick="dsSelectPick('deptSelect','department','Manufacturing',this)">Manufacturing</div>
+                                            <div class="ds-custom-select-option" onclick="dsSelectPick('deptSelect','department','Quality Control',this)">Quality Control</div>
+                                            <div class="ds-custom-select-option" onclick="dsSelectPick('deptSelect','department','Maintenance',this)">Maintenance</div>
+                                            <div class="ds-custom-select-option" onclick="dsSelectPick('deptSelect','department','Operations',this)">Operations</div>
+                                        </div>
+                                    </div>
+                                    <select id="department" style="display:none;">
+                                        <option value="Manufacturing">Manufacturing</option>
+                                        <option value="Quality Control">Quality Control</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="Operations">Operations</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
-                        <div class="ds-field">
-                            <label class="ds-label text-xs fw-bold text-uppercase opacity-75">Temporary Password</label>
-                            <input type="text" class="ds-input" id="password" placeholder="Set initial password (e.g. Welcome@123)" value="QCMS@123">
-                            <small class="text-muted text-xs">User will be required to change this upon first login.</small>
+                        <div class="ds-field" id="passwordFieldContainer">
+                            <label class="ds-label">Temporary Access Credentials</label>
+                            <div class="h-stack gap-2">
+                                <input type="text" class="ds-input flex-grow-1" id="password" placeholder="Initial access code" value="QCMS@Pass2026" style="letter-spacing: 0.1em; font-family: monospace; font-weight: 700;" autocomplete="new-password">
+                                <button type="button" class="ds-btn ds-btn-secondary ds-btn-icon" onclick="Users.generatePassword()" title="Regenerate Password" style="border: 1px solid var(--ds-border-color);">
+                                    <i data-lucide="refresh-cw" style="width:18px;height:18px;"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-muted mt-2">The user will be prompted to change their password upon first login.</p>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
-                    <button class="ds-btn ds-btn-primary px-4" onclick="Users.save()">Confirm Provisioning</button>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary px-4" onclick="Users.save()">Confirm Lifecycle</button>
                 </div>
             </div>
         </div>
@@ -143,56 +180,101 @@
             async init() {
                 try {
                     if (typeof QCMS !== 'undefined') QCMS.init();
+                    
+                    const searchInput = document.getElementById('globalSearchInput');
+                    if (searchInput) {
+                        searchInput.addEventListener('input', () => this.loadUsers());
+                    }
+                    
+                    await this.fetchDepartments();
                     this.loadUsers();
                 } catch (e) { console.error('Init failed:', e); }
+            },
+
+            async fetchDepartments() {
+                try {
+                    const depts = await api.get('/admin/departments');
+                    this.departments = depts;
+                    this.populateDepartmentSelects(depts);
+                } catch (e) {
+                    console.error('Failed to fetch departments:', e);
+                }
+            },
+
+            populateDepartmentSelects(depts) {
+                const select = document.getElementById('department');
+                const panel = document.querySelector('#deptSelect .ds-custom-select-panel');
+                
+                if (!select || !panel) return;
+
+                const optionsHtml = depts.map(d => `
+                    <div class="ds-custom-select-option" onclick="dsSelectPick('deptSelect','department','${d.name}',this)">${d.name}</div>
+                `).join('');
+                
+                panel.innerHTML = optionsHtml;
+                
+                select.innerHTML = depts.map(d => `
+                    <option value="${d.name}">${d.name}</option>
+                `).join('');
             },
 
             async loadUsers() {
                 try {
                     const allUsers = await api.get('/admin/users');
+                    const query = document.getElementById('globalSearchInput')?.value.toLowerCase() || '';
                     
-                    // Filter logic
                     const filtered = allUsers.filter(u => {
-                        if (this.currentFilter === 'active') return u.is_active;
-                        return true;
+                        const matchesFilter = this.currentFilter === 'active' ? u.is_active : true;
+                        const dept = u.department || '';
+                        const matchesSearch = !query || 
+                            u.username.toLowerCase().includes(query) || 
+                            u.email.toLowerCase().includes(query) || 
+                            dept.toLowerCase().includes(query);
+                        return matchesFilter && matchesSearch;
                     });
 
                     const tbody = document.getElementById('usersBody');
                     if (filtered.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="6" class="text-center p-5 text-muted">No ${this.currentFilter} members found.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="6" class="py-5">
+                            ${QCMS.emptyState('No Members Found', `We couldn't find any stakeholders matching "${query}".`, 'search-x')}
+                        </td></tr>`;
+                        if (window.lucide) lucide.createIcons();
                         return;
                     }
 
                     tbody.innerHTML = filtered.map(u => `
                         <tr class="fade-in">
                             <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="user-avatar" style="width:32px; height:32px; font-size:0.75rem; background: ${this.getAvatarColor(u.username)}">${u.username.substring(0,2).toUpperCase()}</div>
-                                    <div>
-                                        <div class="fw-bold text-sm text-slate-900">${u.username}</div>
-                                        <div class="text-xs text-muted">${u.email}</div>
+                                <div class="h-stack gap-3">
+                                    <div class="ds-avatar" style="background: ${u.profile_picture ? 'transparent' : this.getAvatarColor(u.username)}">
+                                        ${u.profile_picture ? `<img src="${u.profile_picture}">` : u.username.substring(0,2).toUpperCase()}
+                                    </div>
+                                    <div class="v-stack">
+                                        <div class="fw-bold text-sm ds-text-main">${u.username}</div>
+                                        <div class="text-xs ds-text-secondary">${u.email}</div>
                                     </div>
                                 </div>
                             </td>
                             <td>${this.roleBadge(u.role)}</td>
-                            <td><span class="text-sm fw-medium">${u.department}</span></td>
+                            <td><span class="text-sm fw-medium ds-text-main">${u.department}</span></td>
                             <td>
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="h-stack gap-2">
                                     <span class="ds-badge-dot ${u.is_active ? 'green' : 'gray'}"></span>
-                                    <span class="text-xs fw-medium">${u.is_active ? 'Active' : 'Deactivated'}</span>
+                                    <span class="text-xs fw-bold uppercase opacity-70">${u.is_active ? 'Active' : 'Offline'}</span>
                                 </div>
                             </td>
-                            <td><span class="text-xs text-muted">${u.last_active ? QCMS.formatRelative(u.last_active) : 'Never'}</span></td>
+                            <td><span class="text-xs ds-text-secondary">${u.last_active ? QCMS.formatRelative(u.last_active) : 'Never'}</span></td>
                             <td class="text-end">
                                 <div class="dropdown">
-                                    <button class="nav-icon-btn" data-bs-toggle="dropdown" data-bs-boundary="viewport" style="width:32px; height:32px;">
+                                    <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" data-bs-toggle="dropdown" data-bs-boundary="viewport">
                                         <i data-lucide="more-vertical" style="width:16px;"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-light">
-                                        <li><a class="dropdown-item" href="#" onclick="Users.edit(${u.id})"><i data-lucide="edit-2" class="me-2" style="width:14px;"></i> Edit Member</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="Users.reassign(${u.id})"><i data-lucide="refresh-cw" class="me-2" style="width:14px;"></i> Reassign Dept</a></li>
+                                    <ul class="dropdown-menu dropdown-menu-end ds-dropdown-premium">
+                                        <li><a class="dropdown-item" href="user-profile.html?id=${u.id}"><i data-lucide="user"></i> View Profile</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="Users.edit(${u.id})"><i data-lucide="edit-2"></i> Edit Member</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="Users.reassign(${u.id})"><i data-lucide="refresh-cw"></i> Reassign Dept</a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#" onclick="Users.archive(${u.id})"><i data-lucide="trash-2" class="me-2" style="width:14px;"></i> ${u.is_active ? 'Deactivate' : 'Activate'} User</a></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="Users.archive(${u.id})"><i data-lucide="shield-off"></i> ${u.is_active ? 'Deactivate' : 'Activate'} Stakeholder</a></li>
                                     </ul>
                                 </div>
                             </td>
@@ -202,7 +284,7 @@
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error('Failed to load users:', e);
-                    QCMS.toast('Failed to load users from server', 'error');
+                    QCMS.toast('Failed to synchronize member directory.', 'error');
                 }
             },
 
@@ -216,7 +298,8 @@
             },
 
             getAvatarColor(name) {
-                const colors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+                // Corporate Matt Palette: Slate, Navy, Deep Emerald, Muted Indigo, Charcoal, Deep Rose
+                const colors = ['#334155', '#1e293b', '#065f46', '#4338ca', '#3f3f46', '#9f1239'];
                 const index = (name || 'U').charCodeAt(0) % colors.length;
                 return colors[index];
             },
@@ -224,7 +307,7 @@
             roleBadge(role) {
                 const colors = {
                     'Admin': 'red',
-                    'Team Leader': 'blue',
+                    'Team Leader': 'blue', // Neutralized to Slate in CSS
                     'Facilitator': 'purple',
                     'Reviewer': 'cyan',
                     'Team Member': 'gray'
@@ -237,15 +320,35 @@
                 this.editingUserId = null;
                 this.modalMode = 'ADD';
                 document.getElementById('userForm').reset();
-                document.getElementById('password').value = 'QCMS@123';
+                document.getElementById('password').value = 'QCMS@Pass2026';
+                document.getElementById('passwordFieldContainer').style.display = 'block';
                 document.querySelector('#userModal .modal-title').textContent = 'Provision Access';
                 document.querySelector('#userModal .ds-btn-primary').textContent = 'Confirm Provisioning';
+                
+                // Reset custom selects
+                if (typeof dsSelectSet === 'function') {
+                    dsSelectSet('roleSelect', 'role', 'Team Member');
+                    dsSelectSet('deptSelect', 'department', 'Manufacturing');
+                }
                 
                 // Enable all fields
                 document.getElementById('username').disabled = false;
                 document.getElementById('email').disabled = false;
                 
                 new bootstrap.Modal(document.getElementById('userModal')).show();
+            },
+
+            generatePassword() {
+                const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                let retVal = "QCMS@";
+                for (let i = 0, n = charset.length; i < 8; ++i) {
+                    retVal += charset.charAt(Math.floor(Math.random() * n));
+                }
+                const passField = document.getElementById('password');
+                if (passField) {
+                    passField.value = retVal;
+                    QCMS.toast('Temporary password regenerated.', 'info');
+                }
             },
 
             async edit(id) { 
@@ -261,6 +364,13 @@
                     document.getElementById('role').value = user.role;
                     document.getElementById('department').value = user.department;
                     document.getElementById('password').value = ''; // Don't show password, but allow reset
+                    document.getElementById('passwordFieldContainer').style.display = 'none';
+                    
+                    // Sync custom selects
+                    if (typeof dsSelectSet === 'function') {
+                        dsSelectSet('roleSelect', 'role', user.role);
+                        dsSelectSet('deptSelect', 'department', user.department);
+                    }
                     
                     // Enable fields for full edit
                     document.getElementById('username').disabled = false;
@@ -287,14 +397,13 @@
                     document.getElementById('email').value = user.email;
                     document.getElementById('role').value = user.role;
                     document.getElementById('department').value = user.department;
-                    document.getElementById('password').value = '';
-                    
-                    // Disable core identity fields for reassignment
-                    document.getElementById('username').disabled = true;
-                    document.getElementById('email').disabled = true;
-                    
-                    document.querySelector('#userModal .modal-title').textContent = 'Reassign Department';
-                    document.querySelector('#userModal .ds-btn-primary').textContent = 'Update Assignment';
+                    document.getElementById('passwordFieldContainer').style.display = 'none';
+
+                    // Sync custom selects
+                    if (typeof dsSelectSet === 'function') {
+                        dsSelectSet('roleSelect', 'role', user.role);
+                        dsSelectSet('deptSelect', 'department', user.department);
+                    }
                     
                     new bootstrap.Modal(document.getElementById('userModal')).show();
                     
@@ -321,6 +430,9 @@
                     if (this.modalMode !== 'REASSIGN') {
                         payload.username = username;
                         payload.email = email;
+                    } else {
+                        // In REASSIGN mode, we only care about department
+                        payload.role = document.getElementById('role').value;
                     }
                     if (password) payload.password = password;
 
@@ -332,7 +444,8 @@
                         QCMS.toast('Provisioning stakeholder...', 'info');
                         // For new users, ensure we have a password
                         payload.password = password || 'QCMS@123';
-                        await api.post('/auth/register', payload);
+                        // Use standardized admin user creation endpoint instead of deprecated auth register
+                        await api.post('/admin/users', payload);
                         QCMS.toast('Stakeholder provisioned successfully', 'success');
                     }
 
@@ -361,6 +474,48 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => Users.init());
+    </script>
+
+    <script>
+        /* ── Custom Select Helpers ── */
+        function dsSelectToggle(selectId) {
+            const el = document.getElementById(selectId);
+            const isOpen = el.classList.contains('open');
+            // Close all open selects first
+            document.querySelectorAll('.ds-custom-select.open').forEach(s => s.classList.remove('open'));
+            if (!isOpen) el.classList.add('open');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function dsSelectPick(selectId, hiddenId, value, optionEl) {
+            // Update display text
+            document.querySelector('#' + selectId + ' .ds-custom-select-value').textContent = value;
+            // Sync hidden select
+            const hidden = document.getElementById(hiddenId);
+            if (hidden) { hidden.value = value; }
+            // Update selected class
+            document.querySelectorAll('#' + selectId + ' .ds-custom-select-option').forEach(o => o.classList.remove('selected'));
+            optionEl.classList.add('selected');
+            // Close panel
+            document.getElementById(selectId).classList.remove('open');
+        }
+
+        function dsSelectSet(selectId, hiddenId, value) {
+            const trigger = document.querySelector('#' + selectId + ' .ds-custom-select-value');
+            if (trigger) trigger.textContent = value || '';
+            const hidden = document.getElementById(hiddenId);
+            if (hidden) hidden.value = value || '';
+            document.querySelectorAll('#' + selectId + ' .ds-custom-select-option').forEach(o => {
+                o.classList.toggle('selected', o.textContent.trim() === value);
+            });
+        }
+
+        // Close custom selects when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.ds-custom-select')) {
+                document.querySelectorAll('.ds-custom-select.open').forEach(s => s.classList.remove('open'));
+            }
+        });
     </script>
 </body>
 </html>

@@ -58,7 +58,7 @@ const teamLeader = {
         try {
             const data = await api.get('/team-leader/dashboard-stats');
             
-            document.getElementById('deptSavings').textContent = `$${(data.total_savings || 0).toLocaleString()}`;
+            document.getElementById('deptSavings').textContent = `₹${(data.total_savings || 0).toLocaleString()}`;
             document.getElementById('activeCount').textContent = data.total_projects || 0;
             document.getElementById('queueCount').textContent = data.queue_count || 0;
         } catch (err) {
@@ -98,8 +98,8 @@ const teamLeader = {
         if (!board) return;
         
         const stages = [
-            "1. Identification", "2. Data Collection", "3. Root Cause", "4. Proposal",
-            "5. Approval", "6. Implementation", "7. Impact", "8. Standardization"
+            "1. Identification", "2. Selection", "3. Analysis", "4. Causes",
+            "5. Root Cause", "6. Data Analysis", "7. Development", "8. Implementation"
         ];
 
         try {
@@ -171,7 +171,7 @@ const teamLeader = {
         submitBtn.textContent = 'Creating...';
 
         try {
-            const result = await api.post('/team-leader/initialize', payload);
+            const result = await api.post('/projects', payload);
             
             alert("Project initialized successfully!");
             

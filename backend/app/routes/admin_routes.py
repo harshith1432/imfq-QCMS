@@ -9,6 +9,7 @@ from ..models import (
     ProjectStageTracker, Stage3RCA, Stage5Approval, Stage7Impact, Stage8Standardization,
     KnowledgeRepository, Organization
 )
+from ..utils.email_utils import EmailUtils
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -19,7 +20,12 @@ def admin_required(f):
     @wraps(f)
     @jwt_required()
     def decorated_function(*args, **kwargs):
-        current_user_id = get_jwt_identity()
+        identity = get_jwt_identity()
+        try:
+            current_user_id = int(identity)
+        except (ValueError, TypeError):
+            return jsonify({"message": "Invalid token identity"}), 401
+            
         user = db.session.get(User, current_user_id)
         if not user or not user.role or user.role.name != 'Admin':
             return jsonify({"message": "Admin access required"}), 403
@@ -51,11 +57,13 @@ def get_users():
     return jsonify([{
         "id": u.id,
         "username": u.username,
+        "full_name": u.full_name or u.username,
         "email": u.email,
         "role": u.role.name,
         "department": u.dept.name if u.dept else "N/A",
         "is_active": u.is_active,
-        "created_at": u.created_at.isoformat() + "Z",
+        "profile_picture": f"/uploads/{u.profile_picture}" if u.profile_picture else None,
+        "created_at": u.created_at.isoformat() + "Z" if u.created_at else None,
         "last_login": u.last_login.isoformat() + "Z" if u.last_login else None
     } for u in users]), 200
 
@@ -70,10 +78,12 @@ def get_user_detail(user_id):
     return jsonify({
         "id": user.id,
         "username": user.username,
+        "full_name": user.full_name or user.username,
         "email": user.email,
         "role": user.role.name,
         "department": user.dept.name if user.dept else "N/A",
-        "is_active": user.is_active
+        "is_active": user.is_active,
+        "profile_picture": f"/uploads/{user.profile_picture}" if user.profile_picture else None
     }), 200
 
 @admin_bp.route('/users', methods=['POST'])
@@ -94,28 +104,71 @@ def create_user():
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "Email already exists"}), 400
     
+    username = data.get('username')
+    if not username:
+        return jsonify({"message": "Username is required"}), 400
+        
+    if User.query.filter_by(username=username).first():
+        return jsonify({"message": "Username already taken"}), 400
+    
     role_name = data.get('role')
     role = Role.query.filter_by(name=role_name).first() if role_name else None
+    if not role:
+        return jsonify({"message": f"Invalid role: {role_name}"}), 400
     
-    dept_name = data.get('department')
-    dept = Department.query.filter_by(name=dept_name).first() if dept_name else None
+    dept_name = data.get('dept_name') or data.get('department')
+    dept = None
     
-    password = data.get('password', 'QCMS@123')
+    # Safety for org_id
+    org_id = current_user.org_id
+    if not org_id:
+        # Check if any organization exists, if not create one or default to 1
+        first_org = Organization.query.first()
+        org_id = first_org.id if first_org else 1
+
+    if dept_name:
+        dept = Department.query.filter_by(name=dept_name, org_id=org_id).first()
+        if not dept:
+            # Create department on the fly if it doesn't exist
+            dept = Department(name=dept_name, org_id=org_id)
+            db.session.add(dept)
+            db.session.flush() # Get ID before user creation
     
-    new_user = User(
-        username=data.get('username'),
-        email=email,
-        hashed_password=bcrypt.generate_password_hash(password).decode('utf-8'),
-        role_id=role.id if role else None,
-        department_id=dept.id if dept else None,
-        org_id=current_user.org_id,
-        is_temp_password=True
-    )
-    db.session.add(new_user)
-    db.session.commit()
+    password = data.get('password', 'QCMS@Pass2026')
     
+    try:
+        new_user = User(
+            username=username,
+            full_name=data.get('full_name', username), # Save full name if provided
+            email=email,
+            hashed_password=bcrypt.generate_password_hash(password).decode('utf-8'),
+            role_id=role.id,
+            department_id=dept.id if dept else None,
+            org_id=org_id,
+            is_temp_password=True,
+            status='Active'
+        )
+        db.session.add(new_user)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Failed to create user", "error": str(e)}), 500
+    
+    # Send credentials email (Non-blocking)
+    try:
+        EmailUtils.send_temp_password_email(new_user, password)
+    except Exception as e:
+        current_app.logger.error(f"Failed to send welcome email to {email}: {str(e)}")
+
     log_action(current_user.id, "CREATE_USER", current_user.org_id, "users", new_user.id, {"username": new_user.username})
-    return jsonify({"message": "User created successfully"}), 201
+    return jsonify({
+        "message": "User provisioned successfully. Credentials sent to their email.",
+        "user": {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email
+        }
+    }), 201
 
 @admin_bp.route('/users/<int:user_id>', methods=['PUT'])
 @admin_required
@@ -132,6 +185,9 @@ def update_user(user_id):
     if data.get('username'):
         user.username = data.get('username')
     
+    if data.get('full_name'):
+        user.full_name = data.get('full_name')
+
     if data.get('email'):
         email = data.get('email')
         # Check if email is already taken by another user
@@ -145,8 +201,14 @@ def update_user(user_id):
         if role: user.role_id = role.id
     
     if data.get('department'):
-        dept = Department.query.filter_by(name=data.get('department')).first()
-        if dept: user.department_id = dept.id
+        dept_name = data.get('department')
+        dept = Department.query.filter_by(name=dept_name, org_id=current_user.org_id).first()
+        if not dept:
+            # Create department on the fly to match create_user logic
+            dept = Department(name=dept_name, org_id=current_user.org_id)
+            db.session.add(dept)
+            db.session.flush()
+        user.department_id = dept.id
         
     if 'is_active' in data:
         user.is_active = data.get('is_active')
@@ -157,9 +219,51 @@ def update_user(user_id):
         user.hashed_password = bcrypt.generate_password_hash(data.get('password')).decode('utf-8')
         user.is_temp_password = True
         
-    db.session.commit()
-    log_action(current_user.id, "UPDATE_USER", current_user.org_id, "users", user.id, data)
-    return jsonify({"message": "User updated successfully"}), 200
+    try:
+        db.session.commit()
+        log_action(current_user.id, "UPDATE_USER", current_user.org_id, "users", user.id, data)
+        return jsonify({
+            "message": "User updated successfully",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "full_name": user.full_name,
+                "role": user.role.name,
+                "department": user.dept.name if user.dept else "N/A"
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Failed to update user", "error": str(e)}), 500
+
+@admin_bp.route('/users/<int:user_id>/regenerate-credentials', methods=['POST'])
+@admin_required
+def regenerate_credentials(user_id):
+    current_user_id = get_jwt_identity()
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"message": "User not found"}), 404
+        
+    user = User.query.filter_by(id=user_id, org_id=current_user.org_id).first_or_404()
+    
+    # Generate new random password
+    import string
+    import random
+    new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    
+    try:
+        user.hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        user.is_temp_password = True
+        db.session.commit()
+        
+        # Send email
+        EmailUtils.send_temp_password_email(user, new_password)
+        
+        log_action(current_user.id, "REGENERATE_CREDENTIALS", current_user.org_id, "users", user.id)
+        return jsonify({"message": "New temporary credentials generated and emailed successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Failed to regenerate credentials", "error": str(e)}), 500
 
 # --- Audit Logs ---
 
@@ -331,6 +435,9 @@ def get_all_projects():
             "category": p.category,
             "department": dept.name if dept else "N/A",
             "created_at": p.created_at.isoformat() + "Z" if p.created_at else None,
+            "facilitator_id": p.facilitator_id,
+            "team_leader_id": p.team_leader_id,
+            "creator_id": p.creator_id,
             "member_ids": [m.id for m in p.members]
         })
     return jsonify(results), 200
@@ -422,12 +529,22 @@ def delete_department(dept_id):
 @admin_bp.route('/org-settings', methods=['GET'])
 @admin_required
 def get_org_settings():
-    current_user_id = get_jwt_identity()
+    identity = get_jwt_identity()
+    try:
+        current_user_id = int(identity)
+    except (ValueError, TypeError):
+        return jsonify({"message": "Invalid token identity"}), 401
+        
     current_user = db.session.get(User, current_user_id)
     if not current_user:
         return jsonify({"message": "User not found"}), 404
-    org = db.session.get(Organization, current_user.org_id)
+        
+    org_id = current_user.org_id
+    print(f"[QCMS ADMIN] Fetching settings for User ID {current_user_id}, Org ID {org_id}")
+    
+    org = db.session.get(Organization, org_id)
     if not org:
+        print(f"[QCMS ADMIN] ERROR: Organization with ID {org_id} not found in database.")
         return jsonify({"message": "Organization not found"}), 404
     return jsonify({
         "id": org.id,

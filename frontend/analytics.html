@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="assets/js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deep Analytics | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/design-system.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="assets/css/glass.css">
+    <script src="assets/js/ux/breadcrumbs.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -16,52 +20,46 @@
         <main class="app-main">
             <header class="app-navbar" id="app-navbar"></header>
 
-            <div class="app-content">
-                <div class="content-header fade-in">
-                    <div class="d-flex justify-content-between align-items-end w-100">
-                        <div>
-                            <h1 class="page-heading">Performance Analytics</h1>
-                            <p class="page-description">Advanced KPI tracking, Pareto analysis, and organizational impact metrics.</p>
+            <div class="app-content-inner fade-in-up">
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Performance Analytics</h1>
+                            <p class="ds-text-secondary mb-0">Advanced KPI tracking, Pareto analysis, and organizational impact metrics.</p>
                         </div>
-                        <div class="header-actions mb-2">
-                            <button class="ds-btn ds-btn-outline ds-btn-sm">
-                                <i data-lucide="calendar" class="me-2"></i> Last 30 Days
+                        <div class="h-stack gap-2">
+                            <button class="ds-btn ds-btn-outline ds-btn-sm px-3">
+                                <i data-lucide="calendar" class="me-2" style="width:14px;"></i>
+                                <span>Last 30 Days</span>
                             </button>
-                            <button class="ds-btn ds-btn-primary ds-btn-sm">
-                                <i data-lucide="download" class="me-2"></i> Export Report
+                            <button class="ds-btn ds-btn-primary ds-btn-sm px-3">
+                                <i data-lucide="download" class="me-2" style="width:14px;"></i>
+                                <span>Export Report</span>
                             </button>
                         </div>
                     </div>
-                </div>
+                </header>
 
                 <!-- Dashboard Content (Conditional) -->
                 <div id="analyticsDashboard" class="d-none">
                     <!-- KPI Quick Stats -->
-                    <div class="kpi-grid fade-in">
-                        <div class="kpi-card" id="kpi-efficiency">
-                            <div class="skeleton-card skeleton"></div>
-                        </div>
-                        <div class="kpi-card" id="kpi-success">
-                            <div class="skeleton-card skeleton"></div>
-                        </div>
-                        <div class="kpi-card" id="kpi-velocity">
-                            <div class="skeleton-card skeleton"></div>
-                        </div>
-                        <div class="kpi-card" id="kpi-savings">
-                            <div class="skeleton-card skeleton"></div>
-                        </div>
+                    <div class="kpi-grid fade-in mb-4">
+                        <div id="kpi-success"></div>
+                        <div id="kpi-efficiency"></div>
+                        <div id="kpi-velocity"></div>
+                        <div id="kpi-savings"></div>
                     </div>
 
-                    <div class="row g-4 mt-2">
+                    <div class="row g-4 mb-4">
                         <!-- Primary Analytics -->
                         <div class="col-lg-8 fade-in" style="animation-delay: 0.1s;">
-                            <div class="ds-card">
+                            <div class="glass-card h-100">
                                 <div class="ds-card-header">
                                     <h5 class="card-title">Project Growth Trends</h5>
                                     <div class="ds-badge blue">Real-time</div>
                                 </div>
                                 <div class="ds-card-body">
-                                    <div style="height: 300px;">
+                                    <div style="height: 320px;">
                                         <canvas id="trendChart"></canvas>
                                     </div>
                                 </div>
@@ -70,12 +68,12 @@
                         
                         <!-- Distribution -->
                         <div class="col-lg-4 fade-in" style="animation-delay: 0.2s;">
-                            <div class="ds-card">
+                            <div class="glass-card h-100">
                                 <div class="ds-card-header">
                                     <h5 class="card-title">Impact by Category</h5>
                                 </div>
                                 <div class="ds-card-body">
-                                    <div style="height: 300px;">
+                                    <div style="height: 320px;">
                                         <canvas id="impactChart"></canvas>
                                     </div>
                                 </div>
@@ -83,9 +81,9 @@
                         </div>
                     </div>
 
-                    <div class="row g-4 mt-2">
+                    <div class="row g-4 mb-4">
                         <div class="col-lg-6 fade-in" style="animation-delay: 0.3s;">
-                            <div class="ds-card">
+                            <div class="glass-card h-100">
                                 <div class="ds-card-header">
                                     <h5 class="card-title">Project Distribution by Dept</h5>
                                     <i data-lucide="info" class="text-muted" title="Number of active projects per department" style="width:16px;"></i>
@@ -98,7 +96,7 @@
                             </div>
                         </div>
                         <div class="col-lg-6 fade-in" style="animation-delay: 0.4s;">
-                            <div class="ds-card">
+                            <div class="glass-card h-100">
                                 <div class="ds-card-header">
                                     <h5 class="card-title">Department Velocity (Avg Days)</h5>
                                 </div>
@@ -112,47 +110,36 @@
                     </div>
 
                     <!-- High Impact Projects Table -->
-                    <div class="ds-card mt-4 fade-in" style="animation-delay: 0.5s;">
+                    <div class="glass-card fade-in" style="animation-delay: 0.5s;">
                         <div class="ds-card-header">
-                            <h5 class="card-title">Top Performance Leaderboard</h5>
-                            <span class="text-xs text-muted">Ranked by KPI Improvement %</span>
+                            <div>
+                                <h5 class="card-title">Top Performance Leaderboard</h5>
+                                <p class="text-xs text-secondary mt-1">Ranked by KPI Improvement %</p>
+                            </div>
                         </div>
                         <div class="ds-card-body p-0">
-                            <table class="ds-table">
-                                <thead>
-                                    <tr>
-                                        <th>Project Title</th>
-                                        <th>Department</th>
-                                        <th>KPI Improvement</th>
-                                        <th class="text-end">Cost Savings</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="leaderboardBody">
-                                    <!-- Loaded via script -->
-                                </tbody>
-                            </table>
+                            <div class="table-responsive">
+                                <table class="ds-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Project Title</th>
+                                            <th>Department</th>
+                                            <th>KPI Improvement</th>
+                                            <th class="text-end">Cost Savings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="leaderboardBody">
+                                        <!-- Loaded via script -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Empty State (Conditional) -->
-                <div id="analyticsEmptyState" class="d-none mt-5 text-center fade-in">
-                    <div class="py-5">
-                        <div class="mb-4">
-                            <div class="d-inline-flex align-items-center justify-content-center bg-blue-50 text-primary rounded-circle" style="width: 80px; height: 80px;">
-                                <i data-lucide="bar-chart-2" style="width: 40px; height: 40px;"></i>
-                            </div>
-                        </div>
-                        <h2 class="h3 fw-bold text-slate-900">Waiting for Data...</h2>
-                        <p class="text-muted mx-auto" style="max-width: 450px;">
-                            The analytics engine identifies high-impact trends and ROI metrics as you work on projects. Create your first project to activate this dashboard.
-                        </p>
-                        <div class="mt-4">
-                            <a href="projects.html" class="ds-btn ds-btn-primary">
-                                <i data-lucide="plus-circle" class="me-2"></i> Launch First Project
-                            </a>
-                        </div>
-                    </div>
+                <div id="analyticsEmptyState" class="d-none mt-5 fade-in">
+                    <!-- Targeted by QCMS.emptyState -->
                 </div>
             </div>
         </main>
@@ -178,8 +165,8 @@
                 } else {
                     dashboard.classList.add('d-none');
                     emptyState.classList.remove('d-none');
+                    emptyState.innerHTML = QCMS.emptyState('bar-chart-3', 'Analytics Data Pending', 'The engine requires active projects to generate ROI metrics. Launch a project to see deep insights.');
                 }
-                if (window.lucide) lucide.createIcons();
             },
 
             async fetchData() {
@@ -192,13 +179,10 @@
             },
 
             renderKPIs(summary) {
-                const grid = document.querySelector('.kpi-grid');
-                grid.innerHTML = `
-                    ${QCMS.kpiCard('Success Rate', `${summary.success_rate}%`, 'check-circle', 'green', 0)}
-                    ${QCMS.kpiCard('Avg Productivity', `${Math.round(summary.avg_productivity)}%`, 'zap', 'blue', 0)}
-                    ${QCMS.kpiCard('Active Projects', summary.active_projects, 'briefcase', 'purple', 0)}
-                    ${QCMS.kpiCard('Total Savings', `$${Math.round(summary.total_savings / 1000)}K`, 'dollar-sign', 'cyan', 0)}
-                `;
+                document.getElementById('kpi-success').outerHTML = QCMS.kpiCard('Success Rate', `${summary.success_rate}%`, 'check-circle', 'green', 12);
+                document.getElementById('kpi-efficiency').outerHTML = QCMS.kpiCard('Avg Productivity', `${Math.round(summary.avg_productivity)}%`, 'zap', 'blue', 8);
+                document.getElementById('kpi-velocity').outerHTML = QCMS.kpiCard('Active Projects', summary.active_projects, 'briefcase', 'purple', 5);
+                document.getElementById('kpi-savings').outerHTML = QCMS.kpiCard('Total Savings', `₹${Math.round(summary.total_savings / 1000)}K`, 'indian-rupee', 'cyan', 15);
             },
 
             renderCharts(data) {
@@ -280,12 +264,20 @@
 
                 body.innerHTML = leaderboard.map(i => `
                     <tr>
-                        <td class="text-slate-900 fw-medium">${i.title}</td>
+                        <td style="padding-left: 24px;">
+                            <div class="fw-bold" style="color: var(--ds-text-main);">${i.title}</div>
+                        </td>
                         <td><span class="ds-badge gray">${i.dept}</span></td>
-                        <td><span class="text-success fw-semibold">+${i.improvement}</span></td>
-                        <td class="text-end fw-bold text-slate-900">${i.savings}</td>
+                        <td>
+                            <div class="h-stack gap-2 text-success fw-bold">
+                                <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
+                                +${i.improvement}
+                            </div>
+                        </td>
+                        <td class="text-end fw-bold" style="padding-right: 24px; color: var(--ds-text-main);">${i.savings}</td>
                     </tr>
                 `).join('');
+                if (window.lucide) lucide.createIcons();
             }
         };
 
