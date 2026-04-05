@@ -6,8 +6,11 @@ from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_migrate import Migrate
+from .boot_utils import bootstrap_database
 
-load_dotenv()
+# Ensure .env is loaded from the root of the backend folder relative to this file
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path)
 
 db = SQLAlchemy()
 jwt = JWTManager()
@@ -15,13 +18,45 @@ bcrypt = Bcrypt()
 migrate = Migrate()
 
 def create_app():
+    # Bootstrap database (create if missing)
+    bootstrap_database()
+
     # Resolve frontend folder path (../frontend relative to backend/)
     frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'frontend'))
 
     app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
     
     # Configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    db_url = os.getenv('DATABASE_URL')
+    if db_url:
+        try:
+            # Mask password in logs
+            # If the password contains @, it MUST be URL-encoded in the URI.
+            # However, if it's already encoded in .env, we should make sure 
+            # SQLAlchemy handles it correctly by decoding/encoding properly.
+            from urllib.parse import urlparse, quote_plus, unquote
+            result = urlparse(db_url)
+            
+            username = result.username
+            password = unquote(result.password) if result.password else None
+            host = result.hostname
+            port = result.port or 5432
+            database = result.path.lstrip('/')
+            
+            if password:
+                # ALWAYS quote_plus the password to handle special chars like @, :, /, ?, #
+                encoded_password = quote_plus(password)
+                reconstructed_url = f"postgresql://{username}:{encoded_password}@{host}:{port}/{database}"
+                app.config['SQLALCHEMY_DATABASE_URI'] = reconstructed_url
+            else:
+                app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+
+            masked_url = f"postgresql://{username}:****@{host}:{port}/{database}"
+            print(f"[QCMS] Connecting to database at: {masked_url}")
+        except Exception as e:
+            print(f"[QCMS] Warning: Could not parse DATABASE_URL: {e}")
+            app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'qcms_secret')
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -112,22 +147,25 @@ def create_app():
     def serve_uploads(filename):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-    # Health check API
-    @app.route('/api/health')
-    def health_check():
-        try:
-            from sqlalchemy import text
-            db.session.execute(text('SELECT 1'))
-            return jsonify({
-                "status": "online",
-                "message": "QCMS Backend API is Running",
-                "database": "connected"
-            }), 200
-        except Exception as e:
-            return jsonify({
-                "status": "error",
-                "message": str(e),
-                "database": "disconnected"
-            }), 500
-            
+    # ─── Global Error Handlers ───
+    from sqlalchemy.exc import OperationalError
+    
+    @app.errorhandler(OperationalError)
+    def handle_db_error(e):
+        print(f"[QCMS] Critical Database Connection Error: {e}")
+        return jsonify({
+            "status": "error",
+            "message": "The system could not connect to the database. Please ensure your PostgreSQL service is running.",
+            "code": "DB_CONNECTION_ERROR"
+        }), 503
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        print(f"[QCMS] Unhandled exception: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e) if app.debug else "An unexpected error occurred.",
+            "code": "SERVER_ERROR"
+        }), 500
+
     return app

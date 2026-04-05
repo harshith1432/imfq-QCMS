@@ -337,7 +337,27 @@
                     </button>
                     <div class="d-flex gap-2">
                         <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                        <button class="ds-btn ds-btn-danger ds-btn-outline" onclick="adminDash.confirmDeleteUser(document.getElementById('edit_user_id').value, true)">Delete User</button>
                         <button class="ds-btn ds-btn-primary" onclick="adminDash.saveUserEdits()">Update User</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete User Modal -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body p-4 text-center">
+                    <div class="ds-icon-circle bg-red-soft text-red mx-auto mb-3" style="width:48px;height:48px;">
+                        <i data-lucide="user-minus"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Remove Stakeholder?</h5>
+                    <p class="text-muted text-sm mb-4">This action <b>cannot be undone</b>. All user records will be permanently purged.</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-ghost flex-1" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="ds-btn ds-btn-danger flex-1" id="confirmDeleteUserBtn">Delete User</button>
                     </div>
                 </div>
             </div>
@@ -600,8 +620,8 @@
 
                 await this.loadStats();
                 await this.loadProjects();
-                this.loadDepartments();
-                this.loadFacilitators();
+                await this.loadDepartments();
+                await this.loadFacilitators();
                 this.loadUsers();
                 this.loadAuditLog();
 
@@ -873,8 +893,11 @@
                         </td>
                         <td>
                             <div class="d-flex justify-content-end gap-2">
-                                <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="adminDash.openEditUserModal(${u.id})" title="Edit User">
+                                <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="adminDash.openEditUserModal(${u.id})" title="Edit User Profile">
                                     <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
+                                </button>
+                                <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon text-danger" onclick="adminDash.confirmDeleteUser(${u.id})" title="Permanently Delete Member">
+                                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                                 </button>
                                 <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="adminDash.regenerateUserCredentials(${u.id})" title="Regenerate Credentials">
                                     <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
@@ -964,7 +987,7 @@
                     full_name: document.getElementById('new_full_name').value || document.getElementById('new_username').value,
                     email: document.getElementById('new_email').value,
                     role: document.getElementById('new_role').value,
-                    dept_name: document.getElementById('new_dept').value,
+                    department: document.getElementById('new_dept').value,
                     password: document.getElementById('new_password').value
                 };
                 if (!payload.username || !payload.email) return QCMS.toast('Please fill all fields', 'warning');
@@ -998,16 +1021,27 @@
             async loadFacilitators() {
                 try {
                     const users = await api.get('/admin/users');
-                    const facilitators = users.filter(u => (u.role || '').toLowerCase() === 'facilitator');
+                    const facilitators = users.filter(u => {
+                        const role = (u.role || '').toLowerCase();
+                        return role === 'facilitator' || role === 'technical facilitator';
+                    });
+                    
+                    console.log('[QCMS] Facilitators found:', facilitators.length);
+
                     const selects = [document.getElementById('projFacilitator'), document.getElementById('editProjectFacilitator')];
                     selects.forEach(select => {
                         if (select) {
+                            const currentValue = select.value;
                             select.innerHTML = '<option value="">Select Facilitator</option>' +
                                 facilitators.map(f => `<option value="${f.id}">${f.full_name || f.username}</option>`).join('');
+                            // Restore value if it still exists in the new list
+                            if (currentValue) select.value = currentValue;
                         }
                     });
+                    return facilitators;
                 } catch (e) {
                     console.error('Facilitator load failed', e);
+                    return [];
                 }
             },
 
@@ -1156,10 +1190,23 @@
                         await this.loadTeamPool(p.department_id, 'editTeamPool', p.team_leader_id, p.member_ids || []);
                     }
                     
-                    if (p.facilitator_id) {
-                        document.getElementById('editProjectFacilitator').value = p.facilitator_id;
-                    } else {
-                        document.getElementById('editProjectFacilitator').value = "";
+                    // Ensure facilitator dropdown is populated
+                    const facSelect = document.getElementById('editProjectFacilitator');
+                    if (facSelect) {
+                        if (facSelect.options.length <= 1) {
+                            await this.loadFacilitators();
+                        }
+                        
+                        // Set the value - convert to string for reliable matching
+                        if (p.facilitator_id) {
+                            const val = String(p.facilitator_id);
+                            facSelect.value = val;
+                            
+                            // Debugging log
+                            console.log(`[QCMS] Pre-selecting facilitator ID: ${val}, Success: ${facSelect.value === val}`);
+                        } else {
+                            facSelect.value = "";
+                        }
                     }
 
                     this.editModal.show();
@@ -1217,6 +1264,35 @@
                     QCMS.toast(e.message || 'Deletion failed', 'danger');
                 } finally {
                     QCMS.setLoading('confirmDeleteBtn', false);
+                }
+            },
+
+            confirmDeleteUser(id, fromModal = false) {
+                this.deleteUserTargetId = id;
+                if (fromModal) {
+                    const editModalEl = document.getElementById('editUserModal');
+                    const editModal = bootstrap.Modal.getInstance(editModalEl);
+                    if (editModal) editModal.hide();
+                }
+                if (!this.userDeleteModal) {
+                    this.userDeleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+                }
+                this.userDeleteModal.show();
+                document.getElementById('confirmDeleteUserBtn').onclick = () => this.handleDeleteUser();
+            },
+
+            async handleDeleteUser() {
+                try {
+                    QCMS.setLoading('confirmDeleteUserBtn', true);
+                    await api.delete(`/admin/users/${this.deleteUserTargetId}`);
+                    QCMS.toast('Stakeholder removed from organization.', 'success');
+                    this.userDeleteModal.hide();
+                    this.loadUsers();
+                    this.loadStats();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Deletion failed', 'danger');
+                } finally {
+                    QCMS.setLoading('confirmDeleteUserBtn', false);
                 }
             }
         };

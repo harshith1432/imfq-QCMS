@@ -116,23 +116,28 @@ def create_user():
     if not role:
         return jsonify({"message": f"Invalid role: {role_name}"}), 400
     
-    dept_name = data.get('dept_name') or data.get('department')
-    dept = None
-    
     # Safety for org_id
     org_id = current_user.org_id
     if not org_id:
-        # Check if any organization exists, if not create one or default to 1
         first_org = Organization.query.first()
         org_id = first_org.id if first_org else 1
 
-    if dept_name:
-        dept = Department.query.filter_by(name=dept_name, org_id=org_id).first()
+    dept_input = data.get('dept_name') or data.get('department')
+    dept = None
+    if dept_input:
+        # 1. Try as ID if it's numeric
+        if str(dept_input).isdigit():
+            dept = Department.query.filter_by(id=int(dept_input), org_id=org_id).first()
+        
+        # 2. If not found by ID, try as Name
         if not dept:
-            # Create department on the fly if it doesn't exist
-            dept = Department(name=dept_name, org_id=org_id)
+            dept = Department.query.filter_by(name=str(dept_input), org_id=org_id).first()
+            
+        # 3. Create if still not found (only if it doesn't look like an ID)
+        if not dept and not str(dept_input).isdigit():
+            dept = Department(name=str(dept_input), org_id=org_id)
             db.session.add(dept)
-            db.session.flush() # Get ID before user creation
+            db.session.flush()
     
     password = data.get('password', 'QCMS@Pass2026')
     
@@ -146,6 +151,7 @@ def create_user():
             department_id=dept.id if dept else None,
             org_id=org_id,
             is_temp_password=True,
+            is_verified=True,
             status='Active'
         )
         db.session.add(new_user)
@@ -170,7 +176,7 @@ def create_user():
         }
     }), 201
 
-@admin_bp.route('/users/<int:user_id>', methods=['PUT'])
+@admin_bp.route('/users/<int:user_id>', methods=['PUT', 'PATCH'])
 @admin_required
 def update_user(user_id):
     current_user_id = get_jwt_identity()
@@ -200,15 +206,24 @@ def update_user(user_id):
         role = Role.query.filter_by(name=data.get('role')).first()
         if role: user.role_id = role.id
     
-    if data.get('department'):
-        dept_name = data.get('department')
-        dept = Department.query.filter_by(name=dept_name, org_id=current_user.org_id).first()
+    dept_input = data.get('department') or data.get('dept_name')
+    if dept_input:
+        dept = None
+        # Try as ID first if numeric
+        if str(dept_input).isdigit():
+            dept = Department.query.filter_by(id=int(dept_input), org_id=current_user.org_id).first()
+        
+        # Try as Name if not found
         if not dept:
-            # Create department on the fly to match create_user logic
-            dept = Department(name=dept_name, org_id=current_user.org_id)
+            dept = Department.query.filter_by(name=str(dept_input), org_id=current_user.org_id).first()
+            
+        if not dept and not str(dept_input).isdigit():
+            dept = Department(name=str(dept_input), org_id=current_user.org_id)
             db.session.add(dept)
             db.session.flush()
-        user.department_id = dept.id
+            
+        if dept:
+            user.department_id = dept.id
         
     if 'is_active' in data:
         user.is_active = data.get('is_active')
@@ -216,7 +231,7 @@ def update_user(user_id):
             user.deactivated_at = datetime.utcnow()
 
     if data.get('password'):
-        user.hashed_password = bcrypt.generate_password_hash(data.get('password')).decode('utf-8')
+        user.password = data.get('password')
         user.is_temp_password = True
         
     try:
@@ -235,6 +250,7 @@ def update_user(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Failed to update user", "error": str(e)}), 500
+
 
 @admin_bp.route('/users/<int:user_id>/regenerate-credentials', methods=['POST'])
 @admin_required
@@ -264,6 +280,72 @@ def regenerate_credentials(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Failed to regenerate credentials", "error": str(e)}), 500
+
+@admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+    
+    if user_id == current_user_id:
+        return jsonify({"message": "You cannot delete your own account."}), 400
+        
+    user = User.query.filter_by(id=user_id, org_id=current_user.org_id).first_or_404()
+    
+    # Dependency Checks
+    # 1. Projects where user is Leader, Facilitator, or Creator
+    active_roles = Project.query.filter(
+        (Project.team_leader_id == user_id) | 
+        (Project.facilitator_id == user_id) | 
+        (Project.creator_id == user_id)
+    ).first()
+    
+    if active_roles:
+        return jsonify({
+            "message": "User is assigned as a Leader, Facilitator, or Creator in active projects. Please reassign those roles or deactive the user instead.",
+            "code": "DEPENDENCY_EXISTS"
+        }), 400
+        
+    # 2. Project Memberships
+    is_member = ProjectMember.query.filter_by(user_id=user_id).first()
+    if is_member:
+        return jsonify({
+            "message": "User is a member of one or more projects. Please remove them from all projects before deleting.",
+            "code": "DEPENDENCY_EXISTS"
+        }), 400
+
+    # 3. Project Reviews
+    is_reviewer = ProjectReview.query.filter_by(reviewer_id=user_id).first()
+    if is_reviewer:
+        return jsonify({
+            "message": "User has historical review records. Deletion would break audit trails. Please deactivate the user instead.",
+            "code": "DEPENDENCY_EXISTS"
+        }), 400
+
+    try:
+        # Before deleting, clear any relationships that might block deletion but aren't critical dependencies
+        # (e.g. audit logs usually stay but if there's a hard FK without cascade, we might need a strategy)
+        # Assuming cascade delete is NOT set for AuditLogs to preserve history, but they have user_id.
+        # If AuditLog.user_id is NOT NULL, we might fail. 
+        # Looking at AuditLog in models.py: user_id=db.ForeignKey('users.id'), nullable=False.
+        # Since AuditLog must be preserved, we really SHOULD suggest deactivation.
+        
+        # However, many systems NULL out the user_id or use a "Deleted User" shell.
+        # Given the instruction to prioritize data integrity, let's enforce deactivation for anyone with logs.
+        has_logs = AuditLog.query.filter_by(user_id=user_id).first()
+        if has_logs:
+             return jsonify({
+                "message": "User has historical activity logs. Deletion would break audit trails. Please deactivate the user instead.",
+                "code": "DEPENDENCY_EXISTS"
+            }), 400
+
+        db.session.delete(user)
+        db.session.commit()
+        log_action(current_user_id, "DELETE_USER", current_user.org_id, "users", user_id, {"username": user.username})
+        return jsonify({"message": "User deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Failed to delete user", "error": str(e)}), 500
 
 # --- Audit Logs ---
 

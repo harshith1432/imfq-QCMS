@@ -184,7 +184,7 @@
                                     <button type="button" class="ds-btn ds-btn-primary px-4" id="verifyOtpBtn" onclick="verifyOtp()">
                                         Verify Code
                                     </button>
-                                    <span id="otpSuccess" class="text-success fw-bold d-inline-flex align-items-center" style="display: none;">
+                                    <span id="otpSuccess" class="text-success fw-bold align-items-center" style="display: none;">
                                         <i data-lucide="check-circle" class="me-2"></i> Verified
                                     </span>
                                 </div>
@@ -305,24 +305,52 @@
 
         let isEmailVerified = false;
 
+        // Reset verification if email changes
+        document.getElementById('email').addEventListener('input', function() {
+            if (isEmailVerified) {
+                isEmailVerified = false;
+                document.getElementById('otpSuccess').style.display = 'none';
+                document.getElementById('nextToStep2').disabled = true;
+                document.getElementById('nextToStep2').title = "Please verify your email first";
+                document.getElementById('otpSection').style.display = 'none';
+                document.getElementById('verifyOtpBtn').style.display = 'inline-flex';
+                document.getElementById('otp_code').disabled = false;
+                document.getElementById('otp_code').value = '';
+                document.getElementById('sendOtpBtn').disabled = false;
+                document.getElementById('sendOtpBtn').innerHTML = 'Send OTP';
+                if (window.lucide) lucide.createIcons();
+            }
+        });
+
         async function sendOtp() {
-            const email = document.getElementById('email').value;
+            const emailInput = document.getElementById('email');
+            const email = emailInput.value;
             if (!email || !email.includes('@')) {
                 showError("Please enter a valid work email.");
                 return;
             }
 
             const btn = document.getElementById('sendOtpBtn');
-            const originalText = btn.innerText;
+            const originalText = btn.innerHTML;
             btn.disabled = true;
-            btn.innerText = "Sending...";
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+            
+            // Explicitly hide verification state if re-sending
+            document.getElementById('otpSuccess').style.display = 'none';
+            document.getElementById('nextToStep2').disabled = true;
+            
             hideError();
 
             try {
                 const response = await api.post('/auth/request-registration-otp', { email });
                 document.getElementById('otpSection').style.display = 'block';
-                document.getElementById('email').disabled = true;
-                btn.innerText = "Resend OTP";
+                // Only disable email after successful OTP send
+                emailInput.readOnly = true; 
+                btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i> Resend OTP';
+                
+                // Allow editing email again via a "Change" button if needed, 
+                // but for now let's just make it clear it's locked for this OTP session
+                
                 setTimeout(() => { btn.disabled = false; }, 30000); // 30s cooldown
                 
                 if (window.lucide) lucide.createIcons();
@@ -330,7 +358,7 @@
             } catch (err) {
                 showError(err.message || "Failed to send OTP.");
                 btn.disabled = false;
-                btn.innerText = originalText;
+                btn.innerHTML = originalText;
             }
         }
 
@@ -345,22 +373,31 @@
 
             const btn = document.getElementById('verifyOtpBtn');
             btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+            
             hideError();
 
             try {
                 const response = await api.post('/auth/verify-registration-otp', { email, otp });
                 isEmailVerified = true;
-                document.getElementById('otpSuccess').style.display = 'inline-flex';
+                
+                // Success UI sequence
+                const successBadge = document.getElementById('otpSuccess');
+                successBadge.style.display = 'inline-flex';
                 document.getElementById('otp_code').disabled = true;
                 btn.style.display = 'none';
-                document.getElementById('nextToStep2').disabled = false;
-                document.getElementById('nextToStep2').title = "";
+                
+                const nextBtn = document.getElementById('nextToStep2');
+                nextBtn.disabled = false;
+                nextBtn.title = "";
                 
                 if (window.lucide) lucide.createIcons();
                 showNotification(response.msg, 'success');
             } catch (err) {
                 showError(err.message || "Verification failed.");
                 btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 

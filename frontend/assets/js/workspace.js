@@ -39,14 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadProjectDetails() {
             try {
-                // Use the team-member projects endpoint (works for assigned members)
-                // Team Leaders use their own endpoint
-                let data;
-                if (user.role === 'Team Leader') {
-                    data = await api.get(`/team-leader/projects/${projectId}`);
-                } else {
-                    data = await api.get(`/team-member/projects/${projectId}`);
-                }
+                const data = await api.get(`/projects/${projectId}`);
                 
                 this.project = data;
                 
@@ -128,18 +121,23 @@ document.addEventListener('DOMContentLoaded', () => {
                  lockReason = "Awaiting Reviewer Approval.";
             }
             
-            // Populate form with existing stage data if available
-            const stageData = this.project.stage_data ? this.project.stage_data[stageNumber] : null;
-            const form = document.getElementById('stageForm');
-            form.reset();
-            
-            if (stageData && typeof stageData === 'object') {
-                for (const key in stageData) {
-                    const input = form.elements[key];
-                    if (input) {
-                        input.value = stageData[key];
+            // Populate form with existing stage data from backend
+            try {
+                const stageData = await api.get(`/projects/${projectId}/stage/${stageNumber}`);
+                const form = document.getElementById('stageForm');
+                form.reset();
+                
+                if (stageData && typeof stageData === 'object') {
+                    for (const key in stageData) {
+                        const input = form.elements[key];
+                        if (input) {
+                            // Check if it's a date or textarea or input
+                            input.value = stageData[key] || '';
+                        }
                     }
                 }
+            } catch (err) {
+                console.error("Error fetching stage details:", err);
             }
 
             if (isReadOnly) {
@@ -256,10 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.disabled = true;
 
                 try {
-                    const result = await api.post(`/team-member/stage/${this.currentViewStage}/update`, {
-                        project_id: parseInt(projectId),
-                        stage_data: dataPayload
-                    });
+                    const result = await api.post(`/projects/${projectId}/stage/${this.currentViewStage}`, dataPayload);
                     
                     alert(result.msg || `Stage ${this.currentViewStage} data saved successfully!`);
                     this.loadProjectDetails();

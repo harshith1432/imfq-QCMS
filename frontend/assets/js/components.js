@@ -123,10 +123,16 @@ const QCMS = {
      * Premium Date Formatting
      */
     formatDate(dateStr) {
-        if (!dateStr) return 'N/A';
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        if (!dateStr || dateStr === '—') return '—';
+        let normalized = dateStr;
+        if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+')) normalized += 'Z';
+        const date = new Date(normalized);
+        if (isNaN(date.getTime())) return '—';
+        return date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+        });
     },
 
     /**
@@ -143,15 +149,16 @@ const QCMS = {
      * Relative Time (e.g. 2 hours ago)
      */
     formatRelative(dateStr) {
-        if (!dateStr) return 'N/A';
-        const d = new Date(dateStr);
-        const now = new Date();
-        const diff = (now - d) / 1000;
-        
+        if (!dateStr || dateStr === '—') return '—';
+        let normalized = dateStr;
+        if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+')) normalized += 'Z';
+        const date = new Date(normalized);
+        if (isNaN(date.getTime())) return '—';
+        const diff = (new Date() - date) / 1000;
         if (diff < 60) return 'Just now';
         if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
         if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        return this.formatDate(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     },
 
     getPermissions() {
@@ -442,7 +449,8 @@ const QCMS = {
     },
 
     statusBadge(status) {
-        const s = (status || '').toLowerCase();
+        if (!status) return `<span class="ds-badge gray">N/A</span>`;
+        const s = String(status).toLowerCase();
         let color = 'gray';
         if (s.includes('active') || s.includes('in_progress') || s.includes('approved') || s.includes('open')) color = 'blue';
         if (s.includes('completed') || s.includes('closed') || s.includes('success') || s.includes('done')) color = 'green';
@@ -452,10 +460,12 @@ const QCMS = {
     },
 
     categoryBadge(cat) {
-        const hash = Array.from(cat).reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
+        if (!cat) return `<span class="ds-badge gray">Uncategorized</span>`;
+        const categoryStr = String(cat);
+        const hash = Array.from(categoryStr).reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
         const colors = ['blue', 'green', 'orange', 'red', 'purple', 'gray', 'cyan'];
         const color = colors[Math.abs(hash) % colors.length];
-        return `<span class="ds-badge ${color}">${cat}</span>`;
+        return `<span class="ds-badge ${color}">${categoryStr}</span>`;
     },
 
     formatRelative(dateStr) {

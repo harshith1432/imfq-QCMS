@@ -1,5 +1,5 @@
 from datetime import datetime
-from . import db
+from . import db, bcrypt
 
 class Role(db.Model):
     __tablename__ = 'roles'
@@ -55,6 +55,17 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     deactivated_at = db.Column(db.DateTime)
+
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
+
+    @password.setter
+    def password(self, password):
+        self.hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.hashed_password, password)
 
 class EmailVerification(db.Model):
     __tablename__ = 'email_verifications'
@@ -145,6 +156,8 @@ class Stage1Identification(db.Model):
     location = db.Column(db.String(255))
     frequency_of_occurrence = db.Column(db.String(255))
     initial_impact = db.Column(db.Text)
+    is_approved = db.Column(db.Boolean, default=False)
+    tl_comments = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     project_ref = db.relationship('Project', backref=db.backref('stage1_identification', uselist=False))
 

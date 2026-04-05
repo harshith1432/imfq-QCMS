@@ -265,17 +265,24 @@
                             </td>
                             <td><span class="text-xs ds-text-secondary">${u.last_active ? QCMS.formatRelative(u.last_active) : 'Never'}</span></td>
                             <td class="text-end">
-                                <div class="dropdown">
-                                    <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" data-bs-toggle="dropdown" data-bs-boundary="viewport">
-                                        <i data-lucide="more-vertical" style="width:16px;"></i>
+                                <div class="h-stack gap-2 justify-content-end">
+                                    <button class="ds-btn ds-btn-outline ds-btn-sm ds-btn-icon" onclick="Users.edit(${u.id})" title="Edit Member">
+                                        <i data-lucide="edit-2"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end ds-dropdown-premium">
-                                        <li><a class="dropdown-item" href="user-profile.html?id=${u.id}"><i data-lucide="user"></i> View Profile</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="Users.edit(${u.id})"><i data-lucide="edit-2"></i> Edit Member</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="Users.reassign(${u.id})"><i data-lucide="refresh-cw"></i> Reassign Dept</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#" onclick="Users.archive(${u.id})"><i data-lucide="shield-off"></i> ${u.is_active ? 'Deactivate' : 'Activate'} Stakeholder</a></li>
-                                    </ul>
+                                    <button class="ds-btn ds-btn-danger ds-btn-sm ds-btn-icon" onclick="Users.delete(${u.id})" title="Delete Member">
+                                        <i data-lucide="trash-2"></i>
+                                    </button>
+                                    <div class="dropdown">
+                                        <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" data-bs-toggle="dropdown" data-bs-boundary="viewport">
+                                            <i data-lucide="more-vertical" style="width:16px;"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end ds-dropdown-premium">
+                                            <li><a class="dropdown-item" href="user-profile.html?id=${u.id}"><i data-lucide="user"></i> View Profile</a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="Users.reassign(${u.id})"><i data-lucide="refresh-cw"></i> Reassign Dept</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="Users.archive(${u.id})"><i data-lucide="shield-off"></i> ${u.is_active ? 'Deactivate' : 'Activate'} Stakeholder</a></li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -470,7 +477,27 @@
                 } catch (e) {
                     QCMS.toast('Operation failed', 'error');
                 }
+            },
+
+            async delete(id) {
+                if (!confirm("Are you sure you want to permanently delete this member? This action cannot be undone and will only work if the user has no active project assignments or logs.")) {
+                    return;
+                }
+
+                try {
+                    QCMS.toast('Removing stakeholder...', 'info');
+                    const response = await api.delete(`/admin/users/${id}`);
+                    QCMS.toast(response.message || 'Stakeholder removed successfully', 'success');
+                    this.loadUsers();
+                } catch (e) {
+                    if (e.code === 'DEPENDENCY_EXISTS') {
+                        QCMS.toast(e.message, 'warning');
+                    } else {
+                        QCMS.toast(e.message || 'Failed to remove stakeholder.', 'error');
+                    }
+                }
             }
+
         };
 
         document.addEventListener('DOMContentLoaded', () => Users.init());

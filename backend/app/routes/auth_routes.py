@@ -101,22 +101,8 @@ def request_registration_otp():
         )
         db.session.add(verification)
     
-    # Send email
-    subject = "Verify Your Email - IMFQ Registration"
-    html = f"""
-    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h2 style="color: #2563eb;">Verify Your Email</h2>
-        <p>Thank you for choosing IMFQ. Please use the following One-Time Password (OTP) to verify your work email and continue with your organization registration:</p>
-        <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 8px; border-radius: 5px; margin: 25px 0; color: #1e40af;">
-            {otp}
-        </div>
-        <p>This code will expire in 10 minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 12px; color: #6b7280;">&copy; {datetime.now().year} IMFQ Enterprise. All rights reserved.</p>
-    </div>
-    """
-    EmailUtils.send_email(email, subject, html)
+    # Send email via standardized utility
+    EmailUtils.send_registration_otp(email, otp)
     
     db.session.commit()
     return jsonify({"msg": "Verification code sent to your email."}), 200
@@ -248,8 +234,8 @@ def login():
 @auth_bp.route('/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
         
@@ -270,8 +256,8 @@ def get_profile():
 @auth_bp.route('/profile', methods=['PUT'])
 @jwt_required()
 def update_profile():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
     
     if not user:
         return jsonify({"msg": "User not found"}), 404
@@ -328,8 +314,8 @@ def get_public_profile(user_id):
 @auth_bp.route('/request-password-otp', methods=['POST'])
 @jwt_required()
 def request_password_otp():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
     data = request.get_json()
     
     current_password = data.get('current_password')
@@ -355,8 +341,8 @@ def request_password_otp():
 @auth_bp.route('/change-password', methods=['PUT'])
 @jwt_required()
 def change_password():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
     data = request.get_json()
     
     current_password = data.get('current_password')
@@ -366,7 +352,7 @@ def change_password():
     if not current_password or not new_password or not otp:
         return jsonify({"msg": "Current password, new password, and OTP required"}), 400
         
-    if not bcrypt.check_password_hash(user.hashed_password, current_password):
+    if not user.check_password(current_password):
         return jsonify({"msg": "Invalid current password"}), 401
         
     # Verify OTP
@@ -376,12 +362,15 @@ def change_password():
     if user.otp_expiry < datetime.utcnow():
         return jsonify({"msg": "OTP has expired"}), 400
         
-    user.hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    user.password = new_password
     user.is_temp_password = False
+    user.is_verified = True
     
     # Clear OTP
     user.otp_token = None
     user.otp_expiry = None
+    
+    db.session.add(user)
     
     # Send notification email
     EmailUtils.send_password_change_notification(user)
@@ -398,16 +387,27 @@ def logout():
 @auth_bp.route('/reset-password', methods=['POST'])
 @jwt_required()
 def reset_password():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    user_id = int(get_jwt_identity())
+    print(f"[AUTH] Resetting password for user_id: {user_id}")
+    user = db.session.get(User, user_id)
     data = request.get_json()
     
     if not data or 'password' not in data:
         return jsonify({"msg": "Password required"}), 400
         
+    # Use direct hashed_password assignment to be absolutely sure
     user.hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     user.is_temp_password = False
-    db.session.commit()
+    user.is_verified = True
+    db.session.add(user)
+    
+    try:
+        db.session.commit()
+        print(f"[AUTH] Password successfully updated and saved for user_id: {user_id}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"[AUTH] Error saving password for user_id: {user_id}: {e}")
+        return jsonify({"msg": "Internal database error while saving password"}), 500
     
     return jsonify({"msg": "Password updated successfully"}), 200
 
@@ -481,6 +481,8 @@ def reset_password_confirm():
     user.reset_token = None
     user.token_expiry = None
     user.is_temp_password = False
+    user.is_verified = True
+    db.session.add(user)
     db.session.commit()
     
     return jsonify({"msg": "Password reset successfully. You can now log in with your new password."}), 200

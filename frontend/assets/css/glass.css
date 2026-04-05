@@ -623,15 +623,22 @@
 /* --- Workspace Layout --- */
 .workspace-layout {
     display: grid;
-    grid-template-columns: 260px 1fr 320px;
-    gap: var(--ds-space-6);
+    grid-template-columns: 180px 1fr 210px;
+    gap: var(--ds-space-4);
     align-items: stretch;
     min-height: 500px;
 }
 
+@media (max-width: 1440px) {
+    .workspace-layout {
+        grid-template-columns: 180px 1fr 220px;
+        gap: var(--ds-space-3);
+    }
+}
+
 @media (max-width: 1200px) {
     .workspace-layout {
-        grid-template-columns: 200px 1fr 250px;
+        grid-template-columns: 160px 1fr 200px;
     }
 }
 

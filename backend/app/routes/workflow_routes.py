@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models import (
-    Project, db, AuditLog, ProjectReview,
+    Project, db, AuditLog, ProjectReview, ProjectStageTracker,
     Stage1Identification, Stage2Selection, Stage3Analysis, 
     Stage4Causes, Stage5RootCause, Stage6DataAnalysis, 
     Stage7Development, Stage8Implementation
@@ -70,6 +70,15 @@ def update_stage_data(project_id, stage_id):
         record = model(project_id=project_id, org_id=project.org_id)
         db.session.add(record)
         
+    # Standardize Stage 1 specifics (Update Project Metadata if provided)
+    if stage_id == 1:
+        if 'title' in data:
+            project.title = data['title']
+        if 'category' in data:
+            project.category = data['category']
+        if 'department' in data:
+            project.department = data['department']
+
     # Update fields from json
     for key, value in data.items():
         if hasattr(record, key) and key not in ['id', 'project_id', 'org_id']:
@@ -93,8 +102,21 @@ def submit_for_review(project_id):
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
     
-    # Generic submission helper for Reviewer/Facilitator
-    # For now, we mainly use it for Final Solution Approval (Stage 7)
+    # Stage 1: Identification Approval Flow (Team Leader)
+    if project.current_stage == 1:
+        s1 = Stage1Identification.query.filter_by(project_id=project_id).first()
+        if not s1:
+            return jsonify({"msg": "Stage 1 data not found"}), 404
+        
+        # We can use is_approved=False to indicate "Pending" if we treat None as "Draft"
+        # but for simplicity, let's just say it's submitted.
+        # We might want a dedicated status field, but I've already added is_approved.
+        # Let's assume matches requirements: TL sees Approve/Reject
+        log_action(project.org_id, user_id, "Submitted Stage 1 for Approval", project_id)
+        db.session.commit()
+        return jsonify({"msg": "Stage 1 submitted for Team Leader approval"}), 200
+
+    # Stage 7: Final Solution Approval (Reviewer/Facilitator)
     if project.current_stage == 7:
         project.status = 'Pending Approval'
         review = ProjectReview.query.filter_by(project_id=project_id, stage_number=7, status='Pending').first()
@@ -105,6 +127,33 @@ def submit_for_review(project_id):
         return jsonify({"msg": "Project submitted for Reviewer Approval"}), 200
     
     return jsonify({"msg": "No specific submission logic for this stage"}), 200
+
+@workflow_bp.route('/<int:project_id>/stage/1/decision', methods=['POST'])
+@jwt_required()
+@role_required(['Team Leader', 'Facilitator', 'Admin'])
+def stage1_decision(project_id):
+    data = request.get_json() # {status: 'Approved'/'Rejected', 'comments': '...'}
+    user_id = get_jwt_identity()
+    project = Project.query.get_or_404(project_id)
+    
+    s1 = Stage1Identification.query.filter_by(project_id=project_id).first()
+    if not s1:
+        return jsonify({"msg": "Stage 1 data not found"}), 404
+        
+    decision = data.get('status')
+    comments = data.get('comments')
+    
+    if decision == 'Approved':
+        s1.is_approved = True
+        s1.tl_comments = comments
+        log_action(project.org_id, user_id, "Stage 1 Identification Approved", project_id, comments)
+    else:
+        s1.is_approved = False
+        s1.tl_comments = comments
+        log_action(project.org_id, user_id, "Stage 1 Identification Sent Back for Correction", project_id, comments)
+        
+    db.session.commit()
+    return jsonify({"msg": f"Stage 1 {decision}", "is_approved": s1.is_approved}), 200
 
 @workflow_bp.route('/<int:project_id>/approve', methods=['POST'])
 @jwt_required()
@@ -152,6 +201,15 @@ def advance_stage(project_id):
     if new_stage > 8:
         return jsonify({"msg": "Project has reached the final workflow stage (Stage 8). Final administrative closure must be performed by a Facilitator."}), 400
 
+    # ─── Workflow Gate: Stage 1 → 2 ─────────────────────────────
+    # Requires Team Leader Approval
+    if new_stage == 2:
+        s1 = Stage1Identification.query.filter_by(project_id=project_id).first()
+        if not s1 or not s1.is_approved:
+            return jsonify({
+                "msg": "Stage 1 Identification must be approved by a Team Leader before advancing to Selection."
+            }), 403
+
     # ─── Workflow Gate: Stage 2 → 3 ─────────────────────────────
     # Requires Facilitator Validation
     if new_stage == 3:
@@ -179,11 +237,40 @@ def advance_stage(project_id):
                 "msg": "Stage 7 Solution must be formally approved by a Reviewing Officer before Implementation (Stage 8)."
             }), 403
 
+    # Update Project Current Stage
+    old_stage = project.current_stage
     project.current_stage = new_stage
-    log_action(project.org_id, user_id, f"Advanced to Stage {new_stage}", project_id)
+    
+    # Update Tracker for Current (New) Stage
+    tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=new_stage).first()
+    if tracker:
+        tracker.status = 'In Progress'
+        tracker.started_at = datetime.utcnow()
+    else:
+        # Create if somehow missing
+        tracker = ProjectStageTracker(
+            project_id=project_id,
+            org_id=project.org_id,
+            stage_number=new_stage,
+            status='In Progress',
+            started_at=datetime.utcnow()
+        )
+        db.session.add(tracker)
+
+    # Mark Old Stage as Completed in Tracker if it wasn't already
+    old_tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=old_stage).first()
+    if old_tracker and old_tracker.status != 'Completed':
+        old_tracker.status = 'Completed'
+        old_tracker.completed_at = datetime.utcnow()
+
+    log_action(project.org_id, user_id, f"Advanced from Stage {old_stage} to Stage {new_stage}", project_id)
     db.session.commit()
     
-    return jsonify({"msg": f"Advanced to Stage {new_stage}", "current_stage": project.current_stage}), 200
+    return jsonify({
+        "msg": f"Successfully advanced to Stage {new_stage}",
+        "current_stage": project.current_stage,
+        "status": "In Progress"
+    }), 200
 
 @workflow_bp.route('/projects/<int:project_id>/reviews', methods=['GET'])
 @jwt_required()

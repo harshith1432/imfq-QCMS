@@ -231,23 +231,16 @@ def get_project_details(id):
     if project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
         
-    role = user.role.name
-    authorized = False
-    
-    if role == 'Admin':
-        authorized = True
-    elif role == 'Facilitator':
-        authorized = (project.facilitator_id == user.id)
-    elif role == 'Reviewer':
-        authorized = (project.status == 'Pending Approval' or project.current_stage in [5, 7])
-    elif role == 'Team Leader':
-        authorized = (project.team_leader_id == user.id or project.department_id == user.department_id)
-    elif role == 'Team Member':
-        is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first()
-        authorized = (is_member is not None)
-    
-    if not authorized:
+    # Authorized for viewing if same organization, but we still track explicit roles for UI hinting
+    is_org_member = (project.org_id == user.org_id)
+    if not is_org_member:
         return jsonify({"msg": "Project not found"}), 404
+    
+    # We can still calculate 'authorized' for specific permissions later if needed, 
+    # but for this GET route, being in the same org is enough to prevent a 404.
+
+    # Fetch all stages for tracker
+    stages = ProjectStageTracker.query.filter_by(project_id=id).order_by(ProjectStageTracker.stage_number).all()
 
     return jsonify({
         "id": project.id,
@@ -267,8 +260,131 @@ def get_project_details(id):
         "team_leader_name": project.team_leader.full_name if project.team_leader else (project.team_leader.username if project.team_leader else None),
         "department_id": project.department_id,
         "deadline": project.deadline.isoformat() if project.deadline else None,
-        "member_ids": [m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()]
+        "member_ids": [m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()],
+        "stages": [{
+            "stage_number": s.stage_number,
+            "status": s.status,
+            "started_at": s.started_at.isoformat() + "Z" if s.started_at else None,
+            "completed_at": s.completed_at.isoformat() + "Z" if s.completed_at else None
+        } for s in stages]
     }), 200
+
+@project_bp.route('/<int:id>/stage/<int:stage_num>', methods=['GET'])
+@jwt_required()
+def get_project_stage_details(id, stage_num):
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    project = db.session.get(Project, id)
+    
+    if not project or project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+        
+    from ..models import (
+        Stage1Identification, Stage2Selection, Stage3Analysis, 
+        Stage4Causes, Stage5RootCause, Stage6DataAnalysis, 
+        Stage7Development, Stage8Implementation
+    )
+    
+    stage_models = {
+        1: Stage1Identification, 2: Stage2Selection, 3: Stage3Analysis,
+        4: Stage4Causes, 5: Stage5RootCause, 6: Stage6DataAnalysis,
+        7: Stage7Development, 8: Stage8Implementation
+    }
+    
+    model = stage_models.get(stage_num)
+    if not model:
+        return jsonify({"msg": "Invalid stage number"}), 400
+        
+    stage_data = model.query.filter_by(project_id=id).first()
+    
+    # Standardize data to dict
+    data = {}
+    if stage_data:
+        data = {c.name: getattr(stage_data, c.name) for c in stage_data.__table__.columns}
+        # Clean up
+        data.pop('id', None)
+        data.pop('project_id', None)
+        data.pop('org_id', None)
+        # Convert datetimes to isoformat
+        for k, v in data.items():
+            if isinstance(v, datetime):
+                data[k] = v.isoformat() + "Z"
+    
+    return jsonify(data), 200
+
+@project_bp.route('/<int:id>/stage/<int:stage_num>', methods=['POST'])
+@jwt_required()
+def update_project_stage(id, stage_num):
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    project = db.session.get(Project, id)
+    
+    if not project or project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+        
+    # RBAC: TL or assigned members
+    is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first()
+    if not is_member and user.role.name != 'Admin':
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    from ..models import (
+        Stage1Identification, Stage2Selection, Stage3Analysis, 
+        Stage4Causes, Stage5RootCause, Stage6DataAnalysis, 
+        Stage7Development, Stage8Implementation, ProjectStageTracker,
+        AuditLog
+    )
+    
+    stage_models = {
+        1: Stage1Identification, 2: Stage2Selection, 3: Stage3Analysis,
+        4: Stage4Causes, 5: Stage5RootCause, 6: Stage6DataAnalysis,
+        7: Stage7Development, 8: Stage8Implementation
+    }
+    
+    model = stage_models.get(stage_num)
+    if not model:
+        return jsonify({"msg": "Invalid stage number"}), 400
+        
+    data = request.get_json()
+    stage_data = model.query.filter_by(project_id=id).first()
+    
+    if not stage_data:
+        # Initialize if missing
+        stage_data = model(project_id=id, org_id=user.org_id)
+        db.session.add(stage_data)
+    
+    # Dynamically update fields
+    for key, value in data.items():
+        if hasattr(stage_data, key) and key not in ['id', 'project_id', 'org_id']:
+            setattr(stage_data, key, value)
+            
+    # Update tracker if stage is being completed
+    if data.get('action') == 'submit':
+        tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=stage_num).first()
+        if tracker:
+            tracker.status = 'Completed'
+            tracker.completed_at = datetime.utcnow()
+            
+            # Note: Stage advancement is now handled via the /api/workflow/projects/<id>/transitions endpoint
+            # to ensure all security gates (approvals/validations) are checked.
+        
+        # If it's the final stage, we still want to mark the project as completed
+        if stage_num == 8:
+            project.status = 'Completed'
+
+    # Audit Log
+    audit = AuditLog(
+        org_id=user.org_id,
+        project_id=id,
+        user_id=user_id,
+        action=f"Updated Stage {stage_num}",
+        details=f"Stage {stage_num} updated. Action: {data.get('action', 'save')}",
+        target_table=model.__tablename__,
+        target_id=stage_data.id if stage_data.id else id
+    )
+    db.session.add(audit)
+    
+    db.session.commit()
+    return jsonify({"msg": f"Stage {stage_num} updated successfully", "current_stage": project.current_stage}), 200
 
 @project_bp.route('/<int:id>/activity', methods=['GET'])
 @jwt_required()

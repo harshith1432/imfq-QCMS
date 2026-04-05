@@ -40,7 +40,8 @@
                                 <h1 class="ds-title mb-0" id="projectTitle">Loading...</h1>
                                 <span id="projectStatusBadge"></span>
                             </div>
-                            <p class="ds-text-secondary mb-0" id="projectMeta">Project ID and Department will appear here.</p>
+                            <p class="ds-text-secondary mb-0" id="projectMeta">Project ID and Department will appear
+                                here.</p>
                         </div>
                         <div id="projectActions" class="h-stack gap-2"></div>
                     </div>
@@ -68,7 +69,8 @@
 
                     <!-- Reviewer Governance Panel (Stage 7) -->
                     <div id="reviewerPanel" class="glass-card mb-4 border-primary" style="display: none;">
-                        <div class="ds-card-header bg-soft-primary p-3 d-flex justify-content-between align-items-center">
+                        <div
+                            class="ds-card-header bg-soft-primary p-3 d-flex justify-content-between align-items-center">
                             <div class="h-stack gap-2">
                                 <i data-lucide="shield-check" class="text-primary"></i>
                                 <span class="fw-bold text-primary">Reviewer Governance: Stage 7 Approval</span>
@@ -76,26 +78,25 @@
                             <span class="badge bg-primary">Action Required</span>
                         </div>
                         <div class="ds-card-body p-4">
-                            <p class="ds-text-secondary small mb-3">As a Reviewing Officer, please evaluate the proposed solution and implementation plan. Your approval is required to advance the project to Stage 8 (Implementation).</p>
+                            <p class="ds-text-secondary small mb-3">As a Reviewing Officer, please evaluate the proposed
+                                solution and implementation plan. Your approval is required to advance the project to
+                                Stage 8 (Implementation).</p>
                             <div class="mb-3">
                                 <label class="ds-label mb-2">Reviewer Comments / Observations</label>
-                                <textarea id="reviewerNote" class="ds-textarea w-100" rows="3" placeholder="Enter findings or revision requirements..."></textarea>
+                                <textarea id="reviewerNote" class="ds-textarea w-100" rows="3"
+                                    placeholder="Enter findings or revision requirements..."></textarea>
                             </div>
                             <div class="h-stack gap-2 justify-content-end">
-                                <button class="ds-btn ds-btn-danger" onclick="workspace.submitDecision('Rejected')">Reject Project</button>
-                                <button class="ds-btn ds-btn-warning" onclick="workspace.submitDecision('Revision')">Request Revision</button>
-                                <button class="ds-btn ds-btn-primary" onclick="workspace.submitDecision('Approved')">Approve Solution</button>
+                                <button class="ds-btn ds-btn-danger"
+                                    onclick="workspace.submitDecision('Rejected')">Reject Project</button>
+                                <button class="ds-btn ds-btn-warning"
+                                    onclick="workspace.submitDecision('Revision')">Request Revision</button>
+                                <button class="ds-btn ds-btn-primary"
+                                    onclick="workspace.submitDecision('Approved')">Approve Solution</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Facilitator Panel (Stage 5 RCA & Stage 8 Closure) -->
-                    <div id="facilitatorPanel" class="glass-card mb-4 border-info" style="display: none;">
-                        <div class="glass-card h-100 d-flex flex-column">
-                            <div class="ds-card-header d-flex justify-content-between align-items-center">
-                                <h5 class="card-title" id="stageTitle">Stage Content</h5>
-                                <div id="stageStatusBadge"></div>
-                            </div>
 
                     <!-- Center: Stage Content & Execution -->
                     <div class="workspace-main">
@@ -110,7 +111,8 @@
                                     <p class="mt-2 text-muted">Loading stage data...</p>
                                 </div>
                             </div>
-                            <div class="ds-card-footer border-top p-3" id="stageActions" style="display:none; background: rgba(var(--ds-accent-rgb), 0.05); border-color: var(--ds-border-color) !important;">
+                            <div class="ds-card-footer border-top p-3" id="stageActions"
+                                style="display:none; background: rgba(var(--ds-accent-rgb), 0.05); border-color: var(--ds-border-color) !important;">
                                 <!-- Role-based actions injected here -->
                             </div>
                             <div id="facilitator-actions" class="p-3 border-top border-white/10 hidden">
@@ -144,7 +146,9 @@
             <div class="modal-content glass-card border-0">
                 <div class="modal-header border-0 align-items-center pt-4 px-4 pb-0">
                     <h5 class="modal-title fw-bold text-main" id="modalTitle">Submit Stage Data</h5>
-                    <button type="button" class="btn ds-btn-ghost rounded-circle p-1 d-flex align-items-center justify-content-center text-muted m-0" data-bs-dismiss="modal" style="width:32px; height:32px;">
+                    <button type="button"
+                        class="btn ds-btn-ghost rounded-circle p-1 d-flex align-items-center justify-content-center text-muted m-0"
+                        data-bs-dismiss="modal" style="width:32px; height:32px;">
                         <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                     </button>
                 </div>
@@ -199,8 +203,8 @@
             async loadProject() {
                 try {
                     this.project = await api.get(`/projects/${this.projectId}`);
-                    this.currentStage = this.project.current_stage || 1;
-                    this.viewingStage = this.currentStage;
+                    this.currentStage = Number(this.project.current_stage || 1);
+                    this.viewingStage = Number(this.currentStage);
 
                     // Update Header
                     document.getElementById('projectTitle').textContent = this.project.title;
@@ -209,6 +213,7 @@
                     <span class="fw-medium">${this.project.project_uid || 'P-NEW'}</span> · 
                     <span>${this.project.department || 'N/A'}</span> · 
                     ${QCMS.categoryBadge(this.project.category)}
+                    ${this.project.facilitator_name ? ` · <span class="text-xs text-muted"><i data-lucide="user-check" class="w-3 h-3 inline-block"></i> Facilitator: <b>${this.project.facilitator_name}</b></span>` : ''}
                 `;
 
                     // Render Progress Components
@@ -219,7 +224,6 @@
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error(e);
-                    QCMS.toast('Failed to load project details', 'danger');
                 }
             },
 
@@ -255,160 +259,398 @@
 
                 title.textContent = `Stage ${num}: ${STAGE_NAMES[num]}`;
 
-                    // Determine display state
-                    let displayStatus = 'Not Started';
-                    if (Number(num) < Number(this.currentStage)) displayStatus = 'Completed';
-                    else if (Number(num) == Number(this.currentStage)) displayStatus = 'In Progress';
-                    state.innerHTML = QCMS.statusBadge(displayStatus);
+                // Determine display state
+                let displayStatus = 'Not Started';
+                if (Number(num) < Number(this.currentStage)) displayStatus = 'Completed';
+                else if (Number(num) == Number(this.currentStage)) displayStatus = 'In Progress';
+                state.innerHTML = QCMS.statusBadge(displayStatus);
 
-                    try {
-                        // Fetch stage-specific data
-                        const resp = await api.get(`/workflow/${this.projectId}/stage/${num}`);
-                        const data = resp.data;
+                try {
+                    // Fetch stage-specific data
+                    const data = await api.get(`/projects/${this.projectId}/stage/${num}`);
 
-                        if (data && Object.keys(data).length > 2) { // 2 assuming id and project_id are always there
-                            body.innerHTML = this.renderDataView(data, num);
-                        } else {
-                            body.innerHTML = `
-                            <div class="p-5 text-center fade-in">
-                                <div class="mb-3 text-muted">
-                                    <i data-lucide="${Number(num) == Number(this.currentStage) ? 'edit-3' : 'lock'}" style="width:48px;height:48px;"></i>
+                    if (Number(num) === 1) {
+                        body.innerHTML = this.renderStage1(data);
+                    } else if (data && Object.keys(data).length > 2) {
+                        body.innerHTML = this.renderDataView(data, num);
+                    } else {
+                        body.innerHTML = `
+                                <div class="p-5 text-center fade-in">
+                                    <div class="mb-3 text-muted">
+                                        <i data-lucide="${Number(num) == Number(this.currentStage) ? 'edit-3' : 'lock'}" style="width:48px;height:48px;"></i>
+                                    </div>
+                                    <h6 class="fw-bold">${Number(num) == Number(this.currentStage) ? 'Ready for Input' : 'No Data Available'}</h6>
+                                    <p class="text-sm text-muted">Detailed documentation for this stage will appear here after submission.</p>
                                 </div>
-                                <h6 class="fw-bold">${Number(num) == Number(this.currentStage) ? 'Ready for Input' : 'No Data Available'}</h6>
-                                <p class="text-sm text-muted">Detailed documentation for this stage will appear here after submission.</p>
+                            `;
+                    }
+
+                    // Inject actions if viewing current stage or a completed past stage
+                    if (Number(num) <= Number(this.currentStage) && this.canExecute()) {
+                        actions.style.display = 'flex';
+                        const isCompleted = Number(num) < Number(this.currentStage);
+                        const isStage1Approved = Number(num) === 1 && (data.is_approved === true || data.is_approved === 1);
+                        const canGoNext = (isCompleted || isStage1Approved) && num < STAGE_NAMES.length - 1;
+                        const canGoPrev = num > 1;
+
+                        const role = String(this.userRole || '').toLowerCase();
+                        const isTL = role.includes('leader') || role.includes('admin');
+                        const isTM = role.includes('member');
+                        const isFacilitator = role.includes('facilitator');
+
+                        let prevBtn = `
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost" 
+                                    onclick="${canGoPrev ? `workspace.viewStage(${Number(num) - 1})` : ''}" 
+                                    ${!canGoPrev ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>
+                                <i data-lucide="arrow-left" class="w-3 h-3 mr-1"></i> Previous
+                            </button>
+                        `;
+
+                        const isCurrent = Number(num) === Number(this.currentStage);
+                        const isPast = Number(num) < Number(this.currentStage);
+
+                        let nextBtn = `
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost" 
+                                    onclick="${isCurrent ? 'workspace.advance()' : (isPast ? `workspace.viewStage(${Number(num) + 1})` : '')}" 
+                                    ${(!isCurrent && !isPast) ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>
+                                ${isCurrent ? 'Advance Stage' : 'Next Stage'} <i data-lucide="${isCurrent ? 'chevrons-right' : 'arrow-right'}" class="w-3 h-3 ml-1"></i>
+                            </button>
+                        `;
+
+                        // Highlight if locked via logic (e.g. Stage 1 not approved)
+                        if (isCurrent) {
+                            nextBtn = `
+                                <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.advance()">
+                                    Advance Stage <i data-lucide="chevrons-right" class="w-3 h-3 ml-1"></i>
+                                </button>
+                            `;
+                        } else if (isPast) {
+                             nextBtn = `
+                                <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.viewStage(${Number(num) + 1})">
+                                    Next Stage <i data-lucide="arrow-right" class="w-3 h-3 ml-1"></i>
+                                </button>
+                            `;
+                        }
+
+                        let centerAction = '';
+
+                        if (Number(num) == 1) {
+                            if (isTL && (data.is_approved === null || (data.is_approved === false && !this.isEditing))) {
+                                centerAction = `
+                                    <div class="h-stack gap-2">
+                                        <button class="ds-btn ds-btn-sm ds-btn-danger" onclick="workspace.promptStage1Decision('Rejected')">
+                                            <i data-lucide="x-circle" class="w-3 h-3 mr-1"></i> Send Back
+                                        </button>
+                                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.submitStage1Decision('Approved')">
+                                            <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> Approve Statement
+                                        </button>
+                                    </div>
+                                `;
+                            } else if (this.isEditing) {
+                                centerAction = `
+                                    <div class="h-stack gap-2">
+                                        <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.toggleEditMode(false)">Cancel</button>
+                                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.saveStage1Inline()">
+                                            <i data-lucide="save" class="w-3 h-3 mr-1"></i> Save Changes
+                                        </button>
+                                    </div>
+                                `;
+                            } else {
+                                centerAction = `
+                                    <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.toggleEditMode(true)">
+                                        <i data-lucide="edit" class="w-3 h-3 mr-1"></i> Edit Identification
+                                    </button>
+                                `;
+                            }
+                        } else if (isFacilitator) {
+                            // Facilitator specific actions override generic ones
+                            if (Number(num) == 5 && Number(num) == this.currentStage) {
+                                centerAction = `
+                                    <div class="h-stack gap-2 bg-soft-primary p-2 rounded-lg border border-primary/20">
+                                        <textarea id="rca-note-inline" class="ds-input text-xs" style="width:200px; min-height:32px" placeholder="Validation remarks..."></textarea>
+                                        <button onclick="workspace.validateRCA(document.getElementById('rca-note-inline').value)" class="ds-btn ds-btn-sm ds-btn-primary">
+                                            <i data-lucide="check-square" class="w-3 h-3 mr-1"></i> Validate RCA
+                                        </button>
+                                    </div>
+                                `;
+                            } else if (Number(num) == 8 && this.project.status !== 'Pending Closure') {
+                                centerAction = `
+                                    <button onclick="workspace.approveImpact()" class="ds-btn ds-btn-sm ds-btn-primary">
+                                        <i data-lucide="award" class="w-3 h-3 mr-1"></i> Final Approval & Close
+                                    </button>
+                                `;
+                            } else {
+                                centerAction = `<span class="text-xs text-muted italic">Viewing as Facilitator</span>`;
+                            }
+                        } else if (Number(num) == 5 && !isCompleted) {
+                            centerAction = `<button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update RCA Data</button>`;
+                        } else if (Number(num) == 7 && !isCompleted) {
+                            centerAction = `
+                                <div class="h-stack gap-2">
+                                    <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update Solution</button>
+                                    <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.advance()">Submit for Review</button>
+                                </div>
+                            `;
+                        } else if (Number(num) == 8 && !isCompleted) {
+                            centerAction = `<button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update implementation</button>`;
+                        } else if (!isCompleted) {
+                            centerAction = `
+                                <div class="h-stack gap-2">
+                                    <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update Data</button>
+                                    <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.openStageModal(${num}, true)">Save & Advance</button>
+                                </div>
+                            `;
+                        }
+
+                        const actionHtml = `
+                            <div class="h-stack gap-2 justify-content-between w-100">
+                                ${prevBtn}
+                                <div class="h-stack gap-2">
+                                    <div class="text-xxs text-muted uppercase fw-bold tracking-widest mr-2 border-end pr-2 py-1">Stage ${num} Actions</div>
+                                    ${centerAction}
+                                </div>
+                                ${nextBtn}
                             </div>
                         `;
-                        }
 
-                        // Show Panels based on role and stage
-            const user = QCMS.getUser();
-            const facilitatorPanel = document.getElementById('facilitatorPanel');
-            const reviewerPanel = document.getElementById('reviewerPanel');
-            
-            if (user.role === 'Facilitator') {
-                if (this.currentStage === 5 || this.currentStage === 8) {
-                    facilitatorPanel.style.display = 'block';
-                }
-            } else if (user.role === 'Reviewer') {
-                if (this.currentStage === 7) {
-                    reviewerPanel.style.display = 'block';
-                }
-            }
-
-                        // Inject actions if viewing current stage or a completed past stage
-                        if (Number(num) <= Number(this.currentStage) && this.canExecute()) {
-                            actions.style.display = 'flex';
-                            let actionHtml = '';
-
-                            if (Number(num) == 5) {
-                                // Stage 5: RCA — Facilitator Validation Gate
-                                actionHtml = `
-                                <div class="d-flex w-100 justify-content-center align-items-center p-3">
-                                    <div class="text-center">
-                                        <div class="ds-icon-circle bg-warning-soft text-warning mx-auto mb-2" style="width:48px;height:48px;">
-                                            <i data-lucide="shield-check" style="width:24px;height:24px;"></i>
-                                        </div>
-                                        <h6 class="fw-bold">Awaiting Facilitator RCA Validation</h6>
-                                        <p class="text-xs text-muted">The Facilitator must validate Root Cause Analysis before Stage 6 unlocks.</p>
-                                        <button class="ds-btn ds-btn-sm ds-btn-ghost mt-2" onclick="workspace.openStageModal(${num})">Update RCA Data</button>
-                                    </div>
-                                </div>
-                            `;
-                            } else if (Number(num) == 7) {
-                                // Stage 7: Development — Reviewer Approval Gate
-                                actionHtml = `
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <div class="text-xs text-muted">Finalize the solution and submit for Reviewer Approval.</div>
-                                    <div class="d-flex gap-2">
-                                        <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update Solution</button>
-                                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.advance()">Submit for Review</button>
-                                    </div>
-                                </div>
-                            `;
-                            } else if (Number(num) == 8) {
-                                // Stage 8: Implementation — Facilitator Closure Gate
-                                actionHtml = `
-                                <div class="d-flex w-100 justify-content-center align-items-center p-3">
-                                    <div class="text-center">
-                                        <div class="ds-icon-circle bg-warning-soft text-warning mx-auto mb-2" style="width:48px;height:48px;">
-                                            <i data-lucide="lock" style="width:24px;height:24px;"></i>
-                                        </div>
-                                        <h6 class="fw-bold">Awaiting Facilitator Sign-off</h6>
-                                        <p class="text-xs text-muted">Impact measurement and closure will be finalized by the Facilitator.</p>
-                                        <button class="ds-btn ds-btn-sm ds-btn-ghost mt-2" onclick="workspace.openStageModal(${num})">Update Implementation Data</button>
-                                    </div>
-                                </div>
-                            `;
-                            } else {
-                                // Stages 1-4, 6: Normal input + advance
-                                actionHtml = `
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <div class="text-xs text-muted">Current phase requires your input to proceed.</div>
-                                    <div class="d-flex gap-2">
-                                        <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update Data</button>
-                                        ${Number(num) <= 4 ? `
-                                            <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.openStageModal(${num}, true)">
-                                                <i data-lucide="check-circle-2" class="w-3 h-3 mr-1"></i> Save & Advance
-                                            </button>
-                                        ` : `
-                                            <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.advance()">Advance to Stage ${num + 1}</button>
-                                        `}
-                                    </div>
-                                </div>
-                            `;
-                            }
-                            actions.innerHTML = actionHtml;
-                        } else {
-                            actions.style.display = 'none';
-                        }
-
-                        if (window.lucide) lucide.createIcons();
-                    } catch (e) {
-                        console.error(e);
-                        body.innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Load Error', 'Could not retrieve stage data.')}</div>`;
+                        actions.innerHTML = actionHtml;
+                        actions.style.display = 'flex';
+                    } else {
+                        actions.style.display = 'none';
                     }
-                },
 
-                canExecute() {
-                    const roleStr = String(this.userRole || QCMS.user?.role || localStorage.getItem('role') || '').toLowerCase().trim();
-                    // Explicitly restrict Reviewer from executing these stages but default allow others
-                    // to prevent string mismatch issues like 'team leader' vs 'teamleader' or trailing spaces
-                    return !roleStr.includes('reviewer');
-                },
-
-            renderDataView(data, stage) {
-                const skip = ['id', 'project_id', 'created_at', 'updated_at'];
-                return `
-                <div class="p-4 fade-in">
-                    <div class="ds-table-container">
-                        <table class="ds-table">
-                            ${Object.entries(data)
-                            .filter(([k]) => !skip.includes(k))
-                            .map(([k, v]) => `
-                                    <tr>
-                                        <th style="width:30%; border-right: 1px solid var(--ds-border-color);" class="text-xs text-uppercase text-muted">${k.replace(/_/g, ' ')}</th>
-                                        <td class="text-sm fw-medium">${v || '—'}</td>
-                                    </tr>
-                                `).join('')}
-                        </table>
-                    </div>
-                </div>
-            `;
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error(e);
+                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Load Error', 'Could not retrieve stage data.')}</div>`;
+                }
             },
 
-        async renderActionButtons() {
-            const container = document.getElementById('stageActions');
-            if (!container) return;
-            
-            if (!this.project) return;
-            
-            const user = QCMS.getUser();
-            const isFacilitator = user && user.role === 'Facilitator';
-            const stage = this.project.current_stage;
+            canExecute() {
+                const roleStr = String(this.userRole || QCMS.user?.role || '').toLowerCase();
+                return !roleStr.includes('reviewer');
+            },
 
-            if (isFacilitator) {
-                if (stage === 5) {
-                    container.innerHTML += `
+            renderStage1(data) {
+                const p = this.project || {};
+                const isEdit = this.isEditing;
+
+                const approvalAlert = data.is_approved === true ? `
+                        <div class="ds-alert ds-alert-success mb-4 fade-in">
+                            <div class="h-stack gap-3">
+                                <i data-lucide="check-circle" class="text-success"></i>
+                                <div>
+                                    <div class="fw-bold text-sm">Identification Approved</div>
+                                    <div class="text-xs text-muted">${data.tl_comments || 'This problem has been validated for QC methodology.'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : data.is_approved === false ? `
+                        <div class="ds-alert ds-alert-danger mb-4 fade-in">
+                            <div class="h-stack gap-3">
+                                <i data-lucide="alert-circle" class="text-danger"></i>
+                                <div>
+                                    <div class="fw-bold text-sm">Revision Required</div>
+                                    <div class="text-xs text-muted">Note: "${data.tl_comments || 'Please refine the details.'}"</div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : '';
+
+                const field = (label, key, type = 'text', icon = 'info', isProjectField = false, noMargin = false) => {
+                    const val = isProjectField ? (p[key] || '') : (data[key] || '');
+                    const mbClass = noMargin ? 'mb-0' : 'mb-3';
+                    if (isEdit) {
+                        if (key === 'category') {
+                            const categories = ['Quality', 'Cost', 'Safety', 'Productivity', 'Delivery', 'Morale'];
+                            return `
+                                    <div class="${mbClass}">
+                                        <label class="ds-label text-xs mb-1 font-bold"><i data-lucide="${icon}" class="w-3 h-3 mr-1 inline"></i> ${label}</label>
+                                        <select id="edit_${key}" class="ds-input w-100 font-medium">
+                                            ${categories.map(c => `<option value="${c}" ${val === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                `;
+                        }
+                        return `
+                                <div class="${mbClass}">
+                                    <label class="ds-label text-xs mb-1 font-bold"><i data-lucide="${icon}" class="w-3 h-3 mr-1 inline"></i> ${label}</label>
+                                    ${type === 'textarea'
+                                ? `<textarea id="edit_${key}" class="ds-textarea w-100" rows="3">${val}</textarea>`
+                                : `<input id="edit_${key}" type="text" class="ds-input w-100 font-medium" value="${val}">`}
+                                </div>
+                            `;
+                    }
+                    return `
+                            <div class="${mbClass}">
+                                <label class="text-xs text-muted text-uppercase fw-bold mb-1 d-flex align-items-center gap-1 tracking-wider">
+                                    <i data-lucide="${icon}" class="w-3 h-3"></i> ${label}
+                                </label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <p class="${key === 'problem_statement' || key === 'title' ? 'fs-5 fw-bold text-main' : 'ds-text-secondary fw-medium'} mb-0">
+                                        ${(key === 'category' ? QCMS.categoryBadge(val) + ' <span class="align-middle">' + val + '</span>' : val) || '<span class="text-muted italic opacity-50">Not specified</span>'}
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                };
+
+                return `
+                    <div class="px-4 py-2 fade-in">
+                        ${approvalAlert}
+                        
+                        <div class="v-stack gap-3">
+                             <!-- Main Content Pillar -->
+                            <header class="glass-card px-4 py-3 border-start border-4 border-primary shadow-sm bg-white/40 mb-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-lg-6">
+                                        <div class="py-1">
+                                            ${field('Project Title', 'title', 'text', 'tag', true, true)}
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="py-1 border-start border-black/5 ps-3">
+                                            ${field('Category', 'category', 'select', 'layers', true, true)}
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="py-1 border-start border-black/5 ps-3">
+                                            ${field('Department', 'department', 'text', 'building', true, true)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <section class="glass-card p-4">
+                                <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-2">
+                                    <div class="h-stack gap-2">
+                                        <i data-lucide="target" class="text-primary w-4 h-4"></i>
+                                        <h6 class="text-xs fw-bold text-muted text-uppercase mb-0">Problem Identification</h6>
+                                    </div>
+                                    <span class="text-xxs text-muted italic">Methodology: 5W1H Analysis</span>
+                                </div>
+                                <div class="row g-4">
+                                    <div class="col-12">
+                                        ${field('Problem Statement', 'problem_statement', 'textarea', 'target')}
+                                    </div>
+                                    <div class="col-12 mt-0">
+                                        ${field('Detailed Description', 'description', 'textarea', 'align-left')}
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <div class="p-3 rounded-lg bg-light/30 border border-black/10">
+                                            ${field('Physical Location', 'location', 'text', 'map-pin')}
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="p-3 rounded-lg bg-light/30 border border-black/10">
+                                            ${field('Occurrence Frequency', 'frequency_of_occurrence', 'text', 'clock')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="glass-card p-4 bg-soft-warning/20 border-warning/10">
+                                <div class="h-stack gap-2 mb-3">
+                                    <i data-lucide="zap" class="text-warning w-4 h-4"></i>
+                                    <h6 class="text-xs fw-bold text-muted text-uppercase mb-0">Impact Assessment (Initial)</h6>
+                                </div>
+                                ${field('Assessment of Quality / Cost / Safety', 'initial_impact', 'textarea', 'alert-triangle')}
+                            </section>
+
+                            <!-- Metadata Row (Secondary Information) -->
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="glass-card h-100 flex-column d-flex">
+                                        <div class="p-4 border-bottom border-black/5">
+                                            <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-sm">
+                                                <i data-lucide="image" class="w-4 h-4 text-primary"></i> Evidence
+                                            </h6>
+                                        </div>
+                                        <div class="p-4 flex-grow-1 d-flex flex-column justify-content-center">
+                                            ${isEdit ? `
+                                                <input id="edit_evidence" type="text" class="ds-input w-100 text-xs shadow-none border-dashed" placeholder="Evidence URL..." value="${data.evidence || ''}">
+                                            ` : (data.evidence ? `
+                                                <a href="${data.evidence}" target="_blank" class="ds-link-btn w-100 justify-content-center bg-primary-subtle text-primary border-primary p-2 rounded-3 text-decoration-none d-flex align-items-center gap-2 fw-medium hover-subtle text-xs">
+                                                    <i data-lucide="external-link" class="w-3 h-3"></i> Open Folder
+                                                </a>
+                                            ` : `
+                                                <p class="text-center text-muted text-xs mb-0 opacity-50">No evidence</p>
+                                            `)}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="glass-card h-100 p-4 bg-light/30">
+                                        <label class="text-xxs text-muted d-block text-uppercase fw-bold mb-3 tracking-widest">Project Identity</label>
+                                        <div class="v-stack gap-2">
+                                            <div class="h-stack justify-content-between p-2 px-3 rounded-md bg-white/50 border">
+                                                <span class="text-xxs text-muted uppercase fw-bold">UID</span>
+                                                <div class="text-xs fw-bold font-monospace">${p.project_uid || 'P-NEW'}</div>
+                                            </div>
+                                            <div class="h-stack justify-content-between px-1">
+                                                <span class="text-xxs text-muted uppercase fw-bold">Started</span>
+                                                <div class="text-xs fw-medium">${QCMS.formatDate(p.created_at)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="glass-card h-100 p-4 overflow-hidden" style="background: linear-gradient(135deg, rgba(var(--ds-primary-rgb), 0.08), transparent);">
+                                        <div class="h-stack justify-content-between mb-3">
+                                            <h6 class="fw-bold mb-0 text-xs tracking-wider">FLOW STATE</h6>
+                                            <span class="badge ${data.is_approved ? 'bg-success' : 'bg-primary'} text-xxs px-2" style="font-size: 9px;">
+                                                ${data.is_approved ? 'VERIFIED' : 'ACTIVE'}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-muted mb-0 leading-relaxed opacity-90">
+                                            ${data.is_approved ? 'Stage 1 verified. Methodology Stage 2 is unlocked.' : 'Phase 1: Identification & Definition.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    `;
+            },
+
+            renderDataView(data, stage) {
+                const skip = ['id', 'project_id', 'created_at', 'updated_at', 'is_approved', 'tl_comments', 'org_id'];
+                return `
+                        <div class="p-4 fade-in">
+                            <div class="ds-table-container shadow-sm border-0 rounded-xl overflow-hidden">
+                                <table class="ds-table">
+                                    ${Object.entries(data)
+                        .filter(([k, v]) => !skip.includes(k) && v !== null && v !== undefined)
+                        .map(([k, v]) => `
+                                            <tr>
+                                                <th style="width:30%;" class="text-xs text-uppercase text-muted border-bottom-0">${k.replace(/_/g, ' ')}</th>
+                                                <td class="text-sm fw-medium border-bottom-0">${v || '—'}</td>
+                                            </tr>
+                                        `).join('')}
+                                </table>
+                            </div>
+                        </div>
+                    `;
+            },
+
+            async renderActionButtons() {
+                const container = document.getElementById('stageActions');
+                if (!container) return;
+
+                if (!this.project) return;
+
+                const user = QCMS.user || {};
+                const isFacilitator = user && user.role === 'Facilitator';
+                const stage = this.project.current_stage;
+
+                if (isFacilitator) {
+                    if (stage === 5) {
+                        container.innerHTML += `
                         <div class="v-stack gap-3 w-full p-4 border border-white/10 rounded-lg bg-white/5">
                             <label class="text-xs fw-bold text-uppercase text-muted">Facilitator RCA Validation</label>
                             <textarea id="rca-note" class="ds-input w-full" style="min-height:80px" placeholder="Enter validation remarks..."></textarea>
@@ -417,40 +659,93 @@
                             </button>
                         </div>
                     `;
-                } else if (stage === 8 && this.project.status !== 'Pending Closure') {
-                    container.innerHTML += `
+                    } else if (stage === 8 && this.project.status !== 'Pending Closure') {
+                        container.innerHTML += `
                         <button onclick="workspace.approveImpact()" class="ds-btn ds-btn-primary w-full">
                             <i data-lucide="award"></i> Approve Impact & Ready for Closure
                         </button>
                     `;
+                    }
+                    if (window.lucide) lucide.createIcons();
                 }
-                if (window.lucide) lucide.createIcons();
-            }
-        },
+            },
 
-        async validateRCA() {
-            const note = document.getElementById('rca-note').value.trim();
-            if (!note) return QCMS.toast('Validation note is required', 'error');
+            async validateRCA() {
+                const note = document.getElementById('rca-note').value.trim();
+                if (!note) return QCMS.toast('Validation note is required', 'error');
 
-            try {
-                const res = await api.post(`/api/facilitator/rca/${this.projectId}/validate`, { validation_note: note });
-                QCMS.toast(res.msg, 'success');
-                this.loadProject();
-            } catch (err) {
-                QCMS.toast(err.message, 'error');
-            }
-        },
+                try {
+                    const res = await api.post(`/api/facilitator/rca/${this.projectId}/validate`, { validation_note: note });
+                    QCMS.toast(res.msg, 'success');
+                    this.loadProject();
+                } catch (err) {
+                    QCMS.toast(err.message, 'error');
+                }
+            },
 
-        async approveImpact() {
-            if (!confirm('Are you sure you want to approve the final results and mark this project for closure?')) return;
-            try {
-                const res = await api.post(`/api/facilitator/impact/${this.projectId}/approve`);
-                QCMS.toast(res.msg, 'success');
-                this.loadProject();
-            } catch (err) {
-                QCMS.toast(err.message, 'error');
-            }
-        },
+            async promptStage1Decision(status) {
+                const comments = prompt(`Reason for ${status === 'Approved' ? 'Approval' : 'Correction'}:`);
+                if (comments === null) return;
+                this.submitStage1Decision(status, comments);
+            },
+
+            async submitStage1Decision(status, comments = '') {
+                try {
+                    await api.post(`/projects/${this.projectId}/stage/1`, { is_approved: status === 'Approved', tl_comments: comments });
+                    QCMS.toast(`Stage 1 ${status}!`, 'success');
+                    if (status === 'Approved') {
+                        await this.advance(true); // Auto advance to Stage 2 if approved
+                    } else {
+                        this.loadProject();
+                    }
+                } catch (e) {
+                    QCMS.toast(e.message || 'Decision failed', 'danger');
+                }
+            },
+
+            toggleEditMode(isEditing) {
+                this.isEditing = isEditing;
+                this.viewStage(this.viewingStage);
+            },
+
+            async saveStage1Inline() {
+                // Stage 1 specific fields
+                const keys = ['problem_statement', 'description', 'location', 'frequency_of_occurrence', 'evidence', 'initial_impact'];
+                // Project level fields
+                const projectKeys = ['title', 'category', 'department'];
+                const payload = {};
+
+                keys.forEach(k => {
+                    const el = document.getElementById(`edit_${k}`);
+                    if (el) payload[k] = el.value;
+                });
+
+                projectKeys.forEach(k => {
+                    const el = document.getElementById(`edit_${k}`);
+                    if (el) payload[k] = el.value;
+                });
+
+                try {
+                    await api.post(`/projects/${this.projectId}/stage/1`, payload);
+                    QCMS.toast('Identification updated successfully', 'success');
+                    // Refresh project to update header
+                    await this.loadProject();
+                    this.toggleEditMode(false);
+                } catch (e) {
+                    QCMS.toast(e.message || 'Update failed', 'danger');
+                }
+            },
+
+            async approveImpact() {
+                if (!confirm('Are you sure you want to approve the final results and mark this project for closure?')) return;
+                try {
+                    const res = await api.post(`/api/facilitator/impact/${this.projectId}/approve`);
+                    QCMS.toast(res.msg, 'success');
+                    this.loadProject();
+                } catch (err) {
+                    QCMS.toast(err.message, 'error');
+                }
+            },
 
             async loadActivity() {
                 const log = document.getElementById('activityLog');
@@ -476,7 +771,7 @@
                 const body = document.getElementById('modalBody');
                 document.getElementById('modalTitle').textContent = `Update Stage ${num}`;
                 const saveBtn = document.getElementById('saveStageBtn');
-                
+
                 if (autoAdvance) {
                     saveBtn.innerHTML = '<i data-lucide="check-circle-2" class="w-3 h-3 mr-1"></i> Save & Advance';
                     saveBtn.className = 'ds-btn ds-btn-primary';
@@ -581,44 +876,61 @@
                 inputs.forEach(i => payload[i.id.replace('form_', '')] = i.value);
 
                 try {
-                    // Submit to workflow engine
-                    await api.post(`/workflow/${this.projectId}/stage/${this.viewingStage}`, payload);
-                    QCMS.toast('Data saved successfully', 'success');
-                    this.modal.hide();
+                    // Check if it's a submission or just a save
+                    const isSubmit = this._autoAdvance;
+                    const finalPayload = { ...payload };
+                    if (isSubmit) finalPayload.action = 'submit';
                     
-                    if (this._autoAdvance) {
-                        this._autoAdvance = false;
+                    await api.post(`/projects/${this.projectId}/stage/${this.viewingStage}`, finalPayload);
+                    
+                    if (isSubmit) {
+                        this.modal.hide();
+                        // If it's the current stage, attempt to advance
                         if (Number(this.viewingStage) === Number(this.currentStage)) {
-                            await this.advance(true); // pass true to skip confirmation if already clicked
+                            await this.advance(true); 
                         } else {
-                            QCMS.toast('Past data saved. Project stage remains unchanged.', 'info');
-                            setTimeout(() => window.location.reload(), 1500);
+                            QCMS.toast('Historical data submitted. Project stage remains unchanged.', 'info');
+                            this.viewStage(this.viewingStage);
                         }
                     } else {
+                        QCMS.toast('Progress saved successfully', 'success');
                         this.viewStage(this.viewingStage);
                         this.loadActivity();
                     }
-                } catch (e) { QCMS.toast(e?.message || 'Submission failed', 'danger'); }
+                } catch (e) { 
+                    QCMS.toast(e?.msg || e?.message || 'Update failed', 'danger'); 
+                } finally {
+                    this._autoAdvance = false;
+                }
             },
 
             async advance(skipConfirm = false) {
-                if (this.currentStage >= 8) {
-                    QCMS.toast('Project is in the final stage (8). Awaiting Facilitator closure.', 'info');
+                const nextNum = Number(this.currentStage) + 1;
+                
+                if (nextNum > 8) {
+                    QCMS.toast('Project has reached the final workflow stage (Stage 8).', 'info');
                     return;
                 }
-                if (!skipConfirm && !confirm(`Are you sure you want to advance to Stage ${this.currentStage + 1}?`)) return;
+                
+                if (!skipConfirm && !confirm(`Advance to Stage ${nextNum}? This will verify all mandatory approvals and validations.`)) return;
+                
                 try {
-                    if (this.currentStage === 7) {
-                        // Stage 7 → Submit for Reviewer Approval
-                        await api.post(`/workflow/${this.projectId}/submit-for-review`);
-                        QCMS.toast('Submitted for Reviewer Approval!', 'success');
-                    } else {
-                        await api.post(`/workflow/projects/${this.projectId}/transitions`, { stage: this.currentStage + 1 });
-                        QCMS.toast('Project advanced!', 'success');
-                    }
-                    this.loadProject();
-                    this.loadActivity();
-                } catch (e) { QCMS.toast('Transition failed: ' + (e.message || e.msg || 'Unknown error'), 'danger'); }
+                    QCMS.toast(`Verifying Stage ${nextNum} requirements...`, 'info', 2000);
+                    
+                    const res = await api.post(`/workflow/projects/${this.projectId}/transitions`, {
+                        stage: nextNum
+                    });
+                    
+                    QCMS.toast(res.msg || `Successfully advanced to Stage ${nextNum}`, 'success');
+                    
+                    // Reload to get updated state
+                    await this.loadProject();
+                } catch (e) { 
+                    // Enhanced error reporting for workflow gates
+                    const msg = e?.message || e?.msg || 'Transition failed';
+                    console.error('Workflow Transition Error:', e);
+                    QCMS.toast(msg, 'warning', 6000); 
+                }
             }
         };
 
