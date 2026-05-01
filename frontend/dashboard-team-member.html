@@ -161,24 +161,6 @@
             projects: [],
 
             async init() {
-                const userStr = localStorage.getItem('user');
-                if (userStr) {
-                    const user = JSON.parse(userStr);
-                    if (user.role !== 'Team Member') {
-                        const dashboards = {
-                            'Admin': 'dashboard-admin.html',
-                            'Team Leader': 'dashboard-team-leader.html',
-                            'Facilitator': 'dashboard-facilitator.html',
-                            'Reviewer': 'dashboard-reviewer.html'
-                        };
-                        window.location.href = dashboards[user.role] || 'login.html';
-                        return;
-                    }
-                } else {
-                    window.location.href = 'login.html';
-                    return;
-                }
-
                 if (typeof QCMS !== 'undefined' && QCMS.init) QCMS.init();
 
                 this.loadProjects();

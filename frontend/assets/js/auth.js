@@ -135,9 +135,9 @@ function handleStaticRedirects() {
     }
 }
 
-// Run checks
-checkAuth();
-handleStaticRedirects();
+// Run checks — Now handled primarily by auth-guard.js
+// checkAuth();
+// handleStaticRedirects();
 
 function togglePassword(inputId, icon) {
     const input = document.getElementById(inputId);

@@ -1,16 +1,30 @@
 (function () {
     const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
     let userRole = null;
-    try {
-        const user = JSON.parse(localStorage.getItem('user'));
-        userRole = user ? user.role : null;
-    } catch (e) {
-        console.error('Error parsing user data:', e);
+
+    if (token) {
+        try {
+            const user = JSON.parse(userStr);
+            if (user && user.role) {
+                userRole = user.role;
+            } else {
+                // Token exists but user data is missing or corrupt
+                throw new Error('Invalid user data');
+            }
+        } catch (e) {
+            console.warn('Auth state corrupt. Clearing session...');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.replace('login.html');
+            return;
+        }
     }
 
     const path = window.location.pathname;
+    const page = path.split('/').pop() || 'index.html';
 
-    // pages that DON'T need protection
+    // Pages that DON'T need protection
     const publicPages = [
         'index.html',
         'login.html',
@@ -20,11 +34,10 @@
         'reset-password.html'
     ];
 
-    const isPublic = publicPages.some(page => path.includes(page)) || path === '/' || path.endsWith('/');
-    const isAuthPage = path.includes('login.html') || path.includes('index.html') || path.includes('dashboard.html') || path === '/' || path.endsWith('/');
+    const isPublic = publicPages.includes(page) || path === '/' || path.endsWith('/');
+    const isAuthPage = ['login.html', 'index.html', 'dashboard.html'].includes(page) || path === '/' || path.endsWith('/');
 
     if (!token && !isPublic) {
-        // Not logged in and trying to access protected page
         console.log('Access denied. Redirecting to login...');
         window.location.replace('login.html');
         return;
@@ -32,16 +45,14 @@
 
     if (token) {
         if (isAuthPage) {
-            // Already logged in and trying to access login/index/dashboard
-            console.log('Already logged in or on landing. Redirecting to role dashboard...');
+            console.log('Already logged in. Redirecting to role dashboard...');
             redirectByRole(userRole);
-        } else if (path.includes('dashboard-')) {
-            // Strict role-dashboard check
-            validateDashboardAccess(userRole, path);
+        } else if (page.startsWith('dashboard-')) {
+            validateDashboardAccess(userRole, page);
         }
     }
 
-    function validateDashboardAccess(role, currentPath) {
+    function validateDashboardAccess(role, currentPage) {
         const dashboardMap = {
             'Admin': 'dashboard-admin.html',
             'Reviewer': 'dashboard-reviewer.html',
@@ -51,23 +62,22 @@
         };
 
         const expectedDashboard = dashboardMap[role] || 'dashboard-team-member.html';
-        if (!currentPath.includes(expectedDashboard)) {
-            console.warn(`Role ${role} unauthorized for ${currentPath}. Redirecting to ${expectedDashboard}`);
+        if (currentPage !== expectedDashboard) {
+            console.warn(`Role ${role} unauthorized for ${currentPage}. Redirecting to ${expectedDashboard}`);
             window.location.replace(expectedDashboard);
         }
     }
 
     function redirectByRole(role) {
-        let dashboard = 'dashboard-team-member.html';
-        switch (role) {
-            case 'Admin': dashboard = 'dashboard-admin.html'; break;
-            case 'Facilitator': dashboard = 'dashboard-facilitator.html'; break;
-            case 'Reviewer': dashboard = 'dashboard-reviewer.html'; break;
-            case 'Team Leader': dashboard = 'dashboard-team-leader.html'; break;
-            case 'Team Member': dashboard = 'dashboard-team-member.html'; break;
-        }
-
-        if (!path.includes(dashboard)) {
+        const dashboardMap = {
+            'Admin': 'dashboard-admin.html',
+            'Reviewer': 'dashboard-reviewer.html',
+            'Facilitator': 'dashboard-facilitator.html',
+            'Team Leader': 'dashboard-team-leader.html',
+            'Team Member': 'dashboard-team-member.html'
+        };
+        const dashboard = dashboardMap[role] || 'dashboard-team-member.html';
+        if (page !== dashboard) {
             window.location.replace(dashboard);
         }
     }
@@ -78,7 +88,8 @@
         sessionStorage.clear();
         window.location.replace('login.html');
     };
-    // Force check on back/forward navigation (bfcache)
+
+    // Force check on back/forward navigation
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
             window.location.reload();
