@@ -1,116 +1,153 @@
-# QCMS – Quality & Continuous Improvement Management System
+# QCMS Enterprise
 
-A high-performance, enterprise-grade SaaS platform designed for structured problem-solving (8D/Six Sigma) and continuous improvement within industrial and corporate environments.
+QCMS Enterprise is a Flask-based quality management system for structured problem solving, project tracking, approvals, and knowledge capture. The workspace contains a Flask backend, a static HTML/CSS/JavaScript frontend, and PostgreSQL-backed persistence.
 
----
+## Overview
 
-## 🏗️ System Architecture
+The application centers on an 8-stage workflow used to move projects from problem definition through analysis, approval, implementation, verification, and standardization. Role-based access controls cover Admin, Reviewer, Facilitator, Team Leader, and Team Member workflows.
 
 ```mermaid
 graph TD
-    subgraph Frontend
-        LB[login.html] --> DA[Dashboard Admin]
-        DA --> PR[Projects Repository]
-        DA --> US[User Management]
-        DA --> WS[Project Workspace]
-    end
-
-    subgraph Backend
-        API[Flask REST API] --> AUTH[JWT Auth Middleware]
-        AUTH --> RBAC[RBAC Service]
-        RBAC --> WF[8-Stage Workflow Engine]
-        RBAC --> KPI[KPI Calculation Engine]
-    end
-
-    subgraph Database
-        DB[(PostgreSQL)]
-    end
-
-    Frontend -- REST API --> Backend
-    Backend -- SQLAlchemy --> Database
+    U[Browser UI] --> F[Frontend HTML/CSS/JS]
+    F --> B[Flask App]
+    B --> A[JWT + RBAC + Workflow APIs]
+    A --> D[(PostgreSQL)]
 ```
 
----
+## Repository Layout
 
-## 🌟 Core Modules & Features
+```text
+.
+├── backend/        # Flask API, models, migrations/helpers, scripts
+├── frontend/       # Static web app served by Nginx or Flask
+├── API_DOCUMENTATION.md
+├── README.md
+└── docker-compose.yml
+```
 
-### 1. 8-Stage Workflow Engine
-A rigid, sequential problem-solving process that ensures data integrity and adherence to quality standards:
-- **Stage 1: Problem Definition** (Problem statement, evidence)
-- **Stage 2: Data Collection** (Baseline KPIs, raw data)
-- **Stage 3: Root Cause Analysis** (Fishbone, 5-Why, Pareto)
-- **Stage 4: Solution Planning** (ROI, resource planning)
-- **Stage 5: Review & Approval** (Independent Reviewer sign-off)
-- **Stage 6: Implementation** (Execution tracking)
-- **Stage 7: Impact Verification** (Final KPI vs. Baseline)
-- **Stage 8: Standardization** (SOP, lessons learned)
+## Features
 
-### 2. Enterprise RBAC System
-Granular permissions for five distinct roles:
-- **Admin**: Full system control, organization settings, user orchestration.
-- **Reviewer**: Quality gatekeeper, approves/rejects project stage transitions.
-- **Facilitator**: Methodological guide, validates RCA and Impact data.
-- **Team Leader**: Project owner, manages team members and stage execution.
-- **Team Member**: Contributor, updates task data and execution notes.
+- 8-stage project workflow with stage tracking and approval gates.
+- Role-based dashboards for Admin, Reviewer, Facilitator, Team Leader, and Team Member.
+- Project, department, repository, analytics, and audit-style views.
+- Email support via Resend for verification and notifications.
+- PDF and spreadsheet report generation in the backend utilities.
 
-### 3. KPI & Analytics Engine
-Real-time tracking of organizational performance:
-- **Financial**: Total Cost Savings (Project-level & Org-level).
-- **Operational**: Productivity Gains, Success Rate, Quality Index.
-- **Safety**: Dedicated safety score tracking for industrial projects.
+## Tech Stack
 
-### 4. Interactive QC Tools
-Built-in charting and data visualization using `Chart.js`:
-- **Pareto Charts** for prioritizing issues.
-- **Fishbone Diagrams** for root cause mapping.
-- **Trend Lines** for KPI monitoring.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technologies |
+| Layer | Stack |
 | :--- | :--- |
-| **Frontend** | Vanilla HTML5, CSS3 (Glassmorphism), ES6 JavaScript, Google Fonts |
-| **Backend** | Python 3.10+, Flask, SQLAlchemy, JWT, Bcrypt |
-| **Database** | PostgreSQL (Neon Serverless / Local Docker) |
-| **DevOps** | Docker, Docker Compose, Nginx (In Production) |
-| **Utilities** | Chart.js, Mermaid.js, jsPDF (Reporting) |
+| Frontend | HTML5, CSS3, Vanilla JavaScript |
+| Backend | Python 3.10+, Flask, SQLAlchemy, Flask-JWT-Extended, Flask-Bcrypt, Flask-CORS |
+| Database | PostgreSQL |
+| Deployment | Docker, Docker Compose, Nginx |
+| Reporting | pandas, openpyxl, fpdf2 |
 
----
+## Requirements
 
-## 🚀 Rapid Deployment
+- Python 3.10 or newer.
+- PostgreSQL if you are running the backend outside Docker.
+- Docker and Docker Compose if you want the full stack locally.
 
-### Docker Setup (Recommended)
-The fastest way to get QCMS running locally:
+## Quick Start
+
+### Docker Compose
+
+This is the fastest way to run the full system.
+
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/qcms-v2.git
-cd qcms-v2
-
-# Start all services
 docker-compose up --build
 ```
-- **Login**: `http://localhost:80`
-- **API**: `http://localhost:5000`
-- **Default Credentials**: `admin` / `admin123`
 
-### Manual Backend Setup
+Services exposed by the compose file:
+
+- Frontend: `http://localhost:80`
+- Backend API: `http://localhost:5000`
+
+### Manual Backend Run
+
 ```bash
 cd backend
 pip install -r requirements.txt
-python setup_db.py  # Initialize schema and seed roles
-python run.py      # Start Flask development server
+python setup_db.py
+python run.py
 ```
 
----
+The backend bootstrap will create missing tables and seed the default roles. The setup script also creates an initial admin account if one does not already exist.
 
-## 📄 Documentation Links
+### Default Credentials
+
+The seeded admin account uses:
+
+- Username: `admin`
+- Password: `admin123`
+
+Change these immediately after first login.
+
+## Environment Variables
+
+The backend reads its configuration from `backend/.env`. The main values used by the app are:
+
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `FLASK_APP`
+- `FLASK_ENV`
+- `PORT`
+
+Example database format:
+
+```text
+DATABASE_URL=postgresql://user:password@host:5432/database_name
+```
+
+## Key Entry Points
+
+- Backend app factory and route registration: [backend/app/__init__.py](backend/app/__init__.py)
+- Backend development runner: [backend/run.py](backend/run.py)
+- Database bootstrap and role seeding: [backend/setup_db.py](backend/setup_db.py)
+- Frontend landing page: [frontend/index.html](frontend/index.html)
+- API reference: [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
+
+## Frontend Pages
+
+The static frontend includes pages for:
+
+- Authentication: login, register, forgot/reset password
+- Dashboards: admin, reviewer, facilitator, team leader, team member
+- Projects: workspace, details, repository
+- Admin flows: users, departments, settings, audit queue, audit logs
+- Knowledge views: repository, standards, analytics, profile pages
+
+## Backend API Surface
+
+The Flask app registers the following major API groups:
+
+- `/api/auth`
+- `/api/projects`
+- `/api/workflow`
+- `/api/analytics`
+- `/api/admin`
+- `/api/facilitator`
+- `/api/reviewer`
+- `/api/team-leader`
+- `/api/team-member`
+- `/api/project`
+- `/api/dashboard`
+- `/api/repository`
+
+## Notes
+
+- The backend serves the frontend static files directly when run through Flask.
+- `docker-compose.yml` also defines a separate Nginx frontend container.
+- Uploaded files are served from the backend `uploads/` directory.
+
+## More Documentation
+
+- [Backend Developer Guide](backend/README.md)
 - [Frontend Developer Guide](frontend/README.md)
-- [Backend API Guide](backend/README.md)
 - [API Documentation](API_DOCUMENTATION.md)
-
----
 
 
 
