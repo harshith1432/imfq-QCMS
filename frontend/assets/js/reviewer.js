@@ -123,6 +123,24 @@ const reviewer = {
         window.addEventListener('qcms-global-search', (e) => {
             this.filterAuditQueue(e.detail.query);
         });
+
+        // Check if user is Admin, and update UI accordingly
+        try {
+            const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+            if (currentUser.role === 'Admin') {
+                const badgeEl = document.querySelector('.ds-badge.orange.text-xs');
+                if (badgeEl) {
+                    badgeEl.textContent = 'Stage 8 Closure Review';
+                    badgeEl.className = 'ds-badge green text-xs';
+                }
+                const subtitleEl = document.querySelector('.ds-text-secondary');
+                if (subtitleEl) {
+                    subtitleEl.textContent = 'Review completed projects and authorize final administrative closure.';
+                }
+            }
+        } catch (e) {
+            console.error("Failed to parse user role for UI updates", e);
+        }
     },
 
     async fetchAuditStats() {
@@ -227,7 +245,7 @@ const reviewer = {
         }
     },
 
-    openReview(id) {
+    async openReview(id, showStageNum = null) {
         this.selectedProposalId = id;
         const project = this.pendingAudits.find(a => a.project_id === id);
         
@@ -239,52 +257,231 @@ const reviewer = {
 
         const modal = new bootstrap.Modal(modalEl);
         
-        // Show loading state
-        document.getElementById('proposalDetailView').innerHTML = `
-            <div class="text-center p-5">
-                <div class="spinner-grow text-primary" role="status"></div>
-                <p class="mt-3 text-secondary">Fetching context...</p>
-            </div>
-        `;
-        
-        // Fetch detailed project context
+        // Show loading state if it is the first load
+        if (!project.all_workflows) {
+            document.getElementById('proposalDetailView').innerHTML = `
+                <div class="text-center p-5">
+                    <div class="spinner-grow text-primary" role="status"></div>
+                    <p class="mt-3 text-secondary">Fetching context...</p>
+                </div>
+            `;
+            try {
+                const projectDetails = await api.get('/projects/' + id);
+                project.all_workflows = projectDetails.workflows || [];
+            } catch (e) {
+                console.error("Failed to load project details for review history", e);
+                project.all_workflows = [];
+            }
+        }
+
+        const activeStage = showStageNum || project.pending_stage;
+
         api.get(`/reviewer/pending`).then(allPending => {
             const data = allPending.find(p => p.project_id === id);
             if (!data) throw new Error("Project not found in pending list");
 
-            document.getElementById('proposalDetailView').innerHTML = `
-                <div class="v-stack gap-4">
-                    <header class="reviewer-header p-3 glass-panel rounded-3 mb-2" style="background: rgba(var(--ds-primary-rgb), 0.05);">
-                        <h5 class="fw-bold mb-1">${data.title}</h5>
-                        <div class="text-secondary text-sm">${data.department} | Submitted ${QCMS.formatRelative(data.submitted_at)}</div>
-                    </header>
+            // Extract the active stage's data
+            let d = {};
+            if (activeStage === data.pending_stage) {
+                d = data.stage_data || {};
+            } else {
+                const wf = project.all_workflows.find(w => w.stage_id === activeStage);
+                d = wf ? { data: wf.data } : {};
+            }
 
-                    <section class="review-context-section">
-                        <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Goal & Problem Statement</h6>
-                        <div class="p-3 border rounded-3 bg-light text-sm">${data.problem_statement || 'No problem statement provided.'}</div>
-                    </section>
-
-                    <section class="review-context-section">
-                        <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Root Cause Analysis</h6>
-                        <div class="p-3 border rounded-3 bg-light text-sm">${data.root_cause_summary || 'No root cause summary provided.'}</div>
-                    </section>
-
-                    <section class="review-context-section">
-                        <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Proposed Solution & ROI</h6>
-                        <div class="p-3 border rounded-3 bg-light text-sm mb-3">${data.solution || 'No solution details provided.'}</div>
-                        <div class="h-stack gap-4">
-                            <div class="kpi-stat">
-                                <div class="text-xs text-muted mb-1">Est. Cost</div>
-                                <div class="fw-bold text-primary">₹${(data.estimated_cost || 0).toLocaleString()}</div>
-                            </div>
-                            <div class="kpi-stat">
-                                <div class="text-xs text-muted mb-1">Target Action</div>
-                                <div class="fw-bold text-success">Stage 8 Transition</div>
-                            </div>
+            // Build the stage tabs navigation
+            let stageTabs = '';
+            if (project.all_workflows && project.all_workflows.length > 0) {
+                stageTabs = `
+                    <div class="mb-4">
+                        <div class="text-xs text-muted fw-bold mb-2 uppercase tracking-wider">Project Stage History</div>
+                        <div class="d-flex flex-wrap gap-1.5 p-1.5 rounded-3" style="border: 1px solid rgba(0,0,0,0.08); background: rgba(0,0,0,0.03);">
+                            ${[1, 2, 3, 4, 5, 6, 7, 8].map(sNum => {
+                                const isCurrentPending = (sNum === data.pending_stage);
+                                const isActive = (sNum === activeStage);
+                                const hasData = project.all_workflows.some(w => w.stage_id === sNum) || sNum === data.pending_stage;
+                                
+                                let btnClass = 'ds-btn ds-btn-sm ';
+                                if (isActive) {
+                                    btnClass += 'ds-btn-primary';
+                                } else if (isCurrentPending) {
+                                    btnClass += 'ds-btn-outline border-warning text-warning';
+                                } else if (hasData) {
+                                    btnClass += 'ds-btn-outline border-secondary text-secondary';
+                                } else {
+                                    btnClass += 'ds-btn-ghost text-muted opacity-50';
+                                }
+                                
+                                let label = `Stage ${sNum}`;
+                                if (isCurrentPending) {
+                                    label += ' ⚠️';
+                                }
+                                
+                                return `<button type="button" class="${btnClass} py-1 px-2.5" ${hasData ? `onclick="reviewer.openReview(${data.project_id}, ${sNum})"` : 'disabled'} style="font-size: 0.72rem; border-radius: 6px;">
+                                    ${label}
+                                </button>`;
+                            }).join('')}
                         </div>
-                    </section>
-                </div>
+                    </div>
+                `;
+            }
+
+            let detailHtml = '';
+            
+            let headerHtml = `
+                <header class="reviewer-header p-3 glass-panel rounded-3 mb-2" style="background: rgba(var(--ds-primary-rgb), 0.05);">
+                    <h5 class="fw-bold mb-1">${data.title}</h5>
+                    <div class="text-secondary text-sm">${data.department} | Viewing Stage ${activeStage}</div>
+                </header>
+                ${stageTabs}
             `;
+
+            if (activeStage === 8) {
+                detailHtml = `
+                    <div class="v-stack gap-4">
+                        ${headerHtml}
+                        <section class="review-context-section">
+                            <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Lessons Learned</h6>
+                            <div class="p-3 border rounded-3 bg-light text-sm">${d.lessons_learned || (d.data && d.data.lessons_learned) || 'No lessons learned recorded.'}</div>
+                        </section>
+
+                        <section class="review-context-section">
+                            <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Preventive Actions</h6>
+                            <div class="p-3 border rounded-3 bg-light text-sm">${d.preventive_actions || (d.data && d.data.preventive_actions) || 'No preventive actions recorded.'}</div>
+                        </section>
+
+                        <section class="review-context-section">
+                            <div class="h-stack gap-4">
+                                <div class="kpi-stat">
+                                    <div class="text-xs text-muted mb-1">Target Action</div>
+                                    <div class="fw-bold text-success">Project Closure & Archiving</div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                `;
+            } else if (activeStage === 2) {
+                const s2 = d.data || {};
+                const po = s2.process_observation || {};
+                const cs = s2.current_state || {};
+                const files = cs.media_files || [];
+                
+                let filesHtml = '';
+                if (files.length === 0) {
+                    filesHtml = '<div class="text-xs text-muted">No files uploaded.</div>';
+                } else {
+                    filesHtml = files.map(f => {
+                        const isImage = /\.(jpg|jpeg|png|gif)$/i.test(f.url);
+                        const isVideo = /\.(mp4|webm|mov|avi|mkv)$/i.test(f.url);
+                        let icon = 'file-text';
+                        if (isImage) icon = 'image';
+                        else if (isVideo) icon = 'video';
+                        
+                        return `
+                            <div class="h-stack justify-content-between p-2 rounded border bg-light mb-1" style="font-size:0.78rem;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i data-lucide="${icon}" style="width:14px;height:14px;color:var(--ds-primary);"></i>
+                                    <span class="fw-medium">${f.name}</span>
+                                </div>
+                                <a href="${f.url}" target="_blank" class="ds-btn ds-btn-sm py-1 px-2 text-xs" style="background:var(--ds-primary);color:#fff;border-radius:6px;height:26px;display:inline-flex;align-items:center;">
+                                    <i data-lucide="external-link" style="width:11px;height:11px;margin-right:3px;"></i>View
+                                </a>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                let linksHtml = '';
+                if (cs.video_link || cs.drive_link) {
+                    linksHtml = `
+                        <div class="row g-2 mt-2">
+                            ${cs.video_link ? `
+                                <div class="col-6">
+                                    <a href="${cs.video_link}" target="_blank" class="ds-btn ds-btn-outline w-100 py-2 text-xs text-center justify-content-center" style="border-radius:8px;height:34px;display:inline-flex;align-items:center;">
+                                        <i data-lucide="video" class="me-1" style="width:13px;height:13px;"></i> Open Video Link
+                                    </a>
+                                </div>
+                            ` : ''}
+                            ${cs.drive_link ? `
+                                <div class="col-6">
+                                    <a href="${cs.drive_link}" target="_blank" class="ds-btn ds-btn-outline w-100 py-2 text-xs text-center justify-content-center" style="border-radius:8px;height:34px;display:inline-flex;align-items:center;">
+                                        <i data-lucide="external-link" class="me-1" style="width:13px;height:13px;"></i> Open Google Drive
+                                    </a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                detailHtml = `
+                    <div class="v-stack gap-4">
+                        ${headerHtml}
+                        <section class="review-context-section">
+                            <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-2">Process Observation &amp; Findings</h6>
+                            <div class="p-3 border rounded-3 bg-light text-xs">
+                                <div><strong>Observer:</strong> ${po.observer || 'N/A'} | <strong>Area:</strong> ${po.area || 'N/A'}</div>
+                                <div class="mt-1"><strong>Finding:</strong> <span class="badge bg-warning text-dark text-xxs" style="font-size:0.6rem;padding:3px 6px;">${po.finding_type || 'N/A'}</span> (${po.finding_severity || 'N/A'})</div>
+                                <div class="mt-2 border-top pt-2" style="white-space:pre-line;">${po.finding_desc || 'No details provided.'}</div>
+                            </div>
+                        </section>
+
+                        <section class="review-context-section">
+                            <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-2">Current State Metrics</h6>
+                            <div class="p-3 border rounded-3 bg-light text-xs" style="white-space:pre-line;">${cs.metrics || 'No baseline metrics provided.'}</div>
+                        </section>
+
+                        <section class="review-context-section">
+                            <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-2">Current State Evidence (Files &amp; Links)</h6>
+                            <div class="p-3 border rounded-3 bg-white">
+                                ${filesHtml}
+                                ${linksHtml}
+                            </div>
+                        </section>
+                    </div>
+                `;
+            } else {
+                detailHtml = `
+                    <div class="v-stack gap-4">
+                        ${headerHtml}
+                        <section class="review-context-section">
+                            <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Goal & Problem Statement</h6>
+                            <div class="p-3 border rounded-3 bg-light text-sm">${d.problem_statement || (d.data && d.data.problem_statement) || 'No problem statement provided.'}</div>
+                        </section>
+
+                        <section class="review-context-section">
+                            <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Root Cause Analysis</h6>
+                            <div class="p-3 border rounded-3 bg-light text-sm">${d.root_cause_summary || (d.data && d.data.root_cause_summary) || 'No root cause summary provided.'}</div>
+                        </section>
+
+                        <section class="review-context-section">
+                            <h6 class="ds-text-tertiary text-xs fw-bold text-uppercase mb-3">Proposed Solution & ROI</h6>
+                            <div class="p-3 border rounded-3 bg-light text-sm mb-3">${d.solution || (d.data && d.data.solution) || 'No solution details provided.'}</div>
+                            <div class="h-stack gap-4">
+                                <div class="kpi-stat">
+                                    <div class="text-xs text-muted mb-1">Est. Cost</div>
+                                    <div class="fw-bold text-primary">₹${(data.estimated_cost || 0).toLocaleString()}</div>
+                                </div>
+                                <div class="kpi-stat">
+                                    <div class="text-xs text-muted mb-1">Target Action</div>
+                                    <div class="fw-bold text-success">Stage 8 Transition</div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                `;
+            }
+            document.getElementById('proposalDetailView').innerHTML = detailHtml;
+
+            // Update button label
+            const btnApprove = document.getElementById('btn-approve');
+            if (btnApprove) {
+                if (data.pending_stage === 8) {
+                    btnApprove.innerHTML = `<i data-lucide="check-circle" class="me-2 text-sm"></i> Close Project`;
+                } else {
+                    btnApprove.innerHTML = `<i data-lucide="check-circle" class="me-2 text-sm"></i> Approve Transition`;
+                }
+                if (window.lucide) lucide.createIcons();
+            }
         }).catch(err => {
             console.error(err);
             document.getElementById('proposalDetailView').innerHTML = '<p class="text-danger p-4">Failed to load detailed context. Please try again.</p>';
@@ -309,10 +506,14 @@ const reviewer = {
 
         try {
             QCMS.setLoading('btn-approve', true);
+            const audit = this.pendingAudits.find(a => a.project_id === this.selectedProposalId);
+            const pendingStage = audit ? audit.pending_stage : 1;
+
             const result = await api.post(`/reviewer/decision`, {
                 project_id: this.selectedProposalId,
                 decision: decision,
-                comments: comments || "Approved"
+                comments: comments || "Approved",
+                pending_stage: pendingStage
             });
             
             QCMS.toast(`Project ${decision} successfully.`, 'success');

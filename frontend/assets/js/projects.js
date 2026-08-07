@@ -18,7 +18,7 @@ async function loadProjects() {
                     </span>
                 </td>
                 <td class="text-right">
-                    <button class="btn btn-outline-sm" onclick="window.location.href='workspace.html?id=${p.id}'">
+                    <button class="btn btn-outline-sm" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">
                         Manage
                     </button>
                 </td>

@@ -50,11 +50,13 @@ const teamMember = {
 
     renderDashboard() {
         // Stats
-        const activeProjects = this.projects.filter(p => p.status !== 'Closed');
-        const completedProjects = this.projects.filter(p => p.status === 'Closed' || p.stage === 8);
+        const completed_statuses = ['Closed', 'Completed', 'Stage 8 Approved'];
+        const inactive_statuses = ['Rejected', 'Archived', 'Cancelled'];
+        const activeProjects = this.projects.filter(p => !completed_statuses.includes(p.status) && !inactive_statuses.includes(p.status) && (p.current_stage || p.stage || 1) < 8);
+        const completedProjects = this.projects.filter(p => completed_statuses.includes(p.status) || (p.current_stage || p.stage || 1) >= 8);
         
         // Members act on stages 1,2,3,6,7,8. Stages 4,5 are TL/Reviewer.
-        const actionItems = this.projects.filter(p => [1,2,3,6,7,8].includes(p.stage) && p.status !== 'Closed');
+        const actionItems = this.projects.filter(p => [1,2,3,6,7,8].includes(p.current_stage || p.stage) && !completed_statuses.includes(p.status) && !inactive_statuses.includes(p.status));
 
         document.getElementById('statActive').textContent = activeProjects.length;
         document.getElementById('statActionItems').textContent = actionItems.length;
@@ -72,7 +74,7 @@ const teamMember = {
                         <h6 class="mb-0">${p.title}</h6>
                         <small class="text-muted">Awaiting Input - Stage ${p.stage}</small>
                     </div>
-                    <button class="btn btn-sm btn-outline-success" onclick="window.location.href='workspace.html?id=${p.id}'">Open Workspace</button>
+                    <button class="btn btn-sm btn-outline-success" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">Open Workspace</button>
                 </li>
             `).join('');
         }
@@ -92,7 +94,7 @@ const teamMember = {
                     <div class="kanban-cards d-flex flex-column gap-2">
                         ${stageProjects.map(p => `
                             <div class="card shadow-sm border-0 p-2 cursor-pointer border-start border-3 ${[1,2,3,6,7,8].includes(p.stage) ? 'border-success' : 'border-secondary'}" 
-                                 onclick="window.location.href='workspace.html?id=${p.id}'">
+                                 onclick="window.location.href='/projects/project-details.html?id=${p.id}'">
                                 <div class="small fw-bold text-truncate" title="${p.title}">${p.title}</div>
                                 <div class="text-muted" style="font-size:0.7rem;">${p.uid}</div>
                             </div>
@@ -117,7 +119,7 @@ const teamMember = {
                 <td><span class="badge bg-success bg-opacity-10 text-success">Stage ${p.stage}</span></td>
                 <td>${p.status}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="window.location.href='workspace.html?id=${p.id}'">
+                    <button class="btn btn-sm btn-primary" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">
                         Workspace
                     </button>
                 </td>

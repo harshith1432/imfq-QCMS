@@ -11,6 +11,9 @@ def bootstrap_database():
     if not db_url:
         print("[QCMS] Error: DATABASE_URL not set. Skipping bootstrap.")
         return
+    if db_url.startswith('sqlite'):
+        print("[QCMS] SQLite database detected. Skipping bootstrap.")
+        return
 
     try:
         # Parse connection details

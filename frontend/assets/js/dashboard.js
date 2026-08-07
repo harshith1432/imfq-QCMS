@@ -1,6 +1,6 @@
 const dashboard = {
     init: async function() {
-        const userJson = localStorage.getItem('user');
+        const userJson = sessionStorage.getItem('user');
         if (!userJson) {
             window.location.href = 'login.html';
             return;
@@ -77,7 +77,7 @@ const dashboard = {
                     <td><span class="status-pill ${p.status.toLowerCase().replace(' ', '-')}">${p.status}</span></td>
                     <td class="font-mono text-success">₹${(p.financial_impact || 0).toLocaleString()}</td>
                     <td class="text-right">
-                        <button class="btn btn-secondary btn-sm" onclick="window.location.href='workspace.html?id=${p.id}'">
+                        <button class="btn btn-secondary btn-sm" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">
                             <i data-lucide="external-link"></i> Open
                         </button>
                     </td>

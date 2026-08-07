@@ -1,0 +1,1251 @@
+{
+  "phase1_structure": [],
+  "phase2_quality": [],
+  "phase3_logic": [],
+  "phase4_frontend": [
+    {
+      "file": "frontend\\admin\\departments.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'deptManager.openAddModal()'",
+      "cause": "Root object 'deptManager' is not defined in any loaded JS file.",
+      "fix": "Define 'deptManager' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\departments.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'deptManager.save()'",
+      "cause": "Root object 'deptManager' is not defined in any loaded JS file.",
+      "fix": "Define 'deptManager' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\departments.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'deptManager.openEditModal(${d.id}, '",
+      "cause": "Root object 'deptManager' is not defined in any loaded JS file.",
+      "fix": "Define 'deptManager' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\departments.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'deptManager.delete(${d.id})'",
+      "cause": "Root object 'deptManager' is not defined in any loaded JS file.",
+      "fix": "Define 'deptManager' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\stage-template.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'moveStage(${i},-1); event.stopPropagation();'",
+      "cause": "Root object 'moveStage' is not defined in any loaded JS file.",
+      "fix": "Define 'moveStage' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\stage-template.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'moveStage(${i},+1); event.stopPropagation();'",
+      "cause": "Root object 'moveStage' is not defined in any loaded JS file.",
+      "fix": "Define 'moveStage' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\stage-template.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'deleteStage(${i}); event.stopPropagation();'",
+      "cause": "Root object 'deleteStage' is not defined in any loaded JS file.",
+      "fix": "Define 'deleteStage' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\stage-template.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'openToolPicker(${i})'",
+      "cause": "Root object 'openToolPicker' is not defined in any loaded JS file.",
+      "fix": "Define 'openToolPicker' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\stage-template.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'deleteSection(${i}, ${sIdx}); event.stopPropagation();'",
+      "cause": "Root object 'deleteSection' is not defined in any loaded JS file.",
+      "fix": "Define 'deleteSection' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\stage-template.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'deleteSubField(${i}, ${sIdx}, ${fIdx}); event.stopPropagation();'",
+      "cause": "Root object 'deleteSubField' is not defined in any loaded JS file.",
+      "fix": "Define 'deleteSubField' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\stage-template.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'openToolPicker(${i}, ${sIdx}); event.stopPropagation();'",
+      "cause": "Root object 'openToolPicker' is not defined in any loaded JS file.",
+      "fix": "Define 'openToolPicker' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\stage-template.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'deleteSection(${i}, ${sIdx})'",
+      "cause": "Root object 'deleteSection' is not defined in any loaded JS file.",
+      "fix": "Define 'deleteSection' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.refresh()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.exportCSV()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.openCreateWizard()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.clearSearch()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.resetFilters()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.bulkAction('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.bulkAction('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.bulkAction('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.exportSelectedCSV()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.bulkAction('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.clearSelection()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.toggleColumnVisibility()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.sort('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.sort('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.sort('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.sort('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.sort('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.sort('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.closeDrawer()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.closeDrawer()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goToStep(1)'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goToStep(2)'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goToStep(3)'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goToStep(4)'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goToStep(5)'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goToStep(6)'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.selectCycle('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.selectCycle('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.selectCycle('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.selectCycle('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.wizardPrev()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.wizardNext()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.submitWizard()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.confirmPlanChange()'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.openDrawer(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.openDrawer(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.openUpgradeModal(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.openDowngradeModal(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionRenew(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionExtend(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionPause(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionResume(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionConvertTrial(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionExtendTrial(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.generateInvoice(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.viewInvoices(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.sendReminder(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionCancel(${s.id});return false;'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goPage(${pg.page-1})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goPage(1)'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goPage(${i})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goPage(${pg.pages})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.goPage(${pg.page+1})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.useRecentSearch('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionRenew(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.openUpgradeModal(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.generateInvoice(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.sendReminder(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionPause(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionResume(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionConvertTrial(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.actionCancel(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.viewInvoices(${s.id})'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.previewInvoice(${JSON.stringify(i).replace(/'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.selectNewPlan('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.selectWizardPlan('",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\subscriptions.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'SubMgr.selectOrg(${o.id},'",
+      "cause": "Root object 'SubMgr' is not defined in any loaded JS file.",
+      "fix": "Define 'SubMgr' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\user-management.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'userMgmt.openAddModal()'",
+      "cause": "Root object 'userMgmt' is not defined in any loaded JS file.",
+      "fix": "Define 'userMgmt' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\user-management.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'userMgmt.saveUser()'",
+      "cause": "Root object 'userMgmt' is not defined in any loaded JS file.",
+      "fix": "Define 'userMgmt' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\user-management.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'userMgmt.openEditModal(${JSON.stringify(u).replace(/'",
+      "cause": "Root object 'userMgmt' is not defined in any loaded JS file.",
+      "fix": "Define 'userMgmt' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\admin\\user-management.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'userMgmt.toggleStatus(${u.id}, ${u.is_active})'",
+      "cause": "Root object 'userMgmt' is not defined in any loaded JS file.",
+      "fix": "Define 'userMgmt' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\auth\\profile.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'togglePasswordReset()'",
+      "cause": "Root object 'togglePasswordReset' is not defined in any loaded JS file.",
+      "fix": "Define 'togglePasswordReset' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\auth\\profile.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'togglePasswordReset()'",
+      "cause": "Root object 'togglePasswordReset' is not defined in any loaded JS file.",
+      "fix": "Define 'togglePasswordReset' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\auth\\profile.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'updateProfile()'",
+      "cause": "Root object 'updateProfile' is not defined in any loaded JS file.",
+      "fix": "Define 'updateProfile' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\auth\\register-org.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'sendOtp()'",
+      "cause": "Root object 'sendOtp' is not defined in any loaded JS file.",
+      "fix": "Define 'sendOtp' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\auth\\register-org.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'verifyOtp()'",
+      "cause": "Root object 'verifyOtp' is not defined in any loaded JS file.",
+      "fix": "Define 'verifyOtp' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.openAddUserModal()'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.rejectProject()'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.confirmClose()'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.confirmRegenerateCredentials()'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.confirmDeleteUser(document.getElementById('",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.saveUserEdits()'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.saveQuickUser()'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.initProject()'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.openCloseModal(${p.id}, '",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.showEditModal(${p.id})'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.openCloseModal(${p.id}, '",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.confirmDelete(${p.id})'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.setPage(${this.currentPage - 1})'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.setPage(${p})'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.setPage(${this.currentPage + 1})'",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-admin.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'adminDash.autoSelectMember('",
+      "cause": "Root object 'adminDash' is not defined in any loaded JS file.",
+      "fix": "Define 'adminDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-facilitator.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'facDash.submitNote()'",
+      "cause": "Root object 'facDash' is not defined in any loaded JS file.",
+      "fix": "Define 'facDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-facilitator.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'facDash.submitValidation()'",
+      "cause": "Root object 'facDash' is not defined in any loaded JS file.",
+      "fix": "Define 'facDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-facilitator.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'facDash.openNoteModal(${p.id}, 5)'",
+      "cause": "Root object 'facDash' is not defined in any loaded JS file.",
+      "fix": "Define 'facDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-facilitator.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'facDash.openValidateModal(${p.id})'",
+      "cause": "Root object 'facDash' is not defined in any loaded JS file.",
+      "fix": "Define 'facDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-reviewer.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'revDash.submitNote()'",
+      "cause": "Root object 'revDash' is not defined in any loaded JS file.",
+      "fix": "Define 'revDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-reviewer.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'revDash.submitImpactApproval()'",
+      "cause": "Root object 'revDash' is not defined in any loaded JS file.",
+      "fix": "Define 'revDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-reviewer.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'revDash.submitClosure()'",
+      "cause": "Root object 'revDash' is not defined in any loaded JS file.",
+      "fix": "Define 'revDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-reviewer.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'revDash.openReview(${p.project_id})'",
+      "cause": "Root object 'revDash' is not defined in any loaded JS file.",
+      "fix": "Define 'revDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-reviewer.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'revDash.openNoteModal(${p.id}, 8)'",
+      "cause": "Root object 'revDash' is not defined in any loaded JS file.",
+      "fix": "Define 'revDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-reviewer.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'revDash.openApproveModal(${p.id})'",
+      "cause": "Root object 'revDash' is not defined in any loaded JS file.",
+      "fix": "Define 'revDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-reviewer.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'revDash.openClosureModal(${p.id})'",
+      "cause": "Root object 'revDash' is not defined in any loaded JS file.",
+      "fix": "Define 'revDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.switchTab('",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.switchTab('",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.setPipelineView('",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.setPipelineView('",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.openInitModal()'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.showWorkloadModal()'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.updateProject()'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.deleteProject()'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.initProject()'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.selectProject(${p.id}, this)'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.showGuidelines(${stage})'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.setPage(${this.currentPage - 1})'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.setPage(${p})'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.setPage(${this.currentPage + 1})'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.showEditModal(${p.id})'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.confirmDelete(${p.id})'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.showWorkloadModal(${m.id})'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.toggleWorkloadDetail(${m.id})'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\dashboard\\dashboard-team-member.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'tmDash.selectProject(${p.id}, this)'",
+      "cause": "Root object 'tmDash' is not defined in any loaded JS file.",
+      "fix": "Define 'tmDash' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\projects-repository.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'repoUI.openInitModal()'",
+      "cause": "Root object 'repoUI' is not defined in any loaded JS file.",
+      "fix": "Define 'repoUI' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\projects-repository.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'repoUI.loadData()'",
+      "cause": "Root object 'repoUI' is not defined in any loaded JS file.",
+      "fix": "Define 'repoUI' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\projects-repository.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'repoUI.openInitModal()'",
+      "cause": "Root object 'repoUI' is not defined in any loaded JS file.",
+      "fix": "Define 'repoUI' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\projects-repository.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'repoUI.initProject()'",
+      "cause": "Root object 'repoUI' is not defined in any loaded JS file.",
+      "fix": "Define 'repoUI' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\project_workspace.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'validateStage(2)'",
+      "cause": "Root object 'validateStage' is not defined in any loaded JS file.",
+      "fix": "Define 'validateStage' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\project_workspace.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'validateStage(5)'",
+      "cause": "Root object 'validateStage' is not defined in any loaded JS file.",
+      "fix": "Define 'validateStage' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\project_workspace.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'decideReview('",
+      "cause": "Root object 'decideReview' is not defined in any loaded JS file.",
+      "fix": "Define 'decideReview' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\project_workspace.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'decideReview('",
+      "cause": "Root object 'decideReview' is not defined in any loaded JS file.",
+      "fix": "Define 'decideReview' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\repository.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'repoApp.showTab('",
+      "cause": "Root object 'repoApp' is not defined in any loaded JS file.",
+      "fix": "Define 'repoApp' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\repository.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'repoApp.showTab('",
+      "cause": "Root object 'repoApp' is not defined in any loaded JS file.",
+      "fix": "Define 'repoApp' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\repository.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'repoApp.viewDetail(${p.id})'",
+      "cause": "Root object 'repoApp' is not defined in any loaded JS file.",
+      "fix": "Define 'repoApp' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\repository.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'repoApp.search(${i})'",
+      "cause": "Root object 'repoApp' is not defined in any loaded JS file.",
+      "fix": "Define 'repoApp' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\sop-deviation-analysis.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'goBack()'",
+      "cause": "Root object 'goBack' is not defined in any loaded JS file.",
+      "fix": "Define 'goBack' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\sop-deviation-analysis.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'goBack()'",
+      "cause": "Root object 'goBack' is not defined in any loaded JS file.",
+      "fix": "Define 'goBack' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\sop-deviation-analysis.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler 'saveDeviation()'",
+      "cause": "Root object 'saveDeviation' is not defined in any loaded JS file.",
+      "fix": "Define 'saveDeviation' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\workspace.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler '${canGoPrev ? `workspace.viewStage(${Number(num) - 1})` : '",
+      "cause": "Root object '${canGoPrev ? `workspace' is not defined in any loaded JS file.",
+      "fix": "Define '${canGoPrev ? `workspace' or include missing JS script tag in HTML."
+    },
+    {
+      "file": "frontend\\projects\\workspace.html",
+      "line": 1,
+      "severity": "Medium",
+      "issue": "Unresolved HTML Event Handler '${isCurrent ? '",
+      "cause": "Root object '${isCurrent ?' is not defined in any loaded JS file.",
+      "fix": "Define '${isCurrent ?' or include missing JS script tag in HTML."
+    }
+  ],
+  "phase5_backend": [],
+  "phase6_database": [],
+  "phase7_security": [
+    {
+      "file": "backend\\app\\config\\settings.py",
+      "line": 10,
+      "severity": "High",
+      "issue": "Hardcoded JWT Secret Fallback",
+      "cause": "Fallback secret string used if environment variable is unset.",
+      "fix": "Raise an exception or require JWT_SECRET_KEY to be set in production environment."
+    },
+    {
+      "file": "backend\\app\\presentation\\routes\\super_admin_routes.py",
+      "line": 801,
+      "severity": "High",
+      "issue": "Hardcoded JWT Secret Fallback",
+      "cause": "Fallback secret string used if environment variable is unset.",
+      "fix": "Raise an exception or require JWT_SECRET_KEY to be set in production environment."
+    }
+  ],
+  "phase8_performance": [],
+  "phase9_api": [],
+  "phase10_state": [],
+  "phase11_dependencies": [],
+  "phase12_design_system": [],
+  "phase13_rbac": [
+    {
+      "file": "backend\\app\\presentation\\routes\\team_member_routes.py",
+      "line": 74,
+      "severity": "High",
+      "issue": "Potentially Unprotected Route",
+      "cause": "Route contains mutating action without explicit auth/role decorator.",
+      "fix": "Enforce @jwt_required or role protection decorator."
+    }
+  ],
+  "phase14_error_handling": []
+}

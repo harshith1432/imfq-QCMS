@@ -25,6 +25,22 @@
     /* Needed for the shine effect */
 }
 
+/* --- Hidden Scrollbar Utilities --- */
+.hide-scrollbar,
+.no-scrollbar,
+.settings-sidebar-scroll {
+    -ms-overflow-style: none !important;  /* IE & Edge */
+    scrollbar-width: none !important;     /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
+.settings-sidebar-scroll::-webkit-scrollbar {
+    display: none !important;             /* Chrome, Safari, Opera */
+    width: 0 !important;
+    height: 0 !important;
+}
+
 .glass-card::before {
     content: '';
     position: absolute;
@@ -183,9 +199,17 @@
 }
 
 .sidebar-link.active {
-    background: var(--ds-accent);
-    color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, var(--ds-primary, #2563eb) 0%, #1d4ed8 100%) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+}
+
+.sidebar-link.active .link-icon,
+.sidebar-link.active [data-lucide],
+.sidebar-link.active svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
 }
 
 .sidebar-link .link-icon {
@@ -219,7 +243,7 @@
 .ds-textarea:focus,
 .ds-select:focus,
 .form-control:focus {
-    background: white !important;
+    background-color: white !important;
     border-color: var(--ds-primary) !important;
     box-shadow: 0 0 0 4px rgba(var(--ds-primary-rgb), 0.08) !important;
     outline: none !important;
@@ -255,19 +279,20 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 0.875rem 1.75rem;
+    gap: 8px;
+    padding: 0.75rem 1.25rem;
     border-radius: var(--ds-radius-md);
     font-size: 0.875rem;
     font-weight: 600;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: pointer;
     border: 1px solid transparent;
     text-decoration: none;
     position: relative;
-    overflow: hidden;
     white-space: nowrap;
     outline: none;
+    flex-shrink: 0;
+    max-width: 100%;
 }
 
 .ds-btn:active {
@@ -422,13 +447,13 @@
     max-width: 1600px;
     margin: 0 auto;
     /* Safe-Zone Padding: Responsive scaling with minimum 1.25rem to prevent border-touching */
-    padding: clamp(1.25rem, 5vw, var(--ds-space-12));
-    padding-top: var(--ds-space-8);
-    padding-bottom: var(--ds-space-12);
+    padding: clamp(1rem, 3vw, var(--ds-space-10));
+    padding-top: var(--ds-space-2) !important;
+    padding-bottom: var(--ds-space-8);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: var(--ds-space-8);
+    gap: var(--ds-space-4);
 }
 
 @media (max-width: 1024px) {
@@ -551,7 +576,7 @@
 }
 
 .section-spacing {
-    margin-bottom: var(--ds-space-8);
+    margin-bottom: var(--ds-space-4) !important;
 }
 
 .corporate-grid {
@@ -563,14 +588,87 @@
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--ds-space-6);
-    margin-bottom: var(--ds-space-8);
+    grid-template-columns: repeat(8, 1fr);
+    gap: var(--ds-space-3);
+    margin-bottom: var(--ds-space-4);
+}
+
+@media (max-width: 1200px) {
+    .kpi-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
 @media (max-width: 768px) {
     .kpi-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* --- KPI grids in one line (single row) on desktop --- */
+@media (min-width: 1200px) {
+    #superKpiGrid, .kpi-grid, .lic-kpi-grid, .mod-kpi-grid {
+        grid-template-columns: repeat(8, 1fr) !important;
+        gap: var(--ds-space-3) !important;
+    }
+    .sub-kpi-grid {
+        grid-template-columns: repeat(8, 1fr) !important;
+        gap: var(--ds-space-2) !important;
+    }
+    .plan-kpi-grid {
+        grid-template-columns: repeat(7, 1fr) !important;
+        gap: var(--ds-space-3) !important;
+    }
+    .bill-kpi-grid {
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: var(--ds-space-4) !important;
+    }
+
+    /* Make all KPI cards smaller */
+    .sub-kpi-card, .lic-kpi-card, .mod-kpi-card, .plan-kpi-card, .bill-kpi-card, .kpi-card,
+    #superKpiGrid .glass-card, #orgKpiGrid .glass-card {
+        padding: 0.75rem 0.6rem !important;
+        border-radius: 12px !important;
+        min-height: 110px !important;
+        height: 110px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    #superKpiGrid .glass-card div[style*="width:40px"], #orgKpiGrid .glass-card div[style*="width:40px"],
+    .sub-kpi-card .kpi-icon, .lic-kpi-card .kpi-icon, .mod-kpi-card .kpi-icon, .plan-kpi-card .kpi-icon, .bill-kpi-card .kpi-icon {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 8px !important;
+        margin: 0 auto 6px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    #superKpiGrid .glass-card div[style*="width:40px"] i, #orgKpiGrid .glass-card div[style*="width:40px"] i,
+    .sub-kpi-card .kpi-icon i, .lic-kpi-card .kpi-icon i, .mod-kpi-card .kpi-icon i, .plan-kpi-card .kpi-icon i, .bill-kpi-card .kpi-icon i {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    .kpi-value, #superKpiGrid .text-2xl, #orgKpiGrid .text-2xl {
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        line-height: 1.2 !important;
+        margin-bottom: 2px !important;
+    }
+
+    .kpi-label, #superKpiGrid .text-xs, #orgKpiGrid .text-xs {
+        font-size: 9.5px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .5px !important;
+        margin-top: 0 !important;
+        color: var(--ds-text-secondary) !important;
     }
 }
 
@@ -892,19 +990,19 @@
 }
 
 .ds-table th {
-    background: rgba(var(--ds-primary-rgb), 0.02);
-    padding: 1rem 1.5rem;
-    font-size: 0.75rem;
-    font-weight: 700;
+    background: rgba(var(--ds-primary-rgb), 0.05) !important;
+    padding: 0.85rem 1.25rem !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--ds-text-secondary);
-    border-bottom: 1px solid var(--ds-border-color);
+    letter-spacing: 0.06em !important;
+    color: var(--ds-primary) !important;
+    border-bottom: 2px solid rgba(var(--ds-primary-rgb), 0.15) !important;
     text-align: left;
 }
 
 .ds-table td {
-    padding: 1rem 1.5rem;
+    padding: 0.8rem 1.25rem;
     font-size: 0.875rem;
     color: var(--ds-text-main);
     border-bottom: 1px solid var(--ds-border-color);
@@ -923,25 +1021,44 @@
 
 /* Dropdown stacking fix for tables — elevate open row, isolate others */
 .table-responsive {
+    min-height: 220px !important;
+    -ms-overflow-style: none !important;  /* IE & Edge */
+    scrollbar-width: none !important;     /* Firefox */
+}
+
+.table-responsive::-webkit-scrollbar {
+    display: none !important;             /* Chrome, Safari, Opera */
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.glass-card:has(.table-responsive) {
     overflow: visible !important;
 }
 
-/* When a dropdown is open, lift that cell above all other rows */
-.ds-table td:has(.dropdown.show) {
-    z-index: 10000;
+/* Elevate the entire row that contains an open dropdown above subsequent rows */
+.ds-table tr:has(.dropdown.show) {
     position: relative;
+    z-index: 9999 !important;
 }
 
-/* Prevent other buttons in non-active rows bleeding above open dropdown */
-.ds-table .dropdown:not(.show) .ds-btn-icon {
-    z-index: 1;
-    position: relative;
+.table-responsive:has(.dropdown.show) {
+    overflow: visible !important;
 }
 
 /* Force dropdown to always render above everything */
 .ds-table .dropdown.show .dropdown-menu,
-.dropdown.show .dropdown-menu {
-    z-index: 10001 !important;
+.dropdown.show .dropdown-menu,
+.dropdown-menu.show {
+    z-index: 10050 !important;
+    white-space: nowrap !important;
+    min-width: 200px !important;
+}
+
+.dropdown-menu .dropdown-item {
+    white-space: nowrap !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 /* --- Corporate Badges --- */
@@ -1076,6 +1193,8 @@
     top: calc(100% + 6px);
     left: 0;
     right: 0;
+    max-height: 220px;
+    overflow-y: auto;
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -1168,9 +1287,9 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    padding-bottom: 24px;
+    padding-bottom: 10px !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    margin-bottom: 32px !important;
+    margin-bottom: 12px !important;
 }
 
 .header-main {
@@ -1367,6 +1486,12 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 
+/* Ensure inputs with search icons have proper left padding to avoid icon overlap */
+div:has(> [data-lucide="search"]) .ds-input,
+.position-relative:has([data-lucide="search"]) .ds-input {
+    padding-left: 34px !important;
+}
+
 .ds-input:focus {
     outline: none !important;
     border-color: var(--ds-accent) !important;
@@ -1450,21 +1575,27 @@
     padding: 0 !important;
 }
 
-/* --- Glassmorphism Dropdown Menus --- */
+/* --- Premium Dropdown Menus (Fixed Visibility) --- */
 .dropdown-menu {
-    background: rgba(255, 255, 255, 0.98) !important;
-    backdrop-filter: blur(20px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-    border: 1px solid rgba(15, 23, 42, 0.08) !important;
-    border-radius: 14px !important;
-    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06) !important;
-    padding: 6px !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important; /* Fully opaque for clarity */
+    border: 1px solid rgba(15, 23, 42, 0.16) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32), 0 4px 14px rgba(0, 0, 0, 0.14) !important;
+    padding: 8px !important;
     min-width: 190px;
-    z-index: 10001 !important;
-    position: absolute !important;
-    animation: dropdownFadeIn 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 999999 !important; /* High enough to clear all table content and stat cards */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    opacity: 1 !important;
+    animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     font-family: 'Inter', -apple-system, sans-serif !important;
     -webkit-font-smoothing: antialiased !important;
+}
+
+.ds-dropdown-premium {
+    border: 1px solid var(--ds-border-color) !important;
+    box-shadow: var(--ds-shadow-lg) !important;
 }
 
 @keyframes dropdownFadeIn {
@@ -1537,6 +1668,8 @@ select.ds-select option {
 /* --- Dark Mode Overrides --- */
 [data-theme="dark"] .dropdown-menu {
     background: rgba(15, 23, 42, 0.92) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
     border-color: rgba(255, 255, 255, 0.10) !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
@@ -1565,3 +1698,498 @@ select.ds-select option {
 }
 
 /* --- End of File --- */
+
+/* --- AI Chat Assistant Widget --- */
+#ai-chat-widget {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 9999;
+    font-family: var(--ds-font-main);
+}
+
+.chat-toggle-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ds-accent), var(--ds-accent-hover));
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 12px 24px rgba(var(--ds-primary-rgb), 0.3);
+}
+
+.chat-toggle-btn:hover {
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 0 16px 32px rgba(var(--ds-primary-rgb), 0.4);
+}
+
+.chat-toggle-btn i {
+    width: 28px;
+    height: 28px;
+}
+
+.chat-window {
+    position: absolute;
+    bottom: 80px;
+    right: 0;
+    width: 400px;
+    height: 600px;
+    max-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    background: var(--ds-bg-surface) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 16px;
+}
+
+.chat-window.hidden {
+    display: none;
+}
+
+.chat-header {
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(90deg, var(--ds-accent), var(--ds-accent-hover));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ai-avatar {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-close-chat {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.btn-close-chat:hover {
+    color: white;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.message {
+    max-width: 85%;
+    padding: 0.75rem 1rem;
+    border-radius: 14px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.message.system {
+    align-self: flex-start;
+    background: rgba(var(--ds-primary-rgb), 0.05);
+    color: var(--ds-text-main);
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--ds-border-color);
+}
+
+.message.user {
+    align-self: flex-end;
+    background: var(--ds-accent);
+    color: white;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 12px rgba(var(--ds-primary-rgb), 0.1);
+}
+
+.message.typing {
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.chat-input-area {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.source-link {
+    color: var(--ds-accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.source-link:hover {
+    text-decoration: underline;
+}
+
+.text-xs { font-size: 0.75rem; }
+.text-blue-200 { color: #bfdbfe; }
+
+.app-sidebar.minimized, .glass-sidebar.minimized { width: 80px !important; }
+.app-sidebar.minimized .brand-text, .glass-sidebar.minimized .brand-text { display: none; }
+.app-sidebar.minimized .sidebar-section-label, .glass-sidebar.minimized .sidebar-section-label { display: none; }
+.app-sidebar.minimized .sidebar-link span, .glass-sidebar.minimized .sidebar-link span { display: none; }
+.app-sidebar.minimized .sidebar-link { justify-content: center; padding: 0.8rem; }
+.app-main.expanded { width: calc(100% - 80px) !important; flex: 1; margin-left: 80px; }
+.sidebar-toggle-btn {
+    position: absolute;
+    right: -12px;
+    top: 20px;
+    background: var(--ds-accent);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1002;
+    transition: transform 0.3s;
+}
+.app-sidebar.minimized .sidebar-toggle-btn { transform: rotate(180deg); }
+
+/* Sidebar Toggle Button */
+.sidebar-toggle-btn {
+    background: var(--ds-bg-surface);
+    color: var(--ds-text-main);
+    border: 1px solid var(--ds-border-color);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1002;
+    transition: transform 0.3s, background 0.2s;
+    margin-left: auto;
+}
+.sidebar-toggle-btn:hover {
+    background: rgba(var(--ds-primary-rgb), 0.1);
+    color: var(--ds-primary);
+}
+body.sidebar-collapsed .sidebar-toggle-btn {
+    transform: rotate(180deg);
+    margin: 0 auto;
+}
+
+/* --- Helpdesk Support Widget --- */
+#helpdesk-widget {
+    position: fixed;
+    bottom: 2rem;
+    right: 6.5rem;
+    z-index: 9999;
+    font-family: var(--ds-font-main);
+}
+
+.helpdesk-toggle-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ds-accent), var(--ds-accent-hover));
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 12px 24px rgba(var(--ds-primary-rgb), 0.3);
+}
+
+.helpdesk-toggle-btn:hover {
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 0 16px 32px rgba(var(--ds-primary-rgb), 0.4);
+}
+
+.helpdesk-toggle-btn i {
+    width: 28px;
+    height: 28px;
+    color: white !important;
+}
+
+.helpdesk-window {
+    position: absolute;
+    bottom: 80px;
+    right: 0;
+    width: 400px;
+    height: 600px;
+    max-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #0f172a !important; /* Dark slate background */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px;
+    z-index: 10000;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    color: #f8fafc;
+}
+
+.helpdesk-window.hidden {
+    display: none;
+}
+
+.helpdesk-header {
+    padding: 1.25rem;
+    background: linear-gradient(90deg, var(--ds-accent), var(--ds-accent-hover));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.helpdesk-header .fw-bold {
+    color: #ffffff !important;
+}
+
+.helpdesk-header .text-blue-200 {
+    color: #94a3b8 !important; /* Slate grey */
+}
+
+.btn-close-helpdesk {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.btn-close-helpdesk:hover {
+    color: #ffffff;
+}
+
+.helpdesk-tabs {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.helpdesk-tab-btn {
+    flex: 1;
+    padding: 0.75rem;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.helpdesk-tab-btn.active {
+    color: #ffffff;
+    border-bottom: 2px solid #38bdf8; /* Sky blue active line */
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.helpdesk-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+    background: #0f172a;
+}
+
+/* Form inputs styling to match black/grey/white */
+.helpdesk-content .ds-field label {
+    color: #e2e8f0 !important;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+}
+
+.helpdesk-content .form-control,
+.helpdesk-content .ds-input {
+    background: #1e293b !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+}
+
+.helpdesk-content .form-control::placeholder {
+    color: #64748b !important;
+}
+
+.helpdesk-content .form-control:focus,
+.helpdesk-content .ds-input:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+}
+
+.helpdesk-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.helpdesk-history-item {
+    background: #1e293b !important; /* Grey item container */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: background 0.2s;
+}
+
+.helpdesk-history-item:hover {
+    background: #273549 !important;
+}
+
+.helpdesk-history-item .fw-bold {
+    color: #ffffff !important;
+}
+
+.helpdesk-history-item .text-secondary {
+    color: #94a3b8 !important;
+}
+
+.helpdesk-history-item .text-muted {
+    color: #cbd5e1 !important;
+}
+
+.helpdesk-resolution-box {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(56, 189, 248, 0.08) !important;
+    border-left: 3px solid #38bdf8 !important;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+}
+
+.helpdesk-resolution-box.rejected {
+    background: rgba(239, 68, 68, 0.08) !important;
+    border-left-color: #ef4444 !important;
+}
+
+.helpdesk-success-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    padding: 2rem;
+}
+
+.helpdesk-success-screen h5 {
+    color: #ffffff !important;
+}
+
+.helpdesk-success-screen p {
+    color: #94a3b8 !important;
+}
+
+.helpdesk-success-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+/* Premium Frosted Glass Dropdowns */
+.glass-dropdown {
+    background: var(--ds-bg-card, rgba(255, 255, 255, 0.95)) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--ds-border-color, rgba(15, 23, 42, 0.12)) !important;
+}
+
+[data-theme="dark"] .glass-dropdown {
+    background: rgba(15, 23, 42, 0.92) !important;
+}
+
+/* --- High Visibility Border Highlights --- */
+.ds-input, .ds-select, .ds-textarea, select.ds-input, select.ds-select {
+    border: 1.5px solid rgba(15, 23, 42, 0.3) !important;
+}
+
+[data-theme="dark"] .ds-input, 
+[data-theme="dark"] .ds-select, 
+[data-theme="dark"] .ds-textarea,
+[data-theme="dark"] select.ds-input, 
+[data-theme="dark"] select.ds-select {
+    border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+.ds-input:focus, .ds-select:focus, .ds-textarea:focus, select.ds-input:focus, select.ds-select:focus {
+    border-color: var(--ds-accent, #6366f1) !important;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25) !important;
+}
+
+/* --- Compact Table Inputs --- */
+.table-input {
+    width: 100% !important;
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    font-size: 0.8rem !important;
+    border: 1.5px solid rgba(15, 23, 42, 0.25) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--ds-text-main) !important;
+    outline: none !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+[data-theme="dark"] .table-input {
+    border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+.table-input:focus {
+    border-color: var(--ds-accent, #6366f1) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* --- Skeleton Shimmer Animation --- */
+.skeleton-shimmer {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.08) 25%,
+        rgba(255, 255, 255, 0.15) 37%,
+        rgba(255, 255, 255, 0.08) 63%
+    );
+    background-size: 400% 100%;
+    animation: skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0 50%;
+    }
+}
+
+/* Hide info tooltip icons in all KPI cards */
+#superKpiGrid .position-absolute,
+#orgKpiGrid .position-absolute,
+#licKpiGrid .position-absolute {
+    display: none !important;
+}

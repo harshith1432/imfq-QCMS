@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     lucide.createIcons();
 
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(sessionStorage.getItem('user'));
     
     // Set up Back button based on role
     const backBtn = document.getElementById('backToDashBtn');
@@ -61,14 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
             tabsContainer.innerHTML = '';
             
             const stageNames = [
-                "1. Identification",
-                "2. Selection",
-                "3. Analysis",
-                "4. Causes",
-                "5. Root Cause",
-                "6. Data Analysis",
-                "7. Development",
-                "8. Implementation"
+                "1. S0/S1 Plan & Establish Team",
+                "2. S2 Define Problem",
+                "3. S3 Interim Containment",
+                "4. S4 Determine Root Causes",
+                "5. S5 Choose Permanent Corrections",
+                "6. S6 Implement Corrective Actions",
+                "7. S7 Take Preventive Measures",
+                "8. S8 Congratulate Team & Closure"
             ];
 
             const currentStage = this.project.current_stage || this.project.stage || 1;
@@ -109,16 +109,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let isReadOnly = false;
             let lockReason = "";
+            
+            const role = (user.role || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-            if (stageNumber < currentStage) {
+            const isProjectRejected = (project && project.status && (project.status === 'Rejected' || project.status.includes('Rejected')));
+
+            if (stageNumber < currentStage && !isProjectRejected) {
                 isReadOnly = true;
                 lockReason = "This stage is already completed and is now read-only.";
-            } else if (stageNumber === 5 && user.role === 'Team Member') {
+            } else if (stageNumber === 1 && !['admin', 'superadmin', 'teamleader', 'teammember'].includes(role)) {
+                isReadOnly = true;
+                lockReason = "Only Admin, Team Leader and Team Members can add/edit Stage 1 details.";
+            } else if (stageNumber >= 2 && stageNumber <= 8 && !['teammember', 'teamleader', 'admin', 'superadmin'].includes(role)) {
+                isReadOnly = true;
+                lockReason = "Only Team Members, Team Leader and Admin can add/edit details for this stage.";
+            } else if (stageNumber === 5 && role === 'teammember' && !isProjectRejected) {
                 isReadOnly = true;
                 lockReason = "Stage 5 (Approval) is strictly for Reviewing Officers.";
-            } else if (currentStage === 5 && stageNumber === 5 && user.role !== 'Reviewer') {
-                 isReadOnly = true;
-                 lockReason = "Awaiting Reviewer Approval.";
             }
             
             // Populate form with existing stage data from backend
@@ -266,7 +273,163 @@ document.addEventListener('DOMContentLoaded', () => {
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                 }
-            });
+        },
+
+        openQCTools() {
+            const modal = new bootstrap.Modal(document.getElementById('qcToolsModal'));
+            modal.show();
+            this.switchQCTool('checksheet');
+        },
+
+        switchQCTool(toolId, event) {
+            if (event) event.preventDefault();
+            
+            // Update active state in sidebar
+            const navLinks = document.querySelectorAll('#qcToolsNav .nav-link');
+            navLinks.forEach(link => link.classList.remove('active', 'bg-light', 'text-primary'));
+            const activeLink = document.querySelector(`#qcToolsNav .nav-link[data-tool="${toolId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active', 'bg-light', 'text-primary');
+            }
+
+            const contentArea = document.getElementById('qcToolContent');
+            
+            // Basic templates for each tool (simulated integration)
+            const templates = {
+                'checksheet': `
+                    <h5>Check Sheet</h5>
+                    <p class="text-muted text-sm mb-4">Structured data collection grid for tracking defects, events, or occurrences.</p>
+                    <table class="table table-sm table-bordered">
+                        <thead class="bg-light">
+                            <tr><th>Defect Type</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Total</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Surface Scratches</td><td>|||</td><td>||</td><td>|</td><td>||||</td><td>||</td><td>12</td></tr>
+                            <tr><td>Dimensional Error</td><td>|</td><td></td><td>||</td><td>|</td><td>|</td><td>5</td></tr>
+                            <tr><td>Contamination</td><td></td><td>|</td><td></td><td></td><td></td><td>1</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="mt-3"><button class="btn btn-sm btn-primary">Add Row</button></div>
+                `,
+                'histogram': `
+                    <h5>Histogram</h5>
+                    <p class="text-muted text-sm mb-4">Frequency distribution of continuous data to visualize process capability.</p>
+                    <div style="height: 300px; width: 100%;"><canvas id="qcHistogram"></canvas></div>
+                `,
+                'pareto': `
+                    <h5>Pareto Chart</h5>
+                    <p class="text-muted text-sm mb-4">80/20 rule visualization to identify the most significant factors.</p>
+                    <div style="height: 300px; width: 100%;"><canvas id="qcPareto"></canvas></div>
+                `,
+                'fishbone': `
+                    <h5>Cause & Effect (Fishbone) Diagram</h5>
+                    <p class="text-muted text-sm mb-4">Structured brainstorming for root causes grouped by categories (Man, Machine, Material, Method, Measurement, Mother Nature).</p>
+                    <div class="border rounded p-4 text-center bg-light" style="min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <span class="text-muted"><i data-lucide="git-merge" class="mb-2" style="width:32px;height:32px;"></i><br>Interactive Fishbone UI Module</span>
+                    </div>
+                `,
+                'controlchart': `
+                    <h5>Control Chart</h5>
+                    <p class="text-muted text-sm mb-4">Time-series plot with Upper and Lower Control Limits (UCL/LCL) to track process stability.</p>
+                    <div style="height: 300px; width: 100%;"><canvas id="qcControlChart"></canvas></div>
+                `,
+                'scatter': `
+                    <h5>Scatter Diagram</h5>
+                    <p class="text-muted text-sm mb-4">Plots paired data points to visualize correlation between two variables.</p>
+                    <div style="height: 300px; width: 100%;"><canvas id="qcScatter"></canvas></div>
+                `,
+                'stratification': `
+                    <h5>Stratification</h5>
+                    <p class="text-muted text-sm mb-4">Separating data gathered from a variety of sources to see patterns.</p>
+                    <div style="height: 300px; width: 100%;"><canvas id="qcStratification"></canvas></div>
+                `
+            };
+
+            contentArea.innerHTML = templates[toolId] || '<p>Tool not found.</p>';
+            if (window.lucide) lucide.createIcons();
+
+            // Render Charts if applicable
+            setTimeout(() => this.renderQCChart(toolId), 100);
+        },
+
+        renderQCChart(toolId) {
+            if (!window.Chart) return;
+            
+            // Clean up previous charts if they exist
+            if (this.currentQCChart) {
+                this.currentQCChart.destroy();
+                this.currentQCChart = null;
+            }
+            
+            if (toolId === 'histogram') {
+                const ctx = document.getElementById('qcHistogram');
+                if (!ctx) return;
+                this.currentQCChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['10-20', '20-30', '30-40', '40-50', '50-60', '60-70'],
+                        datasets: [{ label: 'Frequency', data: [5, 12, 25, 18, 8, 2], backgroundColor: 'rgba(59, 130, 246, 0.7)', borderWidth: 1, borderColor: 'rgb(59, 130, 246)' }]
+                    },
+                    options: { maintainAspectRatio: false, scales: { x: { display: false, barPercentage: 1.0, categoryPercentage: 1.0 } } }
+                });
+            } else if (toolId === 'pareto') {
+                const ctx = document.getElementById('qcPareto');
+                if (!ctx) return;
+                this.currentQCChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Scratches', 'Dimensions', 'Dents', 'Contamination', 'Other'],
+                        datasets: [
+                            { type: 'line', label: 'Cumulative %', data: [45, 75, 90, 96, 100], borderColor: 'rgb(245, 158, 11)', yAxisID: 'y1', tension: 0.1 },
+                            { type: 'bar', label: 'Defects', data: [45, 30, 15, 6, 4], backgroundColor: 'rgba(59, 130, 246, 0.7)' }
+                        ]
+                    },
+                    options: { maintainAspectRatio: false, scales: { y1: { type: 'linear', position: 'right', min: 0, max: 100 } } }
+                });
+            } else if (toolId === 'controlchart') {
+                const ctx = document.getElementById('qcControlChart');
+                if (!ctx) return;
+                this.currentQCChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['1','2','3','4','5','6','7','8','9','10'],
+                        datasets: [
+                            { label: 'Sample Mean', data: [10.1, 9.8, 10.3, 10.0, 9.9, 10.2, 10.5, 9.7, 10.1, 10.0], borderColor: 'rgb(59, 130, 246)', tension: 0 },
+                            { label: 'UCL (10.6)', data: [10.6,10.6,10.6,10.6,10.6,10.6,10.6,10.6,10.6,10.6], borderColor: 'rgba(239, 68, 68, 0.5)', borderDash: [5, 5], pointRadius: 0, fill: false },
+                            { label: 'LCL (9.4)', data: [9.4,9.4,9.4,9.4,9.4,9.4,9.4,9.4,9.4,9.4], borderColor: 'rgba(239, 68, 68, 0.5)', borderDash: [5, 5], pointRadius: 0, fill: false }
+                        ]
+                    },
+                    options: { maintainAspectRatio: false }
+                });
+            } else if (toolId === 'scatter') {
+                const ctx = document.getElementById('qcScatter');
+                if (!ctx) return;
+                this.currentQCChart = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Speed vs Error Rate',
+                            data: [{x: 100, y: 2}, {x: 110, y: 2.5}, {x: 120, y: 3.1}, {x: 130, y: 4.8}, {x: 140, y: 5.5}, {x: 150, y: 8.2}],
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)'
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, scales: { x: { title: { display: true, text: 'Machine Speed (RPM)' } }, y: { title: { display: true, text: 'Error Rate (%)' } } } }
+                });
+            } else if (toolId === 'stratification') {
+                const ctx = document.getElementById('qcStratification');
+                if (!ctx) return;
+                this.currentQCChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Shift 1', 'Shift 2', 'Shift 3'],
+                        datasets: [
+                            { label: 'Machine A', data: [12, 19, 8], backgroundColor: 'rgba(59, 130, 246, 0.7)' },
+                            { label: 'Machine B', data: [5, 15, 20], backgroundColor: 'rgba(245, 158, 11, 0.7)' }
+                        ]
+                    },
+                    options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+                });
+            }
         }
     };
 

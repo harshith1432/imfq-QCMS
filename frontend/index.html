@@ -2,19 +2,23 @@
 <html lang="en">
 
 <head>
-    <script src="assets/js/auth-guard.js"></script>
+    <script src="/assets/js/auth-guard.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QCMS Enterprise | Quality Management Reimagined</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/design-system.css">
-    <link rel="stylesheet" href="assets/css/glass.css">
-    <script src="assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
             --hero-bg: #f8fafc;
+            --primary-900: #0f172a;
+            --primary-50: #f0f9ff;
+            --primary-200: #bae6fd;
+            --radius-2xl: 24px;
         }
 
         .lp-navbar {
@@ -79,12 +83,16 @@
         }
 
         .cta-banner {
-            background: var(--primary-900);
-            color: white;
-            padding: 80px 0;
-            border-radius: var(--radius-2xl);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%) !important;
+            color: #ffffff !important;
+            padding: 80px 40px;
+            border-radius: 24px;
             margin: 80px 0;
             text-align: center;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+        }
+        .cta-banner h2, .cta-banner p, .cta-banner span {
+            color: #ffffff !important;
         }
 
         @media (max-width: 991px) {
@@ -118,23 +126,31 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6 fade-in">
-                    <div class="ds-badge blue mb-4">Version 3.0 Now Live</div>
-                    <h1 class="hero-title">Precision Quality <br><span class="text-primary">Management</span> at Scale.
+                    <div class="ds-badge blue mb-4" id="lp-hero-badge">Version 3.0 Now Live</div>
+                    <h1 class="hero-title" id="lp-hero-title">Precision Quality <br><span class="text-primary">Management</span> at Scale.
                     </h1>
-                    <p class="hero-subtitle">Optimize your organizational efficiency with our structured 8-stage
+                    <p class="hero-subtitle" id="lp-hero-subtitle">Optimize your organizational efficiency with our structured 8-stage
                         workflow engine. Built for enterprise excellence, designed for modern teams.</p>
                     <div class="d-flex gap-3">
-                        <a href="register-org.html" class="glass-btn glass-btn-primary px-5 py-3 fs-5"
+                        <a href="register-org.html" id="lp-cta-primary" class="glass-btn glass-btn-primary px-5 py-3 fs-5"
                             style="border-radius: 12px; font-weight: 700;">Start Free Trial</a>
-                        <a href="#features" class="glass-btn px-4 py-3 fs-5"
+                        <a href="#features" id="lp-cta-secondary" class="glass-btn px-4 py-3 fs-5"
                             style="border-radius: 12px; font-weight: 600;">Watch Demo</a>
                     </div>
-                    <div class="mt-5 d-flex align-items-center gap-4 opacity-60">
-                        <span class="text-xs fw-bold text-uppercase tracking-widest">Trusted By Leaders</span>
-                        <div class="d-flex gap-4">
-                            <i data-lucide="award" style="width:20px;"></i>
-                            <i data-lucide="globe" style="width:20px;"></i>
-                            <i data-lucide="zap" style="width:20px;"></i>
+                    <div class="mt-5">
+                        <div class="d-flex align-items-center gap-4 opacity-60">
+                            <div class="d-flex align-items-center gap-2">
+                                <i data-lucide="shield-check" class="text-primary" style="width:18px;"></i>
+                                <span class="text-xs fw-bold text-uppercase tracking-widest">Enterprise Secure</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i data-lucide="globe" class="text-primary" style="width:18px;"></i>
+                                <span class="text-xs fw-bold text-uppercase tracking-widest">Global Scale</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i data-lucide="zap" class="text-primary" style="width:18px;"></i>
+                                <span class="text-xs fw-bold text-uppercase tracking-widest">High Precision</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -166,20 +182,96 @@
                                     </div>
                                 </div>
                                 <div class="p-3 d-flex flex-wrap gap-3">
-                                    <div class="glass-panel" style="width:30%; height:100px; border-radius:12px;"></div>
-                                    <div class="glass-panel" style="width:30%; height:100px; border-radius:12px;"></div>
-                                    <div class="glass-panel" style="width:30%; height:100px; border-radius:12px;"></div>
-                                    <div class="glass-panel" style="width:100%; height:180px; border-radius:12px;">
+                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px;">
+                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" id="lp-hero-stat1-lbl">Efficiency</div>
+                                        <div class="fs-4 fw-black text-success" id="lp-hero-stat1-val">98.2%</div>
+                                        <div class="progress mt-2"
+                                            style="height:4px; background: rgba(var(--ds-primary-rgb), 0.1);">
+                                            <div class="progress-bar bg-success" style="width: 98%;"></div>
+                                        </div>
                                     </div>
+                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px;">
+                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" id="lp-hero-stat2-lbl">Quality Score</div>
+                                        <div class="fs-4 fw-black text-primary" id="lp-hero-stat2-val">A+</div>
+                                        <div class="d-flex gap-1 mt-2">
+                                            <div
+                                                style="width:15px; height:4px; background:var(--ds-primary); border-radius:2px;">
+                                            </div>
+                                            <div
+                                                style="width:15px; height:4px; background:var(--ds-primary); border-radius:2px;">
+                                            </div>
+                                            <div
+                                                style="width:15px; height:4px; background:var(--ds-primary); border-radius:2px;">
+                                            </div>
+                                            <div
+                                                style="width:15px; height:4px; background:rgba(var(--ds-primary-rgb), 0.1); border-radius:2px;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px;">
+                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" id="lp-hero-stat3-lbl">Active Nodes</div>
+                                        <div class="fs-4 fw-black text-primary" id="lp-hero-stat3-val">1,204</div>
+                                        <div class="text-xxs text-muted mt-1" id="lp-hero-stat3-sub">+12 this hour</div>
+                                    </div>
+                                    <div class="glass-panel p-4" style="width:100%; height:190px; border-radius:12px;">
+                                        <div class="h-stack justify-content-between mb-4">
+                                            <div class="fw-bold fs-6">Global Quality Pipeline</div>
+                                            <div class="ds-badge blue text-xxs">Real-time</div>
+                                        </div>
+                                        <div class="v-stack gap-3">
+                                            <div class="h-stack gap-3">
+                                                <div
+                                                    style="width:40px; height:8px; background:rgba(var(--ds-primary-rgb), 0.1); border-radius:4px;">
+                                                </div>
+                                                <div class="flex-grow-1"
+                                                    style="height:8px; background:rgba(var(--ds-primary-rgb), 0.05); border-radius:4px; overflow:hidden;">
+                                                    <div style="width:75%; height:100%; background:var(--ds-primary);">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="h-stack gap-3">
+                                                <div
+                                                    style="width:40px; height:8px; background:rgba(var(--ds-primary-rgb), 0.1); border-radius:4px;">
+                                                </div>
+                                                <div class="flex-grow-1"
+                                                    style="height:8px; background:rgba(var(--ds-primary-rgb), 0.05); border-radius:4px; overflow:hidden;">
+                                                    <div style="width:45%; height:100%; background:var(--ds-primary);">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="h-stack gap-3">
+                                                <div
+                                                    style="width:40px; height:8px; background:rgba(var(--ds-primary-rgb), 0.1); border-radius:4px;">
+                                                </div>
+                                                <div class="flex-grow-1"
+                                                    style="height:8px; background:rgba(var(--ds-primary-rgb), 0.05); border-radius:4px; overflow:hidden;">
+                                                    <div style="width:90%; height:100%; background:var(--ds-primary);">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Floating Activity Notification -->
+                        <div class="position-absolute"
+                            style="top: 40px; left: -40px; background: white; padding: 12px 20px; border-radius: 12px; box-shadow: var(--ds-shadow-lg); border: 1px solid rgba(0,0,0,0.05); animation: float 3s ease-in-out infinite;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-success rounded-circle"
+                                    style="width:8px; height:8px; box-shadow: 0 0 10px var(--success);"></div>
+                                <div class="v-stack">
+                                    <span class="fw-bold text-xs">New Quality Audit</span>
+                                    <span class="text-xxs text-muted">Plant #124 • 2m ago</span>
                                 </div>
                             </div>
                         </div>
                         <!-- Floating Badge -->
                         <div class="position-absolute"
-                            style="bottom: -20px; right: -20px; background: var(--success); color: white; padding: 15px 25px; border-radius: 15px; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);">
+                            style="bottom: -20px; right: -20px; background: var(--ds-primary); color: white; padding: 15px 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(var(--ds-primary-rgb), 0.4);">
                             <div class="d-flex align-items-center gap-2">
-                                <i data-lucide="trending-up" style="width:18px;"></i>
-                                <span class="fw-bold">+42% Efficiency</span>
+                                <i data-lucide="award" style="width:18px;"></i>
+                                <span class="fw-bold">ISO 9001 Verified</span>
                             </div>
                         </div>
                     </div>
@@ -188,14 +280,72 @@
         </div>
     </header>
 
+
+    <section class="py-5"
+        style="background: rgba(var(--ds-primary-rgb), 0.02); border-top: 1px solid var(--ds-border-color); border-bottom: 1px solid var(--ds-border-color);">
+        <div class="container">
+            <div class="row align-items-center justify-content-center text-center g-4">
+                <div class="col-6 col-md-2 opacity-50">
+                    <h5 class="fw-bold mb-0" id="lp-ticker-1">99.9% Uptime</h5>
+                </div>
+                <div class="col-6 col-md-2 opacity-50">
+                    <h5 class="fw-bold mb-0" id="lp-ticker-2">ISO 9001 Ready</h5>
+                </div>
+                <div class="col-6 col-md-2 opacity-50">
+                    <h5 class="fw-bold mb-0" id="lp-ticker-3">Enterprise Grade</h5>
+                </div>
+                <div class="col-6 col-md-2 opacity-50">
+                    <h5 class="fw-bold mb-0" id="lp-ticker-4">Audit Secure</h5>
+                </div>
+                <div class="col-6 col-md-2 opacity-50">
+                    <h5 class="fw-bold mb-0" id="lp-ticker-5">24/7 Support</h5>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Value Pillars Section -->
+    <section class="py-5 border-bottom bg-white">
+        <div class="container">
+            <div class="row align-items-center justify-content-center text-center g-5">
+                <div class="col-md-3">
+                    <div class="v-stack gap-2 opacity-60">
+                        <i id="lp-badge-1-icon" data-lucide="award" class="mx-auto" style="width:32px; height:32px;"></i>
+                        <h6 class="fw-bold mb-0" id="lp-badge-1-label">ISO 9001 Compliant</h6>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="v-stack gap-2 opacity-60">
+                        <i id="lp-badge-2-icon" data-lucide="shield-check" class="mx-auto" style="width:32px; height:32px;"></i>
+                        <h6 class="fw-bold mb-0" id="lp-badge-2-label">Bank-Grade Security</h6>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="v-stack gap-2 opacity-60">
+                        <i id="lp-badge-3-icon" data-lucide="clock" class="mx-auto" style="width:32px; height:32px;"></i>
+                        <h6 class="fw-bold mb-0" id="lp-badge-3-label">99.9% Platform Uptime</h6>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="v-stack gap-2 opacity-60">
+                        <i id="lp-badge-4-icon" data-lucide="headset" class="mx-auto" style="width:32px; height:32px;"></i>
+                        <h6 class="fw-bold mb-0" id="lp-badge-4-label">24/7 Priority Support</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
     <section id="features" class="py-5" style="background: white;">
         <div class="container py-5">
             <div class="text-center mb-5">
-                <h2 class="fw-extrabold fs-1 mb-3">Engineered for Quality</h2>
-                <p class="text-muted fs-5 mx-auto" style="max-width: 600px;">Every tool you need to maintain the highest
+                <div class="ds-badge blue mb-3">Core Capabilities</div>
+                <h2 class="fw-extrabold fs-1 mb-3" id="lp-features-title">Engineered for Quality</h2>
+                <p class="text-muted fs-5 mx-auto" style="max-width: 600px;" id="lp-features-subtitle">Every tool you need to maintain the highest
                     standards across your industrial operations.</p>
             </div>
-            <div class="row g-4">
+            <div class="row g-4" id="lp-features-grid">
                 <div class="col-md-4">
                     <div class="feature-card glass-card shimmer-effect">
                         <div class="icon-box"><i data-lucide="git-branch" size="24"></i></div>
@@ -219,40 +369,614 @@
                         <p class="text-muted">Centralized repository for SOPs, lessons learned, and project history.</p>
                     </div>
                 </div>
+                <!-- Extended Features -->
+                <div class="col-md-4">
+                    <div class="feature-card glass-card shimmer-effect">
+                        <div class="icon-box" style="background:rgba(16, 185, 129, 0.1); color:var(--success);"><i
+                                data-lucide="bar-chart-3" size="24"></i></div>
+                        <h4 class="fw-bold">Real-time Analytics</h4>
+                        <p class="text-muted">Live KPI tracking with automated reporting and visual data insights.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card glass-card shimmer-effect">
+                        <div class="icon-box" style="background:rgba(245, 158, 11, 0.1); color:var(--warning);"><i
+                                data-lucide="shield-check" size="24"></i></div>
+                        <h4 class="fw-bold">Automated Compliance</h4>
+                        <p class="text-muted">Stay ISO ready with automated audit logs and version-controlled documents.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card glass-card shimmer-effect">
+                        <div class="icon-box" style="background:rgba(99, 102, 241, 0.1); color:var(--primary);"><i
+                                data-lucide="smartphone" size="24"></i></div>
+                        <h4 class="fw-bold">Mobile Readiness</h4>
+                        <p class="text-muted">Access your quality management engine from anywhere, on any device.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <div class="container">
-        <div class="cta-banner">
-            <h2 class="fw-extrabold fs-1 mb-3">Ready to transform your quality culture?</h2>
-            <p class="opacity-80 fs-5 mb-5">Join hundreds of manufacturing leaders using QCMS Enterprise.</p>
-            <a href="register-org.html" class="ds-btn ds-btn-secondary px-5 py-3 fs-5"
-                style="border-radius: 12px; background: white; color: var(--primary-900); font-weight:700;">Create Your
-                Free Account</a>
+    <section id="how-it-works" class="py-5 bg-light">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <div class="ds-badge purple mb-3">Onboarding Flow</div>
+                <h2 class="fw-extrabold fs-1 mb-3" id="lp-steps-title">How It Works</h2>
+                <p class="text-muted fs-5 mx-auto" style="max-width: 600px;" id="lp-steps-subtitle">Deploy your enterprise-grade QMS in four
+                    simple steps.</p>
+            </div>
+            <div class="row g-5" id="lp-steps-grid">
+                <div class="col-md-3 text-center">
+                    <div class="icon-box mx-auto mb-4"
+                        style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
+                        <h3 class="mb-0 fw-black text-primary">1</h3>
+                    </div>
+                    <h5 class="fw-bold">Register Company</h5>
+                    <p class="text-muted small">Set up your unique organizational instance and security parameters.</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="icon-box mx-auto mb-4"
+                        style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
+                        <h3 class="mb-0 fw-black text-primary">2</h3>
+                    </div>
+                    <h5 class="fw-bold">Setup Team</h5>
+                    <p class="text-muted small">Configure departments and assign role-based access to your workforce.
+                    </p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="icon-box mx-auto mb-4"
+                        style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
+                        <h3 class="mb-0 fw-black text-primary">3</h3>
+                    </div>
+                    <h5 class="fw-bold">Launch Projects</h5>
+                    <p class="text-muted small">Initiate quality improvement projects using our 8-stage engine.</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="icon-box mx-auto mb-4"
+                        style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
+                        <h3 class="mb-0 fw-black text-primary">4</h3>
+                    </div>
+                    <h5 class="fw-bold">Track KPI</h5>
+                    <p class="text-muted small">Monitor real-time improvements in efficiency, cost, and safety.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="py-5">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <div class="ds-badge green mb-3">Simple Pricing</div>
+                <h2 class="fw-extrabold fs-1 mb-3" id="lp-pricing-title">Flexible Plans for Every Stage</h2>
+                <p class="text-muted fs-5 mx-auto" style="max-width: 600px;" id="lp-pricing-subtitle">Scale your quality operations without
+                    complexity.</p>
+            </div>
+            <div class="row g-4 justify-content-center" id="lp-pricing-grid">
+                <div class="col-lg-4">
+                    <div class="feature-card glass-card h-100">
+                        <div class="mb-4">
+                            <h3 class="fw-black mb-1">Starter</h3>
+                            <p class="text-muted mb-4">For small focused teams</p>
+                            <div class="d-flex align-items-baseline gap-1 mb-4">
+                                <span class="fs-1 fw-black">₹0</span>
+                                <span class="text-muted">/month (14d Trial)</span>
+                            </div>
+                        </div>
+                        <ul class="list-unstyled mb-5 v-stack gap-3">
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> 50 Users Max</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Basic QC Workflow</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Limited Reports</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> 14 Days Free Trial</li>
+                        </ul>
+                        <a href="register-org.html?plan=Starter" class="ds-btn ds-btn-secondary w-100 py-3">Start Free
+                            Trial</a>
+                    </div>
+                </div>
+                <div class="col-lg-4 position-relative">
+                    <div class="position-absolute w-100 text-center" style="top: -15px; left: 0; z-index: 10;">
+                        <span class="ds-badge px-3 py-1" style="background: var(--primary); color: white; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">MOST POPULAR</span>
+                    </div>
+                    <div class="feature-card glass-card border-primary h-100" style="border-width: 2px;">
+                        <div class="mb-4">
+                            <h3 class="fw-black mb-1">Professional</h3>
+                            <p class="text-muted mb-4">Complete enterprise engine</p>
+                            <div class="d-flex align-items-baseline gap-1 mb-4">
+                                <span class="fs-1 fw-black">₹199</span>
+                                <span class="text-muted">/month</span>
+                            </div>
+                        </div>
+                        <ul class="list-unstyled mb-5 v-stack gap-3">
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> 500 Users</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Full Workflow Engine</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Analytics Dashboard</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Repository + AI Assistant</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Reports + Audit Logs</li>
+                        </ul>
+                        <a href="register-org.html?plan=Professional" class="ds-btn ds-btn-primary w-100 py-3">Start
+                            Free Trial</a>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="feature-card glass-card h-100">
+                        <div class="mb-4">
+                            <h3 class="fw-black mb-1">Enterprise</h3>
+                            <p class="text-muted mb-4">For global scale manufacturing</p>
+                            <div class="d-flex align-items-baseline gap-1 mb-4">
+                                <span class="fs-1 fw-black">Custom</span>
+                            </div>
+                        </div>
+                        <ul class="list-unstyled mb-5 v-stack gap-3">
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Unlimited Users</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Multi Plant Support</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> White Label Branding</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> API Integration</li>
+                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
+                                    style="width:20px;"></i> Dedicated Support</li>
+                        </ul>
+                        <a href="#" class="ds-btn ds-btn-secondary w-100 py-3">Contact Sales</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="py-5 bg-light">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="ds-badge orange mb-3">Support</div>
+                    <h2 class="fw-extrabold fs-1 mb-3" id="lp-faq-title">Frequently Asked Questions</h2>
+                    <p class="text-muted fs-5" id="lp-faq-subtitle">Everything you need to know about QCMS Enterprise.</p>
+                </div>
+                <div class="col-lg-8">
+                    <div class="accordion accordion-flush glass-card p-4" id="faqAccordion">
+                        <div class="accordion-item bg-transparent border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq1">
+                                    How does the 14-day free trial work?
+                                </button>
+                            </h2>
+                            <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-muted">
+                                    You get full access to the Professional plan for 14 days. No credit card is required
+                                    to start. You can upgrade or cancel at any time.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-transparent border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq2">
+                                    Can we upgrade plans later?
+                                </button>
+                            </h2>
+                            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-muted">
+                                    Yes! You can switch between plans at any time from your organization dashboard.
+                                    Changes are pro-rated.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-transparent border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq3">
+                                    Do you support multiple factories?
+                                </button>
+                            </h2>
+                            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-muted">
+                                    Our Enterprise plan includes Multi-Plant support, allowing you to manage multiple
+                                    manufacturing sites under a single corporate umbrella.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-transparent border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq4">
+                                    Is white label branding available?
+                                </button>
+                            </h2>
+                            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-muted">
+                                    Yes, the Enterprise plan allows you to use your own domain, logo, and primary brand
+                                    colors across the entire platform.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-transparent">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq5">
+                                    Can we integrate with ERP/SAP?
+                                </button>
+                            </h2>
+                            <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-muted">
+                                    We provide comprehensive API access and custom webhooks in the Enterprise plan to
+                                    sync data with your existing ERP or SAP systems.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container" id="lp-cta-banner-container">
+        <div class="cta-banner shimmer-effect">
+            <div class="ds-badge mb-4"
+                style="background:rgba(255,255,255,0.1); color:white; border-color:rgba(255,255,255,0.2);">Limited Time
+                Offer</div>
+            <h2 class="fw-extrabold fs-1 mb-3" id="lp-cta-banner-title">Start Your 14-Day Free Trial</h2>
+            <p class="opacity-80 fs-5 mb-5 mx-auto" style="max-width:600px;" id="lp-cta-banner-subtitle">No Credit Card Required. Get instant access
+                to admin dashboard, workflow engine, and analytics.</p>
+            <div class="d-flex flex-wrap justify-content-center gap-4 mb-5">
+                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px;"></i>
+                    <span>Instant Setup</span></div>
+                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px;"></i>
+                    <span>Full Workflow</span></div>
+                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px;"></i>
+                    <span>AI Assistant</span></div>
+            </div>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="register-org.html" class="ds-btn ds-btn-secondary px-5 py-3 fs-5"
+                    style="border-radius: 12px; background: white; color: var(--primary-900); font-weight:700;" id="lp-cta-banner-btn1">Launch
+                    Your Instance</a>
+                <a href="#" class="ds-btn ds-btn-ghost px-5 py-3 fs-5 text-white border-white" id="lp-cta-banner-btn2">Talk to Sales</a>
+            </div>
         </div>
     </div>
 
-    <footer class="py-5 border-top">
-        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-4">
-            <div class="d-flex align-items-center gap-2">
-                <div
-                    style="width:32px; height:32px; border-radius:8px; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center;">
-                    <i data-lucide="shield-check" style="width:18px; height:18px;"></i>
+    <footer class="py-5 border-top bg-light">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-4">
+                    <div class="d-flex align-items-center gap-2 mb-4">
+                        <div
+                            style="width:40px; height:40px; border-radius:10px; background:var(--ds-primary); color:white; display:flex; align-items:center; justify-content:center;">
+                            <i data-lucide="shield-check" style="width:24px; height:24px;"></i>
+                        </div>
+                        <span class="fw-extrabold fs-4 text-primary">QCMS <span
+                                class="text-muted fw-normal">Enterprise</span></span>
+                    </div>
+                    <p class="text-muted mb-4" id="lp-footer-desc" style="max-width: 320px;">The world's most advanced quality management
+                        system for modern manufacturing and enterprise excellence. Built for scale, security, and
+                        precision.</p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="twitter"
+                                style="width:20px;"></i></a>
+                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="linkedin"
+                                style="width:20px;"></i></a>
+                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="github"
+                                style="width:20px;"></i></a>
+                    </div>
                 </div>
-                <span class="fw-bold text-primary">QCMS Enterprise</span>
+                <div class="col-md-8">
+                    <div class="row g-4">
+                        <div class="col-6 col-md-3">
+                            <h6 class="fw-bold mb-4">Product</h6>
+                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-product">
+                                <!-- Dynamic Links -->
+                            </ul>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="fw-bold mb-4">Resources</h6>
+                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-resources">
+                                <!-- Dynamic Links -->
+                            </ul>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="fw-bold mb-4">Company</h6>
+                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-company">
+                                <!-- Dynamic Links -->
+                            </ul>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="fw-bold mb-4">Legal</h6>
+                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-legal">
+                                <!-- Dynamic Links -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="d-flex gap-4 text-muted fs-7">
-                <a href="#" class="text-reset text-decoration-none">Privacy Policy</a>
-                <a href="#" class="text-reset text-decoration-none">Terms of Service</a>
-                <a href="#" class="text-reset text-decoration-none">Contact Sales</a>
+            <div
+                class="mt-5 pt-5 border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 text-muted small">
+                <p class="mb-0" id="lp-footer-copy">&copy; 2026 QCMS Precision Core. Engineered for Excellence.</p>
+                <div class="d-flex gap-4">
+                    <span class="d-flex align-items-center gap-2"><i data-lucide="globe" style="width:14px;"></i>
+                        <span data-i18n-lang-name>English (US)</span></span>
+                    <span class="d-flex align-items-center gap-2"><span
+                            class="ds-status-indicator ds-status-active"></span> System Status: <span
+                            class="text-success fw-bold" id="lp-footer-status">Operational</span></span>
+                </div>
             </div>
-            <p class="text-muted fs-7 mb-0">&copy; 2026 QCMS Precision Core. All rights reserved.</p>
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/i18n.js"></script>
     <script>
-        lucide.createIcons();
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // Accordion click handler for FAQ questions
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('.accordion-button');
+                if (!btn) return;
+                const targetSelector = btn.getAttribute('data-bs-target') || btn.getAttribute('href');
+                if (!targetSelector) return;
+                const targetEl = document.querySelector(targetSelector);
+                if (!targetEl) return;
+
+                e.preventDefault();
+                const isOpen = targetEl.classList.contains('show');
+                const parentSelector = targetEl.getAttribute('data-bs-parent');
+
+                if (parentSelector) {
+                    const parentEl = document.querySelector(parentSelector);
+                    if (parentEl) {
+                        parentEl.querySelectorAll('.accordion-collapse').forEach(el => el.classList.remove('show'));
+                        parentEl.querySelectorAll('.accordion-button').forEach(b => {
+                            b.classList.add('collapsed');
+                            b.setAttribute('aria-expanded', 'false');
+                        });
+                    }
+                }
+
+                if (!isOpen) {
+                    targetEl.classList.add('show');
+                    btn.classList.remove('collapsed');
+                    btn.setAttribute('aria-expanded', 'true');
+                } else {
+                    targetEl.classList.remove('show');
+                    btn.classList.add('collapsed');
+                    btn.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            // Load Landing CMS Content
+            try {
+                const res = await fetch('/api/super-admin/public/landing-content');
+                if(res.ok) {
+                    const data = await res.json();
+                        const cms = data.data;
+
+                        // Check if Landing Page is disabled by administrator
+                        if (cms.enable_landing_page === false || String(cms.enable_landing_page).toLowerCase() === 'false') {
+                            window.location.replace('/auth/login.html');
+                            return;
+                        }
+
+                        // Helper for text assignment
+                        const _txt = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.textContent = val; };
+                        const _html = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.innerHTML = val; };
+
+                        // 1. Hero
+                        if(cms.hero_badge) _txt('lp-hero-badge', cms.hero_badge);
+                        if(cms.hero_title) _html('lp-hero-title', cms.hero_title);
+                        if(cms.hero_subtitle) _txt('lp-hero-subtitle', cms.hero_subtitle);
+                        if(cms.cta_primary_text) _txt('lp-cta-primary', cms.cta_primary_text);
+                        if(cms.cta_secondary_text) _txt('lp-cta-secondary', cms.cta_secondary_text);
+
+                        // Hero Stats
+                        if(cms.hero_stat_1_val) _txt('lp-hero-stat1-val', cms.hero_stat_1_val);
+                        if(cms.hero_stat_1_lbl) _txt('lp-hero-stat1-lbl', cms.hero_stat_1_lbl);
+                        if(cms.hero_stat_2_val) _txt('lp-hero-stat2-val', cms.hero_stat_2_val);
+                        if(cms.hero_stat_2_lbl) _txt('lp-hero-stat2-lbl', cms.hero_stat_2_lbl);
+                        if(cms.hero_stat_3_val) _txt('lp-hero-stat3-val', cms.hero_stat_3_val);
+                        if(cms.hero_stat_3_lbl) _txt('lp-hero-stat3-lbl', cms.hero_stat_3_lbl);
+
+                        // 1b. Trust Ticker Strip
+                        if(cms.ticker_1) _txt('lp-ticker-1', cms.ticker_1);
+                        if(cms.ticker_2) _txt('lp-ticker-2', cms.ticker_2);
+                        if(cms.ticker_3) _txt('lp-ticker-3', cms.ticker_3);
+                        if(cms.ticker_4) _txt('lp-ticker-4', cms.ticker_4);
+                        if(cms.ticker_5) _txt('lp-ticker-5', cms.ticker_5);
+
+                        // 1c. Trust / Credential Badges
+                        [1,2,3,4].forEach(n => {
+                            const iconKey   = `badge_${n}_icon`;
+                            const labelKey  = `badge_${n}_label`;
+                            const iconEl    = document.getElementById(`lp-badge-${n}-icon`);
+                            const labelEl   = document.getElementById(`lp-badge-${n}-label`);
+                            if(labelEl && cms[labelKey]) labelEl.textContent = cms[labelKey];
+                            if(iconEl  && cms[iconKey]) {
+                                // Swap the lucide icon by replacing data-lucide attribute and re-rendering
+                                iconEl.setAttribute('data-lucide', cms[iconKey]);
+                                iconEl.innerHTML = '';
+                            }
+                        });
+
+                        // 2. Features Section
+                        if(cms.features_title) _txt('lp-features-title', cms.features_title);
+                        if(cms.features_subtitle) _txt('lp-features-subtitle', cms.features_subtitle);
+                        if(cms.features_list && Array.isArray(cms.features_list) && cms.features_list.length > 0) {
+                            const grid = document.getElementById('lp-features-grid');
+                            if(grid) {
+                                grid.innerHTML = cms.features_list.map(f => `
+                                <div class="col-md-4">
+                                    <div class="feature-card glass-card shimmer-effect">
+                                        <div class="icon-box"><i data-lucide="${f.icon || 'star'}" size="24"></i></div>
+                                        <h4 class="fw-bold">${f.title}</h4>
+                                        <p class="text-muted">${f.desc}</p>
+                                    </div>
+                                </div>`).join('');
+                            }
+                        }
+
+                        // 3. Onboarding Steps
+                        if(cms.steps_title) _txt('lp-steps-title', cms.steps_title);
+                        if(cms.steps_subtitle) _txt('lp-steps-subtitle', cms.steps_subtitle);
+                        if(cms.steps_list && Array.isArray(cms.steps_list) && cms.steps_list.length > 0) {
+                            const grid = document.getElementById('lp-steps-grid');
+                            if(grid) {
+                                grid.innerHTML = cms.steps_list.map(s => `
+                                <div class="col-md-3 text-center">
+                                    <div class="icon-box mx-auto mb-4" style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
+                                        <h3 class="mb-0 fw-black text-primary">${s.num || '1'}</h3>
+                                    </div>
+                                    <h5 class="fw-bold">${s.title}</h5>
+                                    <p class="text-muted small">${s.desc}</p>
+                                </div>`).join('');
+                            }
+                        }
+
+                        // 4. Pricing Plans
+                        if(cms.pricing_title) _txt('lp-pricing-title', cms.pricing_title);
+                        if(cms.pricing_subtitle) _txt('lp-pricing-subtitle', cms.pricing_subtitle);
+                        if(cms.pricing_plans && Array.isArray(cms.pricing_plans) && cms.pricing_plans.length > 0) {
+                            const grid = document.getElementById('lp-pricing-grid');
+                            if(grid) {
+                                grid.innerHTML = cms.pricing_plans.map(p => `
+                                <div class="col-lg-4 position-relative">
+                                    ${p.badge ? `<div class="position-absolute w-100 text-center" style="top: -15px; left: 0; z-index: 10;">
+                                        <span class="ds-badge px-3 py-1" style="background: var(--primary); color: white; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">${p.badge}</span>
+                                    </div>` : ''}
+                                    <div class="feature-card glass-card ${p.badge ? 'border-primary' : ''} h-100" ${p.badge ? 'style="border-width: 2px;"' : ''}>
+                                        <div class="mb-4">
+                                            <h3 class="fw-black mb-1">${p.name}</h3>
+                                            <p class="text-muted mb-4">${p.desc}</p>
+                                            <div class="d-flex align-items-baseline gap-1 mb-4">
+                                                <span class="fs-1 fw-black">${p.price}</span>
+                                                <span class="text-muted">${p.period}</span>
+                                            </div>
+                                        </div>
+                                        <ul class="list-unstyled mb-5 v-stack gap-3">
+                                            ${(p.features || []).map(feat => `<li class="d-flex gap-2"><i data-lucide="check" class="text-success" style="width:20px;"></i> ${feat}</li>`).join('')}
+                                        </ul>
+                                        <a href="register-org.html?plan=${encodeURIComponent(p.name)}" class="ds-btn ds-btn-${p.badge ? 'primary' : 'secondary'} w-100 py-3">${p.cta || 'Start Free Trial'}</a>
+                                    </div>
+                                </div>`).join('');
+                            }
+                        }
+
+                        // 5. FAQs Section
+                        if(cms.faq_title) _txt('lp-faq-title', cms.faq_title);
+                        if(cms.faq_subtitle) _txt('lp-faq-subtitle', cms.faq_subtitle);
+                        if(cms.faqs && Array.isArray(cms.faqs) && cms.faqs.length > 0) {
+                            const acc = document.getElementById('faqAccordion');
+                            if(acc) {
+                                acc.innerHTML = cms.faqs.map((faq, i) => {
+                                    const id = 'faq' + i;
+                                    return `
+                                    <div class="accordion-item bg-transparent border-bottom">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#${id}">
+                                                ${faq.q}
+                                            </button>
+                                        </h2>
+                                        <div id="${id}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                            <div class="accordion-body text-muted">${faq.a}</div>
+                                        </div>
+                                    </div>`;
+                                }).join('');
+                            }
+                        }
+
+                        // 6. CTA Offer Banner
+                        if(cms.cta_banner_title) _txt('lp-cta-banner-title', cms.cta_banner_title);
+                        if(cms.cta_banner_subtitle) _txt('lp-cta-banner-subtitle', cms.cta_banner_subtitle);
+                        if(cms.cta_banner_btn1) _txt('lp-cta-banner-btn1', cms.cta_banner_btn1);
+                        if(cms.cta_banner_btn2) _txt('lp-cta-banner-btn2', cms.cta_banner_btn2);
+
+                        // 7. Footer
+                        if(cms.footer_description) _txt('lp-footer-desc', cms.footer_description);
+                        if(cms.footer_copyright) _txt('lp-footer-copy', cms.footer_copyright);
+                        if(cms.footer_status) _txt('lp-footer-status', cms.footer_status);
+
+                        if(cms.footer_pages && Object.keys(cms.footer_pages).length > 0) {
+                            localStorage.setItem('ps-landing-cms-pages', JSON.stringify(cms.footer_pages));
+                            if (window.renderFooterCols) window.renderFooterCols(cms.footer_pages);
+                        }
+
+                        if (window.lucide) lucide.createIcons();
+                    }
+                }
+            } catch(e) { console.error('Failed to load CMS content', e); }
+        });</script>
+
+    <script id="dynamic-footer">
+        document.addEventListener('DOMContentLoaded', () => {
+            const defaultPages = {
+                product: [
+                    { id: 'features', title: 'Features', link: 'page.html?id=features', content: '<h1>Core Platform Features</h1><p>Explore the full suite of 144 integrated feature modules designed for comprehensive quality governance, 8-stage problem solving, real-time KPI metrics, and automated PDF reporting.</p>' },
+                    { id: 'pricing', title: 'Pricing', link: 'page.html?id=pricing', content: '<h1>Transparent Enterprise Pricing</h1><p>Choose the plan that fits your organization — from Starter teams to global multi-plant Enterprise deployments with custom SLAs and white-label branding.</p>' },
+                    { id: 'workflows', title: 'Workflows', link: 'page.html?id=workflows', content: '<h1>Structured 8-Stage Quality Workflow</h1><p>Drive root cause analysis, countermeasure implementation, and standardization using our industry-validated 8-stage Quality Circle workflow engine.</p>' },
+                    { id: 'free-trial', title: 'Free Trial', link: '/auth/register-org.html', content: '<h1>14-Day Full Access Free Trial</h1><p>Start your 14-day free trial today with no credit card required. Experience complete access to all Enterprise features and multi-user collaboration tools.</p>' }
+                ],
+                resources: [
+                    { id: 'documentation', title: 'Documentation', link: 'page.html?id=documentation', content: '<h1>Enterprise Documentation</h1><p>Welcome to the official QCMS Enterprise documentation portal. Discover detailed guides on workflow setup, quality circle management, 8-stage problem solving, user roles, permission matrices, and audit logging.</p><h3>Getting Started</h3><p>Follow our step-by-step onboarding walkthroughs to register your organization, configure custom subdomains, define departments, and invite team members.</p>' },
+                    { id: 'api-reference', title: 'API Reference', link: 'page.html?id=api-reference', content: '<h1>API Reference & Integration Guide</h1><p>The QCMS Enterprise REST API allows programmatic integration with ERP systems, SAP S/4HANA, Salesforce, MES (Manufacturing Execution Systems), and custom internal dashboards.</p><h3>Authentication</h3><p>All API endpoints require JSON Web Tokens (JWT) passed in the HTTP Authorization: Bearer header or an Organization API Key.</p>' },
+                    { id: 'support-center', title: 'Support Center', link: 'page.html?id=support-center', content: '<h1>24/7 Enterprise Support Center</h1><p>Our dedicated customer success and technical engineering teams are available round-the-clock to assist with your deployment, billing, custom integration, or system inquiries.</p>' },
+                    { id: 'community', title: 'Community', link: 'page.html?id=community', content: '<h1>QCMS Global Community & Developer Hub</h1><p>Connect with quality managers, industrial engineers, lead auditors, and system administrators worldwide. Share best practices, custom workflow templates, and automation plugins.</p>' }
+                ],
+                company: [
+                    { id: 'about-us', title: 'About Us', link: 'page.html?id=about-us', content: '<h1>About QCMS Enterprise OS</h1><p>QCMS is the world’s leading Quality & Compliance Management System, engineered specifically for modern manufacturing, aerospace, automotive, healthcare, and enterprise industries.</p><h3>Our Mission</h3><p>To empower organizations globally with intelligent, data-driven 8-stage quality workflows, real-time analytics, and seamless compliance automation.</p>' },
+                    { id: 'careers', title: 'Careers', link: 'page.html?id=careers', content: '<h1>Careers at QCMS Solutions</h1><p>Join a fast-growing, mission-driven team of engineers, software architects, product designers, and enterprise quality experts. We are building the future of industrial quality automation.</p>' },
+                    { id: 'contact-sales', title: 'Contact Sales', link: 'page.html?id=contact-sales', content: '<h1>Contact Enterprise Sales</h1><p>Ready to transform your organization’s quality management? Contact our sales team for custom enterprise licensing, multi-site deployments, dedicated SLA guarantees, and SOC2 compliance packages.</p>' },
+                    { id: 'global-partners', title: 'Global Partners', link: 'page.html?id=global-partners', content: '<h1>Global Partner Network</h1><p>Collaborate with certified implementation partners, ISO consulting firms, and systems integrators across North America, Europe, Asia-Pacific, and Latin America.</p>' }
+                ],
+                legal: [
+                    { id: 'privacy-policy', title: 'Privacy Policy', link: 'page.html?id=privacy-policy', content: '<h1>Privacy Policy</h1><p>Your privacy and data security are our highest priorities. This Privacy Policy details how QCMS collects, uses, encrypts, and protects your personal and organizational information.</p>' },
+                    { id: 'terms-of-service', title: 'Terms of Service', link: 'page.html?id=terms-of-service', content: '<h1>Terms of Service</h1><p>These Terms of Service govern your access to and use of the QCMS Enterprise platform, web applications, mobile tools, and associated services.</p>' },
+                    { id: 'security', title: 'Security', link: 'page.html?id=security', content: '<h1>Enterprise Security Architecture</h1><p>QCMS is built with defense-in-depth security standards to protect mission-critical manufacturing and enterprise data.</p><h3>Security Specifications</h3><ul><li>AES-256 Data Encryption at Rest & TLS 1.3 in Transit</li><li>SOC2 Type II & ISO 27001 Certified Infrastructure</li><li>Multi-Factor Authentication (MFA) & Single Sign-On (SSO)</li><li>Granular Role-Based Access Control (RBAC) & Audit Trails</li></ul>' },
+                    { id: 'gdpr', title: 'GDPR', link: 'page.html?id=gdpr', content: '<h1>GDPR & EU Data Protection Compliance</h1><p>QCMS complies strictly with the European Union General Data Protection Regulation (GDPR), ensuring robust privacy protection for all EU data subjects.</p>' }
+                ]
+            };
+
+            const stored = localStorage.getItem('ps-landing-cms-pages');
+            let pagesData = stored ? JSON.parse(stored) : defaultPages;
+
+            if (!stored) {
+                localStorage.setItem('ps-landing-cms-pages', JSON.stringify(defaultPages));
+            }
+
+            const renderCol = (colId, items) => {
+                const el = document.getElementById('footer-col-' + colId);
+                if (el && items) {
+                    el.innerHTML = items.map(item => {
+                        if (!item || !item.title) return '';
+                        const href = item.link || `page.html?id=${item.id}`;
+                        const isExternal = href.startsWith('http://') || href.startsWith('https://');
+                        const targetAttr = isExternal ? 'target="_blank" rel="noopener noreferrer"' : '';
+                        return `<li><a href="${href}" ${targetAttr} class="text-reset text-decoration-none hover-primary">${item.title}</a></li>`;
+                    }).join('');
+                }
+            };
+
+            window.renderFooterCols = (data) => {
+                if(!data) return;
+                renderCol('product', data.product);
+                renderCol('resources', data.resources);
+                renderCol('company', data.company);
+                renderCol('legal', data.legal);
+            };
+
+            window.renderFooterCols(pagesData);
+        });
     </script>
 </body>
 

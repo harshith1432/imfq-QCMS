@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const projectId = params.get('project') || params.get('id');
+            if (projectId) {
+                window.location.replace('/projects/project-details.html?id=' + projectId);
+            } else {
+                window.location.replace('/projects/projects-repository.html');
+            }
+        })();
+    </script>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Workspace | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <header class="app-navbar">
+                <div class="h-stack justify-content-between w-100 px-4">
+                    <div class="h-stack gap-3">
+                        <button class="ds-btn ds-btn-ghost p-1 me-2" id="sidebar-toggle-btn" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="menu" style="width: 22px; height: 22px;"></i>
+                        </button>
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="window.history.back()">
+                            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back to Dashboard
+                        </button>
+                        <div id="breadcrumb-container"></div>
+                    </div>
+                    <div id="navbar-user"></div>
+                </div>
+            </header>
+
+            <div class="app-content fade-in-up">
+                <!-- Project Progress Header -->
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h1 class="ds-title mb-0" id="projectTitle">Loading...</h1>
+                                <span id="projectStatusBadge"></span>
+                            </div>
+                            <p class="ds-text-secondary mb-0" id="projectMeta">Project ID and Department will appear
+                                here.</p>
+                        </div>
+                        <div id="projectActions" class="h-stack gap-2"></div>
+                    </div>
+                </header>
+
+                <!-- Methodology Stepper -->
+                <div id="stepperContainer" class="fade-in section-spacing">
+                    <!-- QCMS.stageStepper will be injected here -->
+                </div>
+
+                <!-- 3-Panel Workspace -->
+                <div class="workspace-layout fade-in section-spacing">
+                    <!-- Left: Stage Selector -->
+                    <div class="workspace-sidebar">
+                        <div class="glass-card h-100">
+                            <div class="ds-card-header p-3 px-3">
+                                <span class="text-xs fw-bold text-muted text-uppercase tracking-wider">Methodology
+                                    Stages</span>
+                            </div>
+                            <div class="ds-card-body p-0" id="stageList">
+                                <!-- Stage nav buttons injected here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reviewer Governance Panel (Stage 7) -->
+                    <div id="reviewerPanel" class="glass-card mb-4 border-primary" style="display: none;">
+                        <div
+                            class="ds-card-header bg-soft-primary p-3 d-flex justify-content-between align-items-center">
+                            <div class="h-stack gap-2">
+                                <i data-lucide="shield-check" class="text-primary"></i>
+                                <span class="fw-bold text-primary">Reviewer Governance: Stage 7 Approval</span>
+                            </div>
+                            <span class="badge bg-primary">Action Required</span>
+                        </div>
+                        <div class="ds-card-body p-4">
+                            <p class="ds-text-secondary small mb-3">As a Reviewing Officer, please evaluate the proposed
+                                solution and implementation plan. Your approval is required to advance the project to
+                                Stage 8 (Implementation).</p>
+                            <div class="mb-3">
+                                <label class="ds-label mb-2">Reviewer Comments / Observations</label>
+                                <textarea id="reviewerNote" class="ds-textarea w-100" rows="3"
+                                    placeholder="Enter findings or revision requirements..."></textarea>
+                            </div>
+                            <div class="h-stack gap-2 justify-content-end">
+                                <button class="ds-btn ds-btn-danger"
+                                    onclick="workspace.submitDecision('Rejected')">Reject Project</button>
+                                <button class="ds-btn ds-btn-warning"
+                                    onclick="workspace.submitDecision('Revision')">Request Revision</button>
+                                <button class="ds-btn ds-btn-primary"
+                                    onclick="workspace.submitDecision('Approved')">Approve Solution</button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- Center: Stage Content & Execution -->
+                    <div class="workspace-main">
+                        <div class="glass-card h-100 d-flex flex-column">
+                            <div class="ds-card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title" id="stageTitle">Stage Content</h5>
+                                <div id="stageStatusBadge"></div>
+                            </div>
+                            <div class="ds-card-body overflow-auto flex-grow-1" id="stageBody">
+                                <div class="p-4 text-center">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <p class="mt-2 text-muted">Loading stage data...</p>
+                                </div>
+                            </div>
+                            <div class="ds-card-footer border-top p-3" id="stageActions"
+                                style="display:none; background: rgba(var(--ds-accent-rgb), 0.05); border-color: var(--ds-border-color) !important;">
+                                <!-- Role-based actions injected here -->
+                            </div>
+                            <div id="facilitator-actions" class="p-3 border-top border-white/10 hidden">
+                                <!-- Facilitator gates injected here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Activity & Metadata -->
+                    <div class="workspace-details">
+                        <div class="glass-card h-100">
+                            <div class="ds-card-header p-3 px-3">
+                                <span class="text-xs fw-bold text-muted text-uppercase tracking-wider">Project
+                                    Lifecycle</span>
+                            </div>
+                            <div class="ds-card-body p-0" id="activityPanel">
+                                <div id="activityLog" class="activity-feed">
+                                    <p class="text-center text-muted text-xs p-4">Initializing timeline...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 7 QC Tools Floating Action Button -->
+    <button class="ds-btn ds-btn-primary rounded-circle shadow-lg" style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index: 1050;" onclick="workspace.openQCTools()" title="Open 7 QC Tools">
+        <i data-lucide="bar-chart-2" style="width:28px;height:28px;color:white;"></i>
+    </button>
+
+    <!-- 7 QC Tools Modal -->
+    <div class="modal fade" id="qcToolsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content glass-card border-0">
+                <div class="modal-header border-0 align-items-center pt-4 px-4 pb-0">
+                    <div>
+                        <h4 class="mb-1 fw-bold text-gradient">7 QC Tools</h4>
+                        <p class="text-xs text-muted mb-0">Use standard quality control tools to analyze project data</p>
+                    </div>
+                    <button type="button" class="btn-close shadow-none bg-light p-2 rounded-circle"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 pt-3">
+                    <div class="d-flex gap-3 h-100">
+                        <!-- Sidebar for Tools Selection -->
+                        <div class="qc-tools-sidebar" style="width: 200px; flex-shrink: 0; border-right: 1px solid var(--ds-border-color); padding-right: 15px;">
+                            <nav class="nav flex-column gap-2" id="qcToolsNav">
+                                <a href="#" class="nav-link active rounded fw-semibold text-xs py-2 px-3" data-tool="checksheet" onclick="workspace.switchQCTool('checksheet', event)"><i data-lucide="table" class="me-2" style="width:14px;height:14px;"></i>Check Sheet</a>
+                                <a href="#" class="nav-link rounded fw-semibold text-xs py-2 px-3" data-tool="histogram" onclick="workspace.switchQCTool('histogram', event)"><i data-lucide="bar-chart" class="me-2" style="width:14px;height:14px;"></i>Histogram</a>
+                                <a href="#" class="nav-link rounded fw-semibold text-xs py-2 px-3" data-tool="pareto" onclick="workspace.switchQCTool('pareto', event)"><i data-lucide="bar-chart-horizontal" class="me-2" style="width:14px;height:14px;"></i>Pareto Chart</a>
+                                <a href="#" class="nav-link rounded fw-semibold text-xs py-2 px-3" data-tool="fishbone" onclick="workspace.switchQCTool('fishbone', event)"><i data-lucide="git-merge" class="me-2" style="width:14px;height:14px;"></i>Cause & Effect</a>
+                                <a href="#" class="nav-link rounded fw-semibold text-xs py-2 px-3" data-tool="controlchart" onclick="workspace.switchQCTool('controlchart', event)"><i data-lucide="activity" class="me-2" style="width:14px;height:14px;"></i>Control Chart</a>
+                                <a href="#" class="nav-link rounded fw-semibold text-xs py-2 px-3" data-tool="scatter" onclick="workspace.switchQCTool('scatter', event)"><i data-lucide="scatter-chart" class="me-2" style="width:14px;height:14px;"></i>Scatter Diagram</a>
+                                <a href="#" class="nav-link rounded fw-semibold text-xs py-2 px-3" data-tool="stratification" onclick="workspace.switchQCTool('stratification', event)"><i data-lucide="layers" class="me-2" style="width:14px;height:14px;"></i>Stratification</a>
+                            </nav>
+                        </div>
+                        
+                        <!-- Tool Content Area -->
+                        <div class="qc-tool-content flex-grow-1" id="qcToolContent" style="min-height: 400px; position: relative;">
+                            <!-- Dynamically injected based on selection -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Submission Modal -->
+    <div class="modal fade" id="stageModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 650px;">
+            <div class="modal-content glass-card border-0">
+                <div class="modal-header border-0 align-items-center pt-4 px-4 pb-0">
+                    <h5 class="modal-title fw-bold text-main" id="modalTitle">Submit Stage Data</h5>
+                    <button type="button"
+                        class="btn ds-btn-ghost rounded-circle p-1 d-flex align-items-center justify-content-center text-muted m-0"
+                        data-bs-dismiss="modal" style="width:32px; height:32px;">
+                        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                    </button>
+                </div>
+                <div class="modal-body px-4 py-3" id="modalBody">
+                    <!-- Dynamic form based on stage -->
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-2">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="saveStageBtn">Save Stage Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        const STAGE_NAMES = [
+            '', 
+            'Problem Definition & Project Initiation', 
+            'Observation & Data Collection', 
+            'Cause Identification',
+            'Root Cause Analysis & Verification', 
+            'Countermeasure Planning & Solution Development', 
+            'Implementation & Change Management',
+            'Performance Verification & Benefits Realization', 
+            'Standardization, Knowledge Sharing & Project Closure'
+        ];
+
+        const workspace = {
+            projectId: null,
+            project: null,
+            currentStage: 1,
+            viewingStage: 1,
+            userRole: null,
+            modal: null,
+            stageData: null,
+
+            async init() {
+                QCMS.init();
+                this.modal = new bootstrap.Modal(document.getElementById('stageModal'));
+
+                const params = new URLSearchParams(window.location.search);
+                this.projectId = params.get('project') || params.get('id');
+                this.userRole = QCMS.user?.role || localStorage.getItem('role') || 'Team Member';
+
+                if (!this.projectId) {
+                    window.location.href = '/dashboard/dashboard-' + QCMS.roleToSlug(this.userRole) + '.html';
+                    return;
+                }
+
+                await this.loadProject();
+                this.loadActivity();
+
+                document.getElementById('saveStageBtn').onclick = () => this.submitData();
+            },
+
+            async loadProject() {
+                try {
+                    this.project = await api.get(`/projects/${this.projectId}`);
+                    this.currentStage = Number(this.project.current_stage || 1);
+                    this.viewingStage = Number(this.currentStage);
+
+                    // Update Header
+                    document.getElementById('projectTitle').textContent = this.project.title;
+                    document.getElementById('projectStatusBadge').innerHTML = QCMS.statusBadge(this.project.status);
+                    document.getElementById('projectMeta').innerHTML = `
+                    <span class="fw-medium">${this.project.project_uid || 'P-NEW'}</span> · 
+                    <span>${this.project.department || 'N/A'}</span> · 
+                    ${QCMS.categoryBadge(this.project.category)}
+                    ${this.project.facilitator_name ? ` · <span class="text-xs text-muted"><i data-lucide="user-check" class="w-3 h-3 inline-block"></i> Facilitator: <b>${this.project.facilitator_name}</b></span>` : ''}
+                `;
+
+                    // Render Progress Components
+                    document.getElementById('stepperContainer').innerHTML = QCMS.stageStepper(this.currentStage);
+                    this.renderStageNav();
+                    this.viewStage(this.currentStage);
+
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error(e);
+                }
+            },
+
+            renderStageNav() {
+                const list = document.getElementById('stageList');
+                const stageIcons = ['users', 'search', 'shield', 'git-branch', 'sliders', 'wrench', 'shield-check', 'award'];
+                list.innerHTML = STAGE_NAMES.slice(1).map((name, i) => {
+                    const num = i + 1;
+                    let state = 'locked';
+                    if (num < this.currentStage) state = 'completed';
+                    else if (num === this.currentStage) state = 'active';
+
+                    const isSelected = num === this.viewingStage;
+                    const isDisabled = num > this.currentStage;
+                    const iconName = stageIcons[i];
+                    
+                    let iconHtml = `<i data-lucide="${iconName}" style="width: 12px; height: 12px;"></i>`;
+                    if (num < this.currentStage) {
+                        iconHtml = `<i data-lucide="check" style="width: 12px; height: 12px;"></i>`;
+                    }
+
+                    return `
+                    <button class="stage-nav-btn ${state} ${isSelected ? 'selected' : ''}" 
+                            onclick="workspace.viewStage(${num})" ${isDisabled ? 'disabled' : ''}>
+                        <div class="stage-nav-num" style="display: flex; align-items: center; justify-content: center;">
+                            ${iconHtml}
+                        </div>
+                        <div class="stage-nav-label">${name}</div>
+                    </button>
+                `;
+                }).join('');
+            },
+
+            async viewStage(num) {
+                this.viewingStage = num;
+                this.renderStageNav();
+
+                const title = document.getElementById('stageTitle');
+                const state = document.getElementById('stageStatusBadge');
+                const body = document.getElementById('stageBody');
+                const actions = document.getElementById('stageActions');
+
+                title.textContent = `Stage ${num}: ${STAGE_NAMES[num]}`;
+
+                // Determine display state
+                let displayStatus = 'Not Started';
+                if (Number(num) < Number(this.currentStage)) displayStatus = 'Completed';
+                else if (Number(num) == Number(this.currentStage)) displayStatus = 'In Progress';
+                state.innerHTML = QCMS.statusBadge(displayStatus);
+
+                try {
+                    // Fetch stage-specific data
+                    const data = await api.get(`/projects/${this.projectId}/stage/${num}`);
+                    this.stageData = data;
+
+                    if (Number(num) === 1) {
+                        body.innerHTML = this.renderStage1(data);
+                    } else if (data && Object.keys(data).length > 2) {
+                        body.innerHTML = this.renderDataView(data, num);
+                    } else {
+                        body.innerHTML = `
+                                <div class="p-5 text-center fade-in">
+                                    <div class="mb-3 text-muted">
+                                        <i data-lucide="${Number(num) == Number(this.currentStage) ? 'edit-3' : 'lock'}" style="width:48px;height:48px;"></i>
+                                    </div>
+                                    <h6 class="fw-bold">${Number(num) == Number(this.currentStage) ? 'Ready for Input' : 'No Data Available'}</h6>
+                                    <p class="text-sm text-muted">Detailed documentation for this stage will appear here after submission.</p>
+                                </div>
+                            `;
+                    }
+
+                    // Inject actions if viewing current stage or a completed past stage
+                    if (Number(num) <= Number(this.currentStage) && this.canExecute()) {
+                        actions.style.display = 'flex';
+                        const isCompleted = Number(num) < Number(this.currentStage);
+                        const isStage1Approved = Number(num) === 1 && (data.is_approved === true || data.is_approved === 1);
+                        const canGoNext = (isCompleted || isStage1Approved) && num < STAGE_NAMES.length - 1;
+                        const canGoPrev = num > 1;
+
+                        const role = String(this.userRole || '').toLowerCase();
+                        const isTL = role.includes('leader') || role.includes('admin');
+                        const isTM = role.includes('member');
+                        const isFacilitator = role.includes('facilitator');
+
+                        let prevBtn = `
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost" 
+                                    onclick="${canGoPrev ? `workspace.viewStage(${Number(num) - 1})` : ''}" 
+                                    ${!canGoPrev ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>
+                                <i data-lucide="arrow-left" class="w-3 h-3 mr-1"></i> Previous
+                            </button>
+                        `;
+
+                        const isCurrent = Number(num) === Number(this.currentStage);
+                        const isPast = Number(num) < Number(this.currentStage);
+
+                        let nextBtn = `
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost" 
+                                    onclick="${isCurrent ? 'workspace.advance()' : (isPast ? `workspace.viewStage(${Number(num) + 1})` : '')}" 
+                                    ${(!isCurrent && !isPast) ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>
+                                ${isCurrent ? 'Advance Stage' : 'Next Stage'} <i data-lucide="${isCurrent ? 'chevrons-right' : 'arrow-right'}" class="w-3 h-3 ml-1"></i>
+                            </button>
+                        `;
+
+                        // Highlight if locked via logic (e.g. Stage 1 not approved)
+                        if (isCurrent) {
+                            nextBtn = `
+                                <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.advance()">
+                                    Advance Stage <i data-lucide="chevrons-right" class="w-3 h-3 ml-1"></i>
+                                </button>
+                            `;
+                        } else if (isPast) {
+                             nextBtn = `
+                                <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.viewStage(${Number(num) + 1})">
+                                    Next Stage <i data-lucide="arrow-right" class="w-3 h-3 ml-1"></i>
+                                </button>
+                            `;
+                        }
+
+                        let centerAction = '';
+
+                        if (Number(num) == 1) {
+                            if (isTL && (data.is_approved === null || (data.is_approved === false && !this.isEditing))) {
+                                centerAction = `
+                                    <div class="h-stack gap-2">
+                                        <button class="ds-btn ds-btn-sm ds-btn-danger" onclick="workspace.promptStage1Decision('Rejected')">
+                                            <i data-lucide="x-circle" class="w-3 h-3 mr-1"></i> Send Back
+                                        </button>
+                                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.submitStage1Decision('Approved')">
+                                            <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> Approve Statement
+                                        </button>
+                                    </div>
+                                `;
+                            } else if (isTL && this.isEditing) {
+                                centerAction = `
+                                    <div class="h-stack gap-2">
+                                        <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.toggleEditMode(false)">Cancel</button>
+                                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.saveStage1Inline()">
+                                            <i data-lucide="save" class="w-3 h-3 mr-1"></i> Save Changes
+                                        </button>
+                                    </div>
+                                `;
+                            } else if (isTL) {
+                                centerAction = `
+                                    <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.toggleEditMode(true)">
+                                        <i data-lucide="edit" class="w-3 h-3 mr-1"></i> Edit Identification
+                                    </button>
+                                `;
+                            } else {
+                                centerAction = `<span class="text-xs text-muted italic">Read-only Stage</span>`;
+                            }
+                        } else if (isFacilitator) {
+                            // Facilitator specific actions override generic ones
+                            if (Number(num) == 5 && Number(num) == this.currentStage) {
+                                centerAction = `
+                                    <div class="h-stack gap-2 bg-soft-primary p-2 rounded-lg border border-primary/20">
+                                        <textarea id="rca-note-inline" class="ds-input text-xs" style="width:200px; min-height:32px" placeholder="Validation remarks..."></textarea>
+                                        <button onclick="workspace.validateRCA(document.getElementById('rca-note-inline').value)" class="ds-btn ds-btn-sm ds-btn-primary">
+                                            <i data-lucide="check-square" class="w-3 h-3 mr-1"></i> Validate RCA
+                                        </button>
+                                    </div>
+                                `;
+                            } else if (Number(num) == 8 && this.project.status !== 'Pending Closure') {
+                                centerAction = `
+                                    <button onclick="workspace.approveImpact()" class="ds-btn ds-btn-sm ds-btn-primary">
+                                        <i data-lucide="award" class="w-3 h-3 mr-1"></i> Final Approval & Close
+                                    </button>
+                                `;
+                            } else {
+                                centerAction = `<span class="text-xs text-muted italic">Viewing as Facilitator</span>`;
+                            }
+                        } else if (isTM) {
+                            if (Number(num) == 5 && !isCompleted) {
+                                centerAction = `<button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update RCA Data</button>`;
+                            } else if (Number(num) == 7 && !isCompleted) {
+                                centerAction = `
+                                    <div class="h-stack gap-2">
+                                        <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update Solution</button>
+                                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.advance()">Submit</button>
+                                    </div>
+                                `;
+                            } else if (Number(num) == 8 && !isCompleted) {
+                                centerAction = `<button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update implementation</button>`;
+                            } else if (!isCompleted) {
+                                centerAction = `
+                                    <div class="h-stack gap-2">
+                                        <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="workspace.openStageModal(${num})">Update Data</button>
+                                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="workspace.openStageModal(${num}, true)">Save & Advance</button>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            if (!isCompleted) {
+                                centerAction = `<span class="text-xs text-muted italic">Read-only Stage</span>`;
+                            }
+                        }
+
+                        const actionHtml = `
+                            <div class="h-stack gap-2 justify-content-between w-100">
+                                ${prevBtn}
+                                <div class="h-stack gap-2">
+                                    <div class="text-xxs text-muted uppercase fw-bold tracking-widest mr-2 border-end pr-2 py-1">Stage ${num} Actions</div>
+                                    ${centerAction}
+                                </div>
+                                ${nextBtn}
+                            </div>
+                        `;
+
+                        actions.innerHTML = actionHtml;
+                        actions.style.display = 'flex';
+                    } else {
+                        actions.style.display = 'none';
+                    }
+
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error(e);
+                    body.innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Load Error', 'Could not retrieve stage data.')}</div>`;
+                }
+            },
+
+            canExecute() {
+                const roleStr = String(this.userRole || QCMS.user?.role || '').toLowerCase();
+                return !roleStr.includes('reviewer');
+            },
+
+            renderStage1(data) {
+                const p = this.project || {};
+                const isEdit = this.isEditing;
+
+                const approvalAlert = data.is_approved === true ? `
+                        <div class="ds-alert ds-alert-success mb-4 fade-in">
+                            <div class="h-stack gap-3">
+                                <i data-lucide="check-circle" class="text-success"></i>
+                                <div>
+                                    <div class="fw-bold text-sm">Identification Approved</div>
+                                    <div class="text-xs text-muted">${data.tl_comments || 'This problem has been validated for QC methodology.'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : data.is_approved === false ? `
+                        <div class="ds-alert ds-alert-danger mb-4 fade-in">
+                            <div class="h-stack gap-3">
+                                <i data-lucide="alert-circle" class="text-danger"></i>
+                                <div>
+                                    <div class="fw-bold text-sm">Revision Required</div>
+                                    <div class="text-xs text-muted">Note: "${data.tl_comments || 'Please refine the details.'}"</div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : '';
+
+                const field = (label, key, type = 'text', icon = 'info', isProjectField = false, noMargin = false) => {
+                    const val = isProjectField ? (p[key] || '') : (data[key] || '');
+                    const mbClass = noMargin ? 'mb-0' : 'mb-3';
+                    if (isEdit) {
+                        if (key === 'category') {
+                            const categories = ['Quality', 'Cost', 'Safety', 'Productivity', 'Delivery', 'Morale'];
+                            return `
+                                    <div class="${mbClass}">
+                                        <label class="ds-label text-xs mb-1 font-bold"><i data-lucide="${icon}" class="w-3 h-3 mr-1 inline"></i> ${label}</label>
+                                        <select id="edit_${key}" class="ds-input w-100 font-medium">
+                                            ${categories.map(c => `<option value="${c}" ${val === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                `;
+                        }
+                        return `
+                                <div class="${mbClass}">
+                                    <label class="ds-label text-xs mb-1 font-bold"><i data-lucide="${icon}" class="w-3 h-3 mr-1 inline"></i> ${label}</label>
+                                    ${type === 'textarea'
+                                ? `<textarea id="edit_${key}" class="ds-textarea w-100" rows="3">${val}</textarea>`
+                                : `<input id="edit_${key}" type="text" class="ds-input w-100 font-medium" value="${val}">`}
+                                </div>
+                            `;
+                    }
+                    return `
+                            <div class="${mbClass}">
+                                <label class="text-xs text-muted text-uppercase fw-bold mb-1 d-flex align-items-center gap-1 tracking-wider">
+                                    <i data-lucide="${icon}" class="w-3 h-3"></i> ${label}
+                                </label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <p class="${key === 'problem_statement' || key === 'title' ? 'fs-5 fw-bold text-main' : 'ds-text-secondary fw-medium'} mb-0">
+                                        ${(key === 'category' ? QCMS.categoryBadge(val) + ' <span class="align-middle">' + val + '</span>' : val) || '<span class="text-muted italic opacity-50">Not specified</span>'}
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                };
+
+                return `
+                    <div class="px-4 py-2 fade-in">
+                        ${approvalAlert}
+                        
+                        <div class="v-stack gap-3">
+                             <!-- Main Content Pillar -->
+                            <header class="glass-card px-4 py-3 border-start border-4 border-primary shadow-sm bg-white/40 mb-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-lg-6">
+                                        <div class="py-1">
+                                            ${field('Project Title', 'title', 'text', 'tag', true, true)}
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="py-1 border-start border-black/5 ps-3">
+                                            ${field('Category', 'category', 'select', 'layers', true, true)}
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="py-1 border-start border-black/5 ps-3">
+                                            ${field('Department', 'department', 'text', 'building', true, true)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <section class="glass-card p-4">
+                                <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-2">
+                                    <div class="h-stack gap-2">
+                                        <i data-lucide="target" class="text-primary w-4 h-4"></i>
+                                        <h6 class="text-xs fw-bold text-muted text-uppercase mb-0">Problem Identification</h6>
+                                    </div>
+                                    <span class="text-xxs text-muted italic">Methodology: 5W1H Analysis</span>
+                                </div>
+                                <div class="row g-4">
+                                    <div class="col-12">
+                                        ${field('Problem Statement', 'problem_statement', 'textarea', 'target')}
+                                    </div>
+                                    <div class="col-12 mt-0">
+                                        ${field('Detailed Description', 'description', 'textarea', 'align-left')}
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <div class="p-3 rounded-lg bg-light/30 border border-black/10">
+                                            ${field('Physical Location', 'location', 'text', 'map-pin')}
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="p-3 rounded-lg bg-light/30 border border-black/10">
+                                            ${field('Occurrence Frequency', 'frequency_of_occurrence', 'text', 'clock')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="glass-card p-4 bg-soft-warning/20 border-warning/10">
+                                <div class="h-stack gap-2 mb-3">
+                                    <i data-lucide="zap" class="text-warning w-4 h-4"></i>
+                                    <h6 class="text-xs fw-bold text-muted text-uppercase mb-0">Impact Assessment (Initial)</h6>
+                                </div>
+                                ${field('Assessment of Quality / Cost / Safety', 'initial_impact', 'textarea', 'alert-triangle')}
+                            </section>
+
+                            <!-- Metadata Row (Secondary Information) -->
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="glass-card h-100 flex-column d-flex">
+                                        <div class="p-4 border-bottom border-black/5">
+                                            <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-sm">
+                                                <i data-lucide="image" class="w-4 h-4 text-primary"></i> Evidence
+                                            </h6>
+                                        </div>
+                                        <div class="p-4 flex-grow-1 d-flex flex-column justify-content-center">
+                                            ${isEdit ? `
+                                                <input id="edit_evidence" type="text" class="ds-input w-100 text-xs shadow-none border-dashed" placeholder="Evidence URL..." value="${data.evidence || ''}">
+                                            ` : (data.evidence ? `
+                                                <a href="${data.evidence}" target="_blank" class="ds-link-btn w-100 justify-content-center bg-primary-subtle text-primary border-primary p-2 rounded-3 text-decoration-none d-flex align-items-center gap-2 fw-medium hover-subtle text-xs">
+                                                    <i data-lucide="external-link" class="w-3 h-3"></i> Open Folder
+                                                </a>
+                                            ` : `
+                                                <p class="text-center text-muted text-xs mb-0 opacity-50">No evidence</p>
+                                            `)}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="glass-card h-100 p-4 bg-light/30">
+                                        <label class="text-xxs text-muted d-block text-uppercase fw-bold mb-3 tracking-widest">Project Identity</label>
+                                        <div class="v-stack gap-2">
+                                            <div class="h-stack justify-content-between p-2 px-3 rounded-md bg-white/50 border">
+                                                <span class="text-xxs text-muted uppercase fw-bold">UID</span>
+                                                <div class="text-xs fw-bold font-monospace">${p.project_uid || 'P-NEW'}</div>
+                                            </div>
+                                            <div class="h-stack justify-content-between px-1">
+                                                <span class="text-xxs text-muted uppercase fw-bold">Started</span>
+                                                <div class="text-xs fw-medium">${QCMS.formatDate(p.created_at)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="glass-card h-100 p-4 overflow-hidden" style="background: linear-gradient(135deg, rgba(var(--ds-primary-rgb), 0.08), transparent);">
+                                        <div class="h-stack justify-content-between mb-3">
+                                            <h6 class="fw-bold mb-0 text-xs tracking-wider">FLOW STATE</h6>
+                                            <span class="badge ${data.is_approved ? 'bg-success' : 'bg-primary'} text-xxs px-2" style="font-size: 9px;">
+                                                ${data.is_approved ? 'VERIFIED' : 'ACTIVE'}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-muted mb-0 leading-relaxed opacity-90">
+                                            ${data.is_approved ? 'Stage 1 verified. Methodology Stage 2 is unlocked.' : 'Phase 1: Identification & Definition.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    `;
+            },
+
+            renderDataView(data, stage) {
+                const skip = ['id', 'project_id', 'created_at', 'updated_at', 'is_approved', 'tl_comments', 'org_id', 'management_approved', 'management_approver_id', 'management_approved_at', 'management_comments', 'facilitator_approved', 'facilitator_approver_id', 'facilitator_approved_at', 'facilitator_comments', 'reviewer_approved', 'reviewer_id', 'reviewer_approved_at', 'reviewer_comments', 'final_approval', 'final_approval_by', 'final_approval_at'];
+                
+                let html = `<div class="p-4 fade-in v-stack gap-4">`;
+                
+                const entries = Object.entries(data).filter(([k, v]) => !skip.includes(k) && v !== null && v !== undefined);
+                
+                const tableFields = [];
+                const complexFields = [];
+                
+                entries.forEach(([k, v]) => {
+                    if (typeof v === 'object') {
+                        complexFields.push([k, v]);
+                    } else {
+                        tableFields.push([k, v]);
+                    }
+                });
+                
+                if (tableFields.length > 0) {
+                    html += `
+                        <div class="glass-card p-4 border border-black/5 bg-white/30 rounded-xl">
+                            <h6 class="text-xs fw-bold text-muted text-uppercase mb-3 tracking-wider d-flex align-items-center gap-2">
+                                <i data-lucide="info" class="w-4 h-4 text-primary"></i> Stage Overview Metrics & Details
+                            </h6>
+                            <div class="ds-table-container rounded-lg overflow-hidden border border-black/5">
+                                <table class="ds-table mb-0">
+                                    <tbody>
+                                        ${tableFields.map(([k, v]) => {
+                                            let displayVal = v;
+                                            if (typeof v === 'boolean') {
+                                                displayVal = v ? `<span class="badge bg-success-subtle text-success border-success/15 border" style="font-size: 10px; padding: 4px 8px;">Yes</span>` : `<span class="badge bg-secondary-subtle text-secondary border border-black/10" style="font-size: 10px; padding: 4px 8px;">No</span>`;
+                                            } else if (k.includes('cost') || k.includes('savings') || k.includes('budget')) {
+                                                displayVal = `₹${Number(v).toLocaleString()}`;
+                                            } else if (k.includes('pct') || k.includes('rate') || k.includes('roi')) {
+                                                displayVal = `${v}%`;
+                                            }
+                                            return `
+                                                <tr>
+                                                    <th style="width:35%;" class="text-xs text-uppercase text-muted py-2.5 font-bold">${k.replace(/_/g, ' ')}</th>
+                                                    <td class="text-sm fw-medium py-2.5">${displayVal || '—'}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                complexFields.forEach(([k, v]) => {
+                    let fieldHtml = '';
+                    const title = k.replace(/_/g, ' ').toUpperCase();
+                    
+                    if (Array.isArray(v)) {
+                        if (v.length === 0) {
+                            fieldHtml = `<p class="text-xs text-muted italic mb-0">No records documented.</p>`;
+                        } else {
+                            if (typeof v[0] === 'object') {
+                                const keys = Object.keys(v[0]);
+                                fieldHtml = `
+                                    <div class="ds-table-container rounded-lg overflow-hidden border border-black/5">
+                                        <table class="ds-table mb-0">
+                                            <thead>
+                                                <tr>
+                                                    ${keys.map(key => `<th class="text-xxs text-uppercase text-muted py-2">${key.replace(/_/g, ' ')}</th>`).join('')}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${v.map(row => `
+                                                    <tr>
+                                                        ${keys.map(key => {
+                                                            let cellVal = row[key];
+                                                            if (typeof cellVal === 'boolean') {
+                                                                cellVal = cellVal ? 'Yes' : 'No';
+                                                            }
+                                                            return `<td class="text-xs py-2">${cellVal || '—'}</td>`;
+                                                        }).join('')}
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                `;
+                            } else {
+                                fieldHtml = `
+                                    <ul class="list-group list-group-flush rounded-lg overflow-hidden border border-black/5 text-sm">
+                                        ${v.map(item => `<li class="list-group-item bg-transparent text-xs py-2">${item}</li>`).join('')}
+                                    </ul>
+                                `;
+                            }
+                        }
+                    } else {
+                        fieldHtml = `<pre class="bg-black/5 p-3 rounded-lg text-xs mb-0 overflow-auto" style="max-height: 200px;">${JSON.stringify(v, null, 2)}</pre>`;
+                    }
+                    
+                    html += `
+                        <div class="glass-card p-4 border border-black/5 bg-white/30 rounded-xl">
+                            <h6 class="text-xs fw-bold text-muted text-uppercase mb-3 tracking-wider d-flex align-items-center gap-2">
+                                <i data-lucide="layers" class="w-4 h-4 text-primary"></i> ${title}
+                            </h6>
+                            ${fieldHtml}
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+                return html;
+            },
+
+            async renderActionButtons() {
+                const container = document.getElementById('stageActions');
+                if (!container) return;
+
+                if (!this.project) return;
+
+                const user = QCMS.user || {};
+                const isFacilitator = user && user.role === 'Facilitator';
+                const stage = this.project.current_stage;
+
+                if (isFacilitator) {
+                    if (stage === 5) {
+                        container.innerHTML += `
+                        <div class="v-stack gap-3 w-full p-4 border border-white/10 rounded-lg bg-white/5">
+                            <label class="text-xs fw-bold text-uppercase text-muted">Facilitator RCA Validation</label>
+                            <textarea id="rca-note" class="ds-input w-full" style="min-height:80px" placeholder="Enter validation remarks..."></textarea>
+                            <button onclick="workspace.validateRCA()" class="ds-btn ds-btn-primary w-full">
+                                <i data-lucide="check-square"></i> Validate RCA (Unlock Stage 6)
+                            </button>
+                        </div>
+                    `;
+                    } else if (stage === 8 && this.project.status !== 'Pending Closure') {
+                        container.innerHTML += `
+                        <button onclick="workspace.approveImpact()" class="ds-btn ds-btn-primary w-full">
+                            <i data-lucide="award"></i> Approve Impact & Ready for Closure
+                        </button>
+                    `;
+                    }
+                    if (window.lucide) lucide.createIcons();
+                }
+            },
+
+            async validateRCA() {
+                const note = document.getElementById('rca-note').value.trim();
+                if (!note) return QCMS.toast('Validation note is required', 'error');
+
+                try {
+                    const res = await api.post(`/facilitator/rca/${this.projectId}/validate`, { validation_note: note });
+                    QCMS.toast(res.msg, 'success');
+                    this.loadProject();
+                } catch (err) {
+                    QCMS.toast(err.message, 'error');
+                }
+            },
+
+            async promptStage1Decision(status) {
+                const comments = prompt(`Reason for ${status === 'Approved' ? 'Approval' : 'Correction'}:`);
+                if (comments === null) return;
+                this.submitStage1Decision(status, comments);
+            },
+
+            async submitStage1Decision(status, comments = '') {
+                try {
+                    await api.post(`/projects/${this.projectId}/stage/1`, { is_approved: status === 'Approved', tl_comments: comments });
+                    QCMS.toast(`Stage 1 ${status}!`, 'success');
+                    if (status === 'Approved') {
+                        await this.advance(true); // Auto advance to Stage 2 if approved
+                    } else {
+                        this.loadProject();
+                    }
+                } catch (e) {
+                    QCMS.toast(e.message || 'Decision failed', 'danger');
+                }
+            },
+
+            toggleEditMode(isEditing) {
+                this.isEditing = isEditing;
+                this.viewStage(this.viewingStage);
+            },
+
+            async saveStage1Inline() {
+                // Stage 1 specific fields
+                const keys = ['problem_statement', 'description', 'location', 'frequency_of_occurrence', 'evidence', 'initial_impact'];
+                // Project level fields
+                const projectKeys = ['title', 'category', 'department'];
+                const payload = {};
+
+                keys.forEach(k => {
+                    const el = document.getElementById(`edit_${k}`);
+                    if (el) payload[k] = el.value;
+                });
+
+                projectKeys.forEach(k => {
+                    const el = document.getElementById(`edit_${k}`);
+                    if (el) payload[k] = el.value;
+                });
+
+                try {
+                    await api.post(`/projects/${this.projectId}/stage/1`, payload);
+                    QCMS.toast('Identification updated successfully', 'success');
+                    // Refresh project to update header
+                    await this.loadProject();
+                    this.toggleEditMode(false);
+                } catch (e) {
+                    QCMS.toast(e.message || 'Update failed', 'danger');
+                }
+            },
+
+            async approveImpact() {
+                if (!confirm('Are you sure you want to approve the final results and mark this project for closure?')) return;
+                try {
+                    const res = await api.post(`/facilitator/impact/${this.projectId}/approve`);
+                    QCMS.toast(res.msg, 'success');
+                    this.loadProject();
+                } catch (err) {
+                    QCMS.toast(err.message, 'error');
+                }
+            },
+
+            async loadActivity() {
+                const log = document.getElementById('activityLog');
+                try {
+                    const events = await api.get(`/projects/${this.projectId}/activity`);
+                    if (!events.length) {
+                        log.innerHTML = `<p class="p-4 text-center text-xs text-muted">Timeline started</p>`;
+                        return;
+                    }
+                    log.innerHTML = events.map(e => `
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="text-xs fw-semibold">${e.action || 'Stage Updated'}</div>
+                            <div class="text-xs text-muted">${QCMS.formatRelative(e.timestamp || e.created_at)}</div>
+                        </div>
+                    </div>
+                `).join('');
+                } catch (e) { console.error(e); }
+            },
+
+            openStageModal(num, autoAdvance = false) {
+                this._autoAdvance = autoAdvance;
+                const body = document.getElementById('modalBody');
+                document.getElementById('modalTitle').textContent = `Update Stage ${num}`;
+                const saveBtn = document.getElementById('saveStageBtn');
+
+                if (autoAdvance) {
+                    saveBtn.innerHTML = '<i data-lucide="check-circle-2" class="w-3 h-3 mr-1"></i> Save & Advance';
+                    saveBtn.className = 'ds-btn ds-btn-primary';
+                } else {
+                    saveBtn.innerHTML = 'Save Stage Data';
+                    saveBtn.className = 'ds-btn ds-btn-primary';
+                }
+
+                // This is where we define the forms for each stage
+                body.innerHTML = this.getStageForm(num);
+                
+                // Pre-populate fields
+                if (this.stageData) {
+                    const inputs = body.querySelectorAll('[id^="form_"]');
+                    inputs.forEach(input => {
+                        const key = input.id.replace('form_', '');
+                        let val = this.stageData[key];
+                        if (val !== undefined && val !== null) {
+                            if (typeof val === 'object') {
+                                input.value = JSON.stringify(val, null, 2);
+                            } else if (input.tagName === 'SELECT') {
+                                if (typeof val === 'boolean') {
+                                    input.value = val ? 'Yes' : 'No';
+                                } else {
+                                    input.value = val;
+                                }
+                            } else {
+                                input.value = val;
+                            }
+                        }
+                    });
+                }
+                
+                this.modal.show();
+                if (window.lucide) lucide.createIcons();
+            },
+
+            getStageForm(num) {
+                const configs = {
+                    1: [
+                        { key: 'project_title', label: 'Project Title', type: 'text', icon: 'tag', placeholder: 'e.g. Reduction of Weld Defects' },
+                        { key: 'problem_category', label: 'Problem Category', type: 'select', icon: 'layers', options: ['Quality', 'Cost', 'Safety', 'Productivity', 'Delivery', 'Morale'] },
+                        { key: 'business_unit', label: 'Business Unit', type: 'text', icon: 'briefcase', placeholder: 'e.g. Automotive Division' },
+                        { key: 'plant', label: 'Plant Location', type: 'text', icon: 'building', placeholder: 'e.g. Plant-1 Chennai' },
+                        { key: 'department', label: 'Department', type: 'text', icon: 'users', placeholder: 'e.g. Welding Operations' },
+                        { key: 'planned_start_date', label: 'Planned Start Date', type: 'date', icon: 'calendar' },
+                        { key: 'planned_end_date', label: 'Planned End Date', type: 'date', icon: 'calendar' },
+                        { key: 'sponsor_name', label: 'Project Sponsor', type: 'text', icon: 'user', placeholder: 'Sponsor Name' },
+                        { key: 'facilitator_name', label: 'Facilitator Name', type: 'text', icon: 'user-check', placeholder: 'Facilitator Name' },
+                        { key: 'team_leader_name', label: 'Team Leader Name', type: 'text', icon: 'user-check', placeholder: 'Team Leader Name' },
+                        { key: 'policy_reference', label: 'Policy Reference', type: 'text', icon: 'file-text', placeholder: 'Policy / Quality Manual Ref' },
+                        { key: 'business_impact', label: 'Business Impact Analysis', type: 'textarea', icon: 'trending-up', placeholder: 'Initial business impact...' },
+                        { key: 'customer_impact', label: 'Customer Impact Analysis', type: 'textarea', icon: 'smile', placeholder: 'Initial customer impact...' },
+                        { key: 'quality_impact', label: 'Quality Impact Analysis', type: 'textarea', icon: 'shield-check', placeholder: 'Initial quality impact...' },
+                        { key: 'safety_impact', label: 'Safety Impact Analysis', type: 'textarea', icon: 'shield-alert', placeholder: 'Initial safety impact...' },
+                        { key: 'team_name', label: 'Team Name (S1)', type: 'text', icon: 'users', placeholder: 'e.g. Quality Circles Avengers' }
+                    ],
+                    2: [
+                        { key: 'what_happened', label: 'What Happened? (Problem Description)', type: 'textarea', icon: 'help-circle', placeholder: 'Describe the defect or deviation...' },
+                        { key: 'where_happened', label: 'Where did it happen? (Physical/Process Location)', type: 'text', icon: 'map-pin', placeholder: 'e.g. Assembly Line 3, Station 5' },
+                        { key: 'when_happened', label: 'When did it happen? (Time/Shift/Date)', type: 'text', icon: 'clock', placeholder: 'e.g. Shift B, since May 15th' },
+                        { key: 'who_is_affected', label: 'Who is affected? (Customer/Stakeholder)', type: 'text', icon: 'user', placeholder: 'e.g. Final Quality Audit / Client X' },
+                        { key: 'why_is_it_a_problem', label: 'Why is it a problem? (Loss/Severity)', type: 'textarea', icon: 'alert-triangle', placeholder: 'Describe the risk or loss...' },
+                        { key: 'how_was_it_discovered', label: 'How was it discovered? (Detection Mode)', type: 'text', icon: 'eye', placeholder: 'e.g. Visual inspection audit' },
+                        { key: 'how_much_impact', label: 'How much? (Defect Rate/Loss Amount)', type: 'text', icon: 'bar-chart', placeholder: 'e.g. 500 PPM / ₹50,000 per month' },
+                        { key: 'gemba_observation', label: 'Gemba Observation Notes', type: 'textarea', icon: 'activity', placeholder: 'Observations from Gemba walkthrough...' },
+                        { key: 'process_walkthrough', label: 'Process Walkthrough Summary', type: 'textarea', icon: 'git-commit', placeholder: 'Process flow notes...' },
+                        { key: 'sop_compliance', label: 'SOP Compliance Check', type: 'textarea', icon: 'file-text', placeholder: 'Is current SOP followed?' },
+                        { key: 'control_plan_compliance', label: 'Control Plan Compliance Check', type: 'textarea', icon: 'file-text', placeholder: 'Is control plan implemented?' },
+                        { key: 'pfmea_review', label: 'PFMEA Review Details', type: 'textarea', icon: 'alert-circle', placeholder: 'Is this mode listed in PFMEA?' },
+                        { key: 'defective_quantity', label: 'Defective Quantity Count', type: 'number', icon: 'hash', placeholder: 'e.g. 150' },
+                        { key: 'defect_rate', label: 'Defect Rate (%)', type: 'number', icon: 'percent', placeholder: 'e.g. 2.5' },
+                        { key: 'defect_type', label: 'Defect Type Class', type: 'text', icon: 'tag', placeholder: 'e.g. Porosity / Slag Inclusion' },
+                        { key: 'inspector_name', label: 'Inspector Name', type: 'text', icon: 'user', placeholder: 'Inspector Name' }
+                    ],
+                    3: [
+                        { key: 'containment_actions', label: 'Interim Containment Actions Log (JSON format)', type: 'textarea', icon: 'shield', placeholder: 'e.g. [{"action": "Sort inventory", "owner": "John", "implementation_date": "2026-06-06", "effectiveness": "High", "status": "Completed"}]' },
+                        { key: 'escape_point_details', label: 'Escape Point Details', type: 'textarea', icon: 'door-open', placeholder: 'Where did the defect escape detection?' },
+                        { key: 'sorting_required', label: 'Sorting Required?', type: 'select', icon: 'check-square', options: ['No', 'Yes'] },
+                        { key: 'quantity_sorted', label: 'Quantity Sorted', type: 'number', icon: 'hash', placeholder: 'e.g. 1500' },
+                        { key: 'defect_found_qty', label: 'Defects Found Qty', type: 'number', icon: 'hash', placeholder: 'e.g. 24' },
+                        { key: 'customer_notified', label: 'Customer Notified?', type: 'select', icon: 'mail', options: ['No', 'Yes'] }
+                    ],
+                    4: [
+                        { key: 'brainstorming_log', label: 'Brainstorming Ideas List (JSON format)', type: 'textarea', icon: 'lightbulb', placeholder: 'e.g. ["Overheating", "Operator fatigue", "Incorrect feed rate"]' },
+                        { key: 'why1', label: 'Why 1 (Immediate Cause)', type: 'text', icon: 'help-circle', placeholder: 'Why did the problem occur?' },
+                        { key: 'why2', label: 'Why 2', type: 'text', icon: 'help-circle', placeholder: 'Why?' },
+                        { key: 'why3', label: 'Why 3', type: 'text', icon: 'help-circle', placeholder: 'Why?' },
+                        { key: 'why4', label: 'Why 4', type: 'text', icon: 'help-circle', placeholder: 'Why?' },
+                        { key: 'why5', label: 'Why 5 (Root Cause)', type: 'text', icon: 'help-circle', placeholder: 'Why? (Reveals root cause)' },
+                        { key: 'occurrence_root_cause', label: 'Occurrence Root Cause', type: 'textarea', icon: 'alert-triangle', placeholder: 'Why did the defect occur?' },
+                        { key: 'escape_root_cause', label: 'Escape Root Cause', type: 'textarea', icon: 'door-open', placeholder: 'Why did the defect escape?' }
+                    ],
+                    5: [
+                        { key: 'temporary_actions', label: 'Temporary Countermeasures (JSON format)', type: 'textarea', icon: 'shield', placeholder: 'e.g. [{"action": "Double inspect", "owner": "John"}]' },
+                        { key: 'permanent_actions', label: 'Proposed Permanent Actions (JSON format)', type: 'textarea', icon: 'check-square', placeholder: 'e.g. [{"action": "Install proximity sensor", "owner": "John"}]' },
+                        { key: 'feasibility_score', label: 'Feasibility Score (1-10)', type: 'number', icon: 'star', placeholder: 'e.g. 8.5' },
+                        { key: 'cost_estimate', label: 'Cost Estimate (INR)', type: 'number', icon: 'indian-rupee', placeholder: 'e.g. 45000' },
+                        { key: 'risk_assessment', label: 'Risk Assessment / Side Effects', type: 'textarea', icon: 'alert-triangle', placeholder: 'Side effects or risks of solution...' },
+                        { key: 'effectiveness_estimate', label: 'Effectiveness Estimate (%)', type: 'number', icon: 'percent', placeholder: 'e.g. 95' },
+                        { key: 'implementation_cost', label: 'Total Implementation Cost (INR)', type: 'number', icon: 'indian-rupee', placeholder: 'e.g. 50000' },
+                        { key: 'annual_savings', label: 'Estimated Annual Savings (INR)', type: 'number', icon: 'indian-rupee', placeholder: 'e.g. 120000' },
+                        { key: 'roi_percentage', label: 'Estimated ROI (%)', type: 'number', icon: 'percent', placeholder: 'e.g. 240' },
+                        { key: 'action_plan_3w1h', label: 'Action Plan (3W1H JSON)', type: 'textarea', icon: 'calendar', placeholder: 'e.g. [{"what": "Install jig", "who": "Operator", "when": "2026-06-15", "how": "Bolt on"}]' }
+                    ],
+                    6: [
+                        { key: 'rollout_log', label: 'Rollout Log & Status (JSON format)', type: 'textarea', icon: 'list', placeholder: 'e.g. [{"action": "Install jig", "owner": "John", "start_date": "2026-06-10", "end_date": "2026-06-12", "status": "Completed"}]' },
+                        { key: 'actual_start_date', label: 'Actual Start Date', type: 'date', icon: 'calendar' },
+                        { key: 'actual_end_date', label: 'Actual End Date', type: 'date', icon: 'calendar' },
+                        { key: 'before_vs_after', label: 'Before vs After Comparison (JSON/Notes)', type: 'textarea', icon: 'columns', placeholder: 'e.g. {"before": "2.5% defect rate", "after": "0.1% defect rate"}' },
+                        { key: 'defect_reduction_pct', label: 'Defect Reduction (%)', type: 'number', icon: 'percent', placeholder: 'e.g. 96' },
+                        { key: 'cost_reduction', label: 'Cost Reduction (INR)', type: 'number', icon: 'indian-rupee', placeholder: 'e.g. 10000' },
+                        { key: 'process_capability_cp', label: 'Process Capability (Cp)', type: 'number', icon: 'activity', placeholder: 'e.g. 1.67' },
+                        { key: 'process_capability_cpk', label: 'Process Capability (Cpk)', type: 'number', icon: 'activity', placeholder: 'e.g. 1.55' },
+                        { key: 'stability_verified', label: 'Process Stability Verified?', type: 'select', icon: 'check-square', options: ['No', 'Yes'] }
+                    ],
+                    7: [
+                        { key: 'sop_update_ref', label: 'Updated SOP Reference', type: 'text', icon: 'file-check', placeholder: 'SOP Document ID / Revision' },
+                        { key: 'control_plan_update_ref', label: 'Updated Control Plan Reference', type: 'text', icon: 'file-check', placeholder: 'Control Plan Revision ID' },
+                        { key: 'pfmea_update_ref', label: 'Updated PFMEA Reference', type: 'text', icon: 'file-check', placeholder: 'PFMEA Revision ID' },
+                        { key: 'drawing_update_ref', label: 'Updated Drawings Reference', type: 'text', icon: 'image', placeholder: 'Drawing / Blueprint ID' },
+                        { key: 'checklist_update_ref', label: 'Updated Checklist Reference', type: 'text', icon: 'check-square', placeholder: 'Checklist ID' },
+                        { key: 'sop_evidence_url', label: 'SOP Evidence Link / URL', type: 'text', icon: 'link', placeholder: 'https://...' },
+                        { key: 'deployment_other_lines', label: 'Horizontal Deployment: Other Lines (JSON)', type: 'textarea', icon: 'git-branch', placeholder: 'e.g. ["Line 2", "Line 4"]' },
+                        { key: 'change_management_log', label: 'Change Management Log (JSON)', type: 'textarea', icon: 'list', placeholder: 'e.g. [{"step": "Update documents", "status": "Done"}]' },
+                        { key: 'training_records_url', label: 'Training Records Link / URL', type: 'text', icon: 'link', placeholder: 'https://...' }
+                    ],
+                    8: [
+                        { key: 'what_worked', label: 'What Worked (Lessons Learned)', type: 'textarea', icon: 'thumbs-up', placeholder: 'Success factors...' },
+                        { key: 'what_failed', label: 'What Failed / Challenges', type: 'textarea', icon: 'thumbs-down', placeholder: 'Friction points encountered...' },
+                        { key: 'best_practices', label: 'Best Practices Identified', type: 'textarea', icon: 'award', placeholder: 'Summary of best practices...' },
+                        { key: 'employee_engagement', label: 'Employee Engagement Observations', type: 'textarea', icon: 'smile', placeholder: 'Stakeholder engagement feedback...' },
+                        { key: 'teamwork_improvement', label: 'Teamwork & Collaboration Improvement', type: 'textarea', icon: 'users', placeholder: 'Collaboration insights...' },
+                        { key: 'congratulation_notes', label: 'Congratulation Notes / Recognition', type: 'textarea', icon: 'gift', placeholder: 'Recognize contributors...' },
+                        { key: 'closure_report', label: 'Final Closure Report Summary', type: 'textarea', icon: 'file-text', placeholder: 'Executive summary of project completion...' }
+                    ]
+                };
+
+                const fields = configs[num] || [{ key: 'notes', label: 'Stage Details', type: 'textarea', icon: 'info', placeholder: 'Additional comments...' }];
+
+                return fields.map(f => `
+                <div class="ds-field mb-4">
+                    <label class="ds-label fw-semibold">
+                        <i data-lucide="${f.icon || 'circle'}" style="width: 16px; height: 16px;"></i>
+                        ${f.label} <span class="text-danger">*</span>
+                    </label>
+                    <div class="ds-field-content">
+                        ${f.type === 'textarea'
+                        ? `<textarea class="ds-textarea w-100" id="form_${f.key}" rows="4" placeholder="${f.placeholder || ''}" required></textarea>`
+                        : f.type === 'select'
+                            ? `<select class="ds-select w-100" id="form_${f.key}" required><option value="">Choose Option...</option>${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`
+                            : `<input type="${f.type || 'text'}" class="ds-input w-100" id="form_${f.key}" placeholder="${f.placeholder || ''}" required>`
+                    }
+                    </div>
+                </div>
+            `).join('');
+            },
+
+            async submitData() {
+                const inputs = document.querySelectorAll('[id^="form_"]');
+                let emptyCount = 0;
+                let firstEmpty = null;
+
+                inputs.forEach(i => {
+                    if (i.disabled || i.readOnly) return;
+                    const val = i.value ? i.value.trim() : '';
+                    if (!val) {
+                        i.classList.add('is-invalid');
+                        i.style.borderColor = 'var(--ds-danger, #ef4444)';
+                        emptyCount++;
+                        if (!firstEmpty) firstEmpty = i;
+                    } else {
+                        i.classList.remove('is-invalid');
+                        i.style.borderColor = '';
+                    }
+                });
+
+                if (emptyCount > 0) {
+                    QCMS.toast(`Please fill out all mandatory fields before submitting Stage ${this.currentStage}. ${emptyCount} field(s) empty.`, 'danger');
+                    if (firstEmpty) {
+                        firstEmpty.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstEmpty.focus();
+                    }
+                    return;
+                }
+
+                const payload = {};
+                inputs.forEach(i => {
+                    const key = i.id.replace('form_', '');
+                    let val = i.value;
+                    const jsonKeys = ['milestones', 'team_members', 'competency_skills', 'containment_actions', 'brainstorming_log', 'hypothesis_tests', 'verified_root_causes', 'rejected_causes', 'temporary_actions', 'permanent_actions', 'potential_risks', 'secondary_effects', 'action_plan_3w1h', 'rollout_log', 'before_vs_after', 'deployment_other_lines', 'change_management_log', 'open_issues', 'future_opportunities'];
+                    if (jsonKeys.includes(key)) {
+                        if (val && val.trim() !== '') {
+                            try {
+                                val = JSON.parse(val);
+                            } catch (e) {
+                                console.warn(`Could not parse JSON for field ${key}, sending as is.`, e);
+                            }
+                        } else {
+                            val = [];
+                        }
+                    } else if (i.tagName === 'SELECT' && (val === 'Yes' || val === 'No')) {
+                        if (key === 'sorting_required' || key === 'customer_notified' || key === 'stability_verified') {
+                            val = val === 'Yes';
+                        }
+                    } else if (i.type === 'number' && val !== '') {
+                        val = Number(val);
+                    }
+                    payload[key] = val;
+                });
+
+                try {
+                    // Check if it's a submission or just a save
+                    const isSubmit = this._autoAdvance;
+                    const finalPayload = { ...payload };
+                    if (isSubmit) finalPayload.action = 'submit';
+                    
+                    await api.post(`/projects/${this.projectId}/stage/${this.viewingStage}`, finalPayload);
+                    
+                    if (isSubmit) {
+                        this.modal.hide();
+                        // If it's the current stage, attempt to advance
+                        if (Number(this.viewingStage) === Number(this.currentStage)) {
+                            await this.advance(true); 
+                        } else {
+                            QCMS.toast('Historical data submitted. Project stage remains unchanged.', 'info');
+                            this.viewStage(this.viewingStage);
+                        }
+                    } else {
+                        QCMS.toast('Progress saved successfully', 'success');
+                        this.viewStage(this.viewingStage);
+                        this.loadActivity();
+                    }
+                } catch (e) { 
+                    QCMS.toast(e?.msg || e?.message || 'Update failed', 'danger'); 
+                } finally {
+                    this._autoAdvance = false;
+                }
+            },
+
+            async advance(skipConfirm = false) {
+                const nextNum = Number(this.currentStage) + 1;
+                
+                if (nextNum > 8) {
+                    QCMS.toast('Project has reached the final workflow stage (Stage 8).', 'info');
+                    return;
+                }
+                
+                if (!skipConfirm && !confirm(`Advance to Stage ${nextNum}? This will verify all mandatory approvals and validations.`)) return;
+                
+                try {
+                    QCMS.toast(`Verifying Stage ${nextNum} requirements...`, 'info', 2000);
+                    
+                    const res = await api.post(`/workflow/projects/${this.projectId}/transitions`, {
+                        stage: nextNum
+                    });
+                    
+                    QCMS.toast(res.msg || `Successfully advanced to Stage ${nextNum}`, 'success');
+                    
+                    // Reload to get updated state
+                    await this.loadProject();
+                } catch (e) { 
+                    // Enhanced error reporting for workflow gates
+                    const msg = e?.message || e?.msg || 'Transition failed';
+                    console.error('Workflow Transition Error:', e);
+                    QCMS.toast(msg, 'warning', 6000); 
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => workspace.init());
+    </script>
+</body>
+
+</html>

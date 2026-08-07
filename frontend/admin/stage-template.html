@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-Stage Workflow Template | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Define mock values and functions so that the Stage Modules do not crash during WYSIWYG loading
+        window.StageModules = {};
+        window.api = { get: () => Promise.resolve([]), post: () => Promise.resolve({}) };
+        window.QCMS = { toast: () => {} };
+    </script>
+    <script src="/assets/js/stages/stage1.js"></script>
+    <script src="/assets/js/stages/stage2.js"></script>
+    <script src="/assets/js/stages/stage3.js"></script>
+    <script src="/assets/js/stages/stage4.js"></script>
+    <script src="/assets/js/stages/stage5.js"></script>
+    <script src="/assets/js/stages/stage6.js"></script>
+    <script src="/assets/js/stages/stage7.js"></script>
+    <script src="/assets/js/stages/stage8.js"></script>
+    <script src="/assets/js/stages/dynamic_renderer.js"></script>
+
+
+    <style>
+        /* ── Stage list ──────────────────────────────────────────────── */
+        #stageList {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .stage-row-container {
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-md);
+            background: var(--ds-bg-card);
+            overflow: hidden;
+            transition: box-shadow .2s;
+        }
+        .stage-row-container:hover {
+            box-shadow: var(--ds-shadow-sm);
+        }
+
+        .stage-row-header {
+            display: grid;
+            grid-template-columns: 32px 48px 1fr auto auto auto;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            cursor: pointer;
+            user-select: none;
+            background: rgba(var(--ds-primary-rgb), 0.01);
+        }
+
+        .stage-row-container.dragging {
+            opacity: .38;
+        }
+        .stage-row-container.drag-over {
+            border-color: var(--ds-accent);
+            box-shadow: 0 0 0 2px rgba(var(--ds-accent-rgb), .15);
+        }
+
+        /* drag handle */
+        .drag-handle {
+            cursor: grab;
+            color: var(--ds-text-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drag-handle:active { cursor: grabbing; }
+
+        /* icon bubble */
+        .stage-icon-bubble {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--ds-radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform .2s, box-shadow .2s;
+            border: 1.5px solid transparent;
+            flex-shrink: 0;
+        }
+        .stage-icon-bubble:hover {
+            transform: scale(1.08);
+            box-shadow: var(--ds-shadow-sm);
+            border-color: var(--ds-accent);
+        }
+
+        /* title */
+        .stage-title-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+        }
+        .stage-seq-badge {
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: .07em;
+            color: var(--ds-text-tertiary);
+            text-transform: uppercase;
+        }
+        .stage-title-input {
+            background: transparent;
+            border: none;
+            color: var(--ds-text-main);
+            font-size: .9rem;
+            font-weight: 600;
+            font-family: var(--ds-font-body);
+            width: 100%;
+            outline: none;
+            border-bottom: 1.5px solid transparent;
+            transition: border-color .2s;
+            padding: 2px 0;
+        }
+        .stage-title-input:focus {
+            border-bottom-color: var(--ds-accent);
+        }
+
+        /* orig badge */
+        .orig-badge {
+            font-size: .7rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+            background: var(--ds-input-bg);
+            color: var(--ds-text-secondary);
+            border: 1px solid var(--ds-border-color);
+        }
+
+        /* up/down buttons */
+        .row-actions { display: flex; gap: 4px; }
+        .row-btn {
+            background: transparent;
+            border: 1px solid var(--ds-border-color);
+            color: var(--ds-text-tertiary);
+            width: 30px; height: 30px;
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .row-btn:hover:not(:disabled) {
+            border-color: var(--ds-accent);
+            color: var(--ds-accent);
+            background: var(--ds-input-bg);
+        }
+        .row-btn:disabled { opacity: .28; cursor: default; }
+
+        /* Collapse Section for Columns/QC Tools */
+        .stage-sections-detail {
+            border-top: 1px solid var(--ds-border-color);
+            background: rgba(var(--ds-primary-rgb), 0.005);
+            padding: 16px 20px;
+        }
+
+        .section-item {
+            display: grid;
+            grid-template-columns: 24px 1fr 140px auto;
+            align-items: center;
+            gap: 12px;
+            background: var(--ds-bg-card);
+            border: 1px solid var(--ds-border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            transition: box-shadow .2s, border-color .2s;
+        }
+        .section-item:hover {
+            box-shadow: var(--ds-shadow-sm);
+        }
+        .section-item.dragging {
+            opacity: 0.4;
+        }
+        .section-item.drag-over {
+            border-color: var(--ds-accent);
+        }
+
+        .section-drag-handle {
+            cursor: grab;
+            color: var(--ds-text-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .section-title-input {
+            background: transparent;
+            border: none;
+            color: var(--ds-text-main);
+            font-size: .85rem;
+            font-weight: 500;
+            outline: none;
+            width: 100%;
+            border-bottom: 1.5px solid transparent;
+            transition: border-color .2s;
+        }
+        .section-title-input:focus {
+            border-bottom-color: var(--ds-accent);
+        }
+
+        .type-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: var(--ds-input-bg);
+            color: var(--ds-text-secondary);
+            border: 1px solid var(--ds-border-color);
+            text-align: center;
+        }
+
+        /* ── Info banner ─────────────────────────────────────────────── */
+        .info-banner {
+            background: rgba(var(--ds-blue-rgb), .06);
+            border: 1px solid rgba(var(--ds-blue-rgb), .18);
+            border-radius: var(--ds-radius-md);
+            padding: 13px 18px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        .info-banner i { color: #334155; flex-shrink: 0; margin-top: 2px; }
+        .info-banner p { margin: 0; font-size: .83rem; color: var(--ds-text-secondary); line-height: 1.6; }
+
+        /* ── Preview strip ───────────────────────────────────────────── */
+        #previewStrip {
+            display: flex;
+            gap: 0;
+            overflow-x: auto;
+            padding: 16px 4px 8px;
+            scrollbar-width: none;
+        }
+        #previewStrip::-webkit-scrollbar { display: none; }
+
+        .prev-step {
+            display: flex; flex-direction: column; align-items: center;
+            min-width: 85px; max-width: 100px;
+        }
+        .prev-icon {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            border: 1.5px solid var(--ds-border-color);
+            background: var(--ds-input-bg);
+            color: var(--ds-text-secondary);
+        }
+        .prev-label {
+            font-size: .6rem; font-weight: 600; text-align: center;
+            margin-top: 6px; line-height: 1.3; color: var(--ds-text-main);
+            max-width: 82px; word-break: break-word;
+        }
+        .prev-num {
+            font-size: .55rem; font-weight: 700; letter-spacing: .06em;
+            color: var(--ds-text-tertiary); text-transform: uppercase; margin-top: 2px;
+        }
+        .prev-connector {
+            flex: 1; height: 1.5px;
+            background: var(--ds-border-color);
+            min-width: 10px;
+            margin-bottom: 34px;
+        }
+
+        /* ── Tool list grid in modal ─────────────────────────────────── */
+        .tool-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            max-height: 380px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .tool-picker-group-title {
+            grid-column: span 2;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--ds-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+        .tool-opt {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1.5px solid var(--ds-border-color);
+            transition: all .15s;
+            background: var(--ds-bg-card);
+        }
+        .tool-opt:hover { border-color: var(--ds-accent); background: var(--ds-input-bg); }
+        .tool-opt.selected {
+            border-color: var(--ds-accent);
+            background: rgba(var(--ds-accent-rgb), .08);
+        }
+        .tool-opt i { color: var(--ds-text-secondary); }
+        .tool-opt span { font-size: .8rem; font-weight: 500; color: var(--ds-text-main); }
+
+        /* Icon Picker Modal */
+        .icon-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+            gap: 6px;
+            max-height: 320px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .icon-opt {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 3px; padding: 8px 4px;
+            border-radius: 8px; cursor: pointer;
+            border: 1.5px solid var(--ds-border-color);
+            transition: all .15s;
+            background: var(--ds-bg-card);
+        }
+        .icon-opt:hover { border-color: var(--ds-accent); background: var(--ds-input-bg); }
+        .icon-opt.selected {
+            border-color: var(--ds-accent);
+            background: rgba(var(--ds-accent-rgb), .08);
+        }
+        .icon-opt span { font-size: .52rem; color: var(--ds-text-tertiary); text-align: center; }
+
+        #iconSearch {
+            margin-bottom: 12px;
+        }
+
+        /* spinner */
+        @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+        .spin { animation: spin 1s linear infinite; }
+
+        /* fade-in for list */
+        @keyframes fadeUp {
+            from { opacity:0; transform:translateY(8px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        /* WYSIWYG Editor Styles */
+        .visual-stage-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px 0;
+        }
+        .visual-stage-container .glass-card.ds-card {
+            margin-bottom: 0 !important;
+        }
+
+
+        .visual-card-wrapper {
+            position: relative;
+            border: 2px solid transparent;
+            border-radius: var(--ds-radius-lg);
+            transition: all 0.2s;
+            background: var(--ds-bg-card);
+        }
+
+        .visual-card-wrapper:hover {
+            border-color: var(--ds-accent);
+            box-shadow: var(--ds-shadow-md);
+        }
+
+        .visual-card-wrapper.dragging {
+            opacity: 0.4;
+            border-style: dashed;
+            border-color: var(--ds-accent);
+        }
+
+        .visual-card-wrapper.drag-over {
+            border-color: var(--ds-accent);
+            background: rgba(var(--ds-primary-rgb), 0.02);
+        }
+
+        /* Custom visual card edit header */
+        .card-edit-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--ds-input-bg);
+            border-bottom: 1px solid var(--ds-border-color);
+            padding: 10px 16px;
+            border-top-left-radius: var(--ds-radius-md);
+            border-top-right-radius: var(--ds-radius-md);
+            user-select: none;
+        }
+
+        .card-drag-handle {
+            cursor: grab;
+            color: var(--ds-text-tertiary);
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+        }
+        .card-drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .card-title-edit-wrap {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-seq-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--ds-text-secondary);
+            text-transform: uppercase;
+            background: rgba(var(--ds-primary-rgb), 0.08);
+            padding: 3px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(var(--ds-primary-rgb), 0.1);
+        }
+
+        .card-title-edit-input {
+            background: transparent;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--ds-text-main);
+            width: 100%;
+            outline: none;
+            border-bottom: 1.5px solid transparent;
+        }
+        .card-title-edit-input:focus {
+            border-bottom-color: var(--ds-accent);
+        }
+
+        .card-actions-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-type-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            background: var(--ds-border-color);
+            color: var(--ds-text-secondary);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .card-delete-btn {
+            background: transparent;
+            border: 1px solid var(--ds-border-color);
+            color: var(--ds-text-tertiary);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .card-delete-btn:hover {
+            border-color: var(--ds-red);
+            color: var(--ds-red);
+            background: rgba(var(--ds-red-rgb), 0.05);
+        }
+
+        .btn-req-mandatory {
+            background: rgba(220, 38, 38, 0.1) !important;
+            color: #dc2626 !important;
+            border: 1px solid rgba(220, 38, 38, 0.3) !important;
+            font-size: 0.68rem;
+            font-weight: 700;
+            border-radius: 6px;
+            padding: 2px 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-req-mandatory:hover {
+            background: rgba(220, 38, 38, 0.2) !important;
+        }
+
+        .btn-req-optional {
+            background: var(--ds-input-bg) !important;
+            color: var(--ds-text-secondary) !important;
+            border: 1px solid var(--ds-border-color) !important;
+            font-size: 0.68rem;
+            font-weight: 600;
+            border-radius: 6px;
+            padding: 2px 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-req-optional:hover {
+            border-color: var(--ds-accent) !important;
+            color: var(--ds-accent) !important;
+        }
+    </style>
+
+</head>
+<body>
+<div class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+
+    <main class="app-main">
+        <header class="app-navbar" id="app-navbar"></header>
+
+        <div class="app-content-inner fade-in-up">
+
+            <!-- Page header -->
+            <header class="ds-header-layout section-spacing">
+                <div class="h-stack justify-content-between w-100 flex-wrap gap-3">
+                    <div class="v-stack">
+                        <h1 class="ds-title mb-0">8-Stage Workflow Template</h1>
+                        <p class="ds-text-secondary mb-0">Customize your organization's workflow: drag stages to reorder, click stages to manage columns/QC Tools, and edit titles inline.</p>
+                    </div>
+                    <div class="h-stack gap-2 flex-wrap">
+                        <button class="ds-btn ds-btn-ghost ds-btn-sm text-primary" id="addStageBtn">
+                            <i data-lucide="plus-circle"></i> Add New Stage
+                        </button>
+                        <button class="ds-btn ds-btn-ghost ds-btn-sm" id="resetBtn">
+                            <i data-lucide="rotate-ccw"></i> Reset to Defaults
+                        </button>
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" id="saveBtn">
+                            <i data-lucide="save"></i> Save Template
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Info banner -->
+            <div class="info-banner">
+                <i data-lucide="info" style="width:17px;height:17px;"></i>
+                <p>
+                    <strong>Workflow Customization:</strong> Click on any stage header below to expand and edit its sections.
+                    You can add text inputs, data tables, or 7 QC Tools (like Pareto, Fishbone, or Control Charts) to each stage, and rearrange them inside the stage.
+                    Changes are saved organization-wise.
+                </p>
+            </div>
+
+            <!-- Stage list card -->
+            <div class="glass-card ds-card section-spacing">
+                <div class="ds-card-header h-stack justify-content-between px-4 py-3">
+                    <div class="v-stack">
+                        <h5 class="mb-0 fw-bold">Stage & Section Sequence</h5>
+                        <p class="text-xs ds-text-secondary mb-0">Reorder stages · Click to edit sections · Insert data fields & QC Tools</p>
+                    </div>
+                </div>
+                <div class="ds-card-body p-4" style="padding-top:12px!important;">
+                    <div id="stageList">
+                        <div class="text-center py-5 ds-text-secondary">
+                            <i data-lucide="loader" style="width:22px;height:22px;" class="spin"></i>
+                            <p class="mt-2 mb-0 text-sm">Loading template…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+        </div><!-- /app-content-inner -->
+    </main>
+</div><!-- /app-layout -->
+
+<!-- ── Icon Picker Modal (Bootstrap) ───────────────────────────────────── -->
+<div class="modal fade" id="iconPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+        <div class="modal-content glass-card ds-card">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Choose Icon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pb-0">
+                <input type="text" class="ds-input mb-3" id="iconSearch" placeholder="Search icons…">
+                <div class="icon-picker-grid" id="iconGrid"></div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-3">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal" id="iconPickerCancel">Cancel</button>
+                <button class="ds-btn ds-btn-primary ds-btn-sm" id="iconPickerConfirm">Apply Icon</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Tool Picker Modal (Bootstrap) ───────────────────────────────────── -->
+<div class="modal fade" id="toolPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:550px;">
+        <div class="modal-content glass-card ds-card">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Add Data Input or QC Tool</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pb-0">
+                <p class="text-xs ds-text-secondary mb-3">Select the type of section/QC tool you want to insert into this stage.</p>
+                <div class="tool-picker-grid" id="toolGrid"></div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-3">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="ds-btn ds-btn-primary ds-btn-sm" id="toolPickerConfirm">Add Section</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Add Stage Modal (Bootstrap) ─────────────────────────────────────── -->
+<div class="modal fade" id="addStageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+        <div class="modal-content glass-card ds-card">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Add New Stage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pb-0">
+                <div class="mb-3">
+                    <label class="ds-label text-xs fw-semibold mb-1 d-block">Stage Title <span class="text-danger">*</span></label>
+                    <input type="text" class="ds-input" id="newStageTitle" placeholder="e.g. D9 Additional Audit Checklist" required>
+                </div>
+                <div class="mb-3">
+                    <label class="ds-label text-xs fw-semibold mb-1 d-block">Base Module (Binding)</label>
+                    <select class="ds-input ds-select" id="newStageBaseModule">
+                        <option value="1">S0/S1 Plan & Establish Team</option>
+                        <option value="2">S2 Define Problem</option>
+                        <option value="3">S3 Interim Containment</option>
+                        <option value="4">S4 Determine Root Causes</option>
+                        <option value="5">S5 Choose Permanent Corrections</option>
+                        <option value="6">S6 Implement Corrective Actions</option>
+                        <option value="7">S7 Take Preventive Measures</option>
+                        <option value="8" selected>S8 Congratulate Team & Closure</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="ds-label text-xs fw-semibold mb-1 d-block">Stage Icon</label>
+                    <select class="ds-input ds-select" id="newStageIcon">
+                        <option value="plus-circle" selected>Plus Circle</option>
+                        <option value="git-commit">Git Commit</option>
+                        <option value="activity">Activity</option>
+                        <option value="clipboard-list">Clipboard List</option>
+                        <option value="check-circle">Check Circle</option>
+                        <option value="settings">Settings</option>
+                        <option value="shield">Shield</option>
+                        <option value="award">Award</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-3">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="ds-btn ds-btn-primary ds-btn-sm" id="addStageConfirmBtn">Add Stage</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/api.js"></script>
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/components.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Icon library
+// ─────────────────────────────────────────────────────────────────────────────
+const ICON_LIBRARY = [
+    'target','database','git-branch','search','lightbulb','settings-2',
+    'trending-up','award','users','clipboard-list','flag','check-circle',
+    'shield','zap','layers','activity','bar-chart-2','alert-triangle',
+    'anchor','aperture','archive','bell','bookmark','box','briefcase',
+    'camera','check-square','chevrons-right','circle-dot','clipboard',
+    'clock','cloud','code','cog','command','compass','cpu','crosshair',
+    'disc','dna','download','edit-3','eye','file-check','file-text',
+    'filter','fingerprint','flame','focus','gauge','git-merge','globe',
+    'graduation-cap','grid','hash','heart-pulse','hexagon','home','key',
+    'landmark','layout-grid','leaf','link','list-checks','lock','map-pin',
+    'maximize-2','medal','message-square','microscope','monitor','network',
+    'octagon','package','pen-tool','percent','pie-chart','play-circle',
+    'plus-circle','power','radar','recycle','refresh-cw','repeat','rocket',
+    'route','ruler','save','send','server','share-2','shield-check',
+    'shuffle','signal','sliders','star','table','tag','thermometer',
+    'thumbs-up','timer','toggle-left','triangle','truck','umbrella',
+    'unlock','upload','user-check','video','wand-2','wifi','wrench',
+    'zoom-in',
+];
+
+// Tool options grouped by category
+const TOOL_OPTIONS = [
+    { category: "Standard Data Inputs", items: [
+        { type: "text", label: "Text Field (Single Line)", icon: "type" },
+        { type: "textarea", label: "Text Area (Multi-line)", icon: "align-left" },
+        { type: "multi_text", label: "Bullet List (Brainstorming)", icon: "list" },
+        { type: "select", label: "Dropdown Select Box", icon: "chevron-down" },
+        { type: "file_upload", label: "File/Evidence Upload", icon: "upload" }
+    ]},
+    { category: "Tables & Structured Data", items: [
+        { type: "table", label: "General Data Table", icon: "table" },
+        { type: "five_why", label: "5-Why Root Cause Table", icon: "help-circle" },
+        { type: "verification_table", label: "Cause Verification Table", icon: "check-square" }
+    ]},
+    { category: "7 QC Tools (Graphical Charts)", items: [
+        { type: "check_sheet", label: "Check Sheet / Checklist", icon: "clipboard-list" },
+        { type: "pareto", label: "Pareto Chart (80/20 Rule)", icon: "bar-chart-2" },
+        { type: "fishbone", label: "Ishikawa (Fishbone) Diagram", icon: "git-merge" },
+        { type: "histogram", label: "Before/After Histogram", icon: "activity" },
+        { type: "control_chart", label: "Control Chart (SPC)", icon: "trending-up" },
+        { type: "scatter", label: "Scatter Diagram", icon: "plus-circle" },
+        { type: "stratification", label: "Stratification Table & Chart", icon: "layers" }
+    ]},
+    { category: "Review & Approvals", items: [
+        { type: "signature", label: "Reviewer Approval Gate", icon: "pen-tool" }
+    ]}
+];
+
+// Flat lookup for type labels
+const TOOL_TYPE_MAP = {};
+TOOL_OPTIONS.forEach(g => g.items.forEach(i => { TOOL_TYPE_MAP[i.type] = { label: i.label, icon: i.icon }; }));
+
+// Stage accent colors
+const STAGE_COLORS = [
+    { bg:'rgba(15,23,42,.07)',   color:'#0f172a'  },
+    { bg:'rgba(51,65,85,.08)',   color:'#334155'  },
+    { bg:'rgba(79,70,229,.08)',  color:'#4f46e5'  },
+    { bg:'rgba(124,58,237,.08)', color:'#7c3aed'  },
+    { bg:'rgba(245,158,11,.09)', color:'#d97706'  },
+    { bg:'rgba(234,88,12,.08)',  color:'#c2410c'  },
+    { bg:'rgba(22,163,74,.08)',  color:'#15803d'  },
+    { bg:'rgba(6,182,212,.08)',  color:'#0e7490'  },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let stages = [];
+let dragSrcIdx = null;
+let pickerTargetIdx = null;
+let pickerSelectedIcon = null;
+let activeStageSectionTargetIdx = null; // which stage we are adding a section to
+let selectedToolType = null;
+
+let bsIconModal = null;
+let bsToolModal = null;
+
+function showToast(msg, type = 'success') {
+    if (window.QCMS && QCMS.toast) { QCMS.toast(msg, type); return; }
+    const d = document.createElement('div');
+    d.style.cssText = `position:fixed;top:24px;right:24px;z-index:99999999;padding:12px 20px;
+        border-radius:10px;font-weight:600;font-size:.875rem;color:#fff;
+        background:${type==='success'?'#166534':'#7f1d1d'};
+        border:1px solid ${type==='success'?'#22c55e':'#ef4444'};box-shadow:0 10px 30px rgba(0,0,0,0.3);`;
+    d.textContent = msg;
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 3200);
+}
+
+function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renumber() {
+    stages.forEach((s, i) => { s.stage_id = i + 1; });
+}
+
+// ── Render the stage and sections list ────────────────────────────────────────
+function renderList() {
+    const list = document.getElementById('stageList');
+    list.innerHTML = '';
+
+    stages.forEach((s, i) => {
+        const clr = STAGE_COLORS[i] || STAGE_COLORS[0];
+        const container = document.createElement('div');
+        container.className = 'stage-row-container';
+        container.dataset.idx = i;
+        container.setAttribute('draggable', 'true');
+        container.style.animationDelay = (i * 0.04) + 's';
+
+        // Stage Header
+        const header = document.createElement('div');
+        header.className = 'stage-row-header';
+        header.innerHTML = `
+            <!-- drag handle -->
+            <div class="drag-handle" title="Drag to reorder stages">
+                <i data-lucide="grip-vertical" style="width:16px;height:16px;"></i>
+            </div>
+
+            <!-- icon bubble -->
+            <div class="stage-icon-bubble" data-idx="${i}" title="Click to change icon"
+                 style="background:${clr.bg};color:${clr.color};">
+                <i data-lucide="${s.icon}" style="width:19px;height:19px;stroke-width:1.8;"></i>
+            </div>
+
+            <!-- title -->
+            <div class="stage-title-wrap">
+                <span class="stage-seq-badge">Stage ${i + 1}</span>
+                <input class="stage-title-input" type="text"
+                       value="${esc(s.title)}"
+                       data-idx="${i}"
+                       placeholder="Stage name…"/>
+            </div>
+
+            <!-- module badge -->
+            <span class="orig-badge">Module D${s.original_id}</span>
+
+            <!-- stage reorder & delete buttons -->
+            <div class="row-actions me-2">
+                <button class="row-btn" title="Move up" onclick="moveStage(${i},-1); event.stopPropagation();" ${i === 0 ? 'disabled' : ''}>
+                    <i data-lucide="chevron-up" style="width:13px;height:13px;"></i>
+                </button>
+                <button class="row-btn" title="Move down" onclick="moveStage(${i},+1); event.stopPropagation();" ${i === stages.length - 1 ? 'disabled' : ''}>
+                    <i data-lucide="chevron-down" style="width:13px;height:13px;"></i>
+                </button>
+                <button class="row-btn text-danger ms-1" title="Delete stage" onclick="deleteStage(${i}); event.stopPropagation();">
+                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                </button>
+            </div>
+
+            <!-- Expand icon -->
+            <div class="collapse-toggle text-secondary" style="width:24px; text-align:center;">
+                <i data-lucide="chevron-down" style="width:18px;height:18px;"></i>
+            </div>
+        `;
+
+        // Expand sections toggle on click
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('input') || e.target.closest('.stage-icon-bubble') || e.target.closest('.row-btn') || e.target.closest('.drag-handle')) {
+                return;
+            }
+            const detail = container.querySelector('.stage-sections-detail');
+            const toggleIcon = header.querySelector('.collapse-toggle i');
+            if (detail.style.display === 'none') {
+                detail.style.display = 'block';
+                toggleIcon.setAttribute('data-lucide', 'chevron-up');
+            } else {
+                detail.style.display = 'none';
+                toggleIcon.setAttribute('data-lucide', 'chevron-down');
+            }
+            lucide.createIcons();
+        });
+
+        // Stage Drag & Drop
+        container.addEventListener('dragstart', e => {
+            if (e.target.closest('.section-item')) return; // prevent nested drag
+            dragSrcIdx = i;
+            container.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        container.addEventListener('dragend', () => {
+            container.classList.remove('dragging');
+            document.querySelectorAll('.stage-row-container').forEach(r => r.classList.remove('drag-over'));
+        });
+        container.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            document.querySelectorAll('.stage-row-container').forEach(r => r.classList.remove('drag-over'));
+            container.classList.add('drag-over');
+        });
+        container.addEventListener('dragleave', () => container.classList.remove('drag-over'));
+        container.addEventListener('drop', e => {
+            e.preventDefault();
+            container.classList.remove('drag-over');
+            if (dragSrcIdx === null || dragSrcIdx === i) return;
+            const moved = stages.splice(dragSrcIdx, 1)[0];
+            stages.splice(i, 0, moved);
+            renumber();
+            renderList();
+            renderPreview();
+        });
+
+        // Inline Title Input
+        header.querySelector('.stage-title-input').addEventListener('input', e => {
+            stages[i].title = e.target.value;
+            renderPreview();
+        });
+
+        // Icon Bubble
+        header.querySelector('.stage-icon-bubble').addEventListener('click', (e) => {
+            e.stopPropagation();
+            openIconPicker(i);
+        });
+
+        // Section Details Area
+        const detail = document.createElement('div');
+        detail.className = 'stage-sections-detail';
+        detail.style.display = 'none'; // collapsed by default
+
+        // Render sections list
+        const secListId = `sectionList_${i}`;
+        detail.innerHTML = `
+            <div class="fw-bold text-xs text-secondary mb-3 uppercase tracking-wider">Stage Content Columns & QC Tools</div>
+            <div id="${secListId}" class="mb-3"></div>
+            <div class="d-flex justify-content-start">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" onclick="openToolPicker(${i})">
+                    <i data-lucide="plus"></i> Add Column / QC Tool
+                </button>
+            </div>
+        `;
+
+        const secList = detail.querySelector(`#${secListId}`);
+        secList.className = 'visual-stage-container';
+
+        const sections = s.sections || [];
+
+        if (sections.length === 0) {
+            secList.innerHTML = `<p class="text-xs ds-text-secondary py-2 mb-0 italic">No columns or QC tools added yet. Click below to add.</p>`;
+        } else {
+            // Get original stage module if registered
+            const module = StageModules[s.original_id];
+            let parsedCards = [];
+            if (module) {
+                if (!module._parsedCards) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = module.renderHTML();
+                    const formContainer = temp.querySelector('[id^="stage"]') || temp.firstElementChild;
+                    let cards = [];
+                    if (formContainer) {
+                        cards = Array.from(formContainer.querySelectorAll(':scope > .glass-card.ds-card'));
+                    }
+                    if (cards.length === 0) {
+                        const allCards = Array.from(temp.querySelectorAll('.glass-card.ds-card'));
+                        cards = allCards.filter(card => {
+                            let parent = card.parentElement;
+                            while (parent) {
+                                if (parent.classList.contains('glass-card') && parent.classList.contains('ds-card')) {
+                                    return false;
+                                }
+                                parent = parent.parentElement;
+                            }
+                            return true;
+                        });
+                    }
+                    module._parsedCards = cards;
+                }
+                parsedCards = module._parsedCards;
+            }
+
+            sections.forEach((sec, sIdx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'visual-card-wrapper';
+                wrapper.dataset.stageIdx = i;
+                wrapper.dataset.secIdx = sIdx;
+                wrapper.setAttribute('draggable', 'true');
+
+                // Get original card or render dynamic card
+                let cardEl = null;
+                const cardIdx = sec.card_index !== undefined ? sec.card_index : sIdx;
+                if (module && cardIdx < parsedCards.length && sec.id && sec.id.startsWith('s' + s.original_id)) {
+                    cardEl = parsedCards[cardIdx].cloneNode(true);
+                }
+
+                if (!cardEl) {
+                    // Render dynamic section card
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = DynamicRenderer.renderSectionCard(sec);
+                    cardEl = tempDiv.querySelector('.glass-card.ds-card');
+                }
+
+                // Parse and configure predefined fields
+                const predefinedFieldsList = [];
+                if (cardEl) {
+                    cardEl.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
+                        const id = input.id;
+                        if (!id || input.closest('.card-edit-header')) return;
+                        
+                        // Find label
+                        let labelText = '';
+                        const parent = input.closest('.ds-field') || input.parentElement;
+                        if (parent) {
+                            const label = parent.querySelector('label');
+                            if (label) labelText = label.textContent.trim();
+                        }
+                        if (!labelText) {
+                            const prev = input.previousElementSibling;
+                            if (prev && prev.tagName === 'LABEL') labelText = prev.textContent.trim();
+                        }
+                        if (!labelText) labelText = input.placeholder || id;
+
+                        // Clean label text
+                        labelText = labelText.replace(/\s*\*$/, '');
+
+                        if (!sec.predefined_fields) sec.predefined_fields = {};
+                        if (!sec.predefined_fields[id]) {
+                            const isReq = input.hasAttribute('required') || labelText.includes('*') || input.required;
+                            sec.predefined_fields[id] = {
+                                label: labelText,
+                                placeholder: input.placeholder || '',
+                                input_type: input.type || 'text',
+                                disabled: false,
+                                required: isReq
+                            };
+                        }
+                        predefinedFieldsList.push({
+                            id: id,
+                            defaultLabel: labelText,
+                            type: input.tagName.toLowerCase() === 'textarea' ? 'textarea' : (input.tagName.toLowerCase() === 'select' ? 'select' : (input.type === 'checkbox' || input.type === 'radio' ? 'boolean' : (input.type === 'file' ? 'file' : 'text')))
+                        });
+                    });
+
+                    // Apply predefined fields customizations to the mockup cardEl
+                    if (sec.predefined_fields) {
+                        Object.keys(sec.predefined_fields).forEach(id => {
+                            const cfg = sec.predefined_fields[id];
+                            const el = cardEl.querySelector(`#${id}`);
+                            if (el) {
+                                if (cfg.disabled) {
+                                    const container = el.closest('.col-md-4, .col-md-6, .col-md-3, .col-12, .ds-field, .col-md-5, .col-md-7') || el.parentElement;
+                                    if (container) container.style.setProperty('display', 'none', 'important');
+                                } else {
+                                    const parent = el.closest('.ds-field') || el.parentElement;
+                                    if (parent) {
+                                        const label = parent.querySelector('label');
+                                        if (label) {
+                                            let cleanLbl = (cfg.label || '').replace(/\s*\*$/, '');
+                                            if (cfg.required !== false) {
+                                                label.innerHTML = `${esc(cleanLbl)} <span class="text-danger">*</span>`;
+                                            } else {
+                                                label.textContent = cleanLbl;
+                                            }
+                                        }
+                                    }
+                                    if (cfg.placeholder) el.placeholder = cfg.placeholder;
+                                    if (cfg.input_type && el.tagName.toLowerCase() === 'input' && el.type !== 'checkbox' && el.type !== 'radio' && el.type !== 'file') {
+                                        el.type = cfg.input_type === 'number' ? 'number' : 'text';
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // If we successfully found or rendered a card, style it and insert edit header
+                if (cardEl) {
+                    // Hide duplicate inner "Section X - Title" headings inside card body
+                    cardEl.querySelectorAll('.ds-card-body h6, .ds-card-body h5').forEach(heading => {
+                        if (heading.closest('.card-edit-header')) return;
+                        if (/^\s*Section\s+\d+/i.test(heading.textContent.trim())) {
+                            heading.style.display = 'none';
+                            const parentFlex = heading.closest('.d-flex');
+                            if (parentFlex) {
+                                const visibleSiblings = Array.from(parentFlex.children).filter(child => child !== heading && window.getComputedStyle(child).display !== 'none');
+                                if (visibleSiblings.length === 1 && (visibleSiblings[0].tagName === 'BUTTON' || visibleSiblings[0].querySelector('button, .ds-btn') || visibleSiblings[0].classList.contains('ds-btn'))) {
+                                    parentFlex.classList.remove('justify-content-between');
+                                    parentFlex.classList.add('justify-content-end');
+                                }
+                            }
+                        }
+                    });
+
+                    // 1. Wrap the card body inside `.card-body-collapse`
+                    const cardBody = cardEl.querySelector('.ds-card-body');
+                    const bodyCollapse = document.createElement('div');
+                    bodyCollapse.className = 'card-body-collapse';
+                    bodyCollapse.style.display = 'none'; // collapsed by default
+                    
+                    if (cardBody) {
+                        cardBody.parentNode.insertBefore(bodyCollapse, cardBody);
+                        bodyCollapse.appendChild(cardBody);
+                    }
+
+                    // 2. Replace or prepend the header with our custom card edit header
+                    const existingHeader = cardEl.querySelector('.ds-card-header');
+                    const editHeader = document.createElement('div');
+                    editHeader.className = 'card-edit-header cursor-pointer';
+                    editHeader.innerHTML = `
+                        <div class="card-drag-handle" title="Drag to reorder sections">
+                            <i data-lucide="grip-vertical" style="width:15px;height:15px;"></i>
+                        </div>
+                        <div class="card-title-edit-wrap">
+                            <span class="card-seq-badge">Sec ${(s.stage_id || (i + 1))}.${sIdx + 1}</span>
+                            <input type="text" class="card-title-edit-input" value="${esc(sec.label)}" placeholder="Enter section title...">
+                        </div>
+                        <div class="card-actions-wrap">
+                            <div class="form-check form-switch mb-0 me-2" title="Toggle section mandatory requirement" onclick="event.stopPropagation();">
+                                <input class="form-check-input section-required-toggle" type="checkbox" role="switch" ${sec.required !== false ? 'checked' : ''}>
+                                <label class="text-xs ${sec.required !== false ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0">Mandatory</label>
+                            </div>
+                            <div class="form-check form-switch mb-0 me-2" title="Allow project teams to mark this section Applicable / Not Applicable" onclick="event.stopPropagation();">
+                                <input class="form-check-input section-allowna-toggle" type="checkbox" role="switch" ${sec.allow_na ? 'checked' : ''}>
+                                <label class="text-xs ${sec.allow_na ? 'text-primary fw-bold' : 'text-muted'} ms-1 mb-0">Allow N/A</label>
+                            </div>
+                            <span class="card-type-badge">${sec.type.toUpperCase()}</span>
+                            <button class="card-delete-btn" title="Delete section" onclick="deleteSection(${i}, ${sIdx}); event.stopPropagation();">
+                                <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                            </button>
+                            <div class="card-collapse-toggle text-secondary ms-2" style="width:20px; text-align:center;">
+                                <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+                            </div>
+                        </div>
+                    `;
+
+                    // Rename section listener
+                    editHeader.querySelector('.card-title-edit-input').addEventListener('input', (e) => {
+                        sec.label = e.target.value;
+                    });
+
+                    // Section mandatory toggle listener
+                    const secReqToggle = editHeader.querySelector('.section-required-toggle');
+                    if (secReqToggle) {
+                        secReqToggle.addEventListener('change', (e) => {
+                            sec.required = e.target.checked;
+                            const label = e.target.nextElementSibling;
+                            if (label) {
+                                label.textContent = 'Mandatory';
+                                label.className = `text-xs ${e.target.checked ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0`;
+                            }
+                        });
+                    }
+
+                    // Section Allow N/A toggle listener
+                    const secNaToggle = editHeader.querySelector('.section-allowna-toggle');
+                    if (secNaToggle) {
+                        secNaToggle.addEventListener('change', (e) => {
+                            sec.allow_na = e.target.checked;
+                            const label = e.target.nextElementSibling;
+                            if (label) {
+                                label.className = `text-xs ${e.target.checked ? 'text-primary fw-bold' : 'text-muted'} ms-1 mb-0`;
+                            }
+                        });
+                    }
+
+                    // Click to expand/collapse section card
+                    editHeader.addEventListener('click', (e) => {
+                        if (e.target.closest('input') || e.target.closest('.card-drag-handle') || e.target.closest('button') || e.target.closest('.form-switch')) {
+                            return;
+                        }
+                        const toggleIcon = editHeader.querySelector('.card-collapse-toggle i');
+                        if (bodyCollapse.style.display === 'none') {
+                            bodyCollapse.style.display = 'block';
+                            toggleIcon.setAttribute('data-lucide', 'chevron-up');
+                        } else {
+                            bodyCollapse.style.display = 'none';
+                            toggleIcon.setAttribute('data-lucide', 'chevron-down');
+                        }
+                        lucide.createIcons();
+                    });
+
+                    if (existingHeader) {
+                        existingHeader.replaceWith(editHeader);
+                    } else {
+                        cardEl.prepend(editHeader);
+                    }
+
+                    // Disable inputs/textareas inside the card mockup
+                    cardEl.querySelectorAll('input, textarea, select, button').forEach(el => {
+                        if (!el.classList.contains('card-title-edit-input') && !el.closest('.card-edit-header')) {
+                            el.disabled = true;
+                            el.style.pointerEvents = 'none';
+                        }
+                    });
+
+                    // Add Custom sub-fields lists and Addition controls inside card body
+                    if (cardBody) {
+                        const fieldsContainer = document.createElement('div');
+                        fieldsContainer.className = 'custom-fields-container border-top pt-3 mt-3';
+                        
+                        let fieldsHtml = '';
+                        
+                        // Render Predefined Fields if any
+                        if (predefinedFieldsList.length > 0) {
+                            fieldsHtml += `<small class="ds-label text-muted mb-2 d-block">Predefined Section Fields</small>`;
+                            predefinedFieldsList.forEach(pf => {
+                                const cfg = (sec.predefined_fields && sec.predefined_fields[pf.id]) || {
+                                    label: pf.defaultLabel,
+                                    placeholder: '',
+                                    input_type: 'text',
+                                    disabled: false,
+                                    required: true
+                                };
+                                const isChecked = !cfg.disabled ? 'checked' : '';
+                                
+                                // Configurations for text/textarea fields
+                                let configHtml = '';
+                                if (pf.type === 'text' || pf.type === 'textarea') {
+                                    configHtml += `
+                                        <div class="row g-2 mt-2 align-items-center">
+                                            <div class="col-6">
+                                                <label class="text-xs text-muted fw-semibold mb-1 d-block">Example / Placeholder</label>
+                                                <input type="text" class="ds-input text-xs predefined-placeholder-edit-input" style="height:34px; padding:6px 12px;"
+                                                       value="${esc(cfg.placeholder)}" placeholder="e.g. Quality Warriors" 
+                                                       data-stage="${i}" data-sec="${sIdx}" data-pfid="${pf.id}">
+                                            </div>
+                                    `;
+                                    if (pf.type === 'text') {
+                                        configHtml += `
+                                            <div class="col-6">
+                                                <label class="text-xs text-muted fw-semibold mb-1 d-block">Allowed Data Type</label>
+                                                <select class="ds-input text-xs ds-select predefined-datatype-edit-select" style="height:34px; padding:6px 30px 6px 12px; font-size:0.75rem;"
+                                                        data-stage="${i}" data-sec="${sIdx}" data-pfid="${pf.id}">
+                                                    <option value="text" ${cfg.input_type === 'text' ? 'selected' : ''}>Text Characters</option>
+                                                    <option value="number" ${cfg.input_type === 'number' ? 'selected' : ''}>Numbers Only</option>
+                                                </select>
+                                            </div>
+                                        `;
+                                    }
+                                    configHtml += `</div>`;
+                                }
+
+                                fieldsHtml += `
+                                    <div class="custom-field-row border rounded bg-light p-2 mb-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <input type="text" class="predefined-label-edit-input text-xs fw-bold" style="background:transparent;border:none;border-bottom:1px solid transparent;outline:none;" 
+                                                   value="${esc(cfg.label)}" placeholder="Enter field label..." data-stage="${i}" data-sec="${sIdx}" data-pfid="${pf.id}">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="form-check form-switch mb-0" title="Toggle mandatory requirement">
+                                                    <input class="form-check-input predefined-required-toggle" type="checkbox" role="switch" ${cfg.required !== false ? 'checked' : ''}
+                                                           data-stage="${i}" data-sec="${sIdx}" data-pfid="${pf.id}">
+                                                    <label class="text-xs ${cfg.required !== false ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0">Mandatory</label>
+                                                </div>
+                                                <div class="form-check form-switch mb-0">
+                                                    <input class="form-check-input predefined-visibility-toggle" type="checkbox" role="switch" ${isChecked}
+                                                           data-stage="${i}" data-sec="${sIdx}" data-pfid="${pf.id}">
+                                                    <label class="text-xs text-muted ms-1 mb-0">Visible</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        ${configHtml}
+                                    </div>
+                                `;
+                            });
+                            fieldsHtml += `<hr class="section-divider my-3">`;
+                        }
+                        
+                        fieldsHtml += `<small class="ds-label text-muted mb-2 d-block">Custom Fields inside Section</small>`;
+                        const fields = sec.fields || [];
+                        if (fields.length === 0) {
+                            fieldsHtml += `<p class="text-xs text-muted mb-2 italic">No custom fields added inside this section yet.</p>`;
+                        } else {
+                            fields.forEach((field, fIdx) => {
+                                const placeholderVal = field.placeholder || '';
+                                const inputTypeVal = field.input_type || 'text';
+                                const selectMockup = field.type === 'select'
+                                    ? mockupHtmlForFieldType('select')
+                                    : mockupHtmlForFieldType(field.type, placeholderVal, inputTypeVal);
+                                    
+                                // Configurations for text/textarea fields
+                                let configHtml = '';
+                                if (field.type === 'text' || field.type === 'textarea') {
+                                    configHtml += `
+                                        <div class="row g-2 mt-2 align-items-center">
+                                            <div class="col-6">
+                                                <label class="text-xs text-muted fw-semibold mb-1 d-block">Example / Placeholder</label>
+                                                <input type="text" class="ds-input text-xs field-placeholder-edit-input" style="height:34px; padding:6px 12px;"
+                                                       value="${esc(placeholderVal)}" placeholder="e.g. Quality Warriors" 
+                                                       data-stage="${i}" data-sec="${sIdx}" data-fidx="${fIdx}">
+                                            </div>
+                                    `;
+                                    if (field.type === 'text') {
+                                        configHtml += `
+                                            <div class="col-6">
+                                                <label class="text-xs text-muted fw-semibold mb-1 d-block">Allowed Data Type</label>
+                                                <select class="ds-input text-xs ds-select field-datatype-edit-select" style="height:34px; padding:6px 30px 6px 12px; font-size:0.75rem;"
+                                                        data-stage="${i}" data-sec="${sIdx}" data-fidx="${fIdx}">
+                                                    <option value="text" ${inputTypeVal === 'text' ? 'selected' : ''}>Text Characters</option>
+                                                    <option value="number" ${inputTypeVal === 'number' ? 'selected' : ''}>Numbers Only</option>
+                                                </select>
+                                            </div>
+                                        `;
+                                    }
+                                    configHtml += `</div>`;
+                                }
+                                    
+                                fieldsHtml += `
+                                    <div class="custom-field-row border rounded bg-light p-2 mb-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <input type="text" class="field-label-edit-input text-xs fw-bold" style="background:transparent;border:none;border-bottom:1px solid transparent;outline:none;" 
+                                                   value="${esc(field.label)}" placeholder="Enter field label..." data-stage="${i}" data-sec="${sIdx}" data-fidx="${fIdx}">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="form-check form-switch mb-0" title="Toggle mandatory requirement">
+                                                    <input class="form-check-input field-required-toggle" type="checkbox" role="switch" ${field.required !== false ? 'checked' : ''}
+                                                           data-stage="${i}" data-sec="${sIdx}" data-fidx="${fIdx}">
+                                                    <label class="text-xs ${field.required !== false ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0">Mandatory</label>
+                                                </div>
+                                                <button class="row-btn danger" style="width:20px;height:20px;padding:0;" title="Delete field" onclick="deleteSubField(${i}, ${sIdx}, ${fIdx}); event.stopPropagation();">
+                                                    <i data-lucide="x" style="width:10px;height:10px;"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div style="opacity:0.6;">
+                                            ${selectMockup}
+                                        </div>
+                                        ${configHtml}
+                                    </div>
+                                `;
+                            });
+                        }
+                        
+                        fieldsHtml += `
+                            <div class="mt-3 d-flex justify-content-start">
+                                <button class="ds-btn ds-btn-ghost ds-btn-sm py-1" onclick="openToolPicker(${i}, ${sIdx}); event.stopPropagation();">
+                                    <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Field / QC Tool
+                                </button>
+                            </div>
+                        `;
+
+                        fieldsContainer.innerHTML = fieldsHtml;
+
+                        const ensurePredefinedField = (st, sc, pfid) => {
+                            if (!stages[st].sections[sc].predefined_fields) {
+                                stages[st].sections[sc].predefined_fields = {};
+                            }
+                            if (!stages[st].sections[sc].predefined_fields[pfid]) {
+                                stages[st].sections[sc].predefined_fields[pfid] = {
+                                    label: '', placeholder: '', input_type: 'text', disabled: false, required: true
+                                };
+                            }
+                        };
+
+                        // Predefined field required toggle listeners
+                        fieldsContainer.querySelectorAll('.predefined-required-toggle').forEach(chk => {
+                            chk.addEventListener('change', (e) => {
+                                const st = parseInt(chk.dataset.stage);
+                                const sc = parseInt(chk.dataset.sec);
+                                const pfid = chk.dataset.pfid;
+                                ensurePredefinedField(st, sc, pfid);
+                                stages[st].sections[sc].predefined_fields[pfid].required = e.target.checked;
+                                const label = chk.nextElementSibling;
+                                if (label) {
+                                    label.textContent = 'Mandatory';
+                                    label.className = `text-xs ${e.target.checked ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0`;
+                                }
+                                const el = cardEl.querySelector(`#${pfid}`);
+                                if (el) {
+                                    const parent = el.closest('.ds-field') || el.parentElement;
+                                    if (parent) {
+                                        const lbl = parent.querySelector('label');
+                                        if (lbl) {
+                                            let cleanLbl = (stages[st].sections[sc].predefined_fields[pfid].label || pfid).replace(/\s*\*$/, '');
+                                            if (e.target.checked) {
+                                                lbl.innerHTML = `${esc(cleanLbl)} <span class="text-danger">*</span>`;
+                                            } else {
+                                                lbl.textContent = cleanLbl;
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        });
+
+                        // Predefined field label rename listeners
+                        fieldsContainer.querySelectorAll('.predefined-label-edit-input').forEach(inp => {
+                            inp.addEventListener('input', (e) => {
+                                const st = parseInt(inp.dataset.stage);
+                                const sc = parseInt(inp.dataset.sec);
+                                const pfid = inp.dataset.pfid;
+                                ensurePredefinedField(st, sc, pfid);
+                                stages[st].sections[sc].predefined_fields[pfid].label = e.target.value;
+                                
+                                const el = cardEl.querySelector(`#${pfid}`);
+                                if (el) {
+                                    const parent = el.closest('.ds-field') || el.parentElement;
+                                    if (parent) {
+                                        const label = parent.querySelector('label');
+                                        if (label) label.textContent = e.target.value;
+                                    }
+                                }
+                            });
+                        });
+
+                        // Predefined field visibility toggle listeners
+                        fieldsContainer.querySelectorAll('.predefined-visibility-toggle').forEach(chk => {
+                            chk.addEventListener('change', (e) => {
+                                const st = parseInt(chk.dataset.stage);
+                                const sc = parseInt(chk.dataset.sec);
+                                const pfid = chk.dataset.pfid;
+                                ensurePredefinedField(st, sc, pfid);
+                                stages[st].sections[sc].predefined_fields[pfid].disabled = !e.target.checked;
+                                
+                                const el = cardEl.querySelector(`#${pfid}`);
+                                if (el) {
+                                    const container = el.closest('.col-md-4, .col-md-6, .col-md-3, .col-12, .ds-field, .col-md-5, .col-md-7, .team-member-row') || el.parentElement;
+                                    if (container) {
+                                        if (e.target.checked) {
+                                            container.style.removeProperty('display');
+                                        } else {
+                                            container.style.setProperty('display', 'none', 'important');
+                                        }
+                                    }
+                                }
+                            });
+                        });
+
+                        // Predefined field placeholder rename listeners
+                        fieldsContainer.querySelectorAll('.predefined-placeholder-edit-input').forEach(inp => {
+                            inp.addEventListener('input', (e) => {
+                                const st = parseInt(inp.dataset.stage);
+                                const sc = parseInt(inp.dataset.sec);
+                                const pfid = inp.dataset.pfid;
+                                ensurePredefinedField(st, sc, pfid);
+                                stages[st].sections[sc].predefined_fields[pfid].placeholder = e.target.value;
+                                
+                                const el = cardEl.querySelector(`#${pfid}`);
+                                if (el) el.placeholder = e.target.value;
+                            });
+                        });
+
+                        // Predefined field datatype change listeners
+                        fieldsContainer.querySelectorAll('.predefined-datatype-edit-select').forEach(sel => {
+                            sel.addEventListener('change', (e) => {
+                                const st = parseInt(sel.dataset.stage);
+                                const sc = parseInt(sel.dataset.sec);
+                                const pfid = sel.dataset.pfid;
+                                ensurePredefinedField(st, sc, pfid);
+                                stages[st].sections[sc].predefined_fields[pfid].input_type = e.target.value;
+                                
+                                const el = cardEl.querySelector(`#${pfid}`);
+                                if (el && el.tagName.toLowerCase() === 'input') {
+                                    el.type = e.target.value === 'number' ? 'number' : 'text';
+                                }
+                            });
+                        });
+
+                        // Field label rename listeners
+                        fieldsContainer.querySelectorAll('.field-label-edit-input').forEach(inp => {
+                            inp.addEventListener('input', (e) => {
+                                const st = parseInt(inp.dataset.stage);
+                                const sc = parseInt(inp.dataset.sec);
+                                const f = parseInt(inp.dataset.fidx);
+                                stages[st].sections[sc].fields[f].label = e.target.value;
+                            });
+                            inp.addEventListener('focus', (e) => { e.target.style.borderBottomColor = 'var(--ds-accent)'; });
+                            inp.addEventListener('blur', (e) => { e.target.style.borderBottomColor = 'transparent'; });
+                        });
+
+                        // Custom field required toggle listeners
+                        fieldsContainer.querySelectorAll('.field-required-toggle').forEach(chk => {
+                            chk.addEventListener('change', (e) => {
+                                const st = parseInt(chk.dataset.stage);
+                                const sc = parseInt(chk.dataset.sec);
+                                const f = parseInt(chk.dataset.fidx);
+                                stages[st].sections[sc].fields[f].required = e.target.checked;
+                                const label = chk.nextElementSibling;
+                                if (label) {
+                                    label.textContent = 'Mandatory';
+                                    label.className = `text-xs ${e.target.checked ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0`;
+                                }
+                            });
+                        });
+
+                        // Field placeholder rename listeners
+                        fieldsContainer.querySelectorAll('.field-placeholder-edit-input').forEach(inp => {
+                            inp.addEventListener('input', (e) => {
+                                const st = parseInt(inp.dataset.stage);
+                                const sc = parseInt(inp.dataset.sec);
+                                const f = parseInt(inp.dataset.fidx);
+                                stages[st].sections[sc].fields[f].placeholder = e.target.value;
+                                
+                                const row = inp.closest('.custom-field-row');
+                                const mockupInput = row.querySelector('.ds-input, .ds-textarea');
+                                if (mockupInput) {
+                                    mockupInput.placeholder = e.target.value || (stages[st].sections[sc].fields[f].type === 'text' ? 'Enter details...' : 'Enter detailed notes...');
+                                }
+                            });
+                        });
+
+                        // Field datatype change listeners
+                        fieldsContainer.querySelectorAll('.field-datatype-edit-select').forEach(sel => {
+                            sel.addEventListener('change', (e) => {
+                                const st = parseInt(sel.dataset.stage);
+                                const sc = parseInt(sel.dataset.sec);
+                                const f = parseInt(sel.dataset.fidx);
+                                stages[st].sections[sc].fields[f].input_type = e.target.value;
+                                
+                                const row = sel.closest('.custom-field-row');
+                                const mockupInput = row.querySelector('input.ds-input');
+                                if (mockupInput) {
+                                    mockupInput.type = e.target.value === 'number' ? 'number' : 'text';
+                                }
+                            });
+                        });
+
+                        cardBody.appendChild(fieldsContainer);
+                    }
+
+                    wrapper.appendChild(cardEl);
+
+
+                } else {
+                    // Fallback in case card rendering completely fails
+                    wrapper.innerHTML = `
+                        <div class="card-edit-header">
+                            <span>${esc(sec.label)}</span>
+                            <button class="card-delete-btn" onclick="deleteSection(${i}, ${sIdx})">
+                                <i data-lucide="trash-2"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                // Add drag-and-drop event listeners to the wrapper
+                wrapper.addEventListener('dragstart', (ev) => {
+                    ev.stopPropagation();
+                    ev.dataTransfer.setData('text/plain', JSON.stringify({ stageIdx: i, secIdx: sIdx }));
+                    wrapper.classList.add('dragging');
+                });
+                wrapper.addEventListener('dragend', () => {
+                    wrapper.classList.remove('dragging');
+                });
+                wrapper.addEventListener('dragover', (ev) => {
+                    ev.preventDefault();
+                    wrapper.classList.add('drag-over');
+                });
+                wrapper.addEventListener('dragleave', () => {
+                    wrapper.classList.remove('drag-over');
+                });
+                wrapper.addEventListener('drop', (ev) => {
+                    ev.preventDefault();
+                    wrapper.classList.remove('drag-over');
+                    const dragData = JSON.parse(ev.dataTransfer.getData('text/plain'));
+                    if (dragData.stageIdx !== i || dragData.secIdx === sIdx) return;
+                    const movedSec = stages[i].sections.splice(dragData.secIdx, 1)[0];
+                    stages[i].sections.splice(sIdx, 0, movedSec);
+                    stages[i].sections.forEach((sc, o) => sc.order = o + 1);
+                    renderList();
+                    // Expand this section again
+                    const cont = list.children[i];
+                    cont.querySelector('.stage-sections-detail').style.display = 'block';
+                });
+
+                secList.appendChild(wrapper);
+            });
+        }
+
+
+        container.appendChild(header);
+        container.appendChild(detail);
+        list.appendChild(container);
+    });
+
+    lucide.createIcons();
+}
+
+function moveStage(idx, dir) {
+    const t = idx + dir;
+    if (t < 0 || t >= stages.length) return;
+    [stages[idx], stages[t]] = [stages[t], stages[idx]];
+    renumber();
+    renderList();
+    renderPreview();
+}
+window.moveStage = moveStage;
+
+function toggleSectionRequired(stageIdx, secIdx) {
+    const sec = stages[stageIdx].sections[secIdx];
+    sec.required = sec.required === undefined ? false : !sec.required;
+    renderList();
+    
+    const cont = document.getElementById('stageList').children[stageIdx];
+    if (cont) {
+        const detail = cont.querySelector('.stage-sections-detail');
+        if (detail) detail.style.display = 'block';
+        const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+        const cardWrapper = wrappers[secIdx];
+        if (cardWrapper) {
+            const bodyCollapse = cardWrapper.querySelector('.card-body-collapse');
+            if (bodyCollapse) bodyCollapse.style.display = 'block';
+            const toggleIcon = cardWrapper.querySelector('.card-collapse-toggle i');
+            if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
+        }
+    }
+    lucide.createIcons();
+}
+window.toggleSectionRequired = toggleSectionRequired;
+
+// ── Preview strip ─────────────────────────────────────────────────────────────
+function renderPreview() {
+    const strip = document.getElementById('previewStrip');
+    if (!strip) return;
+    strip.innerHTML = '';
+    stages.forEach((s, i) => {
+        const clr = STAGE_COLORS[i] || STAGE_COLORS[0];
+        strip.insertAdjacentHTML('beforeend', `
+            <div class="prev-step">
+                <div class="prev-icon"
+                     style="background:${clr.bg};color:${clr.color};border-color:${clr.color}20;">
+                    <i data-lucide="${s.icon}" style="width:18px;height:18px;stroke-width:1.8;"></i>
+                </div>
+                <div class="prev-label">${esc(s.title)}</div>
+                <div class="prev-num">Step ${i + 1}</div>
+            </div>
+            ${i < stages.length - 1 ? '<div class="prev-connector"></div>' : ''}
+        `);
+    });
+    lucide.createIcons();
+}
+
+// ── Icon Picker Modal ─────────────────────────────────────────────────────────
+function openIconPicker(idx) {
+    pickerTargetIdx = idx;
+    pickerSelectedIcon = stages[idx].icon;
+    document.getElementById('iconSearch').value = '';
+    buildIconGrid(ICON_LIBRARY);
+    bsIconModal.show();
+}
+
+function buildIconGrid(icons) {
+    const grid = document.getElementById('iconGrid');
+    grid.innerHTML = '';
+    icons.forEach(name => {
+        const el = document.createElement('div');
+        el.className = 'icon-opt' + (name === pickerSelectedIcon ? ' selected' : '');
+        el.innerHTML = `<i data-lucide="${name}" style="width:20px;height:20px;"></i>
+                        <span>${name}</span>`;
+        el.addEventListener('click', () => {
+            document.querySelectorAll('.icon-opt').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            pickerSelectedIcon = name;
+        });
+        grid.appendChild(el);
+    });
+    lucide.createIcons();
+}
+
+document.getElementById('iconSearch').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    buildIconGrid(ICON_LIBRARY.filter(n => n.includes(q)));
+});
+
+document.getElementById('iconPickerConfirm').addEventListener('click', () => {
+    if (pickerTargetIdx === null || !pickerSelectedIcon) return;
+    stages[pickerTargetIdx].icon = pickerSelectedIcon;
+    bsIconModal.hide();
+    renderList();
+    renderPreview();
+});
+
+// ── Tool Picker Modal ─────────────────────────────────────────────────────────
+let activeSubFieldTarget = null;
+
+function openToolPicker(stageIdx, secIdx = null) {
+    activeStageSectionTargetIdx = stageIdx;
+    activeSubFieldTarget = secIdx !== null ? { stageIdx, secIdx } : null;
+    selectedToolType = null;
+    buildToolGrid();
+    bsToolModal.show();
+}
+
+function buildToolGrid() {
+    const grid = document.getElementById('toolGrid');
+    grid.innerHTML = '';
+    
+    TOOL_OPTIONS.forEach(group => {
+        // Group Title
+        const title = document.createElement('div');
+        title.className = 'tool-picker-group-title';
+        title.textContent = group.category;
+        grid.appendChild(title);
+        
+        // Group Items
+        group.items.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'tool-opt';
+            el.innerHTML = `
+                <i data-lucide="${item.icon}" style="width:18px;height:18px;"></i>
+                <span>${item.label}</span>
+            `;
+            el.addEventListener('click', () => {
+                document.querySelectorAll('.tool-opt').forEach(o => o.classList.remove('selected'));
+                el.classList.add('selected');
+                selectedToolType = item;
+            });
+            grid.appendChild(el);
+        });
+    });
+    lucide.createIcons();
+}
+
+document.getElementById('toolPickerConfirm').addEventListener('click', () => {
+    if (activeStageSectionTargetIdx === null || !selectedToolType) {
+        showToast('Please select a column or QC Tool type to add.', 'error');
+        return;
+    }
+    
+    if (activeSubFieldTarget) {
+        // Adding a sub-field inside a card!
+        const { stageIdx, secIdx } = activeSubFieldTarget;
+        const stage = stages[stageIdx];
+        const sec = stage.sections[secIdx];
+        if (!sec.fields) sec.fields = [];
+        
+        const fieldId = `${sec.id}_field_${Date.now()}`;
+        sec.fields.push({
+            id: fieldId,
+            type: selectedToolType.type,
+            label: selectedToolType.label,
+            required: true
+        });
+    } else {
+        // Adding a top-level section card!
+        const stage = stages[activeStageSectionTargetIdx];
+        if (!stage.sections) stage.sections = [];
+        
+        const uniqueId = `sec_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        stage.sections.push({
+            id: uniqueId,
+            type: selectedToolType.type,
+            label: selectedToolType.label,
+            required: true,
+            order: stage.sections.length + 1
+        });
+    }
+    
+    bsToolModal.hide();
+    renderList();
+    
+    // Auto expand the stage and card body we just edited
+    const stageIdx = activeStageSectionTargetIdx;
+    const cont = document.getElementById('stageList').children[stageIdx];
+    cont.querySelector('.stage-sections-detail').style.display = 'block';
+    
+    if (activeSubFieldTarget) {
+        // Find the card wrapper and expand its body!
+        const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+        const cardWrapper = wrappers[activeSubFieldTarget.secIdx];
+        if (cardWrapper) {
+            const bodyCollapse = cardWrapper.querySelector('.card-body-collapse');
+            if (bodyCollapse) bodyCollapse.style.display = 'block';
+            const toggleIcon = cardWrapper.querySelector('.card-collapse-toggle i');
+            if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
+        }
+        lucide.createIcons();
+    }
+});
+
+
+function deleteSection(stageIdx, secIdx) {
+    if (!confirm('Are you sure you want to delete this column/QC tool?')) return;
+    stages[stageIdx].sections.splice(secIdx, 1);
+    stages[stageIdx].sections.forEach((sec, idx) => sec.order = idx + 1);
+    renderList();
+    
+    // Auto expand the stage we just edited
+    const cont = document.getElementById('stageList').children[stageIdx];
+    cont.querySelector('.stage-sections-detail').style.display = 'block';
+}
+window.deleteSection = deleteSection;
+
+// ── Custom Sub-Fields Helpers for WYSIWYG Editor ──────────────────────────────────────
+function mockupHtmlForFieldType(type, placeholder = '', inputType = 'text') {
+    const ph = placeholder || (type === 'text' ? 'Enter details...' : 'Enter detailed notes...');
+    switch (type) {
+        case 'text':
+            return `<input type="${inputType === 'number' ? 'number' : 'text'}" class="ds-input" style="height:32px;pointer-events:none;" placeholder="${esc(ph)}">`;
+        case 'textarea':
+            return `<textarea class="ds-input ds-textarea" style="pointer-events:none;" rows="2" placeholder="${esc(ph)}"></textarea>`;
+        case 'select':
+            return `
+                <select class="ds-input ds-select" style="height:32px;pointer-events:none;appearance:auto;">
+                    <option value="">-- Select option --</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            `;
+        case 'file_upload':
+            return `
+                <div class="border rounded p-2 text-center bg-light" style="border-style:dashed!important;pointer-events:none;">
+                    <i data-lucide="upload" style="width:14px;height:14px;vertical-align:middle;" class="text-secondary"></i>
+                    <span class="text-xs text-secondary ms-1" style="vertical-align:middle;">No file uploaded</span>
+                </div>
+            `;
+        case 'signature':
+            return `
+                <div class="d-flex align-items-center justify-content-between p-2 rounded bg-light border" style="pointer-events:none;">
+                    <span class="text-xs fw-semibold">Pending Approval Gate</span>
+                    <input class="form-check-input" type="checkbox" disabled>
+                </div>
+            `;
+        case 'multi_text':
+            return `
+                <div style="pointer-events:none;">
+                    <input type="text" class="ds-input mb-1" style="height:32px;" placeholder="Bullet Item 1...">
+                    <button class="ds-btn ds-btn-ghost ds-btn-sm py-0 mt-1" type="button"><i data-lucide="plus" style="width:10px;height:10px;"></i> Add Item</button>
+                </div>
+            `;
+        case 'table':
+            return `
+                <div class="table-responsive" style="pointer-events:none;">
+                    <table class="ds-table table-bordered mb-1 text-xs">
+                        <thead>
+                            <tr><th>Item / Metric</th><th>Planned / Target</th><th>Actual / Outcome</th></tr>
+                        </thead>
+                        <tbody><tr><td>Sample Item</td><td>Target A</td><td>Outcome A</td></tr></tbody>
+                    </table>
+                </div>
+            `;
+        case 'five_why':
+            return `
+                <div class="table-responsive" style="pointer-events:none;">
+                    <table class="ds-table table-bordered mb-1 text-xs">
+                        <thead>
+                            <tr><th style="width:70px;">Why</th><th>Description</th></tr>
+                        </thead>
+                        <tbody><tr><td>Why 1</td><td>Problem occurrence...</td></tr></tbody>
+                    </table>
+                </div>
+            `;
+        case 'verification_table':
+            return `
+                <div class="table-responsive" style="pointer-events:none;">
+                    <table class="ds-table table-bordered mb-1 text-xs">
+                        <thead>
+                            <tr><th>Hypothesis / Root Cause</th><th>Verification Method</th><th>Status</th></tr>
+                        </thead>
+                        <tbody><tr><td>Hypothesis A</td><td>Testing method...</td><td>Open</td></tr></tbody>
+                    </table>
+                </div>
+            `;
+        case 'check_sheet':
+            return `
+                <div style="pointer-events:none;" class="text-xs">
+                    <div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Verify specification checklist item</label></div>
+                </div>
+            `;
+        case 'pareto':
+        case 'histogram':
+        case 'control_chart':
+        case 'scatter':
+            return `
+                <div class="border rounded p-2 text-center bg-light text-xs text-secondary" style="border-style:dashed!important;pointer-events:none;">
+                    <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;"></i>
+                    <span class="ms-1" style="vertical-align:middle;">[Mockup ${type.toUpperCase()} Chart]</span>
+                </div>
+            `;
+        case 'fishbone':
+            return `
+                <div class="border rounded p-2 text-center bg-light text-xs text-secondary" style="border-style:dashed!important;pointer-events:none;">
+                    <i data-lucide="git-merge" style="width:16px;height:16px;vertical-align:middle;"></i>
+                    <span class="ms-1" style="vertical-align:middle;">[Mockup Ishikawa Fishbone Diagram]</span>
+                </div>
+            `;
+        case 'stratification':
+            return `
+                <div class="border rounded p-2 text-center bg-light text-xs text-secondary" style="border-style:dashed!important;pointer-events:none;">
+                    <i data-lucide="layers" style="width:16px;height:16px;vertical-align:middle;"></i>
+                    <span class="ms-1" style="vertical-align:middle;">[Mockup Stratification Table & Chart]</span>
+                </div>
+            `;
+        default:
+            return `<div class="text-xs text-secondary">[Mockup: ${type}]</div>`;
+    }
+}
+
+function deleteSubField(stageIdx, secIdx, fIdx) {
+    if (!confirm('Are you sure you want to delete this field?')) return;
+    const stage = stages[stageIdx];
+    const sec = stage.sections[secIdx];
+    if (sec.fields) {
+        sec.fields.splice(fIdx, 1);
+    }
+    renderList();
+    // Expand this section again
+    const list = document.getElementById('stageList');
+    const cont = list.children[stageIdx];
+    cont.querySelector('.stage-sections-detail').style.display = 'block';
+    
+    // Find the card wrapper and expand its body!
+    const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+    const cardWrapper = wrappers[secIdx];
+    if (cardWrapper) {
+        const bodyCollapse = cardWrapper.querySelector('.card-body-collapse');
+        if (bodyCollapse) bodyCollapse.style.display = 'block';
+        const toggleIcon = cardWrapper.querySelector('.card-collapse-toggle i');
+        if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
+    }
+    lucide.createIcons();
+}
+window.deleteSubField = deleteSubField;
+
+
+
+
+
+// ── Save Template ─────────────────────────────────────────────────────────────
+document.getElementById('saveBtn').addEventListener('click', async () => {
+    const empty = stages.findIndex(s => !s.title.trim());
+    if (empty !== -1) {
+        showToast(`Stage ${empty + 1} has an empty title — please fill it in.`, 'error');
+        return;
+    }
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" class="spin" style="width:14px;height:14px;"></i> Saving…';
+    lucide.createIcons();
+    try {
+        await api.post('/admin/stages-template', { stages });
+        showToast('Stage template saved successfully!');
+    } catch (err) {
+        showToast('Error: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save"></i> Save Template';
+        lucide.createIcons();
+    }
+});
+
+// ── Reset Template ────────────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', async () => {
+    if (!confirm('Reset to QCMS default S0–S8 sequence and columns? This cannot be undone.')) return;
+    try {
+        const res = await api.post('/admin/stages-template', { reset: true });
+        stages = (res.stages || []).sort((a, b) => a.stage_id - b.stage_id);
+        renumber();
+        renderList();
+        renderPreview();
+        showToast('Template reset to defaults.');
+    } catch (err) {
+        showToast('Error: ' + (err.message || 'Unknown error'), 'error');
+    }
+});
+
+let bsAddStageModal = null;
+
+// ── Add Stage listeners ────────────────────────────────────────────────────────
+document.getElementById('addStageBtn').addEventListener('click', () => {
+    document.getElementById('newStageTitle').value = '';
+    bsAddStageModal.show();
+});
+
+document.getElementById('addStageConfirmBtn').addEventListener('click', () => {
+    const title = document.getElementById('newStageTitle').value.trim();
+    if (!title) {
+        showToast('Please enter a stage title.', 'error');
+        return;
+    }
+    const baseModule = parseInt(document.getElementById('newStageBaseModule').value);
+    const icon = document.getElementById('newStageIcon').value;
+
+    const newStg = {
+        stage_id: stages.length + 1,
+        original_id: baseModule,
+        title: title,
+        icon: icon,
+        sections: []
+    };
+    stages.push(newStg);
+    renumber();
+    renderList();
+    renderPreview();
+    bsAddStageModal.hide();
+    showToast('New stage added successfully! Expand it to customize sections.');
+});
+
+// ── Delete stage ───────────────────────────────────────────────────────────────
+function deleteStage(idx) {
+    if (!confirm('Are you sure you want to delete this stage? All customized sections/fields under this stage will be removed.')) return;
+    stages.splice(idx, 1);
+    renumber();
+    renderList();
+    renderPreview();
+    showToast('Stage deleted successfully.');
+}
+window.deleteStage = deleteStage;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    lucide.createIcons();
+    bsIconModal = new bootstrap.Modal(document.getElementById('iconPickerModal'));
+    bsToolModal = new bootstrap.Modal(document.getElementById('toolPickerModal'));
+    bsAddStageModal = new bootstrap.Modal(document.getElementById('addStageModal'));
+
+    try {
+        const res = await api.get('/admin/stages-template');
+        stages = (res.stages || []).sort((a, b) => a.stage_id - b.stage_id);
+        renderList();
+    } catch (err) {
+        document.getElementById('stageList').innerHTML = `
+            <div class="text-center py-5 text-danger">
+                <i data-lucide="alert-triangle" style="width:24px;height:24px;"></i>
+                <p class="mt-2 mb-0 text-sm">Failed to load template: ${err.message || 'Server error'}</p>
+            </div>`;
+        lucide.createIcons();
+    }
+});
+</script>
+</body>
+</html>

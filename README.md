@@ -1,153 +1,164 @@
-# QCMS Enterprise
+# QCMS Enterprise OS — Quality & Compliance Management System (IFQM)
 
-QCMS Enterprise is a Flask-based quality management system for structured problem solving, project tracking, approvals, and knowledge capture. The workspace contains a Flask backend, a static HTML/CSS/JavaScript frontend, and PostgreSQL-backed persistence.
+An enterprise-grade, high-performance SaaS platform engineered for structured 8-stage problem solving (**Quality Circle / 8D / DMAIC / Six Sigma**), multi-tenant organization governance, automated compliance audit reporting, and real-time operational analytics.
 
-## Overview
+---
 
-The application centers on an 8-stage workflow used to move projects from problem definition through analysis, approval, implementation, verification, and standardization. Role-based access controls cover Admin, Reviewer, Facilitator, Team Leader, and Team Member workflows.
+## 🏗️ System Architecture
 
 ```mermaid
 graph TD
-    U[Browser UI] --> F[Frontend HTML/CSS/JS]
-    F --> B[Flask App]
-    B --> A[JWT + RBAC + Workflow APIs]
-    A --> D[(PostgreSQL)]
+    subgraph Client Layer [Frontend Client (Glassmorphism UI)]
+        LP[Landing & CMS] --> AUTH[Auth & SSO]
+        AUTH --> DASH[Role-Based Dashboards]
+        DASH --> WF[8-Stage Workflow Workspace]
+        DASH --> SA[Super Admin Governance]
+        DASH --> AN[Enterprise Analytics & Billing]
+    end
+
+    subgraph API Layer [Flask Clean Architecture REST Engine]
+        ROUTER[Presentation Layer / REST Routes] --> MW[JWT & Subscription Guards]
+        MW --> APP[Application Services]
+        APP --> DOM[Domain Logic & Policy Engines]
+        DOM --> INFRA[Infrastructure & Repository Layer]
+    end
+
+    subgraph Data & Storage Layer
+        DB[(PostgreSQL / Neon Serverless)]
+        UPL[Uploads & PDF Assets]
+    end
+
+    Client Layer -- REST APIs / JSON --> API Layer
+    INFRA -- SQLAlchemy ORM --> DB
+    INFRA -- File I/O --> UPL
 ```
 
-## Repository Layout
+---
+
+## 📁 Repository Structure
+
+The platform follows clean architecture principles with decoupled backend REST microservices and a responsive glassmorphic frontend:
 
 ```text
 .
-├── backend/        # Flask API, models, migrations/helpers, scripts
-├── frontend/       # Static web app served by Nginx or Flask
-├── API_DOCUMENTATION.md
-├── README.md
-└── docker-compose.yml
+├── backend/                     # Decoupled Python/Flask REST API Service
+│   ├── app/
+│   │   ├── config/              # Environment configurations & secrets
+│   │   ├── domain/              # Pure business entities, policies & feature engine
+│   │   ├── application/         # Use-case handlers & domain interfaces
+│   │   ├── infrastructure/      # Database models, ORM mappings & notification adapters
+│   │   ├── presentation/        # REST route blueprints, JWT middleware & validators
+│   │   └── utils/               # PDF fillers, report generators, i18n & avatar helpers
+│   ├── run.py                   # Server entry point
+│   ├── requirements.txt         # Dependency manifest
+│   └── Dockerfile               # Backend container configuration
+│
+├── frontend/                    # Modern responsive web application client
+│   ├── admin/                   # Super Admin portal, audit logs, settings & user management
+│   ├── analytics/               # Enterprise KPI dashboards & financial reporting
+│   ├── assets/                  # Design system CSS, i18n dictionaries & JS modules
+│   │   ├── css/                 # Glassmorphic UI theme styles & utility tokens
+│   │   ├── js/                  # Feature engines, stage renderers, analytics & settings
+│   │   └── translations/        # Multilingual JSON dictionaries
+│   ├── auth/                    # Login, registration, profile & password recovery
+│   ├── dashboard/               # Role-tailored dashboards (Admin, CEO, Reviewer, Team Lead)
+│   ├── projects/                # 8-Stage problem-solving workspace & standards repository
+│   ├── index.html               # Public landing page & initial gatekeeper
+│   ├── page.html                # CMS dynamic content renderer
+│   ├── nginx.conf               # Nginx reverse proxy configuration
+│   └── Dockerfile               # Frontend container configuration
+│
+└── docker-compose.yml           # Multi-container orchestration specification
 ```
 
-## Features
+---
 
-- 8-stage project workflow with stage tracking and approval gates.
-- Role-based dashboards for Admin, Reviewer, Facilitator, Team Leader, and Team Member.
-- Project, department, repository, analytics, and audit-style views.
-- Email support via Resend for verification and notifications.
-- PDF and spreadsheet report generation in the backend utilities.
+## 🌟 Key Features & Capabilities
 
-## Tech Stack
+### 1. Structured 8-Stage Quality Circle Workflow
+Rigid, sequential problem-solving lifecycle with automated stage-transition approval locks:
+- **Stage 1: Problem Definition & Team Formation** (Problem statement, target metrics, team assignment)
+- **Stage 2: Data Collection & Baseline** (KPI baselines, stratifications, evidence gathering)
+- **Stage 3: Root Cause Analysis** (Interactive Fishbone diagram, 5-Why tree, Pareto analysis)
+- **Stage 4: Solution Planning & Countermeasures** (Action items, cost-benefit analysis, ROI estimation)
+- **Stage 5: Independent Review & Approval** (Gatekeeper sign-off by designated Reviewer/Facilitator)
+- **Stage 6: Implementation & Execution** (Milestone tracking, task progress monitoring)
+- **Stage 7: Impact & Savings Verification** (Post-execution KPI vs. baseline, tangible cost savings)
+- **Stage 8: Standardization & SOP Integration** (Standard Operating Procedure updates, lessons learned)
 
-| Layer | Stack |
+### 2. Multi-Tenant Enterprise SaaS Governance
+- **Organization Isolation**: Complete data segregation per organization.
+- **Tiered Subscriptions**: Starter, Professional, Enterprise, and Custom tiers with automated feature-flag enforcement.
+- **License & User Caps**: Real-time quota validation for active users, concurrent projects, and storage.
+- **Payment & Upgrades**: Razorpay payment gateway integration for seamless plan upgrades and automated billing invoices.
+
+### 3. Super Admin & Governance Portal
+- **Centralized Management**: Manage all tenant organizations, subdomains, and administrator accounts.
+- **Document Identity & Branding Engine**: Customize software name, acronym (`Software Short Name`), platform title, custom logo, legal company details, and invoice headers across the entire platform.
+- **Compliance Activity Stream**: Real-time audit telemetry tracking user logins, state changes, security events, and risk levels with detailed drawer inspection.
+- **Global Broadcast Engine**: Compose and dispatch announcements across organizations with audience targeting rules.
+
+### 4. Automated PDF Report Generation
+- Instant PDF generation for **QC Story Closure Summaries**, **Official Invoices**, **ISO 9001 Certificates**, and **Compliance Reports** via ReportLab and custom template fillers.
+
+### 5. Multilingual Dynamic i18n Engine
+- Real-time client-side translation into 6 languages (**English, Hindi, Kannada, Telugu, Tamil, Malayalam**).
+- DOM MutationObservers automatically translate dynamically rendered tables, charts, and modal content.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
 | :--- | :--- |
-| Frontend | HTML5, CSS3, Vanilla JavaScript |
-| Backend | Python 3.10+, Flask, SQLAlchemy, Flask-JWT-Extended, Flask-Bcrypt, Flask-CORS |
-| Database | PostgreSQL |
-| Deployment | Docker, Docker Compose, Nginx |
-| Reporting | pandas, openpyxl, fpdf2 |
+| **Frontend UI** | HTML5, Vanilla JavaScript (ES6+), Vanilla CSS3 (Glassmorphism Design System) |
+| **Icons & Visuals** | Lucide Icons, Chart.js (Data Visualization) |
+| **Backend API** | Python 3.10+, Flask, SQLAlchemy ORM, Flask-JWT-Extended, Flask-Bcrypt |
+| **PDF Engine** | ReportLab, PyPDF2 |
+| **Database** | PostgreSQL (Neon Serverless / Local PostgreSQL) |
+| **DevOps & Proxy** | Docker, Docker Compose, Nginx |
 
-## Requirements
+---
 
-- Python 3.10 or newer.
-- PostgreSQL if you are running the backend outside Docker.
-- Docker and Docker Compose if you want the full stack locally.
+## 🚀 Quick Start & Deployment
 
-## Quick Start
+### Prerequisites
+- Python 3.10+
+- Node.js (optional, for local static serving)
+- Docker & Docker Compose (for containerized deployment)
 
-### Docker Compose
-
-This is the fastest way to run the full system.
-
+### 1. Docker Setup (Recommended)
 ```bash
-docker-compose up --build
+# Clone the repository
+git clone https://github.com/harshith1432/imfq-QCMS.git
+cd imfq-QCMS
+
+# Build and launch services
+docker-compose up --build -d
 ```
+- **Web Application**: `http://localhost:80`
+- **Backend REST API**: `http://localhost:5000`
 
-Services exposed by the compose file:
-
-- Frontend: `http://localhost:80`
-- Backend API: `http://localhost:5000`
-
-### Manual Backend Run
-
+### 2. Manual Backend Setup
 ```bash
+# Navigate to backend directory
 cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-python setup_db.py
+
+# Start Flask development server
 python run.py
 ```
 
-The backend bootstrap will create missing tables and seed the default roles. The setup script also creates an initial admin account if one does not already exist.
+---
 
-### Default Credentials
+## 📄 License & Attribution
 
-The seeded admin account uses:
+Designed and engineered for enterprise quality governance, industrial compliance, and continuous improvement.
 
-- Username: `admin`
-- Password: `admin123`
-
-Change these immediately after first login.
-
-## Environment Variables
-
-The backend reads its configuration from `backend/.env`. The main values used by the app are:
-
-- `DATABASE_URL`
-- `JWT_SECRET_KEY`
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
-- `FLASK_APP`
-- `FLASK_ENV`
-- `PORT`
-
-Example database format:
-
-```text
-DATABASE_URL=postgresql://user:password@host:5432/database_name
-```
-
-## Key Entry Points
-
-- Backend app factory and route registration: [backend/app/__init__.py](backend/app/__init__.py)
-- Backend development runner: [backend/run.py](backend/run.py)
-- Database bootstrap and role seeding: [backend/setup_db.py](backend/setup_db.py)
-- Frontend landing page: [frontend/index.html](frontend/index.html)
-- API reference: [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
-
-## Frontend Pages
-
-The static frontend includes pages for:
-
-- Authentication: login, register, forgot/reset password
-- Dashboards: admin, reviewer, facilitator, team leader, team member
-- Projects: workspace, details, repository
-- Admin flows: users, departments, settings, audit queue, audit logs
-- Knowledge views: repository, standards, analytics, profile pages
-
-## Backend API Surface
-
-The Flask app registers the following major API groups:
-
-- `/api/auth`
-- `/api/projects`
-- `/api/workflow`
-- `/api/analytics`
-- `/api/admin`
-- `/api/facilitator`
-- `/api/reviewer`
-- `/api/team-leader`
-- `/api/team-member`
-- `/api/project`
-- `/api/dashboard`
-- `/api/repository`
-
-## Notes
-
-- The backend serves the frontend static files directly when run through Flask.
-- `docker-compose.yml` also defines a separate Nginx frontend container.
-- Uploaded files are served from the backend `uploads/` directory.
-
-## More Documentation
-
-- [Backend Developer Guide](backend/README.md)
-- [Frontend Developer Guide](frontend/README.md)
-- [API Documentation](API_DOCUMENTATION.md)
-
-
-
+© 2026 **QCMS Enterprise OS**. All rights reserved.

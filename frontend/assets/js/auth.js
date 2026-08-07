@@ -7,27 +7,44 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
     try {
         const data = await api.post('/auth/login', { username, password });
-        localStorage.setItem('token', data.access_token);
-        localStorage.setItem('user', JSON.stringify({
+        sessionStorage.setItem('token', data.access_token);
+        sessionStorage.setItem('user', JSON.stringify({
             username: data.username,
             role: data.role,
             org_id: data.org_id,
+            org_name: data.org_name,
             dept_id: data.dept_id,
-            is_temp_password: data.is_temp_password
+            subscription_plan: data.subscription_plan,
+            subscription_status: data.subscription_status,
+            is_temp_password: data.is_temp_password,
+            id: data.id,
+            language: data.language,
+            org_timezone: data.org_timezone,
+            org_primary_color: data.org_primary_color || null,
+            org_logo_url: data.org_logo_url || null,
+            org_favicon_url: data.org_favicon_url || null
         }));
+        
+        // Sync global language
+        if (data.language) {
+            localStorage.setItem('qcms-language', data.language);
+            if (window.i18n) window.i18n.setLanguage(data.language);
+        }
 
         if (data.is_temp_password) {
-            window.location.href = 'reset-password.html';
+            window.location.href = '/auth/reset-password.html';
             return;
         }
 
         // Role-based redirection
         const role = data.role;
-        if (role === 'Admin') window.location.href = 'dashboard-admin.html';
-        else if (role === 'Reviewer') window.location.href = 'dashboard-reviewer.html';
-        else if (role === 'Facilitator') window.location.href = 'dashboard-facilitator.html';
-        else if (role === 'Team Leader') window.location.href = 'dashboard-team-leader.html';
-        else window.location.href = 'dashboard-team-member.html';
+        if (role === 'SuperAdmin') window.location.href = '/admin/super-admin.html';
+        else if (role === 'Admin') window.location.href = '/dashboard/dashboard-admin.html';
+        else if (role === 'Reviewer') window.location.href = '/dashboard/dashboard-reviewer.html';
+        else if (role === 'Facilitator') window.location.href = '/dashboard/dashboard-facilitator.html';
+        else if (role === 'Team Leader') window.location.href = '/dashboard/dashboard-team-member.html';
+        else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
+        else window.location.href = '/dashboard/dashboard-team-member.html';
     } catch (err) {
         errorMsg.textContent = err.message;
         errorMsg.style.display = 'block';
@@ -67,7 +84,7 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
             alert('Registration successful! Redirecting to login...');
         }
         setTimeout(() => {
-            window.location.href = 'login.html';
+            window.location.href = '/auth/login.html';
         }, 2000);
     } catch (err) {
         errorMsg.textContent = err.message;
@@ -76,12 +93,12 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
 });
 
 function logout() {
-    localStorage.clear();
-    window.location.href = 'login.html';
+    sessionStorage.clear();
+    window.location.href = '/auth/login.html';
 }
 
 function checkAuth() {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     const path = window.location.pathname;
 
     // Improved detection including extensionless paths
@@ -90,16 +107,16 @@ function checkAuth() {
         path.includes('reset-password');
 
     if (!token && !isAuthPage && !path.endsWith('/') && !path.includes('index.html')) {
-        window.location.href = 'login.html';
+        window.location.href = '/auth/login.html';
         return;
     }
 
     // Force password reset if flagged
     if (token && !path.includes('reset-password.html')) {
         try {
-            const user = JSON.parse(localStorage.getItem('user'));
+            const user = JSON.parse(sessionStorage.getItem('user'));
             if (user && user.is_temp_password) {
-                window.location.href = 'reset-password.html';
+                window.location.href = '/auth/reset-password.html';
             }
         } catch (e) {
             console.error('Auth state error:', e);
@@ -109,28 +126,30 @@ function checkAuth() {
 
 // Redirect if already logged in on login/register page
 function handleStaticRedirects() {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     const path = window.location.pathname;
     const isLoginPage = path.includes('login.html') || (path.endsWith('/login'));
     const isRegisterPage = path.includes('register.html') || (path.endsWith('/register'));
 
     if ((isLoginPage || isRegisterPage) && token) {
         try {
-            const user = JSON.parse(localStorage.getItem('user'));
+            const user = JSON.parse(sessionStorage.getItem('user'));
             if (user && user.role) {
                 const role = user.role;
-                if (role === 'Admin') window.location.href = 'dashboard-admin.html';
-                else if (role === 'Reviewer') window.location.href = 'dashboard-reviewer.html';
-                else if (role === 'Facilitator') window.location.href = 'dashboard-facilitator.html';
-                else if (role === 'Team Leader') window.location.href = 'dashboard-team-leader.html';
-                else window.location.href = 'dashboard-team-member.html';
+                if (role === 'SuperAdmin') window.location.href = '/admin/super-admin.html';
+                else if (role === 'Admin') window.location.href = '/dashboard/dashboard-admin.html';
+                else if (role === 'Reviewer') window.location.href = '/dashboard/dashboard-reviewer.html';
+                else if (role === 'Facilitator') window.location.href = '/dashboard/dashboard-facilitator.html';
+                else if (role === 'Team Leader') window.location.href = '/dashboard/dashboard-team-member.html';
+                else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
+                else window.location.href = '/dashboard/dashboard-team-member.html';
             } else {
                 // Token exists but user object is corrupt/missing — clear it
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                sessionStorage.removeItem('token');
+                sessionStorage.removeItem('user');
             }
         } catch (e) {
-            localStorage.clear();
+            sessionStorage.clear();
         }
     }
 }

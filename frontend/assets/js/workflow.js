@@ -3,18 +3,18 @@ let currentStageId = 1;
 const projectId = new URLSearchParams(window.location.search).get('id');
 
 const stages = [
-    { title: "Stage 1: Identification", description: "Define the problem and its scope." },
-    { title: "Stage 2: Selection", description: "Select the project and set objectives." },
-    { title: "Stage 3: Analysis", description: "Analyze the problem with data and charts." },
-    { title: "Stage 4: Causes", description: "Identify potential causes (Fishbone/5-Why)." },
-    { title: "Stage 5: Root Cause (RCA)", description: "Validate and confirm the root cause." },
-    { title: "Stage 6: Data Analysis", description: "Verify root cause with data-driven analysis." },
-    { title: "Stage 7: Development", description: "Develop and propose the solution." },
-    { title: "Stage 8: Implementation", description: "Implement, measure impact, and close." }
+    { title: "Stage 1: Problem Definition & Project Initiation", description: "Project charter, timeline, team competency matrix." },
+    { title: "Stage 2: Observation & Data Collection", description: "Define problem with 5W2H, Gemba observation, defect data." },
+    { title: "Stage 3: Cause Identification", description: "Brainstorming and Fishbone Diagram (Level 1-3)." },
+    { title: "Stage 4: Root Cause Analysis & Verification", description: "Hypothesis testing, statistical validation, and 5-Why." },
+    { title: "Stage 5: Countermeasure Planning & Solution Development", description: "Evaluate solution matrix, CBA, and 3W1H action plan." },
+    { title: "Stage 6: Implementation & Change Management", description: "Task management, risk resistance, and training." },
+    { title: "Stage 7: Performance Verification & Benefits Realization", description: "KPI verification, before vs after analysis, and ROI." },
+    { title: "Stage 8: Standardization, Knowledge Sharing & Project Closure", description: "Lessons learned, horizontal deployment, formal closure." }
 ];
 
 async function initWorkspace() {
-    if (!projectId) return window.location.href = 'projects.html';
+    if (!projectId) return window.location.href = '/projects/projects-repository.html';
     
     try {
         currentProject = await api.get(`/projects/${projectId}`);
@@ -122,7 +122,7 @@ async function submitStage() {
 }
 
 function checkReviewerAccess() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
     const panel = document.getElementById('reviewerControls');
     if ((user.role === 'Reviewer' || user.role === 'Admin') && currentProject.status === 'Pending Approval') {
         panel.style.display = 'block';

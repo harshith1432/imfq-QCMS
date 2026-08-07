@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QCMS Enterprise | Quality Management Reimagined</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --hero-bg: #f8fafc;
+            --primary-900: #0f172a;
+            --primary-50: #f0f9ff;
+            --primary-200: #bae6fd;
+            --radius-2xl: 24px;
+        }
+
+        .lp-navbar {
+            padding: var(--ds-space-4) 0;
+            background: rgba(var(--ds-bg-main-rgb), 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--ds-border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .hero-section {
+            padding: 120px 0 80px;
+            background: radial-gradient(circle at 70% 30%, var(--primary-50) 0%, transparent 50%),
+                radial-gradient(circle at 10% 80%, #f0f9ff 0%, transparent 40%);
+            overflow: hidden;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -1.5px;
+            color: var(--ds-text-primary);
+            margin-bottom: var(--ds-space-6);
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--ds-text-secondary);
+            max-width: 600px;
+            margin-bottom: var(--ds-space-8);
+            line-height: 1.6;
+        }
+
+        .feature-card {
+            padding: var(--ds-space-8);
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-lg);
+            transition: all 0.3s var(--ds-ease-out);
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-200);
+        }
+
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(var(--ds-primary-rgb), 0.1);
+            color: var(--ds-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--ds-space-5);
+        }
+
+        .cta-banner {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%) !important;
+            color: #ffffff !important;
+            padding: 80px 40px;
+            border-radius: 24px;
+            margin: 80px 0;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+        }
+        .cta-banner h2, .cta-banner p, .cta-banner span {
+            color: #ffffff !important;
+        }
+
+        @media (max-width: 991px) {
+            .hero-title {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="lp-navbar glass-navbar">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <div class="icon-box mb-0"
+                    style="width:36px; height:36px; border-radius:8px; background:var(--ds-primary);">
+                    <i data-lucide="shield-check" style="width:20px; height:20px; color:var(--ds-bg-main);"></i>
+                </div>
+                <span class="fw-extrabold fs-4 text-primary tracking-tight"
+                    style="color:var(--ds-primary) !important;">QCMS <span
+                        class="text-muted fw-normal">Enterprise</span></span>
+            </div>
+            <div class="d-flex gap-3 align-items-center">
+                <a href="login.html" class="ds-btn ds-btn-ghost ds-btn-sm text-primary fw-bold">Sign In</a>
+                <a href="register-org.html" class="ds-btn ds-btn-primary ds-btn-sm px-4">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="page-content" style="padding: 120px 0 80px; min-height: 70vh;">
+        <div class="container">
+            <div class="glass-card p-5" style="border-radius: 24px; max-width: 900px; margin: 0 auto; background: var(--ds-bg-surface);">
+                <h1 id="page-title" class="fw-bold mb-4" style="color: var(--ds-text-primary);">Loading...</h1>
+                <div id="page-content" class="text-secondary" style="line-height: 1.8; font-size: 1.1rem;">
+                    <!-- Content will be injected here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+<footer class="py-5 border-top bg-light">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-4">
+                    <div class="d-flex align-items-center gap-2 mb-4">
+                        <div
+                            style="width:40px; height:40px; border-radius:10px; background:var(--ds-primary); color:white; display:flex; align-items:center; justify-content:center;">
+                            <i data-lucide="shield-check" style="width:24px; height:24px;"></i>
+                        </div>
+                        <span class="fw-extrabold fs-4 text-primary">QCMS <span
+                                class="text-muted fw-normal">Enterprise</span></span>
+                    </div>
+                    <p class="text-muted mb-4" id="lp-footer-desc" style="max-width: 320px;">The world's most advanced quality management
+                        system for modern manufacturing and enterprise excellence. Built for scale, security, and
+                        precision.</p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="twitter"
+                                style="width:20px;"></i></a>
+                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="linkedin"
+                                style="width:20px;"></i></a>
+                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="github"
+                                style="width:20px;"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="row g-4">
+                        <div class="col-6 col-md-3">
+                            <h6 class="fw-bold mb-4">Product</h6>
+                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-product">
+                                <!-- Dynamic Links -->
+                            </ul>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="fw-bold mb-4">Resources</h6>
+                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-resources">
+                                <!-- Dynamic Links -->
+                            </ul>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="fw-bold mb-4">Company</h6>
+                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-company">
+                                <!-- Dynamic Links -->
+                            </ul>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="fw-bold mb-4">Legal</h6>
+                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-legal">
+                                <!-- Dynamic Links -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div
+                class="mt-5 pt-5 border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 text-muted small">
+                <p class="mb-0" id="lp-footer-copy">&copy; 2026 QCMS Precision Core. Engineered for Excellence.</p>
+                <div class="d-flex gap-4">
+                    <span class="d-flex align-items-center gap-2"><i data-lucide="globe" style="width:14px;"></i>
+                        <span data-i18n-lang-name>English (US)</span></span>
+                    <span class="d-flex align-items-center gap-2"><span
+                            class="ds-status-indicator ds-status-active"></span> System Status: <span
+                            class="text-success fw-bold" id="lp-footer-status">Operational</span></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // Accordion click handler for FAQ questions
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('.accordion-button');
+                if (!btn) return;
+                const targetSelector = btn.getAttribute('data-bs-target') || btn.getAttribute('href');
+                if (!targetSelector) return;
+                const targetEl = document.querySelector(targetSelector);
+                if (!targetEl) return;
+
+                e.preventDefault();
+                const isOpen = targetEl.classList.contains('show');
+                const parentSelector = targetEl.getAttribute('data-bs-parent');
+
+                if (parentSelector) {
+                    const parentEl = document.querySelector(parentSelector);
+                    if (parentEl) {
+                        parentEl.querySelectorAll('.accordion-collapse').forEach(el => el.classList.remove('show'));
+                        parentEl.querySelectorAll('.accordion-button').forEach(b => {
+                            b.classList.add('collapsed');
+                            b.setAttribute('aria-expanded', 'false');
+                        });
+                    }
+                }
+
+                if (!isOpen) {
+                    targetEl.classList.add('show');
+                    btn.classList.remove('collapsed');
+                    btn.setAttribute('aria-expanded', 'true');
+                } else {
+                    targetEl.classList.remove('show');
+                    btn.classList.add('collapsed');
+                    btn.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            // Load Landing CMS Content
+            try {
+                const res = await fetch('/api/super-admin/public/landing-content');
+                if(res.ok) {
+                    const data = await res.json();
+                    if(data.success && data.data) {
+                        const cms = data.data;
+                        if(cms.hero_title) document.getElementById('lp-hero-title').innerHTML = cms.hero_title;
+                        if(cms.hero_subtitle) document.getElementById('lp-hero-subtitle').textContent = cms.hero_subtitle;
+                        if(cms.cta_primary_text) document.getElementById('lp-cta-primary').textContent = cms.cta_primary_text;
+                        if(cms.cta_secondary_text) document.getElementById('lp-cta-secondary').textContent = cms.cta_secondary_text;
+                        if(cms.faq_title) document.getElementById('lp-faq-title').textContent = cms.faq_title;
+                        if(cms.faq_subtitle) document.getElementById('lp-faq-subtitle').textContent = cms.faq_subtitle;
+                        if(cms.footer_description) document.getElementById('lp-footer-desc').textContent = cms.footer_description;
+                        if(cms.footer_copyright) document.getElementById('lp-footer-copy').textContent = cms.footer_copyright;
+                        if(cms.footer_status) document.getElementById('lp-footer-status').textContent = cms.footer_status;
+
+                        if(cms.faqs && Array.isArray(cms.faqs)) {
+                            const acc = document.getElementById('faqAccordion');
+                            if(acc) {
+                                acc.innerHTML = '';
+                                cms.faqs.forEach((faq, i) => {
+                                    const id = 'faq' + i;
+                                    acc.innerHTML += `
+                                    <div class="accordion-item bg-transparent border-bottom">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#${id}">
+                                                ${faq.q}
+                                            </button>
+                                        </h2>
+                                        <div id="${id}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                            <div class="accordion-body text-muted">${faq.a}</div>
+                                        </div>
+                                    </div>`;
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch(e) { console.error('Failed to load CMS content', e); }
+        });</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageId = urlParams.get('id');
+            const titleEl = document.getElementById('page-title');
+            const contentEl = document.getElementById('page-content');
+
+            if (!pageId) {
+                titleEl.textContent = 'Page Not Found';
+                contentEl.innerHTML = '<p>No page ID specified.</p>';
+                return;
+            }
+
+            let pagesData = null;
+            try {
+                const res = await fetch('/api/super-admin/public/landing-content');
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.success && json.data && json.data.footer_pages) {
+                        pagesData = json.data.footer_pages;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not fetch server landing content for page', e);
+            }
+
+            if (!pagesData) {
+                const stored = localStorage.getItem('ps-landing-cms-pages');
+                if (stored) {
+                    try { pagesData = JSON.parse(stored); } catch(e) {}
+                }
+            }
+
+            if (pagesData) {
+                let foundPage = null;
+                ['product', 'resources', 'company', 'legal'].forEach(col => {
+                    if (pagesData[col]) {
+                        const page = pagesData[col].find(p => p.id === pageId);
+                        if (page) foundPage = page;
+                    }
+                });
+
+                if (foundPage) {
+                    titleEl.textContent = foundPage.title;
+                    contentEl.innerHTML = foundPage.content || '<p>No content available for this page yet.</p>';
+                    document.title = foundPage.title + ' | QCMS Enterprise';
+                } else {
+                    titleEl.textContent = 'Page Not Found';
+                    contentEl.innerHTML = '<p>The requested page could not be found.</p>';
+                }
+            } else {
+                titleEl.textContent = 'Page Not Found';
+                contentEl.innerHTML = '<p>The requested page could not be found.</p>';
+            }
+        });
+    </script>
+
+    <script id="dynamic-footer">
+        document.addEventListener('DOMContentLoaded', () => {
+            const defaultPages = {
+                product: [
+                    { id: 'features', title: 'Features', link: 'page.html?id=features', content: '<h1>Core Platform Features</h1><p>Explore the full suite of 144 integrated feature modules designed for comprehensive quality governance, 8-stage problem solving, real-time KPI metrics, and automated PDF reporting.</p>' },
+                    { id: 'pricing', title: 'Pricing', link: 'page.html?id=pricing', content: '<h1>Transparent Enterprise Pricing</h1><p>Choose the plan that fits your organization — from Starter teams to global multi-plant Enterprise deployments with custom SLAs and white-label branding.</p>' },
+                    { id: 'workflows', title: 'Workflows', link: 'page.html?id=workflows', content: '<h1>Structured 8-Stage Quality Workflow</h1><p>Drive root cause analysis, countermeasure implementation, and standardization using our industry-validated 8-stage Quality Circle workflow engine.</p>' },
+                    { id: 'free-trial', title: 'Free Trial', link: '/auth/register-org.html', content: '<h1>14-Day Full Access Free Trial</h1><p>Start your 14-day free trial today with no credit card required. Experience complete access to all Enterprise features and multi-user collaboration tools.</p>' }
+                ],
+                resources: [
+                    { id: 'documentation', title: 'Documentation', link: 'page.html?id=documentation', content: '<h1>Enterprise Documentation</h1><p>Welcome to the official QCMS Enterprise documentation portal. Discover detailed guides on workflow setup, quality circle management, 8-stage problem solving, user roles, permission matrices, and audit logging.</p><h3>Getting Started</h3><p>Follow our step-by-step onboarding walkthroughs to register your organization, configure custom subdomains, define departments, and invite team members.</p>' },
+                    { id: 'api-reference', title: 'API Reference', link: 'page.html?id=api-reference', content: '<h1>API Reference & Integration Guide</h1><p>The QCMS Enterprise REST API allows programmatic integration with ERP systems, SAP S/4HANA, Salesforce, MES (Manufacturing Execution Systems), and custom internal dashboards.</p><h3>Authentication</h3><p>All API endpoints require JSON Web Tokens (JWT) passed in the HTTP Authorization: Bearer header or an Organization API Key.</p>' },
+                    { id: 'support-center', title: 'Support Center', link: 'page.html?id=support-center', content: '<h1>24/7 Enterprise Support Center</h1><p>Our dedicated customer success and technical engineering teams are available round-the-clock to assist with your deployment, billing, custom integration, or system inquiries.</p>' },
+                    { id: 'community', title: 'Community', link: 'page.html?id=community', content: '<h1>QCMS Global Community & Developer Hub</h1><p>Connect with quality managers, industrial engineers, lead auditors, and system administrators worldwide. Share best practices, custom workflow templates, and automation plugins.</p>' }
+                ],
+                company: [
+                    { id: 'about-us', title: 'About Us', link: 'page.html?id=about-us', content: '<h1>About QCMS Enterprise OS</h1><p>QCMS is the world’s leading Quality & Compliance Management System, engineered specifically for modern manufacturing, aerospace, automotive, healthcare, and enterprise industries.</p><h3>Our Mission</h3><p>To empower organizations globally with intelligent, data-driven 8-stage quality workflows, real-time analytics, and seamless compliance automation.</p>' },
+                    { id: 'careers', title: 'Careers', link: 'page.html?id=careers', content: '<h1>Careers at QCMS Solutions</h1><p>Join a fast-growing, mission-driven team of engineers, software architects, product designers, and enterprise quality experts. We are building the future of industrial quality automation.</p>' },
+                    { id: 'contact-sales', title: 'Contact Sales', link: 'page.html?id=contact-sales', content: '<h1>Contact Enterprise Sales</h1><p>Ready to transform your organization’s quality management? Contact our sales team for custom enterprise licensing, multi-site deployments, dedicated SLA guarantees, and SOC2 compliance packages.</p>' },
+                    { id: 'global-partners', title: 'Global Partners', link: 'page.html?id=global-partners', content: '<h1>Global Partner Network</h1><p>Collaborate with certified implementation partners, ISO consulting firms, and systems integrators across North America, Europe, Asia-Pacific, and Latin America.</p>' }
+                ],
+                legal: [
+                    { id: 'privacy-policy', title: 'Privacy Policy', link: 'page.html?id=privacy-policy', content: '<h1>Privacy Policy</h1><p>Your privacy and data security are our highest priorities. This Privacy Policy details how QCMS collects, uses, encrypts, and protects your personal and organizational information.</p>' },
+                    { id: 'terms-of-service', title: 'Terms of Service', link: 'page.html?id=terms-of-service', content: '<h1>Terms of Service</h1><p>These Terms of Service govern your access to and use of the QCMS Enterprise platform, web applications, mobile tools, and associated services.</p>' },
+                    { id: 'security', title: 'Security', link: 'page.html?id=security', content: '<h1>Enterprise Security Architecture</h1><p>QCMS is built with defense-in-depth security standards to protect mission-critical manufacturing and enterprise data.</p><h3>Security Specifications</h3><ul><li>AES-256 Data Encryption at Rest & TLS 1.3 in Transit</li><li>SOC2 Type II & ISO 27001 Certified Infrastructure</li><li>Multi-Factor Authentication (MFA) & Single Sign-On (SSO)</li><li>Granular Role-Based Access Control (RBAC) & Audit Trails</li></ul>' },
+                    { id: 'gdpr', title: 'GDPR', link: 'page.html?id=gdpr', content: '<h1>GDPR & EU Data Protection Compliance</h1><p>QCMS complies strictly with the European Union General Data Protection Regulation (GDPR), ensuring robust privacy protection for all EU data subjects.</p>' }
+                ]
+            };
+
+            const stored = localStorage.getItem('ps-landing-cms-pages');
+            let pagesData = stored ? JSON.parse(stored) : defaultPages;
+
+            if (!stored) {
+                localStorage.setItem('ps-landing-cms-pages', JSON.stringify(defaultPages));
+            }
+
+            const renderCol = (colId, items) => {
+                const el = document.getElementById('footer-col-' + colId);
+                if (el && items) {
+                    el.innerHTML = items.map(item => {
+                        if (!item || !item.title) return '';
+                        let href = item.link || `page.html?id=${item.id}`;
+                        if (href.startsWith('#')) {
+                            href = 'index.html' + href;
+                        }
+                        const isExternal = href.startsWith('http://') || href.startsWith('https://');
+                        const targetAttr = isExternal ? 'target="_blank" rel="noopener noreferrer"' : '';
+                        return `<li><a href="${href}" ${targetAttr} class="text-reset text-decoration-none hover-primary">${item.title}</a></li>`;
+                    }).join('');
+                }
+            };
+
+            renderCol('product', pagesData.product);
+            renderCol('resources', pagesData.resources);
+            renderCol('company', pagesData.company);
+            renderCol('legal', pagesData.legal);
+        });
+    </script>
+</body>
+
+</html>

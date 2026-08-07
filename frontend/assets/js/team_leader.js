@@ -12,7 +12,7 @@ const teamLeader = {
         this.loadMembers();
         
         // Set username in header
-        const user = JSON.parse(localStorage.getItem('user'));
+        const user = JSON.parse(sessionStorage.getItem('user'));
         if (user) {
             document.getElementById('userName').textContent = user.username;
         }
@@ -80,7 +80,7 @@ const teamLeader = {
                             <small class="text-muted">${item.type || ''}</small>
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-primary" onclick="window.location.href='workspace.html?id=${item.id}'">Review</button>
+                             <button class="btn btn-sm btn-outline-primary" onclick="window.location.href='/projects/project-details.html?id=${item.id}'">Review</button>
                             <button class="btn btn-sm btn-primary" onclick="teamLeader.confirmAction(${item.id}, 'proceed')">Validate & Proceed</button>
                         </div>
                     </div>
@@ -112,7 +112,7 @@ const teamLeader = {
                         <p class="fw-bold small mb-2 text-uppercase text-muted">${s}</p>
                         <div class="kanban-cards d-flex flex-column gap-2">
                             ${stageProjects.length > 0 ? stageProjects.map(p => `
-                                <div class="card shadow-sm border-0 p-2 cursor-pointer" onclick="window.location.href='workspace.html?id=${p.id}'" style="cursor:pointer;">
+                                 <div class="card shadow-sm border-0 p-2 cursor-pointer" onclick="window.location.href='/projects/project-details.html?id=${p.id}'" style="cursor:pointer;">
                                     <div class="small fw-bold text-truncate">${p.title}</div>
                                     <div class="text-muted" style="font-size:0.7rem;">${p.uid || ''}</div>
                                     ${p.category ? `<span class="badge bg-soft-primary text-primary mt-1" style="font-size:0.65rem;">${p.category}</span>` : ''}
@@ -180,9 +180,9 @@ const teamLeader = {
             if (modal) modal.hide();
             
             // Redirect to workspace
-            if (result.project_id) {
-                window.location.href = `workspace.html?id=${result.project_id}`;
-            } else {
+             if (result.project_id) {
+                 window.location.href = `/projects/project-details.html?id=${result.project_id}`;
+             } else {
                 window.location.reload();
             }
         } catch (err) {
@@ -220,7 +220,7 @@ const teamLeader = {
                     <td><span class="badge bg-primary">Stage ${p.stage}</span></td>
                     <td><span class="badge ${p.status === 'In Progress' ? 'bg-success' : p.status === 'Closed' ? 'bg-secondary' : 'bg-warning'}">${p.status}</span></td>
                     <td>${p.members ? p.members.map(m => m.name).join(', ') : '—'}</td>
-                    <td><button class="btn btn-sm btn-outline-primary" onclick="window.location.href='workspace.html?id=${p.id}'">Open</button></td>
+                     <td><button class="btn btn-sm btn-outline-primary" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">Open</button></td>
                 </tr>
             `).join('');
 

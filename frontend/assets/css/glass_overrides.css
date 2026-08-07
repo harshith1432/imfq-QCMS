@@ -49,3 +49,288 @@ body {
     border-color: rgba(255, 255, 255, 0.2) !important;
     box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.4) !important;
 }
+
+/* Mobile Responsiveness Rules */
+#sidebar-toggle-btn {
+    display: inline-flex !important;
+}
+
+@media (max-width: 1024px) {
+    #sidebar-toggle-btn {
+        display: inline-flex !important;
+    }
+    
+    .glass-navbar {
+        padding: 0 var(--ds-space-4) !important;
+    }
+    
+    .app-main {
+        margin-left: 0 !important;
+        padding-bottom: 5rem !important;
+    }
+    
+    .kpi-grid {
+        grid-template-columns: 1fr !important;
+        gap: var(--ds-space-4) !important;
+    }
+    
+    .corporate-grid {
+        grid-template-columns: 1fr !important;
+        gap: var(--ds-space-4) !important;
+    }
+    
+    .table-responsive {
+        border-radius: var(--ds-radius-lg);
+        overflow-x: auto;
+    }
+}
+
+/* Mobile Sidebar Overlay Backdrop */
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Mobile Responsiveness down to 320px */
+@media (max-width: 576px) {
+    :root {
+        --ds-sidebar-width: 0px;
+    }
+    
+    .app-content-inner {
+        padding: 12px !important;
+    }
+    
+    .ds-title {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* Mandatory / Required Input Validation Styles */
+.ds-input.is-invalid, 
+.form-control.is-invalid, 
+.form-select.is-invalid,
+.ds-textarea.is-invalid,
+.ds-select.is-invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+    animation: dsFieldShake 0.3s ease-in-out;
+}
+
+@keyframes dsFieldShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+}
+
+/* Print Styles for PDF / Print Export */
+@media print {
+    .app-sidebar, .app-navbar, .ds-tab-group, .dropdown, #sidebar-toggle-btn, .btn, button:not(.print-keep) {
+        display: none !important;
+    }
+    body, .app-layout, .app-main, .app-content-inner {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+    .glass-card, .ds-card, .kpi-card {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        break-inside: avoid;
+    }
+}
+    
+    .ds-card, .glass-card {
+        padding: 12px !important;
+        border-radius: 12px !important;
+    }
+    
+    .gap-grid, .gap-grid-3-1, .gap-grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem !important;
+        max-width: calc(100% - 1rem) !important;
+    }
+    
+    .modal-content {
+        padding: 12px !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Responsive Table Wrap */
+    .ds-table th, .ds-table td {
+        padding: 8px 12px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .ds-table {
+        min-width: 600px;
+    }
+    
+    /* Form elements on mobile */
+    .ds-field {
+        margin-bottom: 0.75rem !important;
+    }
+    
+    .ds-label {
+        font-size: 0.75rem !important;
+    }
+    
+    .ds-input, .ds-select, .ds-textarea {
+        font-size: 0.8rem !important;
+        padding: 8px 12px !important;
+    }
+    
+    /* Stepper adjustments */
+    .workspace-stepper {
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        padding: 8px 0 !important;
+        gap: 12px !important;
+    }
+    
+    .workspace-stepper .step {
+        flex: 0 0 auto !important;
+    }
+    
+    .workspace-stepper .step-desc {
+        display: none !important;
+    }
+}
+
+@media (max-width: 360px) {
+    .ds-title {
+        font-size: 1.3rem !important;
+    }
+    
+    .ds-badge {
+        font-size: 0.65rem !important;
+        padding: 2px 6px !important;
+    }
+    
+    .user-pill {
+        padding: 4px 8px !important;
+    }
+    
+    .user-meta {
+        display: none !important;
+    }
+}
+
+/* Global safety layout: prevent text clipping inside unpadded glass-cards */
+.glass-card:not([class*="p-"]):not([style*="padding"]) {
+    padding: 1.25rem !important;
+}
+
+/* ============================================================
+   UNIVERSAL MOBILE BUTTON TEXT VISIBILITY & FLEX PROTECTION
+   ============================================================ */
+.ds-btn, .btn, .btn-primary, .btn-secondary, .btn-outline, .btn-ghost, 
+.btn-sm, .ds-btn-sm, .ds-btn-lg, .btn-lg, .btn-auth-v2, .ds-btn-tab, .ds-tab, button {
+    flex-shrink: 0 !important;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .ds-btn, .btn {
+        padding: 0.45rem 0.85rem !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        flex-shrink: 0 !important;
+        min-width: max-content !important;
+    }
+
+    .ds-btn-sm, .btn-sm {
+        padding: 0.35rem 0.65rem !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        flex-shrink: 0 !important;
+        min-width: max-content !important;
+    }
+
+    .ds-btn-lg, .btn-lg {
+        padding: 0.7rem 1.25rem !important;
+        font-size: 0.875rem !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        flex-shrink: 0 !important;
+        min-width: max-content !important;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Allow flex item rows to wrap on small mobile screens so buttons don't get squished */
+    .list-group-item,
+    .activity-content,
+    .ds-card-header,
+    .meeting-card,
+    .meeting-item,
+    .modal-footer {
+        flex-wrap: wrap !important;
+    }
+
+    /* Stack buttons cleanly when parent container wraps */
+    .list-group-item > .ds-btn,
+    .list-group-item > .btn,
+    .activity-content > .ds-btn,
+    .activity-content > .btn {
+        margin-top: 6px;
+        align-self: flex-start;
+    }
+}
+
+/* Dynamic Stage Table Auto-Sizing & Number Input Visibility Fix */
+.table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dyn-row .ds-input, 
+.dyn-row input[type="text"], 
+.dyn-row input[type="number"], 
+.dyn-row select {
+    padding: 0.45rem 0.4rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    color: var(--ds-text-main) !important;
+    background: var(--ds-surface) !important;
+    border: 1px solid var(--ds-border-color, #cbd5e1) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    width: 100%;
+}
+
+.dyn-row input[type="number"] {
+    -moz-appearance: textfield;
+    text-align: center;
+}
+
+.dyn-row input[type="number"]::-webkit-inner-spin-button, 
+.dyn-row input[type="number"]::-webkit-outer-spin-button { 
+    -webkit-appearance: none;
+    margin: 0;
+}

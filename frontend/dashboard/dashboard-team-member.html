@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .project-item {
+            padding: var(--ds-space-4);
+            border-bottom: 1px solid var(--ds-border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-4);
+        }
+
+        .project-item:hover {
+            background: rgba(var(--ds-primary-rgb), 0.02);
+            padding-left: var(--ds-space-6);
+        }
+
+        .project-item.active {
+            background: rgba(var(--ds-primary-rgb), 0.05);
+            border-left: 4px solid var(--ds-primary);
+        }
+
+        .project-name {
+            font-weight: 700;
+            color: var(--ds-text-main);
+            font-size: 0.9rem;
+        }
+
+        .project-uid {
+            font-size: 0.75rem;
+            color: var(--ds-text-tertiary);
+            margin-top: 2px;
+        }
+
+        .project-item-meta {
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .project-item-arrow {
+            color: var(--ds-text-tertiary);
+            opacity: 0.5;
+        }
+
+        .workstation-preview {
+            padding: var(--ds-space-6);
+        }
+
+        .workstation-details {
+            background: rgba(var(--ds-primary-rgb), 0.02);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-lg);
+            padding: var(--ds-space-6);
+        }
+
+        /* Kanban Pipeline styling */
+        .kanban-wrapper {
+            padding: var(--ds-space-6);
+            overflow-x: auto;
+            background: rgba(var(--ds-primary-rgb), 0.01);
+            border-radius: var(--ds-radius-lg);
+        }
+
+        .kanban-scroll-area {
+            display: flex;
+            gap: var(--ds-space-6);
+            min-height: 500px;
+            padding-bottom: var(--ds-space-4);
+        }
+
+        .kanban-stage {
+            flex: 0 0 calc(20% - 13px);
+            min-width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--ds-space-3);
+        }
+
+        .kanban-stage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--ds-space-3) var(--ds-space-4);
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-md);
+            backdrop-filter: blur(8px);
+        }
+
+        .kanban-stage-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--ds-text-secondary);
+        }
+
+        .kanban-stage-count {
+            background: var(--ds-accent);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .kanban-task-card {
+            background: var(--ds-bg-card);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-md);
+            padding: var(--ds-space-4);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: var(--ds-shadow-sm);
+        }
+
+        .kanban-task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--ds-shadow);
+            border-color: var(--ds-accent);
+        }
+
+        .kanban-task-id {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--ds-text-tertiary);
+            letter-spacing: 0.05em;
+        }
+
+        .kanban-task-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--ds-text-main);
+            line-height: 1.4;
+        }
+
+        .workload-member-row {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .workload-member-row:hover {
+            background-color: rgba(var(--ds-primary-rgb), 0.03) !important;
+        }
+        .chevron-icon {
+            transition: transform 0.2s ease;
+        }
+        .dropdown-toggle.no-caret::after {
+            display: none !important;
+        }
+
+        .member-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(var(--ds-primary-rgb), 0.04);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--radius-md);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .member-chip input {
+            cursor: pointer;
+        }
+        .member-chip:hover {
+            background: rgba(var(--ds-primary-rgb), 0.08);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar will be injected by components.js -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <!-- Navbar will be injected by components.js -->
+            <header class="glass-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner fade-in-up">
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100 align-items-center flex-wrap gap-3">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0" id="dashboardTitle">My Workstation</h1>
+                            <p class="ds-text-secondary mb-0" id="dashboardSub">Manage your personal assignments and execute workflow steps.</p>
+                        </div>
+                        <div class="ds-tab-group" style="background: rgba(var(--ds-primary-rgb), 0.05); padding: 4px; border-radius: var(--radius-lg); flex-wrap: wrap;">
+                            <button class="ds-tab active" id="btnWorkstation" onclick="tmDash.switchTab('workstation')" style="font-weight:600; padding: 6px 16px;">
+                                <i data-lucide="layout-template" style="width:16px;height:16px;margin-right:6px;vertical-align:text-bottom;"></i>My Workstation
+                            </button>
+                            <button class="ds-tab" id="btnTeamPerformance" onclick="tmDash.switchTab('team')" style="font-weight:600; padding: 6px 16px;">
+                                <i data-lucide="users" style="width:16px;height:16px;margin-right:6px;vertical-align:text-bottom;"></i>Team Performance
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- ── TAB 1: WORKSTATION CONTENT ── -->
+                <div id="workstationTabContent">
+                    <!-- KPI Cards for Workstation -->
+                    <div class="kpi-grid fade-in section-spacing" id="workstationKpiGrid">
+                        <div class="kpi-card">
+                            <div class="skeleton-card skeleton"></div>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Meetings Widget -->
+                    <div id="upcomingMeetingsFeed" class="glass-card fade-in section-spacing"></div>
+
+                    <!-- Main Layout: Projects & Workstation -->
+                    <div class="gap-grid gap-grid-2 fade-in section-spacing">
+                        <!-- Assigned Projects -->
+                        <div class="glass-card">
+                            <div class="ds-card-header">
+                                <h5 class="card-title">My Projects</h5>
+                                <div class="ds-badge gray" id="projectCount">0 Assigned</div>
+                            </div>
+                            <div class="ds-card-body p-0">
+                                <div style="max-height:500px; overflow-y:auto;" id="projectsList">
+                                    <div class="p-4 text-center">
+                                        <div class="spinner-border spinner-border-sm text-primary opacity-25" role="status"></div>
+                                        <p class="text-xs text-muted mt-2">Loading projects...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Focused Workstation -->
+                        <div class="glass-card">
+                            <div class="ds-card-header">
+                                <h5 class="card-title">Workstation Preview</h5>
+                                <div id="selectionHint" class="text-xs text-muted">Select a project to begin work</div>
+                            </div>
+                            <div class="ds-card-body" id="workstationArea">
+                                <div class="empty-state">
+                                    <i class="empty-icon" data-lucide="layout-template"></i>
+                                    <h5>Ready to Execute</h5>
+                                    <p>Select a project from the left to view current stage requirements and take direct action.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB 2: TEAM PERFORMANCE CONTENT ── -->
+                <div id="teamTabContent" style="display: none;">
+                    <!-- KPI Cards for Team -->
+                    <div class="kpi-grid fade-in section-spacing" id="teamKpiGrid">
+                        <div class="kpi-card">
+                            <div class="skeleton-card skeleton"></div>
+                        </div>
+                    </div>
+
+                    <!-- Pipeline Section -->
+                    <div class="glass-card fade-in section-spacing">
+                        <div class="ds-card-header">
+                            <div class="d-flex align-items-center gap-3">
+                                <h5 class="card-title">Project Pipeline</h5>
+                                <div class="ds-tab-group">
+                                    <button class="ds-tab active" onclick="tmDash.setPipelineView('kanban')" id="kanbanViewBtn">
+                                        <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Board
+                                    </button>
+                                    <button class="ds-tab" onclick="tmDash.setPipelineView('table')" id="tableViewBtn">
+                                        <i data-lucide="list" style="width:14px;height:14px;"></i> List
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ds-card-body p-0" id="pipelineContainer" style="min-height:400px;">
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary opacity-25" role="status"></div>
+                                <p class="text-xs text-muted mt-3">Fetching project data...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- My Team Status Section -->
+                    <div class="fade-in section-spacing">
+                        <div class="glass-card">
+                            <div class="ds-card-header">
+                                <div class="h-stack gap-3">
+                                    <i data-lucide="users" class="text-blue" style="width:20px;height:20px;"></i>
+                                    <h5 class="card-title mb-0">My Team Status</h5>
+                                </div>
+
+                            </div>
+                            <div class="ds-card-body p-0">
+                                <div style="max-height:400px; overflow-y:auto;" id="teamBody">
+                                    <table class="ds-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="padding-left: 24px;">Member</th>
+                                                <th>Role</th>
+                                                <th class="text-end" style="padding-right: 24px;">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="membersList">
+                                            <!-- Team members injected here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="ds-card-footer d-flex align-items-center justify-content-between px-4 py-3 border-top" id="membersPagination" style="display: none;">
+                                    <div class="text-xs text-muted" id="membersPageInfo">Showing 1-10 of 10 members</div>
+                                    <div class="d-flex align-items-center gap-1" id="membersPageButtons"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Project Details Modal -->
+    <div class="modal fade" id="editProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <div class="ds-icon-circle bg-blue-soft text-blue" style="width:32px;height:32px;">
+                            <i data-lucide="edit-3" style="width:16px;height:16px;"></i>
+                        </div>
+                        Update Project Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editProjectId">
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                        <input type="text" class="ds-input" id="editProjectTitle" placeholder="Enter project title">
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="file-text"></i> Problem Summary</label>
+                        <textarea class="ds-input ds-textarea" id="editProjectDesc" rows="2" placeholder="Describe the current issue..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="tag"></i> Category</label>
+                                <select class="ds-input ds-select" id="editProjectCategory">
+                                    <option value="Safety">Safety</option>
+                                    <option value="Quality">Quality</option>
+                                    <option value="Cost">Cost</option>
+                                    <option value="Productivity">Productivity</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="calendar"></i> Target Completion</label>
+                                <input type="date" class="ds-input" id="editProjectDeadline">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="users"></i> Assigned Team Members</label>
+                        <div class="member-selection-grid" id="editMemberCheckboxes" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 150px; overflow-y: auto; padding: 12px; background: var(--bg-body); border-radius: var(--radius-md); border: 1px solid var(--ds-border-color);">
+                            <!-- Members injected here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="tmDash.updateProject()">
+                        <i data-lucide="save" style="width:14px;height:14px;"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="deleteProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px; border: 1px solid var(--ds-border-color); padding: 32px;">
+                <div class="d-flex align-items-start gap-4">
+                    <div style="flex-shrink: 0; padding-top: 4px;">
+                        <i data-lucide="trash-2" style="width: 24px; height: 24px; color: #1e293b;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h5 class="fw-bold mb-2" style="color: #0f172a; font-size: 1.1rem;">Delete Project?</h5>
+                        <p class="mb-4" style="color: #475569; font-size: 0.95rem; line-height: 1.5;">This action <b>cannot be undone</b>. All project workflow data will be permanently removed from the system.</p>
+                        <div class="d-flex justify-content-end gap-3 align-items-center">
+                            <button type="button" class="btn btn-link text-decoration-none" style="color: #475569; font-weight: 500; padding: 0;" data-bs-dismiss="modal">Keep It</button>
+                            <button type="button" class="btn d-flex align-items-center gap-2" style="background-color: #1e293b; color: white; border-radius: 8px; font-weight: 500; padding: 8px 16px; border: none;" onclick="tmDash.deleteProject()">
+                                <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete Project
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Initialization Modal -->
+    <div class="modal fade" id="initModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content" style="border-radius:16px;border:1px solid var(--ds-border-color);background:#ffffff;box-shadow:0 25px 60px rgba(0,0,0,.18);overflow:hidden;">
+                <!-- Header -->
+                <div class="modal-header px-4 py-3" style="background:#f8f9fa;border-bottom:1px solid #e9ecef;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:40px;height:40px;border-radius:10px;background:var(--ds-primary);display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="folder-plus" style="width:20px;height:20px;color:#fff;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title mb-0 fw-bold">Create New Project</h5>
+                            <small class="ds-text-secondary">Fill in the details below to register your QC Story project</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body px-4 py-4" style="max-height:75vh;overflow-y:auto;">
+                    <form id="initProjectForm">
+                        <!-- ── Section 1: Project Identity ── -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
+                                <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ds-primary);">Project Identity</span>
+                                <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="type"></i> Project Title *</label>
+                                        <input type="text" class="ds-input" id="projTitle" placeholder="e.g. Reduce Assembly Line Defects by 60%" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="tag"></i> Project Type *</label>
+                                        <select class="ds-input ds-select" id="projType" required>
+                                            <option value="" disabled selected>Select Type</option>
+                                            <option value="Quality">Quality</option>
+                                            <option value="Productivity">Productivity</option>
+                                            <option value="Cost">Cost</option>
+                                            <option value="Delivery">Delivery</option>
+                                            <option value="Safety">Safety</option>
+                                            <option value="Morale">Morale</option>
+                                            <option value="Environment">Environment</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="hash"></i> Ref. Number</label>
+                                        <input type="text" class="ds-input" id="projRefNumber" placeholder="Optional">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Section 2: Location & Source ── -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
+                                <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ds-primary);">Location &amp; Source</span>
+                                <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="map-pin"></i> Work Area *</label>
+                                        <input type="text" class="ds-input" id="projWorkArea" placeholder="e.g. Assembly Line 3" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="briefcase"></i> Department *</label>
+                                        <select class="ds-input ds-select" id="projDepartment" onchange="tmDash.handleDepartmentChange(this.value)" required>
+                                            <option value="" disabled selected>Loading...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="building-2"></i> Plant / Location *</label>
+                                        <input type="text" class="ds-input" id="projPlant" placeholder="e.g. Unit 1 – Pune" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="git-merge"></i> Project Source *</label>
+                                        <select class="ds-input ds-select" id="projSource" required>
+                                            <option value="" disabled selected>Select Source</option>
+                                            <option value="Policy">Policy</option>
+                                            <option value="MPCP">MPCP</option>
+                                            <option value="Problem Bank">Problem Bank</option>
+                                            <option value="Customer Complaint">Customer Complaint</option>
+                                            <option value="Audit Finding">Audit Finding</option>
+                                            <option value="Safety Incident">Safety Incident</option>
+                                            <option value="Employee Suggestion">Employee Suggestion</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Section 3: People ── -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
+                                <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ds-primary);">People</span>
+                                <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="user-check"></i> Facilitator *</label>
+                                        <select class="ds-input ds-select" id="projFacilitator" required>
+                                            <option value="" disabled selected>Loading...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="user"></i> Team Leader *</label>
+                                        <select class="ds-input ds-select" id="projTeamLeader" required>
+                                            <option value="" disabled selected>Loading...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="shield-check"></i> Reviewer *</label>
+                                        <select class="ds-input ds-select" id="projReviewer" required>
+                                            <option value="" disabled selected>Loading...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="star"></i> Sponsor <span class="ds-text-secondary fw-normal">(Optional)</span></label>
+                                        <input type="text" class="ds-input" id="projSponsor" placeholder="e.g. Plant Head">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Section 4: Timeline ── -->
+                        <div class="mb-2">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
+                                <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ds-primary);">Timeline</span>
+                                <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="calendar"></i> Planned Start Date *</label>
+                                        <input type="date" class="ds-input" id="projStartDate" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="calendar-check"></i> Planned End Date *</label>
+                                        <input type="date" class="ds-input" id="projEndDate" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer px-4 py-3" style="background:#f8f9fa;border-top:1px solid #e9ecef;">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <small class="ds-text-secondary"><i data-lucide="info" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:4px;"></i> Select the assigned Team Leader. Add team members in Stage 1.</small>
+                        <div class="d-flex gap-2">
+                            <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                            <button class="ds-btn ds-btn-primary" onclick="tmDash.initProject()" style="min-width:160px;">
+                                <i data-lucide="zap" style="width:14px;height:14px;"></i> Create &amp; Go To Stage 1
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Workload Modal -->
+    <div class="modal fade" id="workloadModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content glass-card" style="border-radius:16px;">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <div class="ds-icon-circle bg-blue-soft text-blue" style="width:32px;height:32px;">
+                            <i data-lucide="users" style="width:16px;height:16px;"></i>
+                        </div>
+                        Team Workload &amp; Allocations
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="h-stack justify-content-between mb-4">
+                        <div style="max-width: 320px; width: 100%;">
+                            <input type="text" class="ds-input" id="workloadSearch" placeholder="Filter members by name..." oninput="tmDash.filterWorkload()">
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="ds-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="padding-left:24px;">Team Member</th>
+                                    <th>Active Projects</th>
+                                    <th>Completed Projects</th>
+                                    <th>Workload Status</th>
+                                    <th class="text-end" style="padding-right:24px;">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workloadTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-between align-items-center">
+                    <div class="text-xs text-muted" id="workloadPaginationInfo">Showing 0 of 0 members</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex gap-1 align-items-center" id="workloadPaginationControls"></div>
+                        <button type="button" class="ds-btn ds-btn-ghost ms-2" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        const tmDash = {
+            projects: [], // Personal workstation projects
+            projectsData: [], // Department level projects
+            filteredTeamProjects: [],
+            tableProjects: [], // Server-paginated projects for table view
+            members: [], // Department members
+            workloadData: [], // Workload API data
+            workloadCurrentPage: 1,
+            workloadPerPage: 5,
+            workloadTotalPages: 1,
+            workloadTotalCount: 0,
+            workloadSearchQuery: '',
+            activeDeleteProjectId: null,
+            currentTab: 'workstation',
+            currentPipelineView: 'kanban',
+            currentPage: 1,
+            projectsPerPage: 5,
+            totalProjects: 0,
+            totalProjectPages: 1,
+            memberPage: 1,
+            membersPerPage: 10,
+            totalMembers: 0,
+            totalMemberPages: 1,
+
+            async init() {
+                if (typeof QCMS !== 'undefined' && QCMS.init) QCMS.init();
+
+                this.initModal = new bootstrap.Modal(document.getElementById('initModal'));
+                this.editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
+                this.deleteModal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
+                this.workloadModal = new bootstrap.Modal(document.getElementById('workloadModal'));
+
+                // Global search listener
+                window.addEventListener('qcms-global-search', (e) => {
+                    this.handleGlobalSearch(e.detail.query);
+                });
+
+                // Load initial data
+                await this.loadWorkstationData();
+                await this.loadTeamPerformanceData();
+            },
+
+            switchTab(tab) {
+                this.currentTab = tab;
+                const isWorkstation = tab === 'workstation';
+
+                document.getElementById('btnWorkstation').classList.toggle('active', isWorkstation);
+                document.getElementById('btnTeamPerformance').classList.toggle('active', !isWorkstation);
+
+                document.getElementById('workstationTabContent').style.display = isWorkstation ? 'block' : 'none';
+                document.getElementById('teamTabContent').style.display = isWorkstation ? 'none' : 'block';
+
+                document.getElementById('dashboardTitle').textContent = isWorkstation ? 'My Workstation' : 'Team Performance';
+                document.getElementById('dashboardSub').textContent = isWorkstation 
+                    ? 'Manage your assigned projects, execute workflow steps, and track your contribution impact.' 
+                    : "Oversee your team's project pipeline and manage project assignments.";
+
+                if (window.lucide) lucide.createIcons();
+            },
+
+            // ── WORKSTATION CONTROLLER LOGIC ──
+            async loadWorkstationData() {
+                try {
+                    this.projects = await api.get('/projects?scope=member');
+                    this.renderWorkstationKPIs();
+                    this.renderWorkstationList();
+                    this.loadMeetings();
+                } catch (e) {
+                    console.error('Workstation load failed', e);
+                    document.getElementById('projectsList').innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Could not load your projects.')}</div>`;
+                }
+            },
+
+            renderWorkstationKPIs() {
+                const total = this.projects.length;
+                const completed_statuses = ['Closed', 'Completed', 'Stage 8 Approved', 'Archived'];
+                const inactive_statuses = ['Rejected', 'Cancelled', 'On Hold'];
+                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                const completed = this.projects.filter(p => completed_statuses.includes(p.status)).length;
+                const inactive = this.projects.filter(p => {
+                    if (inactive_statuses.includes(p.status)) return true;
+                    if (completed_statuses.includes(p.status)) return false;
+                    const lastActivity = p.last_updated ? new Date(p.last_updated) : (p.created_at ? new Date(p.created_at) : null);
+                    return lastActivity && lastActivity < sevenDaysAgo;
+                }).length;
+                const active = this.projects.filter(p =>
+                    !completed_statuses.includes(p.status) && !inactive_statuses.includes(p.status) &&
+                    (() => { const la = p.last_updated ? new Date(p.last_updated) : (p.created_at ? new Date(p.created_at) : null); return !la || la >= sevenDaysAgo; })()
+                ).length;
+
+                document.getElementById('workstationKpiGrid').innerHTML =
+                    QCMS.kpiCard('Total Projects Assigned', total, 'folder', 'blue') +
+                    QCMS.kpiCard('Active Projects', active, 'activity', 'green') +
+                    QCMS.kpiCard('Completed Projects', completed, 'award', 'cyan') +
+                    QCMS.kpiCard('Inactive Projects', inactive, 'clock', 'red');
+                if (window.lucide) lucide.createIcons();
+            },
+
+            renderWorkstationList() {
+                const list = document.getElementById('projectsList');
+                const completed_statuses = ['Closed', 'Completed', 'Stage 8 Approved', 'Archived'];
+                const inactive_statuses = ['Rejected', 'Cancelled', 'On Hold'];
+                const activeProjects = this.projects.filter(p => !completed_statuses.includes(p.status) && !inactive_statuses.includes(p.status));
+                document.getElementById('projectCount').textContent = `${activeProjects.length} Active`;
+
+                if (!activeProjects.length) {
+                    list.innerHTML = `<div class="p-4">${QCMS.emptyState('inbox', 'No Assignments', 'You are not assigned to any active projects.')}</div>`;
+                    return;
+                }
+
+                list.innerHTML = activeProjects.map(p => `
+                    <div class="project-item fade-in" onclick="tmDash.selectProject(${p.id}, this)">
+                        <div class="project-item-info">
+                            <div class="project-name">${p.title}</div>
+                            <div class="project-uid">${p.project_uid || 'UID-PENDING'} · ${QCMS.categoryBadge(p.category)}</div>
+                        </div>
+                        <div class="project-item-meta">
+                            ${QCMS.projectProgress(p.current_stage || p.stage || 1)}
+                        </div>
+                        <i data-lucide="chevron-right" class="project-item-arrow"></i>
+                    </div>
+                `).join('');
+                if (window.lucide) lucide.createIcons();
+            },
+
+            selectProject(id, element) {
+                const p = this.projects.find(proj => proj.id === id);
+                if (!p) return;
+
+                document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
+                if (element) {
+                    element.classList.add('active');
+                }
+
+                const stageNames = ['', 'S1 - Plan & Establish Team', 'S2 - Define Problem', 'S3 - Interim Containment', 'S4 - Determine Root Causes', 'S5 - Choose Permanent Corrections', 'S6 - Implement Corrective Actions', 'S7 - Take Preventive Measures', 'S8 - Congratulate Team & Closure'];
+                const stage = p.current_stage || p.stage || 1;
+
+                document.getElementById('selectionHint').textContent = `Currently at Stage ${stage}`;
+                document.getElementById('workstationArea').innerHTML = `
+                    <div class="workstation-preview fade-in">
+                        <div class="d-flex justify-content-between align-items-start mb-4">
+                            <div>
+                                <h4 class="mb-1">${p.title}</h4>
+                                <div class="text-sm text-primary fw-semibold">${stageNames[stage]}</div>
+                            </div>
+                            ${QCMS.statusBadge(p.status || 'Active')}
+                        </div>
+                        
+                        <div class="mb-5">
+                            ${QCMS.stageStepper(stage)}
+                        </div>
+
+                        <div class="workstation-details ds-card bg-light border-0">
+                            <div class="ds-card-body">
+                                <h6 class="text-xs fw-bold text-muted text-uppercase mb-3">Action Required</h6>
+                                <p class="text-sm mb-4">You are currently in the <strong>${stageNames[stage]}</strong> phase. Please update the necessary documents and data to progress this project.</p>
+                                
+                                <div class="d-flex gap-2">
+                                    <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-primary">
+                                        <i data-lucide="play" style="width:14px;height:14px;"></i> Open Workspace
+                                    </a>
+                                    <button class="ds-btn ds-btn-outline" onclick="tmDash.showGuidelines(${stage})">
+                                        <i data-lucide="info" style="width:14px;height:14px;"></i> Stage Guidelines
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+            },
+
+            async loadMeetings() {
+                try {
+                    const meetings = await api.get('/dashboard/meetings');
+                    const feed = document.getElementById('upcomingMeetingsFeed');
+
+                    if (!meetings || !meetings.length) {
+                        feed.innerHTML = `
+                            <div class="ds-card-header">
+                                <h5 class="card-title d-flex align-items-center gap-2">
+                                    <i data-lucide="calendar" style="width:18px;height:18px;"></i> Upcoming Meetings
+                                </h5>
+                                <div class="ds-badge gray">0 SCHEDULED</div>
+                            </div>
+                            <div class="ds-card-body text-center py-5">
+                                <div class="empty-icon mx-auto mb-3" style="width:48px;height:48px;border-radius:50%;background:rgba(var(--ds-gray-rgb),0.1);display:flex;align-items:center;justify-content:center;color:var(--ds-text-tertiary);">
+                                    <i data-lucide="calendar-x" style="width:24px;height:24px;"></i>
+                                </div>
+                                <h6 class="fw-bold mb-1">No Meetings Scheduled</h6>
+                                <p class="text-sm text-muted mb-0">You have no upcoming meetings for your projects.</p>
+                            </div>
+                        `;
+                    } else {
+                        const meetingsListHtml = meetings.map(m => {
+                            const dt = new Date(m.scheduled_at);
+                            const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const dateStr = dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                            const isOnline = m.meeting_type === 'online';
+                            const icon = isOnline ? 'video' : 'map-pin';
+                            const url = m.url || m.meeting_link;
+                            const duration = m.duration || m.duration_minutes || 0;
+                            const actionBtn = isOnline && url ? `
+                                <a href="${url}" target="_blank" class="ds-btn ds-btn-primary ds-btn-sm">
+                                    Join Meeting
+                                </a>
+                            ` : '';
+                            return `
+                                <div class="list-group-item p-3 p-sm-4 d-flex flex-wrap flex-sm-nowrap align-items-center justify-content-between gap-3 fade-in">
+                                    <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
+                                        <div class="text-center px-2 px-sm-3 border-end flex-shrink-0" style="min-width: 75px;">
+                                            <div class="text-xs text-uppercase fw-bold text-primary">${dateStr}</div>
+                                            <div class="h6 mb-0 fw-bold">${timeStr}</div>
+                                        </div>
+                                        <div class="flex-grow-1 min-w-0">
+                                            <h6 class="mb-1 fw-bold text-truncate">${m.title}</h6>
+                                            <div class="text-xs text-muted d-flex flex-wrap align-items-center gap-1 gap-sm-2">
+                                                <span>Project: ${m.project_title}</span>
+                                                <span>•</span>
+                                                <i data-lucide="${icon}" style="width:12px;height:12px;"></i>
+                                                <span class="text-capitalize">${m.meeting_type || (url ? 'online' : 'offline')}</span>
+                                                <span>•</span>
+                                                <span>${duration} mins</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ${actionBtn ? `<div class="flex-shrink-0 mt-2 mt-sm-0">${actionBtn}</div>` : ''}
+                                </div>
+                            `;
+                        }).join('');
+
+                        feed.innerHTML = `
+                            <div class="ds-card-header">
+                                <h5 class="card-title d-flex align-items-center gap-2">
+                                    <i data-lucide="calendar" style="width:18px;height:18px;"></i> Upcoming Meetings
+                                </h5>
+                                <div class="ds-badge blue">${meetings.length} SCHEDULED</div>
+                            </div>
+                            <div class="ds-card-body p-0">
+                                <div class="list-group list-group-flush">
+                                    ${meetingsListHtml}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error('Meetings load failed', e);
+                }
+            },
+
+            // ── TEAM PERFORMANCE CONTROLLER LOGIC ──
+            async loadTeamPerformanceData() {
+                await this.loadStats();
+                await this.loadTeamProjects();
+                await this.loadMembers();
+            },
+
+            async loadStats() {
+                try {
+                    const stats = await api.get('/team-leader/dashboard');
+                    document.getElementById('teamKpiGrid').innerHTML =
+                        QCMS.kpiCard('Total Projects Assigned', stats.total_projects || 0, 'folder-kanban', 'blue', null, "javascript:tmDash.filterBy('all')") +
+                        QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'activity', 'green', null, "javascript:tmDash.filterBy('progress')") +
+                        QCMS.kpiCard('Completed Projects', stats.completed_projects || 0, 'award', 'cyan', null, "javascript:tmDash.filterBy('completed')") +
+                        QCMS.kpiCard('Inactive Projects', stats.stalled_projects || 0, 'clock', 'red', null, "javascript:tmDash.filterBy('inactive')");
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error('Stats load failed', e);
+                }
+            },
+
+            async loadTeamProjects(page = 1) {
+                try {
+                    this.currentPage = page;
+                    const res = await api.get(`/team-leader/projects?page=${page}&per_page=${this.projectsPerPage}`);
+                    if (res && res.items !== undefined) {
+                        this.projectsData = res.items;
+                        this.tableProjects = res.items;
+                        this.filteredTeamProjects = res.items;
+                        this.totalProjects = res.total;
+                        this.totalProjectPages = res.total_pages;
+                    } else {
+                        const arr = Array.isArray(res) ? res : [];
+                        this.totalProjects = arr.length;
+                        this.totalProjectPages = Math.ceil(arr.length / this.projectsPerPage) || 1;
+                        this.projectsData = arr;
+                        this.filteredTeamProjects = arr.slice((page - 1) * this.projectsPerPage, page * this.projectsPerPage);
+                        this.tableProjects = this.filteredTeamProjects;
+                    }
+                    this.renderPipeline();
+                } catch (e) {
+                    console.error('loadTeamProjects failed:', e);
+                    document.getElementById('pipelineContainer').innerHTML = QCMS.emptyState('inbox', 'No Projects Linked', 'Start a new project to lead your team.');
+                }
+            },
+
+            setPipelineView(view) {
+                this.currentPipelineView = view;
+                document.getElementById('kanbanViewBtn').classList.toggle('active', view === 'kanban');
+                document.getElementById('tableViewBtn').classList.toggle('active', view === 'table');
+                this.currentPage = 1;
+                this.loadTeamProjects(1);
+            },
+
+            renderPipeline() {
+                const container = document.getElementById('pipelineContainer');
+                if (this.currentPipelineView === 'kanban') {
+                    if (!this.filteredTeamProjects || !this.filteredTeamProjects.length) {
+                        container.innerHTML = QCMS.emptyState('folder-kanban', 'No Projects Matched', 'Try searching for something else.');
+                        return;
+                    }
+
+                    const stages = ['S1 - Plan & Team', 'S2 - Define Problem', 'S3 - Containment', 'S4 - Root Causes', 'S5 - Corrections', 'S6 - Implement', 'S7 - Preventive', 'S8 - Closure'];
+                    const grouped = Array.from({ length: 8 }, () => []);
+                    this.filteredTeamProjects.forEach(p => {
+                        const s = (p.current_stage || p.stage || 1) - 1;
+                        if (grouped[s]) grouped[s].push(p);
+                    });
+
+                    const totalProjects = this.totalProjects || this.filteredTeamProjects.length;
+                    const totalPages = this.totalProjectPages || Math.ceil(totalProjects / this.projectsPerPage) || 1;
+                    const page = this.currentPage || 1;
+
+                    const startIndex = (page - 1) * this.projectsPerPage + 1;
+                    const endIndex = Math.min(page * this.projectsPerPage, totalProjects);
+
+                    let paginationHtml = '';
+                    if (totalPages > 1) {
+                        paginationHtml = `
+                            <div class="d-flex justify-content-between align-items-center mt-3 px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                                <div class="text-xs text-muted">
+                                    Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${totalProjects}</span> projects
+                                </div>
+                                <div class="pagination-buttons d-flex gap-1 align-items-center">
+                                    <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="tmDash.loadTeamProjects(${page - 1})">
+                                        <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                                    </button>
+                                    ${Array.from({ length: totalPages }, (_, idx) => idx + 1).map(p => `
+                                        <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="tmDash.loadTeamProjects(${p})">
+                                            ${p}
+                                        </button>
+                                    `).join('')}
+                                    <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="tmDash.loadTeamProjects(${page + 1})">
+                                        <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    container.innerHTML = `
+                        <div class="kanban-wrapper">
+                            <div class="kanban-scroll-area">
+                                ${stages.map((name, i) => `
+                                    <div class="kanban-stage">
+                                        <div class="kanban-stage-header">
+                                            <span class="kanban-stage-title" title="${name}">${name}</span>
+                                            <span class="kanban-stage-count">${grouped[i].length}</span>
+                                        </div>
+                                        <div class="kanban-stage-items">
+                                            ${grouped[i].map(p => {
+                                                const progress = Math.round(((p.current_stage || 1) / 8) * 100);
+                                                return `
+                                                    <div class="kanban-task-card fade-in" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">
+                                                        <div class="kanban-task-header">
+                                                            <span class="kanban-task-id">${p.project_uid || 'PRJ-XXXX'}</span>
+                                                            ${QCMS.categoryBadge(p.category)}
+                                                        </div>
+                                                        <div class="kanban-task-title">${p.title}</div>
+                                                        <div class="kanban-task-footer">
+                                                            <div class="kanban-task-meta">
+                                                                <i data-lucide="clock" style="width:12px;height:12px;"></i>
+                                                                ${p.deadline ? new Date(p.deadline).toLocaleDateString() : 'No date'}
+                                                            </div>
+                                                            <div class="kanban-task-progress" title="${progress}% Complete">
+                                                                <div class="progress-fill" style="width: ${progress}%"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                            ${grouped[i].length === 0 ? `<div class="text-center py-4 text-xs text-muted opacity-50">Empty Lane</div>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ${paginationHtml}
+                    `;
+                } else {
+                    const projects = this.tableProjects || [];
+                    if (!projects.length) {
+                        container.innerHTML = QCMS.emptyState('folder-kanban', 'No Projects Found', 'There are currently no projects in your pipeline.');
+                        return;
+                    }
+
+                    const totalProjects = this.totalProjects || projects.length;
+                    const totalPages = this.totalProjectPages || Math.ceil(totalProjects / this.projectsPerPage) || 1;
+                    const page = this.currentPage || 1;
+
+                    const startIndex = (page - 1) * this.projectsPerPage + 1;
+                    const endIndex = Math.min(page * this.projectsPerPage, totalProjects);
+
+                    let paginationHtml = '';
+                    if (totalPages > 1) {
+                        paginationHtml = `
+                            <div class="d-flex justify-content-between align-items-center mt-3 px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                                <div class="text-xs text-muted">
+                                    Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${totalProjects}</span> projects
+                                </div>
+                                <div class="pagination-buttons d-flex gap-1 align-items-center">
+                                    <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="tmDash.setPage(${page - 1})">
+                                        <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                                    </button>
+                                    ${Array.from({ length: totalPages }, (_, idx) => idx + 1).map(p => `
+                                        <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="tmDash.setPage(${p})">
+                                            ${p}
+                                        </button>
+                                    `).join('')}
+                                    <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="tmDash.setPage(${page + 1})">
+                                        <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    container.innerHTML = `
+                        <div class="table-responsive">
+                            <table class="ds-table">
+                                <thead><tr><th>Project Identifier</th><th>Strategic Focus</th><th>Current Stage</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                                <tbody>${projects.map(p => `
+                                    <tr class="fade-in">
+                                        <td>
+                                            <div class="fw-semibold text-primary">${p.title}</div>
+                                            <div class="text-xs text-muted">${p.project_uid || 'UID-PENDING'}</div>
+                                        </td>
+                                        <td>${QCMS.categoryBadge(p.category)}</td>
+                                        <td>${QCMS.badge('Stage ' + (p.current_stage || 1), 'blue')}</td>
+                                        <td>${QCMS.statusBadge(p.status || 'Active')}</td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" title="Workspace">
+                                                    <i data-lucide="external-link" style="width:14px;height:14px;"></i>
+                                                </a>
+                                                <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="tmDash.showEditModal(${p.id})" title="Edit">
+                                                    <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
+                                                </button>
+                                                <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon text-danger" onclick="tmDash.confirmDelete(${p.id})" title="Delete">
+                                                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}</tbody>
+                            </table>
+                        </div>
+                        ${paginationHtml}
+                    `;
+                }
+                if (window.lucide) lucide.createIcons();
+            },
+
+            setPage(page) {
+                if (page < 1 || page > (this.totalProjectPages || 1)) return;
+                this.loadTeamProjects(page);
+            },
+
+            async loadMembers(page = 1) {
+                try {
+                    this.memberPage = page;
+                    const res = await api.get(`/team-leader/members?page=${page}&per_page=${this.membersPerPage}`);
+                    const tbody = document.getElementById('membersList');
+                    
+                    let membersList = [];
+                    let total = 0;
+                    let totalPages = 1;
+
+                    if (Array.isArray(res)) {
+                        membersList = res;
+                        total = res.length;
+                        this.members = res;
+                    } else if (res && res.items) {
+                        membersList = res.items;
+                        total = res.total || 0;
+                        totalPages = res.total_pages || 1;
+                        if (!this.members.length) {
+                            this.members = await api.get('/team-leader/members');
+                        }
+                    }
+
+                    this.totalMembers = total;
+                    this.totalMemberPages = totalPages;
+
+                    if (!membersList.length) {
+                        tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">${QCMS.emptyState('users', 'No Team Members', 'You haven\'t added any stakeholders to your team yet.')}</td></tr>`;
+                        document.getElementById('membersPagination').style.display = 'none';
+                        return;
+                    }
+
+                    tbody.innerHTML = membersList.map(m => `
+                        <tr class="fade-in">
+                            <td style="padding-left: 24px;">
+                                <div class="h-stack gap-3">
+                                    <div class="user-avatar-sm" style="width:34px;height:34px; border-radius:10px; background: rgba(var(--ds-primary-rgb), 0.05); color: var(--ds-primary); border: 1px solid var(--ds-border-color); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px;">
+                                        ${(m.username || 'UN').substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <div class="v-stack">
+                                        <div class="text-sm fw-bold" style="color: var(--ds-text-main);">${m.username}</div>
+                                        <div class="text-xxs text-muted">${m.email || 'team-member@qcms.com'}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="ds-badge gray">${m.role || 'Member'}</span>
+                            </td>
+                            <td class="text-end" style="padding-right: 24px;">
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="tmDash.showWorkloadModal(${m.id})">
+                                    <i data-lucide="bar-chart-2" style="width:14px;height:14px;margin-right:6px;"></i> View Workload
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                    if (window.lucide) lucide.createIcons();
+
+                    // Render pagination controls
+                    const paginationEl = document.getElementById('membersPagination');
+                    const infoEl = document.getElementById('membersPageInfo');
+                    const btnsEl = document.getElementById('membersPageButtons');
+
+                    if (total > 0) {
+                        paginationEl.style.display = 'flex';
+                        const start = (page - 1) * this.membersPerPage + 1;
+                        const end = Math.min(page * this.membersPerPage, total);
+                        infoEl.textContent = `Showing ${start}-${end} of ${total} members`;
+
+                        let btnsHtml = `
+                            <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="tmDash.loadMembers(${page - 1})">
+                                <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                            </button>
+                        `;
+
+                        for (let p = 1; p <= totalPages; p++) {
+                            btnsHtml += `
+                                <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 28px; height: 28px; padding: 0;" onclick="tmDash.loadMembers(${p})">
+                                    ${p}
+                                </button>
+                            `;
+                        }
+
+                        btnsHtml += `
+                            <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="tmDash.loadMembers(${page + 1})">
+                                <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                            </button>
+                        `;
+
+                        btnsEl.innerHTML = btnsHtml;
+                        if (window.lucide) lucide.createIcons();
+                    } else {
+                        paginationEl.style.display = 'none';
+                    }
+
+                    const allM = this.members.length ? this.members : membersList;
+                    const cb = document.getElementById('memberCheckboxes');
+                    const editCb = document.getElementById('editMemberCheckboxes');
+
+                    const cbHtml = allM.map(m => `
+                        <label class="member-chip">
+                            <input type="checkbox" value="${m.id}" class="member-cb">
+                            <span>${m.username}</span>
+                        </label>
+                    `).join('');
+
+                    if (cb) cb.innerHTML = cbHtml;
+                    if (editCb) editCb.innerHTML = cbHtml.replace(/member-cb/g, 'edit-member-cb');
+                } catch (e) {
+                    console.error('Members load failed', e);
+                }
+            },
+
+            async handleDepartmentChange(deptId) {
+                if (!deptId) return;
+                try {
+                    const [facs, revs, members] = await Promise.all([
+                        api.get(`/projects/facilitators?dept_id=${deptId}`),
+                        api.get(`/projects/potential-members?role=Reviewer&dept_id=${deptId}`),
+                        api.get(`/projects/potential-members?dept_id=${deptId}`)
+                    ]);
+
+                    const facSel = document.getElementById('projFacilitator');
+                    if (facSel) {
+                        facSel.innerHTML = '<option value="" disabled selected>Select Facilitator</option>' +
+                            facs.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                    }
+
+                    const tlSel = document.getElementById('projTeamLeader');
+                    if (tlSel) {
+                        tlSel.innerHTML = '<option value="" disabled selected>Select Team Leader</option>' +
+                            members.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                    }
+
+                    const revSel = document.getElementById('projReviewer');
+                    if (revSel) {
+                        revSel.innerHTML = '<option value="" disabled selected>Select Reviewer</option>' +
+                            revs.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                    }
+                } catch (e) {
+                    console.error('Failed to load department members', e);
+                }
+            },
+
+            async openInitModal() {
+                this.initModal.show();
+                try {
+                    const depts = await api.get('/projects/departments');
+                    const deptSel = document.getElementById('projDepartment');
+                    if (deptSel) {
+                        deptSel.innerHTML = '<option value="" disabled selected>Select Department</option>' +
+                            depts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
+                        const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+                        if (user.department_id) {
+                            deptSel.value = user.department_id;
+                            deptSel.disabled = true; // Auto-lock to user's department
+                            this.handleDepartmentChange(user.department_id);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to load init modal dropdowns', e);
+                }
+            },
+
+            async initProject() {
+                const title = document.getElementById('projTitle').value.trim();
+                const type = document.getElementById('projType').value;
+                const workArea = document.getElementById('projWorkArea').value.trim();
+                const deptId = document.getElementById('projDepartment').value;
+                const plant = document.getElementById('projPlant').value.trim();
+                const source = document.getElementById('projSource').value;
+                const facilitatorId = document.getElementById('projFacilitator').value;
+                const teamLeaderId = document.getElementById('projTeamLeader').value;
+                const reviewerId = document.getElementById('projReviewer').value;
+                const sponsor = document.getElementById('projSponsor').value.trim();
+                const refNumber = document.getElementById('projRefNumber').value.trim();
+                const startDate = document.getElementById('projStartDate').value;
+                const endDate = document.getElementById('projEndDate').value;
+
+                if (!title || !type || !workArea || !deptId || !plant || !source || !facilitatorId || !teamLeaderId || !reviewerId || !startDate || !endDate) {
+                    return QCMS.toast('Please fill all required (*) fields.', 'warning');
+                }
+
+                const payload = {
+                    title,
+                    category: type,
+                    department_id: parseInt(deptId),
+                    facilitator_id: parseInt(facilitatorId),
+                    team_leader_id: parseInt(teamLeaderId),
+                    reviewer_id: parseInt(reviewerId),
+                    member_ids: [],
+                    deadline: endDate,
+                    init_data: { work_area: workArea, plant, source, ref_number: refNumber, sponsor, planned_start_date: startDate, planned_end_date: endDate }
+                };
+
+                try {
+                    const res = await api.post('/projects', payload);
+                    QCMS.toast('Project created successfully!', 'success');
+                    this.initModal.hide();
+                    setTimeout(() => {
+                        window.location.href = `/projects/project-details.html?id=${res.id}`;
+                    }, 800);
+                } catch (e) {
+                    QCMS.toast(e.message || 'Failed to create project', 'error');
+                }
+            },
+
+            showEditModal(id) {
+                const p = this.filteredTeamProjects.find(x => x.id === id);
+                if (!p) return;
+                document.getElementById('editProjectId').value = p.id;
+                document.getElementById('editProjectTitle').value = p.title;
+                document.getElementById('editProjectCategory').value = p.category || 'Quality';
+                document.getElementById('editProjectDesc').value = p.description || '';
+                if (p.deadline) document.getElementById('editProjectDeadline').value = p.deadline.split('T')[0];
+
+                const checks = document.querySelectorAll('.edit-member-cb');
+                checks.forEach(cb => {
+                    cb.checked = p.members && p.members.some(m => m.id === parseInt(cb.value));
+                });
+
+                this.editModal.show();
+            },
+
+            async updateProject() {
+                const id = document.getElementById('editProjectId').value;
+                const title = document.getElementById('editProjectTitle').value.trim();
+                const category = document.getElementById('editProjectCategory').value;
+                const description = document.getElementById('editProjectDesc').value.trim();
+                const deadline = document.getElementById('editProjectDeadline').value;
+
+                const cbs = document.querySelectorAll('.edit-member-cb:checked');
+                const member_ids = Array.from(cbs).map(cb => parseInt(cb.value));
+
+                if (!title) return QCMS.toast('Title is required', 'warning');
+
+                try {
+                    await api.put(`/projects/${id}`, { title, category, description, deadline, member_ids });
+                    QCMS.toast('Project details updated successfully!', 'success');
+                    this.editModal.hide();
+                    this.loadTeamPerformanceData();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Update failed', 'error');
+                }
+            },
+
+            confirmDelete(id) {
+                this.activeDeleteProjectId = id;
+                this.deleteModal.show();
+            },
+
+            async deleteProject() {
+                if (!this.activeDeleteProjectId) return;
+                try {
+                    await api.delete(`/projects/${this.activeDeleteProjectId}`);
+                    QCMS.toast('Project deleted successfully.', 'success');
+                    this.deleteModal.hide();
+                    this.loadTeamPerformanceData();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Deletion failed', 'error');
+                }
+            },
+
+            async loadWorkloadData(page = 1, searchQuery = '', selectedMemberId = null) {
+                try {
+                    this.workloadCurrentPage = page;
+                    this.workloadSearchQuery = searchQuery;
+                    let url = `/team-leader/workload?page=${page}&per_page=${this.workloadPerPage}`;
+                    if (searchQuery) url += `&q=${encodeURIComponent(searchQuery)}`;
+                    if (selectedMemberId) url += `&member_id=${selectedMemberId}`;
+
+                    const res = await api.get(url);
+
+                    if (Array.isArray(res)) {
+                        this.workloadData = res;
+                        this.workloadTotalCount = res.length;
+                        this.workloadTotalPages = 1;
+                        this.workloadCurrentPage = 1;
+                    } else {
+                        this.workloadData = res.members || [];
+                        this.workloadTotalCount = res.total || 0;
+                        this.workloadTotalPages = res.pages || 1;
+                        this.workloadCurrentPage = res.page || page;
+                    }
+
+                    this.renderWorkloadTable(this.workloadData);
+                    this.renderWorkloadPagination();
+
+                    if (selectedMemberId) {
+                        setTimeout(() => {
+                            this.toggleWorkloadDetail(selectedMemberId);
+                            const row = document.getElementById(`workload-row-${selectedMemberId}`);
+                            if (row) {
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 350);
+                    }
+                } catch (e) {
+                    console.error('Failed to load workload', e);
+                    QCMS.toast('Error loading workload statistics', 'danger');
+                }
+            },
+
+            async showWorkloadModal(selectedMemberId = null) {
+                try {
+                    let searchQuery = '';
+                    if (selectedMemberId && this.members && this.members.length) {
+                        const memberObj = this.members.find(m => m.id === selectedMemberId);
+                        if (memberObj && memberObj.username) {
+                            searchQuery = memberObj.username;
+                        }
+                    }
+                    const searchInput = document.getElementById('workloadSearch');
+                    if (searchInput) searchInput.value = searchQuery;
+                    this.workloadSearchQuery = searchQuery;
+
+                    await this.loadWorkloadData(1, searchQuery, selectedMemberId);
+                    this.workloadModal.show();
+
+                    if (selectedMemberId) {
+                        setTimeout(() => {
+                            const detailRow = document.getElementById(`workload-detail-${selectedMemberId}`);
+                            const icon = document.getElementById(`chevron-${selectedMemberId}`);
+                            if (detailRow && detailRow.classList.contains('d-none')) {
+                                detailRow.classList.remove('d-none');
+                                if (icon) icon.style.transform = 'rotate(180deg)';
+                            }
+                            const row = document.getElementById(`workload-row-${selectedMemberId}`);
+                            if (row) {
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 300);
+                    }
+                } catch (e) {
+                    console.error('Failed to load workload modal', e);
+                }
+            },
+
+            filterWorkload() {
+                const query = (document.getElementById('workloadSearch').value || '').trim();
+                if (this._workloadDebounce) clearTimeout(this._workloadDebounce);
+                this._workloadDebounce = setTimeout(() => {
+                    this.loadWorkloadData(1, query);
+                }, 350);
+            },
+
+            async changeWorkloadPage(newPage) {
+                if (newPage < 1 || newPage > this.workloadTotalPages || newPage === this.workloadCurrentPage) return;
+                await this.loadWorkloadData(newPage, this.workloadSearchQuery);
+            },
+
+            renderWorkloadPagination() {
+                const infoEl = document.getElementById('workloadPaginationInfo');
+                const controlsEl = document.getElementById('workloadPaginationControls');
+                if (!infoEl || !controlsEl) return;
+
+                const total = this.workloadTotalCount;
+                const page = this.workloadCurrentPage;
+                const perPage = this.workloadPerPage;
+                const totalPages = this.workloadTotalPages;
+
+                if (total === 0) {
+                    infoEl.textContent = 'Showing 0 of 0 members';
+                    controlsEl.innerHTML = '';
+                    return;
+                }
+
+                const start = (page - 1) * perPage + 1;
+                const end = Math.min(page * perPage, total);
+                infoEl.textContent = `Showing ${start}-${end} of ${total} members`;
+
+                let html = '';
+
+                // Prev button
+                html += `<button class="ds-btn ds-btn-ghost ds-btn-xs" ${page <= 1 ? 'disabled' : ''} onclick="tmDash.changeWorkloadPage(${page - 1})">
+                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                </button>`;
+
+                // Page numbers
+                for (let p = 1; p <= totalPages; p++) {
+                    const activeClass = p === page ? 'ds-btn-primary' : 'ds-btn-ghost';
+                    html += `<button class="ds-btn ${activeClass} ds-btn-xs px-2.5" onclick="tmDash.changeWorkloadPage(${p})">${p}</button>`;
+                }
+
+                // Next button
+                html += `<button class="ds-btn ds-btn-ghost ds-btn-xs" ${page >= totalPages ? 'disabled' : ''} onclick="tmDash.changeWorkloadPage(${page + 1})">
+                    <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                </button>`;
+
+                controlsEl.innerHTML = html;
+                if (window.lucide) lucide.createIcons();
+            },
+
+            renderWorkloadTable(members) {
+                const tbody = document.getElementById('workloadTableBody');
+                if (!members || !members.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No team members found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = members.map(m => {
+                    const activeProjs = m.active_projects || [];
+                    const totalActiveLoad = activeProjs.length;
+                    let statusBadge = '';
+                    if (totalActiveLoad === 0) {
+                        statusBadge = '<span class="ds-badge gray">Idle (0)</span>';
+                    } else if (totalActiveLoad <= 2) {
+                        statusBadge = '<span class="ds-badge green">Optimal (' + totalActiveLoad + ')</span>';
+                    } else if (totalActiveLoad <= 4) {
+                        statusBadge = '<span class="ds-badge orange">Busy (' + totalActiveLoad + ')</span>';
+                    } else {
+                        statusBadge = '<span class="ds-badge red">Overloaded (' + totalActiveLoad + ')</span>';
+                    }
+
+                    const activeProjectsHtml = activeProjs.length > 0
+                        ? activeProjs.map(p => {
+                            const progress = Math.round(((p.current_stage || 1) / 8) * 100);
+                            return `
+                                <div class="mb-3 p-3 rounded" style="background: rgba(var(--ds-primary-rgb), 0.05); border: 1px solid var(--ds-border-color);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-bold text-sm" style="color: var(--ds-text-main);">${p.title}</span>
+                                        <span class="text-xxs fw-semibold" style="color: var(--ds-primary);">Stage ${p.current_stage || 1}/8</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px; background: rgba(0,0,0,0.05); border-radius: 3px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${progress}%; border-radius: 3px;"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')
+                        : '<div class="text-muted text-xs italic p-3 text-center">No active projects assigned.</div>';
+
+                    return `
+                        <tr class="workload-member-row" id="workload-row-${m.id}" onclick="tmDash.toggleWorkloadDetail(${m.id})">
+                            <td style="padding-left:24px;">
+                                <div class="h-stack gap-3">
+                                    <div class="user-avatar-sm" style="width:34px;height:34px; border-radius:10px; background: rgba(var(--ds-primary-rgb), 0.05); color: var(--ds-primary); border: 1px solid var(--ds-border-color); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px;">
+                                        ${(m.username || 'UN').substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <div class="v-stack">
+                                        <div class="text-sm fw-bold" style="color: var(--ds-text-main);">${m.username}</div>
+                                        <div class="text-xxs text-muted">${m.email || 'team-member@qcms.com'}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="fw-semibold">${activeProjs.length} Projects</span></td>
+                            <td><span class="fw-semibold">${m.completed_projects_count || 0} Projects</span></td>
+                            <td>${statusBadge}</td>
+                            <td class="text-end" style="padding-right:24px;">
+                                <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm">
+                                    <i data-lucide="chevron-down" class="chevron-icon" id="chevron-${m.id}" style="width:16px;height:16px;"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr id="workload-detail-${m.id}" class="d-none" style="background: rgba(0,0,0,0.01);">
+                            <td colspan="5" class="p-4" style="border-bottom: 1px solid var(--ds-border-color);">
+                                <div class="fw-bold mb-3 text-xs text-uppercase tracking-wider text-muted d-flex align-items-center gap-2">
+                                    <i data-lucide="folder-kanban" style="width:14px;height:14px;color:var(--ds-primary);"></i> Active Projects (${activeProjs.length})
+                                </div>
+                                <div style="max-height: 250px; overflow-y: auto; padding-right: 8px;">
+                                    ${activeProjectsHtml}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                if (window.lucide) lucide.createIcons();
+            },
+
+            toggleWorkloadDetail(memberId) {
+                const detailRow = document.getElementById(`workload-detail-${memberId}`);
+                const icon = document.getElementById(`chevron-${memberId}`);
+                if (detailRow.classList.contains('d-none')) {
+                    detailRow.classList.remove('d-none');
+                    if (icon) icon.style.transform = 'rotate(180deg)';
+                } else {
+                    detailRow.classList.add('d-none');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                }
+            },
+
+            filterBy(type) {
+                const completed_statuses = ['Closed', 'Completed', 'Stage 8 Approved', 'Archived'];
+                const inactive_statuses = ['Rejected', 'Cancelled', 'On Hold'];
+                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                const isInactive = (p) => {
+                    if (inactive_statuses.includes(p.status)) return true;
+                    if (completed_statuses.includes(p.status)) return false;
+                    const la = p.last_updated ? new Date(p.last_updated) : (p.created_at ? new Date(p.created_at) : null);
+                    return la && la < sevenDaysAgo;
+                };
+                if (type === 'all') {
+                    this.filteredTeamProjects = [...this.projectsData];
+                } else if (type === 'progress') {
+                    this.filteredTeamProjects = this.projectsData.filter(p => !completed_statuses.includes(p.status) && !isInactive(p));
+                } else if (type === 'completed') {
+                    this.filteredTeamProjects = this.projectsData.filter(p => completed_statuses.includes(p.status));
+                } else if (type === 'inactive') {
+                    this.filteredTeamProjects = this.projectsData.filter(p => isInactive(p));
+                }
+                this.renderPipeline();
+                const el = document.getElementById('pipelineContainer');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            },
+
+            handleGlobalSearch(query) {
+                const q = (query || '').toLowerCase().trim();
+                if (this.currentTab === 'workstation') {
+                    const completed_statuses = ['Closed', 'Completed', 'Stage 8 Approved', 'Archived'];
+                    const inactive_statuses = ['Rejected', 'Cancelled', 'On Hold'];
+                    const activeProjects = this.projects.filter(p => !completed_statuses.includes(p.status) && !inactive_statuses.includes(p.status));
+                    if (!q) {
+                        this.renderWorkstationList();
+                    } else {
+                        const filtered = activeProjects.filter(p =>
+                            (p.title || '').toLowerCase().includes(q) ||
+                            (p.project_uid || '').toLowerCase().includes(q)
+                        );
+                        const list = document.getElementById('projectsList');
+                        list.innerHTML = filtered.map(p => `
+                            <div class="project-item fade-in" onclick="tmDash.selectProject(${p.id}, this)">
+                                <div class="project-item-info">
+                                    <div class="project-name">${p.title}</div>
+                                    <div class="project-uid">${p.project_uid || 'UID-PENDING'} · ${QCMS.categoryBadge(p.category)}</div>
+                                </div>
+                                <div class="project-item-meta">
+                                    ${QCMS.projectProgress(p.current_stage || p.stage || 1)}
+                                </div>
+                                <i data-lucide="chevron-right" class="project-item-arrow"></i>
+                            </div>
+                        `).join('');
+                        if (window.lucide) lucide.createIcons();
+                    }
+                } else {
+                    if (!q) {
+                        this.filteredTeamProjects = [...this.projectsData];
+                    } else {
+                        this.filteredTeamProjects = this.projectsData.filter(p =>
+                            (p.title || '').toLowerCase().includes(q) ||
+                            (p.project_uid || '').toLowerCase().includes(q) ||
+                            (p.category || '').toLowerCase().includes(q)
+                        );
+                    }
+                    this.currentPage = 1;
+                    this.renderPipeline();
+                }
+            },
+
+            showGuidelines(stage) {
+                const guidelines = {
+                    1: {
+                        title: "S1 - Plan & Establish Team",
+                        icon: "users",
+                        objective: "Identify the problem area, define the scope, and form a cross-functional team with a leader, facilitator, and members.",
+                        actions: [
+                            "Assemble a team with representatives from all departments affected by the issue.",
+                            "Establish team roles: Champion, Team Leader, Facilitator, Reviewer, and Team Members.",
+                            "Draft the project charter containing the scope, objectives, and high-level milestones."
+                        ],
+                        tools: ["Team Charter / Team Roles Matrix", "RACI Responsibility Map", "Gantt Timeline Chart"]
+                    },
+                    2: {
+                        title: "S2 Define Problem",
+                        icon: "file-search",
+                        objective: "Describe the problem in detail using 'Is/Is-Not' analysis and clarify the gap between current and target state.",
+                        actions: [
+                            "Formulate a clear problem statement explaining what the defect is and its impact.",
+                            "Complete the 5W2H analysis (Who, What, When, Where, Why, How, How many).",
+                            "Map the process using a SIPOC or Flowchart diagram to identify critical-to-quality control points."
+                        ],
+                        tools: ["5W2H Questionnaire", "SIPOC Process Map", "Pareto Analysis Chart"]
+                    },
+                    3: {
+                        title: "S3 Interim Containment",
+                        icon: "shield-alert",
+                        objective: "Implement temporary actions to protect the customer/process from the defect until permanent corrective action is verified.",
+                        actions: [
+                            "Define and deploy containment actions immediately (e.g. sorting, 100% inspection).",
+                            "Establish validation metrics to verify containment effectiveness.",
+                            "Log and track all defects found during the containment period."
+                        ],
+                        tools: ["Containment Action Log", "Inspection Checksheet", "Defect Sorting Sheet"]
+                    },
+                    4: {
+                        title: "S4 Determine Root Causes",
+                        icon: "git-branch",
+                        objective: "Identify all potential causes, analyze them using data-driven tools, and isolate the true root cause(s).",
+                        actions: [
+                            "Perform brainstorming session with the team to identify all possible causes.",
+                            "Build a Cause-and-Effect (Fishbone) diagram grouping potential causes.",
+                            "Drill down on high-priority branches using 5 Whys analysis to isolate root causes.",
+                            "Validate root causes with statistical data and physical evidence."
+                        ],
+                        tools: ["Fishbone (Ishikawa) Diagram", "5 Whys Analysis", "Scatter & Histogram Charts"]
+                    },
+                    5: {
+                        title: "S5 Choose Permanent Corrections",
+                        icon: "check-square",
+                        objective: "Identify and select the best permanent corrective actions (PCAs) that eliminate the root cause without creating new problems.",
+                        actions: [
+                            "Brainstorm permanent solutions that directly address the root causes.",
+                            "Evaluate solutions based on cost, feasibility, ease of implementation, and side effects.",
+                            "Perform FMEA (Failure Mode and Effects Analysis) on proposed changes to identify risks.",
+                            "Initiate pilot trials to prove the effectiveness of selected corrective measures."
+                        ],
+                        tools: ["Decision Matrix (Pugh Matrix)", "FMEA Risk Assessment", "Pilot Test / Trial Protocol"]
+                    },
+                    6: {
+                        title: "S6 Implement Corrective Actions",
+                        icon: "play-circle",
+                        objective: "Implement the chosen permanent corrective actions (PCAs) and monitor the process to ensure the root cause is eliminated.",
+                        actions: [
+                            "Define a detailed execution plan assigning dates and owners for all actions.",
+                            "Formally roll out the corrective actions on the production floor/system.",
+                            "Decommission the temporary containment actions once permanent actions are stable."
+                        ],
+                        tools: ["Action Plan Matrix", "Poka-Yoke (Mistake Proofing)", "Process Control Charts"]
+                    },
+                    7: {
+                        title: "S7 Take Preventive Measures",
+                        icon: "refresh-cw",
+                        objective: "Modify management systems, operation standards, and procedures to prevent recurrence of this and similar problems.",
+                        actions: [
+                            "Update Standard Operating Procedures (SOPs), Work Instructions, and Control Plans.",
+                            "Train all operators and process owners on the new standard work.",
+                            "Set up periodic process audits to verify continuous compliance."
+                        ],
+                        tools: ["SOP (Standard Operating Procedure) Updates", "Training Verification Log", "Layered Process Audit Checklist"]
+                    },
+                    8: {
+                        title: "S8 Congratulate Team & Closure",
+                        icon: "award",
+                        objective: "Recognize team contributions, share lessons learned across the organization, and officially close the project.",
+                        actions: [
+                            "Archive the final case study and SOPs into the global Knowledge Base.",
+                            "Perform a project review to identify lessons learned during the process.",
+                            "Recognize and celebrate team member contributions to the project's success.",
+                            "Obtain final approval and sign-off from the executive sponsor."
+                        ],
+                        tools: ["Lessons Learned Database", "Project Closure Report", "Recognition Certificates"]
+                    }
+                };
+
+                const data = guidelines[stage];
+                if (!data) return;
+
+                let modalEl = document.getElementById('guidelinesModal');
+                if (!modalEl) {
+                    modalEl = document.createElement('div');
+                    modalEl.id = 'guidelinesModal';
+                    modalEl.className = 'modal fade';
+                    modalEl.setAttribute('tabindex', '-1');
+                    modalEl.setAttribute('aria-hidden', 'true');
+                    document.body.appendChild(modalEl);
+                }
+
+                modalEl.innerHTML = `
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content glass-panel" style="background: var(--ds-bg-surface); border: 1px solid var(--ds-glass-border); border-radius: var(--ds-radius-lg); box-shadow: var(--ds-shadow-2xl); color: var(--ds-text-main);">
+                            <div class="modal-header border-0 pb-0" style="padding: var(--ds-space-6) var(--ds-space-6) 0;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--ds-primary-rgb), 0.1); color: var(--ds-primary); display: flex; align-items: center; justify-content: center;">
+                                        <i data-lucide="${data.icon}" style="width: 22px; height: 22px;"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="modal-title fw-bold mb-0" style="font-size: 1.25rem;">${data.title}</h5>
+                                        <span class="text-xs text-muted">Methodology Guidelines & SOPs</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="opacity: 0.7;"></button>
+                            </div>
+                            
+                            <div class="modal-body" style="padding: var(--ds-space-6);">
+                                <div class="mb-4" style="background: rgba(var(--ds-primary-rgb), 0.02); border-left: 4px solid var(--ds-primary); padding: var(--ds-space-4); border-radius: 0 var(--ds-radius-md) var(--ds-radius-md) 0;">
+                                    <h6 class="text-xs fw-bold text-primary text-uppercase mb-2">Stage Objective</h6>
+                                    <p class="text-sm mb-0" style="line-height: 1.5; color: var(--ds-text-main); font-weight: 500;">${data.objective}</p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h6 class="text-xs fw-bold text-muted text-uppercase mb-3">Key Activities & Guidelines</h6>
+                                    <ul class="list-unstyled v-stack gap-3 mb-0">
+                                        ${data.actions.map(act => `
+                                            <li class="d-flex align-items-start gap-3">
+                                                <div style="margin-top: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(var(--ds-green-rgb, 16,185,129), 0.15); color: rgb(var(--ds-green-rgb, 16,185,129)); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                                    <i data-lucide="check" style="width: 11px; height: 11px; stroke-width: 3px;"></i>
+                                                </div>
+                                                <span class="text-sm" style="color: var(--ds-text-main); line-height: 1.4;">${act}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h6 class="text-xs fw-bold text-muted text-uppercase mb-3">Suggested QC & 8D Tools</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        ${data.tools.map(tool => `
+                                            <span class="ds-badge" style="background: rgba(var(--ds-primary-rgb), 0.05); color: var(--ds-primary); border: 1px solid rgba(var(--ds-primary-rgb), 0.1); padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 0.75rem;">
+                                                <i data-lucide="wrench" class="me-1" style="width: 11px; height: 11px; vertical-align: middle;"></i>
+                                                ${tool}
+                                            </span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="modal-footer border-0" style="padding: 0 var(--ds-space-6) var(--ds-space-6);">
+                                <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                if (window.lucide) lucide.createIcons();
+                const modalInstance = new bootstrap.Modal(modalEl);
+                modalInstance.show();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => tmDash.init());
+    </script>
+</body>
+
+</html>

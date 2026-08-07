@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Leaderboard & Rewards | QCMS Enterprise</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 & Lucide Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- QCMS Design System & Glassmorphism Styles -->
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+
+    <!-- App Engine & UX Scripts -->
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="/assets/js/module-map.js"></script>
+    <script src="/assets/js/feature-engine.js"></script>
+
+    <style>
+        /* Podium Custom Styling */
+        .podium-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-top: 1rem;
+        }
+
+        .podium-card {
+            background: var(--ds-bg-card);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-xl);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            max-width: 260px;
+        }
+
+        .podium-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--ds-shadow-xl);
+        }
+
+        .podium-card.rank-1 {
+            border-color: rgba(245, 158, 11, 0.4);
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, var(--ds-bg-card) 100%);
+            order: 2;
+            z-index: 2;
+        }
+
+        .podium-card.rank-2 {
+            border-color: rgba(148, 163, 184, 0.4);
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0%, var(--ds-bg-card) 100%);
+            order: 1;
+        }
+
+        .podium-card.rank-3 {
+            border-color: rgba(217, 119, 6, 0.3);
+            background: linear-gradient(180deg, rgba(217, 119, 6, 0.08) 0%, var(--ds-bg-card) 100%);
+            order: 3;
+        }
+
+        .podium-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 0.75rem auto;
+            border: 3px solid var(--ds-border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .rank-1 .podium-avatar { border-color: #f59e0b; width: 84px; height: 84px; }
+        .rank-2 .podium-avatar { border-color: #94a3b8; }
+        .rank-3 .podium-avatar { border-color: #d97706; }
+
+        .crown-badge {
+            position: absolute;
+            top: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .badge-pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-Quality-Champion { background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .badge-Diamond { background: rgba(56, 189, 248, 0.15); color: #0284c7; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge-Platinum { background: rgba(148, 163, 184, 0.2); color: #475569; border: 1px solid rgba(148, 163, 184, 0.4); }
+        .badge-Gold { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .badge-Silver { background: rgba(148, 163, 184, 0.15); color: #64748b; border: 1px solid rgba(148, 163, 184, 0.3); }
+        .badge-Bronze { background: rgba(180, 83, 9, 0.15); color: #b45309; border: 1px solid rgba(180, 83, 9, 0.3); }
+        .badge-Beginner { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-Newbie { background: rgba(100, 116, 139, 0.1); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.2); }
+
+        [data-theme="dark"] .badge-Diamond { color: #38bdf8; }
+        [data-theme="dark"] .badge-Platinum { color: #cbd5e1; }
+        [data-theme="dark"] .badge-Gold { color: #fbbf24; }
+        [data-theme="dark"] .badge-Silver { color: #cbd5e1; }
+
+        .point-counter {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--ds-primary);
+            font-family: var(--ds-font-heading);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar injected by components.js -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <!-- Navbar injected by components.js -->
+            <header class="glass-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner fade-in-up">
+                <!-- Page Header -->
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100 flex-wrap gap-3">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-1 d-flex align-items-center gap-2">
+                                🏆 Employee Leaderboard & Rewards
+                            </h1>
+                            <p class="ds-text-secondary mb-0 text-sm">
+                                Recognizing quality excellence, project milestones, and continuous improvement contributions across the organization.
+                            </p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="rewardsApp.loadLeaderboard()">
+                                <i data-lucide="refresh-cw" style="width:14px;height:14px;" class="me-1"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+
+
+                <!-- Top 3 Podium -->
+                <div class="podium-container" id="podiumSection">
+                    <!-- Dynamic Top 3 Cards rendered here -->
+                </div>
+
+                <!-- Leaderboard Table Controls -->
+                <div class="glass-card ds-card mb-4">
+                    <div class="ds-card-header p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 400px;">
+                            <div class="position-relative w-100">
+                                <input type="text" class="ds-input ps-5" id="leaderboardSearch" placeholder="Search employee name or department..." oninput="rewardsApp.filterLeaderboard()">
+                                <i data-lucide="search" class="position-absolute start-0 top-50 translate-middle-y ms-3 text-muted" style="width:16px;height:16px;"></i>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <select class="ds-input ds-select py-1 px-3 text-xs" id="deptFilter" style="width:auto;" onchange="rewardsApp.loadLeaderboard()">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="table-responsive">
+                        <table class="table ds-table align-middle mb-0" id="leaderboardTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;" class="text-center">RANK</th>
+                                    <th>EMPLOYEE</th>
+                                    <th>DEPARTMENT</th>
+                                    <th>BADGE</th>
+                                    <th class="text-end">TOTAL POINTS</th>
+                                    <th class="text-center">COMPLETED</th>
+                                    <th class="text-center">IDEAS APP.</th>
+                                    <th class="text-center">ARTICLES</th>
+                                    <th class="text-center">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardTbody">
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-muted">
+                                        <div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading leaderboard data...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination Footer Bar -->
+                    <div class="card-footer p-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-3" id="paginationBar">
+                        <div class="text-xs text-muted" id="paginationInfo">
+                            Showing 0 to 0 of 0 members
+                        </div>
+                        <div class="d-flex align-items-center gap-1" id="paginationBtns">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Employee History Modal -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="historyModalTitle">
+                        <i data-lucide="history" class="text-primary"></i> Employee Point History
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" style="max-height: 60vh; overflow-y: auto;">
+                    <div id="historyList">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/components.js"></script>
+
+    <script>
+        class LeaderboardManager {
+            constructor() {
+                this.leaderboardData = [];
+                this.podiumData = [];
+                this.departments = [];
+                this.page = 1;
+                this.perPage = 5;
+                this.pagination = { total: 0, page: 1, per_page: 5, pages: 1 };
+                this.init();
+            }
+
+            async init() {
+                await this.loadDepartments();
+                await this.loadLeaderboard(1);
+            }
+
+            async loadDepartments() {
+                try {
+                    const token = sessionStorage.getItem('token');
+                    const res = await fetch('/api/admin/departments', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        this.departments = await res.json();
+                        const sel = document.getElementById('deptFilter');
+                        sel.innerHTML = '<option value="">All Departments</option>' + 
+                            this.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                    }
+                } catch (e) {
+                    console.error("Failed to load departments", e);
+                }
+            }
+
+            async loadLeaderboard(targetPage = 1) {
+                try {
+                    this.page = targetPage;
+                    const token = sessionStorage.getItem('token');
+                    const search = (document.getElementById('leaderboardSearch')?.value || '').trim();
+                    const deptId = document.getElementById('deptFilter')?.value || '';
+
+                    let url = `/api/leaderboard?page=${this.page}&per_page=5`;
+                    if (deptId) url += `&department_id=${deptId}`;
+                    if (search) url += `&q=${encodeURIComponent(search)}`;
+
+                    const res = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (!res.ok) throw new Error("Failed to fetch leaderboard");
+
+                    const data = await res.json();
+                    this.leaderboardData = data.leaderboard || [];
+                    this.podiumData = data.podium || [];
+                    this.pagination = data.pagination || { total: this.leaderboardData.length, page: 1, per_page: 5, pages: 1 };
+
+                    // Render My Summary if elements exist
+                    const my = data.my_summary || {};
+                    const pEl = document.getElementById('myPoints'); if (pEl) pEl.textContent = (my.total_points || 0).toLocaleString();
+                    const rEl = document.getElementById('myRank'); if (rEl) rEl.textContent = my.rank ? `#${my.rank}` : '--';
+                    const cEl = document.getElementById('myProjectsComp'); if (cEl) cEl.textContent = my.projects_completed || 0;
+                    const bEl = document.getElementById('myBadge'); if (bEl) bEl.innerHTML = `<span class="badge-pill badge-${my.badge}">${my.badge || 'Newbie'}</span>`;
+
+                    this.renderPodium();
+                    this.renderTable();
+                    this.renderPagination();
+                    if (window.lucide) lucide.createIcons();
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById('leaderboardTbody').innerHTML = `
+                        <tr><td colspan="9" class="text-center py-4 text-danger">Failed to load leaderboard data.</td></tr>
+                    `;
+                }
+            }
+
+            renderPodium() {
+                const sec = document.getElementById('podiumSection');
+                if (!this.podiumData || !this.podiumData.length) {
+                    sec.innerHTML = '';
+                    return;
+                }
+
+                const top3 = this.podiumData.slice(0, 3);
+                const crowns = ['🥇', '🥈', '🥉'];
+                
+                sec.innerHTML = top3.map((emp, i) => {
+                    const rankClass = `rank-${emp.rank || (i + 1)}`;
+                    return `
+                        <div class="podium-card ${rankClass} fade-in">
+                            <div class="crown-badge">${crowns[i]}</div>
+                            <img src="${emp.avatar || '/assets/img/default-avatar.png'}" class="podium-avatar" alt="${emp.name}" onerror="this.src='/assets/img/default-avatar.png'">
+                            <h6 class="fw-bold mb-1 text-main text-truncate">${emp.name}</h6>
+                            <p class="text-xs text-secondary mb-2">${emp.department || 'General'}</p>
+                            <div class="mb-2"><span class="badge-pill badge-${emp.badge}">${emp.badge}</span></div>
+                            <div class="point-counter">${(emp.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            renderTable() {
+                const tbody = document.getElementById('leaderboardTbody');
+
+                if (!this.leaderboardData || !this.leaderboardData.length) {
+                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No employees found matching criteria.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = this.leaderboardData.map(e => `
+                    <tr>
+                        <td class="text-center fw-bold fs-6">
+                            ${e.rank === 1 ? '🥇 1' : (e.rank === 2 ? '🥈 2' : (e.rank === 3 ? '🥉 3' : `#${e.rank}`))}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <img src="${e.avatar || '/assets/img/default-avatar.png'}" class="rounded-circle" style="width:36px;height:36px;object-fit:cover;" onerror="this.src='/assets/img/default-avatar.png'">
+                                <div>
+                                    <div class="fw-bold text-main">${e.name}</div>
+                                    <div class="text-xs text-muted">@${e.username}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-secondary font-medium">${e.department}</td>
+                        <td><span class="badge-pill badge-${e.badge}">${e.badge}</span></td>
+                        <td class="text-end fw-extrabold text-primary fs-6">${(e.total_points || 0).toLocaleString()}</td>
+                        <td class="text-center fw-bold">${e.projects_completed}</td>
+                        <td class="text-center fw-bold">${e.ideas_approved}</td>
+                        <td class="text-center fw-bold">${e.knowledge_articles}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary py-0 px-2 text-xs" onclick="rewardsApp.viewHistory(${e.employee_id}, '${e.name}')">
+                                <i data-lucide="history" style="width:12px;height:12px;" class="me-1"></i> History
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            renderPagination() {
+                const info = document.getElementById('paginationInfo');
+                const btns = document.getElementById('paginationBtns');
+                if (!info || !btns) return;
+
+                const { total, page, per_page, pages } = this.pagination;
+                if (!total) {
+                    info.textContent = 'Showing 0 members';
+                    btns.innerHTML = '';
+                    return;
+                }
+
+                const start = (page - 1) * per_page + 1;
+                const end = Math.min(page * per_page, total);
+                info.textContent = `Showing ${start} to ${end} of ${total} members`;
+
+                let html = [];
+                // Previous button
+                html.push(`
+                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs" onclick="rewardsApp.loadLeaderboard(${page - 1})" ${page <= 1 ? 'disabled' : ''}>
+                        ‹
+                    </button>
+                `);
+
+                // Page numbers
+                for (let i = 1; i <= pages; i++) {
+                    html.push(`
+                        <button class="ds-btn ${i === page ? 'ds-btn-primary' : 'ds-btn-secondary'} btn-sm px-3 text-xs fw-bold" onclick="rewardsApp.loadLeaderboard(${i})">
+                            ${i}
+                        </button>
+                    `);
+                }
+
+                // Next button
+                html.push(`
+                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs" onclick="rewardsApp.loadLeaderboard(${page + 1})" ${page >= pages ? 'disabled' : ''}>
+                        ›
+                    </button>
+                `);
+
+                btns.innerHTML = html.join('');
+            }
+
+            filterLeaderboard() {
+                clearTimeout(this._searchTimer);
+                this._searchTimer = setTimeout(() => {
+                    this.loadLeaderboard(1);
+                }, 300);
+            }
+
+            async viewHistory(empId, empName) {
+                document.getElementById('historyModalTitle').innerHTML = `<i data-lucide="history" class="text-primary"></i> ${empName}'s Point History`;
+                const list = document.getElementById('historyList');
+                list.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div> Loading activity history...</div>';
+                
+                const modal = new bootstrap.Modal(document.getElementById('historyModal'));
+                modal.show();
+
+                try {
+                    const token = sessionStorage.getItem('token');
+                    const res = await fetch(`/api/points/history?employee_id=${empId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        const items = data.items || [];
+                        if (!items.length) {
+                            list.innerHTML = '<div class="text-center py-3 text-muted">No point transaction history found.</div>';
+                            return;
+                        }
+                        list.innerHTML = `
+                            <ul class="list-group list-group-flush">
+                                ${items.map(item => `
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                                        <div>
+                                            <div class="fw-bold text-main text-sm">${item.description}</div>
+                                            <div class="text-xs text-muted">${item.activity_type} • ${new Date(item.created_at).toLocaleDateString()}</div>
+                                        </div>
+                                        <span class="badge ${item.points >= 0 ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'} fw-bold fs-6">
+                                            ${item.points >= 0 ? '+' : ''}${item.points} PTS
+                                        </span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        `;
+                    }
+                } catch (e) {
+                    list.innerHTML = '<div class="text-center py-3 text-danger">Failed to load point history.</div>';
+                }
+            }
+        }
+
+        const rewardsApp = new LeaderboardManager();
+    </script>
+</body>
+
+</html>

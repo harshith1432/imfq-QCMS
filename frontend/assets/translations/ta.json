@@ -1,0 +1,373 @@
+{
+  "common": {
+    "save": "மாற்றங்களைச் சேமி",
+    "cancel": "ரத்துசெய்",
+    "delete": "நீக்கு",
+    "edit": "திருத்து",
+    "view": "பார்வை",
+    "search": "தேடு",
+    "loading": "ஏற்றப்படுகிறது...",
+    "no_data": "தரவு இல்லை",
+    "actions": "செயல்கள்",
+    "date": "தேதி",
+    "time": "நேரம்",
+    "status_list": {
+      "active": "செயலில் உள்ளது",
+      "trialing": "சோதனையில் உள்ளது",
+      "suspended": "நிறுத்தி வைக்கப்பட்டுள்ளது",
+      "expired": "காலாவதியானது",
+      "pending": "நிலுவையில் உள்ளது",
+      "in_progress": "செயல்பாட்டில் உள்ளது",
+      "completed": "முடிந்தது",
+      "rejected": "நிராகரிக்கப்பட்டது",
+      "failed": "தோல்வியடைந்தது",
+      "done": "முடிந்தது",
+      "of": "of"
+    }
+  },
+  "sidebar": {
+    "labels": {
+      "master_control": "மாஸ்டர் கண்ட்ரோல்",
+      "main": "முக்கியமானது",
+      "administration": "?????????",
+      "management": "மேலாண்மை",
+      "resources": "ஆதாரங்கள்",
+      "system": "அமைப்பு"
+    },
+    "links": {
+      "dashboard": "டாஷ்போர்டு",
+      "platform_dashboard": "பிளாட்பார்ம் டாஷ்போர்டு",
+      "organizations": "நிறுவனங்கள்",
+      "revenue": "வருவாய் கட்டுப்பாடு",
+      "support": "உதவி மையம்",
+      "global_settings": "உலகளாவிய அமைப்புகள்",
+      "system_logs": "அமைப்பு பதிவுகள்",
+      "overview": "மேலோட்டம்",
+      "projects_repo": "திட்ட களஞ்சியம்",
+      "analytics": "பகுப்பாய்வு",
+      "user_management": "பயனர் மேலாண்மை",
+      "departments": "துறைகள்",
+      "audit_logs": "தணிக்கை பதிவுகள்",
+      "knowledge_base": "அறிவுத் தளம்",
+      "standards_sops": "தரநிலைகள் மற்றும் SOP-கள்",
+      "settings": "அமைப்புகள்",
+      "logout": "வெளியேறு",
+      "profile": "சுயவிவரம்"
+    }
+  },
+  "navbar": {
+    "search_placeholder": "திட்டங்கள் அல்லது பயனர்களைத் தேடுங்கள்...",
+    "notifications": "அறிவிப்புகள்",
+    "light_mode": "பகல் பயன்முறை",
+    "dark_mode": "இரவு பயன்முறை"
+  },
+  "roles": {
+    "superadmin": "சூப்பர் அட்மின்",
+    "admin": "அட்மின்",
+    "team_leader": "குழுத் தலைவர்",
+    "facilitator": "வசதியாளர்",
+    "reviewer": "மதிப்பாய்வாளர்",
+    "team_member": "குழு உறுப்பினர்"
+  },
+  "profile": {
+    "title": "பயனர் சுயவிவரம்",
+    "language_settings": "மொழி அமைப்புகள்",
+    "select_language": "மொழியைத் தேர்ந்தெடுக்கவும்",
+    "update_profile": "சுயவிவரத்தைப் புதுப்பிக்கவும்"
+  },
+  "settings": {
+    "branding": {
+      "title": "பிராண்டிங் மற்றும் நடை",
+      "primary_color": "முதன்மை தீம் நிறம்",
+      "logo_url": "லோகோ URL / பதிவேற்றம்",
+      "favicon_url": "ஃபேவிகான் URL / பதிவேற்றம்",
+      "logo_preview": "லோகோ முன்னோட்டம்",
+      "favicon_preview": "ஃபேவிகான் முன்னோட்டம்"
+    },
+    "localization": {
+      "title": "உள்ளூர்மயமாக்கல் மற்றும் UX",
+      "timezone": "அமைப்பு நேர மண்டலம்",
+      "date_format": "தேதி வடிவம்",
+      "currency": "அடிப்படை நாணயம்",
+      "language": "இயல்புநிலை மொழி"
+    },
+    "nav": {
+      "profile": "Corporate Profile",
+      "branding": "Branding & Style",
+      "localization": "Localization & UX",
+      "billing": "Billing & Subscription",
+      "security": "Security & Privacy",
+      "integrations": "API & Integrations",
+      "compliance": "Compliance Standards",
+      "audit": "System Audit Logs",
+      "org_profile": "Corporate Profile",
+      "system": "System & Security",
+      "governance": "Governance",
+      "audit_logs": "System Audit Logs"
+    },
+    "billing": {
+      "title": "Billing & Subscription",
+      "current_plan": "Current Subscription",
+      "active_plan": "ACTIVE PLAN",
+      "change_plan": "Change Plan",
+      "user_licenses": "USER LICENSES",
+      "active_projects": "ACTIVE PROJECTS",
+      "billing_details": "Billing Details",
+      "billing_email": "BILLING EMAIL",
+      "phone": "PHONE",
+      "payment_method": "PAYMENT METHOD",
+      "billing_history": "Billing History",
+      "transaction_id": "TRANSACTION ID",
+      "amount": "AMOUNT",
+      "plan": "PLAN",
+      "invoice": "INVOICE"
+    },
+    "security": {
+      "title": "Security & Privacy",
+      "maintenance_mode": "Maintenance Mode",
+      "maintenance_desc": "Restrict system access to Admins only during upgrades.",
+      "session_timeout": "SESSION TIMEOUT (MINUTES)",
+      "data_retention": "DATA RETENTION (DAYS)",
+      "auto_archive": "Auto-Archive Strategy",
+      "auto_archive_desc": "Automatically move completed projects to knowledge repository after 90 days.",
+      "notifications": "Global Notifications",
+      "notifications_desc": "Enable automated email triggers for all stakeholders."
+    },
+    "integrations": {
+      "title": "API Access & Developer Keys",
+      "enable_api": "Enable API Interface",
+      "enable_api_desc": "Allows integration with external ERP and CRM systems.",
+      "api_key": "SECRET API KEY"
+    },
+    "compliance": {
+      "title": "Regulatory Compliance",
+      "desc": "Select the standards that govern your organization. QCMS will adjust reporting templates accordingly.",
+      "iso9001": "Quality Management System",
+      "iso14001": "Environmental Management",
+      "as9100": "Aerospace Quality",
+      "certificate": "Compliance Certificate",
+      "certificate_desc": "Generated based on active standards and audit results."
+    },
+    "audit": {
+      "title": "System Audit Logs",
+      "timestamp": "TIMESTAMP",
+      "user": "USER",
+      "action": "ACTION",
+      "target": "TARGET",
+      "details": "DETAILS"
+    }
+  },
+  "dashboards": {
+    "common": {
+      "overview": "மேலோட்டம்",
+      "analytics": "பகுப்பாய்வு",
+      "all_status": "அனைத்து நிலை",
+      "command": "கட்டளை",
+      "loading": "ஏற்றப்படுகிறது...",
+      "department": "துறை",
+      "status": "நிலை"
+    },
+    "admin": {
+      "title": "நிறுவன மேலோட்டம்",
+      "subtitle": "திட்டங்களை நிர்வகிக்கவும், செயல்பாட்டைக் கண்காணிக்கவும் மற்றும் அமைப்பு பயனர்களை மேற்பார்வையிடவும்.",
+      "strategic_distribution": "மூலோபாய விநியோகம்",
+      "projects_by_category": "வகை வாரியான திட்டங்கள்",
+      "workflow_metrics": "பணிப்பாய்வு அளவீடுகள்",
+      "projects_by_stage": "நிலை வாரியான திட்டங்கள்",
+      "pipeline_title": "செயலில் உள்ள வழிமுறை பைப்லைன்",
+      "init_project": "திட்டத்தைத் தொடங்கவும்",
+      "project_identity": "திட்ட அடையாளம்",
+      "current_stage": "தற்போதைய நிலை",
+      "methodology_status": "வழிமுறை நிலை",
+      "loading_pipeline": "பைப்லைன் தரவு ஏற்றப்படுகிறது...",
+      "stakeholders_title": "நிறுவன பங்குதாரர்கள்",
+      "manage_users": "பயனர்களை நிர்வகிக்கவும்",
+      "provision_access": "அணுகலை வழங்கவும்",
+      "stakeholder": "பங்குதாரர்",
+      "corporate_role": "கார்ப்பரேட் பங்கு",
+      "access_status": "அணுகல் நிலை",
+      "last_active": "கடைசியாகச் செயலில்",
+      "sync_directory": "பயனர் கோப்பகத்தை ஒத்திசைக்கிறது..."
+    },
+    "ceo": {
+      "executive_summary": "Executive Strategic Summary",
+      "financial_impact": "Cumulative Financial Impact",
+      "project_velocity": "Project Execution Velocity",
+      "quality_roi": "Quality Circle ROI",
+      "strategic_alignment": "Strategic Resource Alignment",
+      "org_health": "Organizational Quality Health",
+      "priority_initiatives": "Priority Strategic Initiatives",
+      "total_savings": "Total Savings",
+      "completion_rate": "Completion Rate",
+      "avg_improvement": "Avg. KPI Improvement",
+      "health_score": "Health Score",
+      "active_initiatives": "Active Strategic Initiatives",
+      "view_all_projects": "View All Projects",
+      "savings_trend": "Cost Savings Trend (6 Months)",
+      "impact_category": "Impact by Category",
+      "stage_completion": "Avg. Stage Completion",
+      "days": "days",
+      "subtitle": "Executive oversight of organizational performance and ROI analytics.",
+      "savings_trend_sub": "Monthly cost savings from quality circles",
+      "org_health_sub": "Composite efficiency index",
+      "insight_velocity": "Average project stage completion time is {days} days.",
+      "insight_success": "Project success rate stands at {rate}% across {total} initiatives.",
+      "insight_participation": "{active} departments ({rate}%) are actively utilizing the QCMS platform.",
+      "insight_recommendation": "Recommendation: Increase facilitator engagement in underperforming units.",
+      "active_initiatives_sub": "of {total} total projects",
+      "executive_access": "Executive Access",
+      "project_initiative": "Project Initiative",
+      "roi_priority": "ROI Priority",
+      "current_stage": "Current Stage",
+      "status": "Status",
+      "retrieving_initiatives": "Retrieving priority initiatives...",
+      "no_initiatives": "No active initiatives found."
+    },
+    "workflow": {
+      "stage1": "Problem Identification",
+      "stage2": "Problem Selection",
+      "stage3": "Initial Analysis",
+      "stage4": "Cause Analysis",
+      "stage5": "Root Cause Analysis",
+      "stage6": "Data Analysis",
+      "stage7": "Solution Development",
+      "stage8": "Implementation & ROI"
+    },
+    "analytics": {
+      "title": "Performance Analytics",
+      "subtitle": "Advanced KPI tracking and organizational impact metrics.",
+      "growth_trends": "Project Growth Trends",
+      "distribution": "Project Distribution by Dept",
+      "roi_distribution": "ROI Impact Distribution",
+      "velocity": "Department Velocity (Avg Days)",
+      "leaderboard": "Top Performance Leaderboard",
+      "leaderboard_sub": "Ranked by KPI Improvement %",
+      "project_title": "Project Title",
+      "kpi_improvement": "KPI Improvement",
+      "cost_savings": "Cost Savings",
+      "chart_velocity": "Project Velocity (Count)",
+      "chart_active_projects": "Active Projects",
+      "chart_avg_days": "Avg Days per Stage"
+    },
+    "users": {
+      "title": "Organization Directory",
+      "subtitle": "Manage user roles, departments, and system access across the organization.",
+      "registry": "Member Registry",
+      "registry_sub": "Stakeholder access and role tracking",
+      "all": "All",
+      "active": "Active",
+      "add_member": "Add Member",
+      "identity": "Identity",
+      "role": "Role",
+      "department": "Department",
+      "state": "State",
+      "last_active": "Last Active",
+      "actions": "Actions",
+      "provision_access": "Provision Access",
+      "display_name": "DISPLAY NAME / IDENTITY",
+      "enterprise_email": "ENTERPRISE EMAIL",
+      "system_role": "SYSTEM ROLE"
+    },
+    "landing": {
+      "sign_in": "Sign In",
+      "get_started": "Get Started",
+      "hero_badge": "Version 3.0 Now Live",
+      "hero_title": "Precision Quality Management at Scale.",
+      "hero_subtitle": "Optimize your organizational efficiency with our structured 8-stage workflow engine. Built for enterprise excellence, designed for modern teams.",
+      "start_trial": "Start Free Trial",
+      "watch_demo": "Watch Demo",
+      "secure": "Enterprise Secure",
+      "global": "Global Scale",
+      "precision": "High Precision"
+    },
+    "workspace": {
+      "loading": "Loading Project...",
+      "id_prefix": "ID: ",
+      "active": "Active",
+      "progress_label": "Overall Progress",
+      "all_saved": "All changes saved",
+      "save_draft": "Save Draft",
+      "submit_to_tl": "Submit to Team Leader",
+      "timeline": "Project Timeline",
+      "target_date": "Target Date",
+      "days_remaining": "Days Remaining",
+      "team_members": "Team Members",
+      "activity_title": "Comments & Activity",
+      "post_comment": "Post a comment...",
+      "methodology": "Methodology Stages",
+      "stages": {
+        "identification": {
+          "title": "Stage 1: Identification",
+          "desc": "Identify and list potential problems / improvement areas.",
+          "problem_statement": "Problem Statement (Selected for Initial Focus)",
+          "impact": "Initial Impact Analysis",
+          "problem_list": "Identified Problems List (One per line)"
+        },
+        "selection": {
+          "title": "Stage 2: Selection",
+          "desc": "Select the final problem based on criteria and obtain Facilitator validation.",
+          "final_problem": "Final Selected Problem",
+          "logic": "Selection Logic / Criteria Scoring",
+          "validation": "Facilitator Validation",
+          "notes": "Validation Notes...",
+          "validate_btn": "Validate & Proceed",
+          "validated_msg": "Validated by Facilitator"
+        },
+        "analysis": {
+          "title": "Stage 3: Analysis of the Problem",
+          "desc": "Analyzing the current situation and setting the baseline.",
+          "status": "Current Status Situation",
+          "baseline": "Baseline KPI Value"
+        },
+        "causes": {
+          "title": "Stage 4: Causes",
+          "desc": "Brainstorming all potential causes.",
+          "brainstorming": "Brainstorming Data",
+          "potential_causes": "List of Potential Causes"
+        },
+        "rca": {
+          "title": "Stage 5: Root Cause Analysis",
+          "desc": "Deep dive using 5-Why and Fishbone.",
+          "five_why": "5-Why Analysis",
+          "fishbone": "Fishbone Analysis",
+          "root_cause_summary": "Final Root Cause Summary",
+          "validation": "Facilitator RCA Validation",
+          "validated_msg": "RCA Validated by Facilitator"
+        },
+        "data_analysis": {
+          "title": "Stage 6: Data Analysis",
+          "desc": "Validating the identified root causes with data.",
+          "inference": "Verification Inference",
+          "validation_data": "Validation Data (Notes)"
+        },
+        "development": {
+          "title": "Stage 7: Development of Solution",
+          "desc": "Planning the permanent solution and action plan.",
+          "solution_details": "Solution Details",
+          "estimated_cost": "Estimated Cost (INR)",
+          "action_plan": "Action Plan / 3W1H",
+          "reviewer_approval": "Reviewer Approval Required",
+          "reject": "Reject",
+          "approve": "Approve Solution",
+          "approved_msg": "Solution Approved by Reviewer"
+        },
+        "implementation": {
+          "title": "Stage 8: Implementation of Solution",
+          "desc": "Final implementation, SOP creation, and closure.",
+          "sop": "Standard Operating Procedure (SOP) Details",
+          "lessons": "Lessons Learned",
+          "results": "Final Results Data / Verification"
+        }
+      }
+    },
+    "workstation": {
+      "title": "My Workstation",
+      "subtitle": "Manage your assigned projects, execute workflow steps, and track your contribution impact.",
+      "assigned_projects": "Assigned Projects",
+      "no_projects": "No assigned projects found.",
+      "select_project": "Select a project from the left to begin your contribution.",
+      "active_stage": "Active Stage",
+      "open_workspace": "Open Full Workspace"
+    }
+  }
+}

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Locations | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+
+    <main class="app-main">
+        <header class="app-navbar" id="app-navbar"></header>
+
+        <div class="app-content-inner">
+            <header class="ds-header-layout section-spacing px-0">
+                <div class="h-stack justify-content-between w-100">
+                    <div class="v-stack">
+                        <h1 class="ds-title mb-0">Plant Locations</h1>
+                        <p class="ds-text-secondary mb-0">Manage enterprise manufacturing plants, facilities, and regional operating locations.</p>
+                    </div>
+                    <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="plantManager.openAddModal()">
+                        <i data-lucide="plus"></i> Add Plant Location
+                    </button>
+                </div>
+            </header>
+
+            <!-- Stats Overview -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="glass-card p-4 d-flex align-items-center gap-3">
+                        <div class="icon-shape bg-primary-subtle text-primary rounded-3 p-3">
+                            <i data-lucide="factory" style="width:24px;height:24px;"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted fw-semibold text-uppercase">Total Plant Locations</div>
+                            <div class="fs-4 fw-bold text-main" id="statTotalPlants">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Plants Table Card -->
+            <div class="glass-card ds-card mb-4 fade-in">
+                <div class="ds-card-header h-stack justify-content-between p-4 border-bottom">
+                    <div class="v-stack">
+                        <h5 class="mb-0 fw-bold">Active Plant Locations</h5>
+                        <p class="text-xs ds-text-secondary mb-0">Organizational facilities and operational units</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="ds-input ds-input-sm" id="plantSearch" placeholder="Search plants..." oninput="plantManager.filterTable()" style="width: 220px;">
+                    </div>
+                </div>
+                <div class="ds-card-body p-0">
+                    <div class="table-responsive">
+                        <table class="ds-table ds-table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Plant Name</th>
+                                    <th>Code</th>
+                                    <th>Location / Address</th>
+                                    <th>Departments</th>
+                                    <th>Users</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plantsTableBody">
+                                <tr><td colspan="6" class="p-5 text-center text-muted">Loading plant locations...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="ds-card-footer p-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2" id="plantPaginationFooter" style="display: none;">
+                        <div class="text-xs text-muted fw-medium" id="plantPaginationInfo">Showing 1 to 5 of 0 entries</div>
+                        <div class="d-flex align-items-center gap-2" id="plantPaginationControls">
+                            <button class="ds-btn ds-btn-ghost ds-btn-sm" id="btnPlantPrevPage" onclick="plantManager.prevPage()">Previous</button>
+                            <span class="text-xs fw-semibold px-2" id="plantPageIndicator">Page 1 of 1</span>
+                            <button class="ds-btn ds-btn-ghost ds-btn-sm" id="btnPlantNextPage" onclick="plantManager.nextPage()">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Add / Edit Plant -->
+    <div class="modal fade" id="plantModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card ds-card">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-bold" id="modalTitle">Add Plant Location</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="plantForm" onsubmit="event.preventDefault(); plantManager.save();">
+                        <input type="hidden" id="plantId">
+                        <div class="ds-field mb-3">
+                            <label class="ds-label">PLANT LOCATION NAME <span class="text-danger">*</span></label>
+                            <input type="text" class="ds-input" id="plantName" placeholder="e.g. Pune Manufacturing Plant" required>
+                        </div>
+                        <div class="ds-field mb-3">
+                            <label class="ds-label">PLANT CODE / IDENTIFIER</label>
+                            <input type="text" class="ds-input" id="plantCode" placeholder="e.g. PN-01">
+                        </div>
+                        <div class="ds-field mb-3">
+                            <label class="ds-label">LOCATION / ADDRESS</label>
+                            <textarea class="ds-input" id="plantLocation" rows="2" placeholder="e.g. Plot 45, Chakan Industrial Area, Pune"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary px-4" id="savePlantBtn" onclick="plantManager.save()">Save Plant Location</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+    const plantManager = {
+        allPlants: [],
+        filteredPlants: [],
+        bsModal: null,
+        currentPage: 1,
+        pageSize: 5,
+
+        async init() {
+            try {
+                if (typeof QCMS !== 'undefined') QCMS.init();
+                const modalEl = document.getElementById('plantModal');
+                if (modalEl) this.bsModal = new bootstrap.Modal(modalEl);
+                await this.loadPlants();
+            } catch (e) {
+                console.error('[PlantManager] Init failed:', e);
+            }
+        },
+
+        async loadPlants() {
+            try {
+                const res = await api.getPlants();
+                this.allPlants = (res && res.plants) ? res.plants : [];
+                this.filteredPlants = [...this.allPlants];
+                this.currentPage = 1;
+                this.updateStats();
+                this.renderTable();
+            } catch (e) {
+                console.error('Failed to load plants', e);
+                const errMsg = (e && e.message && !e.message.includes('InFailedSqlTransaction')) ? e.message : 'Unable to connect or fetch plant locations. Please try again.';
+                document.getElementById('plantsTableBody').innerHTML = 
+                    `<tr><td colspan="7" class="p-5 text-center text-danger">Failed to load plant locations: ${QCMS.escapeHtml(errMsg)}</td></tr>`;
+            }
+        },
+
+        updateStats() {
+            document.getElementById('statTotalPlants').textContent = this.allPlants.length;
+            const totalDepts = this.allPlants.reduce((acc, p) => acc + (p.department_count || 0), 0);
+            const totalUsers = this.allPlants.reduce((acc, p) => acc + (p.user_count || 0), 0);
+            document.getElementById('statMappedDepts').textContent = totalDepts;
+            document.getElementById('statTotalUsers').textContent = totalUsers;
+        },
+
+        filterTable() {
+            const q = (document.getElementById('plantSearch')?.value || '').toLowerCase().trim();
+            if (!q) {
+                this.filteredPlants = [...this.allPlants];
+            } else {
+                this.filteredPlants = this.allPlants.filter(p => 
+                    (p.name || '').toLowerCase().includes(q) ||
+                    (p.code || '').toLowerCase().includes(q) ||
+                    (p.location || '').toLowerCase().includes(q)
+                );
+            }
+            this.currentPage = 1;
+            this.renderTable();
+        },
+
+        renderTable() {
+            const tbody = document.getElementById('plantsTableBody');
+            const total = this.filteredPlants.length;
+            const totalPages = Math.ceil(total / this.pageSize) || 1;
+
+            if (this.currentPage > totalPages) this.currentPage = totalPages;
+            if (this.currentPage < 1) this.currentPage = 1;
+
+            const startIdx = (this.currentPage - 1) * this.pageSize;
+            const pageItems = this.filteredPlants.slice(startIdx, startIdx + this.pageSize);
+
+            const footer = document.getElementById('plantPaginationFooter');
+
+            if (!total) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-5 text-center text-muted">No plant locations found. Click "Add Plant Location" to create one.</td></tr>`;
+                if (footer) footer.style.display = 'none';
+                return;
+            }
+
+            if (footer) footer.style.display = 'flex';
+            const endIdx = Math.min(startIdx + this.pageSize, total);
+            document.getElementById('plantPaginationInfo').textContent = `Showing ${startIdx + 1} to ${endIdx} of ${total} entries`;
+            document.getElementById('plantPageIndicator').textContent = `Page ${this.currentPage} of ${totalPages}`;
+            document.getElementById('btnPlantPrevPage').disabled = (this.currentPage <= 1);
+            document.getElementById('btnPlantNextPage').disabled = (this.currentPage >= totalPages);
+
+            tbody.innerHTML = pageItems.map(p => `
+                <tr>
+                    <td class="fw-bold text-main">
+                        <div class="d-flex align-items-center gap-2">
+                            <i data-lucide="factory" class="text-primary" style="width:16px;height:16px;"></i>
+                            <span>${QCMS.escapeHtml(p.name)}</span>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-secondary-subtle text-secondary font-monospace px-2 py-1">${QCMS.escapeHtml(p.code || 'N/A')}</span></td>
+                    <td class="text-muted text-sm">${QCMS.escapeHtml(p.location || 'N/A')}</td>
+                    <td><span class="badge bg-info-subtle text-info rounded-pill px-2.5 py-1 fw-semibold">${p.department_count} Depts</span></td>
+                    <td><span class="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 fw-semibold">${p.user_count} Users</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-ghost text-primary px-2" onclick="plantManager.openEditModal(${p.id})">
+                            <i data-lucide="edit-2" style="width:14px;height:14px;"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-ghost text-danger px-2" onclick="plantManager.deletePlant(${p.id}, '${QCMS.escapeHtml(p.name)}')">
+                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            if (window.lucide) lucide.createIcons();
+        },
+
+        prevPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.renderTable();
+            }
+        },
+
+        nextPage() {
+            const totalPages = Math.ceil(this.filteredPlants.length / this.pageSize) || 1;
+            if (this.currentPage < totalPages) {
+                this.currentPage++;
+                this.renderTable();
+            }
+        },
+
+        openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Plant Location';
+            document.getElementById('plantId').value = '';
+            document.getElementById('plantName').value = '';
+            document.getElementById('plantCode').value = '';
+            document.getElementById('plantLocation').value = '';
+            if (this.bsModal) this.bsModal.show();
+        },
+
+        openEditModal(id) {
+            const p = this.allPlants.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('modalTitle').textContent = 'Edit Plant Location';
+            document.getElementById('plantId').value = p.id;
+            document.getElementById('plantName').value = p.name;
+            document.getElementById('plantCode').value = p.code || '';
+            document.getElementById('plantLocation').value = p.location || '';
+            if (this.bsModal) this.bsModal.show();
+        },
+
+        async save() {
+            const id = document.getElementById('plantId').value;
+            const name = document.getElementById('plantName').value.trim();
+            const code = document.getElementById('plantCode').value.trim();
+            const location = document.getElementById('plantLocation').value.trim();
+
+            if (!name) {
+                QCMS.toast('Plant Location Name is required', 'warning');
+                return;
+            }
+
+            const payload = { name, code, location };
+            try {
+                if (id) {
+                    await api.updatePlant(id, payload);
+                    QCMS.toast('Plant location updated successfully', 'success');
+                } else {
+                    await api.createPlant(payload);
+                    QCMS.toast('Plant location created successfully', 'success');
+                }
+                if (this.bsModal) this.bsModal.hide();
+                await this.loadPlants();
+            } catch (e) {
+                QCMS.toast(e.message || 'Failed to save plant location', 'danger');
+            }
+        },
+
+        async deletePlant(id, name) {
+            if (!confirm(`Are you sure you want to delete plant location "${name}"? Departments and users under this plant will be unassigned.`)) return;
+            try {
+                await api.deletePlant(id);
+                QCMS.toast('Plant location deleted', 'info');
+                await this.loadPlants();
+            } catch (e) {
+                QCMS.toast(e.message || 'Failed to delete plant location', 'danger');
+            }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => plantManager.init());
+    </script>
+</body>
+</html>

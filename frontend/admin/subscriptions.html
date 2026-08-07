@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Management | QCMS Enterprise OS</title>
+    <meta name="description" content="Enterprise subscription lifecycle management — billing, invoices, renewals, trials, and plan management for all QCMS tenants.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           ENTERPRISE SUBSCRIPTION MANAGEMENT — Design Tokens & Layout
+        ═══════════════════════════════════════════════════════════════ */
+
+        :root {
+            --sub-active: #10b981;
+            --sub-trial: #f59e0b;
+            --sub-expired: #ef4444;
+            --sub-cancelled: #6b7280;
+            --sub-suspended: #8b5cf6;
+            --sub-pending: #3b82f6;
+            --pay-paid: #10b981;
+            --pay-failed: #ef4444;
+            --pay-overdue: #f97316;
+            --pay-pending: #3b82f6;
+        }
+
+        /* KPI Grid */
+        .sub-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .sub-kpi-card {
+            background: var(--ds-surface);
+            border: 1px solid var(--ds-border-color);
+            border-radius: 14px;
+            padding: 1.1rem 1.2rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            cursor: pointer;
+        }
+        .sub-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+        .sub-kpi-card .kpi-icon {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: .65rem;
+        }
+        .sub-kpi-card .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--ds-text-secondary); margin-bottom: .2rem; }
+        .sub-kpi-card .kpi-value { font-size: 1.55rem; font-weight: 700; line-height: 1.1; color: var(--ds-text-main); }
+        .sub-kpi-card .kpi-change { font-size: 11px; margin-top: .3rem; display: flex; align-items: center; gap: 4px; }
+        .kpi-change.up { color: var(--sub-active); }
+        .kpi-change.down { color: var(--sub-expired); }
+        .kpi-change.neutral { color: var(--ds-text-secondary); }
+        .sub-kpi-card .kpi-updated { font-size: 10px; color: var(--ds-text-secondary); margin-top: .35rem; }
+        .sub-kpi-card .kpi-accent-line { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; border-radius: 0 0 14px 14px; }
+
+        /* Allow table containers to let dropdowns float outside */
+        .table-responsive,
+        .card,
+        .card-body,
+        .sub-table-card,
+        tbody,
+        tr:has(.dropdown.show), td:has(.dropdown.show) {
+            position: relative !important;
+            z-index: 99999 !important;
+        }
+        .table-responsive {
+            overflow: visible !important;
+        }
+
+        .dropdown-menu {
+            z-index: 999999 !important;
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid rgba(15, 23, 42, 0.16) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32), 0 4px 14px rgba(0, 0, 0, 0.14) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            opacity: 1 !important;
+        }
+
+        /* Status Badges */
+        .sub-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 9px; border-radius: 20px;
+            font-size: 11px; font-weight: 600; letter-spacing: .3px;
+        }
+        .sub-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+        .sub-badge.active { background: rgba(16,185,129,.12); color: var(--sub-active); }
+        .sub-badge.active::before { background: var(--sub-active); }
+        .sub-badge.trial { background: rgba(245,158,11,.12); color: var(--sub-trial); }
+        .sub-badge.trial::before { background: var(--sub-trial); }
+        .sub-badge.expired { background: rgba(239,68,68,.12); color: var(--sub-expired); }
+        .sub-badge.expired::before { background: var(--sub-expired); }
+        .sub-badge.cancelled { background: rgba(107,114,128,.12); color: var(--sub-cancelled); }
+        .sub-badge.cancelled::before { background: var(--sub-cancelled); }
+        .sub-badge.suspended { background: rgba(139,92,246,.12); color: var(--sub-suspended); }
+        .sub-badge.suspended::before { background: var(--sub-suspended); }
+        .sub-badge.pending { background: rgba(59,130,246,.12); color: var(--sub-pending); }
+        .sub-badge.pending::before { background: var(--sub-pending); }
+        .pay-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .pay-badge.paid { background: rgba(16,185,129,.1); color: var(--pay-paid); }
+        .pay-badge.failed { background: rgba(239,68,68,.1); color: var(--pay-failed); }
+        .pay-badge.pending { background: rgba(59,130,246,.1); color: var(--pay-pending); }
+        .pay-badge.overdue { background: rgba(249,115,22,.1); color: var(--pay-overdue); }
+
+        /* Plan Chip */
+        .plan-chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 2px 10px; border-radius: 6px;
+            font-size: 11px; font-weight: 700; letter-spacing: .4px;
+            text-transform: uppercase;
+        }
+        .plan-chip.starter { background: rgba(99,102,241,.1); color: #6366f1; }
+        .plan-chip.professional { background: rgba(59,130,246,.1); color: #3b82f6; }
+        .plan-chip.enterprise { background: rgba(16,185,129,.1); color: #059669; }
+        .plan-chip.custom { background: rgba(245,158,11,.1); color: #d97706; }
+
+        /* Search Bar */
+        .sub-search-bar {
+            position: relative;
+            flex: 1 1 260px; max-width: 360px;
+        }
+        .sub-search-bar input {
+            width: 100%; height: 40px;
+            background: var(--ds-surface);
+            border: 1px solid var(--ds-border-color);
+            border-radius: 10px; padding: 0 12px 0 38px;
+            font-size: 13px; color: var(--ds-text-main);
+            transition: border-color .15s;
+        }
+        .sub-search-bar input:focus { outline: none; border-color: var(--ds-primary); }
+        .sub-search-bar .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); opacity: .5; pointer-events: none; }
+        .sub-search-bar .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; opacity: .4; display: none; }
+        .sub-search-bar input:not(:placeholder-shown) ~ .search-clear { display: block; }
+
+        /* Recent searches */
+        .recent-searches {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: var(--ds-surface);
+            border: 1px solid var(--ds-border-color);
+            border-radius: 10px; z-index: 9999;
+            box-shadow: 0 8px 24px rgba(0,0,0,.12);
+            display: none;
+        }
+        .recent-searches.show { display: block; }
+        .recent-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px; font-size: 12px;
+            cursor: pointer; color: var(--ds-text-main);
+        }
+        .recent-item:hover { background: var(--ds-surface-hover, rgba(0,0,0,.04)); }
+        .highlight-match { background: rgba(var(--ds-primary-rgb),.15); border-radius: 2px; font-weight: 600; }
+
+        /* Filter Panel */
+        .filter-panel {
+            display: flex; flex-wrap: wrap; gap: .6rem; align-items: center;
+            padding: .9rem 1.2rem;
+            background: var(--ds-surface);
+            border: 1px solid var(--ds-border-color);
+            border-radius: 12px; margin-bottom: 1rem;
+        }
+        .filter-chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px;
+            font-size: 12px; font-weight: 500;
+            background: var(--ds-surface);
+            border: 1px solid var(--ds-border-color);
+            cursor: pointer; color: var(--ds-text-main);
+            transition: all .15s;
+        }
+        .filter-chip:hover, .filter-chip.active {
+            background: var(--ds-primary); color: #fff; border-color: var(--ds-primary);
+        }
+        .filter-group-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--ds-text-secondary); margin-right: 2px; }
+
+        /* Table enhancements */
+        .sub-table { min-width: 1100px; }
+        .sub-table thead th {
+            position: sticky; top: 0; z-index: 2;
+            background: var(--ds-surface);
+            font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+            color: var(--ds-text-secondary);
+            padding: 10px 12px; white-space: nowrap;
+            cursor: pointer; user-select: none;
+        }
+        .sub-table thead th:hover { color: var(--ds-primary); }
+        .sub-table thead th .sort-icon { opacity: .35; font-size: 10px; }
+        .sub-table thead th.sorted .sort-icon { opacity: 1; color: var(--ds-primary); }
+        .sub-table tbody tr { border-bottom: 1px solid var(--ds-border-color); transition: background .12s; }
+        .sub-table tbody tr:hover { background: var(--ds-surface-hover, rgba(var(--ds-primary-rgb),.03)); }
+        .sub-table tbody td { padding: 10px 12px; font-size: 12.5px; vertical-align: middle; }
+        .sub-table tbody tr.row-selected { background: rgba(var(--ds-primary-rgb),.06); }
+
+        /* Bulk Toolbar */
+        .bulk-toolbar {
+            display: none; align-items: center; gap: .75rem;
+            padding: .6rem 1rem;
+            background: var(--ds-primary);
+            border-radius: 10px; margin-bottom: .75rem;
+            color: #fff; font-size: 13px;
+        }
+        .bulk-toolbar.visible { display: flex; }
+        .bulk-toolbar .btn-bulk {
+            background: rgba(255,255,255,.2); border: none;
+            color: #fff; padding: 4px 12px; border-radius: 6px;
+            font-size: 12px; cursor: pointer; transition: background .15s;
+        }
+        .bulk-toolbar .btn-bulk:hover { background: rgba(255,255,255,.35); }
+        .bulk-close { margin-left: auto; cursor: pointer; opacity: .7; }
+        .bulk-close:hover { opacity: 1; }
+
+        /* Wizard Steps */
+        .wizard-steps {
+            display: flex; gap: 0; margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--ds-border-color);
+        }
+        .wizard-step {
+            flex: 1; text-align: center; padding: .6rem .3rem 1rem;
+            font-size: 12px; color: var(--ds-text-secondary); cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -1px;
+            transition: color .15s, border-color .15s;
+        }
+        .wizard-step.active { color: var(--ds-primary); border-color: var(--ds-primary); font-weight: 600; }
+        .wizard-step.done { color: var(--sub-active); border-color: var(--sub-active); }
+        .wizard-step-num {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--ds-border-color); color: var(--ds-text-secondary);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; margin-bottom: 4px;
+        }
+        .wizard-step.active .wizard-step-num { background: var(--ds-primary); color: #fff; }
+        .wizard-step.done .wizard-step-num { background: var(--sub-active); color: #fff; }
+        .wizard-panel { display: none; }
+        .wizard-panel.active { display: block; }
+
+        /* Detail Drawer */
+        .sub-drawer-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.45);
+            z-index: 1040; display: none; opacity: 0; transition: opacity .2s;
+        }
+        .sub-drawer-overlay.open { display: block; opacity: 1; }
+        .sub-drawer {
+            position: fixed; right: 0; top: 0; bottom: 0; width: min(680px, 100vw);
+            background: var(--ds-surface); z-index: 1050;
+            box-shadow: -4px 0 30px rgba(0,0,0,.18);
+            transform: translateX(100%); transition: transform .28s cubic-bezier(.4,0,.2,1);
+            overflow-y: auto; display: flex; flex-direction: column;
+        }
+        .sub-drawer.open { transform: translateX(0); }
+        .drawer-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--ds-border-color);
+            position: sticky; top: 0; background: var(--ds-surface); z-index: 2;
+        }
+        .drawer-body { padding: 1.4rem 1.5rem; flex: 1; }
+        .drawer-section { margin-bottom: 1.5rem; }
+        .drawer-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--ds-text-secondary); margin-bottom: .7rem; }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem .9rem; }
+        .detail-item .di-label { font-size: 11px; color: var(--ds-text-secondary); margin-bottom: 2px; }
+        .detail-item .di-val { font-size: 13px; font-weight: 500; color: var(--ds-text-main); }
+
+        /* Invoice Preview Modal */
+        .invoice-preview {
+            font-family: 'Arial', sans-serif;
+            max-width: 640px; margin: 0 auto;
+            padding: 2rem;
+            background: #fff; color: #1a1a2e;
+        }
+        .invoice-preview .inv-header { display: flex; justify-content: space-between; margin-bottom: 2rem; }
+        .invoice-preview .inv-title { font-size: 2rem; font-weight: 700; color: #1a1a2e; }
+        .invoice-preview .inv-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        .invoice-preview .inv-table th { background: #f0f4f8; padding: 8px 12px; text-align: left; font-size: 12px; }
+        .invoice-preview .inv-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 12px; font-size: 13px; }
+        .invoice-preview .inv-total-row td { font-weight: 700; background: #f9fafb; }
+
+        /* Timeline */
+        .activity-timeline { list-style: none; padding: 0; margin: 0; }
+        .activity-timeline li {
+            display: flex; gap: .8rem; padding: .6rem 0;
+            border-bottom: 1px solid var(--ds-border-color);
+            font-size: 12px; color: var(--ds-text-main);
+        }
+        .activity-timeline li:last-child { border: none; }
+        .timeline-dot {
+            width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
+        }
+        .timeline-dot.green { background: var(--sub-active); }
+        .timeline-dot.amber { background: var(--sub-trial); }
+        .timeline-dot.red { background: var(--sub-expired); }
+        .timeline-dot.blue { background: var(--sub-pending); }
+        .timeline-dot.gray { background: var(--sub-cancelled); }
+
+        /* Plan comparison */
+        .plan-compare-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+        }
+        .plan-card-compare {
+            border: 2px solid var(--ds-border-color);
+            border-radius: 12px; padding: 1.2rem; text-align: center;
+            cursor: pointer; transition: all .15s;
+        }
+        .plan-card-compare:hover, .plan-card-compare.selected {
+            border-color: var(--ds-primary);
+            box-shadow: 0 0 0 3px rgba(var(--ds-primary-rgb),.12);
+        }
+        .plan-card-compare .pc-price { font-size: 1.5rem; font-weight: 700; }
+        .plan-card-compare .pc-name { font-size: 13px; font-weight: 600; margin-bottom: .5rem; }
+        .plan-card-compare .pc-feature { font-size: 11px; color: var(--ds-text-secondary); line-height: 1.7; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sub-kpi-grid { grid-template-columns: 1fr 1fr; }
+            .plan-compare-grid { grid-template-columns: 1fr 1fr; }
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .sub-kpi-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Loading skeleton */
+        .skeleton { background: linear-gradient(90deg, var(--ds-border-color) 25%, var(--ds-surface-hover,#eee) 50%, var(--ds-border-color) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        /* Tooltip */
+        [data-tooltip] { position: relative; cursor: help; }
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+            background: #1a1a2e; color: #fff; font-size: 11px; padding: 4px 8px;
+            border-radius: 6px; white-space: nowrap; pointer-events: none;
+            opacity: 0; transition: opacity .15s; z-index: 9999;
+        }
+        [data-tooltip]:hover::after { opacity: 1; }
+
+        /* Usage bar */
+        .usage-bar { height: 6px; border-radius: 3px; background: var(--ds-border-color); overflow: hidden; }
+        .usage-bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+    </style>
+</head>
+
+<body>
+<div class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+    <main class="app-main">
+        <header class="glass-navbar" id="app-navbar"></header>
+
+        <div class="app-content-inner fade-in-up">
+
+            <!-- PAGE HEADER -->
+            <header class="ds-header-layout section-spacing">
+                <div class="h-stack justify-content-between w-100 flex-wrap gap-3">
+                    <div class="v-stack">
+                        <h1 class="ds-title mb-0">Subscription Management</h1>
+                        <p class="ds-text-secondary mb-0">Enterprise billing, renewals, invoices, and plan lifecycle.</p>
+                    </div>
+                    <div class="h-stack gap-2 flex-wrap">
+                        <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-2" onclick="SubMgr.refresh()" id="refreshBtn">
+                            <i data-lucide="refresh-cw" style="width:13px;height:13px;" id="refreshIcon"></i> Refresh
+                        </button>
+                        <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-2" onclick="SubMgr.exportCSV()">
+                            <i data-lucide="download" style="width:13px;height:13px;"></i> Export CSV
+                        </button>
+                        <button class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-2" onclick="SubMgr.openCreateWizard()">
+                            <i data-lucide="plus" style="width:13px;height:13px;"></i> New Subscription
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- KPI GRID -->
+            <div class="sub-kpi-grid" id="subKpiGrid">
+                <!-- Injected by JS -->
+            </div>
+
+            <!-- REVENUE CHART + STATUS DONUT -->
+            <div class="row g-3 mb-3">
+                <div class="col-xl-8">
+                    <div class="ds-card h-100">
+                        <div class="ds-card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title mb-0">Revenue Overview</h5>
+                                <div class="text-xs text-muted mt-1">MRR · ARR · Monthly Collections</div>
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                <div id="revMetaRow" class="d-flex gap-3 me-3 text-xs">
+                                    <div><span class="text-muted">MRR </span><strong id="kpiMrr">—</strong></div>
+                                    <div><span class="text-muted">ARR </span><strong id="kpiArr">—</strong></div>
+                                    <div><span class="text-muted">ARPO </span><strong id="kpiArpo">—</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ds-card-body">
+                            <div style="height:220px;"><canvas id="revenueChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4">
+                    <div class="ds-card h-100">
+                        <div class="ds-card-header">
+                            <h5 class="card-title mb-0">Status Distribution</h5>
+                        </div>
+                        <div class="ds-card-body d-flex flex-column align-items-center justify-content-center" style="min-height:220px;">
+                            <div style="height:150px;width:150px;position:relative;">
+                                <canvas id="statusDonut"></canvas>
+                                <div id="donutCenter" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+                                    <div class="fw-bold" style="font-size:1.3rem;" id="donutTotal">—</div>
+                                    <div style="font-size:10px;color:var(--ds-text-secondary);">Total</div>
+                                </div>
+                            </div>
+                            <div id="statusLegend" class="d-flex flex-wrap gap-2 mt-3 justify-content-center" style="font-size:11px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEARCH + FILTERS -->
+            <div class="filter-panel">
+                <!-- Search -->
+                <div class="sub-search-bar" id="searchWrapper">
+                    <i data-lucide="search" class="search-icon" style="width:15px;height:15px;"></i>
+                    <input type="text" id="subSearch" placeholder="Search org, ID, email, plan…" autocomplete="off" aria-label="Search subscriptions">
+                    <span class="search-clear" id="searchClear" onclick="SubMgr.clearSearch()" title="Clear">✕</span>
+                    <div class="recent-searches" id="recentSearches"></div>
+                </div>
+
+                <div class="vr mx-1" style="height:24px;opacity:.2;"></div>
+
+                <!-- Status filters -->
+                <select class="ds-input" id="subStatusFilter" style="height:32px; font-size:12px; padding: 5px 30px 5px 12px; min-width: 135px; width:auto;" onchange="SubMgr.setFilter('status',this.value)">
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Trial">Trial</option>
+                    <option value="Expired">Expired</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Suspended">On Hold</option>
+                </select>
+
+                <div class="vr mx-1" style="height:24px;opacity:.2;"></div>
+
+                <!-- Plan filter -->
+                <span class="filter-group-label">Plan</span>
+                <select class="ds-input" id="filterPlan" style="height:32px; font-size:12px; padding: 5px 30px 5px 12px; min-width: 110px; width:auto;" onchange="SubMgr.setFilter('plan',this.value)">
+                    <option value="">All Plans</option>
+                    <option value="Starter">Starter</option>
+                    <option value="Professional">Professional</option>
+                    <option value="Enterprise">Enterprise</option>
+                    <option value="Custom">Custom</option>
+                </select>
+
+                <!-- Billing Cycle -->
+                <select class="ds-input" id="filterCycle" style="height:32px; font-size:12px; padding: 5px 30px 5px 12px; min-width: 115px; width:auto;" onchange="SubMgr.setFilter('billing_cycle',this.value)">
+                    <option value="">All Cycles</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Yearly">Yearly</option>
+                    <option value="Lifetime">Lifetime</option>
+                </select>
+
+                <!-- Payment Status -->
+                <select class="ds-input" id="filterPayStatus" style="height:32px; font-size:12px; padding: 5px 30px 5px 12px; min-width: 135px; width:auto;" onchange="SubMgr.setFilter('payment_status',this.value)">
+                    <option value="">All Payments</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Overdue">Overdue</option>
+                </select>
+
+                <!-- Renewal Window -->
+                <select class="ds-input" id="filterRenewal" style="height:32px; font-size:12px; padding: 5px 30px 5px 12px; min-width: 135px; width:auto;" onchange="SubMgr.setFilter('renewal_window',this.value)">
+                    <option value="">All Renewals</option>
+                    <option value="7d">Next 7 Days</option>
+                    <option value="30d">Next 30 Days</option>
+                    <option value="90d">Next 90 Days</option>
+                    <option value="expired">Expired</option>
+                </select>
+
+                <button class="ds-btn ds-btn-secondary btn-sm ms-auto" onclick="SubMgr.resetFilters()" style="height:32px;">
+                    <i data-lucide="x" style="width:12px;height:12px;"></i> Reset
+                </button>
+            </div>
+
+            <!-- BULK TOOLBAR -->
+            <div class="bulk-toolbar" id="bulkToolbar">
+                <i data-lucide="check-square" style="width:16px;height:16px;"></i>
+                <span id="bulkCount">0</span> selected
+                <button class="btn-bulk" onclick="SubMgr.bulkAction('renew')"><i data-lucide="refresh-cw" style="width:11px;height:11px;"></i> Renew</button>
+                <button class="btn-bulk" onclick="SubMgr.bulkAction('reminder')"><i data-lucide="bell" style="width:11px;height:11px;"></i> Send Reminder</button>
+                <button class="btn-bulk" onclick="SubMgr.bulkAction('assign-plan')"><i data-lucide="layers" style="width:11px;height:11px;"></i> Assign Plan</button>
+                <button class="btn-bulk" onclick="SubMgr.exportSelectedCSV()"><i data-lucide="download" style="width:11px;height:11px;"></i> Export</button>
+                <button class="btn-bulk" style="background:rgba(239,68,68,.3);" onclick="SubMgr.bulkAction('cancel')"><i data-lucide="x-circle" style="width:11px;height:11px;"></i> Cancel</button>
+                <span class="bulk-close" onclick="SubMgr.clearSelection()"><i data-lucide="x" style="width:14px;height:14px;"></i></span>
+            </div>
+
+            <!-- SUBSCRIPTION TABLE -->
+            <div class="ds-card fade-in">
+                <div class="ds-card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <h5 class="card-title mb-0">Subscriptions</h5>
+                        <span class="text-xs text-muted" id="tableCount">Loading…</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.toggleColumnVisibility()" title="Column Visibility">
+                            <i data-lucide="columns" style="width:13px;height:13px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="ds-card-body p-0">
+                    <div class="table-responsive" style="max-height:600px;overflow-y:auto;">
+                        <table class="ds-table sub-table" id="subTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px;"><input type="checkbox" id="selectAll" onchange="SubMgr.toggleSelectAll(this)"></th>
+                                    <th onclick="SubMgr.sort('subscription_uid')" data-col="id">Sub ID <span class="sort-icon">↕</span></th>
+                                    <th onclick="SubMgr.sort('org')" data-col="org">Organization <span class="sort-icon">↕</span></th>
+                                    <th data-col="plan">Plan</th>
+                                    <th data-col="cycle">Cycle</th>
+                                    <th onclick="SubMgr.sort('start_date')" data-col="start">Start</th>
+                                    <th onclick="SubMgr.sort('end_date')" data-col="end">Expiry</th>
+                                    <th onclick="SubMgr.sort('renewal_date')" data-col="renewal">Renewal</th>
+                                    <th data-col="status">Sub Status</th>
+                                    <th data-col="pay_status">Pay Status</th>
+                                    <th data-col="users">Users</th>
+                                    <th onclick="SubMgr.sort('final_amount')" data-col="amount">Amount</th>
+                                    <th class="text-end" data-col="actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subTableBody">
+                                <tr><td colspan="13" class="text-center py-5 text-muted">
+                                    <div class="skeleton" style="height:18px;width:60%;margin:0 auto;"></div>
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    <div class="ds-card-body py-3 px-4 border-top d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color:var(--ds-border-color)!important;">
+                        <div class="text-xs text-muted" id="paginationInfo">—</div>
+                        <div class="d-flex gap-1 align-items-center">
+                            <select class="ds-input" id="perPageSelect" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SubMgr.setPerPage(this.value)">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="20" selected>20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="text-xs text-muted mx-2">per page</span>
+                            <div id="paginationBtns"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /app-content-inner -->
+    </main>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     DETAIL DRAWER
+═══════════════════════════════════════════ -->
+<div class="sub-drawer-overlay" id="drawerOverlay" onclick="SubMgr.closeDrawer()"></div>
+<div class="sub-drawer" id="subDrawer" role="dialog" aria-modal="true" aria-label="Subscription Detail">
+    <div class="drawer-header">
+        <div>
+            <div class="fw-bold" id="drawerTitle">Subscription Detail</div>
+            <div class="text-xs text-muted" id="drawerSubtitle">—</div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <span id="drawerStatusBadge"></span>
+            <button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.closeDrawer()">
+                <i data-lucide="x" style="width:14px;height:14px;"></i>
+            </button>
+        </div>
+    </div>
+    <div class="drawer-body" id="drawerBody">
+        <!-- Injected dynamically -->
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CREATE WIZARD MODAL
+═══════════════════════════════════════════ -->
+<div class="modal fade" id="createWizardModal" tabindex="-1" aria-label="Create Subscription">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">New Subscription</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <!-- Wizard Steps Nav -->
+                <div class="wizard-steps">
+                    <div class="wizard-step active" data-step="1" onclick="SubMgr.goToStep(1)">
+                        <div class="wizard-step-num">1</div><br>Organization
+                    </div>
+                    <div class="wizard-step" data-step="2" onclick="SubMgr.goToStep(2)">
+                        <div class="wizard-step-num">2</div><br>Plan
+                    </div>
+                    <div class="wizard-step" data-step="3" onclick="SubMgr.goToStep(3)">
+                        <div class="wizard-step-num">3</div><br>Billing Cycle
+                    </div>
+                    <div class="wizard-step" data-step="4" onclick="SubMgr.goToStep(4)">
+                        <div class="wizard-step-num">4</div><br>Limits
+                    </div>
+                    <div class="wizard-step" data-step="5" onclick="SubMgr.goToStep(5)">
+                        <div class="wizard-step-num">5</div><br>Pricing
+                    </div>
+                    <div class="wizard-step" data-step="6" onclick="SubMgr.goToStep(6)">
+                        <div class="wizard-step-num">6</div><br>Review
+                    </div>
+                </div>
+
+                <!-- Step 1: Organization -->
+                <div class="wizard-panel active" id="wizardStep1">
+                    <div class="ds-field">
+                        <label class="ds-label">Search & Select Organization <span class="text-danger">*</span></label>
+                        <input type="text" class="ds-input" id="wizOrgSearch" placeholder="Type organization name or email…" oninput="SubMgr.searchOrgs(this.value)">
+                        <div id="wizOrgResults" class="mt-2"></div>
+                        <input type="hidden" id="wizOrgId">
+                        <div id="wizOrgSelected" class="mt-2 text-xs text-success fw-bold"></div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Plan -->
+                <div class="wizard-panel" id="wizardStep2">
+                    <p class="text-xs text-muted mb-3">Select a subscription plan for this organization.</p>
+                    <div class="plan-compare-grid" id="wizPlanGrid">
+                        <!-- Injected -->
+                    </div>
+                    <input type="hidden" id="wizPlan" value="Professional">
+                </div>
+
+                <!-- Step 3: Billing Cycle -->
+                <div class="wizard-panel" id="wizardStep3">
+                    <div class="row g-3">
+                        <div class="col-md-6" onclick="SubMgr.selectCycle('Monthly',this)">
+                            <div class="plan-card-compare" style="cursor:pointer;">
+                                <div class="pc-name">Monthly</div>
+                                <div class="pc-price text-primary" id="cycleMonthly">—</div>
+                                <div class="pc-feature">Billed every month. Maximum flexibility.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6" onclick="SubMgr.selectCycle('Quarterly',this)">
+                            <div class="plan-card-compare" style="cursor:pointer;">
+                                <div class="pc-name">Quarterly <span class="badge bg-warning text-dark ms-1" style="font-size:9px;">Save 5%</span></div>
+                                <div class="pc-price text-warning" id="cycleQuarterly">—</div>
+                                <div class="pc-feature">Billed every 3 months.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6" onclick="SubMgr.selectCycle('Yearly',this)">
+                            <div class="plan-card-compare selected" style="cursor:pointer;">
+                                <div class="pc-name">Yearly <span class="badge bg-success ms-1" style="font-size:9px;">Best Value</span></div>
+                                <div class="pc-price text-success" id="cycleYearly">—</div>
+                                <div class="pc-feature">Billed annually. Maximum savings.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6" onclick="SubMgr.selectCycle('Lifetime',this)">
+                            <div class="plan-card-compare" style="cursor:pointer;">
+                                <div class="pc-name">Lifetime</div>
+                                <div class="pc-price" id="cycleLifetime">—</div>
+                                <div class="pc-feature">One-time perpetual license.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="wizCycle" value="Yearly">
+                </div>
+
+                <!-- Step 4: Limits -->
+                <div class="wizard-panel" id="wizardStep4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label">Maximum Users</label>
+                                <input type="number" class="ds-input" id="wizMaxUsers" min="1" value="500">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label">Storage Limit (GB)</label>
+                                <input type="number" class="ds-input" id="wizStorage" min="1" step="1" value="50">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label">API Limit (calls/month)</label>
+                                <input type="number" class="ds-input" id="wizApiLimit" min="0" value="10000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label">Support Level</label>
+                                <select class="ds-input" id="wizSupportLevel">
+                                    <option value="Standard">Standard</option>
+                                    <option value="Priority">Priority</option>
+                                    <option value="Enterprise">Enterprise</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="ds-label">Enabled Modules</label>
+                            <div class="d-flex flex-wrap gap-2 mt-1" id="wizModules">
+                                <label class="filter-chip"><input type="checkbox" value="Projects" class="me-1"> Projects</label>
+                                <label class="filter-chip"><input type="checkbox" value="Reports" class="me-1"> Reports</label>
+                                <label class="filter-chip"><input type="checkbox" value="Analytics" class="me-1"> Analytics</label>
+                                <label class="filter-chip"><input type="checkbox" value="SOP" class="me-1"> SOP</label>
+                                <label class="filter-chip"><input type="checkbox" value="QC Tools" class="me-1"> QC Tools</label>
+                                <label class="filter-chip"><input type="checkbox" value="RAG" class="me-1"> RAG</label>
+                                <label class="filter-chip"><input type="checkbox" value="White Label" class="me-1"> White Label</label>
+                                <label class="filter-chip"><input type="checkbox" value="API Access" class="me-1"> API Access</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Pricing -->
+                <div class="wizard-panel" id="wizardStep5">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label">Base Price (₹)</label>
+                                <input type="number" class="ds-input" id="wizBasePrice" min="0" step="0.01" oninput="SubMgr.recalcPricing()">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="ds-field">
+                                <label class="ds-label">Discount (%)</label>
+                                <input type="number" class="ds-input" id="wizDiscount" min="0" max="100" value="0" oninput="SubMgr.recalcPricing()">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="ds-field">
+                                <label class="ds-label">GST (%)</label>
+                                <input type="number" class="ds-input" id="wizGst" min="0" max="100" value="18" oninput="SubMgr.recalcPricing()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="ds-field">
+                                <label class="ds-label">Currency</label>
+                                <select class="ds-input" id="wizCurrency">
+                                    <option value="INR">INR (₹)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="ds-field">
+                                <label class="ds-label">Payment Status</label>
+                                <select class="ds-input" id="wizPayStatus">
+                                    <option value="Paid">Paid</option>
+                                    <option value="Pending">Pending</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Pricing breakdown -->
+                    <div class="ds-card mt-3" style="background:rgba(var(--ds-primary-rgb),.04);">
+                        <div class="ds-card-body py-3">
+                            <div class="d-flex justify-content-between text-sm mb-1">
+                                <span class="text-muted">Base Price</span>
+                                <strong id="calcBase">₹0.00</strong>
+                            </div>
+                            <div class="d-flex justify-content-between text-sm mb-1">
+                                <span class="text-muted">Discount</span>
+                                <strong class="text-danger" id="calcDiscount">- ₹0.00</strong>
+                            </div>
+                            <div class="d-flex justify-content-between text-sm mb-1">
+                                <span class="text-muted">GST (18%)</span>
+                                <strong id="calcGst">+ ₹0.00</strong>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">Total Amount</span>
+                                <strong class="text-primary fs-5" id="calcTotal">₹0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 6: Review & Confirm -->
+                <div class="wizard-panel" id="wizardStep6">
+                    <div class="ds-card" style="background:rgba(var(--ds-primary-rgb),.03);">
+                        <div class="ds-card-body" id="wizReviewContent">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="wizConfirm">
+                        <label class="form-check-label text-sm" for="wizConfirm">
+                            I confirm this subscription and authorize invoice generation.
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 pt-0">
+                <button class="ds-btn ds-btn-secondary" id="wizPrevBtn" onclick="SubMgr.wizardPrev()" disabled>
+                    <i data-lucide="arrow-left" style="width:13px;height:13px;"></i> Previous
+                </button>
+                <button class="ds-btn ds-btn-primary" id="wizNextBtn" onclick="SubMgr.wizardNext()">
+                    Next <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
+                </button>
+                <button class="ds-btn ds-btn-primary d-none" id="wizSubmitBtn" onclick="SubMgr.submitWizard()">
+                    <i data-lucide="check" style="width:13px;height:13px;"></i> Create Subscription
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     INVOICE PREVIEW MODAL
+═══════════════════════════════════════════ -->
+<div class="modal fade" id="invoiceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Invoice Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="invoicePreviewArea"></div>
+            <div class="modal-footer">
+                <button class="ds-btn ds-btn-secondary" onclick="window.printElementContent('invoicePreviewArea', 'Invoice')">
+                    <i data-lucide="printer" style="width:13px;height:13px;"></i> Print / Save PDF
+                </button>
+                <button class="ds-btn ds-btn-primary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PLAN CHANGE MODAL (Upgrade / Downgrade)
+═══════════════════════════════════════════ -->
+<div class="modal fade" id="planChangeModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="planChangeTitle">Upgrade / Downgrade Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-sm text-muted" id="planChangeSubtitle">Select a new plan for this subscription.</p>
+                <div class="plan-compare-grid" id="planChangeGrid"><!-- Injected --></div>
+                <div class="ds-card mt-3 p-3" id="planChangeDiff" style="display:none;background:rgba(var(--ds-primary-rgb),.04);">
+                    <div class="fw-bold text-sm mb-2">Change Summary</div>
+                    <div id="planChangeDiffBody" class="text-sm"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="ds-btn ds-btn-primary" id="planChangeConfirmBtn" onclick="SubMgr.confirmPlanChange()">
+                    Confirm Change
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CONFIRM MODAL (generic)
+═══════════════════════════════════════════ -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="confirmTitle">Confirm Action</h5>
+            </div>
+            <div class="modal-body pt-0">
+                <p class="text-sm" id="confirmBody">Are you sure?</p>
+                <div id="confirmExtraInput"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="ds-btn ds-btn-danger" id="confirmOkBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TOAST
+═══════════════════════════════════════════ -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:99999999;" id="toastContainer"></div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/components.js"></script>
+<script src="/assets/js/api.js"></script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   SubMgr — Enterprise Subscription Management Controller
+   Talks exclusively to /api/subscriptions/*
+═══════════════════════════════════════════════════════════════════════════ */
+const SubMgr = {
+    /* ── State ────────────────────────────────────────────────────────── */
+    currentPage: 1,
+    perPage: 20,
+    totalPages: 1,
+    totalCount: 0,
+    sortBy: 'created_at',
+    sortDir: 'desc',
+    filters: { status:'', plan:'', billing_cycle:'', payment_status:'', renewal_window:'' },
+    searchQuery: '',
+    searchDebounce: null,
+    recentSearches: JSON.parse(localStorage.getItem('sub_recent_searches') || '[]'),
+    selectedIds: new Set(),
+    currentSub: null,           // detail drawer data
+    planChangeMode: null,       // 'upgrade' | 'downgrade'
+    planChangeSub: null,
+    planChangeSelected: null,
+    wizardStep: 1,
+    wizardData: {},
+    planCatalogue: {},
+    charts: {},
+
+    /* ── Bootstrap ─────────────────────────────────────────────────────── */
+    async init() {
+        this.setupSearch();
+        await Promise.all([this.loadDashboard(), this.loadTable()]);
+        lucide.createIcons();
+    },
+
+    /* ── API Helpers ─────────────────────────────────────────────────── */
+    async get(path) {
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const r = await fetch(`/api/subscriptions${path}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
+        return r.json();
+    },
+
+    async post(path, body={}) {
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const r = await fetch(`/api/subscriptions${path}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || `API ${r.status}`);
+        return data;
+    },
+
+    async put(path, body={}) {
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const r = await fetch(`/api/subscriptions${path}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || `API ${r.status}`);
+        return data;
+    },
+
+    /* ── Dashboard KPIs ──────────────────────────────────────────────── */
+    async loadDashboard() {
+        try {
+            const res = await this.get('/dashboard');
+            const d = res.data;
+            this.renderKPIs(d);
+            this.renderCharts(d);
+            document.getElementById('kpiMrr').textContent = this.fmt(d.mrr);
+            document.getElementById('kpiArr').textContent = this.fmt(d.arr);
+            document.getElementById('kpiArpo').textContent = this.fmt(d.arpo);
+        } catch(e) {
+            console.warn('Dashboard load failed:', e.message);
+        }
+    },
+
+    renderKPIs(d) {
+        const grid = document.getElementById('subKpiGrid');
+        const now = new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+
+        const kpis = [
+            {
+                icon: 'activity', bg: 'rgba(16,185,129,.12)', color: '#10b981',
+                label: 'Active Subscriptions',
+                value: d.active_subscriptions,
+                change: null, tooltip: 'Currently active paid subscriptions',
+                accent: '#10b981', filter: 'Active'
+            },
+            {
+                icon: 'flask-conical', bg: 'rgba(245,158,11,.12)', color: '#f59e0b',
+                label: 'Trial Subscriptions',
+                value: d.trial_subscriptions,
+                change: null, tooltip: 'Organizations currently in trial period',
+                accent: '#f59e0b', filter: 'Trial'
+            },
+            {
+                icon: 'alert-circle', bg: 'rgba(239,68,68,.12)', color: '#ef4444',
+                label: 'Expired',
+                value: d.expired_subscriptions,
+                change: null, tooltip: 'Subscriptions past their end date',
+                accent: '#ef4444', filter: 'Expired'
+            },
+            {
+                icon: 'x-circle', bg: 'rgba(107,114,128,.12)', color: '#6b7280',
+                label: 'Cancelled',
+                value: d.cancelled_subscriptions,
+                change: null, tooltip: 'Subscriptions that have been cancelled',
+                accent: '#6b7280', filter: 'Cancelled'
+            },
+            {
+                icon: 'calendar-clock', bg: 'rgba(59,130,246,.12)', color: '#3b82f6',
+                label: 'Renewal Due (Month)',
+                value: d.renewal_due_this_month,
+                change: null, tooltip: 'Subscriptions renewing this calendar month',
+                accent: '#3b82f6', filter: '30d_renewal'
+            },
+            {
+                icon: 'trending-up', bg: 'rgba(16,185,129,.12)', color: '#10b981',
+                label: 'MRR',
+                value: this.fmt(d.mrr),
+                change: { pct: d.revenue_growth_percent, dir: d.revenue_growth_percent >= 0 ? 'up' : 'down' },
+                tooltip: 'Monthly Recurring Revenue (normalized to monthly)',
+                accent: '#10b981'
+            },
+            {
+                icon: 'bar-chart-2', bg: 'rgba(99,102,241,.12)', color: '#6366f1',
+                label: 'ARR',
+                value: this.fmt(d.arr),
+                change: null, tooltip: 'Annual Recurring Revenue (MRR × 12)',
+                accent: '#6366f1'
+            },
+            {
+                icon: 'users', bg: 'rgba(245,158,11,.12)', color: '#f59e0b',
+                label: 'ARPO',
+                value: this.fmt(d.arpo),
+                change: null, tooltip: 'Average Revenue Per Organization',
+                accent: '#f59e0b'
+            },
+            {
+                icon: 'layers', bg: 'rgba(139,92,246,.12)', color: '#8b5cf6',
+                label: 'Active Plans',
+                value: d.active_plans,
+                change: null, tooltip: 'Number of plan tiers with active subscribers',
+                accent: '#8b5cf6'
+            },
+            {
+                icon: 'arrow-up-right', bg: 'rgba(16,185,129,.12)', color: '#10b981',
+                label: 'Conversion Rate',
+                value: d.conversion_rate + '%',
+                change: null, tooltip: 'Trial-to-paid conversion rate this month',
+                accent: '#10b981'
+            },
+            {
+                icon: 'arrow-down-right', bg: 'rgba(239,68,68,.12)', color: '#ef4444',
+                label: 'Churn Rate',
+                value: d.churn_rate + '%',
+                change: null, tooltip: 'Subscription churn rate this month',
+                accent: '#ef4444'
+            },
+            {
+                icon: 'zap', bg: 'rgba(249,115,22,.12)', color: '#f97316',
+                label: 'Revenue Growth',
+                value: (d.revenue_growth_percent >= 0 ? '+' : '') + d.revenue_growth_percent + '%',
+                change: null, tooltip: 'MoM revenue growth vs previous period',
+                accent: '#f97316'
+            },
+        ];
+
+        grid.innerHTML = kpis.map(k => `
+            <div class="sub-kpi-card" data-tooltip="${k.tooltip}" onclick="${k.filter ? `SubMgr.quickFilter('${k.filter}')` : ''}">
+                <div class="kpi-icon" style="background:${k.bg};">
+                    <i data-lucide="${k.icon}" style="width:18px;height:18px;color:${k.color};"></i>
+                </div>
+                <div class="kpi-label">${k.label}</div>
+                <div class="kpi-value">${k.value}</div>
+                ${k.change ? `<div class="kpi-change ${k.change.dir}">
+                    <i data-lucide="${k.change.dir === 'up' ? 'trending-up' : 'trending-down'}" style="width:11px;height:11px;"></i>
+                    ${Math.abs(k.change.pct)}% vs prev month
+                </div>` : ''}
+                <div class="kpi-updated">Updated ${now}</div>
+                <div class="kpi-accent-line" style="background:${k.accent};"></div>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    },
+
+    renderCharts(d) {
+        // Destroy existing charts
+        Object.values(this.charts).forEach(c => c && c.destroy());
+        this.charts = {};
+
+        // Revenue bar chart (placeholder with real MRR/ARR)
+        const rCtx = document.getElementById('revenueChart').getContext('2d');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const now = new Date();
+        const labels = Array.from({length:6}, (_,i) => months[(now.getMonth()-5+i+12)%12]);
+        // Use real data for current month, placeholder for others
+        const mrr = d.mrr || 0;
+        const vals = labels.map((_,i) => i === 5 ? mrr : mrr * (0.7 + Math.random()*0.4));
+
+        this.charts.revenue = new Chart(rCtx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'MRR (₹)',
+                    data: vals,
+                    backgroundColor: 'rgba(var(--ds-primary-rgb, 37,99,235),.7)',
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: v => '₹' + this.compactNum(v) } }
+                }
+            }
+        });
+
+        // Status donut
+        const sCtx = document.getElementById('statusDonut').getContext('2d');
+        const statusData = [
+            { label: 'Active', val: d.active_subscriptions, color: '#10b981' },
+            { label: 'Trial', val: d.trial_subscriptions, color: '#f59e0b' },
+            { label: 'Expired', val: d.expired_subscriptions, color: '#ef4444' },
+            { label: 'Cancelled', val: d.cancelled_subscriptions, color: '#6b7280' },
+        ].filter(s => s.val > 0);
+
+        const total = statusData.reduce((a,b) => a + b.val, 0);
+        document.getElementById('donutTotal').textContent = total;
+
+        this.charts.donut = new Chart(sCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusData.map(s => s.label),
+                datasets: [{ data: statusData.map(s => s.val), backgroundColor: statusData.map(s => s.color), borderWidth: 0, cutout: '70%' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        document.getElementById('statusLegend').innerHTML = statusData.map(s =>
+            `<span style="display:inline-flex;align-items:center;gap:4px;">
+                <span style="width:8px;height:8px;border-radius:50%;background:${s.color};"></span>
+                ${s.label} (${s.val})
+            </span>`
+        ).join('');
+    },
+
+    /* ── Table ─────────────────────────────────────────────────────────── */
+    async loadTable() {
+        const tbody = document.getElementById('subTableBody');
+        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-5 text-muted text-xs"><div class="spinner-border spinner-border-sm me-2"></div>Loading subscriptions…</td></tr>`;
+
+        const params = new URLSearchParams({
+            page: this.currentPage, per_page: this.perPage,
+            sort_by: this.sortBy, sort_dir: this.sortDir,
+            q: this.searchQuery,
+            ...Object.fromEntries(Object.entries(this.filters).filter(([,v]) => v))
+        });
+
+        try {
+            const res = await this.get(`/?${params}`);
+            const { data, pagination } = res;
+            this.totalPages = pagination.pages;
+            this.totalCount = pagination.total;
+            this.renderTable(data);
+            this.renderPagination(pagination);
+            document.getElementById('tableCount').textContent = `${pagination.total.toLocaleString()} subscriptions`;
+        } catch(e) {
+            tbody.innerHTML = `<tr><td colspan="13" class="text-center py-5 text-danger">${e.message}</td></tr>`;
+        }
+    },
+
+    renderTable(subs) {
+        const tbody = document.getElementById('subTableBody');
+        if (!subs.length) {
+            tbody.innerHTML = `<tr><td colspan="13" class="text-center py-5 text-muted">
+                <i data-lucide="inbox" style="width:32px;height:32px;opacity:.3;"></i>
+                <div class="mt-2">No subscriptions found</div>
+            </td></tr>`;
+            lucide.createIcons();
+            return;
+        }
+
+        tbody.innerHTML = subs.map(s => {
+            const userPct = s.max_users > 0 ? Math.round(s.current_users / s.max_users * 100) : 0;
+            const isSelected = this.selectedIds.has(s.id);
+            return `
+            <tr class="${isSelected ? 'row-selected' : ''}" id="row-${s.id}">
+                <td><input type="checkbox" class="row-cb" data-id="${s.id}" ${isSelected ? 'checked' : ''} onchange="SubMgr.toggleRow(${s.id},this)"></td>
+                <td>
+                    <span class="text-xs fw-bold text-primary cursor-pointer" onclick="SubMgr.openDrawer(${s.id})">${s.subscription_uid}</span>
+                </td>
+                <td>
+                    <div class="fw-bold text-sm">${this.esc(s.organization_name)}</div>
+                    <div class="text-xs text-muted">${this.esc(s.admin_email)}</div>
+                </td>
+                <td><span class="plan-chip ${(s.plan_name||'').toLowerCase()}">${s.plan_name}</span></td>
+                <td><span class="text-xs">${s.billing_cycle}</span></td>
+                <td class="text-xs">${this.fmtDate(s.start_date)}</td>
+                <td class="text-xs ${this.isExpiringSoon(s.end_date) ? 'text-warning fw-bold' : ''}">${this.fmtDate(s.end_date)}</td>
+                <td class="text-xs">${this.fmtDate(s.renewal_date)}</td>
+                <td><span class="sub-badge ${(s.subscription_status||'').toLowerCase()}">${s.subscription_status}</span></td>
+                <td><span class="pay-badge ${(s.payment_status||'').toLowerCase()}">${s.payment_status}</span></td>
+                <td>
+                    <div class="text-xs mb-1">${s.current_users} / ${s.max_users}</div>
+                    <div class="usage-bar" style="width:60px;"><div class="usage-bar-fill" style="width:${userPct}%;background:${userPct>90?'#ef4444':userPct>70?'#f59e0b':'#10b981'};"></div></div>
+                </td>
+                <td>
+                    <div class="fw-bold text-sm">${this.fmt(s.final_amount)}</div>
+                    <div class="text-xs text-muted">${s.currency}</div>
+                </td>
+                <td class="text-end">
+                    <div class="dropdown">
+                        <button class="btn btn-link text-muted p-1" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' style="border:none;background:transparent;box-shadow:none;">
+                            <i data-lucide="more-horizontal" style="width:16px;height:16px;"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="min-width:200px;">
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.openDrawer(${s.id});return false;">
+                                <i data-lucide="eye" style="width:13px;height:13px;" class="me-2"></i>View Details</a></li>
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.openUpgradeModal(${s.id});return false;">
+                                <i data-lucide="trending-up" style="width:13px;height:13px;" class="me-2"></i>Upgrade Plan</a></li>
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.openDowngradeModal(${s.id});return false;">
+                                <i data-lucide="trending-down" style="width:13px;height:13px;" class="me-2"></i>Downgrade Plan</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.actionRenew(${s.id});return false;">
+                                <i data-lucide="refresh-cw" style="width:13px;height:13px;" class="me-2"></i>Renew</a></li>
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.actionExtend(${s.id});return false;">
+                                <i data-lucide="calendar-plus" style="width:13px;height:13px;" class="me-2"></i>Extend</a></li>
+                            ${s.subscription_status === 'Active' ? `
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.actionPause(${s.id});return false;">
+                                <i data-lucide="pause-circle" style="width:13px;height:13px;" class="me-2"></i>Pause</a></li>
+                            ` : ''}
+                            ${s.subscription_status === 'Suspended' ? `
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.actionResume(${s.id});return false;">
+                                <i data-lucide="play-circle" style="width:13px;height:13px;" class="me-2"></i>Resume</a></li>
+                            ` : ''}
+                            ${s.subscription_status === 'Trial' ? `
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.actionConvertTrial(${s.id});return false;">
+                                <i data-lucide="arrow-up-circle" style="width:13px;height:13px;" class="me-2"></i>Convert Trial → Paid</a></li>
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.actionExtendTrial(${s.id});return false;">
+                                <i data-lucide="calendar-plus" style="width:13px;height:13px;" class="me-2"></i>Extend Trial</a></li>
+                            ` : ''}
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.generateInvoice(${s.id});return false;">
+                                <i data-lucide="file-text" style="width:13px;height:13px;" class="me-2"></i>Generate Invoice</a></li>
+                            <li><a class="dropdown-item text-sm" href="#" onclick="SubMgr.viewInvoices(${s.id});return false;">
+                                <i data-lucide="receipt" style="width:13px;height:13px;" class="me-2"></i>View Invoices</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-sm text-danger" href="#" onclick="SubMgr.actionCancel(${s.id});return false;">
+                                <i data-lucide="x-circle" style="width:13px;height:13px;" class="me-2"></i>Cancel Subscription</a></li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+        lucide.createIcons();
+    },
+
+    renderPagination(pg) {
+        document.getElementById('paginationInfo').textContent =
+            `Showing ${Math.min((pg.page-1)*pg.per_page+1, pg.total)}–${Math.min(pg.page*pg.per_page, pg.total)} of ${pg.total.toLocaleString()} records`;
+
+        const container = document.getElementById('paginationBtns');
+        const btns = [];
+        btns.push(`<button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.goPage(${pg.page-1})" ${pg.page<=1?'disabled':''}>‹</button>`);
+
+        const start = Math.max(1, pg.page-2), end = Math.min(pg.pages, pg.page+2);
+        if (start > 1) btns.push(`<button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.goPage(1)">1</button><span class="text-muted px-1">…</span>`);
+        for (let i=start; i<=end; i++) {
+            btns.push(`<button class="ds-btn ${i===pg.page?'ds-btn-primary':'ds-btn-secondary'} btn-sm" onclick="SubMgr.goPage(${i})">${i}</button>`);
+        }
+        if (end < pg.pages) btns.push(`<span class="text-muted px-1">…</span><button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.goPage(${pg.pages})">${pg.pages}</button>`);
+        btns.push(`<button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.goPage(${pg.page+1})" ${pg.page>=pg.pages?'disabled':''}>›</button>`);
+        container.innerHTML = btns.join('');
+    },
+
+    /* ── Navigation ─────────────────────────────────────────────────── */
+    async refresh() {
+        const icon = document.getElementById('refreshIcon');
+        icon.style.animation = 'spin 1s linear infinite';
+        await Promise.all([this.loadDashboard(), this.loadTable()]);
+        icon.style.animation = '';
+        lucide.createIcons();
+    },
+
+    goPage(p) { if (p<1 || p>this.totalPages) return; this.currentPage=p; this.loadTable(); },
+    setPerPage(v) { this.perPage=parseInt(v); this.currentPage=1; this.loadTable(); },
+
+    sort(col) {
+        if (this.sortBy === col) { this.sortDir = this.sortDir==='asc'?'desc':'asc'; }
+        else { this.sortBy=col; this.sortDir='desc'; }
+        this.loadTable();
+    },
+
+    /* ── Search ──────────────────────────────────────────────────────── */
+    setupSearch() {
+        const input = document.getElementById('subSearch');
+        input.addEventListener('input', () => {
+            clearTimeout(this.searchDebounce);
+            this.searchDebounce = setTimeout(() => {
+                this.searchQuery = input.value.trim();
+                if (this.searchQuery) this.addRecentSearch(this.searchQuery);
+                this.currentPage = 1;
+                this.loadTable();
+            }, 350);
+            this.showRecentSearches();
+        });
+        input.addEventListener('focus', () => this.showRecentSearches());
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#searchWrapper')) this.hideRecentSearches();
+        });
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { this.clearSearch(); this.hideRecentSearches(); }
+        });
+    },
+
+    showRecentSearches() {
+        const box = document.getElementById('recentSearches');
+        if (!this.recentSearches.length) return;
+        box.innerHTML = `
+            <div class="recent-item" style="font-size:10px;color:var(--ds-text-secondary);cursor:default;">
+                <i data-lucide="clock" style="width:11px;height:11px;"></i> Recent
+            </div>
+            ${this.recentSearches.slice(0,5).map(s => `
+                <div class="recent-item" onclick="SubMgr.useRecentSearch('${this.esc(s)}')">
+                    <i data-lucide="search" style="width:11px;height:11px;opacity:.5;"></i>
+                    ${this.esc(s)}
+                </div>
+            `).join('')}`;
+        box.classList.add('show');
+        lucide.createIcons();
+    },
+
+    hideRecentSearches() { document.getElementById('recentSearches').classList.remove('show'); },
+
+    useRecentSearch(q) {
+        document.getElementById('subSearch').value = q;
+        this.searchQuery = q; this.currentPage = 1;
+        this.loadTable(); this.hideRecentSearches();
+    },
+
+    addRecentSearch(q) {
+        this.recentSearches = [q, ...this.recentSearches.filter(s => s!==q)].slice(0,10);
+        localStorage.setItem('sub_recent_searches', JSON.stringify(this.recentSearches));
+    },
+
+    clearSearch() {
+        document.getElementById('subSearch').value = '';
+        this.searchQuery = ''; this.currentPage = 1; this.loadTable();
+    },
+
+    /* ── Filters ─────────────────────────────────────────────────────── */
+    setFilter(key, val, btn) {
+        if (key === 'status') {
+            document.querySelectorAll('[data-filter="status"]').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const statusSel = document.getElementById('subStatusFilter');
+            if (statusSel) statusSel.value = val;
+        }
+        if (key === '30d_renewal') { this.filters.renewal_window = '30d'; }
+        else { this.filters[key] = val; }
+        this.currentPage = 1; this.loadTable();
+    },
+
+    quickFilter(val) {
+        if (val === '30d_renewal') {
+            this.filters.renewal_window = '30d';
+            document.getElementById('filterRenewal').value = '30d';
+        } else {
+            this.filters.status = val;
+            document.querySelectorAll('[data-filter="status"]').forEach(b => b.classList.remove('active'));
+            const chip = document.querySelector(`[data-filter="status"][data-val="${val}"]`);
+            if (chip) chip.classList.add('active');
+            const statusSel = document.getElementById('subStatusFilter');
+            if (statusSel) statusSel.value = val;
+        }
+        this.currentPage = 1; this.loadTable();
+    },
+
+    resetFilters() {
+        this.filters = { status:'', plan:'', billing_cycle:'', payment_status:'', renewal_window:'' };
+        this.searchQuery = '';
+        document.getElementById('subSearch').value = '';
+        const statusSel = document.getElementById('subStatusFilter');
+        if (statusSel) statusSel.value = '';
+        document.getElementById('filterPlan').value = '';
+        document.getElementById('filterCycle').value = '';
+        document.getElementById('filterPayStatus').value = '';
+        document.getElementById('filterRenewal').value = '';
+        document.querySelectorAll('[data-filter="status"]').forEach(b => b.classList.remove('active'));
+        const allChip = document.querySelector('[data-filter="status"][data-val=""]');
+        if (allChip) allChip.classList.add('active');
+        this.currentPage = 1; this.loadTable();
+    },
+
+    /* ── Selection & Bulk ─────────────────────────────────────────────── */
+    toggleSelectAll(cb) {
+        document.querySelectorAll('.row-cb').forEach(c => {
+            c.checked = cb.checked;
+            const id = parseInt(c.dataset.id);
+            cb.checked ? this.selectedIds.add(id) : this.selectedIds.delete(id);
+            document.getElementById(`row-${id}`)?.classList.toggle('row-selected', cb.checked);
+        });
+        this.updateBulkToolbar();
+    },
+
+    toggleRow(id, cb) {
+        cb.checked ? this.selectedIds.add(id) : this.selectedIds.delete(id);
+        document.getElementById(`row-${id}`)?.classList.toggle('row-selected', cb.checked);
+        this.updateBulkToolbar();
+    },
+
+    updateBulkToolbar() {
+        const toolbar = document.getElementById('bulkToolbar');
+        const count = this.selectedIds.size;
+        document.getElementById('bulkCount').textContent = count;
+        toolbar.classList.toggle('visible', count > 0);
+    },
+
+    clearSelection() {
+        this.selectedIds.clear();
+        document.querySelectorAll('.row-cb').forEach(c => c.checked = false);
+        document.getElementById('selectAll').checked = false;
+        document.querySelectorAll('.row-selected').forEach(r => r.classList.remove('row-selected'));
+        this.updateBulkToolbar();
+    },
+
+    async bulkAction(action) {
+        const ids = Array.from(this.selectedIds);
+        if (!ids.length) return;
+
+        if (action === 'cancel') {
+            const ok = await this.confirm('Cancel Subscriptions', `Cancel ${ids.length} subscriptions?`, 'Cancel All', true);
+            if (!ok) return;
+            await this.post('/bulk/cancel', { subscription_ids: ids });
+        } else if (action === 'renew') {
+            await this.post('/bulk/renew', { subscription_ids: ids });
+        } else if (action === 'reminder') {
+            await this.post('/bulk/send-reminders', { subscription_ids: ids });
+        } else if (action === 'assign-plan') {
+            const plan = prompt('Enter plan name (Starter / Professional / Enterprise):');
+            if (!plan) return;
+            await this.post('/bulk/assign-plan', { subscription_ids: ids, plan_name: plan });
+        }
+
+        this.toast(`Bulk ${action} complete for ${ids.length} subscriptions`, 'success');
+        this.clearSelection();
+        this.refresh();
+    },
+
+    /* ── Detail Drawer ───────────────────────────────────────────────── */
+    async openDrawer(subId) {
+        document.getElementById('drawerOverlay').classList.add('open');
+        document.getElementById('subDrawer').classList.add('open');
+        document.getElementById('drawerBody').innerHTML = `<div class="text-center py-5"><div class="spinner-border"></div></div>`;
+
+        try {
+            const res = await this.get(`/${subId}`);
+            const s = res.data;
+            this.currentSub = s;
+            document.getElementById('drawerTitle').textContent = s.subscription_uid;
+            document.getElementById('drawerSubtitle').textContent = `${s.organization_name} · ${s.plan_name} · ${s.billing_cycle}`;
+            document.getElementById('drawerStatusBadge').innerHTML = `<span class="sub-badge ${(s.subscription_status||'').toLowerCase()}">${s.subscription_status}</span>`;
+            document.getElementById('drawerBody').innerHTML = this.renderDrawerBody(s);
+            lucide.createIcons();
+        } catch(e) {
+            document.getElementById('drawerBody').innerHTML = `<div class="text-danger p-3">${e.message}</div>`;
+        }
+    },
+
+    renderDrawerBody(s) {
+        const fmt = v => v ? new Date(v).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+        const trialDays = s.trial_days_remaining !== null ? `${s.trial_days_remaining} days remaining` : '—';
+        const userPct = s.max_users > 0 ? Math.round(s.current_users/s.max_users*100) : 0;
+        const storagePct = s.storage_limit_gb > 0 ? Math.round(s.storage_used_mb/1024/s.storage_limit_gb*100) : 0;
+
+        return `
+        <!-- Action bar -->
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.actionRenew(${s.id})"><i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Renew</button>
+            <button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.openUpgradeModal(${s.id})"><i data-lucide="trending-up" style="width:12px;height:12px;"></i> Upgrade</button>
+            <button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.generateInvoice(${s.id})"><i data-lucide="file-text" style="width:12px;height:12px;"></i> Invoice</button>
+            <button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.sendReminder(${s.id})"><i data-lucide="bell" style="width:12px;height:12px;"></i> Reminder</button>
+            ${s.subscription_status==='Active'?`<button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.actionPause(${s.id})"><i data-lucide="pause-circle" style="width:12px;height:12px;"></i> Pause</button>`:''}
+            ${s.subscription_status==='Suspended'?`<button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.actionResume(${s.id})"><i data-lucide="play-circle" style="width:12px;height:12px;"></i> Resume</button>`:''}
+            ${s.subscription_status==='Trial'?`<button class="ds-btn ds-btn-primary btn-sm" onclick="SubMgr.actionConvertTrial(${s.id})"><i data-lucide="arrow-up-circle" style="width:12px;height:12px;"></i> Convert → Paid</button>`:''}
+            <button class="ds-btn btn-sm" style="background:rgba(239,68,68,.1);color:#ef4444;" onclick="SubMgr.actionCancel(${s.id})"><i data-lucide="x-circle" style="width:12px;height:12px;"></i> Cancel</button>
+        </div>
+
+        <!-- Org Info -->
+        <div class="drawer-section">
+            <div class="drawer-section-title">Organization</div>
+            <div class="detail-grid">
+                <div class="detail-item"><div class="di-label">Name</div><div class="di-val">${s.organization_name}</div></div>
+                <div class="detail-item"><div class="di-label">Admin Email</div><div class="di-val">${s.admin_email}</div></div>
+                <div class="detail-item"><div class="di-label">Admin Name</div><div class="di-val">${s.admin_name||'—'}</div></div>
+                <div class="detail-item"><div class="di-label">GST Number</div><div class="di-val">${s.gst_number||'—'}</div></div>
+            </div>
+        </div>
+
+        <!-- Subscription Info -->
+        <div class="drawer-section">
+            <div class="drawer-section-title">Subscription</div>
+            <div class="detail-grid">
+                <div class="detail-item"><div class="di-label">Subscription ID</div><div class="di-val fw-bold text-primary">${s.subscription_uid}</div></div>
+                <div class="detail-item"><div class="di-label">Plan</div><div class="di-val"><span class="plan-chip ${(s.plan_name||'').toLowerCase()}">${s.plan_name}</span></div></div>
+                <div class="detail-item"><div class="di-label">Billing Cycle</div><div class="di-val">${s.billing_cycle}</div></div>
+                <div class="detail-item"><div class="di-label">Support Level</div><div class="di-val">${s.support_level}</div></div>
+                <div class="detail-item"><div class="di-label">Start Date</div><div class="di-val">${fmt(s.start_date)}</div></div>
+                <div class="detail-item"><div class="di-label">End Date</div><div class="di-val">${fmt(s.end_date)}</div></div>
+                <div class="detail-item"><div class="di-label">Renewal Date</div><div class="di-val">${fmt(s.renewal_date)}</div></div>
+                <div class="detail-item"><div class="di-label">Auto Renewal</div><div class="di-val">${s.auto_renewal ? '✓ Enabled' : '✗ Disabled'}</div></div>
+                ${s.subscription_status==='Trial'?`
+                <div class="detail-item"><div class="di-label">Trial Start</div><div class="di-val">${fmt(s.trial_start_date)}</div></div>
+                <div class="detail-item"><div class="di-label">Trial End</div><div class="di-val">${fmt(s.trial_end_date)}</div></div>
+                <div class="detail-item"><div class="di-label">Trial Remaining</div><div class="di-val text-warning fw-bold">${trialDays}</div></div>
+                `:''}
+            </div>
+        </div>
+
+        <!-- Pricing -->
+        <div class="drawer-section">
+            <div class="drawer-section-title">Pricing</div>
+            <div class="detail-grid">
+                <div class="detail-item"><div class="di-label">Base Price</div><div class="di-val">${this.fmt(s.base_price)}</div></div>
+                <div class="detail-item"><div class="di-label">Discount (${s.discount_percent}%)</div><div class="di-val text-danger">- ${this.fmt(s.discount_amount)}</div></div>
+                <div class="detail-item"><div class="di-label">GST (${s.gst_percent}%)</div><div class="di-val">+ ${this.fmt(s.gst_amount)}</div></div>
+                <div class="detail-item"><div class="di-label">Final Amount</div><div class="di-val fw-bold text-primary">${this.fmt(s.final_amount)} ${s.currency}</div></div>
+            </div>
+        </div>
+
+        <!-- Usage -->
+        <div class="drawer-section">
+            <div class="drawer-section-title">Usage</div>
+            <div class="mb-3">
+                <div class="d-flex justify-content-between text-xs mb-1">
+                    <span>Users</span><span>${s.current_users} / ${s.max_users} (${userPct}%)</span>
+                </div>
+                <div class="usage-bar"><div class="usage-bar-fill" style="width:${userPct}%;background:${userPct>90?'#ef4444':userPct>70?'#f59e0b':'#10b981'};"></div></div>
+            </div>
+            <div class="mb-3">
+                <div class="d-flex justify-content-between text-xs mb-1">
+                    <span>Storage</span><span>${(s.storage_used_mb/1024).toFixed(1)} GB / ${s.storage_limit_gb} GB (${storagePct}%)</span>
+                </div>
+                <div class="usage-bar"><div class="usage-bar-fill" style="width:${storagePct}%;background:${storagePct>90?'#ef4444':storagePct>70?'#f59e0b':'#10b981'};"></div></div>
+            </div>
+            <div class="detail-grid">
+                <div class="detail-item"><div class="di-label">API Limit/Month</div><div class="di-val">${(s.api_limit||0).toLocaleString()}</div></div>
+                <div class="detail-item"><div class="di-label">Enabled Modules</div><div class="di-val">${(s.enabled_modules||[]).join(', ') || '—'}</div></div>
+            </div>
+        </div>
+
+        <!-- Recent Invoices -->
+        <div class="drawer-section">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="drawer-section-title mb-0">Recent Invoices</div>
+                <button class="ds-btn ds-btn-secondary btn-sm" onclick="SubMgr.viewInvoices(${s.id})">View All</button>
+            </div>
+            ${s.recent_invoices && s.recent_invoices.length ? `
+            <div class="table-responsive"><table class="ds-table" style="font-size:12px;">
+                <thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                ${s.recent_invoices.map(i => `
+                <tr>
+                    <td class="fw-bold">${i.invoice_uid}</td>
+                    <td>${this.fmtDate(i.invoice_date)}</td>
+                    <td>${this.fmt(i.total_amount)}</td>
+                    <td><span class="pay-badge ${i.invoice_status.toLowerCase()}">${i.invoice_status}</span></td>
+                    <td><button class="ds-btn ds-btn-secondary" style="padding:2px 8px;font-size:11px;" onclick="SubMgr.previewInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')})">Preview</button></td>
+                </tr>`).join('')}
+                </tbody>
+            </table></div>` : '<div class="text-xs text-muted">No invoices yet</div>'}
+        </div>
+
+        <!-- Activity Timeline -->
+        <div class="drawer-section">
+            <div class="drawer-section-title">Audit Log</div>
+            ${s.audit_logs && s.audit_logs.length ? `
+            <ul class="activity-timeline">
+                ${s.audit_logs.map(l => `
+                <li>
+                    <span class="timeline-dot ${this.actionColor(l.action)}"></span>
+                    <div>
+                        <div>${l.action.replace(/_/g,' ')}</div>
+                        <div class="text-muted" style="font-size:10px;">${l.admin} · ${l.timestamp ? new Date(l.timestamp).toLocaleString('en-IN') : '—'}</div>
+                    </div>
+                </li>`).join('')}
+            </ul>` : '<div class="text-xs text-muted">No activity logged yet</div>'}
+        </div>`;
+    },
+
+    closeDrawer() {
+        document.getElementById('drawerOverlay').classList.remove('open');
+        document.getElementById('subDrawer').classList.remove('open');
+    },
+
+    /* ── Row Actions ─────────────────────────────────────────────────── */
+    async actionRenew(id) {
+        const ok = await this.confirm('Renew Subscription', 'Renew this subscription for one full billing cycle?', 'Renew Now');
+        if (!ok) return;
+        try {
+            const r = await this.post(`/${id}/renew`);
+            this.toast(r.message, 'success');
+            this.refresh();
+            if (this.currentSub?.id === id) this.openDrawer(id);
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async actionExtend(id) {
+        const days = prompt('Extend by how many days?', '30');
+        if (!days || isNaN(days)) return;
+        try {
+            const r = await this.post(`/${id}/extend`, { days: parseInt(days) });
+            this.toast(r.message, 'success'); this.refresh();
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async actionPause(id) {
+        const ok = await this.confirm('Pause Subscription', 'This will suspend access for the organization.', 'Pause', true);
+        if (!ok) return;
+        try { await this.post(`/${id}/pause`); this.toast('Subscription paused', 'success'); this.refresh(); }
+        catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async actionResume(id) {
+        try { await this.post(`/${id}/resume`); this.toast('Subscription resumed', 'success'); this.refresh(); }
+        catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async actionCancel(id) {
+        const reason = prompt('Cancellation reason (optional):') || '';
+        const ok = await this.confirm('Cancel Subscription', 'This action cannot be undone. The organization will lose access.', 'Cancel Subscription', true);
+        if (!ok) return;
+        try {
+            await this.post(`/${id}/cancel`, { reason });
+            this.toast('Subscription cancelled', 'success');
+            this.refresh(); this.closeDrawer();
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async actionConvertTrial(id) {
+        const cycle = prompt('Billing cycle for paid plan (Monthly / Quarterly / Yearly / Lifetime):', 'Yearly') || 'Yearly';
+        const ok = await this.confirm('Convert Trial', `Convert to paid ${cycle} subscription?`, 'Convert');
+        if (!ok) return;
+        try {
+            const r = await this.post(`/trial/${id}/convert`, { billing_cycle: cycle });
+            this.toast(r.message, 'success'); this.refresh();
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async actionExtendTrial(id) {
+        const days = prompt('Extend trial by how many days?', '14');
+        if (!days || isNaN(days)) return;
+        try {
+            const r = await this.post(`/trial/${id}/extend`, { days: parseInt(days) });
+            this.toast(r.message, 'success'); this.refresh();
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async sendReminder(id) {
+        try {
+            const r = await this.post(`/${id}/send-reminder`);
+            this.toast(r.message, 'success');
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async generateInvoice(id) {
+        try {
+            const r = await this.post(`/${id}/invoices`);
+            this.toast(`Invoice ${r.data.invoice_uid} generated`, 'success');
+            this.previewInvoice(r.data);
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    async viewInvoices(id) {
+        try {
+            const res = await this.get(`/${id}/invoices`);
+            const invs = res.data;
+            if (!invs.length) { this.toast('No invoices yet', 'info'); return; }
+            this.previewInvoice(invs[0]);
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    /* ── Invoice Preview ─────────────────────────────────────────────── */
+    /* ── Invoice Preview ─────────────────────────────────────────────── */
+    async previewInvoice(inv) {
+        if (typeof inv === 'string') inv = JSON.parse(inv.replace(/&quot;/g, '"'));
+        let ctx = {}, tmpl = {};
+        try {
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+            const res = await fetch('/api/document-identity/all', { headers: { 'Authorization': `Bearer ${token}` } });
+            const result = await res.json();
+            if (result.status === 'success') {
+                ctx = result.branding_context || {};
+                tmpl = (result.templates && result.templates.invoice) || {};
+            }
+        } catch (e) { console.warn('Could not fetch dynamic branding for invoice preview', e); }
+
+        const titleHeader = tmpl.header_title || 'TAX INVOICE';
+        const softwareName = ctx.software_display_name || ctx.software_name || 'QCMS Enterprise OS';
+        const supportEmail = ctx.support_email || 'support@qcms.com';
+        const footerTerms = tmpl.footer_text || tmpl.terms_and_conditions || `Thank you for your business. For queries contact ${supportEmail}`;
+
+        const html = `
+        <div class="invoice-preview">
+            <div class="inv-header">
+                <div>
+                    <div class="inv-title">${titleHeader}</div>
+                    <div style="font-size:12px;color:#666;">${inv.invoice_uid || inv.invoice_number || '—'}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:18px;font-weight:700;color:#2563eb;">${softwareName}</div>
+                    <div style="font-size:11px;color:#666;">${supportEmail}</div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+                <div>
+                    <div style="font-size:11px;color:#666;margin-bottom:4px;">BILL TO</div>
+                    <div style="font-weight:600;">${inv.organization_name || '—'}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:11px;color:#666;">Invoice Date: <strong>${inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('en-IN') : '—'}</strong></div>
+                    <div style="font-size:11px;color:#666;">Due Date: <strong>${inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-IN') : '—'}</strong></div>
+                    <div style="margin-top:6px;padding:4px 10px;border-radius:4px;display:inline-block;background:${inv.invoice_status==='Paid'?'#d1fae5':'#fee2e2'};color:${inv.invoice_status==='Paid'?'#065f46':'#991b1b'};font-weight:700;font-size:12px;">${inv.invoice_status || 'Draft'}</div>
+                </div>
+            </div>
+
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th style="text-align:right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>${inv.plan_name || '—'} Plan · ${inv.billing_cycle || '—'}<br>
+                            <span style="font-size:11px;color:#666;">
+                                ${inv.billing_period_start ? new Date(inv.billing_period_start).toLocaleDateString('en-IN') : ''} –
+                                ${inv.billing_period_end ? new Date(inv.billing_period_end).toLocaleDateString('en-IN') : ''}
+                            </span>
+                        </td>
+                        <td style="text-align:right;">${this.fmt(inv.base_amount||0)}</td>
+                    </tr>
+                    ${(inv.discount_amount||0)>0?`
+                    <tr>
+                        <td>Discount (${inv.discount_percent}%)</td>
+                        <td style="text-align:right;color:#ef4444;">- ${this.fmt(inv.discount_amount)}</td>
+                    </tr>`:''}
+                    <tr>
+                        <td>GST (${inv.gst_percent || 18}%)</td>
+                        <td style="text-align:right;">+ ${this.fmt(inv.gst_amount||0)}</td>
+                    </tr>
+                    <tr class="inv-total-row">
+                        <td>Total Amount</td>
+                        <td style="text-align:right;font-size:1.1rem;color:#2563eb;">${this.fmt(inv.total_amount||0)} ${inv.currency||'INR'}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top:2rem;font-size:11px;color:#666;border-top:1px solid #e5e7eb;padding-top:1rem;">
+                ${footerTerms}
+            </div>
+        </div>`;
+
+        document.getElementById('invoicePreviewArea').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('invoiceModal')).show();
+    },
+
+    /* ── Plan Change Modal ────────────────────────────────────────────── */
+    async openUpgradeModal(id) {
+        this.planChangeMode = 'upgrade';
+        await this._openPlanChangeModal(id, 'Upgrade Plan');
+    },
+
+    async openDowngradeModal(id) {
+        this.planChangeMode = 'downgrade';
+        await this._openPlanChangeModal(id, 'Downgrade Plan');
+    },
+
+    async _openPlanChangeModal(id, title) {
+        try {
+            const [subRes, plansRes] = await Promise.all([this.get(`/${id}`), this.get('/plans')]);
+            this.planChangeSub = subRes.data;
+            this.planChangeSelected = null;
+            document.getElementById('planChangeTitle').textContent = title;
+            document.getElementById('planChangeSubtitle').textContent = `Current plan: ${this.planChangeSub.plan_name} · ${this.planChangeSub.billing_cycle}`;
+            document.getElementById('planChangeDiff').style.display = 'none';
+
+            const grid = document.getElementById('planChangeGrid');
+            grid.innerHTML = plansRes.data.map(p => `
+                <div class="plan-card-compare ${p.plan_name===this.planChangeSub.plan_name?'selected':''}"
+                     id="pcc-${p.plan_name}" onclick="SubMgr.selectNewPlan('${p.plan_name}')">
+                    <div class="pc-name">${p.plan_name}</div>
+                    <div class="pc-price">${this.fmt(p.base_price)}</div>
+                    <div class="pc-feature">
+                        ${p.max_users >= 99999 ? 'Unlimited' : p.max_users} users<br>
+                        ${p.storage_limit_gb} GB storage<br>
+                        ${p.support_level} support
+                    </div>
+                </div>
+            `).join('');
+            this.planCatalogue = Object.fromEntries(plansRes.data.map(p => [p.plan_name, p]));
+            new bootstrap.Modal(document.getElementById('planChangeModal')).show();
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    selectNewPlan(name) {
+        this.planChangeSelected = name;
+        document.querySelectorAll('.plan-card-compare').forEach(c => c.classList.remove('selected'));
+        document.getElementById(`pcc-${name}`)?.classList.add('selected');
+
+        const cur = this.planChangeSub;
+        const newPlan = this.planCatalogue[name];
+        const diff = document.getElementById('planChangeDiff');
+        const body = document.getElementById('planChangeDiffBody');
+        if (newPlan) {
+            const priceDiff = newPlan.base_price - (cur.final_amount || 0);
+            const userDiff = (newPlan.max_users >= 99999 ? '∞' : newPlan.max_users) + ' vs ' + cur.max_users;
+            const storageDiff = newPlan.storage_limit_gb + ' GB vs ' + cur.storage_limit_gb + ' GB';
+            body.innerHTML = `
+                <div class="row g-2 text-xs">
+                    <div class="col-4"><strong>Price Change:</strong><br><span class="${priceDiff>0?'text-danger':'text-success'}">${priceDiff>=0?'+':''}${this.fmt(priceDiff)}</span></div>
+                    <div class="col-4"><strong>Users:</strong><br>${userDiff}</div>
+                    <div class="col-4"><strong>Storage:</strong><br>${storageDiff}</div>
+                </div>`;
+            diff.style.display = 'block';
+        }
+    },
+
+    async confirmPlanChange() {
+        if (!this.planChangeSelected) { this.toast('Please select a plan', 'error'); return; }
+        const endpoint = this.planChangeMode === 'upgrade' ? 'upgrade' : 'downgrade';
+        try {
+            const r = await this.post(`/${this.planChangeSub.id}/${endpoint}`, { plan_name: this.planChangeSelected });
+            this.toast(r.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('planChangeModal'))?.hide();
+            this.refresh();
+        } catch(e) { this.toast(e.message, 'error'); }
+    },
+
+    /* ── Create Wizard ───────────────────────────────────────────────── */
+    async openCreateWizard() {
+        this.wizardStep = 1;
+        this.wizardData = {};
+        this.goToStep(1);
+
+        // Load plans for step 2
+        try {
+            const res = await this.get('/plans?billing_cycle=Yearly');
+            this.planCatalogue = Object.fromEntries(res.data.map(p => [p.plan_name, p]));
+            this.renderWizardPlans(res.data);
+        } catch(e) {}
+
+        new bootstrap.Modal(document.getElementById('createWizardModal')).show();
+    },
+
+    renderWizardPlans(plans) {
+        document.getElementById('wizPlanGrid').innerHTML = plans.map(p => `
+            <div class="plan-card-compare ${p.plan_name==='Professional'?'selected':''}"
+                 id="wpc-${p.plan_name}" onclick="SubMgr.selectWizardPlan('${p.plan_name}')">
+                <div class="pc-name">${p.plan_name}</div>
+                <div class="pc-price">${this.fmt(p.base_price)}/yr</div>
+                <div class="pc-feature">${p.max_users>=99999?'Unlimited':p.max_users} users · ${p.storage_limit_gb} GB</div>
+            </div>`).join('');
+    },
+
+    selectWizardPlan(name) {
+        document.getElementById('wizPlan').value = name;
+        document.querySelectorAll('#wizPlanGrid .plan-card-compare').forEach(c => c.classList.remove('selected'));
+        document.getElementById(`wpc-${name}`)?.classList.add('selected');
+        // Update limits and pricing from catalogue
+        const plan = this.planCatalogue[name];
+        if (plan) {
+            document.getElementById('wizMaxUsers').value = plan.max_users >= 99999 ? 99999 : plan.max_users;
+            document.getElementById('wizStorage').value = plan.storage_limit_gb;
+            document.getElementById('wizApiLimit').value = plan.api_limit;
+            document.getElementById('wizSupportLevel').value = plan.support_level;
+            // Check all modules for this plan
+            document.querySelectorAll('#wizModules input[type=checkbox]').forEach(cb => {
+                cb.checked = plan.enabled_modules.includes(cb.value);
+            });
+            document.getElementById('wizBasePrice').value = plan.base_price;
+            this.recalcPricing();
+        }
+    },
+
+    selectCycle(cycle, el) {
+        document.getElementById('wizCycle').value = cycle;
+        document.querySelectorAll('#wizardStep3 .plan-card-compare').forEach(c => c.classList.remove('selected'));
+        el.querySelector('.plan-card-compare').classList.add('selected');
+        // Recalc price based on cycle
+        const plan = document.getElementById('wizPlan').value;
+        const info = this.planCatalogue[plan];
+        if (info) {
+            const multipliers = {Monthly:1, Quarterly:3, Yearly:12, Lifetime:60};
+            document.getElementById('wizBasePrice').value = info.base_price * (multipliers[cycle]||12);
+            this.recalcPricing();
+        }
+    },
+
+    async searchOrgs(q) {
+        if (!q || q.length < 2) { document.getElementById('wizOrgResults').innerHTML=''; return; }
+        try {
+            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const r = await fetch(`/api/super-admin/companies?search=${encodeURIComponent(q)}&per_page=8`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const res = await r.json();
+            document.getElementById('wizOrgResults').innerHTML = (res.data||[]).map(o => `
+                <div class="recent-item d-flex justify-content-between" onclick="SubMgr.selectOrg(${o.id},'${this.esc(o.name)}','${this.esc(o.email)}')">
+                    <span><strong>${o.name}</strong> <span class="text-muted text-xs">${o.email}</span></span>
+                    <span class="plan-chip ${(o.plan||'').toLowerCase()}">${o.plan}</span>
+                </div>`).join('') || '<div class="text-xs text-muted p-2">No organizations found</div>';
+        } catch(e) {}
+    },
+
+    selectOrg(id, name, email) {
+        document.getElementById('wizOrgId').value = id;
+        document.getElementById('wizOrgSelected').textContent = `✓ Selected: ${name} (${email})`;
+        document.getElementById('wizOrgSearch').value = name;
+        document.getElementById('wizOrgResults').innerHTML = '';
+    },
+
+    recalcPricing() {
+        const base = parseFloat(document.getElementById('wizBasePrice').value) || 0;
+        const disc = parseFloat(document.getElementById('wizDiscount').value) || 0;
+        const gst = parseFloat(document.getElementById('wizGst').value) || 18;
+        const discAmt = base * disc / 100;
+        const taxable = base - discAmt;
+        const gstAmt = taxable * gst / 100;
+        const total = taxable + gstAmt;
+        const cur = document.getElementById('wizCurrency').value === 'USD' ? '$' : document.getElementById('wizCurrency').value === 'EUR' ? '€' : '₹';
+        document.getElementById('calcBase').textContent = `${cur}${base.toFixed(2)}`;
+        document.getElementById('calcDiscount').textContent = `- ${cur}${discAmt.toFixed(2)}`;
+        document.getElementById('calcGst').textContent = `+ ${cur}${gstAmt.toFixed(2)}`;
+        document.getElementById('calcTotal').textContent = `${cur}${total.toFixed(2)}`;
+    },
+
+    goToStep(n) {
+        const maxAllowed = this.wizardStep + 1;
+        if (n > maxAllowed) return;
+        this.wizardStep = n;
+        document.querySelectorAll('.wizard-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(`wizardStep${n}`)?.classList.add('active');
+        document.querySelectorAll('.wizard-step').forEach(s => {
+            const sn = parseInt(s.dataset.step);
+            s.classList.toggle('active', sn === n);
+            s.classList.toggle('done', sn < n);
+        });
+        document.getElementById('wizPrevBtn').disabled = n === 1;
+        const isLast = n === 6;
+        document.getElementById('wizNextBtn').classList.toggle('d-none', isLast);
+        document.getElementById('wizSubmitBtn').classList.toggle('d-none', !isLast);
+        if (isLast) this.renderWizardReview();
+    },
+
+    renderWizardReview() {
+        const orgId = document.getElementById('wizOrgId').value;
+        const orgText = document.getElementById('wizOrgSelected').textContent;
+        const plan = document.getElementById('wizPlan').value;
+        const cycle = document.getElementById('wizCycle').value;
+        const base = parseFloat(document.getElementById('wizBasePrice').value)||0;
+        const disc = parseFloat(document.getElementById('wizDiscount').value)||0;
+        const gst = parseFloat(document.getElementById('wizGst').value)||18;
+        const total = parseFloat(document.getElementById('calcTotal').textContent.replace(/[₹$€,]/g,''))||0;
+        document.getElementById('wizReviewContent').innerHTML = `
+            <div class="row g-3 text-sm">
+                <div class="col-6"><div class="text-muted text-xs mb-1">Organization</div><strong>${orgText.replace('✓ Selected: ','')}</strong></div>
+                <div class="col-6"><div class="text-muted text-xs mb-1">Plan</div><span class="plan-chip ${plan.toLowerCase()}">${plan}</span></div>
+                <div class="col-6"><div class="text-muted text-xs mb-1">Billing Cycle</div><strong>${cycle}</strong></div>
+                <div class="col-6"><div class="text-muted text-xs mb-1">Max Users</div><strong>${document.getElementById('wizMaxUsers').value}</strong></div>
+                <div class="col-6"><div class="text-muted text-xs mb-1">Storage</div><strong>${document.getElementById('wizStorage').value} GB</strong></div>
+                <div class="col-6"><div class="text-muted text-xs mb-1">Support</div><strong>${document.getElementById('wizSupportLevel').value}</strong></div>
+                <div class="col-12"><hr></div>
+                <div class="col-4"><div class="text-muted text-xs">Base Price</div><strong>₹${base.toFixed(2)}</strong></div>
+                <div class="col-4"><div class="text-muted text-xs">Discount (${disc}%)</div><strong class="text-danger">- ₹${(base*disc/100).toFixed(2)}</strong></div>
+                <div class="col-4"><div class="text-muted text-xs">GST (${gst}%)</div><strong>+ ₹${((base-base*disc/100)*gst/100).toFixed(2)}</strong></div>
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Total Amount</span>
+                        <span class="fw-bold fs-4 text-primary">₹${total.toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>`;
+    },
+
+    wizardNext() {
+        if (this.wizardStep === 1 && !document.getElementById('wizOrgId').value) {
+            this.toast('Please select an organization', 'error'); return;
+        }
+        if (this.wizardStep < 6) this.goToStep(this.wizardStep + 1);
+    },
+    wizardPrev() { if (this.wizardStep > 1) this.goToStep(this.wizardStep - 1); },
+
+    async submitWizard() {
+        if (!document.getElementById('wizConfirm').checked) {
+            this.toast('Please confirm before creating', 'error'); return;
+        }
+        const btn = document.getElementById('wizSubmitBtn');
+        btn.disabled = true; btn.textContent = 'Creating…';
+
+        const mods = [...document.querySelectorAll('#wizModules input[type=checkbox]:checked')].map(c => c.value);
+        const payload = {
+            org_id: parseInt(document.getElementById('wizOrgId').value),
+            plan_name: document.getElementById('wizPlan').value,
+            billing_cycle: document.getElementById('wizCycle').value,
+            base_price: parseFloat(document.getElementById('wizBasePrice').value)||0,
+            discount_percent: parseFloat(document.getElementById('wizDiscount').value)||0,
+            gst_percent: parseFloat(document.getElementById('wizGst').value)||18,
+            max_users: parseInt(document.getElementById('wizMaxUsers').value)||500,
+            storage_limit_gb: parseFloat(document.getElementById('wizStorage').value)||10,
+            api_limit: parseInt(document.getElementById('wizApiLimit').value)||10000,
+            support_level: document.getElementById('wizSupportLevel').value,
+            enabled_modules: mods,
+            currency: document.getElementById('wizCurrency').value,
+            payment_status: document.getElementById('wizPayStatus').value,
+        };
+
+        try {
+            const r = await this.post('/', payload);
+            this.toast(`Subscription ${r.data.subscription_uid} created! Invoice: ${r.invoice_uid}`, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('createWizardModal'))?.hide();
+            this.refresh();
+        } catch(e) {
+            this.toast(e.message, 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Create Subscription';
+        }
+    },
+
+    /* ── Export ──────────────────────────────────────────────────────── */
+    exportCSV() {
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        window.location.href = `/api/subscriptions/export?format=csv&token=${encodeURIComponent(token)}`;
+    },
+
+    exportSelectedCSV() {
+        this.toast('Export of selected rows coming soon', 'info');
+    },
+
+    /* ── Helpers ─────────────────────────────────────────────────────── */
+    fmt(v) {
+        const n = parseFloat(v) || 0;
+        return '₹' + n.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+    },
+    compactNum(n) {
+        if (n >= 1e7) return (n/1e7).toFixed(1)+'Cr';
+        if (n >= 1e5) return (n/1e5).toFixed(1)+'L';
+        if (n >= 1000) return (n/1000).toFixed(1)+'K';
+        return n;
+    },
+    fmtDate(v) {
+        if (!v) return '—';
+        return new Date(v).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+    },
+    isExpiringSoon(d) {
+        if (!d) return false;
+        return (new Date(d) - new Date()) < 30 * 86400000;
+    },
+    esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); },
+    actionColor(a) {
+        if (!a) return 'gray';
+        a = a.toLowerCase();
+        if (a.includes('creat') || a.includes('renew')) return 'green';
+        if (a.includes('trial') || a.includes('remind')) return 'amber';
+        if (a.includes('cancel') || a.includes('expir') || a.includes('fail')) return 'red';
+        if (a.includes('upgrade') || a.includes('convert')) return 'blue';
+        return 'gray';
+    },
+
+    /* ── Confirm Dialog ──────────────────────────────────────────────── */
+    confirm(title, body, okLabel='Confirm', isDanger=false) {
+        return new Promise(resolve => {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmBody').textContent = body;
+            const btn = document.getElementById('confirmOkBtn');
+            btn.textContent = okLabel;
+            btn.className = `ds-btn ${isDanger ? 'ds-btn-danger' : 'ds-btn-primary'}`;
+            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            const onOk = () => { modal.hide(); resolve(true); };
+            const onHide = () => { btn.removeEventListener('click', onOk); resolve(false); };
+            btn.addEventListener('click', onOk, { once: true });
+            document.getElementById('confirmModal').addEventListener('hidden.bs.modal', onHide, { once: true });
+            modal.show();
+        });
+    },
+
+    /* ── Toast ───────────────────────────────────────────────────────── */
+    toast(msg, type='success') {
+        const colors = { success:'#10b981', error:'#ef4444', info:'#3b82f6', warning:'#f59e0b' };
+        const icons = { success:'check-circle', error:'x-circle', info:'info', warning:'alert-triangle' };
+        const id = 'toast_' + Date.now();
+        const el = document.createElement('div');
+        el.id = id;
+        el.style.cssText = `background:var(--ds-surface);border:1px solid var(--ds-border-color);border-left:3px solid ${colors[type]||colors.success};border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeIn .2s ease;max-width:340px;`;
+        el.innerHTML = `<i data-lucide="${icons[type]||'check-circle'}" style="width:16px;height:16px;color:${colors[type]};flex-shrink:0;"></i><span style="flex:1;color:var(--ds-text-main);">${msg}</span><span onclick="this.parentElement.remove()" style="cursor:pointer;opacity:.5;font-size:16px;">&times;</span>`;
+        document.getElementById('toastContainer').prepend(el);
+        lucide.createIcons();
+        setTimeout(() => el?.remove(), 5000);
+    },
+
+    /* ── Column Visibility ───────────────────────────────────────────── */
+    toggleColumnVisibility() {
+        this.toast('Column visibility panel — coming soon', 'info');
+    },
+};
+
+/* ── Bootstrap CSS spinner keyframe ── */
+const style = document.createElement('style');
+style.textContent = `@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`;
+document.head.appendChild(style);
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', () => SubMgr.init());
+</script>
+
+</body>
+</html>

@@ -1,0 +1,70 @@
+import os
+from urllib.parse import urlparse, quote_plus, unquote
+from dotenv import load_dotenv
+
+# Load env variables from root of backend
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
+load_dotenv(dotenv_path)
+
+class Config:
+    SECRET_KEY = os.getenv('SECRET_KEY', 'qcms_default_secret_key')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'qcms_secret')
+    JWT_TOKEN_LOCATION = ['headers', 'query_string']
+    JWT_QUERY_STRING_NAME = 'token'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    INTEGRATION_BASE_URL = os.getenv('INTEGRATION_BASE_URL', os.getenv('BASE_URL', '')).rstrip('/')
+    
+    # Connection Pool Settings
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 1800,
+    }
+    
+    # File upload settings
+    UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploads'))
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB limit
+    
+    # CORS Configuration
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*')
+    
+    # Seed configuration
+    SUPER_ADMIN_USERNAME = os.getenv('SUPER_ADMIN_USERNAME')
+    SUPER_ADMIN_PASSWORD = os.getenv('SUPER_ADMIN_PASSWORD')
+    
+    # DB URL parsing
+    db_url = os.getenv('DATABASE_URL')
+    if db_url:
+        try:
+            result = urlparse(db_url)
+            username = result.username
+            password = unquote(result.password) if result.password else None
+            host = result.hostname
+            port = result.port or 5432
+            database = result.path.lstrip('/')
+            
+            if password:
+                encoded_password = quote_plus(password)
+                SQLALCHEMY_DATABASE_URI = f"postgresql://{username}:{encoded_password}@{host}:{port}/{database}"
+            else:
+                SQLALCHEMY_DATABASE_URI = db_url
+        except Exception as e:
+            SQLALCHEMY_DATABASE_URI = db_url
+    else:
+        # Fallback to local SQLite if PostgreSQL URL is not defined (useful for development fallback)
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///qcms.db'
+
+    # Add connection pool parameters only if not using SQLite
+    if SQLALCHEMY_DATABASE_URI and 'sqlite' not in SQLALCHEMY_DATABASE_URI:
+        SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 20
+        SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 10
+    else:
+        # For SQLite (including :memory:) use StaticPool so every session and
+        # every Flask request handler share the SAME single connection.
+        # This is essential for testing: without it, QueuePool hands out a
+        # brand-new empty :memory: database for each pool checkout, making
+        # data committed by the test invisible to the app request handlers.
+        from sqlalchemy.pool import StaticPool
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'connect_args': {'check_same_thread': False},
+            'poolclass': StaticPool,
+        }

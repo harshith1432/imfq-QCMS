@@ -43,6 +43,20 @@ All backend requests should go through the `apiFetch` wrapper which handles:
 - **Design System**: Built on a "Glassmorphism" aesthetic using `backdrop-filter: blur()`.
 - **Typography**: Primary font is *Inter* from Google Fonts.
 - **Icons**: *Font Awesome 6* is used throughout the application.
+- **i18n Translation Engine**: Dynamic client-side internationalization system (English, Hindi, Kannada, Telugu, Tamil, Malayalam) with deep DOM walking and MutationObserver monitoring.
+
+## 🌐 Internationalization (i18n) Architecture
+
+The platform supports full dynamic translation across all dashboard pages:
+- **Baseline Reference**: `en.json` is used as the master key catalog.
+- **Languages Supported**: English (en), Hindi (hi), Kannada (kn), Telugu (te), Tamil (ta), and Malayalam (ml).
+- **Execution Flow**:
+  - `i18n.js` loads dictionary assets from `/assets/i18n/`.
+  - Builds a flat string map (`English -> Target Language`).
+  - Performs a deep traversal of the DOM body, converting text nodes, placeholders, titles, and aria attributes.
+  - Registers a `MutationObserver` to intercept dynamic dashboard elements and translation-renders them instantly.
+  - Skips public/auth pages (landing page, login, register, password recovery) to maintain design layout.
+- **State Preservation**: Original English values are cached inside `node._originalText` to support dynamic, multi-hop switching between non-English locales (e.g. Hindi directly to Kannada) without losing context.
 
 ## 🛠️ Adding a New Page
 

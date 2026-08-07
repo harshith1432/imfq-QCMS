@@ -1,0 +1,2559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global 8-Stage Workflow Template | Super Admin Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Stubs so stage modules don't crash during WYSIWYG loading
+        window.StageModules = {};
+        window.api = { get: () => Promise.resolve([]), post: () => Promise.resolve({}) };
+        window.QCMS = { toast: () => {} };
+    </script>
+    <script src="/assets/js/stages/stage1.js"></script>
+    <script src="/assets/js/stages/stage2.js"></script>
+    <script src="/assets/js/stages/stage3.js"></script>
+    <script src="/assets/js/stages/stage4.js"></script>
+    <script src="/assets/js/stages/stage5.js"></script>
+    <script src="/assets/js/stages/stage6.js"></script>
+    <script src="/assets/js/stages/stage7.js"></script>
+    <script src="/assets/js/stages/stage8.js"></script>
+    <script src="/assets/js/stages/dynamic_renderer.js"></script>
+    <style>
+        #stageList { display: flex; flex-direction: column; gap: 12px; }
+        .stage-row-container { border:1px solid var(--ds-border-color); border-radius:var(--ds-radius-md); background:var(--ds-bg-card); overflow:hidden; transition:box-shadow .2s; }
+        .stage-row-container:hover { box-shadow:var(--ds-shadow-sm); }
+        .stage-row-header { display:grid; grid-template-columns:32px 48px 1fr auto auto auto; align-items:center; gap:14px; padding:14px 16px; cursor:pointer; user-select:none; background:rgba(var(--ds-primary-rgb),0.01); }
+        .stage-row-container.dragging { opacity:.38; }
+        .stage-row-container.drag-over { border-color:var(--ds-accent); box-shadow:0 0 0 2px rgba(var(--ds-accent-rgb),.15); }
+        .drag-handle { cursor:grab; color:var(--ds-text-tertiary); display:flex; align-items:center; justify-content:center; }
+        .drag-handle:active { cursor:grabbing; }
+        .stage-icon-bubble { width:40px; height:40px; border-radius:var(--ds-radius-md); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .2s,box-shadow .2s; border:1.5px solid transparent; flex-shrink:0; }
+        .stage-icon-bubble:hover { transform:scale(1.08); box-shadow:var(--ds-shadow-sm); border-color:var(--ds-accent); }
+        .stage-title-wrap { display:flex; flex-direction:column; gap:1px; min-width:0; }
+        .stage-seq-badge { font-size:.65rem; font-weight:700; letter-spacing:.07em; color:var(--ds-text-tertiary); text-transform:uppercase; }
+        .stage-title-input { background:transparent; border:none; color:var(--ds-text-main); font-size:.9rem; font-weight:600; width:100%; outline:none; border-bottom:1.5px solid transparent; transition:border-color .2s; padding:2px 0; }
+        .stage-title-input:focus { border-bottom-color:var(--ds-accent); }
+        .orig-badge { font-size:.7rem; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap; background:var(--ds-input-bg); color:var(--ds-text-secondary); border:1px solid var(--ds-border-color); }
+        .row-actions { display:flex; gap:4px; }
+        .row-btn { background:transparent; border:1px solid var(--ds-border-color); color:var(--ds-text-tertiary); width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; }
+        .row-btn:hover:not(:disabled) { border-color:var(--ds-accent); color:var(--ds-accent); background:var(--ds-input-bg); }
+        .row-btn:disabled { opacity:.28; cursor:default; }
+        .row-btn.danger:hover { border-color:#dc2626; color:#dc2626; background:rgba(220,38,38,.05); }
+        .stage-sections-detail { border-top:1px solid var(--ds-border-color); background:rgba(var(--ds-primary-rgb),0.005); padding:16px 20px; }
+        .info-banner { background:rgba(var(--ds-blue-rgb),.06); border:1px solid rgba(var(--ds-blue-rgb),.18); border-radius:var(--ds-radius-md); padding:13px 18px; display:flex; gap:12px; align-items:flex-start; margin-bottom:20px; }
+        .info-banner i { color:#334155; flex-shrink:0; margin-top:2px; }
+        .info-banner p { margin:0; font-size:.83rem; color:var(--ds-text-secondary); line-height:1.6; }
+        #previewStrip { display:flex; gap:0; overflow-x:auto; padding:16px 4px 8px; scrollbar-width:none; }
+        #previewStrip::-webkit-scrollbar { display:none; }
+        .prev-step { display:flex; flex-direction:column; align-items:center; min-width:85px; max-width:100px; }
+        .prev-icon { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--ds-border-color); background:var(--ds-input-bg); color:var(--ds-text-secondary); }
+        .prev-label { font-size:.6rem; font-weight:600; text-align:center; margin-top:6px; line-height:1.3; color:var(--ds-text-main); max-width:82px; word-break:break-word; }
+        .prev-num { font-size:.55rem; font-weight:700; letter-spacing:.06em; color:var(--ds-text-tertiary); text-transform:uppercase; margin-top:2px; }
+        .prev-connector { flex:1; height:1.5px; background:var(--ds-border-color); min-width:10px; margin-bottom:34px; }
+        .tool-picker-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; max-height:380px; overflow-y:auto; padding-right:4px; }
+        .tool-picker-group-title { grid-column:span 2; font-size:0.75rem; font-weight:700; color:var(--ds-text-tertiary); text-transform:uppercase; letter-spacing:0.05em; margin-top:10px; margin-bottom:4px; }
+        .tool-opt { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; border:1.5px solid var(--ds-border-color); transition:all .15s; background:var(--ds-bg-card); }
+        .tool-opt:hover { border-color:var(--ds-accent); background:var(--ds-input-bg); }
+        .tool-opt.selected { border-color:var(--ds-accent); background:rgba(var(--ds-accent-rgb),.08); }
+        .tool-opt i { color:var(--ds-text-secondary); }
+        .tool-opt span { font-size:.8rem; font-weight:500; color:var(--ds-text-main); }
+        .icon-picker-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(54px,1fr)); gap:6px; max-height:320px; overflow-y:auto; padding-right:4px; }
+        .icon-opt { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px; border-radius:8px; cursor:pointer; border:1.5px solid var(--ds-border-color); transition:all .15s; background:var(--ds-bg-card); }
+        .icon-opt:hover { border-color:var(--ds-accent); background:var(--ds-input-bg); }
+        .icon-opt.selected { border-color:var(--ds-accent); background:rgba(var(--ds-accent-rgb),.08); }
+        .icon-opt span { font-size:.52rem; color:var(--ds-text-tertiary); text-align:center; }
+        #iconSearch { margin-bottom:12px; }
+        @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+        .spin { animation:spin 1s linear infinite; }
+        .visual-stage-container { display:flex; flex-direction:column; gap:8px; padding:8px 0; }
+        .visual-stage-container .glass-card.ds-card { margin-bottom:0!important; }
+        .visual-card-wrapper { position:relative; border:2px solid transparent; border-radius:var(--ds-radius-lg); transition:all 0.2s; background:var(--ds-bg-card); }
+        .visual-card-wrapper:hover { border-color:var(--ds-accent); box-shadow:var(--ds-shadow-md); }
+        .visual-card-wrapper.dragging { opacity:0.4; border-style:dashed; border-color:var(--ds-accent); }
+        .visual-card-wrapper.drag-over { border-color:var(--ds-accent); background:rgba(var(--ds-primary-rgb),0.02); }
+        .card-edit-header { display:flex; align-items:center; justify-content:space-between; background:var(--ds-input-bg); border-bottom:1px solid var(--ds-border-color); padding:10px 16px; border-top-left-radius:var(--ds-radius-md); border-top-right-radius:var(--ds-radius-md); user-select:none; }
+        .card-drag-handle { cursor:grab; color:var(--ds-text-tertiary); margin-right:12px; display:flex; align-items:center; }
+        .card-drag-handle:active { cursor:grabbing; }
+        .card-title-edit-wrap { flex-grow:1; display:flex; align-items:center; gap:8px; }
+        .card-seq-badge { font-size:0.65rem; font-weight:700; color:var(--ds-text-secondary); text-transform:uppercase; background:rgba(var(--ds-primary-rgb),0.08); padding:3px 8px; border-radius:6px; white-space:nowrap; display:inline-flex; align-items:center; border:1px solid rgba(var(--ds-primary-rgb),0.1); }
+        .card-title-edit-input { background:transparent; border:none; font-size:0.9rem; font-weight:600; color:var(--ds-text-main); width:100%; outline:none; border-bottom:1.5px solid transparent; }
+        .card-title-edit-input:focus { border-bottom-color:var(--ds-accent); }
+        .card-actions-wrap { display:flex; align-items:center; gap:8px; }
+        .card-type-badge { font-size:0.65rem; font-weight:700; background:var(--ds-border-color); color:var(--ds-text-secondary); padding:2px 6px; border-radius:4px; }
+        .card-delete-btn { background:transparent; border:1px solid var(--ds-border-color); color:var(--ds-text-tertiary); width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.15s; }
+        .card-delete-btn:hover { border-color:#dc2626; color:#dc2626; background:rgba(220,38,38,.05); }
+        .custom-fields-container { padding-top:12px; margin-top:12px; border-top:1px solid var(--ds-border-color); }
+        .custom-field-row { background:var(--ds-input-bg); border:1px solid var(--ds-border-color); border-radius:8px; padding:10px 12px; margin-bottom:8px; }
+        .section-divider { border-color:var(--ds-border-color); }
+
+        /* Super Admin global banner */
+        .sa-banner {
+            background: linear-gradient(135deg, rgba(79,70,229,.07) 0%, rgba(124,58,237,.07) 100%);
+            border: 1px solid rgba(79,70,229,.2);
+            border-radius: var(--ds-radius-md);
+            padding: 13px 18px;
+            display: flex; gap: 12px; align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        .sa-banner i { color: #4f46e5; flex-shrink:0; margin-top:2px; }
+        .sa-banner p { margin:0; font-size:.83rem; color:var(--ds-text-secondary); line-height:1.6; }
+
+        /* --- VISUAL CANVAS POSTER BUILDER STUDIO STYLES --- */
+        .builder-mode-switcher {
+            background: var(--ds-input-bg);
+            border: 1px solid var(--ds-border-color);
+            border-radius: 12px;
+            padding: 4px;
+            display: inline-flex;
+            gap: 4px;
+        }
+        .mode-tab-btn {
+            border: none;
+            background: transparent;
+            color: var(--ds-text-secondary);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .mode-tab-btn.active {
+            background: var(--ds-bg-card);
+            color: var(--ds-accent);
+            box-shadow: var(--ds-shadow-sm);
+        }
+        
+        .poster-workspace {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+            position: relative;
+            align-items: start;
+        }
+        .poster-workspace.with-inspector {
+            grid-template-columns: 280px 1fr 310px;
+        }
+        
+        .palette-sidebar {
+            position: sticky;
+            top: 20px;
+            background: var(--ds-bg-card);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-lg);
+            padding: 16px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            box-shadow: var(--ds-shadow-sm);
+        }
+        .palette-cat-header {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ds-text-tertiary);
+            margin-top: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .palette-cat-header:first-child { margin-top: 0; }
+        
+        .palette-item-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            background: var(--ds-input-bg);
+            border: 1.5px dashed var(--ds-border-color);
+            border-radius: 8px;
+            margin-bottom: 6px;
+            cursor: grab;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+        .palette-item-card:hover {
+            border-color: var(--ds-accent);
+            border-style: solid;
+            background: rgba(var(--ds-accent-rgb), 0.06);
+            transform: translateY(-1px);
+        }
+        .palette-item-card:active { cursor: grabbing; }
+        .palette-item-card i { color: var(--ds-text-secondary); flex-shrink: 0; }
+        .palette-item-card .item-label { font-size: 0.78rem; font-weight: 600; color: var(--ds-text-main); line-height: 1.2; }
+        .palette-item-card .item-desc { font-size: 0.65rem; color: var(--ds-text-tertiary); }
+        
+        .drop-target-zone {
+            border: 2px dashed var(--ds-border-color);
+            border-radius: 12px;
+            padding: 18px;
+            background: rgba(var(--ds-primary-rgb), 0.008);
+            transition: all 0.2s ease;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        .drop-target-zone.drop-over {
+            border-color: var(--ds-accent);
+            background: rgba(var(--ds-accent-rgb), 0.1);
+            box-shadow: 0 0 0 4px rgba(var(--ds-accent-rgb), 0.15);
+        }
+        .drop-target-zone .drop-hint {
+            font-size: 0.78rem;
+            color: var(--ds-text-tertiary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        
+        .poster-element-wrapper {
+            position: relative;
+            border: 1.5px solid transparent;
+            border-radius: 8px;
+            padding: 8px;
+            transition: all 0.15s ease;
+        }
+        .poster-element-wrapper:hover {
+            border-color: var(--ds-accent);
+            background: rgba(var(--ds-accent-rgb), 0.02);
+        }
+        .poster-element-wrapper.active-editing {
+            border-color: var(--ds-accent);
+            box-shadow: 0 0 0 3px rgba(var(--ds-accent-rgb), 0.2);
+            background: rgba(var(--ds-accent-rgb), 0.04);
+        }
+        .element-hover-bar {
+            position: absolute;
+            top: -12px;
+            right: 8px;
+            display: none;
+            gap: 4px;
+            background: var(--ds-bg-card);
+            border: 1px solid var(--ds-border-color);
+            border-radius: 6px;
+            padding: 2px 4px;
+            box-shadow: var(--ds-shadow-sm);
+            z-index: 10;
+        }
+        .poster-element-wrapper:hover .element-hover-bar,
+        .poster-element-wrapper.active-editing .element-hover-bar {
+            display: flex;
+        }
+        .hover-btn {
+            background: transparent;
+            border: none;
+            color: var(--ds-text-secondary);
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .hover-btn:hover { background: var(--ds-input-bg); color: var(--ds-accent); }
+        .hover-btn.danger:hover { color: #dc2626; background: rgba(220,38,38,0.1); }
+        
+        .inspector-panel {
+            position: sticky;
+            top: 20px;
+            background: var(--ds-bg-card);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-lg);
+            padding: 16px;
+            box-shadow: var(--ds-shadow-md);
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+    <div id="sidebar-container"></div>
+    <div class="main-content">
+        <div id="header-container"></div>
+        <main class="content-body px-4 py-4">
+
+            <!-- Page header actions -->
+            <div class="d-flex justify-content-end align-items-center mb-4">
+                <div class="d-flex gap-2">
+                    <button type="button" class="ds-btn ds-btn-ghost text-danger" id="resetBtn">
+                        <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Reset to Defaults
+                    </button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="saveBtn">
+                        <i data-lucide="save" style="width:14px;height:14px;"></i> Save Global Template
+                    </button>
+                </div>
+            </div>
+
+            <!-- Super Admin info banner -->
+            <div class="sa-banner">
+                <i data-lucide="globe" style="width:20px;height:20px;"></i>
+                <div>
+                    <strong style="color:var(--ds-text-main)">Global System Default Hierarchy:</strong>
+                    <p>What you configure here becomes the <strong>system-wide default 8-stage template</strong> for every organization across the platform. Organization Admins can still create custom org-level overrides, or click "Reset to Default" in their portal to inherit this Super Admin template again.</p>
+                </div>
+            </div>
+
+            <!-- Live Stepper Preview -->
+            <div class="glass-card ds-card p-4 mb-4">
+                <h6 class="fw-bold text-xs text-uppercase text-muted mb-2 d-flex align-items-center gap-2">
+                    <i data-lucide="eye" style="width:14px;height:14px;"></i> Live Stepper Preview
+                </h6>
+                <div id="previewStrip"></div>
+            </div>
+
+            <!-- Stage list header & Mode Switcher -->
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-3">
+                    <h6 class="fw-bold mb-0">Configured Stage Sequence</h6>
+                    <div class="builder-mode-switcher">
+                        <button type="button" class="mode-tab-btn active" id="tabPosterMode" onclick="setBuilderMode('poster')">
+                            <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Visual Poster Studio (Drag & Drop)
+                        </button>
+                        <button type="button" class="mode-tab-btn" id="tabListMode" onclick="setBuilderMode('list')">
+                            <i data-lucide="list" style="width:14px;height:14px;"></i> Sequence List
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="ds-btn ds-btn-outline-primary ds-btn-sm" id="addStageBtn">
+                    <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Add New Stage
+                </button>
+            </div>
+
+            <!-- Visual Poster Studio Workspace (Canva / Wix Drag and Drop Studio) -->
+            <div id="posterWorkspaceArea" class="poster-workspace mb-5">
+                <!-- Left Sticky Element Palette Sidebar -->
+                <aside class="palette-sidebar" id="paletteSidebar">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <h7 class="fw-bold text-xs text-uppercase text-dark mb-0 d-flex align-items-center gap-2">
+                            <i data-lucide="layers" style="width:15px;height:15px;" class="text-primary"></i> Element Catalog
+                        </h7>
+                        <span class="badge bg-primary-soft text-primary text-xxs">Drag to Stage</span>
+                    </div>
+                    <div id="paletteCatalogContainer"></div>
+                </aside>
+
+                <!-- Center Main Stage Canvas -->
+                <div id="stageList" class="flex-grow-1">
+                    <div class="text-center py-5 text-muted">
+                        <i data-lucide="loader" style="width:22px;height:22px;" class="spin"></i>
+                        <p class="mt-2 mb-0 text-sm">Loading global stage template…</p>
+                    </div>
+                </div>
+
+                <!-- Right Inline Property Inspector Panel -->
+                <aside class="inspector-panel d-none" id="inspectorPanel">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <h7 class="fw-bold text-xs text-uppercase text-dark mb-0 d-flex align-items-center gap-2">
+                            <i data-lucide="sliders" style="width:15px;height:15px;" class="text-primary"></i> Property Inspector
+                        </h7>
+                        <button type="button" class="btn-close text-xs" onclick="closeInspector()"></button>
+                    </div>
+                    <div id="inspectorContent">
+                        <p class="text-xs text-muted italic">Click any dropped element on the poster canvas to edit its properties.</p>
+                    </div>
+                </aside>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- ── Icon Picker Modal ─────────────────────────────────────────────────────── -->
+<div class="modal fade" id="iconPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+        <div class="modal-content glass-card ds-card">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Choose Icon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pb-0">
+                <input type="text" class="ds-input mb-3" id="iconSearch" placeholder="Search icons…">
+                <div class="icon-picker-grid" id="iconGrid"></div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-3">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal" id="iconPickerCancel">Cancel</button>
+                <button class="ds-btn ds-btn-primary ds-btn-sm" id="iconPickerConfirm">Apply Icon</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Tool Picker Modal ─────────────────────────────────────────────────────── -->
+<div class="modal fade" id="toolPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:550px;">
+        <div class="modal-content glass-card ds-card">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Add Data Input or QC Tool</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pb-0">
+                <p class="text-xs ds-text-secondary mb-3">Select the type of section/QC tool you want to insert into this stage.</p>
+                <div class="tool-picker-grid" id="toolGrid"></div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-3">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="ds-btn ds-btn-primary ds-btn-sm" id="toolPickerConfirm">Add Section</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Add Stage Modal ───────────────────────────────────────────────────────── -->
+<div class="modal fade" id="addStageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+        <div class="modal-content glass-card ds-card">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Add New Stage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pb-0">
+                <div class="mb-3">
+                    <label class="ds-label text-xs fw-semibold mb-1 d-block">Stage Title <span class="text-danger">*</span></label>
+                    <input type="text" class="ds-input" id="newStageTitle" placeholder="e.g. S9 Post-Implementation Review">
+                </div>
+                <div class="mb-3">
+                    <label class="ds-label text-xs fw-semibold mb-1 d-block">Base Module (Binding)</label>
+                    <select class="ds-input ds-select" id="newStageBaseModule">
+                        <option value="1">S0/S1 Plan &amp; Establish Team</option>
+                        <option value="2">S2 Define Problem</option>
+                        <option value="3">S3 Interim Containment</option>
+                        <option value="4">S4 Determine Root Causes</option>
+                        <option value="5">S5 Choose Permanent Corrections</option>
+                        <option value="6">S6 Implement Corrective Actions</option>
+                        <option value="7">S7 Take Preventive Measures</option>
+                        <option value="8" selected>S8 Congratulate Team &amp; Closure</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="ds-label text-xs fw-semibold mb-1 d-block">Stage Icon</label>
+                    <select class="ds-input ds-select" id="newStageIcon">
+                        <option value="plus-circle" selected>Plus Circle</option>
+                        <option value="git-commit">Git Commit</option>
+                        <option value="activity">Activity</option>
+                        <option value="clipboard-list">Clipboard List</option>
+                        <option value="check-circle">Check Circle</option>
+                        <option value="settings">Settings</option>
+                        <option value="shield">Shield</option>
+                        <option value="award">Award</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-3">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="ds-btn ds-btn-primary ds-btn-sm" id="addStageConfirmBtn">Add Stage</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Save Confirmation / Warning Modal ─────────────────────────────────── -->
+<div class="modal fade" id="saveWarningModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:600px;">
+        <div class="modal-content glass-card ds-card" style="border:1.5px solid rgba(234,88,12,.35);">
+
+            <!-- Danger header strip -->
+            <div style="background:linear-gradient(135deg,rgba(234,88,12,.12),rgba(239,68,68,.08));border-bottom:1px solid rgba(234,88,12,.2);padding:18px 24px;border-top-left-radius:var(--ds-radius-lg);border-top-right-radius:var(--ds-radius-lg);">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:46px;height:46px;border-radius:12px;background:rgba(234,88,12,.12);border:1.5px solid rgba(234,88,12,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="alert-triangle" style="width:22px;height:22px;color:#c2410c;"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0" style="color:var(--ds-text-main);">Review &amp; Confirm Global Save</h5>
+                        <p class="text-xs mb-0 mt-1" style="color:#c2410c;font-weight:600;">This action will immediately affect ALL organizations on the platform</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-body px-4 py-4">
+
+                <!-- Impact callout -->
+                <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 16px;margin-bottom:18px;">
+                    <div class="d-flex gap-2 align-items-start">
+                        <i data-lucide="globe" style="width:15px;height:15px;color:#dc2626;flex-shrink:0;margin-top:2px;"></i>
+                        <p class="mb-0 text-xs" style="color:#7f1d1d;line-height:1.65;">
+                            <strong>Once saved, these settings become the new system-wide default.</strong>
+                            Any organization that has not applied a custom override will immediately inherit the changes below.
+                            <em>This cannot be undone without a manual reset.</em>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Changes summary -->
+                <p class="fw-bold text-xs text-uppercase mb-2" style="color:var(--ds-text-secondary);letter-spacing:.06em;">
+                    Changes you are about to publish
+                </p>
+                <div id="saveWarningSummary" style="max-height:290px;overflow-y:auto;border:1px solid var(--ds-border-color);border-radius:10px;padding:12px 14px;background:var(--ds-input-bg);"></div>
+
+                <!-- Checkbox confirmation -->
+                <div class="form-check mt-4" style="user-select:none;">
+                    <input class="form-check-input" type="checkbox" id="saveWarningAck" style="border-color:var(--ds-accent);">
+                    <label class="form-check-label text-xs fw-semibold" for="saveWarningAck" style="cursor:pointer;color:var(--ds-text-main);"
+                    >I understand that saving will overwrite the global template and affect all organizations that have not customized their own stage template.</label>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal" id="saveWarningCancelBtn">Cancel — Go Back</button>
+                <button class="ds-btn ds-btn-sm" id="saveWarningConfirmBtn"
+                    style="background:linear-gradient(135deg,#dc2626,#c2410c);color:#fff;border:none;opacity:.45;cursor:not-allowed;"
+                    disabled>
+                    <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
+                    Yes, Publish Global Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/api.js"></script>
+<script src="/assets/js/components.js"></script>
+<script>
+// ── Icon library ───────────────────────────────────────────────────────────────
+const ICON_LIBRARY = [
+    'target','database','git-branch','search','lightbulb','settings-2',
+    'trending-up','award','users','clipboard-list','flag','check-circle',
+    'shield','zap','layers','activity','bar-chart-2','alert-triangle',
+    'anchor','aperture','archive','bell','bookmark','box','briefcase',
+    'camera','check-square','chevrons-right','circle-dot','clipboard',
+    'clock','cloud','code','cog','command','compass','cpu','crosshair',
+    'disc','dna','download','edit-3','eye','file-check','file-text',
+    'filter','fingerprint','flame','focus','gauge','git-merge','globe',
+    'graduation-cap','grid','hash','heart-pulse','hexagon','home','key',
+    'landmark','layout-grid','leaf','link','list-checks','lock','map-pin',
+    'maximize-2','medal','message-square','microscope','monitor','network',
+    'octagon','package','pen-tool','percent','pie-chart','play-circle',
+    'plus-circle','power','radar','recycle','refresh-cw','repeat','rocket',
+    'route','ruler','save','send','server','share-2','shield-check',
+    'shuffle','signal','sliders','star','table','tag','thermometer',
+    'thumbs-up','timer','toggle-left','triangle','truck','umbrella',
+    'unlock','upload','user-check','video','wand-2','wifi','wrench','zoom-in',
+];
+
+// Tool options grouped by category
+const TOOL_OPTIONS = [
+    { category: "Standard Form Inputs", items: [
+        { type: "text",         label: "Single-line Text Input",   icon: "type",         desc: "Short text entry field" },
+        { type: "textarea",     label: "Multi-line Text Area",     icon: "align-left",   desc: "Detailed notes & background" },
+        { type: "number",       label: "Numeric Input",            icon: "hash",         desc: "Quantifiable metric or score" },
+        { type: "select",       label: "Dropdown Select Box",        icon: "chevron-down", desc: "Pick one from predefined list" },
+        { type: "date",         label: "Date Picker",              icon: "calendar",     desc: "Target, start, or review date" },
+        { type: "multi_text",   label: "Bullet List (Brainstorm)", icon: "list",         desc: "Dynamic bullet point list" },
+        { type: "boolean",      label: "Checkbox / Toggle",        icon: "check-square", desc: "Yes/No or Pass/Fail toggle" }
+    ]},
+    { category: "Buttons & Action Options", items: [
+        { type: "file_upload",  label: "File & Evidence Upload",   icon: "upload-cloud", desc: "Max 2MB PDF, PPT, images" },
+        { type: "attachment",   label: "Document Link Attachment", icon: "paperclip",    desc: "URL / cloud document link" },
+        { type: "action_btn",   label: "Trigger Action Button",    icon: "play",         desc: "Modal or workflow action button" },
+        { type: "view_link",    label: "View / Inspect Button",    icon: "eye",          desc: "Inspect preview / log popup" }
+    ]},
+    { category: "Tables & Structured Data", items: [
+        { type: "table",              label: "General Data Table",           icon: "table",       desc: "Custom multi-column data table" },
+        { type: "five_why",           label: "5-Why Root Cause Table",       icon: "help-circle", desc: "Iterative 5-Why analysis" },
+        { type: "verification_table", label: "Cause Verification Table",     icon: "check-circle",desc: "Test hypothesis & verify status" },
+        { type: "action_plan_3w1h",   label: "Action Plan (3W1H Table)",     icon: "calendar-check", desc: "Who, What, When, How table" }
+    ]},
+    { category: "7 QC Tools & Charts", items: [
+        { type: "check_sheet",    label: "Check Sheet / Checklist",       icon: "clipboard-list", desc: "Defect tallies & inspection log" },
+        { type: "pareto",         label: "Pareto Chart (80/20 Rule)",     icon: "bar-chart-2",    desc: "Vital few vs trivial many" },
+        { type: "fishbone",       label: "Ishikawa (Fishbone) Diagram",   icon: "git-merge",      desc: "Man, Machine, Material, Method..." },
+        { type: "histogram",      label: "Before/After Histogram",        icon: "activity",       desc: "Distribution & capability comparison" },
+        { type: "control_chart",  label: "Control Chart (SPC)",           icon: "trending-up",    desc: "UCL, LCL, Mean stability tracking" },
+        { type: "scatter",        label: "Scatter Diagram",               icon: "plus-circle",    desc: "Correlation between 2 variables" },
+        { type: "stratification", label: "Stratification Table & Chart",  icon: "layers",         desc: "Data breakdown by shift/machine" }
+    ]},
+    { category: "Governance & Approvals", items: [
+        { type: "signature",      label: "Reviewer Approval Gate",       icon: "shield-check",  desc: "Formal signoff & stage gate" },
+        { type: "facilitator_gate",label: "Facilitator Signoff Box",      icon: "user-check",    desc: "Facilitator review checkbox" }
+    ]},
+    { category: "Layout & Structure", items: [
+        { type: "section_header", label: "Sub-section Header",            icon: "heading",       desc: "Visual section divider title" },
+        { type: "info_callout",   label: "Info Callout Banner",          icon: "info",          desc: "Helpful instructions banner" },
+        { type: "grid_2col",      label: "2-Column Grid Container",       icon: "columns-2",     desc: "Side-by-side 50/50 layout" },
+        { type: "grid_3col",      label: "3-Column Grid Container",       icon: "columns-3",     desc: "3-Column equal width layout" }
+    ]}
+];
+
+const STAGE_COLORS = [
+    { bg:'rgba(15,23,42,.07)',   color:'#0f172a'  },
+    { bg:'rgba(51,65,85,.08)',   color:'#334155'  },
+    { bg:'rgba(79,70,229,.08)',  color:'#4f46e5'  },
+    { bg:'rgba(124,58,237,.08)', color:'#7c3aed'  },
+    { bg:'rgba(245,158,11,.09)', color:'#d97706'  },
+    { bg:'rgba(234,88,12,.08)',  color:'#c2410c'  },
+    { bg:'rgba(22,163,74,.08)',  color:'#15803d'  },
+    { bg:'rgba(6,182,212,.08)',  color:'#0e7490'  },
+];
+
+// ── Built-in Default Stages (mirrors backend Organization.DEFAULT_STAGES_CONFIG) ──
+const DEFAULT_STAGES = [
+    { stage_id:1, original_id:1, title:'S0/S1 Plan & Establish Team', icon:'target', sections:[
+        {id:'s1_project_team',          type:'table',    label:'Project Team',                   order:1},
+        {id:'s1_problem_background',    type:'textarea', label:'Problem Background (5W2H)',       order:2},
+        {id:'s1_current_performance',   type:'table',    label:'Current Performance',             order:3},
+        {id:'s1_justification',         type:'textarea', label:'Justification',                  order:4},
+        {id:'s1_emergency_response',    type:'textarea', label:'Emergency Response',              order:5},
+        {id:'s1_theme_target_schedule', type:'table',    label:'Theme, Target & Schedule',        order:6},
+    ]},
+    { stage_id:2, original_id:2, title:'S2 Define Problem', icon:'database', sections:[
+        {id:'s2_problem_definition', type:'textarea',      label:'Problem Definition',                  order:1},
+        {id:'s2_std_verification',   type:'table',         label:'Standard Verification',               order:2},
+        {id:'s2_observations',       type:'table',         label:'Data Collection & Observations (Gemba)',order:3},
+        {id:'s2_stratification',     type:'stratification',label:'Stratification',                      order:4},
+        {id:'s2_pareto',             type:'pareto',        label:'Pareto Analysis',                     order:5},
+        {id:'s2_five_g',             type:'table',         label:'5G Verification',                     order:6},
+        {id:'s2_check_sheet',        type:'check_sheet',   label:'Check Sheet',                         order:7},
+    ]},
+    { stage_id:3, original_id:3, title:'S3 Interim Containment', icon:'git-branch', sections:[
+        {id:'s3_brainstorm',          type:'multi_text',        label:'Brainstormed Causes',                   order:1},
+        {id:'s3_fishbone_pre',        type:'fishbone',          label:'Fishbone Diagram (Pre-Verification)',    order:2},
+        {id:'s3_verification',        type:'verification_table',label:'Cause Verification Table',              order:3},
+        {id:'s3_fishbone_post',       type:'fishbone',          label:'Fishbone Diagram (Post-Verification)',   order:4},
+        {id:'s3_hypothesis',          type:'table',             label:'Hypothesis Testing',                    order:5},
+        {id:'s3_pareto_verification', type:'pareto',            label:'Run-Chart / Pareto Verification',       order:6},
+        {id:'s3_root_cause_ident',    type:'textarea',          label:'Root Cause Identification',             order:7},
+        {id:'s3_verif_checklist',     type:'check_sheet',       label:'Verification Checklist',                order:8},
+    ]},
+    { stage_id:4, original_id:4, title:'S4 Determine Root Causes', icon:'search', sections:[
+        {id:'s4_verified_causes',       type:'table', label:'Root Causes',                  order:1},
+        {id:'s4_why_why_analysis',      type:'table', label:'Why-Why Analysis (5-Why)',     order:2},
+        {id:'s4_hypothesis_testing',    type:'table', label:'Hypothesis Testing',           order:3},
+        {id:'s4_good_bad_comparison',   type:'table', label:'Good vs Bad Comparison',       order:4},
+        {id:'s4_statistical_validation',type:'table', label:'Statistical Validation',       order:5},
+        {id:'s4_data_reconfirmation',   type:'table', label:'Data Reconfirmation',          order:6},
+        {id:'s4_root_cause_register',   type:'table', label:'Root Cause Register',          order:7},
+        {id:'s4_root_cause_ranking',    type:'table', label:'Root Cause Ranking',           order:8},
+    ]},
+    { stage_id:5, original_id:5, title:'S5 Choose Permanent Corrections', icon:'lightbulb', sections:[
+        {id:'s5_root_cause_mapping',         type:'table', label:'Root Cause Mapping',          order:1},
+        {id:'s5_solution_brainstorming',     type:'table', label:'Solution Brainstorming',      order:2},
+        {id:'s5_solution_evaluation',        type:'table', label:'Solution Evaluation Matrix',  order:3},
+        {id:'s5_cost_benefit_analysis',      type:'table', label:'Cost Benefit Analysis',       order:4},
+        {id:'s5_side_effect_analysis',       type:'table', label:'Side Effect Analysis',        order:5},
+        {id:'s5_pilot_solution_verification',type:'table', label:'Pilot Solution Verification', order:6},
+        {id:'s5_action_plan_3w1h',           type:'table', label:'Action Plan (3W1H)',          order:7},
+        {id:'s5_resource_planning',          type:'table', label:'Resource Planning',           order:8},
+    ]},
+    { stage_id:6, original_id:6, title:'S6 Implement Corrective Actions', icon:'settings-2', sections:[
+        {id:'s6_countermeasures',          type:'table', label:'Countermeasures',                      order:1},
+        {id:'s6_tasks',                    type:'table', label:'Countermeasure Task Assignments',      order:2},
+        {id:'s6_resource_deployment',      type:'table', label:'Resource Deployment',                 order:3},
+        {id:'s6_change_management',        type:'table', label:'Change Management',                   order:4},
+        {id:'s6_risk_resistance',          type:'table', label:'Risk & Resistance Management',        order:5},
+        {id:'s6_side_effect_analysis',     type:'table', label:'Side Effect Analysis',                order:6},
+        {id:'s6_implementation_evidence',  type:'table', label:'Implementation Evidence',             order:7},
+        {id:'s6_communication',            type:'table', label:'Communication Log',                   order:8},
+        {id:'s6_training',                 type:'table', label:'Training & Awareness',                order:9},
+        {id:'s6_readiness_verification',   type:'table', label:'Readiness Verification',              order:10},
+    ]},
+    { stage_id:7, original_id:7, title:'S7 Take Preventive Measures', icon:'trending-up', sections:[
+        {id:'s7_kpi_verification',         type:'table', label:'KPI Verification',              order:1},
+        {id:'s7_before_vs_after',          type:'table', label:'Before vs After Analysis',      order:2},
+        {id:'s7_statistical_validation',   type:'table', label:'Statistical Validation',        order:3},
+        {id:'s7_benefit_realization',      type:'table', label:'Benefit Realization & Savings', order:4},
+        {id:'s7_roi_validation',           type:'table', label:'ROI Validation',                order:5},
+        {id:'s7_sustainability_check',     type:'table', label:'Sustainability Check',          order:6},
+        {id:'s7_side_effect_verification', type:'table', label:'Side Effect Verification',      order:7},
+        {id:'s7_lessons_implementation',   type:'table', label:'Lessons Implementation',        order:8},
+    ]},
+    { stage_id:8, original_id:8, title:'S8 Congratulate Team & Closure', icon:'award', sections:[
+        {id:'s8_standardization',          type:'table', label:'Standardization & SOP',         order:1},
+        {id:'s8_training_adoption',        type:'table', label:'Training & Adoption',            order:2},
+        {id:'s8_horizontal_deployment',    type:'table', label:'Horizontal Deployment',          order:3},
+        {id:'s8_lessons_learned',          type:'table', label:'Lessons Learned',               order:4},
+        {id:'s8_benefits_summary',         type:'table', label:'Benefits Summary',              order:5},
+        {id:'s8_remaining_opportunities',  type:'table', label:'Remaining Opportunities',       order:6},
+        {id:'s8_knowledge_repository',     type:'table', label:'Knowledge Repository',          order:7},
+        {id:'s8_team_recognition',         type:'table', label:'Team Recognition',              order:8},
+        {id:'s8_project_closure',          type:'table', label:'Project Closure',               order:9},
+    ]},
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let stages = [];
+let dragSrcIdx = null;
+let pickerTargetIdx = null;
+let pickerSelectedIcon = null;
+let activeStageSectionTargetIdx = null;
+let activeSubFieldTarget = null;
+let selectedToolType = null;
+let currentBuilderMode = 'poster';
+let activeInspectorTarget = null;
+let bsIconModal = null;
+let bsToolModal = null;
+let bsAddStageModal = null;
+let bsSaveWarningModal = null;
+
+// ── Builder Mode Switcher ─────────────────────────────────────────────────────
+function setBuilderMode(mode) {
+    currentBuilderMode = mode;
+    const tabPoster = document.getElementById('tabPosterMode');
+    const tabList = document.getElementById('tabListMode');
+    const sidebar = document.getElementById('paletteSidebar');
+    
+    if (mode === 'poster') {
+        if (tabPoster) tabPoster.classList.add('active');
+        if (tabList) tabList.classList.remove('active');
+        if (sidebar) sidebar.style.display = 'block';
+    } else {
+        if (tabPoster) tabPoster.classList.remove('active');
+        if (tabList) tabList.classList.add('active');
+        if (sidebar) sidebar.style.display = 'none';
+        closeInspector();
+    }
+    renderList();
+}
+
+// ── Render Categorized Palette Sidebar (Canva Style) ──────────────────────────
+function renderPaletteSidebar() {
+    const container = document.getElementById('paletteCatalogContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    TOOL_OPTIONS.forEach(cat => {
+        const catHeader = document.createElement('div');
+        catHeader.className = 'palette-cat-header';
+        catHeader.innerHTML = `<i data-lucide="folder" style="width:12px;height:12px;"></i> ${esc(cat.category)}`;
+        container.appendChild(catHeader);
+
+        cat.items.forEach(item => {
+            const itemCard = document.createElement('div');
+            itemCard.className = 'palette-item-card';
+            itemCard.setAttribute('draggable', 'true');
+            itemCard.dataset.toolType = item.type;
+            itemCard.dataset.toolLabel = item.label;
+
+            itemCard.innerHTML = `
+                <i data-lucide="${item.icon || 'box'}" style="width:16px;height:16px;"></i>
+                <div>
+                    <div class="item-label">${esc(item.label)}</div>
+                    <div class="item-desc">${esc(item.desc || '')}</div>
+                </div>
+            `;
+
+            itemCard.addEventListener('dragstart', (e) => {
+                e.dataTransfer.effectAllowed = 'copy';
+                const payload = JSON.stringify({
+                    type: item.type,
+                    label: item.label,
+                    icon: item.icon
+                });
+                e.dataTransfer.setData('application/json', payload);
+                e.dataTransfer.setData('text/plain', payload);
+            });
+
+            container.appendChild(itemCard);
+        });
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
+
+// ── Property Inspector Panel (Canva / Wix Style Property Editor) ──────────────
+function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
+    const stage = stages[stageIdx];
+    if (!stage) return;
+    const sec = (stage.sections || [])[secIdx];
+    if (!sec) return;
+
+    activeInspectorTarget = { stageIdx, secIdx, fieldId, isPredefined };
+    const workspace = document.getElementById('posterWorkspaceArea');
+    const panel = document.getElementById('inspectorPanel');
+    const content = document.getElementById('inspectorContent');
+    if (!workspace || !panel || !content) return;
+
+    workspace.classList.add('with-inspector');
+    panel.classList.remove('d-none');
+
+    document.querySelectorAll('.poster-element-wrapper').forEach(el => el.classList.remove('active-editing'));
+    const targetEl = document.querySelector(`[data-field-id="${fieldId}"]`);
+    if (targetEl) targetEl.classList.add('active-editing');
+
+    let cfg = null;
+    if (isPredefined) {
+        cfg = (sec.predefined_fields || {})[fieldId] || { label: fieldId, placeholder: '', required: true, disabled: false, col_span: 'col-md-6' };
+    } else {
+        cfg = ((sec.custom_fields || [])).find(f => f.id === fieldId) || { label: 'Custom Field', placeholder: '', type: 'text', col_span: 'col-md-6' };
+    }
+
+    const colSpan = cfg.col_span || cfg.col || 'col-md-6';
+    const isReq = cfg.required !== false;
+    const isDis = cfg.disabled === true;
+
+    const typeVal = cfg.type || (isPredefined ? 'predefined' : 'text');
+    const optionsVal = Array.isArray(cfg.options) ? cfg.options.join(', ') : (cfg.options || '');
+    const dataSourceVal = cfg.data_source || 'custom';
+    const unitVal = cfg.unit || '';
+    const minVal = cfg.min !== undefined ? cfg.min : '';
+    const maxVal = cfg.max !== undefined ? cfg.max : '';
+    const allowedTypesVal = cfg.allowed_types || '.pdf, .png, .jpg, .xlsx, .docx';
+    const maxSizeVal = cfg.max_size_mb || '10';
+
+    let extraConfigHtml = '';
+
+    if (typeVal === 'select' || isPredefined) {
+        extraConfigHtml += `
+            <div class="mb-3 p-2.5 rounded border bg-light">
+                <label class="ds-label text-xs fw-semibold mb-1 text-primary">Data Source & Mapping</label>
+                <select class="ds-input ds-select text-xs mb-2" onchange="updateInspectorField('data_source', this.value)">
+                    <option value="custom" ${dataSourceVal==='custom'?'selected':''}>Static Custom Options</option>
+                    <option value="stage1_team_members" ${dataSourceVal==='stage1_team_members'?'selected':''}>Stage 1: Team Members & Roles</option>
+                    <option value="stage1_problem_background" ${dataSourceVal==='stage1_problem_background'?'selected':''}>Stage 1: Problem Statement / Theme</option>
+                    <option value="stage2_observations" ${dataSourceVal==='stage2_observations'?'selected':''}>Stage 2: Gemba Observations</option>
+                    <option value="stage3_brainstormed_causes" ${dataSourceVal==='stage3_brainstormed_causes'?'selected':''}>Stage 3: Brainstormed Causes</option>
+                    <option value="stage4_verified_root_causes" ${dataSourceVal==='stage4_verified_root_causes'?'selected':''}>Stage 4: Verified 5-Why Root Causes</option>
+                    <option value="stage5_chosen_solutions" ${dataSourceVal==='stage5_chosen_solutions'?'selected':''}>Stage 5: Evaluated Solutions</option>
+                    <option value="stage6_countermeasures" ${dataSourceVal==='stage6_countermeasures'?'selected':''}>Stage 6: Implemented Countermeasures</option>
+                    <option value="stage7_kpi_metrics" ${dataSourceVal==='stage7_kpi_metrics'?'selected':''}>Stage 7: Verified KPI Metrics</option>
+                    <option value="stage8_standardized_sops" ${dataSourceVal==='stage8_standardized_sops'?'selected':''}>Stage 8: Standardized SOP Documents</option>
+                    <option value="org_departments" ${dataSourceVal==='org_departments'?'selected':''}>System: Organization Departments</option>
+                    <option value="org_users" ${dataSourceVal==='org_users'?'selected':''}>System: Organization Users</option>
+                </select>
+
+                <div id="inspectorOptionsWrap" style="${dataSourceVal!=='custom'?'display:none;':''}">
+                    <label class="ds-label text-xs fw-semibold mb-1">Dropdown Choices (Comma / Newline separated)</label>
+                    <textarea class="ds-input ds-textarea text-xs" rows="3" placeholder="e.g. Low, Medium, High, Critical" oninput="updateInspectorField('options', this.value)">${esc(optionsVal)}</textarea>
+                    <span class="text-xxs text-muted mt-1 d-block">Type choices separated by commas or line breaks.</span>
+                </div>
+            </div>
+        `;
+    }
+
+    if (typeVal === 'number' || (cfg.input_type === 'number')) {
+        extraConfigHtml += `
+            <div class="mb-3 p-2.5 rounded border bg-light">
+                <label class="ds-label text-xs fw-semibold mb-1 text-primary">Numeric Bounds & Unit</label>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="ds-label text-xxs text-muted">Unit Suffix</label>
+                        <input type="text" class="ds-input text-xs" value="${esc(unitVal)}" placeholder="e.g. ₹, %, hrs, kg" oninput="updateInspectorField('unit', this.value)">
+                    </div>
+                    <div class="col-3">
+                        <label class="ds-label text-xxs text-muted">Min</label>
+                        <input type="number" class="ds-input text-xs" value="${esc(minVal)}" placeholder="Min" oninput="updateInspectorField('min', this.value)">
+                    </div>
+                    <div class="col-3">
+                        <label class="ds-label text-xxs text-muted">Max</label>
+                        <input type="number" class="ds-input text-xs" value="${esc(maxVal)}" placeholder="Max" oninput="updateInspectorField('max', this.value)">
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    if (typeVal === 'file_upload') {
+        extraConfigHtml += `
+            <div class="mb-3 p-2.5 rounded border bg-light">
+                <label class="ds-label text-xs fw-semibold mb-1 text-primary">Upload Settings</label>
+                <div class="mb-2">
+                    <label class="ds-label text-xxs text-muted">Allowed Extensions</label>
+                    <input type="text" class="ds-input text-xs" value="${esc(allowedTypesVal)}" placeholder="e.g. .pdf, .png, .xlsx" oninput="updateInspectorField('allowed_types', this.value)">
+                </div>
+                <div>
+                    <label class="ds-label text-xxs text-muted">Max Size (MB)</label>
+                    <input type="number" class="ds-input text-xs" value="${esc(maxSizeVal)}" placeholder="10" oninput="updateInspectorField('max_size_mb', this.value)">
+                </div>
+            </div>
+        `;
+    }
+
+    content.innerHTML = `
+        <div class="mb-3">
+            <label class="ds-label text-xxs font-mono text-muted uppercase">Field ID / Key</label>
+            <input type="text" class="ds-input bg-light text-muted" value="${esc(fieldId)}" disabled style="height:28px;font-size:0.75rem;">
+        </div>
+        <div class="mb-3">
+            <label class="ds-label text-xs fw-semibold mb-1">Field Label / Title</label>
+            <input type="text" class="ds-input text-xs" value="${esc(cfg.label || '')}" oninput="updateInspectorField('label', this.value)">
+        </div>
+        <div class="mb-3">
+            <label class="ds-label text-xs fw-semibold mb-1">Placeholder Text</label>
+            <input type="text" class="ds-input text-xs" value="${esc(cfg.placeholder || '')}" oninput="updateInspectorField('placeholder', this.value)">
+        </div>
+        ${!isPredefined ? `
+        <div class="mb-3">
+            <label class="ds-label text-xs fw-semibold mb-1">Input Component Type</label>
+            <select class="ds-input ds-select text-xs" onchange="updateInspectorField('type', this.value)">
+                <option value="text" ${cfg.type==='text'?'selected':''}>Single-line Text</option>
+                <option value="textarea" ${cfg.type==='textarea'?'selected':''}>Multi-line Text Area</option>
+                <option value="number" ${cfg.type==='number'?'selected':''}>Numeric Input</option>
+                <option value="select" ${cfg.type==='select'?'selected':''}>Dropdown Select Box</option>
+                <option value="date" ${cfg.type==='date'?'selected':''}>Date Picker</option>
+                <option value="file_upload" ${cfg.type==='file_upload'?'selected':''}>File & Evidence Upload</option>
+                <option value="table" ${cfg.type==='table'?'selected':''}>Data Table</option>
+                <option value="five_why" ${cfg.type==='five_why'?'selected':''}>5-Why Table</option>
+                <option value="verification_table" ${cfg.type==='verification_table'?'selected':''}>Verification Table</option>
+                <option value="check_sheet" ${cfg.type==='check_sheet'?'selected':''}>Check Sheet</option>
+                <option value="pareto" ${cfg.type==='pareto'?'selected':''}>Pareto Chart</option>
+                <option value="fishbone" ${cfg.type==='fishbone'?'selected':''}>Ishikawa Fishbone</option>
+                <option value="signature" ${cfg.type==='signature'?'selected':''}>Reviewer Approval Gate</option>
+            </select>
+        </div>` : ''}
+        ${extraConfigHtml}
+        <div class="mb-3">
+            <label class="ds-label text-xs fw-semibold mb-1">Grid Width (Layout Column)</label>
+            <select class="ds-input ds-select text-xs" onchange="updateInspectorField('col_span', this.value)">
+                <option value="col-12" ${colSpan==='col-12'?'selected':''}>Full Width (12 Columns)</option>
+                <option value="col-md-6" ${colSpan==='col-md-6'?'selected':''}>Half Width (6 Columns - 50%)</option>
+                <option value="col-md-4" ${colSpan==='col-md-4'?'selected':''}>One Third (4 Columns - 33%)</option>
+                <option value="col-md-3" ${colSpan==='col-md-3'?'selected':''}>One Quarter (3 Columns - 25%)</option>
+            </select>
+        </div>
+        <div class="p-3 bg-light rounded-3 mb-3 border">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="inspMandatory" ${isReq?'checked':''} onchange="updateInspectorField('required', this.checked)">
+                <label class="form-check-label text-xs fw-semibold" for="inspMandatory">Mandatory Field (*)</label>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="inspDisabled" ${isDis?'checked':''} onchange="updateInspectorField('disabled', this.checked)">
+                <label class="form-check-label text-xs fw-semibold" for="inspDisabled">Hide / Disable Element</label>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="ds-btn ds-btn-outline-primary ds-btn-sm flex-grow-1" onclick="duplicateInspectorField()">
+                <i data-lucide="copy" style="width:12px;height:12px;"></i> Duplicate
+            </button>
+            <button type="button" class="ds-btn ds-btn-ghost text-danger ds-btn-sm" onclick="deleteInspectorField()">
+                <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete
+            </button>
+        </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeInspector() {
+    activeInspectorTarget = null;
+    const workspace = document.getElementById('posterWorkspaceArea');
+    const panel = document.getElementById('inspectorPanel');
+    if (workspace) workspace.classList.remove('with-inspector');
+    if (panel) panel.classList.add('d-none');
+    document.querySelectorAll('.poster-element-wrapper').forEach(el => el.classList.remove('active-editing'));
+}
+
+function updateInspectorField(prop, value) {
+    if (!activeInspectorTarget) return;
+    const { stageIdx, secIdx, fieldId, isPredefined } = activeInspectorTarget;
+    const stage = stages[stageIdx];
+    if (!stage) return;
+    const sec = (stage.sections || [])[secIdx];
+    if (!sec) return;
+
+    if (isPredefined) {
+        if (!sec.predefined_fields) sec.predefined_fields = {};
+        if (!sec.predefined_fields[fieldId]) sec.predefined_fields[fieldId] = { label: fieldId };
+        sec.predefined_fields[fieldId][prop] = value;
+    } else {
+        if (!sec.custom_fields) sec.custom_fields = [];
+        const f = sec.custom_fields.find(item => item.id === fieldId);
+        if (f) f[prop] = value;
+    }
+
+    renderList();
+    renderPreview();
+}
+
+function duplicateInspectorField() {
+    if (!activeInspectorTarget) return;
+    const { stageIdx, secIdx, fieldId, isPredefined } = activeInspectorTarget;
+    const stage = stages[stageIdx];
+    if (!stage) return;
+    const sec = (stage.sections || [])[secIdx];
+    if (!sec) return;
+
+    const newId = `custom_${Date.now()}`;
+    if (!sec.custom_fields) sec.custom_fields = [];
+
+    let srcLabel = 'Copied Field';
+    let srcType = 'text';
+    let srcPh = '';
+    if (isPredefined) {
+        const pf = (sec.predefined_fields || {})[fieldId] || {};
+        srcLabel = (pf.label || fieldId) + ' (Copy)';
+        srcPh = pf.placeholder || '';
+    } else {
+        const cf = sec.custom_fields.find(f => f.id === fieldId) || {};
+        srcLabel = (cf.label || 'Custom Field') + ' (Copy)';
+        srcType = cf.type || 'text';
+        srcPh = cf.placeholder || '';
+    }
+
+    sec.custom_fields.push({
+        id: newId,
+        label: srcLabel,
+        type: srcType,
+        placeholder: srcPh,
+        required: false,
+        disabled: false
+    });
+
+    renderList();
+    renderPreview();
+    openInspector(stageIdx, secIdx, newId, false);
+}
+
+function deleteInspectorField() {
+    if (!activeInspectorTarget) return;
+    const { stageIdx, secIdx, fieldId, isPredefined } = activeInspectorTarget;
+    const stage = stages[stageIdx];
+    if (!stage) return;
+    const sec = (stage.sections || [])[secIdx];
+    if (!sec) return;
+
+    if (isPredefined) {
+        if (!sec.predefined_fields) sec.predefined_fields = {};
+        if (!sec.predefined_fields[fieldId]) sec.predefined_fields[fieldId] = {};
+        sec.predefined_fields[fieldId].disabled = true;
+    } else {
+        if (sec.custom_fields) {
+            sec.custom_fields = sec.custom_fields.filter(f => f.id !== fieldId);
+        }
+    }
+
+    closeInspector();
+    renderList();
+    renderPreview();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+    if (window.QCMS && QCMS.toast) { QCMS.toast(msg, type); return; }
+    const d = document.createElement('div');
+    const bgMap = { success:'#166534', error:'#7f1d1d', info:'#1e40af', warning:'#92400e' };
+    const bdMap = { success:'#22c55e', error:'#ef4444', info:'#60a5fa', warning:'#fbbf24' };
+    d.style.cssText = `position:fixed;top:24px;right:24px;z-index:99999999;padding:12px 20px;
+        border-radius:10px;font-weight:600;font-size:.875rem;color:#fff;
+        background:${bgMap[type]||bgMap.success};
+        border:1px solid ${bdMap[type]||bdMap.success};box-shadow:0 10px 30px rgba(0,0,0,0.3);`;
+    d.textContent = msg;
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 3200);
+}
+
+function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renumber() { stages.forEach((s, i) => { s.stage_id = i + 1; }); }
+
+// ── Mockup HTML for custom sub-field types ────────────────────────────────────
+function mockupHtmlForFieldType(type, placeholder = '', inputType = 'text', optionsVal = '', dataSourceVal = '', unitVal = '') {
+    const ph = placeholder || (type === 'text' ? 'Enter details...' : 'Enter detailed notes...');
+    switch (type) {
+        case 'text':
+            return `<div class="input-group input-group-sm" style="pointer-events:none;"><input type="${inputType==='number'?'number':'text'}" class="ds-input" style="height:32px;" placeholder="${esc(ph)}">${unitVal ? `<span class="input-group-text bg-light text-muted text-xs">${esc(unitVal)}</span>` : ''}</div>`;
+        case 'textarea':
+            return `<textarea class="ds-input ds-textarea" style="pointer-events:none;" rows="2" placeholder="${esc(ph)}"></textarea>`;
+        case 'select': {
+            let optHtml = `<option value="">-- Select option --</option>`;
+            if (dataSourceVal && dataSourceVal !== 'custom') {
+                const labels = {
+                    'stage1_team_members': 'Stage 1: Team Members & Roles',
+                    'stage1_problem_background': 'Stage 1: Problem Statement / Theme',
+                    'stage2_observations': 'Stage 2: Gemba Defect & Observations',
+                    'stage3_brainstormed_causes': 'Stage 3: Brainstormed Causes',
+                    'stage4_verified_root_causes': 'Stage 4: Verified 5-Why Root Causes',
+                    'stage5_chosen_solutions': 'Stage 5: Evaluated Solutions',
+                    'stage6_countermeasures': 'Stage 6: Implemented Countermeasures',
+                    'stage7_kpi_metrics': 'Stage 7: Verified KPI Metrics',
+                    'stage8_standardized_sops': 'Stage 8: Standardized SOPs',
+                    'org_departments': 'System: Organization Departments',
+                    'org_users': 'System: Organization Users'
+                };
+                const label = labels[dataSourceVal] || dataSourceVal;
+                optHtml += `<option disabled selected>[Mapped to ${esc(label)}]</option>`;
+            } else if (optionsVal) {
+                const list = Array.isArray(optionsVal) ? optionsVal : String(optionsVal).split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                if (list.length > 0) {
+                    optHtml += list.map(o => `<option>${esc(o)}</option>`).join('');
+                } else {
+                    optHtml += `<option>Option 1</option><option>Option 2</option>`;
+                }
+            } else {
+                optHtml += `<option>Option 1</option><option>Option 2</option>`;
+            }
+            return `<select class="ds-input ds-select" style="height:32px;pointer-events:none;appearance:auto;">${optHtml}</select>`;
+        }
+        case 'file_upload':
+            return `<div class="border rounded p-2 text-center bg-light" style="border-style:dashed!important;pointer-events:none;"><i data-lucide="upload" style="width:14px;height:14px;vertical-align:middle;" class="text-secondary"></i><span class="text-xs text-secondary ms-1" style="vertical-align:middle;">Upload evidence document</span></div>`;
+        case 'signature':
+            return `<div class="d-flex align-items-center justify-content-between p-2 rounded bg-light border" style="pointer-events:none;"><span class="text-xs fw-semibold">Pending Approval Gate</span><input class="form-check-input" type="checkbox" disabled></div>`;
+        case 'multi_text':
+            return `<div style="pointer-events:none;"><input type="text" class="ds-input mb-1" style="height:32px;" placeholder="Bullet Item 1..."><button class="ds-btn ds-btn-ghost ds-btn-sm py-0 mt-1" type="button"><i data-lucide="plus" style="width:10px;height:10px;"></i> Add Item</button></div>`;
+        case 'table':
+            return `<div class="table-responsive" style="pointer-events:none;"><table class="ds-table table-bordered mb-1 text-xs"><thead><tr><th>Item / Metric</th><th>Planned / Target</th><th>Actual / Outcome</th></tr></thead><tbody><tr><td>Sample Item</td><td>Target A</td><td>Outcome A</td></tr></tbody></table></div>`;
+        case 'five_why':
+            return `<div class="table-responsive" style="pointer-events:none;"><table class="ds-table table-bordered mb-1 text-xs"><thead><tr><th style="width:70px;">Why</th><th>Description</th></tr></thead><tbody><tr><td>Why 1</td><td>Problem occurrence...</td></tr></tbody></table></div>`;
+        case 'verification_table':
+            return `<div class="table-responsive" style="pointer-events:none;"><table class="ds-table table-bordered mb-1 text-xs"><thead><tr><th>Hypothesis / Root Cause</th><th>Verification Method</th><th>Status</th></tr></thead><tbody><tr><td>Hypothesis A</td><td>Testing method...</td><td>Open</td></tr></tbody></table></div>`;
+        case 'check_sheet':
+            return `<div style="pointer-events:none;" class="text-xs"><div class="form-check"><input class="form-check-input" type="checkbox"><label class="form-check-label">Verify specification checklist item</label></div></div>`;
+        case 'pareto': case 'histogram': case 'control_chart': case 'scatter':
+            return `<div class="border rounded p-2 text-center bg-light text-xs text-secondary" style="border-style:dashed!important;pointer-events:none;"><i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;"></i><span class="ms-1" style="vertical-align:middle;">[Mockup ${type.toUpperCase()} Chart]</span></div>`;
+        case 'fishbone':
+            return `<div class="border rounded p-2 text-center bg-light text-xs text-secondary" style="border-style:dashed!important;pointer-events:none;"><i data-lucide="git-merge" style="width:16px;height:16px;vertical-align:middle;"></i><span class="ms-1" style="vertical-align:middle;">[Mockup Ishikawa Fishbone Diagram]</span></div>`;
+        case 'stratification':
+            return `<div class="border rounded p-2 text-center bg-light text-xs text-secondary" style="border-style:dashed!important;pointer-events:none;"><i data-lucide="layers" style="width:16px;height:16px;vertical-align:middle;"></i><span class="ms-1" style="vertical-align:middle;">[Mockup Stratification Table &amp; Chart]</span></div>`;
+        default:
+            return `<div class="text-xs text-secondary">[Mockup: ${type}]</div>`;
+    }
+}
+
+// ── Render stage list (full WYSIWYG) ──────────────────────────────────────────
+function renderList() {
+    const list = document.getElementById('stageList');
+    list.innerHTML = '';
+
+    stages.forEach((s, i) => {
+        const clr = STAGE_COLORS[i] || STAGE_COLORS[0];
+        const container = document.createElement('div');
+        container.className = 'stage-row-container';
+        container.dataset.idx = i;
+        container.setAttribute('draggable', 'true');
+
+        // Stage Header
+        const header = document.createElement('div');
+        header.className = 'stage-row-header';
+        header.innerHTML = `
+            <div class="drag-handle" title="Drag to reorder stages"><i data-lucide="grip-vertical" style="width:16px;height:16px;"></i></div>
+            <div class="stage-icon-bubble" data-idx="${i}" title="Click to change icon" style="background:${clr.bg};color:${clr.color};">
+                <i data-lucide="${s.icon || 'layers'}" style="width:19px;height:19px;stroke-width:1.8;"></i>
+            </div>
+            <div class="stage-title-wrap">
+                <span class="stage-seq-badge">Stage ${i + 1}</span>
+                <input class="stage-title-input" type="text" value="${esc(s.title)}" data-idx="${i}" placeholder="Stage name…"/>
+            </div>
+            <span class="orig-badge">Module D${s.original_id}</span>
+            <div class="row-actions me-2">
+                <button class="row-btn" title="Move up"   onclick="moveStage(${i},-1); event.stopPropagation();" ${i===0?'disabled':''}>
+                    <i data-lucide="chevron-up"   style="width:13px;height:13px;"></i>
+                </button>
+                <button class="row-btn" title="Move down" onclick="moveStage(${i},+1); event.stopPropagation();" ${i===stages.length-1?'disabled':''}>
+                    <i data-lucide="chevron-down" style="width:13px;height:13px;"></i>
+                </button>
+                <button class="row-btn danger ms-1" title="Delete stage" onclick="deleteStage(${i}); event.stopPropagation();">
+                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                </button>
+            </div>
+            <div class="collapse-toggle text-secondary" style="width:24px;text-align:center;">
+                <i data-lucide="chevron-down" style="width:18px;height:18px;"></i>
+            </div>
+        `;
+
+        // Expand toggle
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('input') || e.target.closest('.stage-icon-bubble') || e.target.closest('.row-btn') || e.target.closest('.drag-handle')) return;
+            const detail = container.querySelector('.stage-sections-detail');
+            const toggleIcon = header.querySelector('.collapse-toggle i');
+            if (detail.style.display === 'none' || !detail.style.display) {
+                detail.style.display = 'block';
+                toggleIcon.setAttribute('data-lucide', 'chevron-up');
+            } else {
+                detail.style.display = 'none';
+                toggleIcon.setAttribute('data-lucide', 'chevron-down');
+            }
+            lucide.createIcons();
+        });
+
+        // Stage drag & drop
+        container.addEventListener('dragstart', e => {
+            if (e.target.closest('.visual-card-wrapper')) return;
+            dragSrcIdx = i; container.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move';
+        });
+        container.addEventListener('dragend',  () => { container.classList.remove('dragging'); document.querySelectorAll('.stage-row-container').forEach(r => r.classList.remove('drag-over')); });
+        container.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; document.querySelectorAll('.stage-row-container').forEach(r => r.classList.remove('drag-over')); container.classList.add('drag-over'); });
+        container.addEventListener('dragleave',() => container.classList.remove('drag-over'));
+        container.addEventListener('drop', e => {
+            e.preventDefault(); container.classList.remove('drag-over');
+            if (dragSrcIdx === null || dragSrcIdx === i) return;
+            const moved = stages.splice(dragSrcIdx, 1)[0];
+            stages.splice(i, 0, moved);
+            renumber(); renderList(); renderPreview();
+        });
+
+        // Inline title input
+        header.querySelector('.stage-title-input').addEventListener('input', e => { stages[i].title = e.target.value; renderPreview(); });
+
+        // Icon bubble
+        header.querySelector('.stage-icon-bubble').addEventListener('click', (e) => { e.stopPropagation(); openIconPicker(i); });
+
+        // Section details area
+        const detail = document.createElement('div');
+        detail.className = 'stage-sections-detail';
+        detail.style.display = 'none';
+
+        const secListId = `sectionList_${i}`;
+        detail.innerHTML = `
+            <div class="fw-bold text-xs text-secondary mb-3 text-uppercase" style="letter-spacing:.06em;">Stage Content Sections &amp; QC Tools</div>
+            <div id="${secListId}" class="mb-3"></div>
+            <div class="d-flex justify-content-start">
+                <button class="ds-btn ds-btn-ghost ds-btn-sm" onclick="openToolPicker(${i})">
+                    <i data-lucide="plus"></i> Add Column / QC Tool
+                </button>
+            </div>
+        `;
+
+        // Build section list WYSIWYG
+        const secList = detail.querySelector(`#${secListId}`);
+        secList.className = 'visual-stage-container';
+
+        const sections = s.sections || [];
+
+        if (sections.length === 0) {
+            secList.innerHTML = `<p class="text-xs ds-text-secondary py-2 mb-0" style="font-style:italic;">No columns or QC tools added yet. Click below to add.</p>`;
+        } else {
+            // Get original stage module cards
+            const module = StageModules[s.original_id];
+            let parsedCards = [];
+            if (module) {
+                if (!module._parsedCards) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = module.renderHTML();
+                    const formContainer = temp.querySelector('[id^="stage"]') || temp.firstElementChild;
+                    let cards = [];
+                    if (formContainer) cards = Array.from(formContainer.querySelectorAll(':scope > .glass-card.ds-card'));
+                    if (cards.length === 0) {
+                        const allCards = Array.from(temp.querySelectorAll('.glass-card.ds-card'));
+                        cards = allCards.filter(card => {
+                            let parent = card.parentElement;
+                            while (parent) {
+                                if (parent.classList.contains('glass-card') && parent.classList.contains('ds-card')) return false;
+                                parent = parent.parentElement;
+                            }
+                            return true;
+                        });
+                    }
+                    module._parsedCards = cards;
+                }
+                parsedCards = module._parsedCards;
+            }
+
+            sections.forEach((sec, sIdx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'visual-card-wrapper';
+                wrapper.dataset.stageIdx = i;
+                wrapper.dataset.secIdx = sIdx;
+                wrapper.setAttribute('draggable', 'true');
+
+                // Get card element
+                let cardEl = null;
+                const cardIdx = sec.card_index !== undefined ? sec.card_index : sIdx;
+                if (module && cardIdx < parsedCards.length && sec.id && sec.id.startsWith('s' + s.original_id)) {
+                    cardEl = parsedCards[cardIdx].cloneNode(true);
+                }
+                if (!cardEl) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = DynamicRenderer.renderSectionCard(sec);
+                    cardEl = tempDiv.querySelector('.glass-card.ds-card');
+                }
+
+                // Parse predefined fields
+                const predefinedFieldsList = [];
+                if (cardEl) {
+                    cardEl.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
+                        const id = input.id;
+                        if (!id || input.closest('.card-edit-header')) return;
+                        let labelText = '';
+                        const parent = input.closest('.ds-field') || input.parentElement;
+                        if (parent) { const lbl = parent.querySelector('label'); if (lbl) labelText = lbl.textContent.trim(); }
+                        if (!labelText) { const prev = input.previousElementSibling; if (prev && prev.tagName === 'LABEL') labelText = prev.textContent.trim(); }
+                        if (!labelText) labelText = input.placeholder || id;
+                        labelText = labelText.replace(/\s*\*$/, '');
+                        if (!sec.predefined_fields) sec.predefined_fields = {};
+                        if (!sec.predefined_fields[id]) {
+                            sec.predefined_fields[id] = { label: labelText, placeholder: input.placeholder||'', input_type: input.type||'text', disabled: false, required: input.hasAttribute('required')||labelText.includes('*') };
+                        }
+                        predefinedFieldsList.push({ id, defaultLabel: labelText, type: input.tagName.toLowerCase()==='textarea'?'textarea':(input.tagName.toLowerCase()==='select'?'select':(input.type==='checkbox'||input.type==='radio'?'boolean':(input.type==='file'?'file':'text'))) });
+                    });
+
+                    // Apply customizations to mockup
+                    if (sec.predefined_fields) {
+                        Object.keys(sec.predefined_fields).forEach(id => {
+                            const cfg = sec.predefined_fields[id];
+                            const el = cardEl.querySelector(`#${id}`);
+                            if (!el) return;
+                            if (cfg.disabled) {
+                                const cont = el.closest('.col-md-4,.col-md-6,.col-md-3,.col-12,.ds-field,.col-md-5,.col-md-7') || el.parentElement;
+                                if (cont) cont.style.setProperty('display','none','important');
+                            } else {
+                                const p = el.closest('.ds-field') || el.parentElement;
+                                if (p) { const lbl = p.querySelector('label'); if (lbl) { let cleanLbl = (cfg.label||'').replace(/\s*\*$/,''); lbl.innerHTML = cfg.required!==false ? `${esc(cleanLbl)} <span class="text-danger">*</span>` : esc(cleanLbl); } }
+                                if (cfg.placeholder) el.placeholder = cfg.placeholder;
+                                if (cfg.input_type && el.tagName.toLowerCase()==='input' && el.type!=='checkbox' && el.type!=='radio' && el.type!=='file') el.type = cfg.input_type==='number'?'number':'text';
+                            }
+                        });
+                    }
+
+                    // Apply saved free-text overrides (headings, descriptions, table headers, etc.)
+                    if (sec.text_overrides) {
+                        Object.keys(sec.text_overrides).forEach(key => {
+                            const el = cardEl.querySelector(`[data-tekey="${key}"]`);
+                            if (el) el.textContent = sec.text_overrides[key];
+                        });
+                    }
+                }
+
+                if (cardEl) {
+                    // Hide duplicate inner "Section X - Title" headings inside card body
+                    cardEl.querySelectorAll('.ds-card-body h6, .ds-card-body h5').forEach(heading => {
+                        if (heading.closest('.card-edit-header')) return;
+                        if (/^\s*Section\s+\d+/i.test(heading.textContent.trim())) {
+                            heading.style.display = 'none';
+                            const parentFlex = heading.closest('.d-flex');
+                            if (parentFlex) {
+                                const visibleSiblings = Array.from(parentFlex.children).filter(child => child !== heading && window.getComputedStyle(child).display !== 'none');
+                                if (visibleSiblings.length === 1 && (visibleSiblings[0].tagName === 'BUTTON' || visibleSiblings[0].querySelector('button, .ds-btn') || visibleSiblings[0].classList.contains('ds-btn'))) {
+                                    parentFlex.classList.remove('justify-content-between');
+                                    parentFlex.classList.add('justify-content-end');
+                                }
+                            }
+                        }
+                    });
+
+                    // Wrap card body in collapsible
+                    const cardBody = cardEl.querySelector('.ds-card-body');
+                    const bodyCollapse = document.createElement('div');
+                    bodyCollapse.className = 'card-body-collapse';
+                    bodyCollapse.style.display = 'none';
+                    if (cardBody) { cardBody.parentNode.insertBefore(bodyCollapse, cardBody); bodyCollapse.appendChild(cardBody); }
+
+                    // ── Inject sample mockup rows into empty dynamic containers ──────────
+                    if (cardBody) {
+                        // Map of container-id suffix → array of column descriptors {type, placeholder, width, opts}
+                        const MOCKUP_ROWS = {
+                            // ── Stage 4 ─────────────────────────────────────────────────
+                            'verifiedContainer': [
+                                {t:'text', ph:'e.g. Inadequate pressure',             w:'col-4'},
+                                {t:'text', ph:'e.g. Review gauge history',             w:'col-4'},
+                                {t:'text', ph:'e.g. In Progress',                     w:'col-3'}
+                            ],
+                            'hypothesisContainer': [
+                                {t:'text', ph:'e.g. Defect rate correlates with shift', w:'col-3'},
+                                {t:'text', ph:'e.g. H0: Shift A = Shift B',            w:'col-3'},
+                                {t:'text', ph:'e.g. H1: Shift A ≠ Shift B',            w:'col-3'},
+                                {t:'text', ph:'e.g. Two-Sample t-Test',                w:'col-2'}
+                            ],
+                            'goodBadContainer': [
+                                {t:'text', ph:'e.g. Wire crimp pressure',              w:'col-3'},
+                                {t:'text', ph:'e.g. Stable at 5.5 bar',               w:'col-3'},
+                                {t:'text', ph:'e.g. Below 4.5 bar',                   w:'col-3'},
+                                {t:'text', ph:'e.g. 1.0 bar drop',                    w:'col-2'}
+                            ],
+                            'validationContainer': [
+                                {t:'text', ph:'e.g. Chi-Square Test',                  w:'col-3'},
+                                {t:'text', ph:'e.g. 0.034',                           w:'col-2'},
+                                {t:'text', ph:'e.g. 95%',                             w:'col-3'},
+                                {t:'text', ph:'e.g. Statistically Significant',       w:'col-3'}
+                            ],
+                            'reconfirmContainer': [
+                                {t:'text',   ph:'e.g. Trial Batch #3',                w:'col-3'},
+                                {t:'number', ph:'e.g. 100',                           w:'col-2'},
+                                {t:'text',   ph:'e.g. 0 defects',                     w:'col-3'},
+                                {t:'text',   ph:'e.g. Yes',                           w:'col-3'}
+                            ],
+                            'rootRegisterContainer': [
+                                {t:'text', ph:'e.g. RC-1',                            w:'col-2'},
+                                {t:'text', ph:'e.g. Wire crimper cylinder seal leak', w:'col-6'},
+                                {t:'text', ph:'e.g. 5-Why analysis',                  w:'col-3'}
+                            ],
+                            'rankingContainer': [
+                                {t:'text',   ph:'e.g. Wire crimper seal leak',        w:'col-5'},
+                                {t:'number', ph:'Impact 1-10',                        w:'col-2'},
+                                {t:'number', ph:'Ease 1-10',                          w:'col-2'},
+                                {t:'number', ph:'Score (auto)',                       w:'col-2', ro:true}
+                            ],
+                            // ── Stage 5 ─────────────────────────────────────────────────
+                            'mappingContainer': [
+                                {t:'select', opts:['— select root cause —'],          w:'col-5'},
+                                {t:'text',   ph:'e.g. Replace seal and add weekly PM',w:'col-6'}
+                            ],
+                            'bsContainer': [
+                                {t:'select', opts:['— select solution —'],            w:'col-5'},
+                                {t:'text',   ph:'e.g. Ravi Kumar',                    w:'col-3'},
+                                {t:'text',   ph:'e.g. High - standard mold exists',   w:'col-3'}
+                            ],
+                            'evalContainer': [
+                                {t:'select', opts:['— select solution —'],            w:'col-3'},
+                                {t:'number', ph:'Effectiveness 1-10',                 w:'col'},
+                                {t:'number', ph:'Cost 1-10',                          w:'col'},
+                                {t:'number', ph:'Feasibility 1-10',                   w:'col'},
+                                {t:'number', ph:'Time 1-10',                          w:'col'},
+                                {t:'number', ph:'Total (auto)',                       w:'col', ro:true}
+                            ],
+                            'cbaContainer': [
+                                {t:'select', opts:['— select solution —'],            w:'col-4'},
+                                {t:'text',   ph:'e.g. ₹20,000',                      w:'col-2'},
+                                {t:'text',   ph:'e.g. Save ₹1.2L/month',             w:'col-3'},
+                                {t:'text',   ph:'e.g. 600% in first year',            w:'col-2'}
+                            ],
+                            'seContainer': [
+                                {t:'select', opts:['— select solution —'],            w:'col-3'},
+                                {t:'text',   ph:'e.g. Production line downtime',      w:'col-4'},
+                                {t:'text',   ph:'e.g. Schedule during Sunday shift',  w:'col-4'}
+                            ],
+                            'pilotContainer': [
+                                {t:'select', opts:['— select solution —'],            w:'col-3'},
+                                {t:'text',   ph:'e.g. Assembly Line A',               w:'col-2'},
+                                {t:'text',   ph:'e.g. 5 days',                        w:'col-2'},
+                                {t:'text',   ph:'e.g. 0 defects in pilot run',        w:'col-2'},
+                                {t:'text',   ph:'e.g. Adopt',                         w:'col-2'}
+                            ],
+                            's5_actionContainer': [
+                                {t:'text', ph:'e.g. Order new crimp die CD-4421',     w:'col-4'},
+                                {t:'text', ph:'e.g. Rajesh Kumar',                    w:'col-2'},
+                                {t:'date', ph:'',                                     w:'col-2'},
+                                {t:'text', ph:'e.g. Issue purchase order via SAP',    w:'col-3'}
+                            ],
+                            's5_resourceContainer': [
+                                {t:'text', ph:'e.g. Torque wrench calibration rig',   w:'col-4'},
+                                {t:'text', ph:'e.g. ₹15,000',                         w:'col-2'},
+                                {t:'text', ph:'e.g. Vendor ABC Ltd',                  w:'col-3'},
+                                {t:'text', ph:'e.g. Approved',                        w:'col-2'}
+                            ],
+                            // ── Stage 6 ─────────────────────────────────────────────────
+                            'taskContainer': [
+                                {t:'text',   ph:'e.g. Install torque sensors',        w:'col-3'},
+                                {t:'text',   ph:'e.g. Ravi Kumar',                    w:'col-2'},
+                                {t:'text',   ph:'e.g. Mount sensors on Machine A',    w:'col-2'},
+                                {t:'date',   ph:'',                                   w:'col-2'},
+                                {t:'number', ph:'%',                                  w:'col-2'}
+                            ],
+                            's6_resourceContainer': [
+                                {t:'text',   ph:'e.g. Calibration sensors kit',       w:'col-4'},
+                                {t:'number', ph:'Planned cost e.g. 15000',            w:'col-2'},
+                                {t:'number', ph:'Actual cost e.g. 14200',             w:'col-2'},
+                                {t:'number', ph:'Variance (auto)',                    w:'col-3', ro:true}
+                            ],
+                            'changeContainer': [
+                                {t:'text',   ph:'e.g. Update SOP #12',                w:'col-4'},
+                                {t:'select', opts:['Yes','No','In Progress'],         w:'col-3'},
+                                {t:'date',   ph:'',                                   w:'col-4'}
+                            ],
+                            'riskContainer': [
+                                {t:'text',   ph:'e.g. Operator resistance',           w:'col-4'},
+                                {t:'text',   ph:'e.g. Training & communication',      w:'col-4'},
+                                {t:'select', opts:['Open','Mitigated','Closed'],      w:'col-3'}
+                            ],
+                            's6_sideEffectContainer': [
+                                {t:'text',   ph:'e.g. Noise increase',                w:'col-3'},
+                                {t:'select', opts:['Low','Medium','High'],            w:'col-2'},
+                                {t:'text',   ph:'e.g. Add sound dampening',           w:'col-3'},
+                                {t:'select', opts:['Yes','No'],                       w:'col-3'}
+                            ],
+                            'evidenceContainer': [
+                                {t:'text',   ph:'e.g. Photo of installation',         w:'col-4'},
+                                {t:'text',   ph:'e.g. https://drive.google.com/…',   w:'col-4'},
+                                {t:'text',   ph:'e.g. Ravi Kumar',                   w:'col-3'}
+                            ],
+                            'commContainer': [
+                                {t:'text',   ph:'e.g. Production Team',               w:'col-3'},
+                                {t:'text',   ph:'e.g. SOP updated and shared',        w:'col-3'},
+                                {t:'date',   ph:'',                                   w:'col-2'},
+                                {t:'select', opts:['Email','Meeting','WhatsApp'],     w:'col-3'}
+                            ],
+                            's6_trainingContainer': [
+                                {t:'text',   ph:'e.g. Line Operators',                w:'col-3'},
+                                {t:'text',   ph:'e.g. Torque calibration module',     w:'col-3'},
+                                {t:'date',   ph:'',                                   w:'col-2'},
+                                {t:'number', ph:'Attendance %',                       w:'col-3'}
+                            ],
+                            'readinessContainer': [
+                                {t:'text',   ph:'e.g. SOP updated',                  w:'col-4'},
+                                {t:'text',   ph:'e.g. Quality Manager',              w:'col-4'},
+                                {t:'select', opts:['Pending','Verified','N/A'],      w:'col-3'}
+                            ],
+                            // ── Stage 7 ─────────────────────────────────────────────────
+                            'kpiContainer': [
+                                {t:'text',   ph:'e.g. Crimp Defect Rate',             w:'col-3'},
+                                {t:'number', ph:'Baseline e.g. 4.2',                 w:'col-2'},
+                                {t:'number', ph:'Target e.g. 0.5',                   w:'col-2'},
+                                {t:'number', ph:'Actual e.g. 0.3',                   w:'col-2'},
+                                {t:'number', ph:'Variance (auto)',                    w:'col-2', ro:true}
+                            ],
+                            'beforeAfterContainer': [
+                                {t:'text',   ph:'e.g. Crimp Defect Rate',             w:'col-3'},
+                                {t:'text',   ph:'e.g. 4.2%',                         w:'col-3'},
+                                {t:'text',   ph:'e.g. 0.3%',                         w:'col-3'},
+                                {t:'number', ph:'Improvement % e.g. 92',             w:'col-2'}
+                            ],
+                            'statContainer': [
+                                {t:'text', ph:'e.g. Two-Sample Proportion Test',      w:'col-4'},
+                                {t:'text', ph:'e.g. 0.0001',                         w:'col-3'},
+                                {t:'text', ph:'e.g. Reject H0; significant result',  w:'col-4'}
+                            ],
+                            's7_benefitContainer': [
+                                {t:'text',   ph:'e.g. Monthly rework savings',        w:'col-4'},
+                                {t:'number', ph:'Expected e.g. 120000',              w:'col-2'},
+                                {t:'number', ph:'Actual e.g. 125000',                w:'col-2'},
+                                {t:'number', ph:'Variance (auto)',                   w:'col-3', ro:true}
+                            ],
+                            'sustainContainer': [
+                                {t:'text', ph:'e.g. Monthly PM audit checklist',      w:'col-4'},
+                                {t:'text', ph:'e.g. Ravi Kumar',                     w:'col-2'},
+                                {t:'text', ph:'e.g. Fully compliant',                w:'col-2'},
+                                {t:'text', ph:'e.g. None',                           w:'col-3'}
+                            ],
+                            's7_sideEffectContainer': [
+                                {t:'text',   ph:'e.g. Downstream cable assembly',    w:'col-4'},
+                                {t:'select', opts:['Yes','No'],                      w:'col-2'},
+                                {t:'text',   ph:'e.g. Cable fitting smoother',       w:'col-5'}
+                            ],
+                            's7_lessonContainer': [
+                                {t:'text', ph:'e.g. Preventive Maintenance',          w:'col-3'},
+                                {t:'text', ph:'e.g. Weekly lubrication extends life', w:'col-4'},
+                                {t:'text', ph:'e.g. Standardize lubrication schedule',w:'col-4'}
+                            ],
+                            // ── Stage 8 ─────────────────────────────────────────────────
+                            'stdContainer': [
+                                {t:'text', ph:'e.g. Standard Document SOP-MFG-042',  w:'col-4'},
+                                {t:'text', ph:'e.g. v1.2',                           w:'col-3'},
+                                {t:'text', ph:'e.g. v2.0',                           w:'col-2'},
+                                {t:'date', ph:'',                                    w:'col-2'}
+                            ],
+                            's8_trainingContainer': [
+                                {t:'text',   ph:'e.g. Line A production operators',  w:'col-4'},
+                                {t:'date',   ph:'',                                  w:'col-3'},
+                                {t:'number', ph:'Attendance %',                      w:'col-2'},
+                                {t:'text',   ph:'e.g. Completed',                   w:'col-2'}
+                            ],
+                            'deployContainer': [
+                                {t:'text', ph:'e.g. Welding Shop, Building 3',        w:'col-4'},
+                                {t:'date', ph:'',                                    w:'col-2'},
+                                {t:'text', ph:'e.g. Completed',                      w:'col-2'},
+                                {t:'text', ph:'e.g. Ravi Kumar',                     w:'col-3'}
+                            ],
+                            's8_lessonContainer': [
+                                {t:'text', ph:'e.g. Preventive Maintenance',          w:'col-3'},
+                                {t:'text', ph:'e.g. Weekly lubrication extends life', w:'col-4'},
+                                {t:'text', ph:'e.g. Schedule PM on Sunday shifts',   w:'col-4'}
+                            ],
+                            's8_benefitContainer': [
+                                {t:'text', ph:'e.g. Scrap reduction',                 w:'col-3'},
+                                {t:'text', ph:'e.g. 4.2%',                           w:'col-2'},
+                                {t:'text', ph:'e.g. 0.3%',                           w:'col-2'},
+                                {t:'text', ph:'e.g. ₹1.2L per month',                w:'col-4'}
+                            ],
+                            'oppContainer': [
+                                {t:'text', ph:'e.g. Line B crimping defects',         w:'col-5'},
+                                {t:'text', ph:'e.g. High',                           w:'col-2'},
+                                {t:'text', ph:'e.g. Replicate torque sensor setup',  w:'col-4'}
+                            ],
+                            'repoContainer': [
+                                {t:'text', ph:'e.g. Pneumatic Crimping',              w:'col-3'},
+                                {t:'text', ph:'e.g. Project presentation + charts',  w:'col-4'},
+                                {t:'text', ph:'e.g. https://sharepoint.corp/…',      w:'col-4'}
+                            ],
+                            'teamContainer': [
+                                {t:'text', ph:'e.g. Ravi Kumar',                      w:'col-3'},
+                                {t:'text', ph:'e.g. Identified root cause',          w:'col-5'},
+                                {t:'text', ph:'e.g. QC Champion Q2',                 w:'col-3'}
+                            ],
+                        };
+
+
+                        cardBody.querySelectorAll('[id]').forEach(cont => {
+                            const cid = cont.id; // e.g. "s6_countermeasuresContainer"
+                            if (!cid) return;
+                            // Match the suffix key
+                            const matchKey = Object.keys(MOCKUP_ROWS).find(k => cid.endsWith('_' + k) || cid === k);
+                            if (!matchKey) return;
+                            if (cont.children.length > 0) return; // already has rows
+
+                            const cols = MOCKUP_ROWS[matchKey];
+                            const row = document.createElement('div');
+                            row.className = 'row g-2 mb-2 align-items-center dyn-row mockup-preview-row';
+                            row.style.opacity = '0.75';
+
+                            let innerHtml = '';
+                            cols.forEach(col => {
+                                if (col.t === 'select') {
+                                    const optHtml = (col.opts || []).map(o => `<option>${o}</option>`).join('');
+                                    innerHtml += `<div class="${col.w}"><select class="ds-input ds-select" disabled style="pointer-events:none;background:var(--ds-surface,#f8fafc);color:var(--ds-text-secondary,#64748b);font-size:.8rem;">${optHtml}</select></div>`;
+                                } else {
+                                    const ro = col.ro ? 'readonly' : 'disabled';
+                                    innerHtml += `<div class="${col.w}"><input type="${col.t}" class="ds-input" placeholder="${col.ph || ''}" ${ro} style="pointer-events:none;background:var(--ds-surface,#f8fafc);color:var(--ds-text-secondary,#64748b);font-size:.8rem;"></div>`;
+                                }
+                            });
+                            // Delete-button placeholder (col-1)
+                            innerHtml += `<div class="col-1"><button type="button" class="ds-btn ds-btn-ghost text-danger p-1" disabled style="pointer-events:none;opacity:.4;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button></div>`;
+                            row.innerHTML = innerHtml;
+
+                            // Badge label
+                            const badge = document.createElement('div');
+                            badge.style.cssText = 'font-size:.65rem;color:var(--ds-text-secondary,#94a3b8);letter-spacing:.05em;padding:0 4px 4px;text-transform:uppercase;';
+                            badge.textContent = 'Sample row — users fill data here';
+
+                            cont.appendChild(badge);
+                            cont.appendChild(row);
+                            if (window.lucide) lucide.createIcons({ el: row });
+                        });
+                    }
+
+                    // Build edit header
+                    const existingHeader = cardEl.querySelector('.ds-card-header');
+                    const editHeader = document.createElement('div');
+                    editHeader.className = 'card-edit-header cursor-pointer';
+                    editHeader.innerHTML = `
+                        <div class="card-drag-handle" title="Drag to reorder sections"><i data-lucide="grip-vertical" style="width:15px;height:15px;"></i></div>
+                        <div class="card-title-edit-wrap">
+                            <span class="card-seq-badge">Sec ${s.stage_id || (i + 1)}.${sIdx + 1}</span>
+                            <input type="text" class="card-title-edit-input" value="${esc(sec.label)}" placeholder="Enter section title...">
+                        </div>
+                        <div class="card-actions-wrap">
+                            <div class="form-check form-switch mb-0 me-2" title="Toggle mandatory" onclick="event.stopPropagation();">
+                                <input class="form-check-input section-required-toggle" type="checkbox" role="switch" ${sec.required!==false?'checked':''}>
+                                <label class="text-xs ${sec.required!==false?'text-danger fw-bold':'text-muted'} ms-1 mb-0">Mandatory</label>
+                            </div>
+                            <div class="form-check form-switch mb-0 me-2" title="Allow N/A" onclick="event.stopPropagation();">
+                                <input class="form-check-input section-allowna-toggle" type="checkbox" role="switch" ${sec.allow_na?'checked':''}>
+                                <label class="text-xs ${sec.allow_na?'text-primary fw-bold':'text-muted'} ms-1 mb-0">Allow N/A</label>
+                            </div>
+                            <span class="card-type-badge">${(sec.type||'custom').toUpperCase()}</span>
+                            <button class="card-delete-btn" title="Delete section" onclick="deleteSection(${i},${sIdx}); event.stopPropagation();">
+                                <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                            </button>
+                            <div class="card-collapse-toggle text-secondary ms-2" style="width:20px;text-align:center;">
+                                <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+                            </div>
+                        </div>
+                    `;
+
+                    // Section title rename
+                    editHeader.querySelector('.card-title-edit-input').addEventListener('input', (e) => { sec.label = e.target.value; });
+
+                    // Mandatory toggle
+                    const secReqToggle = editHeader.querySelector('.section-required-toggle');
+                    if (secReqToggle) {
+                        secReqToggle.addEventListener('change', (e) => {
+                            sec.required = e.target.checked;
+                            const lbl = e.target.nextElementSibling;
+                            if (lbl) { lbl.textContent = 'Mandatory'; lbl.className = `text-xs ${e.target.checked?'text-danger fw-bold':'text-muted'} ms-1 mb-0`; }
+                        });
+                    }
+
+                    // Allow N/A toggle
+                    const secNaToggle = editHeader.querySelector('.section-allowna-toggle');
+                    if (secNaToggle) {
+                        secNaToggle.addEventListener('change', (e) => {
+                            sec.allow_na = e.target.checked;
+                            const lbl = e.target.nextElementSibling;
+                            if (lbl) lbl.className = `text-xs ${e.target.checked?'text-primary fw-bold':'text-muted'} ms-1 mb-0`;
+                        });
+                    }
+
+                    // Expand/collapse card body
+                    editHeader.addEventListener('click', (e) => {
+                        if (e.target.closest('input') || e.target.closest('.card-drag-handle') || e.target.closest('button') || e.target.closest('.form-switch')) return;
+                        const toggleIcon = editHeader.querySelector('.card-collapse-toggle i');
+                        if (bodyCollapse.style.display === 'none') {
+                            bodyCollapse.style.display = 'block';
+                            toggleIcon.setAttribute('data-lucide', 'chevron-up');
+                        } else {
+                            bodyCollapse.style.display = 'none';
+                            toggleIcon.setAttribute('data-lucide', 'chevron-down');
+                        }
+                        lucide.createIcons();
+                    });
+
+                    if (existingHeader) existingHeader.replaceWith(editHeader);
+                    else cardEl.prepend(editHeader);
+
+                    // ── Helper: ensure predefined_fields entry exists ─────────────────
+                    const ensurePF = (pfid) => {
+                        if (!sec.predefined_fields) sec.predefined_fields = {};
+                        if (!sec.predefined_fields[pfid]) sec.predefined_fields[pfid] = { label:'', placeholder:'', input_type:'text', disabled:false, required:true };
+                    };
+
+                    // ── Disable NON-predefined inputs first (buttons, selects, checkboxes, etc.) ──
+                    cardEl.querySelectorAll('input,textarea,select,button').forEach(el => {
+                        const isPF = predefinedFieldsList.find(pf => pf.id === el.id);
+                        if (!isPF && !el.classList.contains('card-title-edit-input') && !el.closest('.card-edit-header')) {
+                            el.disabled = true; el.style.pointerEvents = 'none';
+                        }
+                    });
+
+                    // ── Inline WYSIWYG editing on every predefined field ─────────────
+                    const hiddenPfIds = [];
+                    predefinedFieldsList.forEach(pf => {
+                        const el = cardEl.querySelector(`#${pf.id}`);
+                        if (!el) return;
+
+                        const cfg = (sec.predefined_fields && sec.predefined_fields[pf.id]) || {
+                            label: pf.defaultLabel, placeholder: el.placeholder || '',
+                            input_type: el.type || 'text', disabled: false, required: true
+                        };
+
+                        // Resolve column container
+                        const container = el.closest(
+                            '.col-md-4,.col-md-6,.col-md-3,.col-12,.ds-field,.col-md-5,.col-md-7,.team-member-row'
+                        ) || el.parentElement;
+                        if (!container) return;
+
+                        // If field is hidden, track it for restore bar
+                        if (cfg.disabled) {
+                            container.style.setProperty('display', 'none', 'important');
+                            hiddenPfIds.push({ id: pf.id, label: cfg.label || pf.defaultLabel });
+                            return;
+                        }
+
+                        // Position container for overlays
+                        const existingPos = window.getComputedStyle(container).position;
+                        if (existingPos === 'static') container.style.position = 'relative';
+
+                        // ── Convert label → inline editable input ──────────────────
+                        const labelEl = container.querySelector('label');
+                        if (labelEl) {
+                            const cleanLabel = (cfg.label || pf.defaultLabel).replace(/\s*\*$/, '');
+                            const labelInp = document.createElement('input');
+                            labelInp.type = 'text';
+                            labelInp.className = 'pf-label-inline';
+                            labelInp.value = cleanLabel;
+                            labelInp.placeholder = 'Field label…';
+                            labelInp.title = 'Click to rename this field label';
+                            labelInp.style.cssText = `
+                                display:block;background:transparent;border:none;
+                                border-bottom:1.5px dashed rgba(0,0,0,0.12);outline:none;
+                                font-size:.8rem;font-weight:600;color:var(--ds-text-secondary);
+                                width:calc(100% - 58px);padding:0;margin-bottom:6px;
+                                cursor:text;transition:border-color .15s;line-height:1.4;
+                            `;
+                            labelInp.addEventListener('focus', () => labelInp.style.borderBottomColor = 'var(--ds-accent)');
+                            labelInp.addEventListener('blur',  () => labelInp.style.borderBottomColor = 'rgba(0,0,0,0.12)');
+                            labelInp.addEventListener('input', (e) => {
+                                ensurePF(pf.id);
+                                sec.predefined_fields[pf.id].label = e.target.value;
+                            });
+                            labelEl.replaceWith(labelInp);
+                        }
+
+                        // ── Re-enable actual input for placeholder editing ─────────
+                        const isTextish = (el.tagName.toLowerCase() === 'input' && el.type !== 'checkbox' && el.type !== 'radio' && el.type !== 'file')
+                                        || el.tagName.toLowerCase() === 'textarea';
+                        if (isTextish) {
+                            el.disabled = false;
+                            el.style.pointerEvents = 'auto';
+                            el.readOnly = false;
+                            el.value = '';                                       // keep blank — it's just a placeholder editor
+                            el.placeholder = cfg.placeholder || el.placeholder || 'Type to set placeholder…';
+                            el.title = 'Type here to set the placeholder / example text shown to end-users';
+                            el.style.opacity = '1';
+                            el.style.background = 'transparent';
+                            el.style.cursor = 'text';
+                            el.addEventListener('input', (e) => {
+                                ensurePF(pf.id);
+                                sec.predefined_fields[pf.id].placeholder = e.target.value;
+                                e.target.placeholder = e.target.value || 'Type to set placeholder…';
+                                e.target.value = '';     // keep it placeholder-only UX
+                            });
+                        }
+
+                        // ── Hover overlay: Req/Opt badge + × delete ───────────────
+                        const overlay = document.createElement('div');
+                        overlay.className = 'pf-field-overlay';
+                        overlay.style.cssText = `
+                            position:absolute;top:0;right:0;
+                            display:flex;gap:4px;align-items:center;
+                            opacity:0;transition:opacity .15s;z-index:30;
+                        `;
+                        const isReq = cfg.required !== false;
+                        overlay.innerHTML = `
+                            <button class="pf-req-btn" title="Toggle mandatory / optional"
+                                style="font-size:.58rem;font-weight:700;padding:2px 6px;border-radius:4px;line-height:1.5;white-space:nowrap;cursor:pointer;
+                                       border:1px solid ${isReq?'rgba(220,38,38,.35)':'var(--ds-border-color)'};
+                                       background:${isReq?'rgba(220,38,38,.09)':'rgba(var(--ds-primary-rgb),.05)'};
+                                       color:${isReq?'#dc2626':'var(--ds-text-tertiary)'};">
+                                ${isReq?'★ Req':'Opt'}
+                            </button>
+                            <button class="pf-hide-btn" title="Hide this field (can restore below)"
+                                style="width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+                                       border:1px solid rgba(220,38,38,.2);background:rgba(220,38,38,.07);color:#dc2626;">
+                                <i data-lucide="x" style="width:10px;height:10px;pointer-events:none;"></i>
+                            </button>
+                        `;
+                        container.appendChild(overlay);
+
+                        container.addEventListener('mouseenter', () => overlay.style.opacity = '1');
+                        container.addEventListener('mouseleave', () => overlay.style.opacity = '0');
+
+                        // Req/Opt toggle (no re-render, just update visually + data)
+                        overlay.querySelector('.pf-req-btn').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            ensurePF(pf.id);
+                            const nowReq = sec.predefined_fields[pf.id].required !== false;
+                            sec.predefined_fields[pf.id].required = nowReq ? false : true;
+                            const btn = overlay.querySelector('.pf-req-btn');
+                            const newReq = sec.predefined_fields[pf.id].required !== false;
+                            btn.style.borderColor = newReq?'rgba(220,38,38,.35)':'var(--ds-border-color)';
+                            btn.style.background  = newReq?'rgba(220,38,38,.09)':'rgba(var(--ds-primary-rgb),.05)';
+                            btn.style.color       = newReq?'#dc2626':'var(--ds-text-tertiary)';
+                            btn.textContent       = newReq?'★ Req':'Opt';
+                        });
+
+                        // Hide field
+                        overlay.querySelector('.pf-hide-btn').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            ensurePF(pf.id);
+                            sec.predefined_fields[pf.id].disabled = true;
+                            // Reflect immediately without full re-render
+                            container.style.setProperty('display','none','important');
+                            // Refresh restore bar
+                            const restoreBar = cardEl.querySelector('.pf-restore-bar');
+                            if (restoreBar) {
+                                const btn = document.createElement('button');
+                                btn.className = 'pf-restore-chip';
+                                btn.title = `Restore "${cfg.label || pf.defaultLabel}" field`;
+                                btn.dataset.pfid = pf.id;
+                                btn.style.cssText = 'font-size:.65rem;padding:2px 8px;border-radius:20px;border:1px solid var(--ds-border-color);background:var(--ds-input-bg);color:var(--ds-text-secondary);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;';
+                                btn.innerHTML = `<i data-lucide="plus" style="width:9px;height:9px;"></i> ${esc(cfg.label || pf.defaultLabel)}`;
+                                btn.addEventListener('click', () => {
+                                    ensurePF(pf.id);
+                                    sec.predefined_fields[pf.id].disabled = false;
+                                    container.style.removeProperty('display');
+                                    btn.remove();
+                                    lucide.createIcons();
+                                });
+                                restoreBar.querySelector('.restore-chips').appendChild(btn);
+                                lucide.createIcons();
+                            }
+                        });
+                    });
+
+                    // Build restore bar for hidden predefined fields
+                    if (cardBody) {
+                        const restoreBar = document.createElement('div');
+                        restoreBar.className = 'pf-restore-bar';
+                        restoreBar.style.cssText = `
+                            border-top:1px solid var(--ds-border-color);
+                            padding:8px 0 4px;margin-top:12px;
+                        `;
+                        const chipsWrap = document.createElement('div');
+                        chipsWrap.className = 'restore-chips d-flex flex-wrap gap-2 align-items-center';
+
+                        if (hiddenPfIds.length > 0) {
+                            const label = document.createElement('span');
+                            label.className = 'text-xs text-muted me-1';
+                            label.textContent = 'Hidden fields:';
+                            chipsWrap.appendChild(label);
+                            hiddenPfIds.forEach(hf => {
+                                const chip = document.createElement('button');
+                                chip.className = 'pf-restore-chip';
+                                chip.title = `Restore "${hf.label}" field`;
+                                chip.dataset.pfid = hf.id;
+                                chip.style.cssText = 'font-size:.65rem;padding:2px 8px;border-radius:20px;border:1px solid var(--ds-border-color);background:var(--ds-input-bg);color:var(--ds-text-secondary);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;';
+                                chip.innerHTML = `<i data-lucide="plus" style="width:9px;height:9px;"></i> ${esc(hf.label)}`;
+                                chip.addEventListener('click', () => {
+                                    ensurePF(hf.id);
+                                    sec.predefined_fields[hf.id].disabled = false;
+                                    // Need full re-render to show the field back properly
+                                    renderList();
+                                    const cont2 = document.getElementById('stageList').children[i];
+                                    if (cont2) {
+                                        cont2.querySelector('.stage-sections-detail').style.display = 'block';
+                                        const wps = cont2.querySelectorAll('.visual-card-wrapper');
+                                        const cw2 = wps[sIdx];
+                                        if (cw2) { const bc2 = cw2.querySelector('.card-body-collapse'); if (bc2) bc2.style.display = 'block'; }
+                                    }
+                                    lucide.createIcons();
+                                });
+                                chipsWrap.appendChild(chip);
+                            });
+                        }
+                        restoreBar.appendChild(chipsWrap);
+                        cardBody.appendChild(restoreBar);
+                    }
+
+                    // ── Universal free-text editing: every visible text node is click-to-edit ──
+                    if (cardBody) {
+                        let teIdx = 0;
+                        const SKIP_CLASSES = '.card-edit-header,.restore-bar,.custom-fields-container,.pf-inline-overlay,.pf-restore-chip';
+                        const SKIP_TAGS   = new Set(['INPUT','SELECT','TEXTAREA','BUTTON','SVG','PATH','I']);
+
+                        // Walk every element in cardBody; pick "leaf text containers":
+                        // an element qualifies if all of its child nodes are either text nodes
+                        // or inline-icon elements (i/svg/path), and it has non-empty text.
+                        const walk = (root) => {
+                            Array.from(root.children).forEach(el => {
+                                if (SKIP_TAGS.has(el.tagName.toUpperCase())) return;
+                                if (el.closest(SKIP_CLASSES)) return;
+
+                                // Check if this element is a "leaf text container"
+                                const children = Array.from(el.childNodes);
+                                const hasOnlyTextOrIcons = children.every(n => {
+                                    if (n.nodeType === Node.TEXT_NODE) return true;
+                                    if (n.nodeType === Node.ELEMENT_NODE) {
+                                        const t = n.tagName.toUpperCase();
+                                        return t === 'I' || t === 'SVG' || t === 'PATH' || t === 'SPAN' && n.querySelector('svg');
+                                    }
+                                    return false;
+                                });
+                                const text = el.textContent.trim();
+
+                                if (hasOnlyTextOrIcons && text.length > 0 && el.contentEditable !== 'true') {
+                                    const key = `te_${teIdx++}`;
+                                    el.dataset.tekey = key;
+
+                                    // Restore saved override
+                                    if (sec.text_overrides && sec.text_overrides[key] !== undefined) {
+                                        // Preserve child icons, just update text node
+                                        Array.from(el.childNodes).forEach(n => {
+                                            if (n.nodeType === Node.TEXT_NODE) n.textContent = sec.text_overrides[key];
+                                        });
+                                    }
+
+                                    el.contentEditable = 'true';
+                                    el.spellcheck = false;
+                                    el.title = 'Click to edit';
+                                    Object.assign(el.style, {
+                                        outline: 'none',
+                                        cursor: 'text',
+                                        borderRadius: '3px',
+                                        transition: 'background .12s, box-shadow .12s',
+                                    });
+
+                                    el.addEventListener('mouseenter', () => {
+                                        if (document.activeElement !== el) el.style.background = 'rgba(99,102,241,.07)';
+                                    });
+                                    el.addEventListener('mouseleave', () => {
+                                        if (document.activeElement !== el) el.style.background = '';
+                                    });
+                                    el.addEventListener('focus', () => {
+                                        el.style.background = 'rgba(99,102,241,.1)';
+                                        el.style.boxShadow = '0 0 0 1.5px rgba(99,102,241,.3)';
+                                    });
+                                    el.addEventListener('blur', () => {
+                                        el.style.background = '';
+                                        el.style.boxShadow = '';
+                                        if (!sec.text_overrides) sec.text_overrides = {};
+                                        sec.text_overrides[key] = el.textContent.trim();
+                                    });
+                                    el.addEventListener('keydown', e => {
+                                        if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+                                        e.stopPropagation();
+                                    });
+                                    el.addEventListener('mousedown', e => e.stopPropagation());
+                                    el.addEventListener('click',     e => e.stopPropagation());
+                                } else if (!hasOnlyTextOrIcons) {
+                                    // Recurse deeper
+                                    walk(el);
+                                }
+                            });
+                        };
+                        walk(cardBody);
+
+                        // Button label text nodes → make editable spans
+                        cardBody.querySelectorAll('button').forEach(btn => {
+                            if (btn.closest(SKIP_CLASSES)) return;
+                            Array.from(btn.childNodes)
+                                .filter(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 1)
+                                .forEach(tn => {
+                                    const key = `te_${teIdx++}`;
+                                    const span = document.createElement('span');
+                                    span.textContent = tn.textContent;
+                                    span.dataset.tekey = key;
+                                    if (sec.text_overrides && sec.text_overrides[key] !== undefined) {
+                                        span.textContent = sec.text_overrides[key];
+                                    }
+                                    span.contentEditable = 'true';
+                                    span.spellcheck = false;
+                                    span.title = 'Click to edit button label';
+                                    Object.assign(span.style, {
+                                        outline: 'none', cursor: 'text', borderRadius: '3px',
+                                        padding: '0 2px', transition: 'background .12s'
+                                    });
+                                    span.addEventListener('mouseenter', () => { span.style.background = 'rgba(99,102,241,.1)'; });
+                                    span.addEventListener('mouseleave', () => { if (document.activeElement !== span) span.style.background = ''; });
+                                    span.addEventListener('focus',      () => { span.style.background = 'rgba(99,102,241,.13)'; span.style.boxShadow = '0 0 0 1px rgba(99,102,241,.35)'; });
+                                    span.addEventListener('blur',       () => {
+                                        span.style.background = ''; span.style.boxShadow = '';
+                                        if (!sec.text_overrides) sec.text_overrides = {};
+                                        sec.text_overrides[key] = span.textContent.trim();
+                                    });
+                                    span.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); span.blur(); } e.stopPropagation(); });
+                                    span.addEventListener('mousedown', e => e.stopPropagation());
+                                    span.addEventListener('click',     e => e.stopPropagation());
+                                    tn.replaceWith(span);
+                                });
+                        });
+                    }
+
+                    // ── Custom sub-fields & Drag Target Zone rendered inline ────────
+                    if (cardBody) {
+                        const customFieldsWrap = document.createElement('div');
+                        customFieldsWrap.className = 'custom-fields-container';
+
+                        const fields = sec.fields || sec.custom_fields || [];
+                        if (!sec.fields) sec.fields = fields;
+
+                        let fieldsHtml = `<div class="mb-2" style="border-top:1px dashed var(--ds-border-color);padding-top:10px;margin-top:4px;">
+                            <small class="ds-label text-muted mb-2 d-block" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;">Configured Form Fields & QC Components</small>`;
+
+                        fields.forEach((field, fIdx) => {
+                            const placeholderVal = field.placeholder || '';
+                            const inputTypeVal   = field.input_type || 'text';
+                            const fieldMockup = mockupHtmlForFieldType(field.type, placeholderVal, inputTypeVal, field.options, field.data_source, field.unit);
+
+                            const fId = field.id || `field_${fIdx}`;
+                            const colSpan = field.col_span || field.col || 'col-md-6';
+
+                            fieldsHtml += `
+                                <div class="poster-element-wrapper custom-field-row mb-2" data-field-id="${esc(fId)}" onclick="openInspector(${i},${sIdx},'${esc(fId)}',false); event.stopPropagation();">
+                                    <div class="element-hover-bar">
+                                        <button type="button" class="hover-btn" title="Inspect Properties" onclick="openInspector(${i},${sIdx},'${esc(fId)}',false); event.stopPropagation();">
+                                            <i data-lucide="sliders" style="width:12px;height:12px;"></i>
+                                        </button>
+                                        <button type="button" class="hover-btn" title="Duplicate Element" onclick="activeInspectorTarget={stageIdx:${i},secIdx:${sIdx},fieldId:'${esc(fId)}',isPredefined:false}; duplicateInspectorField(); event.stopPropagation();">
+                                            <i data-lucide="copy" style="width:12px;height:12px;"></i>
+                                        </button>
+                                        <button type="button" class="hover-btn danger" title="Delete Element" onclick="deleteSubField(${i},${sIdx},${fIdx}); event.stopPropagation();">
+                                            <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                                        </button>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <input type="text" class="field-label-edit-input fw-semibold"
+                                               style="background:transparent;border:none;border-bottom:1.5px dashed rgba(0,0,0,.12);outline:none;font-size:.82rem;color:var(--ds-text-main);width:55%;padding:0;"
+                                               value="${esc(field.label)}" placeholder="Field label…"
+                                               data-stage="${i}" data-sec="${sIdx}" data-fidx="${fIdx}">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="card-type-badge" style="font-size:.6rem;">${(field.type||'text').toUpperCase()}</span>
+                                            <div class="form-check form-switch mb-0" onclick="event.stopPropagation();">
+                                                <input class="form-check-input field-required-toggle" type="checkbox" role="switch" ${field.required!==false?'checked':''}
+                                                       data-stage="${i}" data-sec="${sIdx}" data-fidx="${fIdx}">
+                                                <label class="text-xs ${field.required!==false?'text-danger fw-bold':'text-muted'} ms-1 mb-0">Req</label>
+                                            </div>
+                                            <button class="row-btn danger" style="width:22px;height:22px;padding:0;border-radius:5px;" title="Delete field"
+                                                    onclick="deleteSubField(${i},${sIdx},${fIdx}); event.stopPropagation();">
+                                                <i data-lucide="trash-2" style="width:11px;height:11px;"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mockup-preview-area">${fieldMockup}</div>
+                                </div>`;
+                        });
+                        fieldsHtml += `</div>`;
+
+                        // Drag & Drop Target Dropzone
+                        const dropzoneHtml = `
+                            <div class="drop-target-zone" data-stage="${i}" data-sec="${sIdx}">
+                                <div class="drop-hint">
+                                    <i data-lucide="plus-circle" style="width:16px;height:16px;" class="text-primary"></i>
+                                    <span>Drag &amp; Drop elements here from left catalog or click below</span>
+                                </div>
+                            </div>
+                            <div class="mt-2 d-flex justify-content-start">
+                                <button class="ds-btn ds-btn-ghost ds-btn-sm py-1 add-custom-field-btn"
+                                        style="font-size:.75rem;"
+                                        onclick="openToolPicker(${i},${sIdx}); event.stopPropagation();">
+                                    <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Custom Field / QC Tool
+                                </button>
+                            </div>
+                        `;
+
+                        customFieldsWrap.innerHTML = fieldsHtml + dropzoneHtml;
+
+                        // Wire drop target zones
+                        customFieldsWrap.querySelectorAll('.drop-target-zone').forEach(dz => {
+                            dz.addEventListener('dragover', (ev) => {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                ev.dataTransfer.dropEffect = 'copy';
+                                dz.classList.add('drop-over');
+                            });
+                            dz.addEventListener('dragleave', (ev) => {
+                                ev.stopPropagation();
+                                dz.classList.remove('drop-over');
+                            });
+                            dz.addEventListener('drop', (ev) => {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                dz.classList.remove('drop-over');
+
+                                const st = parseInt(dz.dataset.stage);
+                                const sc = parseInt(dz.dataset.sec);
+                                if (isNaN(st) || isNaN(sc)) return;
+
+                                let payload = null;
+                                try {
+                                    const raw = ev.dataTransfer.getData('application/json') || ev.dataTransfer.getData('text/plain');
+                                    if (raw) payload = JSON.parse(raw);
+                                } catch (_) {}
+
+                                if (!payload) return;
+
+                                if (payload.type && payload.label) {
+                                    const sec = stages[st].sections[sc];
+                                    if (!sec.fields) sec.fields = [];
+                                    const fieldId = `${sec.id || 'field'}_custom_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+                                    sec.fields.push({
+                                        id: fieldId,
+                                        type: payload.type,
+                                        label: payload.label,
+                                        placeholder: '',
+                                        required: true,
+                                        disabled: false
+                                    });
+
+                                    renderList();
+                                    const cont = document.getElementById('stageList').children[st];
+                                    if (cont) {
+                                        cont.querySelector('.stage-sections-detail').style.display = 'block';
+                                        const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+                                        const cw = wrappers[sc];
+                                        if (cw) {
+                                            const bc = cw.querySelector('.card-body-collapse');
+                                            if (bc) bc.style.display = 'block';
+                                            const ti = cw.querySelector('.card-collapse-toggle i');
+                                            if (ti) ti.setAttribute('data-lucide', 'chevron-up');
+                                        }
+                                        lucide.createIcons();
+                                    }
+
+                                    openInspector(st, sc, fieldId, false);
+                                    showToast(`Added "${payload.label}" to Section ${st + 1}.${sc + 1}`);
+                                }
+                            });
+                        });
+
+                            // Wire field-label listeners
+                            customFieldsWrap.querySelectorAll('.field-label-edit-input').forEach(inp => {
+                                inp.addEventListener('input', (e) => {
+                                    const st=parseInt(inp.dataset.stage),sc=parseInt(inp.dataset.sec),f=parseInt(inp.dataset.fidx);
+                                    stages[st].sections[sc].fields[f].label = e.target.value;
+                                });
+                                inp.addEventListener('focus', (e) => { e.target.style.borderBottomColor='var(--ds-accent)'; });
+                                inp.addEventListener('blur',  (e) => { e.target.style.borderBottomColor='rgba(0,0,0,.12)'; });
+                            });
+                            // Wire field required toggles
+                            customFieldsWrap.querySelectorAll('.field-required-toggle').forEach(chk => {
+                                chk.addEventListener('change', (e) => {
+                                    const st=parseInt(chk.dataset.stage),sc=parseInt(chk.dataset.sec),f=parseInt(chk.dataset.fidx);
+                                    stages[st].sections[sc].fields[f].required = e.target.checked;
+                                    const lbl = chk.nextElementSibling;
+                                    if (lbl) { lbl.textContent='Req'; lbl.className=`text-xs ${e.target.checked?'text-danger fw-bold':'text-muted'} ms-1 mb-0`; }
+                                });
+                            });
+                            // Wire placeholder inputs
+                            customFieldsWrap.querySelectorAll('.field-placeholder-edit-input').forEach(inp => {
+                                inp.addEventListener('input', (e) => {
+                                    const st=parseInt(inp.dataset.stage),sc=parseInt(inp.dataset.sec),f=parseInt(inp.dataset.fidx);
+                                    stages[st].sections[sc].fields[f].placeholder = e.target.value;
+                                    const row = inp.closest('.custom-field-row');
+                                    const mi = row ? row.querySelector('.ds-input,.ds-textarea') : null;
+                                    if (mi && mi !== inp) mi.placeholder = e.target.value || 'Enter details…';
+                                });
+                            });
+                            // Wire datatype selects
+                            customFieldsWrap.querySelectorAll('.field-datatype-edit-select').forEach(sel => {
+                                sel.addEventListener('change', (e) => {
+                                    const st=parseInt(sel.dataset.stage),sc=parseInt(sel.dataset.sec),f=parseInt(sel.dataset.fidx);
+                                    stages[st].sections[sc].fields[f].input_type = e.target.value;
+                                    const row = sel.closest('.custom-field-row');
+                                    const mi = row ? row.querySelector('input.ds-input') : null;
+                                    if (mi) mi.type = e.target.value==='number'?'number':'text';
+                                });
+                            });
+
+                        cardBody.appendChild(customFieldsWrap);
+                    }
+
+                    wrapper.appendChild(cardEl);
+
+
+                } else {
+                    // Fallback
+                    wrapper.innerHTML = `<div class="card-edit-header"><span>${esc(sec.label)}</span><button class="card-delete-btn" onclick="deleteSection(${i},${sIdx})"><i data-lucide="trash-2"></i></button></div>`;
+                }
+
+                // Section drag & drop
+                wrapper.addEventListener('dragstart', (ev) => { ev.stopPropagation(); ev.dataTransfer.setData('text/plain', JSON.stringify({stageIdx:i,secIdx:sIdx})); wrapper.classList.add('dragging'); });
+                wrapper.addEventListener('dragend',   () => wrapper.classList.remove('dragging'));
+                wrapper.addEventListener('dragover',  (ev) => { ev.preventDefault(); wrapper.classList.add('drag-over'); });
+                wrapper.addEventListener('dragleave', () => wrapper.classList.remove('drag-over'));
+                wrapper.addEventListener('drop', (ev) => {
+                    ev.preventDefault(); wrapper.classList.remove('drag-over');
+                    let dragData = null;
+                    try {
+                        const raw = ev.dataTransfer.getData('application/json') || ev.dataTransfer.getData('text/plain');
+                        if (raw) dragData = JSON.parse(raw);
+                    } catch (_) {}
+                    if (!dragData) return;
+
+                    // Catalog element drop onto section card
+                    if (dragData.type && dragData.label) {
+                        ev.stopPropagation();
+                        const sec = stages[i].sections[sIdx];
+                        if (!sec.fields) sec.fields = [];
+                        const fieldId = `${sec.id || 'field'}_custom_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+                        sec.fields.push({
+                            id: fieldId,
+                            type: dragData.type,
+                            label: dragData.label,
+                            placeholder: '',
+                            required: true,
+                            disabled: false
+                        });
+                        renderList();
+                        const cont = list.children[i];
+                        if (cont) {
+                            cont.querySelector('.stage-sections-detail').style.display = 'block';
+                            const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+                            const cw = wrappers[sIdx];
+                            if (cw) {
+                                const bc = cw.querySelector('.card-body-collapse');
+                                if (bc) bc.style.display = 'block';
+                            }
+                            lucide.createIcons();
+                        }
+                        openInspector(i, sIdx, fieldId, false);
+                        showToast(`Added "${dragData.label}" to Section ${i + 1}.${sIdx + 1}`);
+                        return;
+                    }
+
+                    // Section reordering
+                    if (dragData.stageIdx !== i || dragData.secIdx === sIdx || dragData.secIdx === undefined) return;
+                    const movedSec = stages[i].sections.splice(dragData.secIdx, 1)[0];
+                    stages[i].sections.splice(sIdx, 0, movedSec);
+                    stages[i].sections.forEach((sc, o) => sc.order = o + 1);
+                    renderList();
+                    const cont = list.children[i];
+                    if (cont) cont.querySelector('.stage-sections-detail').style.display = 'block';
+                });
+
+                secList.appendChild(wrapper);
+            });
+        }
+
+        container.appendChild(header);
+        container.appendChild(detail);
+        list.appendChild(container);
+    });
+
+    lucide.createIcons();
+    renderPreview();
+}
+
+// ── Stage CRUD ─────────────────────────────────────────────────────────────────
+function moveStage(idx, dir) {
+    const t = idx + dir;
+    if (t < 0 || t >= stages.length) return;
+    [stages[idx], stages[t]] = [stages[t], stages[idx]];
+    renumber(); renderList(); renderPreview();
+}
+window.moveStage = moveStage;
+
+function deleteStage(idx) {
+    if (!confirm('Are you sure you want to delete this stage? All customized sections/fields will be removed.')) return;
+    stages.splice(idx, 1); renumber(); renderList(); renderPreview();
+    showToast('Stage deleted.');
+}
+window.deleteStage = deleteStage;
+
+function deleteSection(stageIdx, secIdx) {
+    if (!confirm('Are you sure you want to delete this section/QC tool?')) return;
+    stages[stageIdx].sections.splice(secIdx, 1);
+    stages[stageIdx].sections.forEach((sec, idx) => sec.order = idx + 1);
+    renderList();
+    const cont = document.getElementById('stageList').children[stageIdx];
+    if (cont) cont.querySelector('.stage-sections-detail').style.display = 'block';
+}
+window.deleteSection = deleteSection;
+
+function deleteSubField(stageIdx, secIdx, fIdx) {
+    if (!confirm('Are you sure you want to delete this field?')) return;
+    const sec = stages[stageIdx].sections[secIdx];
+    if (sec.fields) sec.fields.splice(fIdx, 1);
+    renderList();
+    const list = document.getElementById('stageList');
+    const cont = list.children[stageIdx];
+    if (cont) {
+        cont.querySelector('.stage-sections-detail').style.display = 'block';
+        const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+        const cardWrapper = wrappers[secIdx];
+        if (cardWrapper) { const bc = cardWrapper.querySelector('.card-body-collapse'); if (bc) bc.style.display = 'block'; const ti = cardWrapper.querySelector('.card-collapse-toggle i'); if (ti) ti.setAttribute('data-lucide','chevron-up'); }
+    }
+    lucide.createIcons();
+}
+window.deleteSubField = deleteSubField;
+
+// ── Preview strip ─────────────────────────────────────────────────────────────
+function renderPreview() {
+    const strip = document.getElementById('previewStrip');
+    if (!strip) return;
+    strip.innerHTML = '';
+    stages.forEach((s, i) => {
+        const clr = STAGE_COLORS[i] || STAGE_COLORS[0];
+        strip.insertAdjacentHTML('beforeend', `
+            <div class="prev-step">
+                <div class="prev-icon" style="background:${clr.bg};color:${clr.color};border-color:${clr.color}20;">
+                    <i data-lucide="${s.icon||'layers'}" style="width:18px;height:18px;stroke-width:1.8;"></i>
+                </div>
+                <div class="prev-label">${esc(s.title)}</div>
+                <div class="prev-num">Step ${i + 1}</div>
+            </div>
+            ${i < stages.length - 1 ? '<div class="prev-connector"></div>' : ''}
+        `);
+    });
+    lucide.createIcons();
+}
+
+// ── Icon Picker Modal ─────────────────────────────────────────────────────────
+function openIconPicker(idx) {
+    pickerTargetIdx = idx; pickerSelectedIcon = stages[idx].icon;
+    document.getElementById('iconSearch').value = '';
+    buildIconGrid(ICON_LIBRARY);
+    bsIconModal.show();
+}
+
+function buildIconGrid(icons) {
+    const grid = document.getElementById('iconGrid');
+    grid.innerHTML = '';
+    icons.forEach(name => {
+        const el = document.createElement('div');
+        el.className = 'icon-opt' + (name === pickerSelectedIcon ? ' selected' : '');
+        el.innerHTML = `<i data-lucide="${name}" style="width:20px;height:20px;"></i><span>${name}</span>`;
+        el.addEventListener('click', () => { document.querySelectorAll('.icon-opt').forEach(o => o.classList.remove('selected')); el.classList.add('selected'); pickerSelectedIcon = name; });
+        grid.appendChild(el);
+    });
+    lucide.createIcons();
+}
+
+document.getElementById('iconSearch').addEventListener('input', e => { buildIconGrid(ICON_LIBRARY.filter(n => n.includes(e.target.value.toLowerCase()))); });
+document.getElementById('iconPickerConfirm').addEventListener('click', () => {
+    if (pickerTargetIdx === null || !pickerSelectedIcon) return;
+    stages[pickerTargetIdx].icon = pickerSelectedIcon;
+    bsIconModal.hide(); renderList(); renderPreview();
+});
+
+// ── Tool Picker Modal ─────────────────────────────────────────────────────────
+function openToolPicker(stageIdx, secIdx = null) {
+    activeStageSectionTargetIdx = stageIdx;
+    activeSubFieldTarget = secIdx !== null ? { stageIdx, secIdx } : null;
+    selectedToolType = null;
+    buildToolGrid();
+    bsToolModal.show();
+}
+
+function buildToolGrid() {
+    const grid = document.getElementById('toolGrid');
+    grid.innerHTML = '';
+    TOOL_OPTIONS.forEach(group => {
+        const title = document.createElement('div');
+        title.className = 'tool-picker-group-title'; title.textContent = group.category; grid.appendChild(title);
+        group.items.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'tool-opt';
+            el.innerHTML = `<i data-lucide="${item.icon}" style="width:18px;height:18px;"></i><span>${item.label}</span>`;
+            el.addEventListener('click', () => { document.querySelectorAll('.tool-opt').forEach(o => o.classList.remove('selected')); el.classList.add('selected'); selectedToolType = item; });
+            grid.appendChild(el);
+        });
+    });
+    lucide.createIcons();
+}
+
+document.getElementById('toolPickerConfirm').addEventListener('click', () => {
+    if (activeStageSectionTargetIdx === null || !selectedToolType) { showToast('Please select a column or QC Tool type to add.', 'error'); return; }
+    if (activeSubFieldTarget) {
+        const { stageIdx, secIdx } = activeSubFieldTarget;
+        const sec = stages[stageIdx].sections[secIdx];
+        if (!sec.fields) sec.fields = [];
+        sec.fields.push({ id:`${sec.id}_field_${Date.now()}`, type:selectedToolType.type, label:selectedToolType.label, required:true });
+    } else {
+        const stage = stages[activeStageSectionTargetIdx];
+        if (!stage.sections) stage.sections = [];
+        stage.sections.push({ id:`sec_${Date.now()}_${Math.floor(Math.random()*1000)}`, type:selectedToolType.type, label:selectedToolType.label, required:true, order:stage.sections.length+1 });
+    }
+    bsToolModal.hide();
+    renderList();
+    const stageIdx = activeStageSectionTargetIdx;
+    const cont = document.getElementById('stageList').children[stageIdx];
+    if (cont) {
+        cont.querySelector('.stage-sections-detail').style.display = 'block';
+        if (activeSubFieldTarget) {
+            const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+            const cw = wrappers[activeSubFieldTarget.secIdx];
+            if (cw) { const bc = cw.querySelector('.card-body-collapse'); if (bc) bc.style.display='block'; const ti = cw.querySelector('.card-collapse-toggle i'); if (ti) ti.setAttribute('data-lucide','chevron-up'); }
+            lucide.createIcons();
+        }
+    }
+});
+
+// ── Add Stage ─────────────────────────────────────────────────────────────────
+document.getElementById('addStageBtn').addEventListener('click', () => { document.getElementById('newStageTitle').value = ''; bsAddStageModal.show(); });
+document.getElementById('addStageConfirmBtn').addEventListener('click', () => {
+    const title = document.getElementById('newStageTitle').value.trim();
+    if (!title) { showToast('Please enter a stage title.', 'error'); return; }
+    const baseModule = parseInt(document.getElementById('newStageBaseModule').value);
+    const icon = document.getElementById('newStageIcon').value;
+    stages.push({ stage_id:stages.length+1, original_id:baseModule, title, icon, sections:[] });
+    renumber(); renderList(); renderPreview();
+    bsAddStageModal.hide();
+    showToast('New stage added! Expand it to customize sections.');
+});
+
+// ── Save & Reset ──────────────────────────────────────────────────────────────
+
+// Build the human-readable summary list shown in the warning modal
+function buildSaveWarningSummary() {
+    if (!stages.length) return '<p class="text-xs text-muted mb-0">No stages configured.</p>';
+    let html = '<div class="v-stack" style="gap:10px;">';
+    stages.forEach((s, i) => {
+        const secCount   = (s.sections || []).length;
+        const fieldCount = (s.sections || []).reduce((acc, sec) => acc + (sec.fields || []).length, 0);
+        const mandCount  = (s.sections || []).filter(sec => sec.required !== false).length;
+        const naCount    = (s.sections || []).filter(sec => sec.allow_na).length;
+        html += `
+            <div style="border:1px solid var(--ds-border-color);border-radius:8px;padding:10px 14px;background:var(--ds-bg-card);">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i data-lucide="${s.icon || 'layers'}" style="width:14px;height:14px;color:var(--ds-text-secondary);"></i>
+                    <span class="fw-bold text-xs" style="color:var(--ds-text-main);">Stage ${i+1}: ${esc(s.title)}</span>
+                    <span class="ms-auto text-xs" style="color:var(--ds-text-tertiary);">Module D${s.original_id}</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    <span style="font-size:.7rem;background:rgba(var(--ds-primary-rgb),.07);border:1px solid var(--ds-border-color);border-radius:6px;padding:2px 8px;color:var(--ds-text-secondary);">
+                        <i data-lucide="layout-list" style="width:10px;height:10px;vertical-align:middle;"></i>
+                        ${secCount} section${secCount!==1?'s':''}
+                    </span>
+                    ${fieldCount > 0 ? `<span style="font-size:.7rem;background:rgba(var(--ds-primary-rgb),.07);border:1px solid var(--ds-border-color);border-radius:6px;padding:2px 8px;color:var(--ds-text-secondary);"><i data-lucide="text-cursor-input" style="width:10px;height:10px;vertical-align:middle;"></i> ${fieldCount} custom field${fieldCount!==1?'s':''}</span>` : ''}
+                    ${mandCount > 0 ? `<span style="font-size:.7rem;background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.18);border-radius:6px;padding:2px 8px;color:#b91c1c;"><i data-lucide="alert-circle" style="width:10px;height:10px;vertical-align:middle;"></i> ${mandCount} mandatory</span>` : ''}
+                    ${naCount > 0 ? `<span style="font-size:.7rem;background:rgba(var(--ds-blue-rgb),.07);border:1px solid rgba(var(--ds-blue-rgb),.18);border-radius:6px;padding:2px 8px;color:var(--ds-text-secondary);"><i data-lucide="toggle-left" style="width:10px;height:10px;vertical-align:middle;"></i> ${naCount} allow N/A</span>` : ''}
+                </div>
+                ${secCount > 0 ? (() => {
+                    const names = (s.sections || []).map(sec => `<li class="text-xs" style="color:var(--ds-text-secondary);"><i data-lucide="minus" style="width:9px;height:9px;vertical-align:middle;margin-right:4px;"></i>${esc(sec.label || 'Untitled')}</li>`).join('');
+                    return `<ul class="mt-2 mb-0 ps-0 list-unstyled">${names}</ul>`;
+                })() : ''}
+            </div>
+        `;
+    });
+    html += '</div>';
+    return html;
+}
+
+document.getElementById('saveBtn').addEventListener('click', () => {
+    const empty = stages.findIndex(s => !s.title.trim());
+    if (empty !== -1) { showToast(`Stage ${empty+1} has an empty title — please fill it in.`, 'error'); return; }
+
+    // Populate warning modal
+    document.getElementById('saveWarningSummary').innerHTML = buildSaveWarningSummary();
+    lucide.createIcons();
+
+    // Reset acknowledgement checkbox and confirm button
+    const ackChk  = document.getElementById('saveWarningAck');
+    const confBtn = document.getElementById('saveWarningConfirmBtn');
+    ackChk.checked = false;
+    confBtn.disabled = true;
+    confBtn.style.opacity = '.45'; confBtn.style.cursor = 'not-allowed';
+
+    bsSaveWarningModal.show();
+});
+
+// Enable confirm button only when ack checkbox is ticked
+document.getElementById('saveWarningAck').addEventListener('change', function () {
+    const confBtn = document.getElementById('saveWarningConfirmBtn');
+    confBtn.disabled = !this.checked;
+    confBtn.style.opacity = this.checked ? '1' : '.45';
+    confBtn.style.cursor  = this.checked ? 'pointer' : 'not-allowed';
+});
+
+// Actual API save triggered from inside warning modal
+document.getElementById('saveWarningConfirmBtn').addEventListener('click', async () => {
+    bsSaveWarningModal.hide();
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" class="spin" style="width:14px;height:14px;"></i> Publishing…';
+    lucide.createIcons();
+    try {
+        await api.post('/super-admin/global-stages-template', { stages });
+        showToast('Global template published successfully — all organizations updated!');
+    } catch (err) {
+        showToast('Save failed: ' + (err.message || err), 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save" style="width:14px;height:14px;"></i> Save Global Template';
+        lucide.createIcons();
+    }
+});
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+    if (!confirm('Reset Super Admin global template to system built-in defaults? This cannot be undone.')) return;
+    try {
+        const res = await api.post('/super-admin/global-stages-template', { reset: true });
+        stages = (res.stages || []).sort((a, b) => a.stage_id - b.stage_id);
+        renumber(); renderList(); renderPreview();
+        showToast('Global template reset to built-in system defaults.');
+    } catch (err) { showToast('Reset failed: ' + (err.message || err), 'error'); }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function loadDefaultStages(reason) {
+    stages = JSON.parse(JSON.stringify(DEFAULT_STAGES)); // deep copy
+    renumber();
+    renderList();
+    renderPreview();
+    if (reason) console.info('[StageTemplate] Using built-in defaults:', reason);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Init UI elements first (always safe)
+    try { lucide.createIcons(); } catch (e) {}
+    try { bsIconModal       = new bootstrap.Modal(document.getElementById('iconPickerModal')); } catch (e) {}
+    try { bsToolModal       = new bootstrap.Modal(document.getElementById('toolPickerModal')); } catch (e) {}
+    try { bsAddStageModal   = new bootstrap.Modal(document.getElementById('addStageModal')); } catch (e) {}
+    try { bsSaveWarningModal= new bootstrap.Modal(document.getElementById('saveWarningModal')); } catch (e) {}
+    renderPaletteSidebar();
+
+    // 2. Always render defaults immediately so the page is NEVER stuck on the spinner
+    loadDefaultStages('initial render');
+
+    // 3. Try to load saved customizations from backend in background (raw fetch to bypass module guards)
+    const token = (typeof api !== 'undefined' && api.token)
+        || sessionStorage.getItem('token')
+        || localStorage.getItem('token')
+        || localStorage.getItem('access_token')
+        || sessionStorage.getItem('access_token')
+        || (() => { try { return window.parent && window.parent !== window ? (window.parent.sessionStorage.getItem('token') || window.parent.localStorage.getItem('token') || '') : ''; } catch (_) { return ''; } })();
+
+    if (token) {
+        fetch('/api/super-admin/global-stages-template', {
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            if (data && Array.isArray(data.stages) && data.stages.length > 0) {
+                stages = data.stages.sort((a, b) => a.stage_id - b.stage_id);
+                renumber();
+                renderList();
+                renderPreview();
+                console.info('[StageTemplate] Loaded saved customizations from server.');
+            }
+            // If no saved customization, keep built-in defaults already rendered
+        })
+        .catch(err => {
+            console.warn('[StageTemplate] Could not load saved template from server, using built-in defaults:', err.message);
+            // Defaults already rendered above — nothing more to do
+        });
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+[QCMS] Verifying database connection to '127.0.0.1:5432' as user 'postgres'...
+[QCMS] Database 'imfq_db' verified.
+[QCMS] Connecting to database at: postgresql://postgres:****@127.0.0.1:5432/imfq_db
+[QCMS] Seeded Enterprise Feature Hierarchy (Parents & Children) successfully.
+[QCMS] Database tables verified, roles, super admin, tax rules, and billing settings seeded successfully.
+=== INSPECTING COMPLETED PROJECTS & DELIVERY TIMES ===
+
+Org ID: 3, Name: 'youtube', Completed Projects Count: 3
+  - Project ID: 69, Title: 'Tolerance Titans', Status: 'Closed', Start: 2026-08-02 18:01:36.143546, End: 2026-08-02 20:12:52.643660 => Delivery: 0.5 Days
+  - Project ID: 52, Title: 'Fast Fit Force', Status: 'Closed', Start: 2026-08-02 14:46:28.485226, End: 2026-08-02 19:02:25.224170 => Delivery: 0.5 Days
+  - Project ID: 68, Title: 'Flow Fixers', Status: 'Closed', Start: 2026-08-02 17:59:18.244748, End: 2026-08-02 19:06:03.237579 => Delivery: 0.5 Days
+  => Real-time Avg Delivery Time for Org 3: 0.5 Days (List: [0.5, 0.5, 0.5])

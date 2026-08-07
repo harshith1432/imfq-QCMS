@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOP Deviation Analysis | QCMS Enterprise</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom styling matching premium aesthetics -->
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .deviation-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--ds-border-color, #e2e8f0);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            border-radius: var(--radius-lg, 1rem);
+            transition: all 0.3s ease;
+        }
+        .textarea-premium {
+            border: 1px solid var(--ds-border-color, #cbd5e1);
+            border-radius: var(--radius-md, 0.5rem);
+            padding: 0.85rem 1.15rem;
+            font-size: 0.95rem;
+            transition: all 0.2s ease-in-out;
+            background-color: #ffffff;
+            color: var(--ds-text-main, #1e293b);
+        }
+        .textarea-premium:focus {
+            border-color: var(--ds-primary, #3b82f6);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+            outline: none;
+        }
+        .form-label-premium {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--ds-text-main, #475569);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+
+    <main class="app-main">
+        <header class="app-navbar" id="app-navbar"></header>
+
+        <div class="app-content-inner">
+            <div class="container py-4" style="max-width: 800px;">
+                <!-- Header / Navigation -->
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <button class="ds-btn ds-btn-ghost d-inline-flex align-items-center gap-2" onclick="goBack()" style="font-size: 0.9rem;">
+                        <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Project
+                    </button>
+                    <span class="ds-badge red">
+                        <i data-lucide="alert-octagon" style="width:12px;height:12px;vertical-align:middle;margin-right:2px;"></i> Deviation Logged
+                    </span>
+                </div>
+
+                <!-- Banner -->
+                <div class="glass-card p-4 mb-4 border d-flex align-items-center gap-3 bg-white" style="border-radius: var(--radius-lg, 1rem); border-color: var(--ds-border-color);">
+                    <div class="ds-icon-circle bg-danger-soft text-danger" style="width:48px;height:48px;font-size:1.25rem;">
+                        <i data-lucide="shield-alert"></i>
+                    </div>
+                    <div>
+                        <h4 id="deviationTitle" class="mb-1 fw-bold" style="font-family: 'Outfit', sans-serif;">SOP Deviation Analysis</h4>
+                        <p id="deviationSub" class="text-secondary text-sm mb-0">Document the rationale behind the standard operating procedure deviation and define future corrective and preventive actions (CAPA).</p>
+                    </div>
+                </div>
+
+                <!-- Loader -->
+                <div id="loader" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-2">Loading deviation log...</p>
+                </div>
+
+                <!-- Form Card -->
+                <div id="formCard" class="deviation-card p-4 p-md-5 d-none bg-white">
+                    <div class="mb-4">
+                        <label id="whyLabel" for="whyDeviated" class="form-label form-label-premium">Why was the SOP deviated? <span class="text-danger">*</span></label>
+                        <div id="whyDesc" class="text-xs text-muted mb-2">Provide a detailed explanation of the operational reasons, environmental factors, or constraints that led to this deviation.</div>
+                        <textarea class="form-control textarea-premium" id="whyDeviated" rows="5" placeholder="e.g. Standard tool length was unavailable in store; temporary bypass required to meet production line balance..."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="preventiveActions" class="form-label form-label-premium">Future Preventive Actions <span class="text-danger">*</span></label>
+                        <div class="text-xs text-muted mb-2">Outline specific actions, training, or system improvements to ensure the SOP is strictly followed or updated in the future.</div>
+                        <textarea class="form-control textarea-premium" id="preventiveActions" rows="5" placeholder="e.g. Update inventory replenishment levels for standard tooling; schedule training refreshment for Shift B operators..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-3 mt-5">
+                        <button type="button" class="ds-btn ds-btn-ghost" onclick="goBack()">Cancel</button>
+                        <button type="button" class="ds-btn ds-btn-primary" onclick="saveDeviation()">
+                            <i data-lucide="check-circle-2" style="width:16px;height:16px;"></i> Save & Log Analysis
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- API and JS logic -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        let projectId = null;
+        let type = 'sop';
+        let stage2Data = null;
+
+        const typeConfig = {
+            sop: {
+                title: "SOP Deviation Analysis",
+                sub: "Document the rationale behind the standard operating procedure deviation and define future corrective and preventive actions (CAPA).",
+                labelWhy: "Why was the SOP deviated? <span class=\"text-danger\">*</span>",
+                descWhy: "Provide a detailed explanation of the operational reasons, environmental factors, or constraints that led to this deviation.",
+                detailsText: "SOP deviated. See separate deviation analysis page.",
+                dbField: "sop_deviation_analysis",
+                detailsField: "sop_details",
+                devField: "sop_dev"
+            },
+            spec: {
+                title: "Specification Deviation Analysis",
+                sub: "Document the rationale behind the specification deviation and define future corrective and preventive actions (CAPA).",
+                labelWhy: "Why was the Specification deviated? <span class=\"text-danger\">*</span>",
+                descWhy: "Provide a detailed explanation of the specification tolerance mismatches, measurement issues, or operational constraints.",
+                detailsText: "Specification deviated. See separate deviation analysis page.",
+                dbField: "spec_deviation_analysis",
+                detailsField: "spec_details",
+                devField: "spec_dev"
+            },
+            cp: {
+                title: "Control Plan Deviation Analysis",
+                sub: "Document the rationale behind the control plan deviation and define future corrective and preventive actions (CAPA).",
+                labelWhy: "Why was the Control Plan deviated? <span class=\"text-danger\">*</span>",
+                descWhy: "Provide a detailed explanation of the process parameter deviations or inspection frequency gaps.",
+                detailsText: "Control Plan deviated. See separate deviation analysis page.",
+                dbField: "cp_deviation_analysis",
+                detailsField: "cp_details",
+                devField: "cp_dev"
+            },
+            pfmea: {
+                title: "PFMEA Finding/Deviation Analysis",
+                sub: "Document the rationale behind the PFMEA review findings and define future corrective and preventive actions (CAPA).",
+                labelWhy: "Why was the PFMEA deviated or what was the finding? <span class=\"text-danger\">*</span>",
+                descWhy: "Provide a detailed explanation of the failure mode risk priority number (RPN) changes or review findings.",
+                detailsText: "PFMEA finding. See separate deviation analysis page.",
+                dbField: "pfmea_deviation_analysis",
+                detailsField: "pfmea_details",
+                devField: "pfmea_dev"
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            QCMS.init();
+            if (window.lucide) lucide.createIcons();
+
+            const params = new URLSearchParams(window.location.search);
+            projectId = params.get('id');
+            type = params.get('type') || 'sop';
+
+            if (!projectId) {
+                QCMS.toast('Project ID is missing', 'error');
+                return;
+            }
+
+            // Customize UI text based on type
+            const config = typeConfig[type] || typeConfig.sop;
+            document.title = `${config.title} | QCMS Enterprise`;
+            
+            const titleEl = document.getElementById('deviationTitle');
+            const subEl = document.getElementById('deviationSub');
+            const labelEl = document.getElementById('whyLabel');
+            const descEl = document.getElementById('whyDesc');
+            
+            if (titleEl) titleEl.textContent = config.title;
+            if (subEl) subEl.textContent = config.sub;
+            if (labelEl) labelEl.innerHTML = config.labelWhy;
+            if (descEl) descEl.textContent = config.descWhy;
+
+            await loadDeviationData();
+        });
+
+        async function loadDeviationData() {
+            try {
+                // Fetch project workflows to get the latest draft standard verification data
+                const projectData = await api.get(`/projects/${projectId}`);
+                const wf = projectData.workflows || [];
+                stage2Data = wf.find(w => w.stage_id === 2)?.data || {};
+                
+                const sv = stage2Data.standard_verification || {};
+                const config = typeConfig[type] || typeConfig.sop;
+                const devAnalysis = sv[config.dbField] || {};
+
+                document.getElementById('whyDeviated').value = devAnalysis.why_deviated || '';
+                document.getElementById('preventiveActions').value = devAnalysis.preventive_actions || '';
+
+                document.getElementById('loader').classList.add('d-none');
+                document.getElementById('formCard').classList.remove('d-none');
+            } catch (e) {
+                console.error("Failed to load stage 2 data", e);
+                QCMS.toast('Failed to load deviation log data', 'error');
+            }
+        }
+
+        async function saveDeviation() {
+            const why = document.getElementById('whyDeviated').value.trim();
+            const preventive = document.getElementById('preventiveActions').value.trim();
+
+            if (!why || !preventive) {
+                QCMS.toast('Please fill in both fields before saving.', 'warning');
+                return;
+            }
+
+            try {
+                const sv = stage2Data.standard_verification || {};
+                const config = typeConfig[type] || typeConfig.sop;
+                sv[config.dbField] = {
+                    why_deviated: why,
+                    preventive_actions: preventive
+                };
+
+                // Also update the details text field to refer to the deviation analysis page
+                sv[config.detailsField] = config.detailsText;
+                if (config.devField && config.devField !== 'pfmea_dev') {
+                    sv[config.devField] = true; // Mark deviation found as true
+                }
+
+                const payload = {
+                    standard_verification: sv
+                };
+
+                // 1. Save to Stage2ObservationDataCollection (for reviews/workflow)
+                await api.post(`/workflow/projects/${projectId}/stages/2`, payload);
+
+                // 2. Save to ProjectWorkflow (for project-details page draft sync)
+                await api.post(`/projects/${projectId}/stage/2/save`, payload);
+
+                QCMS.toast(`${config.title} saved successfully!`, 'success');
+                setTimeout(() => goBack(), 1000);
+            } catch (e) {
+                console.error("Failed to save deviation details", e);
+                QCMS.toast('Failed to save deviation analysis details', 'error');
+            }
+        }
+
+        function goBack() {
+            window.location.href = `/projects/project-details.html?id=${projectId}`;
+        }
+    </script>
+</body>
+</html>

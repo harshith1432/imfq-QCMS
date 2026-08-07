@@ -6,7 +6,9 @@ const facilitator = {
     init() {
         console.log("Facilitator Module Initialized");
         this.bindEvents();
+        this.bindTabs();
         this.loadStats();
+        this.loadAssistanceRequests();
         this.loadActiveProjects();
         this.renderCharts();
         
@@ -97,7 +99,7 @@ const facilitator = {
                         <td><strong>${p.title}</strong><br><small class="text-muted">${p.uid || ''}</small></td>
                         <td><span class="badge bg-primary">Stage ${p.stage}</span></td>
                         <td>${p.team_leader || 'Unknown'}</td>
-                        <td><button class="btn btn-sm btn-outline-primary" onclick="window.location.href='workspace.html?id=${p.id}'">${action}</button></td>
+                        <td><button class="btn btn-sm btn-outline-primary" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">${action}</button></td>
                     </tr>
                 `;
             }).join('');
@@ -150,7 +152,7 @@ const facilitator = {
                     <td>${p.dept || 'Unknown'}</td>
                     <td>${p.tools_used.length > 0 ? p.tools_used.join(', ') : 'None'}</td>
                     <td><span class="badge ${p.has_rca ? 'bg-success' : 'bg-warning'}">${p.has_rca ? 'In Progress' : 'Not Started'}</span></td>
-                    <td><button class="btn btn-sm btn-primary" onclick="window.location.href='workspace.html?id=${p.id}'">Open RCA</button></td>
+                    <td><button class="btn btn-sm btn-primary" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">Open RCA</button></td>
                 </tr>
             `).join('');
         } catch (err) {
@@ -177,7 +179,7 @@ const facilitator = {
                     <td>${p.baseline ? JSON.stringify(p.baseline) : 'N/A'}</td>
                     <td>${p.final ? JSON.stringify(p.final) : 'N/A'}</td>
                     <td><span class="fw-bold text-success">${p.improvement_pct || 0}%</span></td>
-                    <td><button class="btn btn-sm btn-success" onclick="window.location.href='workspace.html?id=${p.id}'">Validate</button></td>
+                    <td><button class="btn btn-sm btn-success" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">Validate</button></td>
                 </tr>
             `).join('');
         } catch (err) {
@@ -191,7 +193,7 @@ const facilitator = {
         if (!table) return;
 
         try {
-            const projects = await api.get('/facilitator/closure-projects');
+            const projects = await api.get('/facilitator/closure-projects?t=' + Date.now());
 
             if (projects.length === 0) {
                 table.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No projects currently awaiting closure</td></tr>`;
@@ -201,15 +203,131 @@ const facilitator = {
             table.innerHTML = projects.map(p => `
                 <tr>
                     <td><strong>${p.title}</strong></td>
-                    <td><span class="badge ${p.sop_status === 'Uploaded' ? 'bg-success' : 'bg-warning'}">${p.sop_status}</span></td>
+                    <td><span class="badge ${['Uploaded', 'Active', 'Approved'].includes(p.sop_status) ? 'bg-success' : (p.sop_status === 'Under Review' ? 'bg-info' : 'bg-warning')}">${p.sop_status}</span></td>
                     <td>${p.lessons}</td>
                     <td><span class="badge ${p.facilitator_signoff ? 'bg-success' : 'bg-secondary'}">${p.facilitator_signoff ? 'Signed Off' : 'Pending'}</span></td>
-                    <td><button class="btn btn-sm btn-primary" onclick="window.location.href='workspace.html?id=${p.id}'">Review</button></td>
+                    <td><button class="btn btn-sm btn-primary" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">Review</button></td>
                 </tr>
             `).join('');
         } catch (err) {
             console.error("Failed to load closure projects", err);
             table.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Failed to load closure data</td></tr>`;
+        }
+    },
+
+    bindTabs() {
+        const tabBtns = document.querySelectorAll('#facTabs .ds-btn-tab');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.getAttribute('data-tab');
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                document.querySelectorAll('.tab-content-panel').forEach(panel => panel.classList.add('d-none'));
+                const targetPanel = document.getElementById(`tab-${targetTab}`);
+                if (targetPanel) targetPanel.classList.remove('d-none');
+
+                if (targetTab === 'assistance') this.loadAssistanceRequests();
+                if (targetTab === 'rca') this.loadRcaProjects();
+                if (targetTab === 'pipeline') this.loadPipelineProjects();
+                if (targetTab === 'completed') this.loadCompletedProjects();
+            });
+        });
+    },
+
+    async loadAssistanceRequests() {
+        const body = document.getElementById('assistanceBody');
+        const countEl = document.getElementById('assistanceCount');
+        if (!body) return;
+
+        try {
+            const requests = await api.get('/facilitator/assistance-requests');
+            if (countEl) countEl.textContent = `${requests.length} Request${requests.length === 1 ? '' : 's'}`;
+
+            if (!requests || requests.length === 0) {
+                body.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-muted">No assistance requests received.</td></tr>`;
+                return;
+            }
+
+            body.innerHTML = requests.map(r => `
+                <tr>
+                    <td>
+                        <strong>${r.project_title}</strong><br>
+                        <small class="text-muted" style="font-family:monospace;">${r.project_uid}</small>
+                    </td>
+                    <td><span class="ds-badge blue">Stage ${r.stage_id}</span></td>
+                    <td>
+                        <strong>${r.user_name}</strong><br>
+                        <small class="text-muted">${r.user_email || '—'}</small>
+                    </td>
+                    <td>
+                        <div class="text-sm text-main" style="max-width: 250px; white-space: normal;">${r.message}</div>
+                        ${r.response ? `<div class="text-xxs text-success mt-1"><strong>Response:</strong> ${r.response}</div>` : ''}
+                    </td>
+                    <td class="text-xs text-muted">${r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
+                    <td>
+                        <span class="ds-badge ${r.status === 'Pending' ? 'orange' : 'green'}">${r.status}</span>
+                    </td>
+                    <td class="text-end">
+                        <button class="ds-btn ds-btn-sm ds-btn-outline" onclick="window.location.href='/projects/project-details.html?id=${r.project_id}&stage=${r.stage_id}'">
+                            Open Project
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            console.error("Failed to load assistance requests", err);
+            body.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-danger">Failed to load assistance requests.</td></tr>`;
+        }
+    },
+
+    async loadPipelineProjects() {
+        const body = document.getElementById('pipelineBody');
+        const countEl = document.getElementById('pipelineCount');
+        if (!body) return;
+        try {
+            const projects = await api.get('/facilitator/projects');
+            if (countEl) countEl.textContent = `${projects.length} Project${projects.length === 1 ? '' : 's'}`;
+            if (!projects || projects.length === 0) {
+                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">No pipeline projects found.</td></tr>`;
+                return;
+            }
+            body.innerHTML = projects.map(p => `
+                <tr>
+                    <td><strong>${p.title}</strong><br><small class="text-muted">${p.uid || ''}</small></td>
+                    <td>${p.dept || 'N/A'}</td>
+                    <td><span class="ds-badge blue">Stage ${p.stage}</span></td>
+                    <td><span class="ds-badge orange">${p.status}</span></td>
+                    <td class="text-end"><button class="ds-btn ds-btn-sm ds-btn-outline" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">View</button></td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Failed to load pipeline projects.</td></tr>`;
+        }
+    },
+
+    async loadCompletedProjects() {
+        const body = document.getElementById('completedBody');
+        const countEl = document.getElementById('completedCount');
+        if (!body) return;
+        try {
+            const projects = await api.get('/facilitator/completed-projects');
+            if (countEl) countEl.textContent = `${projects.length} Project${projects.length === 1 ? '' : 's'}`;
+            if (!projects || projects.length === 0) {
+                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">No completed projects found.</td></tr>`;
+                return;
+            }
+            body.innerHTML = projects.map(p => `
+                <tr>
+                    <td><strong>${p.title}</strong><br><small class="text-muted">${p.uid || ''}</small></td>
+                    <td>${p.dept || 'N/A'}</td>
+                    <td><span class="ds-badge green">Stage 8</span></td>
+                    <td><span class="ds-badge green">Closed</span></td>
+                    <td class="text-end"><button class="ds-btn ds-btn-sm ds-btn-outline" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">View</button></td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Failed to load completed projects.</td></tr>`;
         }
     }
 };

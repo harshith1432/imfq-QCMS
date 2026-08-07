@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEO Strategic Dashboard | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <style>
+        .skeleton {
+            background: linear-gradient(90deg, rgba(var(--ds-primary-rgb), 0.05) 25%, rgba(var(--ds-primary-rgb), 0.1) 50%, rgba(var(--ds-primary-rgb), 0.05) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .kpi-skeleton {
+            height: 140px;
+            width: 100%;
+            border-radius: 16px;
+            border: 1px solid var(--ds-border-color);
+        }
+
+        .kpi-grid-8 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .sparkline-container {
+            height: 35px;
+            margin-top: 10px;
+        }
+
+        .financial-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .financial-item {
+            background: rgba(var(--ds-primary-rgb), 0.02);
+            border: 1px solid var(--ds-border-color);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .highlight-item {
+            border-left: 3px solid var(--ds-primary-color);
+            background: rgba(var(--ds-primary-rgb), 0.01);
+            transition: all 0.2s ease;
+        }
+
+        .highlight-item:hover {
+            background: rgba(var(--ds-primary-rgb), 0.03);
+            transform: translateX(4px);
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--ds-border-color);
+        }
+
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+
+        .hover-row {
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .hover-row:hover {
+            background-color: rgba(var(--ds-primary-rgb), 0.02) !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar injected by components.js -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <!-- Navbar injected by components.js -->
+            <header class="glass-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner fade-in-up">
+                <!-- CEO Header & Action Bar -->
+                <header class="ds-header-layout section-spacing">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 w-100">
+                        <div>
+                            <h1 id="pageTitle" class="ds-title mb-0">Overview</h1>
+                            <p id="pageSubtitle" class="ds-text-secondary mb-0">Strategic Insights. Better Decisions. Stronger Tomorrow.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-nowrap">
+                            <!-- Period compare -->
+                            <select class="ds-input ds-select text-xs" style="width: auto; height: 36px; min-height: 36px; padding: 4px 32px 4px 12px; line-height: 1.4; font-size: 13px; font-weight: 500;" id="comparePeriod" onchange="ceoDash.handleFilters()">
+                                <option value="6">Timeline: Last 6 Months</option>
+                                <option value="3">Timeline: Last 3 Months</option>
+                                <option value="12">Timeline: Last 12 Months</option>
+                                <option value="ytd">Timeline: Year to Date (YTD)</option>
+                                <option value="all">Timeline: All Time</option>
+                            </select>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- ── Strategic Overview Section ── -->
+                <div id="sec-strategic-overview">
+                    <!-- KPI Grid (6 Cards) -->
+                    <div class="kpi-grid-8 fade-in section-spacing" id="ceoKpiGrid">
+                        <!-- Skeletons initially -->
+                        <div class="ds-card skeleton kpi-skeleton"></div>
+                        <div class="ds-card skeleton kpi-skeleton"></div>
+                        <div class="ds-card skeleton kpi-skeleton"></div>
+                        <div class="ds-card skeleton kpi-skeleton"></div>
+                        <div class="ds-card skeleton kpi-skeleton"></div>
+                        <div class="ds-card skeleton kpi-skeleton"></div>
+                    </div>
+
+
+
+                    <!-- Pipeline & Savings Charts Row -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-4">
+                            <div class="ds-card h-100">
+                                <div class="ds-card-header h-stack justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="card-title mb-0">Project Pipeline Stages</h5>
+                                        <p class="text-xs text-muted mb-0">Active projects by lifecycle stages</p>
+                                    </div>
+                                    <span id="pipelineTotalBadge" class="badge bg-primary-soft text-primary font-mono fw-bold">0 Active</span>
+                                </div>
+                                <div class="ds-card-body d-flex align-items-center justify-content-center">
+                                    <div id="pipelineChart" style="width: 100%; min-height: 280px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-8">
+                            <div class="ds-card h-100">
+                                <div class="ds-card-header h-stack justify-content-between align-items-center">
+                                    <div class="v-stack">
+                                        <h5 class="card-title">Cumulative Cost Savings & Projections</h5>
+                                        <p class="text-xs text-muted mb-0">Savings trend with moving average and forecast models</p>
+                                    </div>
+                                    <div class="h-stack gap-2 align-items-center">
+                                        <select class="ds-input ds-select text-xs" style="width: auto; height: 36px; min-height: 36px; padding: 4px 32px 4px 12px; line-height: 1.4; font-size: 13px; font-weight: 500;" id="savingsTimelineFilter" onchange="ceoDash.handleTimelineFilter(this.value)">
+                                            <option value="3">Last 3 Months</option>
+                                            <option value="6" selected>Last 6 Months</option>
+                                            <option value="12">Last 12 Months</option>
+                                            <option value="ytd">Year to Date (YTD)</option>
+                                            <option value="all">All Time</option>
+                                        </select>
+                                        <i data-lucide="trending-up" class="text-primary"></i>
+                                    </div>
+                                </div>
+                                <div class="ds-card-body">
+                                    <div id="savingsChart" style="width: 100%; min-height: 280px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Org Health Index Section ── -->
+                <div id="sec-org-health" class="mt-4 pt-3">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i data-lucide="activity" style="width:20px; height:20px;" class="text-primary"></i>
+                        <h5 class="fw-bold text-primary mb-0">Organizational Health & Department Performance Index</h5>
+                    </div>
+                    <!-- Department Performance -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-12">
+                            <div class="ds-card h-100">
+                                <div class="ds-card-header">
+                                    <h5 class="card-title">Department Performance</h5>
+                                    <p class="text-xs text-muted mb-0">Cross-department efficiency, ROI, and quality indexing</p>
+                                </div>
+                                <div class="ds-card-body p-0">
+                                    <div class="w-100" style="overflow: hidden;">
+                                        <table class="ds-table" style="table-layout: fixed; width: 100%;">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 20%;">Department</th>
+                                                    <th style="width: 11%;">Projects</th>
+                                                    <th style="width: 13%;">Completed</th>
+                                                    <th style="width: 15%;">Savings</th>
+                                                    <th style="width: 11%;">ROI</th>
+                                                    <th style="width: 14%;">Quality Index</th>
+                                                    <th style="width: 16%;">Success Rate</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="deptPerformanceBody">
+                                                <tr>
+                                                    <td colspan="7" class="text-center py-4">
+                                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div id="deptPaginationContainer"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quality Circle Contributors -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-12">
+                            <div class="ds-card h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="ds-card-header">
+                                        <h5 class="card-title">Top Quality Circle Contributors</h5>
+                                        <p class="text-xs text-muted mb-0">Leaderboard of active employee contributions</p>
+                                    </div>
+                                    <div class="ds-card-body p-0" id="leaderboardContainer" style="min-height: 280px;">
+                                        <!-- Dynamic leaderboard list -->
+                                        <div class="text-center py-4 text-muted text-xs">Loading leaderboard...</div>
+                                    </div>
+                                </div>
+                                <div id="leaderboardPaginationContainer"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── ROI & Financial Analytics Section ── -->
+                <div id="sec-roi-analytics" class="mt-4 pt-3">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i data-lucide="trending-up" style="width:20px; height:20px;" class="text-success"></i>
+                        <h5 class="fw-bold text-success mb-0">Corporate Financial Impact & Quality ROI Analytics</h5>
+                    </div>
+                    <!-- Financial Impact Grid & Top Projects -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-5">
+                            <div class="ds-card h-100">
+                                <div class="ds-card-header d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h5 class="card-title">Corporate Financial Impact</h5>
+                                        <p class="text-xs text-muted mb-0">Cost avoidance, reductions, and investment payback</p>
+                                    </div>
+                                    <span class="badge bg-success-soft text-success text-xs fw-semibold">
+                                        <i data-lucide="zap" style="width:11px;height:11px;"></i> Real-Time
+                                    </span>
+                                </div>
+                                <div class="ds-card-body">
+                                    <div class="financial-grid">
+                                        <div class="financial-item" title="Confirmed savings that prevented future costs (Total savings minus direct reduction, waste & revenue gains)">
+                                            <div class="text-xs text-muted">Cost Avoidance <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
+                                            <h5 class="fw-bold mb-0 text-primary mt-1" id="finCostAvoidance">₹0L</h5>
+                                        </div>
+                                        <div class="financial-item" title="Direct cost reductions captured from Stage 6 workflow data">
+                                            <div class="text-xs text-muted">Cost Reduction <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
+                                            <h5 class="fw-bold mb-0 text-success mt-1" id="finCostReduction">₹0L</h5>
+                                        </div>
+                                        <div class="financial-item" title="Estimated annual savings projected from Stage 5 (Improve) workflows">
+                                            <div class="text-xs text-muted">Revenue Improvement <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
+                                            <h5 class="fw-bold mb-0 text-info mt-1" id="finRevImprove">₹0L</h5>
+                                        </div>
+                                        <div class="financial-item" title="Productivity gains logged in Stage 8 closure reports">
+                                            <div class="text-xs text-muted">Waste Reduction <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
+                                            <h5 class="fw-bold mb-0 text-warning mt-1" id="finWasteReduce">₹0L</h5>
+                                        </div>
+                                        <div class="financial-item" title="Investment ÷ (Total Savings / 12 months) — using actual implementation costs from Stage 8">
+                                            <div class="text-xs text-muted">Avg Payback Period <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
+                                            <h5 class="fw-bold mb-0 text-secondary mt-1" id="finPayback">0 Months</h5>
+                                        </div>
+                                        <div class="financial-item" title="Total Savings (Stage 8 + Knowledge Repo + Workflows) minus actual implementation cost">
+                                            <div class="text-xs text-muted">Total Net Gain <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
+                                            <h5 class="fw-bold mb-0 text-primary mt-1" id="finNetGain">₹0L</h5>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-muted mt-3 text-end">
+                                        <i data-lucide="clock" style="width:11px;height:11px;"></i>
+                                        Updated: <span id="finLastUpdated">—</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-7">
+                            <div class="ds-card h-100">
+                                <div class="ds-card-header h-stack justify-content-between">
+                                    <h5 class="card-title">Top 10 Quality Improvement Projects</h5>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="text" class="ds-input py-1 px-2 text-xs" style="width:160px;" placeholder="Search projects..." id="projectSearch" onkeyup="ceoDash.filterProjects()">
+                                    </div>
+                                </div>
+                                <div class="ds-card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="ds-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Project</th>
+                                                    <th>Priority</th>
+                                                    <th>Category</th>
+                                                    <th>Status</th>
+                                                    <th>Stage Progress</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="topProjectsBody">
+                                                <tr>
+                                                    <td colspan="5" class="text-center py-4">
+                                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div id="topProjectsPaginationContainer"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        const ceoDash = {
+            charts: {},
+            departments: [],
+            topProjectsList: [],
+            liveSource: null,
+
+            formatINR(amount) {
+                return QCMS.formatINR(amount);
+            },
+
+            async init() {
+                try {
+                    if (typeof QCMS !== 'undefined') QCMS.init();
+                    
+                    // Fetch latest profile details & subscription status dynamically
+                    let profile = null;
+                    try {
+                        profile = await api.get('/auth/me');
+                    } catch (err) {
+                        console.error('[QCMS] Failed to fetch profile details:', err);
+                    }
+
+                    if (profile) {
+                        const userStr = sessionStorage.getItem('user') || '{}';
+                        const userObj = JSON.parse(userStr);
+                        userObj.subscription_status = profile.subscription_status;
+                        userObj.trial_ends_at = profile.trial_ends_at;
+                        if (profile.org_primary_color !== undefined) userObj.org_primary_color = profile.org_primary_color;
+                        if (profile.org_logo_url !== undefined) userObj.org_logo_url = profile.org_logo_url;
+                        if (profile.org_favicon_url !== undefined) userObj.org_favicon_url = profile.org_favicon_url;
+                        if (profile.org_name !== undefined) userObj.org_name = profile.org_name;
+                        sessionStorage.setItem('user', JSON.stringify(userObj));
+                        
+                        if (profile.subscription_status === 'Suspended') {
+                            const container = document.querySelector('.app-content-inner');
+                            if (container) {
+                                container.innerHTML = `
+                                    <div class="d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 180px);">
+                                        <div class="glass-card text-center p-5 fade-in" style="max-width: 550px; border-top: 4px solid var(--ds-danger-color); box-shadow: var(--ds-shadow-xl);">
+                                            <div class="mb-4" style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; background: rgba(239, 68, 68, 0.1);">
+                                                <i data-lucide="shield-alert" style="width: 36px; height: 36px; color: var(--ds-danger-color);"></i>
+                                            </div>
+                                            <h2 class="fw-bold mb-2 text-danger">Organization Account Suspended</h2>
+                                            <p class="text-secondary mb-4">
+                                                Your organization's access to the QCMS platform has been suspended. Please contact the QCMS support team to reactivate your account.
+                                            </p>
+                                            
+                                            <div class="text-start mb-4 p-4 rounded-3" style="background: rgba(var(--ds-bg-hover-rgb), 0.3); border: 1px solid var(--ds-border-color);">
+                                                <label class="form-label fw-semibold mb-2" for="reactivationMsg">Request Account Reactivation</label>
+                                                <textarea id="reactivationMsg" class="form-control mb-3" rows="4" placeholder="Describe the reason for requesting reactivation..." style="background: var(--ds-bg-card); color: var(--ds-text-primary); border-color: var(--ds-border-color);"></textarea>
+                                                <button class="ds-btn ds-btn-primary w-100" id="submitReactivationBtn" onclick="window.submitReactivationRequest()">
+                                                    <i data-lucide="send" class="me-2" style="width: 16px; height: 16px;"></i> Submit Request
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                if (window.lucide) lucide.createIcons();
+                            }
+                            return;
+                        }
+                    }
+
+                    // Populate Departments filter options dynamically
+                    const departments = await api.get('/admin/departments');
+                    const deptSelect = document.getElementById('deptFilter');
+                    if (deptSelect && departments) {
+                        departments.forEach(d => {
+                            const opt = document.createElement('option');
+                            opt.value = d.id;
+                            opt.textContent = d.name;
+                            deptSelect.appendChild(opt);
+                        });
+                    }
+
+                    // Load Dashboard stats & charts
+                    await this.loadDashboardData();
+                    this.initRealTimeSync();
+
+                    // Handle View parameter from URL or hash
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const viewParam = urlParams.get('view') || window.location.hash.replace('#', '') || 'strategic-overview';
+                    this.switchView(viewParam, viewParam !== 'strategic-overview');
+                    this.initScrollSpy();
+                    
+                } catch (e) {
+                    console.error('[CEO Dash] Init failed:', e);
+                }
+            },
+
+            currentActiveView: null,
+            isProgrammaticScroll: false,
+
+            initScrollSpy() {
+                const sections = [
+                    { id: 'sec-strategic-overview', view: 'strategic-overview' },
+                    { id: 'sec-org-health', view: 'org-health' },
+                    { id: 'sec-roi-analytics', view: 'roi-analytics' }
+                ];
+
+                // Intercept clicks on CEO dashboard section links for smooth scrolling without full page reload
+                document.addEventListener('click', (e) => {
+                    const link = e.target.closest('a.sidebar-link, #executiveOversightTabs .nav-link');
+                    if (!link) return;
+
+                    const href = link.getAttribute('href') || '';
+                    const dataView = link.getAttribute('data-view');
+
+                    let targetView = null;
+                    if (dataView) {
+                        targetView = dataView;
+                    } else if (href.includes('dashboard-ceo.html?view=')) {
+                        targetView = href.split('view=')[1].split('&')[0];
+                    } else if (href.endsWith('dashboard-ceo.html')) {
+                        targetView = 'strategic-overview';
+                    }
+
+                    if (targetView && sections.some(s => s.view === targetView)) {
+                        e.preventDefault();
+                        this.isProgrammaticScroll = true;
+                        this.switchView(targetView, true);
+                        setTimeout(() => { this.isProgrammaticScroll = false; }, 800);
+                    }
+                });
+
+                // ScrollSpy scroll listener
+                const onScroll = () => {
+                    if (this.isProgrammaticScroll) return;
+
+                    const viewportHeight = window.innerHeight;
+                    let activeView = 'strategic-overview';
+
+                    for (let i = sections.length - 1; i >= 0; i--) {
+                        const secEl = document.getElementById(sections[i].id);
+                        if (secEl) {
+                            const rect = secEl.getBoundingClientRect();
+                            if (rect.top <= viewportHeight * 0.45) {
+                                activeView = sections[i].view;
+                                break;
+                            }
+                        }
+                    }
+
+                    this.updateActiveUI(activeView);
+                };
+
+                window.addEventListener('scroll', onScroll, { passive: true });
+            },
+
+            updateActiveUI(viewName) {
+                if (this.currentActiveView === viewName) return;
+                this.currentActiveView = viewName;
+
+                const views = {
+                    'strategic-overview': {
+                        title: 'Overview',
+                        subtitle: 'Strategic Insights. Better Decisions. Stronger Tomorrow.'
+                    },
+                    'org-health': {
+                        title: 'Organization Health',
+                        subtitle: 'Cross-department efficiency, project risk breakdown, and organizational health metrics.'
+                    },
+                    'roi-analytics': {
+                        title: 'Corporate ROI & Financial Analytics',
+                        subtitle: 'Cumulative cost savings, financial impact breakdowns, and quality ROI trends.'
+                    }
+                };
+
+                const target = views[viewName] || views['strategic-overview'];
+
+                // 1. Update Title & Subtitle
+                const pageTitle = document.getElementById('pageTitle');
+                const pageSubtitle = document.getElementById('pageSubtitle');
+                if (pageTitle) pageTitle.textContent = target.title;
+                if (pageSubtitle) pageSubtitle.textContent = target.subtitle;
+
+                // 2. Update Header Nav Pills
+                document.querySelectorAll('#executiveOversightTabs .nav-link').forEach(btn => {
+                    const btnView = btn.getAttribute('data-view');
+                    if (btnView === viewName) {
+                        btn.classList.add('active', 'bg-primary', 'text-white');
+                        btn.classList.remove('btn-outline-secondary');
+                    } else {
+                        btn.classList.remove('active', 'bg-primary', 'text-white');
+                        btn.classList.add('btn-outline-secondary');
+                    }
+                });
+
+                // 3. Update Sidebar Active Class
+                document.querySelectorAll('.sidebar-link').forEach(link => {
+                    const href = link.getAttribute('href') || '';
+                    const isMatch = href.includes(`view=${viewName}`) || 
+                                   (viewName === 'strategic-overview' && href.endsWith('dashboard-ceo.html') && !href.includes('view='));
+                    if (isMatch) {
+                        link.classList.add('active');
+                    } else if (href.includes('dashboard-ceo.html')) {
+                        link.classList.remove('active');
+                    }
+                });
+
+                // 4. Update URL without page reload
+                const newUrl = window.location.pathname + '?view=' + viewName;
+                window.history.replaceState({ view: viewName }, '', newUrl);
+            },
+
+            switchView(viewName, doScroll = true) {
+                const targetIdMap = {
+                    'strategic-overview': 'sec-strategic-overview',
+                    'org-health': 'sec-org-health',
+                    'roi-analytics': 'sec-roi-analytics'
+                };
+
+                const targetId = targetIdMap[viewName] || 'sec-strategic-overview';
+                this.updateActiveUI(viewName);
+
+                if (doScroll) {
+                    const el = document.getElementById(targetId);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            },
+
+            async loadDashboardData() {
+                try {
+                    const timelineVal = document.getElementById('comparePeriod')?.value || document.getElementById('savingsTimelineFilter')?.value || '6';
+                    // Fetch full strategic overview data
+                    const [metrics, trend, health, topProjects, contributors] = await Promise.all([
+                        api.get('/ceo/executive-summary'),
+                        api.get('/ceo/strategic-analytics?timeline=' + encodeURIComponent(timelineVal)),
+                        api.get('/ceo/org-health'),
+                        api.get('/ceo/priority-initiatives'),
+                        api.get('/ceo/top-contributors')
+                    ]);
+
+                    // Bind strategic KPI metrics cards
+                    this.renderKpiGrid(metrics);
+                    
+                    // Bind AI summary content
+                    this.renderAISummary(metrics.ai_summary);
+
+                    // Render dynamic financial impacts
+                    this.renderFinancialImpact(metrics.financial_impact);
+
+                    // Render project pipeline donut chart
+                    this.renderPipelineChart(metrics.project_pipeline);
+
+                    // Render cost savings line chart
+                    this.renderSavingsChart(trend);
+
+                    // Render quality weekly index multi-line
+                    this.renderQualityTrendChart(trend.quality_trend);
+
+                    // Render Health donut chart
+                    this.renderHealthChart(metrics.project_health);
+
+                    // Load 5 departments per page dynamically
+                    this.allDepartments = health.department_health || [];
+                    this.loadDepartmentPerformance(1);
+
+                    // Load top quality improvement projects 4 per page
+                    this.loadTopProjects(1);
+
+                    // Render leaderboard with 5 members per page dynamically
+                    this.loadLeaderboard(1);
+
+                    // Render knowledge repository chart
+                    this.renderKnowledgeChart(metrics);
+
+
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error('[CEO Dash] Failed loading datasets:', e);
+                    QCMS.toast('Error loading operational metrics', 'danger');
+                }
+            },
+
+            renderKpiGrid(metrics) {
+                const spark = metrics.sparklines || {};
+
+                const kpis = [
+                    { title: 'Projects Running', value: metrics.projects_running || 0, trend: 'Optimal', type: 'success', color: 'blue', sparkColor: '#3b82f6', sparkData: spark.projects_running || [0, 0, 0, metrics.projects_running || 0] },
+                    { title: 'Completed Projects', value: metrics.completed_projects || 0, trend: 'Real-time', type: 'primary', color: 'green', sparkColor: '#10b981', sparkData: spark.completed_projects || [0, 0, 0, metrics.completed_projects || 0] },
+                    { title: 'Success Rate', value: `${(metrics.success_rate || 0).toFixed(1)}%`, trend: 'On Track', type: 'success', color: 'purple', sparkColor: '#8b5cf6', sparkData: spark.success_rate || [0, 0, 0, metrics.success_rate || 0] },
+                    { title: 'Annual Savings', value: QCMS.formatINR(Math.round((metrics.annual_savings || 0) * 10000000)), trend: 'Growing', type: 'success', color: 'green', sparkColor: '#10b981', sparkData: spark.annual_savings || [0, 0, 0, metrics.annual_savings || 0] },
+                    { title: 'Average ROI', value: `${(metrics.roi || 0).toFixed(1)}%`, trend: 'Outstanding', type: 'success', color: 'purple', sparkColor: '#8b5cf6', sparkData: spark.roi || [0, 0, 0, metrics.roi || 0] },
+                    { title: 'Total Employees', value: metrics.employees_participating || 0, trend: 'Active', type: 'primary', color: 'blue', sparkColor: '#3b82f6', sparkData: spark.employees_participating || [0, 0, 0, metrics.employees_participating || 0] }
+                ];
+
+                const container = document.getElementById('ceoKpiGrid');
+                container.innerHTML = kpis.map((kpi, idx) => `
+                    <div class="ds-card p-3 shadow-sm hover-row">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="text-xs text-muted fw-medium">${kpi.title}</span>
+                                <h4 class="fw-bold mb-1 mt-1 text-primary" style="font-size:1.15rem;">${kpi.value}</h4>
+                                <span class="text-${kpi.type} text-xs fw-semibold">${kpi.trend}</span>
+                            </div>
+                            <span class="ds-badge ds-badge-sm ${kpi.type}">${kpi.trend}</span>
+                        </div>
+                        <div id="sparkline-chart-${idx}" class="sparkline-container"></div>
+                    </div>
+                `).join('');
+
+                // Render mini sparklines via ApexCharts
+                kpis.forEach((kpi, idx) => {
+                    new ApexCharts(document.getElementById(`sparkline-chart-${idx}`), {
+                        chart: { type: 'area', height: 35, sparkline: { enabled: true } },
+                        series: [{ data: kpi.sparkData }],
+                        colors: [kpi.sparkColor],
+                        stroke: { width: 1.5, curve: 'smooth' },
+                        fill: { opacity: 0.1 },
+                        tooltip: { enabled: false }
+                    }).render();
+                });
+            },
+
+            renderAISummary(sum) {
+                if (!sum) return;
+                const elAch = document.getElementById('aiAchievements');
+                const elRisks = document.getElementById('aiRisks');
+                const elRecs = document.getElementById('aiRecommendations');
+                const elTime = document.getElementById('aiSummaryTime');
+
+                if (elAch) elAch.innerHTML = (sum.achievements || []).map(a => `<li>${a}</li>`).join('');
+                if (elRisks) elRisks.innerHTML = (sum.risks || []).map(r => `<li>${r}</li>`).join('');
+                if (elRecs) elRecs.innerHTML = (sum.recommendations || []).map(rec => `<li>${rec}</li>`).join('');
+                if (elTime && sum.timestamp) {
+                    elTime.textContent = `Updated: ${new Date(sum.timestamp).toLocaleTimeString()}`;
+                }
+            },
+
+            renderFinancialImpact(fin) {
+                if (!fin) return;
+                const fmtL = (val) => {
+                    const n = parseFloat(val) || 0;
+                    // val is already in Lakhs from backend
+                    if (n >= 100) return QCMS.formatINR(Math.round(n * 100000)); // large: use full INR
+                    return `₹ ${n.toFixed(2)}L`;
+                };
+                const el = (id) => document.getElementById(id);
+                if (el('finCostAvoidance'))  el('finCostAvoidance').textContent  = fmtL(fin.cost_avoidance);
+                if (el('finCostReduction'))  el('finCostReduction').textContent  = fmtL(fin.cost_reduction);
+                if (el('finRevImprove'))     el('finRevImprove').textContent     = fmtL(fin.revenue_improvement);
+                if (el('finWasteReduce'))    el('finWasteReduce').textContent    = fmtL(fin.waste_reduction);
+                if (el('finPayback'))        el('finPayback').textContent        = `${parseFloat(fin.payback_months || 0).toFixed(1)} Months`;
+                if (el('finNetGain'))        el('finNetGain').textContent        = fmtL(fin.net_gain);
+                if (el('finLastUpdated'))    el('finLastUpdated').textContent    = new Date().toLocaleTimeString();
+            },
+
+            renderPipelineChart(pipeline) {
+                if (this.charts.pipeline) this.charts.pipeline.destroy();
+                const totalActive = Object.values(pipeline || {}).reduce((a, b) => a + b, 0);
+
+                if (document.getElementById('pipelineTotalBadge')) {
+                    document.getElementById('pipelineTotalBadge').textContent = `${totalActive} Active Project${totalActive === 1 ? '' : 's'}`;
+                }
+
+                this.charts.pipeline = new ApexCharts(document.getElementById('pipelineChart'), {
+                    chart: { type: 'donut', height: 270 },
+                    series: Object.values(pipeline || {}),
+                    labels: Object.keys(pipeline || {}),
+                    colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#fd7e14', '#17a2b8', '#6c757d'],
+                    stroke: { width: 0 },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                size: '68%',
+                                labels: {
+                                    show: true,
+                                    total: {
+                                        show: true,
+                                        showAlways: true,
+                                        label: 'Active Projects',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        color: '#64748b',
+                                        formatter: function () {
+                                            return totalActive;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    legend: { position: 'bottom', labels: { colors: 'var(--ds-text-primary)' } }
+                });
+                this.charts.pipeline.render();
+            },
+
+            renderSavingsChart(trend) {
+                if (this.charts.savings) this.charts.savings.destroy();
+                
+                const labels = (trend.savings_trend || []).map(t => t.month);
+                const actual = (trend.savings_trend || []).map(t => t.savings);
+                const ma = trend.moving_average || [];
+                const fore = trend.forecast || [];
+
+                this.charts.savings = new ApexCharts(document.getElementById('savingsChart'), {
+                    chart: { type: 'area', height: 280, toolbar: { show: false } },
+                    series: [
+                        { name: 'Actual Savings', data: actual },
+                        { name: 'Moving Average', data: ma },
+                        { name: 'Projection Model', data: fore }
+                    ],
+                    xaxis: { categories: labels, labels: { style: { colors: 'var(--ds-text-muted)' } } },
+                    yaxis: { labels: { formatter: (v) => v >= 100000 ? `₹ ${(v / 100000.0).toFixed(1)}L` : (v >= 1000 ? `₹ ${(v / 1000.0).toFixed(0)}K` : `₹ ${Math.round(v)}`), style: { colors: 'var(--ds-text-muted)' } } },
+                    colors: ['#10b981', '#3b82f6', '#8b5cf6'],
+                    stroke: { curve: 'smooth', width: 2 },
+                    fill: { opacity: [0.1, 0, 0.05] },
+                    legend: { labels: { colors: 'var(--ds-text-primary)' } }
+                });
+                this.charts.savings.render();
+            },
+
+            renderQualityTrendChart(qTrend) {
+                const container = document.getElementById('qualityTrendChart');
+                if (!container || !qTrend) return;
+                if (this.charts.quality) this.charts.quality.destroy();
+
+                this.charts.quality = new ApexCharts(document.getElementById('qualityTrendChart'), {
+                    chart: { type: 'line', height: 280, toolbar: { show: false } },
+                    series: [
+                        { name: 'Quality Index %', type: 'column', data: qTrend.quality_index },
+                        { name: 'Defect Rate %', type: 'line', data: qTrend.defect_rate },
+                        { name: 'Cycle Time (Days)', type: 'line', data: qTrend.cycle_time }
+                    ],
+                    xaxis: { categories: qTrend.labels, labels: { style: { colors: 'var(--ds-text-muted)' } } },
+                    yaxis: [
+                        { title: { text: 'Quality / Duration' }, labels: { style: { colors: 'var(--ds-text-muted)' } } },
+                        { opposite: true, title: { text: 'Defect Rate %' }, labels: { style: { colors: 'var(--ds-text-muted)' } } }
+                    ],
+                    colors: ['rgba(59, 130, 246, 0.2)', '#ef4444', '#f59e0b'],
+                    stroke: { curve: 'smooth', width: [0, 3, 2] },
+                    legend: { labels: { colors: 'var(--ds-text-primary)' } }
+                });
+                this.charts.quality.render();
+            },
+
+            renderHealthChart(health) {
+                if (this.charts.health) this.charts.health.destroy();
+
+                // Universal Standardized Color Mapping
+                const colorMap = {
+                    'Healthy': '#10b981',   // Universal Green (Safe / Optimal)
+                    'At Risk': '#f59e0b',   // Universal Amber/Orange (At Risk / Warning)
+                    'Critical': '#ef4444',  // Universal Red (Critical Risk)
+                    'On Hold': '#6c757d'    // Universal Gray (Neutral / On Hold)
+                };
+
+                const standardOrder = ['Healthy', 'At Risk', 'Critical', 'On Hold'];
+                const rawHealth = health || {};
+
+                // Ensure labels follow standard order so legend & slice colors stay perfectly aligned
+                const labels = standardOrder.filter(k => k in rawHealth).concat(
+                    Object.keys(rawHealth).filter(k => !standardOrder.includes(k))
+                );
+
+                const series = labels.map(k => rawHealth[k] || 0);
+                const colors = labels.map(k => colorMap[k] || '#6c757d');
+
+                this.charts.health = new ApexCharts(document.getElementById('healthChart'), {
+                    chart: { type: 'donut', height: 260 },
+                    series: series,
+                    labels: labels,
+                    colors: colors,
+                    stroke: { width: 0 },
+                    legend: { position: 'bottom', labels: { colors: 'var(--ds-text-primary)' } }
+                });
+                this.charts.health.render();
+            },
+
+            async loadDepartmentPerformance(page = 1) {
+                try {
+                    this.currentDeptPage = page;
+                    const res = await api.get(`/ceo/departments?page=${page}&per_page=5&t=` + Date.now());
+
+                    let depts = [];
+                    let total = 0;
+                    let totalPages = 1;
+
+                    if (res && res.items !== undefined) {
+                        depts = res.items;
+                        total = res.total;
+                        totalPages = res.total_pages;
+                    } else if (Array.isArray(res)) {
+                        total = res.length;
+                        totalPages = Math.ceil(total / 5) || 1;
+                        depts = res.slice((page - 1) * 5, page * 5);
+                    }
+
+                    this.renderDepartmentTable(depts, page, total, totalPages);
+                } catch (e) {
+                    console.error('[CEO Dash] Department pagination fetch failed:', e);
+                    if (this.allDepartments) {
+                        const total = this.allDepartments.length;
+                        const totalPages = Math.ceil(total / 5) || 1;
+                        const depts = this.allDepartments.slice((page - 1) * 5, page * 5);
+                        this.renderDepartmentTable(depts, page, total, totalPages);
+                    }
+                }
+            },
+
+            renderDepartmentTable(depts, page = 1, total = 0, totalPages = 1) {
+                const body = document.getElementById('deptPerformanceBody');
+                const pagContainer = document.getElementById('deptPaginationContainer');
+
+                const validDepts = (depts || []).filter(d => d && d.name && !['all', 'all departments', 'n/a', 'none', '-'].includes(d.name.trim().toLowerCase()));
+
+                if (!validDepts || validDepts.length === 0) {
+                    body.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">No operational departments logged.</td></tr>';
+                    if (pagContainer) pagContainer.innerHTML = '';
+                    return;
+                }
+
+                body.innerHTML = validDepts.map(d => {
+                    let statusClass, badgeText;
+                    const score = d.score || 0;
+                    if (score >= 80) {
+                        statusClass = 'green';
+                        badgeText = 'EXCELLENT';
+                    } else if (score >= 60) {
+                        statusClass = 'orange';
+                        badgeText = 'STABLE';
+                    } else if (score > 0) {
+                        statusClass = 'red';
+                        badgeText = 'ATTENTION';
+                    } else {
+                        statusClass = 'gray';
+                        badgeText = 'INACTIVE';
+                    }
+
+                    const projCount = d.projects !== undefined ? d.projects : 0;
+                    const compCount = d.completed !== undefined ? d.completed : 0;
+                    const savingsStr = d.savings || '₹ 0.00L';
+                    const roiStr = d.roi || '0%';
+                    const qIndexStr = d.quality_index || '0%';
+
+                    return `
+                        <tr>
+                            <td class="fw-bold text-truncate" title="${d.name}">${d.name}</td>
+                            <td>${projCount}</td>
+                            <td>${compCount}</td>
+                            <td class="text-nowrap">${savingsStr}</td>
+                            <td class="text-nowrap">${roiStr}</td>
+                            <td class="text-nowrap">${qIndexStr}</td>
+                            <td class="text-nowrap">
+                                <span class="ds-badge ds-badge-sm ${statusClass}">${badgeText}</span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                if (pagContainer) {
+                    const actualTotal = total || depts.length;
+                    const actualTotalPages = totalPages || Math.ceil(actualTotal / 5) || 1;
+                    const startIndex = Math.min((page - 1) * 5 + 1, actualTotal);
+                    const endIndex = Math.min(page * 5, actualTotal);
+
+                    pagContainer.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                            <div class="text-xs text-muted">
+                                Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span> departments
+                            </div>
+                            <div class="pagination-buttons d-flex gap-1 align-items-center">
+                                <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadDepartmentPerformance(${page - 1})">
+                                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                                </button>
+                                ${Array.from({ length: actualTotalPages }, (_, idx) => idx + 1).map(p => `
+                                    <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="ceoDash.loadDepartmentPerformance(${p})">
+                                        ${p}
+                                    </button>
+                                `).join('')}
+                                <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === actualTotalPages ? 'disabled' : ''} onclick="ceoDash.loadDepartmentPerformance(${page + 1})">
+                                    <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (window.lucide) lucide.createIcons();
+            },
+
+            currentTopProjectsPage: 1,
+
+            async loadTopProjects(page = 1) {
+                try {
+                    this.currentTopProjectsPage = page;
+                    const search = (document.getElementById('projectSearch')?.value || '').trim();
+                    const res = await api.get(`/ceo/priority-initiatives?page=${page}&per_page=4&search=` + encodeURIComponent(search) + '&t=' + Date.now());
+
+                    let projects = [];
+                    let total = 0;
+                    let totalPages = 1;
+
+                    if (res && res.items !== undefined) {
+                        projects = res.items;
+                        total = res.total;
+                        totalPages = res.total_pages;
+                    } else if (Array.isArray(res)) {
+                        total = res.length;
+                        totalPages = Math.ceil(total / 4) || 1;
+                        projects = res.slice((page - 1) * 4, page * 4);
+                    }
+
+                    this.renderTopProjects(projects, page, total, totalPages);
+                } catch (e) {
+                    console.error('[CEO Dash] Top Projects pagination fetch failed:', e);
+                }
+            },
+
+            renderTopProjects(projects, page = 1, total = 0, totalPages = 1) {
+                const body = document.getElementById('topProjectsBody');
+                const pagContainer = document.getElementById('topProjectsPaginationContainer');
+
+                if (!projects || projects.length === 0) {
+                    body.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No high-priority initiatives found.</td></tr>';
+                    if (pagContainer) pagContainer.innerHTML = '';
+                    return;
+                }
+
+                body.innerHTML = projects.map(p => {
+                    const isDone = ['Completed', 'Closed'].includes(p.status) || p.stage >= 8;
+                    const stagePct = isDone ? 100 : Math.round((p.stage / 8) * 100);
+                    const priorityClass = p.priority === 'High' ? 'danger' : 'warning';
+                    return `
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">${p.title}</div>
+                            <span class="text-xs text-muted">${p.department || 'Operations'}</span>
+                        </td>
+                        <td>
+                            <span class="ds-badge ds-badge-sm ${priorityClass}">${p.priority || 'Medium'}</span>
+                        </td>
+                        <td class="text-xs text-secondary">${p.category || 'Quality'}</td>
+                        <td class="text-xs fw-semibold">${p.status || 'Active'}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-xs fw-semibold">Stage ${p.stage}/8</span>
+                                <div class="progress flex-grow-1" style="height: 5px; min-width:50px;">
+                                    <div class="progress-bar" style="width: ${stagePct}%"></div>
+                                </div>
+                                <span class="text-xs text-muted">${stagePct}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+
+                if (pagContainer) {
+                    const actualTotal = total || projects.length;
+                    const actualTotalPages = totalPages || Math.ceil(actualTotal / 4) || 1;
+                    const startIndex = Math.min((page - 1) * 4 + 1, actualTotal);
+                    const endIndex = Math.min(page * 4, actualTotal);
+
+                    pagContainer.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                            <div class="text-xs text-muted">
+                                Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span> projects
+                            </div>
+                            <div class="pagination-buttons d-flex gap-1 align-items-center">
+                                <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadTopProjects(${page - 1})">
+                                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                                </button>
+                                ${Array.from({ length: actualTotalPages }, (_, idx) => idx + 1).map(p => `
+                                    <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="ceoDash.loadTopProjects(${p})">
+                                        ${p}
+                                    </button>
+                                `).join('')}
+                                <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === actualTotalPages ? 'disabled' : ''} onclick="ceoDash.loadTopProjects(${page + 1})">
+                                    <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    if (window.lucide) lucide.createIcons();
+                }
+            },
+
+            filterProjects() {
+                this.loadTopProjects(1);
+            },
+
+            async loadLeaderboard(page = 1) {
+                try {
+                    this.currentLeaderboardPage = page;
+                    const res = await api.get(`/ceo/top-contributors?page=${page}&per_page=5&t=` + Date.now());
+
+                    let contributors = [];
+                    let total = 0;
+                    let totalPages = 1;
+
+                    if (res && res.items !== undefined) {
+                        contributors = res.items;
+                        total = res.total;
+                        totalPages = res.total_pages;
+                    } else if (Array.isArray(res)) {
+                        total = res.length;
+                        totalPages = Math.ceil(total / 5) || 1;
+                        contributors = res.slice((page - 1) * 5, page * 5);
+                    }
+
+                    this.renderLeaderboard(contributors, page, total, totalPages);
+                } catch (e) {
+                    console.error('[CEO Dash] Leaderboard fetch error:', e);
+                }
+            },
+
+            renderLeaderboard(contributors, page = 1, total = 0, totalPages = 1) {
+                const container = document.getElementById('leaderboardContainer');
+                const pagContainer = document.getElementById('leaderboardPaginationContainer');
+
+                if (!contributors || contributors.length === 0) {
+                    container.innerHTML = '<div class="text-center text-muted py-4">No contributor data available yet.<br><small>Add team members to projects to see leaderboard.</small></div>';
+                    if (pagContainer) pagContainer.innerHTML = '';
+                    return;
+                }
+
+                container.innerHTML = contributors.map(p => {
+                    const score = p.score || 50;
+                    const scoreColor = score >= 80 ? 'green' : score >= 60 ? 'orange' : 'blue';
+                    return `
+                    <div class="leaderboard-item d-flex align-items-center justify-content-between p-3" style="border-bottom: 1px solid var(--ds-border-color);">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-lg">${p.medal || '⭐'}</span>
+                            <div class="v-stack">
+                                <span class="text-sm fw-bold" style="color: var(--ds-text-main);">${p.name}</span>
+                                <span class="text-xs text-muted">${p.dept} &bull; ${p.projects || 0} project${(p.projects || 0) !== 1 ? 's' : ''}</span>
+                            </div>
+                        </div>
+                        <span class="ds-badge ds-badge-sm ${scoreColor}">${score} PTS</span>
+                    </div>
+                    `;
+                }).join('');
+
+                if (pagContainer) {
+                    const actualTotal = total || contributors.length;
+                    const actualTotalPages = totalPages || Math.ceil(actualTotal / 5) || 1;
+                    const startIndex = Math.min((page - 1) * 5 + 1, actualTotal);
+                    const endIndex = Math.min(page * 5, actualTotal);
+
+                    pagContainer.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center px-3 py-2" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                            <div class="text-xs text-muted" style="font-size: 0.75rem;">
+                                Showing <span class="fw-semibold text-main">${startIndex}-${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span>
+                            </div>
+                            <div class="pagination-buttons d-flex gap-1 align-items-center">
+                                <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" style="padding: 2px 6px;" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadLeaderboard(${page - 1})">
+                                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                                </button>
+                                ${Array.from({ length: actualTotalPages }, (_, idx) => idx + 1).map(p => `
+                                    <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" onclick="ceoDash.loadLeaderboard(${p})">
+                                        ${p}
+                                    </button>
+                                `).join('')}
+                                <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" style="padding: 2px 6px;" ${page === actualTotalPages ? 'disabled' : ''} onclick="ceoDash.loadLeaderboard(${page + 1})">
+                                    <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (window.lucide) lucide.createIcons();
+            },
+
+            renderKnowledgeChart(metrics) {
+                const container = document.getElementById('knowledgeChart');
+                if (!container || !metrics) return;
+                const completedProjects = metrics.completed_projects || 0;
+                const activeProjects = metrics.projects_running || 0;
+                if (this.charts.knowledge) this.charts.knowledge.destroy();
+                this.charts.knowledge = new ApexCharts(document.getElementById('knowledgeChart'), {
+                    chart: { type: 'bar', height: 260, toolbar: { show: false } },
+                    series: [{ name: 'Count', data: [completedProjects, activeProjects] }],
+                    xaxis: { categories: ['Completed Projects', 'Active Projects'], labels: { style: { colors: 'var(--ds-text-muted)' } } },
+                    colors: ['#10b981', '#f59e0b'],
+                    plotOptions: { bar: { borderRadius: 4, columnWidth: '35%', distributed: true } },
+                    legend: { show: false }
+                });
+                this.charts.knowledge.render();
+            },
+
+            renderHighlights() {
+                // CEO Highlights Stream has been removed from the UI
+            },
+
+            initRealTimeSync() {
+                // Initialize SSE connection to backend /api/projects/live
+                if (typeof EventSource !== 'undefined') {
+                    this.liveSource = new EventSource('/api/projects/live');
+                    this.liveSource.onmessage = (e) => {
+                        const data = JSON.parse(e.data);
+                        if (data.event === "refresh_required") {
+                            QCMS.toast('Live updates synced from system core!', 'success');
+                            this.loadDashboardData();
+                        }
+                    };
+                }
+            },
+
+            toggleAutoRefresh() {
+                const checked = document.getElementById('autoRefreshToggle').checked;
+                if (!checked && this.liveSource) {
+                    this.liveSource.close();
+                    this.liveSource = null;
+                    QCMS.toast('Live sync disabled', 'warning');
+                } else if (checked && !this.liveSource) {
+                    this.initRealTimeSync();
+                    QCMS.toast('Live sync enabled', 'success');
+                }
+            },
+
+            refreshAll() {
+                QCMS.toast('Refreshing operational metrics...', 'primary');
+                this.loadDashboardData();
+            },
+
+            async handleTimelineFilter(val) {
+                const headerSelect = document.getElementById('comparePeriod');
+                const cardSelect = document.getElementById('savingsTimelineFilter');
+
+                if (headerSelect && headerSelect.value !== val) headerSelect.value = val;
+                if (cardSelect && cardSelect.value !== val) cardSelect.value = val;
+
+                QCMS.toast('Analyzing metrics for selected timeline...', 'primary');
+                try {
+                    const [metrics, trend] = await Promise.all([
+                        api.get('/ceo/executive-summary?timeline=' + encodeURIComponent(val) + '&t=' + Date.now()),
+                        api.get('/ceo/strategic-analytics?timeline=' + encodeURIComponent(val) + '&t=' + Date.now())
+                    ]);
+                    if (metrics) {
+                        this.renderKpiGrid(metrics);
+                        if (metrics.financial_impact) this.renderFinancialImpact(metrics.financial_impact);
+                        if (metrics.project_pipeline) this.renderPipelineChart(metrics.project_pipeline);
+                        if (metrics.project_health) this.renderHealthChart(metrics.project_health);
+                    }
+                    if (trend) {
+                        this.renderSavingsChart(trend);
+                        if (trend.quality_trend) this.renderQualityTrendChart(trend.quality_trend);
+                    }
+                } catch (e) {
+                    console.error('[CEO Dash] Timeline filter failed:', e);
+                }
+            },
+
+            handleFilters() {
+                const val = document.getElementById('comparePeriod')?.value || '6';
+                const cardSelect = document.getElementById('savingsTimelineFilter');
+                if (cardSelect) cardSelect.value = val;
+                this.handleTimelineFilter(val);
+            },
+
+            async exportPDF() {
+                try {
+                    QCMS.toast('Generating CEO Strategic Executive Report...', 'primary');
+                    const timestamp = new Date().toISOString().slice(0, 10);
+                    const filename = `CEO_Executive_Report_${timestamp}.csv`;
+
+                    if (window.api && typeof window.api.downloadFile === 'function') {
+                        await api.downloadFile('/ceo/export', filename);
+                        QCMS.toast('Report successfully downloaded!', 'success');
+                    } else {
+                        this.triggerClientSideCSVDownload(filename);
+                        QCMS.toast('Report successfully downloaded!', 'success');
+                    }
+                } catch (err) {
+                    console.error('[CEO Dash] Backend export failed, triggering client fallback:', err);
+                    try {
+                        const timestamp = new Date().toISOString().slice(0, 10);
+                        this.triggerClientSideCSVDownload(`CEO_Executive_Report_${timestamp}.csv`);
+                        QCMS.toast('Report exported successfully!', 'success');
+                    } catch (e2) {
+                        QCMS.toast('Failed to download report: ' + err.message, 'danger');
+                    }
+                }
+            },
+
+            triggerClientSideCSVDownload(filename) {
+                const rows = [
+                    ["CEO EXECUTIVE DASHBOARD STRATEGIC REPORT"],
+                    ["Generated At", new Date().toLocaleString()],
+                    [],
+                    ["METRIC NAME", "VALUE", "TREND / STATUS"]
+                ];
+
+                const cards = document.querySelectorAll('#ceoKpiGrid .ds-card');
+                cards.forEach(card => {
+                    const titleEl = card.querySelector('span.text-xs.text-muted');
+                    const valEl = card.querySelector('h4');
+                    const trendEl = card.querySelector('span.ds-badge') || card.querySelector('span.fw-semibold');
+                    
+                    const title = titleEl ? titleEl.textContent.trim() : 'Metric';
+                    const val = valEl ? valEl.textContent.trim() : '0';
+                    const trend = trendEl ? trendEl.textContent.trim() : 'Active';
+                    rows.push([title, val, trend]);
+                });
+
+                // Add Department Health Table if available
+                const deptRows = document.querySelectorAll('#deptHealthTableBody tr');
+                if (deptRows && deptRows.length) {
+                    rows.push([]);
+                    rows.push(["DEPARTMENT PERFORMANCE INDEX"]);
+                    rows.push(["DEPARTMENT NAME", "HEALTH SCORE", "STATUS"]);
+                    deptRows.forEach(tr => {
+                        const cols = tr.querySelectorAll('td');
+                        if (cols.length >= 2) {
+                            const name = cols[0].textContent.trim();
+                            const score = cols[1].textContent.trim();
+                            const status = cols[2] ? cols[2].textContent.trim() : 'Active';
+                            rows.push([name, score, status]);
+                        }
+                    });
+                }
+
+                const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.map(cell => `"${(cell + '').replace(/"/g, '""')}"`).join(",")).join("\n");
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", filename);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+
+        window.submitReactivationRequest = async function() {
+            const textarea = document.getElementById('reactivationMsg');
+            const msg = textarea ? textarea.value.trim() : '';
+            if (!msg) {
+                QCMS.toast('Please write a message before submitting.', 'danger');
+                return;
+            }
+            QCMS.setLoading('submitReactivationBtn', true);
+            try {
+                const res = await api.post('/auth/request-reactivation', { message: msg });
+                QCMS.toast(res.message || 'Reactivation request submitted successfully.', 'success');
+                if (textarea) textarea.value = '';
+            } catch (err) {
+                QCMS.toast(err.message || 'Failed to submit reactivation request.', 'danger');
+            } finally {
+                QCMS.setLoading('submitReactivationBtn', false);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => ceoDash.init());
+    </script>
+</body>
+
+</html>

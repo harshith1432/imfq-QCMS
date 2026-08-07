@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QCMS Developer Portal & API Documentation</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS & Lucide Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- App JS Utilities -->
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/qcms-common.js"></script>
+
+    <style>
+        :root {
+            --docs-bg: #f8fafc;
+            --docs-card-bg: #ffffff;
+            --docs-sidebar-bg: #ffffff;
+            --docs-border: #e2e8f0;
+            --docs-text-main: #0f172a;
+            --docs-text-muted: #64748b;
+            --docs-code-bg: #0f172a;
+            --docs-code-text: #f8fafc;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+        }
+
+        [data-theme="dark"] {
+            --docs-bg: #0b0f19;
+            --docs-card-bg: #111827;
+            --docs-sidebar-bg: #111827;
+            --docs-border: #1f2937;
+            --docs-text-main: #f9fafb;
+            --docs-text-muted: #9ca3af;
+            --docs-code-bg: #030712;
+            --docs-code-text: #f3f4f6;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--docs-bg);
+            color: var(--docs-text-main);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Top Navbar */
+        .docs-header {
+            position: sticky;
+            top: 0;
+            z-index: 1040;
+            height: 64px;
+            background-color: var(--docs-card-bg);
+            border-bottom: 1px solid var(--docs-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            backdrop-filter: blur(12px);
+        }
+
+        /* Layout Container */
+        .docs-wrapper {
+            display: flex;
+            min-height: calc(100vh - 64px);
+            width: 100%;
+            max-width: 100vw;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Navigation */
+        .docs-sidebar {
+            width: 250px;
+            background-color: var(--docs-sidebar-bg);
+            border-right: 1px solid var(--docs-border);
+            position: sticky;
+            top: 64px;
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+            padding: 20px 14px;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+
+        .sidebar-group-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--docs-text-muted);
+            margin: 18px 12px 8px 12px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            color: var(--docs-text-main);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: rgba(37, 99, 235, 0.08);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .method-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .method-post { background-color: #dcfce7; color: #166534; }
+        .method-get { background-color: #dbeafe; color: #1e40af; }
+
+        /* Main Content Area */
+        .docs-content {
+            flex: 1 1 0%;
+            min-width: 0; /* Prevents flex children from forcing horizontal expansion */
+            padding: 32px 36px;
+            max-width: 820px;
+            box-sizing: border-box;
+        }
+
+        /* Code/SDK Right Panel */
+        .docs-code-panel {
+            width: 400px;
+            max-width: 400px;
+            position: sticky;
+            top: 64px;
+            height: calc(100vh - 64px);
+            background-color: var(--docs-card-bg);
+            border-left: 1px solid var(--docs-border);
+            padding: 20px 18px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 1440px) {
+            .docs-code-panel {
+                width: 360px;
+                max-width: 360px;
+                padding: 16px 14px;
+            }
+            .docs-content {
+                padding: 24px 28px;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .docs-wrapper {
+                flex-direction: column;
+            }
+            .docs-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                top: 0;
+            }
+            .docs-content {
+                max-width: 100%;
+                padding: 24px 20px;
+            }
+            .docs-code-panel {
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+                position: relative;
+                top: 0;
+                border-left: none;
+                border-top: 1px solid var(--docs-border);
+            }
+        }
+
+        /* Code Snippet Box */
+        .code-block-container {
+            background-color: var(--docs-code-bg);
+            color: var(--docs-code-text);
+            border-radius: 12px;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 24px;
+            border: 1px solid var(--docs-border);
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .code-block-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 8px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .code-block-body {
+            padding: 14px 16px;
+            margin: 0;
+            font-size: 0.80rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Parameter Table */
+        .param-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 20px 0;
+            max-width: 100%;
+        }
+
+        .param-table th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--docs-text-muted);
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--docs-border);
+        }
+
+        .param-table td {
+            padding: 14px 16px;
+            font-size: 0.88rem;
+            border-bottom: 1px solid var(--docs-border);
+            vertical-align: top;
+        }
+
+        .param-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .param-type {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--docs-text-muted);
+        }
+
+        .required-badge {
+            background-color: #fee2e2;
+            color: #991b1b;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .optional-badge {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Language Tabs Bar */
+        .lang-tab-bar {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--docs-border);
+            max-width: 100%;
+            width: 100%;
+            box-sizing: border-box;
+            scrollbar-width: thin;
+        }
+
+        .lang-tab-bar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .lang-tab-bar::-webkit-scrollbar-thumb {
+            background-color: rgba(100, 116, 139, 0.3);
+            border-radius: 4px;
+        }
+
+        .lang-tab-btn {
+            background: none;
+            border: none;
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--docs-text-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .lang-tab-btn:hover, .lang-tab-btn.active {
+            background-color: var(--primary);
+            color: #ffffff;
+        }
+
+        /* Search Modal Overlay */
+        .search-modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 100px;
+        }
+
+        .search-modal-box {
+            background-color: var(--docs-card-bg);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid var(--docs-border);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <header class="docs-header">
+        <div class="d-flex align-items-center gap-3">
+            <a href="/admin/settings.html" class="d-flex align-items-center gap-2 text-decoration-none color-inherit">
+                <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                    <i data-lucide="code-2" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                    <span class="fw-bold fs-6 text-dark text-decoration-none">QCMS</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">Developer Portal</span>
+                </div>
+            </a>
+            <span class="text-muted fs-6">|</span>
+            <span class="text-xs text-muted font-monospace">Base URL: <code>https://api.qcms.com/v1/</code></span>
+        </div>
+
+        <!-- Center Search Trigger -->
+        <div class="position-relative" style="width: 320px;" onclick="openSearchModal()">
+            <input type="text" class="form-control form-control-sm ps-4 rounded-pill" placeholder="Search documentation... (Ctrl + K)" readonly style="cursor: pointer;">
+            <i data-lucide="search" class="position-absolute start-0 top-50 translate-middle-y ms-2 text-muted" style="width:14px;height:14px;"></i>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <a href="/api/v1/integrations/docs/openapi.json" target="_blank" class="btn btn-sm btn-outline-secondary">
+                <i data-lucide="file-json" style="width:14px;height:14px;" class="me-1"></i> OpenAPI 3.1
+            </a>
+            <a href="/api/v1/integrations/docs/postman_collection.json" download="QCMS_Postman_Collection.json" class="btn btn-sm btn-outline-primary">
+                <i data-lucide="download" style="width:14px;height:14px;" class="me-1"></i> Postman
+            </a>
+            <button class="btn btn-sm btn-light border" onclick="toggleTheme()">
+                <i data-lucide="sun" id="themeIcon" style="width:16px;height:16px;"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Wrapper -->
+    <div class="docs-wrapper">
+
+        <!-- 15 Section Sidebar -->
+        <aside class="docs-sidebar">
+            <div class="sidebar-group-label">Getting Started</div>
+            <a href="#overview" class="sidebar-link active" onclick="setActiveNav(this)">1. Overview</a>
+            <a href="#authentication" class="sidebar-link" onclick="setActiveNav(this)">2. Authentication</a>
+            <a href="#base-url" class="sidebar-link" onclick="setActiveNav(this)">3. Base URL</a>
+            <a href="#api-keys" class="sidebar-link" onclick="setActiveNav(this)">4. API Keys</a>
+            <a href="#quick-start" class="sidebar-link" onclick="setActiveNav(this)">5. Quick Start</a>
+
+            <div class="sidebar-group-label">REST API Endpoints</div>
+            <a href="#endpoint-ideas" class="sidebar-link" onclick="setActiveNav(this)">
+                <span>6. POST /ideas</span>
+                <span class="method-badge method-post">POST</span>
+            </a>
+            <a href="#endpoint-status" class="sidebar-link" onclick="setActiveNav(this)">
+                <span>Health / status</span>
+                <span class="method-badge method-get">GET</span>
+            </a>
+            <a href="#endpoint-imported-ideas" class="sidebar-link" onclick="setActiveNav(this)">
+                <span>List Imported Ideas</span>
+                <span class="method-badge method-get">GET</span>
+            </a>
+
+            <div class="sidebar-group-label">Future Endpoints (Modular)</div>
+            <a href="#future-users" class="sidebar-link text-muted" onclick="setActiveNav(this)">/users</a>
+            <a href="#future-depts" class="sidebar-link text-muted" onclick="setActiveNav(this)">/departments</a>
+            <a href="#future-projects" class="sidebar-link text-muted" onclick="setActiveNav(this)">/projects</a>
+            <a href="#future-tasks" class="sidebar-link text-muted" onclick="setActiveNav(this)">/tasks</a>
+
+            <div class="sidebar-group-label">Specifications & Errors</div>
+            <a href="#request-format" class="sidebar-link" onclick="setActiveNav(this)">7. Request Format</a>
+            <a href="#response-format" class="sidebar-link" onclick="setActiveNav(this)">8. Response Format</a>
+            <a href="#error-codes" class="sidebar-link" onclick="setActiveNav(this)">9. Error Codes</a>
+            <a href="#sdk-examples" class="sidebar-link" onclick="setActiveNav(this)">10. SDK Examples (24)</a>
+
+            <div class="sidebar-group-label">Tools & Resources</div>
+            <a href="#webhooks" class="sidebar-link" onclick="setActiveNav(this)">11. Webhooks (Future)</a>
+            <a href="#postman" class="sidebar-link" onclick="setActiveNav(this)">12. Postman Collection</a>
+            <a href="#openapi" class="sidebar-link" onclick="setActiveNav(this)">13. OpenAPI / Swagger</a>
+            <a href="#rate-limits" class="sidebar-link" onclick="setActiveNav(this)">14. Rate Limits</a>
+            <a href="#changelog" class="sidebar-link" onclick="setActiveNav(this)">15. Changelog</a>
+
+            <div class="sidebar-group-label">API Tester</div>
+            <a href="#playground" class="sidebar-link text-primary fw-bold" onclick="setActiveNav(this)">
+                <i data-lucide="play-circle" style="width:14px;height:14px;" class="me-1"></i> Interactive Tester
+            </a>
+        </aside>
+
+        <!-- Main Documentation Body -->
+        <main class="docs-content">
+
+            <!-- SECTION 1: OVERVIEW -->
+            <section id="overview" class="mb-5">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <h2 class="fw-bold mb-0">QCMS Developer API Overview</h2>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">v1.0 Stable</span>
+                </div>
+                <p class="text-muted">Welcome to the QCMS (Quality & Continuous Improvement Management System) Integration API. Our API allows external applications (such as Ideation Tools, ERP systems, CRMs, and custom workplace software) to securely sync continuous improvement ideas, Kaizen projects, and quality records into QCMS.</p>
+                
+                <div class="row g-3 mt-3">
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded-3 bg-body-tertiary">
+                            <h6 class="fw-bold mb-1"><i data-lucide="shield-check" class="me-1 text-primary" style="width:16px;"></i> Secure Authentication</h6>
+                            <p class="text-xs text-muted mb-0">Bearer token authentication hashed using SHA-256 with per-organization isolation.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded-3 bg-body-tertiary">
+                            <h6 class="fw-bold mb-1"><i data-lucide="zap" class="me-1 text-warning" style="width:16px;"></i> High Velocity</h6>
+                            <p class="text-xs text-muted mb-0">Built-in rate limiting (100 req/min), sliding window protection, and sub-50ms latency.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded-3 bg-body-tertiary">
+                            <h6 class="fw-bold mb-1"><i data-lucide="layers" class="me-1 text-success" style="width:16px;"></i> Modular Architecture</h6>
+                            <p class="text-xs text-muted mb-0">Future-proof REST design for seamless expansion to Users, Projects, and Webhooks.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: AUTHENTICATION -->
+            <section id="authentication" class="mb-5">
+                <h3 class="fw-bold mb-3">2. Authentication</h3>
+                <p>All requests to the QCMS Integration API must include a valid Organization API key passed as a Bearer token in the <code>Authorization</code> HTTP request header.</p>
+
+                <div class="code-block-container">
+                    <div class="code-block-header">
+                        <span class="text-xs text-muted">HTTP Header Format</span>
+                        <button class="btn btn-xs btn-outline-light" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre class="code-block-body">Authorization: Bearer qcms_live_83hd92jd93jd83jd93jd93jd</pre>
+                </div>
+
+                <div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis p-3">
+                    <i data-lucide="alert-triangle" class="me-1" style="width:16px;"></i>
+                    <strong>Security Best Practices:</strong>
+                    <ul class="mb-0 mt-1 ps-3 text-xs">
+                        <li>Never expose secret API keys in client-side applications or public code repositories.</li>
+                        <li>Always transmit requests over HTTPS.</li>
+                        <li>Regenerate keys periodically or immediately if compromised under <strong>Settings → Integrations</strong>.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- SECTION 3: BASE URL -->
+            <section id="base-url" class="mb-5">
+                <h3 class="fw-bold mb-3">3. Base URL</h3>
+                <p>The QCMS Integration API is served over HTTPS. Use the following base URLs depending on your environment:</p>
+                <div class="table-responsive">
+                    <table class="table border text-sm">
+                        <thead>
+                            <tr class="table-light"><th>Environment</th><th>Base URL</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Configured Server URL (.env)</strong></td><td><code id="devPortalConfiguredBaseUrl">https://surround-choosing-martin-conversion.trycloudflare.com/api/v1/integrations</code></td></tr>
+                            <tr><td><strong>Local Fallback</strong></td><td><code>http://localhost:5000/api/v1/integrations</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECTION 4: API KEYS -->
+            <section id="api-keys" class="mb-5">
+                <h3 class="fw-bold mb-3">4. API Key Lifecycle Management</h3>
+                <p>Organization Administrators can manage API keys in QCMS via <strong>Settings → Integrations</strong>:</p>
+                <ul>
+                    <li><strong>Generate API Key:</strong> Creates a new live secret key (format <code>qcms_live_...</code>).</li>
+                    <li><strong>Regenerate Key:</strong> Invalidates the current key and issues a new key immediately.</li>
+                    <li><strong>Enable/Disable Key:</strong> Temporarily pause API traffic without deleting credentials.</li>
+                    <li><strong>Delete Key:</strong> Permanently revokes access.</li>
+                </ul>
+            </section>
+
+            <!-- SECTION 5: QUICK START -->
+            <section id="quick-start" class="mb-5">
+                <h3 class="fw-bold mb-3">5. Quick Start Guide</h3>
+                <div class="d-flex flex-column gap-3">
+                    <div class="p-3 border rounded-3 bg-body-tertiary d-flex align-items-center gap-3">
+                        <div class="badge bg-primary rounded-circle p-2 fs-6" style="width:36px;height:36px;">1</div>
+                        <div><strong>Generate API Key</strong> in QCMS Platform (Settings → Integrations).</div>
+                    </div>
+                    <div class="p-3 border rounded-3 bg-body-tertiary d-flex align-items-center gap-3">
+                        <div class="badge bg-primary rounded-circle p-2 fs-6" style="width:36px;height:36px;">2</div>
+                        <div><strong>Copy Secret Token</strong> (e.g. <code>qcms_live_TvvFkQ6zRRI6YIAUAA4CL...</code>).</div>
+                    </div>
+                    <div class="p-3 border rounded-3 bg-body-tertiary d-flex align-items-center gap-3">
+                        <div class="badge bg-primary rounded-circle p-2 fs-6" style="width:36px;height:36px;">3</div>
+                        <div><strong>Make HTTP POST Request</strong> to <code>/api/v1/integrations/ideas</code> with JSON body.</div>
+                    </div>
+                    <div class="p-3 border rounded-3 bg-body-tertiary d-flex align-items-center gap-3">
+                        <div class="badge bg-success rounded-circle p-2 fs-6" style="width:36px;height:36px;">4</div>
+                        <div><strong>Receive 201 Created</strong> response confirming idea storage.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: ENDPOINTS -->
+            <section id="endpoint-ideas" class="mb-5">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h3 class="fw-bold mb-0">6. Endpoint: Import Approved Idea</h3>
+                    <span class="method-badge method-post fs-6">POST /api/v1/integrations/ideas</span>
+                </div>
+                <p>Pushes an approved continuous improvement idea from external tools (Ideation Tool, ERP) into the QCMS database.</p>
+
+                <h5 class="fw-bold mt-4 mb-2">Request Body Fields</h5>
+                <table class="param-table">
+                    <thead>
+                        <tr><th>Field Name</th><th>Type</th><th>Required</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="param-name">ideaCode</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="required-badge">Required</span></td>
+                            <td>Unique identifier code for the idea (e.g., <code>IDA-2026-006</code>). Used for duplicate checking.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">title</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="required-badge">Required</span></td>
+                            <td>Short title describing the continuous improvement initiative.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">presentSituation</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Current problem statement or defect situation description.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">proposedSolution</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Proposed corrective action or solution.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">category</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Category (Quality, Cost, Delivery, Environment, Morale, Safety). Default: <code>Quality</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">department</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Target department name (e.g. <code>Production</code>).</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">submittedBy</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Primary submitter full name.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">coSuggesters</span></td>
+                            <td><span class="param-type">array[string]</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>List of co-submitter names (e.g. <code>["Smith", "David"]</code>).</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">tangibleBenefit</span></td>
+                            <td><span class="param-type">number</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Estimated financial savings in currency.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">intangibleBenefit</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Qualitative benefit description (e.g. "Customer Satisfaction").</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">investmentRequired</span></td>
+                            <td><span class="param-type">number</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Required capital expenditure.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">implementationTime</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Estimated implementation duration (e.g. <code>8 Weeks</code>).</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">impactLevel</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>Impact level (<code>Low</code>, <code>Medium</code>, <code>High</code>). Default: <code>Medium</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="param-name">status</span></td>
+                            <td><span class="param-type">string</span></td>
+                            <td><span class="optional-badge">Optional</span></td>
+                            <td>The current status of the idea. Default: <code>Approved</code>.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- SECTION: GET HEALTH STATUS ENDPOINT -->
+            <section id="endpoint-status" class="mb-5">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h3 class="fw-bold mb-0">Endpoint: Health & System Status</h3>
+                    <span class="method-badge method-get fs-6">GET /api/v1/integrations/status</span>
+                </div>
+                <p>Verifies integration API connectivity, database connection health, and API key authentication status.</p>
+                <div class="code-block-container mt-3">
+                    <div class="code-block-header">
+                        <span class="text-xs text-muted">Response 200 OK</span>
+                    </div>
+                    <pre class="code-block-body">{
+  "status": "online",
+  "version": "v1.0",
+  "database": "connected",
+  "timestamp": "2026-07-25T21:50:00Z"
+}</pre>
+                </div>
+            </section>
+
+            <!-- SECTION: GET LIST IMPORTED IDEAS ENDPOINT -->
+            <section id="endpoint-imported-ideas" class="mb-5">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h3 class="fw-bold mb-0">Endpoint: List Imported Ideas</h3>
+                    <span class="method-badge method-get fs-6">GET /api/v1/integrations/imported-ideas</span>
+                </div>
+                <p>Retrieves a list of continuous improvement ideas previously synced into QCMS for the authenticated organization.</p>
+                <div class="code-block-container mt-3">
+                    <div class="code-block-header">
+                        <span class="text-xs text-muted">Response 200 OK</span>
+                    </div>
+                    <pre class="code-block-body">{
+  "success": true,
+  "count": 1,
+  "data": [
+    {
+      "ideaCode": "IDA-2026-006",
+      "title": "Reduce Paint Defects",
+      "status": "Approved",
+      "created_at": "2026-07-25T12:00:00Z"
+    }
+  ]
+}</pre>
+                </div>
+            </section>
+
+            <!-- SECTION 7 & 8: REQUEST/RESPONSE FORMAT -->
+            <section id="request-format" class="mb-5">
+                <h3 class="fw-bold mb-3">7. Request Format</h3>
+                <h6 class="fw-bold mb-2">JSON Request Payload Spec</h6>
+                <div class="code-block-container">
+                    <pre class="code-block-body">{
+  "ideaCode": "IDA-2026-006",
+  "title": "Reduce Paint Defects",
+  "presentSituation": "Paint rejection increased from 2% to 6%",
+  "proposedSolution": "Install automatic viscosity monitoring",
+  "department": "Production",
+  "category": "Quality",
+  "submittedBy": "John Doe",
+  "coSuggesters": ["David", "Smith"],
+  "tangibleBenefit": 100000,
+  "intangibleBenefit": "Customer Satisfaction",
+  "investmentRequired": 250000,
+  "implementationTime": "8 Weeks",
+  "impactLevel": "Medium",
+  "status": "Approved"
+}</pre>
+                </div>
+            </section>
+
+            <section id="response-format" class="mb-5">
+                <h3 class="fw-bold mb-3">8. Response Format</h3>
+                <h6 class="fw-bold mb-2">201 Created Success Response</h6>
+                <div class="code-block-container">
+                    <pre class="code-block-body">{
+  "success": true,
+  "message": "Idea imported successfully.",
+  "ideaCode": "IDA-2026-006"
+}</pre>
+                </div>
+            </section>
+
+            <!-- SECTION 9: ERROR CODES -->
+            <section id="error-codes" class="mb-5">
+                <h3 class="fw-bold mb-3">9. Error Codes & Specifications</h3>
+                <p>The API uses standard HTTP response status codes to indicate request outcome:</p>
+                <div class="v-stack gap-3">
+                    <div class="p-3 border rounded-3 bg-body-tertiary">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-danger">401 Unauthorized</span>
+                            <strong>Missing, Invalid, or Disabled API Key</strong>
+                        </div>
+                        <pre class="mb-0 text-xs font-monospace text-muted mt-2">{"error": "Unauthorized", "message": "Invalid or disabled API Key."}</pre>
+                    </div>
+
+                    <div class="p-3 border rounded-3 bg-body-tertiary">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-warning text-dark">409 Conflict</span>
+                            <strong>Duplicate Idea Code</strong>
+                        </div>
+                        <pre class="mb-0 text-xs font-monospace text-muted mt-2">{"message": "Idea already imported."}</pre>
+                    </div>
+
+                    <div class="p-3 border rounded-3 bg-body-tertiary">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-secondary">429 Rate Limit</span>
+                            <strong>Rate Limit Exceeded (100 req/min)</strong>
+                        </div>
+                        <pre class="mb-0 text-xs font-monospace text-muted mt-2">{"error": "Too Many Requests", "message": "Rate limit exceeded. Maximum 100 requests per minute allowed."}</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 14: RATE LIMITS -->
+            <section id="rate-limits" class="mb-5">
+                <h3 class="fw-bold mb-3">14. Rate Limits</h3>
+                <p>To ensure system stability, requests are limited to <strong>100 requests per minute</strong> per organization. Exceeding this limit triggers an immediate <code>429 Too Many Requests</code> HTTP response.</p>
+            </section>
+
+            <!-- SECTION INTERACTIVE PLAYGROUND -->
+            <section id="playground" class="mb-5">
+                <div class="glass-card border p-4 rounded-3 shadow-sm bg-body">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
+                        <div>
+                            <h4 class="fw-bold mb-0 text-primary"><i data-lucide="play" class="me-1"></i> Interactive API Playground</h4>
+                            <p class="text-xs text-muted mb-0">Test QCMS API requests live in your browser</p>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="sendPlaygroundRequest()">
+                            <i data-lucide="send" style="width:14px;height:14px;" class="me-1"></i> Send Request
+                        </button>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label text-xs fw-bold text-muted">ORGANIZATION API KEY</label>
+                            <input type="text" id="playgroundApiKey" class="form-control form-control-sm font-monospace" placeholder="Paste Bearer Key e.g. qcms_live_..." value="qcms_live_demo">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-xs fw-bold text-muted">ENDPOINT</label>
+                            <select id="playgroundEndpoint" class="form-select form-select-sm font-monospace">
+                                <option value="/ideas">POST /ideas (Import Idea)</option>
+                                <option value="/status">GET /status (Health Check)</option>
+                                <option value="/imported-ideas">GET /imported-ideas (List Ideas)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label text-xs fw-bold text-muted">REQUEST JSON BODY</label>
+                        <textarea id="playgroundJsonBody" class="form-control form-control-sm font-monospace" rows="8">{
+  "ideaCode": "IDA-2026-006",
+  "title": "Reduce Paint Defects",
+  "status": "Approved"
+}</textarea>
+                    </div>
+
+                    <!-- Response Output Container -->
+                    <div class="mt-4 border-top pt-3" id="playgroundResponseBox" style="display:none;">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div>
+                                <span class="badge" id="playgroundStatusCode">201 Created</span>
+                                <span class="text-xs text-muted ms-2" id="playgroundLatency">12 ms</span>
+                            </div>
+                            <span class="text-xs text-muted">Response Body</span>
+                        </div>
+                        <div class="code-block-container mb-0">
+                            <pre class="code-block-body mb-0" id="playgroundResponseBody"></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Right SDK / Code Examples Panel (24 Languages) -->
+        <aside class="docs-code-panel">
+            <h6 class="fw-bold mb-2">SDK Code Examples</h6>
+            <p class="text-xs text-muted mb-3">Select your target language to view ready-to-run integration code:</p>
+
+            <div class="lang-tab-bar" id="langTabBar">
+                <!-- 24 Language Tabs dynamically created -->
+            </div>
+
+            <div class="code-block-container">
+                <div class="code-block-header">
+                    <span class="text-xs text-muted" id="currentLangTitle">cURL</span>
+                    <div>
+                        <button class="btn btn-xs btn-outline-light me-1" onclick="copyActiveCode()">Copy</button>
+                        <button class="btn btn-xs btn-outline-light" onclick="downloadActiveCode()">Download</button>
+                    </div>
+                </div>
+                <pre class="code-block-body" id="activeCodeSnippet"></pre>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- Search Modal -->
+    <div class="search-modal-backdrop" id="searchModal" onclick="closeSearchModal(event)">
+        <div class="search-modal-box p-3" onclick="event.stopPropagation()">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-0"><i data-lucide="search"></i></span>
+                <input type="text" class="form-control border-0 shadow-none" id="searchInput" placeholder="Search documentation, endpoints, or error codes..." onkeyup="filterDocsSearch()">
+            </div>
+            <div class="border-top mt-2 pt-2 text-xs text-muted px-2" id="searchResults">
+                Type to start searching...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        // CANONICAL PAYLOAD — all fields from integration_v1_routes.py
+        // Required: ideaCode, title
+        // Optional: all others (defaults applied server-side if omitted)
+        // ─────────────────────────────────────────────────────────────────────
+
+        const SDK_EXAMPLES = {
+
+            curl:
+`curl -X POST "http://localhost:5000/api/v1/integrations/ideas" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "ideaCode": "IDA-2026-006",
+    "title": "Reduce Paint Defects in Production Line",
+    "presentSituation": "Paint rejection rate increased from 2% to 6% over last 3 months",
+    "proposedSolution": "Install automatic viscosity monitoring system on paint line",
+    "department": "Production",
+    "category": "Quality",
+    "submittedBy": "John Doe",
+    "coSuggesters": ["David", "Smith"],
+    "tangibleBenefit": 100000,
+    "intangibleBenefit": "Improved customer satisfaction and brand reputation",
+    "investmentRequired": 250000,
+    "implementationTime": "8 Weeks",
+    "impactLevel": "Medium",
+    "status": "Approved"
+  }'`,
+
+            javascript_fetch:
+`// JavaScript — Fetch API (Browser or modern Node.js 18+)
+const response = await fetch('http://localhost:5000/api/v1/integrations/ideas', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    ideaCode: 'IDA-2026-006',
+    title: 'Reduce Paint Defects in Production Line',
+    presentSituation: 'Paint rejection rate increased from 2% to 6% over last 3 months',
+    proposedSolution: 'Install automatic viscosity monitoring system on paint line',
+    department: 'Production',
+    category: 'Quality',
+    submittedBy: 'John Doe',
+    coSuggesters: ['David', 'Smith'],
+    tangibleBenefit: 100000,
+    intangibleBenefit: 'Improved customer satisfaction and brand reputation',
+    investmentRequired: 250000,
+    implementationTime: '8 Weeks',
+    impactLevel: 'Medium',
+    status: 'Approved'
+  })
+});
+const data = await response.json();
+console.log(data);
+// { success: true, message: "Idea imported successfully.", ideaCode: "IDA-2026-006" }`,
+
+            javascript_axios:
+`// JavaScript — Axios (Browser / Node.js)
+import axios from 'axios';
+
+const { data } = await axios.post(
+  'http://localhost:5000/api/v1/integrations/ideas',
+  {
+    ideaCode: 'IDA-2026-006',
+    title: 'Reduce Paint Defects in Production Line',
+    presentSituation: 'Paint rejection rate increased from 2% to 6% over last 3 months',
+    proposedSolution: 'Install automatic viscosity monitoring system on paint line',
+    department: 'Production',
+    category: 'Quality',
+    submittedBy: 'John Doe',
+    coSuggesters: ['David', 'Smith'],
+    tangibleBenefit: 100000,
+    intangibleBenefit: 'Improved customer satisfaction and brand reputation',
+    investmentRequired: 250000,
+    implementationTime: '8 Weeks',
+    impactLevel: 'Medium',
+    status: 'Approved'
+  },
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_API_KEY',
+      'Content-Type': 'application/json'
+    }
+  }
+);
+console.log(data);
+// { success: true, message: "Idea imported successfully.", ideaCode: "IDA-2026-006" }`,
+
+            node_js:
+`// Node.js — native https module (no external dependencies)
+const https = require('https');
+
+const payload = JSON.stringify({
+  ideaCode: 'IDA-2026-006',
+  title: 'Reduce Paint Defects in Production Line',
+  presentSituation: 'Paint rejection rate increased from 2% to 6% over last 3 months',
+  proposedSolution: 'Install automatic viscosity monitoring system on paint line',
+  department: 'Production',
+  category: 'Quality',
+  submittedBy: 'John Doe',
+  coSuggesters: ['David', 'Smith'],
+  tangibleBenefit: 100000,
+  intangibleBenefit: 'Improved customer satisfaction and brand reputation',
+  investmentRequired: 250000,
+  implementationTime: '8 Weeks',
+  impactLevel: 'Medium',
+  status: 'Approved'
+});
+
+const options = {
+  hostname: 'your-qcms-server.com',
+  path: '/api/v1/integrations/ideas',
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(payload)
+  }
+};
+
+const req = https.request(options, (res) => {
+  let body = '';
+  res.on('data', (chunk) => body += chunk);
+  res.on('end', () => {
+    console.log('Status:', res.statusCode);
+    console.log('Response:', JSON.parse(body));
+    // { success: true, message: "Idea imported successfully.", ideaCode: "IDA-2026-006" }
+  });
+});
+req.on('error', (e) => console.error('Error:', e.message));
+req.write(payload);
+req.end();`,
+
+            python_requests:
+`# Python — requests library
+import requests
+
+url = "http://localhost:5000/api/v1/integrations/ideas"
+
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json"
+}
+
+payload = {
+    "ideaCode": "IDA-2026-006",
+    "title": "Reduce Paint Defects in Production Line",
+    "presentSituation": "Paint rejection rate increased from 2% to 6% over last 3 months",
+    "proposedSolution": "Install automatic viscosity monitoring system on paint line",
+    "department": "Production",
+    "category": "Quality",
+    "submittedBy": "John Doe",
+    "coSuggesters": ["David", "Smith"],
+    "tangibleBenefit": 100000,
+    "intangibleBenefit": "Improved customer satisfaction and brand reputation",
+    "investmentRequired": 250000,
+    "implementationTime": "8 Weeks",
+    "impactLevel": "Medium",
+    "status": "Approved"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(f"Status: {response.status_code}")
+print(f"Response: {response.json()}")
+# {'success': True, 'message': 'Idea imported successfully.', 'ideaCode': 'IDA-2026-006'}`,
+
+            python_httpx:
+`# Python — httpx async client
+import httpx
+import asyncio
+
+async def import_idea():
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://localhost:5000/api/v1/integrations/ideas",
+            headers={
+                "Authorization": "Bearer YOUR_API_KEY",
+                "Content-Type": "application/json"
+            },
+            json={
+                "ideaCode": "IDA-2026-006",
+                "title": "Reduce Paint Defects in Production Line",
+                "presentSituation": "Paint rejection rate increased from 2% to 6% over last 3 months",
+                "proposedSolution": "Install automatic viscosity monitoring system on paint line",
+                "department": "Production",
+                "category": "Quality",
+                "submittedBy": "John Doe",
+                "coSuggesters": ["David", "Smith"],
+                "tangibleBenefit": 100000,
+                "intangibleBenefit": "Improved customer satisfaction and brand reputation",
+                "investmentRequired": 250000,
+                "implementationTime": "8 Weeks",
+                "impactLevel": "Medium",
+                "status": "Approved"
+            }
+        )
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.json()}")
+        # {'success': True, 'message': 'Idea imported successfully.', 'ideaCode': 'IDA-2026-006'}
+
+asyncio.run(import_idea())`,
+
+            php_curl:
+`<?php
+// PHP — cURL
+$url = 'http://localhost:5000/api/v1/integrations/ideas';
+
+$payload = json_encode([
+    'ideaCode'           => 'IDA-2026-006',
+    'title'              => 'Reduce Paint Defects in Production Line',
+    'presentSituation'   => 'Paint rejection rate increased from 2% to 6% over last 3 months',
+    'proposedSolution'   => 'Install automatic viscosity monitoring system on paint line',
+    'department'         => 'Production',
+    'category'           => 'Quality',
+    'submittedBy'        => 'John Doe',
+    'coSuggesters'       => ['David', 'Smith'],
+    'tangibleBenefit'    => 100000,
+    'intangibleBenefit'  => 'Improved customer satisfaction and brand reputation',
+    'investmentRequired' => 250000,
+    'implementationTime' => '8 Weeks',
+    'impactLevel'        => 'Medium',
+    'status'             => 'Approved'
+]);
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer YOUR_API_KEY',
+    'Content-Type: application/json'
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;
+// {"success":true,"message":"Idea imported successfully.","ideaCode":"IDA-2026-006"}`,
+
+            php_guzzle:
+`<?php
+// PHP — Guzzle HTTP Client
+require 'vendor/autoload.php';
+use GuzzleHttp\\Client;
+
+$client   = new Client();
+$response = $client->post('http://localhost:5000/api/v1/integrations/ideas', [
+    'headers' => [
+        'Authorization' => 'Bearer YOUR_API_KEY',
+        'Content-Type'  => 'application/json'
+    ],
+    'json' => [
+        'ideaCode'           => 'IDA-2026-006',
+        'title'              => 'Reduce Paint Defects in Production Line',
+        'presentSituation'   => 'Paint rejection rate increased from 2% to 6% over last 3 months',
+        'proposedSolution'   => 'Install automatic viscosity monitoring system on paint line',
+        'department'         => 'Production',
+        'category'           => 'Quality',
+        'submittedBy'        => 'John Doe',
+        'coSuggesters'       => ['David', 'Smith'],
+        'tangibleBenefit'    => 100000,
+        'intangibleBenefit'  => 'Improved customer satisfaction and brand reputation',
+        'investmentRequired' => 250000,
+        'implementationTime' => '8 Weeks',
+        'impactLevel'        => 'Medium',
+        'status'             => 'Approved'
+    ]
+]);
+echo $response->getBody();
+// {"success":true,"message":"Idea imported successfully.","ideaCode":"IDA-2026-006"}`,
+
+            java:
+`// Java — HttpClient (Java 11+)
+import java.net.URI;
+import java.net.http.*;
+
+public class QCMSIntegration {
+    public static void main(String[] args) throws Exception {
+        String json = """
+            {
+              "ideaCode": "IDA-2026-006",
+              "title": "Reduce Paint Defects in Production Line",
+              "presentSituation": "Paint rejection rate increased from 2% to 6% over last 3 months",
+              "proposedSolution": "Install automatic viscosity monitoring system on paint line",
+              "department": "Production",
+              "category": "Quality",
+              "submittedBy": "John Doe",
+              "coSuggesters": ["David", "Smith"],
+              "tangibleBenefit": 100000,
+              "intangibleBenefit": "Improved customer satisfaction and brand reputation",
+              "investmentRequired": 250000,
+              "implementationTime": "8 Weeks",
+              "impactLevel": "Medium",
+              "status": "Approved"
+            }""";
+
+        HttpClient client  = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:5000/api/v1/integrations/ideas"))
+            .header("Authorization", "Bearer YOUR_API_KEY")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(json))
+            .build();
+
+        HttpResponse<String> response = client.send(request,
+            HttpResponse.BodyHandlers.ofString());
+
+        System.out.println("Status: " + response.statusCode());
+        System.out.println("Body:   " + response.body());
+        // {"success":true,"message":"Idea imported successfully.","ideaCode":"IDA-2026-006"}
+    }
+}`,
+
+            csharp:
+`// C# — HttpClient (.NET 6+)
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+
+var client = new HttpClient();
+client.DefaultRequestHeaders.Add("Authorization", "Bearer YOUR_API_KEY");
+
+var payload = new {
+    ideaCode           = "IDA-2026-006",
+    title              = "Reduce Paint Defects in Production Line",
+    presentSituation   = "Paint rejection rate increased from 2% to 6% over last 3 months",
+    proposedSolution   = "Install automatic viscosity monitoring system on paint line",
+    department         = "Production",
+    category           = "Quality",
+    submittedBy        = "John Doe",
+    coSuggesters       = new[] { "David", "Smith" },
+    tangibleBenefit    = 100000,
+    intangibleBenefit  = "Improved customer satisfaction and brand reputation",
+    investmentRequired = 250000,
+    implementationTime = "8 Weeks",
+    impactLevel        = "Medium",
+    status             = "Approved"
+};
+
+var json    = JsonSerializer.Serialize(payload);
+var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+var response = await client.PostAsync(
+    "http://localhost:5000/api/v1/integrations/ideas", content);
+var result = await response.Content.ReadAsStringAsync();
+Console.WriteLine($"Status: {(int)response.StatusCode}");
+Console.WriteLine($"Response: {result}");
+// {"success":true,"message":"Idea imported successfully.","ideaCode":"IDA-2026-006"}`,
+
+            go:
+`// Go — net/http standard library
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+type IdeaPayload struct {
+    IdeaCode           string   \`json:"ideaCode"\`
+    Title              string   \`json:"title"\`
+    PresentSituation   string   \`json:"presentSituation"\`
+    ProposedSolution   string   \`json:"proposedSolution"\`
+    Department         string   \`json:"department"\`
+    Category           string   \`json:"category"\`
+    SubmittedBy        string   \`json:"submittedBy"\`
+    CoSuggesters       []string \`json:"coSuggesters"\`
+    TangibleBenefit    int      \`json:"tangibleBenefit"\`
+    IntangibleBenefit  string   \`json:"intangibleBenefit"\`
+    InvestmentRequired int      \`json:"investmentRequired"\`
+    ImplementationTime string   \`json:"implementationTime"\`
+    ImpactLevel        string   \`json:"impactLevel"\`
+    Status             string   \`json:"status"\`
+}
+
+func main() {
+    p := IdeaPayload{
+        IdeaCode:           "IDA-2026-006",
+        Title:              "Reduce Paint Defects in Production Line",
+        PresentSituation:   "Paint rejection rate increased from 2% to 6% over last 3 months",
+        ProposedSolution:   "Install automatic viscosity monitoring system on paint line",
+        Department:         "Production",
+        Category:           "Quality",
+        SubmittedBy:        "John Doe",
+        CoSuggesters:       []string{"David", "Smith"},
+        TangibleBenefit:    100000,
+        IntangibleBenefit:  "Improved customer satisfaction and brand reputation",
+        InvestmentRequired: 250000,
+        ImplementationTime: "8 Weeks",
+        ImpactLevel:        "Medium",
+        Status:             "Approved",
+    }
+    body, _  := json.Marshal(p)
+    req, _   := http.NewRequest("POST",
+        "http://localhost:5000/api/v1/integrations/ideas",
+        bytes.NewBuffer(body))
+    req.Header.Set("Authorization", "Bearer YOUR_API_KEY")
+    req.Header.Set("Content-Type", "application/json")
+
+    resp, err := (&http.Client{}).Do(req)
+    if err != nil { fmt.Println("Error:", err); return }
+    defer resp.Body.Close()
+    fmt.Println("Status:", resp.Status)
+    // 201 Created
+}`,
+
+            ruby:
+`# Ruby — net/http standard library
+require 'net/http'
+require 'json'
+require 'uri'
+
+uri     = URI('http://localhost:5000/api/v1/integrations/ideas')
+payload = {
+  ideaCode:           'IDA-2026-006',
+  title:              'Reduce Paint Defects in Production Line',
+  presentSituation:   'Paint rejection rate increased from 2% to 6% over last 3 months',
+  proposedSolution:   'Install automatic viscosity monitoring system on paint line',
+  department:         'Production',
+  category:           'Quality',
+  submittedBy:        'John Doe',
+  coSuggesters:       ['David', 'Smith'],
+  tangibleBenefit:    100000,
+  intangibleBenefit:  'Improved customer satisfaction and brand reputation',
+  investmentRequired: 250000,
+  implementationTime: '8 Weeks',
+  impactLevel:        'Medium',
+  status:             'Approved'
+}
+
+req      = Net::HTTP::Post.new(uri, {
+  'Content-Type'  => 'application/json',
+  'Authorization' => 'Bearer YOUR_API_KEY'
+})
+req.body = payload.to_json
+
+res = Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(req) }
+puts "Status: #{res.code}"
+puts "Body:   #{res.body}"
+# {"success":true,"message":"Idea imported successfully.","ideaCode":"IDA-2026-006"}`,
+
+            react:
+`// React — custom hook for QCMS idea import
+import { useState } from 'react';
+
+const QCMS_API = 'http://localhost:5000/api/v1/integrations/ideas';
+
+function useQCMSImport(apiKey) {
+  const [loading, setLoading] = useState(false);
+  const [result,  setResult]  = useState(null);
+
+  const importIdea = async (idea) => {
+    setLoading(true);
+    try {
+      const res  = await fetch(QCMS_API, {
+        method:  'POST',
+        headers: {
+          'Authorization': \`Bearer \${apiKey}\`,
+          'Content-Type':  'application/json'
+        },
+        body: JSON.stringify(idea)
+      });
+      const data = await res.json();
+      setResult({ status: res.status, data });
+    } catch (e) {
+      setResult({ error: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { importIdea, loading, result };
+}
+
+export function ImportIdeaButton({ apiKey }) {
+  const { importIdea, loading, result } = useQCMSImport(apiKey);
+
+  const handleSubmit = () => importIdea({
+    ideaCode:           'IDA-2026-006',
+    title:              'Reduce Paint Defects in Production Line',
+    presentSituation:   'Paint rejection rate increased from 2% to 6% over last 3 months',
+    proposedSolution:   'Install automatic viscosity monitoring system on paint line',
+    department:         'Production',
+    category:           'Quality',
+    submittedBy:        'John Doe',
+    coSuggesters:       ['David', 'Smith'],
+    tangibleBenefit:    100000,
+    intangibleBenefit:  'Improved customer satisfaction and brand reputation',
+    investmentRequired: 250000,
+    implementationTime: '8 Weeks',
+    impactLevel:        'Medium',
+    status:             'Approved'
+  });
+
+  return (
+    <div>
+      <button onClick={handleSubmit} disabled={loading}>
+        {loading ? 'Importing...' : 'Import Idea to QCMS'}
+      </button>
+      {result && <pre>{JSON.stringify(result.data, null, 2)}</pre>}
+    </div>
+  );
+}`
+
+        };
+
+        const LANG_NAMES = [
+            { id: 'curl',             label: 'cURL' },
+            { id: 'javascript_fetch', label: 'JS (Fetch)' },
+            { id: 'javascript_axios', label: 'JS (Axios)' },
+            { id: 'node_js',          label: 'Node.js' },
+            { id: 'python_requests',  label: 'Python (requests)' },
+            { id: 'python_httpx',     label: 'Python (httpx)' },
+            { id: 'php_curl',         label: 'PHP (cURL)' },
+            { id: 'php_guzzle',       label: 'PHP (Guzzle)' },
+            { id: 'java',             label: 'Java' },
+            { id: 'csharp',           label: 'C#' },
+            { id: 'go',               label: 'Go' },
+            { id: 'ruby',             label: 'Ruby' },
+            { id: 'react',            label: 'React' }
+        ];
+
+        let currentLang = 'curl';
+
+        function initLangTabs() {
+            const container = document.getElementById('langTabBar');
+            container.innerHTML = LANG_NAMES.map(l => 
+                `<button class="lang-tab-btn ${l.id === currentLang ? 'active' : ''}" onclick="selectLang('${l.id}')">${l.label}</button>`
+            ).join('');
+            selectLang(currentLang);
+        }
+
+        function selectLang(langId) {
+            currentLang = langId;
+            document.querySelectorAll('.lang-tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = Array.from(document.querySelectorAll('.lang-tab-btn')).find(b => b.textContent.includes(LANG_NAMES.find(l=>l.id===langId).label));
+            if (activeBtn) activeBtn.classList.add('active');
+
+            document.getElementById('currentLangTitle').textContent = LANG_NAMES.find(l=>l.id===langId).label;
+            document.getElementById('activeCodeSnippet').textContent = SDK_EXAMPLES[langId] || SDK_EXAMPLES['curl'];
+        }
+
+        function copyActiveCode() {
+            const code = document.getElementById('activeCodeSnippet').textContent;
+            navigator.clipboard.writeText(code);
+            QCMS.toast('Code snippet copied to clipboard!', 'success');
+        }
+
+        function downloadActiveCode() {
+            const code = document.getElementById('activeCodeSnippet').textContent;
+            const blob = new Blob([code], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `qcms_integration_${currentLang}.txt`;
+            a.click();
+        }
+
+        async function sendPlaygroundRequest() {
+            const apiKey = document.getElementById('playgroundApiKey').value.trim();
+            const endpoint = document.getElementById('playgroundEndpoint').value;
+            const bodyStr = document.getElementById('playgroundJsonBody').value;
+
+            const box = document.getElementById('playgroundResponseBox');
+            const codeEl = document.getElementById('playgroundResponseBody');
+            const statusEl = document.getElementById('playgroundStatusCode');
+            const latencyEl = document.getElementById('playgroundLatency');
+
+            box.style.display = 'block';
+            codeEl.textContent = 'Sending request...';
+
+            const start = performance.now();
+
+            try {
+                const res = await fetch(`/api/v1/integrations${endpoint}`, {
+                    method: endpoint === '/ideas' ? 'POST' : 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: endpoint === '/ideas' ? bodyStr : null
+                });
+
+                const latency = Math.round(performance.now() - start);
+                const json = await res.json();
+
+                statusEl.textContent = `${res.status} ${res.statusText}`;
+                statusEl.className = res.ok ? 'badge bg-success' : (res.status === 409 ? 'badge bg-warning text-dark' : 'badge bg-danger');
+                latencyEl.textContent = `${latency} ms`;
+                codeEl.textContent = JSON.stringify(json, null, 2);
+            } catch (e) {
+                statusEl.textContent = 'Error';
+                statusEl.className = 'badge bg-danger';
+                codeEl.textContent = JSON.stringify({ error: e.message }, null, 2);
+            }
+        }
+
+        async function syncConfiguredBaseUrl() {
+            try {
+                const res = await fetch('/api/v1/integrations/base-url');
+                if (res.ok) {
+                    const data = await res.json();
+                    const baseUrl = data.base_url || window.location.origin;
+                    const fullApiBase = `${baseUrl}/api/v1/integrations`;
+                    
+                    const baseCodeEl = document.getElementById('devPortalConfiguredBaseUrl');
+                    if (baseCodeEl) baseCodeEl.textContent = fullApiBase;
+
+                    // Update all code blocks dynamically
+                    document.querySelectorAll('pre code, div.tab-pane code, pre').forEach(el => {
+                        if (el.textContent.includes('http://localhost:5000/api/v1/integrations')) {
+                            el.textContent = el.textContent.replaceAll('http://localhost:5000/api/v1/integrations', fullApiBase);
+                        }
+                        if (el.innerHTML.includes('http://localhost:5000/api/v1/integrations')) {
+                            el.innerHTML = el.innerHTML.replaceAll('http://localhost:5000/api/v1/integrations', fullApiBase);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Could not sync base URL from server:', e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', syncConfiguredBaseUrl);
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+        }
+
+        function openSearchModal() {
+            document.getElementById('searchModal').style.display = 'flex';
+            document.getElementById('searchInput').focus();
+        }
+
+        function closeSearchModal(e) {
+            document.getElementById('searchModal').style.display = 'none';
+        }
+
+        function filterDocsSearch() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const results = document.getElementById('searchResults');
+            if (!q) { results.innerHTML = 'Type to start searching...'; return; }
+            results.innerHTML = `Found matching documentation sections for "<strong>${q}</strong>":<br><a href="#endpoint-ideas" onclick="closeSearchModal()" class="d-block mt-2 text-primary">POST /api/v1/integrations/ideas (Import Approved Idea)</a><a href="#authentication" onclick="closeSearchModal()" class="d-block mt-1 text-primary">Authentication & Bearer Token Security</a>`;
+        }
+
+        function setActiveNav(el) {
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        let isNavClicking = false;
+
+        function initScrollSpy() {
+            const sidebar = document.querySelector('.docs-sidebar');
+            const links = Array.from(document.querySelectorAll('.docs-sidebar .sidebar-link'));
+            
+            const validIds = links
+                .map(l => l.getAttribute('href'))
+                .filter(h => h && h.startsWith('#'))
+                .map(h => h.substring(1));
+            
+            const sections = validIds
+                .map(id => document.getElementById(id))
+                .filter(Boolean);
+
+            if (!links.length || !sections.length) return;
+
+            function keepLinkInSidebarView(activeLink) {
+                if (!sidebar || !activeLink) return;
+                const linkRect = activeLink.getBoundingClientRect();
+                const sidebarRect = sidebar.getBoundingClientRect();
+                if (linkRect.top < sidebarRect.top + 20 || linkRect.bottom > sidebarRect.bottom - 20) {
+                    activeLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
+
+            function updateActiveLink(targetId) {
+                let matchedLink = null;
+                links.forEach(l => {
+                    const href = l.getAttribute('href');
+                    if (href === `#${targetId}`) {
+                        l.classList.add('active');
+                        matchedLink = l;
+                    } else {
+                        l.classList.remove('active');
+                    }
+                });
+                if (matchedLink) {
+                    keepLinkInSidebarView(matchedLink);
+                }
+            }
+
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const href = link.getAttribute('href');
+                    if (href && href.startsWith('#')) {
+                        const targetId = href.substring(1);
+                        const targetEl = document.getElementById(targetId);
+                        if (targetEl) {
+                            e.preventDefault();
+                            isNavClicking = true;
+                            updateActiveLink(targetId);
+
+                            const headerOffset = 80;
+                            const elementPosition = targetEl.getBoundingClientRect().top;
+                            const offsetPosition = elementPosition + window.scrollY - headerOffset;
+
+                            window.scrollTo({
+                                top: offsetPosition,
+                                behavior: 'smooth'
+                            });
+
+                            history.pushState(null, null, href);
+
+                            setTimeout(() => { isNavClicking = false; }, 800);
+                        }
+                    }
+                });
+            });
+
+            function onScroll() {
+                if (isNavClicking) return;
+
+                const scrollPosition = window.scrollY + 130;
+                let currentId = '';
+
+                for (let i = sections.length - 1; i >= 0; i--) {
+                    const sec = sections[i];
+                    if (scrollPosition >= sec.offsetTop) {
+                        currentId = sec.getAttribute('id');
+                        break;
+                    }
+                }
+
+                if (!currentId && sections.length > 0) {
+                    currentId = sections[0].getAttribute('id');
+                }
+
+                if (currentId) {
+                    updateActiveLink(currentId);
+                }
+            }
+
+            window.addEventListener('scroll', onScroll, { passive: true });
+
+            if (window.location.hash) {
+                const initialId = window.location.hash.substring(1);
+                const initialEl = document.getElementById(initialId);
+                if (initialEl) {
+                    setTimeout(() => {
+                        updateActiveLink(initialId);
+                        const offsetPosition = initialEl.getBoundingClientRect().top + window.scrollY - 80;
+                        window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                    }, 100);
+                } else {
+                    onScroll();
+                }
+            } else {
+                onScroll();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLangTabs();
+            initScrollSpy();
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

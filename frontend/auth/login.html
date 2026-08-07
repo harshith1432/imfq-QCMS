@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background: var(--ds-bg-mesh);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .login-wrapper {
+            display: flex;
+            max-width: 1000px;
+            /* Widened */
+            width: 100%;
+            min-height: 600px;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: var(--ds-shadow-xl);
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-glass-border);
+        }
+
+        .login-branding {
+            flex: 1.1;
+            padding: var(--ds-space-12);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.02);
+            border-right: 1px solid var(--ds-border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-branding::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, var(--ds-accent-ghost) 0%, transparent 70%);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .login-branding h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.06em;
+            color: var(--ds-text-main);
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-form-section {
+            flex: 1;
+            padding: var(--ds-space-12);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--ds-bg-surface);
+        }
+
+        .login-form-section h2 {
+            font-size: 2rem;
+            font-weight: 850;
+            letter-spacing: -0.04em;
+            margin-bottom: var(--ds-space-2);
+            color: var(--ds-text-main);
+        }
+
+        .login-form-section .subtitle {
+            color: var(--ds-text-secondary);
+            font-size: 0.9375rem;
+            margin-bottom: var(--ds-space-10);
+            line-height: 1.5;
+        }
+
+        .ds-field {
+            margin-bottom: var(--ds-space-6);
+        }
+
+        .ds-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8125rem;
+            font-weight: 650;
+            margin-bottom: var(--ds-space-3);
+            color: var(--ds-text-secondary);
+        }
+
+        .ds-label i {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+
+        .login-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--ds-space-8);
+            font-size: 0.8125rem;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--ds-text-secondary);
+            cursor: pointer;
+            user-select: none;
+            font-weight: 500;
+        }
+
+        .remember-me input {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1.5px solid var(--ds-input-border);
+            background: var(--ds-input-bg);
+            cursor: pointer;
+        }
+
+        .forgot-password {
+            color: var(--ds-accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: var(--ds-space-10);
+            font-size: 0.875rem;
+            color: var(--ds-text-secondary);
+            border-top: 1px solid var(--ds-border-color);
+            padding-top: var(--ds-space-6);
+        }
+
+        .login-footer a {
+            color: var(--ds-accent);
+            font-weight: 700;
+            text-decoration: none;
+            margin-left: 0.35rem;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 900px) {
+            .login-wrapper {
+                flex-direction: column;
+                max-width: 500px;
+                min-height: auto;
+            }
+
+            .login-branding {
+                padding: var(--ds-space-10);
+                border-right: none;
+                border-bottom: 1px solid var(--ds-border-color);
+            }
+
+            .login-branding h1 {
+                font-size: 2.5rem;
+                text-align: center;
+            }
+
+            .login-form-section {
+                padding: var(--ds-space-10);
+            }
+        }
+    </style>
+</head>
+
+<body class="fade-in">
+    <div class="login-wrapper glass-card">
+        <!-- Left: Branding -->
+        <div class="login-branding">
+            <div style="margin-bottom: auto;">
+                <div class="brand-text"
+                    style="font-size: 1.1rem; opacity: 0.8; font-weight: 700; display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="shield-check" style="width:20px; height:20px;"></i>
+                    QCMS <small style="font-size: 0.75rem; opacity: 0.6; font-weight: 500;">ENTERPRISE</small>
+                </div>
+            </div>
+            <h1>Quality Management System</h1>
+            <div style="margin-top: auto;"></div>
+        </div>
+
+        <!-- Right: Form -->
+        <div class="login-form-section">
+            <h2>Welcome back</h2>
+            <p class="subtitle">Sign in to your QCMS account</p>
+
+            <div id="errorMsg" class="ds-toast error mb-4"
+                style="display:none !important; width: 100%; min-width: auto; animation: none;">
+                <i data-lucide="alert-circle"></i>
+                <span></span>
+            </div>
+            <div id="successMsg" class="ds-toast success mb-4"
+                style="display:none !important; width: 100%; min-width: auto; animation: none;">
+                <i data-lucide="check-circle"></i>
+                <span></span>
+            </div>
+
+            <form id="loginForm" autocomplete="on">
+                <div class="ds-field">
+                    <label class="ds-label" id="identifierLabel"><i data-lucide="mail"></i> <span id="identifierLabelText">Email ID</span> <span class="text-danger">*</span></label>
+                    <input type="text" class="ds-input" id="username"
+                        placeholder="Enter your Email ID" required autocomplete="username">
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label"><i data-lucide="lock"></i> Password <span class="text-danger">*</span></label>
+                    <div style="position: relative;">
+                        <input type="password" class="ds-input" id="password" placeholder="**********" required
+                            autocomplete="current-password" style="padding-right: 40px;">
+                        <button type="button" id="togglePasswordBtn" 
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; color: var(--ds-text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                            <i id="togglePasswordIcon" data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="login-options">
+                    <label class="remember-me">
+                        <input type="checkbox" id="rememberMe"> Remember me
+                    </label>
+                    <a href="forgot-password.html" class="forgot-password">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="ds-btn ds-btn-primary w-100 ds-btn-lg" id="loginBtn">
+                    Sign In
+                </button>
+            </form>
+
+            <div id="ssoSection" style="display:none; margin-top: var(--ds-space-6);">
+                <div class="text-center text-xxs text-secondary text-uppercase fw-bold mb-3" style="letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <span style="flex-grow: 1; height: 1px; background: var(--ds-border-color); opacity: 0.2;"></span>
+                    <span>or sign in with</span>
+                    <span style="flex-grow: 1; height: 1px; background: var(--ds-border-color); opacity: 0.2;"></span>
+                </div>
+                <div class="d-flex flex-column gap-2" id="ssoButtonsContainer">
+                </div>
+            </div>
+
+            <div class="login-footer">
+                Create an Organization Account? <a href="register-org.html">Sign up</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/enterprise-validator.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script>
+        // Check for URL parameters to show messages
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams    = new URLSearchParams(window.location.search);
+            const successMsgEl = document.getElementById('successMsg');
+
+            if (urlParams.get('registered')) {
+                successMsgEl.querySelector('span').textContent = "Registration successful! You can now log in.";
+                successMsgEl.style.display = 'flex';
+            } else if (urlParams.get('reset')) {
+                successMsgEl.querySelector('span').textContent = "✓ Password updated successfully! Please log in with your new password.";
+                successMsgEl.style.display = 'flex';
+            }
+
+            if (window.lucide) lucide.createIcons();
+
+            // Password toggle
+            const toggleBtn = document.getElementById('togglePasswordBtn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    const passwordInput = document.getElementById('password');
+                    const icon = document.getElementById('togglePasswordIcon');
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        icon.setAttribute('data-lucide', 'eye-off');
+                    } else {
+                        passwordInput.type = 'password';
+                        icon.setAttribute('data-lucide', 'eye');
+                    }
+                    if (window.lucide) lucide.createIcons();
+                });
+            }
+
+            // ── Dynamic Login Label ───────────────────────────────────────
+            // When user blurs the identifier field, try to fetch the org's
+            // login options based on the email domain, then update the label
+            // and placeholder so the user knows what else they can type.
+
+            const FIELD_LABELS = {
+                email:    'Email ID',
+                username: 'Username',
+                phone:    'Phone Number',
+                phone_number: 'Phone Number'
+            };
+
+            window.handleSSOLogin = async function(provider) {
+                const email = prompt(`Please enter your ${provider.toUpperCase()} email address to simulate SSO login:`);
+                if (!email) return;
+                
+                try {
+                    const res = await api.post('/auth/sso/' + provider, { email, token: 'mock-sso-token' });
+                    sessionStorage.setItem('token', res.access_token);
+                    sessionStorage.setItem('user', JSON.stringify({
+                        username: res.username,
+                        role: res.role,
+                        org_id: res.org_id,
+                        org_name: res.org_name,
+                        id: res.id,
+                        org_primary_color: res.org_primary_color || null,
+                        org_logo_url: res.org_logo_url || null
+                    }));
+                    
+                    // Redirect
+                    if (res.role === 'SuperAdmin') window.location.href = '/admin/super-admin.html';
+                    else if (res.role === 'Admin') window.location.href = '/dashboard/dashboard-admin.html';
+                    else window.location.href = '/dashboard/dashboard-team-member.html';
+                } catch (err) {
+                    const errEl = document.getElementById('errorMsg');
+                    if (errEl) {
+                        errEl.querySelector('span').textContent = err.message;
+                        errEl.style.display = 'flex';
+                    }
+                }
+            };
+
+            async function fetchAndApplyLoginOptions(identifier = '') {
+                try {
+                    const url = api.baseUrl + '/auth/login-config' + (identifier ? '?identifier=' + encodeURIComponent(identifier) : '');
+                    const res = await fetch(url);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const options = data.login_options || [];
+                    const labels  = data.field_labels  || {};
+                    const ssoConfig = data.sso_config || {};
+
+                    const displayLabels = options.map(k => labels[k] || FIELD_LABELS[k] || k.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()));
+                    const labelText  = displayLabels.join(' / ');
+                    const placeholder = 'Enter your ' + displayLabels.join(' or ');
+
+                    const labelEl = document.getElementById('identifierLabelText');
+                    const inputEl = document.getElementById('username');
+                    if (labelEl) labelEl.textContent = labelText;
+                    if (inputEl) inputEl.placeholder = placeholder;
+
+                    // Render SSO Config if active
+                    const ssoSection = document.getElementById('ssoSection');
+                    const ssoContainer = document.getElementById('ssoButtonsContainer');
+                    const loginForm = document.getElementById('loginForm');
+
+                    if (ssoSection && ssoContainer) {
+                        ssoContainer.innerHTML = '';
+                        let hasSSO = false;
+
+                        if (ssoConfig.google_enabled) {
+                            hasSSO = true;
+                            ssoContainer.innerHTML += `
+                                <button type="button" class="ds-btn ds-btn-outline w-100 d-flex justify-content-center align-items-center gap-2" onclick="handleSSOLogin('google')">
+                                    <i data-lucide="chrome" style="width:16px;height:16px;color:#ea4335;"></i> Sign in with Google
+                                </button>
+                            `;
+                        }
+                        if (ssoConfig.microsoft_enabled) {
+                            hasSSO = true;
+                            ssoContainer.innerHTML += `
+                                <button type="button" class="ds-btn ds-btn-outline w-100 d-flex justify-content-center align-items-center gap-2" onclick="handleSSOLogin('microsoft')">
+                                    <i data-lucide="box" style="width:16px;height:16px;color:#0078d4;"></i> Sign in with Microsoft
+                                </button>
+                            `;
+                        }
+                        if (ssoConfig.saml_enabled) {
+                            hasSSO = true;
+                            ssoContainer.innerHTML += `
+                                <button type="button" class="ds-btn ds-btn-outline w-100 d-flex justify-content-center align-items-center gap-2" onclick="handleSSOLogin('saml')">
+                                    <i data-lucide="key" style="width:16px;height:16px;color:#f59e0b;"></i> Sign in with SAML SSO
+                                </button>
+                            `;
+                        }
+
+                        ssoSection.style.display = hasSSO ? 'block' : 'none';
+                        if (window.lucide) lucide.createIcons();
+                    }
+
+                    // Native Email & Password toggle
+                    if (loginForm) {
+                        const formElements = document.querySelectorAll('#loginForm .ds-field:nth-child(2), #loginForm .login-options, #loginBtn');
+                        const sub = document.querySelector('.login-form-section .subtitle');
+                        if (ssoConfig.native_enabled === false) {
+                            formElements.forEach(el => el.style.display = 'none');
+                            if (sub) sub.textContent = 'Enter your email to sign in via SSO';
+                        } else {
+                            formElements.forEach(el => el.style.display = '');
+                            if (sub) sub.textContent = 'Sign in to your QCMS account';
+                        }
+                    }
+
+                } catch (_) {
+                    // Silently ignore — login still works with any enabled field
+                }
+            }
+
+            const identifierInput = document.getElementById('username');
+            if (identifierInput) {
+                // Fetch initial configurations (returns union of all options across the system)
+                fetchAndApplyLoginOptions();
+
+                // Fetch specific org config when user types and blurs
+                identifierInput.addEventListener('blur', () => {
+                    const val = identifierInput.value.trim();
+                    if (val) {
+                        fetchAndApplyLoginOptions(val);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

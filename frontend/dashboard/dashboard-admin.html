@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .leader-radio:checked+span {
+            color: var(--ds-primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar will be injected by components.js -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <!-- Navbar will be injected by components.js -->
+            <header class="glass-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner fade-in-up">
+                <header class="ds-header-layout section-spacing">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0" data-i18n="dashboards.admin.title">Organization Overview</h1>
+                            <p class="ds-text-secondary mb-0" data-i18n="dashboards.admin.subtitle">Manage projects, monitor activity, and oversee system
+                                users.</p>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- KPI Cards -->
+                <div class="kpi-grid fade-in section-spacing" id="kpiGrid">
+                    <!-- Dynamic injection via adminDash.loadStats() -->
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row g-4 fade-in section-spacing">
+                    <div class="col-lg-7">
+                        <div class="ds-card h-100">
+                            <div class="ds-card-header">
+                                <h5 class="card-title" data-i18n="dashboards.admin.strategic_distribution">Strategic Distribution</h5>
+                                <div class="text-xs text-muted" data-i18n="dashboards.admin.projects_by_category">Projects by Category</div>
+                            </div>
+                            <div class="ds-card-body">
+                                <div class="ds-chart-container">
+                                    <canvas id="categoryChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="ds-card h-100">
+                            <div class="ds-card-header">
+                                <h5 class="card-title" data-i18n="dashboards.admin.workflow_metrics">Workflow Metrics</h5>
+                                <div class="text-xs text-muted" data-i18n="dashboards.admin.projects_by_stage">Projects by Stage</div>
+                            </div>
+                            <div class="ds-card-body">
+                                <div class="ds-chart-container">
+                                    <canvas id="stageChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Table Row -->
+                <div class="ds-card fade-in section-spacing">
+                    <div class="ds-card-header">
+                        <h5 class="card-title" data-i18n="dashboards.admin.pipeline_title">Active Projects</h5>
+                        <div class="d-flex gap-2">
+                            <select class="ds-input ds-btn-sm" id="statusFilter" onchange="adminDash.filterProjects()"
+                                style="width: auto;">
+                                <option value="" data-i18n="dashboards.common.all_status">All Status</option>
+                                <option value="Active" data-i18n="common.status_list.active">Active</option>
+                                <option value="Pending" data-i18n="common.status_list.pending">Pending</option>
+                                <option value="Pending Closure" data-i18n="common.status_list.pending_closure">Pending Closure</option>
+                                <option value="Completed" data-i18n="common.status_list.completed">Completed</option>
+                                <option value="Closed" data-i18n="common.status_list.closed">Closed</option>
+                            </select>
+
+                        </div>
+                    </div>
+                    <div class="ds-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="ds-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="dashboards.admin.project_identity">Project Identity</th>
+                                        <th data-i18n="dashboards.admin.current_stage">Current Stage</th>
+                                        <th data-i18n="dashboards.admin.methodology_status">Methodology Status</th>
+                                        <th class="text-end" data-i18n="dashboards.common.command">Command</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="projectsBody">
+                                    <tr>
+                                        <td colspan="4" class="p-4 text-center text-muted" data-i18n="dashboards.admin.loading_pipeline">Loading pipeline data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="projectsPagination"></div>
+                    </div>
+                </div>
+
+                <!-- Users Table Row -->
+                <div class="ds-card fade-in section-spacing">
+                    <div class="ds-card-header">
+                        <h5 class="card-title" data-i18n="dashboards.admin.stakeholders_title">Enterprise Stakeholders</h5>
+                        <div class="d-flex gap-2">
+                            <a href="/admin/users.html" class="ds-btn ds-btn-ghost ds-btn-sm" data-i18n="dashboards.admin.manage_users">Manage Users</a>
+                            <button class="ds-btn ds-btn-primary ds-btn-sm" data-roles="Admin" onclick="adminDash.openAddUserModal()">
+                                <i data-lucide="user-plus" style="width:14px; height:14px;"></i>
+                                <span data-i18n="dashboards.admin.provision_access">Provision Access</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ds-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="ds-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="dashboards.admin.stakeholder">Stakeholder</th>
+                                        <th data-i18n="dashboards.admin.corporate_role">Corporate Role</th>
+                                        <th data-i18n="dashboards.common.department">Department</th>
+                                        <th data-i18n="dashboards.admin.access_status">Access Status</th>
+                                        <th data-i18n="dashboards.admin.last_active">Last Active</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersBody">
+                                    <tr>
+                                        <td colspan="5" class="p-4 text-center text-muted" data-i18n="dashboards.admin.sync_directory">Synchronizing user
+                                            directory...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="usersPagination"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div class="modal fade" id="editProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <i data-lucide="edit-3" class="text-primary"></i>
+                        Update Project Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editProjectId">
+                    <div class="ds-field">
+                        <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                        <input type="text" class="ds-input" id="editProjectTitle">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="tag"></i> Category</label>
+                                <select class="ds-input ds-select" id="editProjectCategory">
+                                    <option value="Safety">Safety</option>
+                                    <option value="Quality">Quality</option>
+                                    <option value="Cost">Cost</option>
+                                    <option value="Productivity">Productivity</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="building"></i> Department</label>
+                                <select class="ds-input ds-select" id="editProjectDept" onchange="adminDash.loadTeamPool(this.value, 'editTeamPool')">
+                                    <!-- Populated by loadDepartments -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="user-plus"></i> Technical Facilitator</label>
+                                <select class="ds-input ds-select" id="editProjectFacilitator">
+                                    <!-- Populated by loadFacilitators -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ds-field">
+                                <label class="ds-label"><i data-lucide="calendar"></i> Target Completion Date</label>
+                                <input type="date" class="ds-input" id="editProjectDeadline">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ds-field">
+                        <div class="v-stack gap-1">
+                            <label class="ds-label mb-0"><i data-lucide="users"></i> Team Leader & Composition</label>
+                            <p class="text-xxs text-muted fst-italic">Select a department first to see eligible members.</p>
+                        </div>
+                        <div class="ds-input p-0 overflow-hidden" style="max-height: 200px; overflow-y: auto; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);">
+                            <div id="editTeamPool">
+                                <div class="p-4 text-center text-muted text-xs">Loading assignment pool...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" id="updateProjectBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="deleteProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+            <div class="modal-content glass-card border-0">
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <div class="ds-icon-circle flex-shrink-0" style="width:42px;height:42px;">
+                            <i data-lucide="trash-2" style="width:18px;height:18px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-1 ds-text-main" style="font-size:16px;">Delete Project?</h5>
+                            <p class="ds-text-secondary mb-0" style="font-size:13px;">This action <strong>cannot be undone</strong>. All project workflow data will be permanently removed from the system.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Keep It</button>
+                        <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="confirmDeleteBtn">
+                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Delete Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin SOP Approval & Project Closure Modal -->
+    <div class="modal fade" id="closeProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" id="closeProjectModalHeader" style="border-bottom:1px solid rgba(var(--ds-primary-rgb),.15);">
+                    <h5 class="modal-title fw-bold" id="closeProjectModalTitle">
+                        <i data-lucide="check-circle" style="width:18px;height:18px;color:var(--ds-primary);margin-right:8px;vertical-align:text-bottom;"></i>
+                        Close Project
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="closeProjectModalBody">
+                    <!-- Dynamic content injected by openCloseModal() -->
+                </div>
+                <div class="modal-footer">
+                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-danger" id="closeProjectRejectBtn" onclick="adminDash.rejectProject()" style="background:#ef4444; border-color:#ef4444; color:white;">
+                        <i data-lucide="x-circle" style="width:14px;height:14px;margin-right:6px;"></i>
+                        Reject &amp; Restart
+                    </button>
+                    <button class="ds-btn ds-btn-primary" id="closeProjectConfirmBtn" onclick="adminDash.confirmClose()">
+                        <i data-lucide="check-circle" style="width:14px;height:14px;margin-right:6px;"></i>
+                        Confirm &amp; Close Project
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Stakeholder Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="edit_user_id">
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="user"></i> Full Name</label>
+                            <input type="text" class="ds-input" id="edit_full_name">
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="at-sign"></i> Username</label>
+                            <input type="text" class="ds-input" id="edit_username" readonly style="background:var(--bg-body);">
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="mail"></i> Email Address</label>
+                            <input type="email" class="ds-input" id="edit_email" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="shield"></i> System Role</label>
+                                    <select class="ds-input ds-select" id="edit_role" required>
+                                        <option value="Team Member">Team Member</option>
+                                        <option value="Team Leader">Team Leader</option>
+                                        <option value="Facilitator">Facilitator</option>
+                                        <option value="Reviewer">Reviewer</option>
+                                        <option value="Admin">Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="building"></i> Department</label>
+                                    <select class="ds-input ds-select" id="edit_dept" required>
+                                        <option value="Manufacturing">Manufacturing</option>
+                                        <option value="Quality Control">Quality Control</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="HR">HR</option>
+                                        <option value="IT">IT</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ds-field">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="checkbox" id="edit_is_active">
+                                <label for="edit_is_active" class="ds-label mb-0">Account Active / Authorized</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button class="ds-btn ds-btn-outline ds-btn-sm text-danger" onclick="adminDash.confirmRegenerateCredentials()">
+                        <i data-lucide="key" style="width:14px;height:14px;"></i> Regenerate Access
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                        <button class="ds-btn ds-btn-danger ds-btn-outline" onclick="adminDash.confirmDeleteUser(document.getElementById('edit_user_id').value, true)">Delete User</button>
+                        <button class="ds-btn ds-btn-primary" onclick="adminDash.saveUserEdits()">Update User</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete User Modal -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body p-4 text-center">
+                    <div class="ds-icon-circle bg-red-soft text-red mx-auto mb-3" style="width:48px;height:48px;">
+                        <i data-lucide="user-minus"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Remove Stakeholder?</h5>
+                    <p class="text-muted text-sm mb-4">This action <b>cannot be undone</b>. All user records will be permanently purged.</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-ghost flex-1" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="ds-btn ds-btn-danger flex-1" id="confirmDeleteUserBtn">Delete User</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Provision New User Access</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="quickUserForm">
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="user"></i> Full Name</label>
+                            <input type="text" class="ds-input" id="new_full_name" placeholder="e.g. John Doe">
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="at-sign"></i> Username / Identity</label>
+                            <input type="text" class="ds-input" id="new_username" placeholder="e.g. jdoe" required>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="mail"></i> Email Address</label>
+                            <input type="email" class="ds-input" id="new_email" placeholder="john.doe@org.com" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="shield"></i> System Role</label>
+                                    <select class="ds-input ds-select" id="new_role" required>
+                                        <option value="Team Member">Team Member</option>
+                                        <option value="Team Leader">Team Leader</option>
+                                        <option value="Facilitator">Facilitator</option>
+                                        <option value="Reviewer">Reviewer</option>
+                                        <option value="Admin">Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="building"></i> Department</label>
+                                    <select class="ds-input ds-select" id="new_dept" required>
+                                        <option value="Manufacturing">Manufacturing</option>
+                                        <option value="Quality Control">Quality Control</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="HR">HR</option>
+                                        <option value="IT">IT</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ds-field p-3" style="background:var(--bg-body); border-radius:var(--radius-md);">
+                            <label class="ds-label"><i data-lucide="key"></i> Temporary Access Credentials</label>
+                            <div class="d-flex gap-2">
+                                <input type="text" class="ds-input" id="new_password" value="QCMS@Pass2026" required
+                                    readonly style="background:white;">
+                                <button type="button" class="ds-btn ds-btn-outline ds-btn-icon" title="Regenerate"
+                                    onclick="document.getElementById('new_password').value = 'QCMS@' + Math.random().toString(36).substring(7).toUpperCase()">
+                                    <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-muted mt-2">The user will be prompted to change their password upon
+                                first login.</p>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary" onclick="adminDash.saveQuickUser()">Provision Access</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Administrative Project Override Modal -->
+    <div class="modal fade" id="initModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Administrative Project Override</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="initProjectForm">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="type"></i> Project Title</label>
+                                    <input type="text" class="ds-input" id="projTitle"
+                                        placeholder="e.g. Reduction in Weld Defects" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="tag"></i> Strategic Category</label>
+                                    <select class="ds-input ds-select" id="projCategory" required>
+                                        <option value="Quality">Quality</option>
+                                        <option value="Safety">Safety</option>
+                                        <option value="Productivity">Productivity</option>
+                                        <option value="Cost">Cost Reduction</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="building"></i> Target Department</label>
+                                    <select class="ds-input ds-select" id="projDept" required
+                                        onchange="adminDash.loadTeamPool(this.value)">
+                                        <option value="">Select Department</option>
+                                        <!-- Departments injected here -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="user-check"></i> Technical Facilitator</label>
+                                    <select class="ds-input ds-select" id="projFacilitator">
+                                        <option value="">Select Facilitator</option>
+                                        <!-- Facilitators injected here -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="alert-circle"></i> Problem Statement</label>
+                            <input type="text" class="ds-input" id="projProblemStatement"
+                                placeholder="What exactly is the gap?">
+                        </div>
+
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="file-text"></i> Detailed Description</label>
+                            <textarea class="ds-input" id="projDesc" rows="2"
+                                placeholder="Describe the current situation and context..."></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="map-pin"></i> Physical Location</label>
+                                    <input type="text" class="ds-input" id="projLocation"
+                                        placeholder="e.g. Line 4, Assembly Shop">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="refresh-cw"></i> Frequency of
+                                        Occurrence</label>
+                                    <input type="text" class="ds-input" id="projFrequency"
+                                        placeholder="e.g. Daily, Monthly, Shift-wise">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="camera"></i> Evidence / Attachment (Upload)</label>
+                            <div class="upload-zone" id="evidenceUploadZone"
+                                onclick="document.getElementById('evidenceFile').click()" style="cursor: pointer;">
+                                <input type="file" id="evidenceFile" style="display:none"
+                                    onchange="adminDash.handleFileUpload(this.files[0])">
+                                <div class="upload-content text-center py-3"
+                                    style="border: 2px dashed var(--border-subtle); border-radius: 8px; background: var(--bg-body);">
+                                    <i data-lucide="upload-cloud" class="text-muted mb-1"
+                                        style="width: 20px; height: 20px;"></i>
+                                    <p class="text-xs text-muted mb-0" id="uploadStatus">Click to upload document or
+                                        image</p>
+                                </div>
+                            </div>
+                            <input type="hidden" id="projEvidence">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="trending-down"></i> Initial Impact /
+                                        Severity</label>
+                                    <input type="text" class="ds-input" id="projImpact"
+                                        placeholder="e.g. High scrap rate / Safety risk">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label"><i data-lucide="calendar"></i> Target Completion
+                                        Date</label>
+                                    <input type="date" class="ds-input" id="projDeadline">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ds-field">
+                            <label class="ds-label"><i data-lucide="users"></i> Project Team Selection (Select
+                                Leader)</label>
+                            <div class="team-selection-container"
+                                style="background: var(--bg-body); border-radius: 12px; border: 1px solid var(--border-subtle); overflow: hidden;">
+                                <div
+                                    class="team-header d-flex px-3 py-2 border-bottom bg-light text-xs fw-bold text-muted">
+                                    <div style="width: 40px;">Ldr</div>
+                                    <div style="width: 40px;">Mem</div>
+                                    <div>User Name / Role</div>
+                                </div>
+                                <div id="teamPool" style="max-height: 200px; overflow-y: auto; padding: 4px;">
+                                    <div class="p-4 text-center text-muted text-xs">Select a department to see eligible
+                                        members</div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <div class="flex-grow-1 text-xs text-muted">
+                        <i data-lucide="info" style="width:12px;height:12px;"></i> This project will bypass normal
+                        creation and go straight to initialization.
+                    </div>
+                    <button class="ds-btn ds-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary" id="initSubmitBtn"
+                        onclick="adminDash.initProject()">Initialize & Assign</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        const adminDash = {
+            allProjects: [],
+            closeTargetId: null,
+            currentPage: 1,
+            projectsPerPage: 5,
+            userPage: 1,
+            usersPerPage: 5,
+            userTotalPages: 1,
+            userTotalCount: 0,
+            userSearchQuery: '',
+
+            async init() {
+                try {
+                QCMS.init();
+                this.initModal = new bootstrap.Modal(document.getElementById('initModal'));
+
+                // Fetch latest subscription status dynamically
+                let profile = null;
+                try {
+                    profile = await api.get('/auth/me');
+                } catch (err) {
+                    console.error('[QCMS] Failed to fetch profile details:', err);
+                }
+
+                if (profile) {
+                    // Update session storage with profile & org branding
+                    const userStr = sessionStorage.getItem('user') || '{}';
+                    const userObj = JSON.parse(userStr);
+                    userObj.subscription_status = profile.subscription_status;
+                    userObj.trial_ends_at = profile.trial_ends_at;
+                    // Sync org branding so admin's changes reflect immediately
+                    if (profile.org_primary_color !== undefined) userObj.org_primary_color = profile.org_primary_color;
+                    if (profile.org_logo_url !== undefined) userObj.org_logo_url = profile.org_logo_url;
+                    if (profile.org_favicon_url !== undefined) userObj.org_favicon_url = profile.org_favicon_url;
+                    if (profile.org_name !== undefined) userObj.org_name = profile.org_name;
+                    sessionStorage.setItem('user', JSON.stringify(userObj));
+                    
+                    if (profile.subscription_status === 'Suspended') {
+                        const container = document.querySelector('.app-content-inner');
+                        if (container) {
+                            container.innerHTML = `
+                                <div class="d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 180px);">
+                                    <div class="glass-card text-center p-5 fade-in" style="max-width: 550px; border-top: 4px solid var(--ds-danger-color); box-shadow: var(--ds-shadow-xl);">
+                                        <div class="mb-4" style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; background: rgba(239, 68, 68, 0.1);">
+                                            <i data-lucide="shield-alert" style="width: 36px; height: 36px; color: var(--ds-danger-color);"></i>
+                                        </div>
+                                        <h2 class="fw-bold mb-2 text-danger">Organization Account Suspended</h2>
+                                        <p class="text-secondary mb-4">
+                                            Your organization's access to the QCMS platform has been suspended. Please contact the QCMS support team to reactivate your account.
+                                        </p>
+                                        
+                                        <div class="text-start mb-4 p-4 rounded-3" style="background: rgba(var(--ds-bg-hover-rgb), 0.3); border: 1px solid var(--ds-border-color);">
+                                            <label class="form-label fw-semibold mb-2" for="reactivationMsg">Request Account Reactivation</label>
+                                            <textarea id="reactivationMsg" class="form-control mb-3" rows="4" placeholder="Describe the reason for requesting reactivation..." style="background: var(--ds-bg-card); color: var(--ds-text-primary); border-color: var(--ds-border-color);"></textarea>
+                                            <button class="ds-btn ds-btn-primary w-100" id="submitReactivationBtn" onclick="window.submitReactivationRequest()">
+                                                <i data-lucide="send" class="me-2" style="width: 16px; height: 16px;"></i> Submit Request
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="text-xs text-muted">
+                                            If you believe this is an error, please reach out directly to your assigned supervisor or mail us at <a href="mailto:support@qcms.com" class="text-decoration-underline text-danger">support@qcms.com</a>.
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            if (window.lucide) lucide.createIcons();
+                        }
+                        return; // Stop loading the rest of the dashboard
+                    }
+
+                    // Expiry alert
+                    if (profile.trial_ends_at) {
+                        const trialEnds = new Date(profile.trial_ends_at);
+                        const today = new Date();
+                        const diffTime = trialEnds - today;
+                        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        if (daysLeft >= 0 && daysLeft <= 3) {
+                            const container = document.querySelector('.app-content-inner');
+                            if (container) {
+                                const banner = document.createElement('div');
+                                banner.innerHTML = `
+                                    <div class="alert alert-danger d-flex align-items-center justify-content-between p-3 mb-4 fade-in" style="border: none; background: rgba(239, 68, 68, 0.08); border-left: 4px solid var(--ds-danger-color); border-radius: var(--ds-radius-md); box-shadow: var(--ds-shadow-sm);">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(239, 68, 68, 0.15);">
+                                                <i data-lucide="alert-triangle" style="width: 20px; height: 20px; color: var(--ds-danger-color);"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="alert-heading mb-1 fw-bold text-danger" style="font-size: 14px;">Subscription Expiring Soon!</h5>
+                                                <p class="mb-0 text-secondary" style="font-size: 13px;">Your trial or monthly subscription expires in ${daysLeft} days. Upgrade now to avoid service interruption.</p>
+                                            </div>
+                                        </div>
+                                        <a href="/admin/settings.html" class="ds-btn ds-btn-danger ds-btn-sm" style="padding: 6px 16px; font-weight: 600;">
+                                            <i data-lucide="credit-card" class="me-1" style="width: 14px; height: 14px;"></i> Buy Plan
+                                        </a>
+                                    </div>
+                                `;
+                                container.insertBefore(banner.firstElementChild, container.firstChild);
+                            }
+                        }
+                    }
+                }
+
+                const userStr = sessionStorage.getItem('user');
+                const user = JSON.parse(userStr || '{}');
+                const roleName = (user.role && user.role.name) ? user.role.name : (user.role || '');
+                const role = roleName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const canCreate = ['teamleader', 'teammember'].includes(role);
+
+                console.log('[QCMS] Admin Dashboard Init - Role:', role, 'Can create:', canCreate);
+
+                const initBtn = document.getElementById('initProjectBtn');
+                if (initBtn) {
+                    initBtn.style.display = canCreate ? 'inline-flex' : 'none';
+                }
+
+                // Global Search Integration
+                const globalSearch = document.getElementById('globalSearchInput');
+                if (globalSearch) {
+                    globalSearch.placeholder = "Search projects or users...";
+                    globalSearch.addEventListener('input', (e) => {
+                        this.handleGlobalSearch(e.target.value);
+                    });
+                }
+
+                await this.loadStats();
+                await this.loadProjects();
+                await this.loadDepartments();
+                await this.loadFacilitators();
+                this.loadUsers();
+                this.loadAuditLog();
+
+                // Initialize modals for editing and deletion
+                const editModalEl = document.getElementById('editProjectModal');
+                const deleteModalEl = document.getElementById('deleteProjectModal');
+                if (editModalEl) this.editModal = new bootstrap.Modal(editModalEl);
+                if (deleteModalEl) this.deleteModal = new bootstrap.Modal(deleteModalEl);
+                } catch (e) {
+                    console.error('[QCMS] Admin Dashboard init error:', e);
+                }
+            },
+
+            showInitialSkeletons() {
+                document.getElementById('projectsBody').innerHTML = `<tr><td colspan="4">${QCMS.tableSkeleton(5)}</td></tr>`;
+                document.getElementById('usersBody').innerHTML = `<tr><td colspan="5">${QCMS.tableSkeleton(3)}</td></tr>`;
+            },
+
+            async loadStats() {
+                try {
+                    const grid = document.getElementById('kpiGrid');
+                    if (grid) grid.innerHTML = ''; // Clear before loading to prevent repetition
+
+                    const stats = await api.get('/admin/stats');
+                    if (grid) {
+                        grid.innerHTML =
+                            QCMS.kpiCard('Active Pipeline', stats.active_projects || 0, 'folder-kanban', 'blue', null) +
+                            QCMS.kpiCard('Team Stakeholders', stats.total_members || 0, 'users', 'purple', null, '/admin/users.html') +
+                            QCMS.kpiCard('Pending Tasks', stats.pending_validations || 0, 'clock', 'orange', null, '/admin/audit-queue.html') +
+                            QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green', null, '/analytics/analytics.html');
+                        // Wire Active Pipeline card to scroll + filter
+                        const kpiCols = document.querySelectorAll('#kpiGrid > div, #kpiGrid > a');
+                        if (kpiCols[0]) {
+                            kpiCols[0].style.cursor = 'pointer';
+                            kpiCols[0].addEventListener('click', () => {
+                                const sel = document.getElementById('statusFilter');
+                                if (sel) { sel.value = 'Active'; adminDash.filterProjects(); }
+                                document.querySelector('.ds-card.fade-in.section-spacing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            });
+                        }
+                    }
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error('Stats load failed', e);
+                }
+            },
+
+            currentPage: 1,
+            projectsPerPage: 5,
+            totalPages: 1,
+            totalProjects: 0,
+            searchQuery: '',
+
+            async loadProjects(page = 1) {
+                try {
+                    this.currentPage = page;
+                    const status = document.getElementById('statusFilter')?.value || '';
+                    const search = this.searchQuery || '';
+
+                    const body = document.getElementById('projectsBody');
+                    if (body) body.innerHTML = `<tr><td colspan="4">${QCMS.tableSkeleton(5)}</td></tr>`;
+
+                    const queryParams = new URLSearchParams({
+                        page: page,
+                        per_page: this.projectsPerPage || 5
+                    });
+                    if (status) queryParams.append('status', status);
+                    if (search) queryParams.append('search', search);
+
+                    const res = await api.get(`/admin/all-projects?${queryParams.toString()}`);
+
+                    let items = [];
+                    if (Array.isArray(res)) {
+                        items = res;
+                        this.totalProjects = res.length;
+                        this.totalPages = Math.ceil(res.length / this.projectsPerPage) || 1;
+                        this.renderProjects(items.slice((page - 1) * 5, page * 5));
+                        this.renderCategoryChart(items);
+                        this.renderStageChart(items);
+                        this.renderClosureAlerts(items.filter(p => p.status === 'Pending Closure' || p.status === 'SOP Created'));
+                    } else {
+                        items = res.items || [];
+                        this.totalProjects = res.total || items.length;
+                        this.totalPages = res.total_pages || Math.ceil(this.totalProjects / 5) || 1;
+
+                        this.renderProjects(items);
+                        if (res.all_projects_summary) {
+                            this.renderCategoryChart(res.all_projects_summary);
+                            this.renderStageChart(res.all_projects_summary);
+                        }
+                        if (res.pending_closures) {
+                            this.renderClosureAlerts(res.pending_closures);
+                        }
+                    }
+                } catch (e) {
+                    console.error('[QCMS] Failed to load projects:', e);
+                    document.getElementById('projectsBody').innerHTML = `<tr><td colspan="4">${QCMS.emptyState('Load Error', 'Unable to load active projects.', 'alert-circle')}</td></tr>`;
+                }
+            },
+
+            renderClosureAlerts(pendingClosures) {
+                document.querySelectorAll('.closure-alert-banner').forEach(el => el.remove());
+                if (!pendingClosures || pendingClosures.length === 0) return;
+
+                const container = document.querySelector('.app-content-inner');
+                if (container) {
+                    pendingClosures.forEach(p => {
+                        const isEarlyClosure = (p.stage === 2 && p.status === 'Pending Closure');
+                        const bannerColor = isEarlyClosure ? '#0ea5e9' : '#d97706';
+                        const bannerBg   = isEarlyClosure ? 'rgba(14,165,233,0.07)' : 'rgba(217,119,6,0.08)';
+                        const bannerBorder = isEarlyClosure ? '#0ea5e9' : '#d97706';
+                        const bannerIcon  = isEarlyClosure ? 'check-circle-2' : 'award';
+                        const bannerTitle = isEarlyClosure
+                            ? '✅ No Deviation Found — Early Project Closure Required'
+                            : 'Project Awaiting Final Closure Approval';
+                        const bannerDesc  = isEarlyClosure
+                            ? `The reviewer confirmed <strong>no deviations</strong> in Stage 2 for project <strong>${QCMS.escapeHtml(p.title)}</strong>. The problem is resolved — please review and officially close this project.`
+                            : `SOP has been created for project <strong>${QCMS.escapeHtml(p.title)}</strong>. Awaiting your final sign-off to close the project and publish the SOP.`;
+
+                        const banner = document.createElement('div');
+                        banner.className = 'closure-alert-banner';
+                        banner.innerHTML = `
+                            <div class="d-flex align-items-center justify-content-between p-3 mb-3 fade-in" style="background:${bannerBg};border-left:4px solid ${bannerBorder};border-radius:var(--ds-radius-md);box-shadow:var(--ds-shadow-sm);">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:38px;height:38px;background:${bannerBg};border:1.5px solid ${bannerColor};">
+                                        <i data-lucide="${bannerIcon}" style="width:20px;height:20px;color:${bannerColor};"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1 fw-bold" style="font-size:14px;color:${bannerColor};">${bannerTitle}</h5>
+                                        <p class="mb-0 text-secondary" style="font-size:13px;">${bannerDesc}</p>
+                                    </div>
+                                </div>
+                                <button class="ds-btn ds-btn-sm ms-3 flex-shrink-0" onclick="adminDash.openCloseModal(${p.id}, '${(p.title || '').replace(/'/g, "\\\\'")}')"
+                                    style="padding:6px 16px;font-weight:600;background:${bannerColor};border-color:${bannerColor};color:white;white-space:nowrap;">
+                                    <i data-lucide="${isEarlyClosure ? 'archive' : 'check-circle'}" class="me-1" style="width:14px;height:14px;"></i>
+                                    ${isEarlyClosure ? 'Review &amp; Close Early' : 'Review &amp; Close Project'}
+                                </button>
+                            </div>
+                        `;
+                        container.insertBefore(banner, container.firstChild);
+                    });
+                    if (window.lucide) lucide.createIcons();
+                }
+            },
+
+            renderProjects(items = []) {
+                const body = document.getElementById('projectsBody');
+                const paginationContainer = document.getElementById('projectsPagination');
+
+                if (!items.length) {
+                    body.innerHTML = `<tr><td colspan="4">${QCMS.emptyState('No Projects Found', 'Try searching for something else or adjusting your filters.', 'search')}</td></tr>`;
+                    if (paginationContainer) paginationContainer.innerHTML = '';
+                    return;
+                }
+
+                body.innerHTML = items.map(p => `
+                <tr class="fade-in">
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="ds-icon-circle bg-blue-soft text-blue">
+                                <i data-lucide="layout" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div class="truncate">
+                                <div class="fw-bold text-sm text-primary mb-0">${QCMS.escapeHtml(p.title)}</div>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    <span class="text-xxs text-muted fw-bold">${QCMS.escapeHtml(p.project_uid || 'N/A')}</span>
+                                    <span class="ds-badge-dot gray"></span>
+                                    <span class="text-xxs text-muted">${QCMS.escapeHtml(p.category || 'General')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="v-stack gap-1">
+                            <div class="progress" style="height: 6px; width: 80px; background: var(--bg-body);">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: ${(p.stage / 8) * 100}%"></div>
+                            </div>
+                            <span class="text-xxs fw-bold uppercase ls-tight">Stage ${p.stage || 1} / 8</span>
+                        </div>
+                    </td>
+                    <td>
+                        ${QCMS.statusBadge(p.status)}
+                    </td>
+                    <td>
+                        <div class="d-flex justify-content-end gap-2 align-items-center">
+                            <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" title="Workspace">
+                                <i data-lucide="external-link" style="width:16px;height:16px;"></i>
+                            </a>
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" onclick="adminDash.showEditModal(${p.id})" title="Modify Strategy">
+                                <i data-lucide="settings" style="width:14px;height:14px;"></i>
+                            </button>
+                            ${(p.status === 'Pending Closure' || p.status === 'SOP Created') ? `
+                            <button class="ds-btn ds-btn-sm" onclick="adminDash.openCloseModal(${p.id}, '${(p.title || '').replace(/'/g, "\\\\'")}')"
+                                style="padding:3px 10px;font-size:0.7rem;font-weight:600;background:#0ea5e9;border-color:#0ea5e9;color:white;" title="Close Project">
+                                <i data-lucide="archive" style="width:12px;height:12px;margin-right:3px;"></i>Close
+                            </button>
+                            ` : ''}
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon text-danger" onclick="adminDash.confirmDelete(${p.id})" title="Purge Records">
+                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+                this.renderPagination();
+                if (window.lucide) lucide.createIcons();
+            },
+
+            renderPagination() {
+                const paginationContainer = document.getElementById('projectsPagination');
+                if (!paginationContainer) return;
+
+                if (!this.totalProjects || this.totalProjects === 0) {
+                    paginationContainer.innerHTML = '';
+                    return;
+                }
+
+                const limit = this.projectsPerPage || 5;
+                const page = this.currentPage || 1;
+                const totalProjects = this.totalProjects || 0;
+                const totalPages = this.totalPages || 1;
+
+                const startIndex = (page - 1) * limit + 1;
+                const endIndex = Math.min(page * limit, totalProjects);
+
+                const isPrevDisabled = page <= 1;
+                const isNextDisabled = page >= totalPages;
+
+                let paginationHtml = `
+                    <div class="d-flex justify-content-between align-items-center mt-3 px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                        <div class="text-xs text-secondary" style="font-weight: 500;">
+                            Showing <strong>${startIndex}-${endIndex}</strong> of <strong>${totalProjects}</strong> projects
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <button class="ds-btn ds-btn-sm border-0 d-flex align-items-center gap-1 px-3 py-2"
+                                    style="background: var(--ds-bg-hover, rgba(0,0,0,0.04)); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-primary);"
+                                    ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed; background: rgba(0,0,0,0.02); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-tertiary);"' : ''}
+                                    onclick="adminDash.loadProjects(${page - 1})">
+                                <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> Prev
+                            </button>
+                            <span class="fw-bold text-sm text-main" style="white-space: nowrap;">Page ${page} of ${totalPages}</span>
+                            <button class="ds-btn ds-btn-sm border-0 d-flex align-items-center gap-1 px-3 py-2"
+                                    style="background: var(--ds-bg-hover, rgba(0,0,0,0.04)); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-primary);"
+                                    ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed; background: rgba(0,0,0,0.02); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-tertiary);"' : ''}
+                                    onclick="adminDash.loadProjects(${page + 1})">
+                                Next <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                paginationContainer.innerHTML = paginationHtml;
+                if (window.lucide) lucide.createIcons();
+            },
+
+            filterProjects() {
+                this.loadProjects(1);
+            },
+
+            handleGlobalSearch(query) {
+                this.searchQuery = query ? query.toLowerCase().trim() : '';
+                this.loadProjects(1);
+                this.loadUsers(1, this.searchQuery);
+            },
+
+            renderCategoryChart(projects) {
+                const canvas = document.getElementById('categoryChart');
+                if (!canvas) return;
+                const chartArea = canvas.parentElement;
+                if (!projects || projects.length === 0) {
+                    chartArea.innerHTML = QCMS.chartPlaceholder('Strategic Distribution');
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                const cats = {};
+                projects.forEach(p => {
+                    const c = p.category || 'Unassigned';
+                    cats[c] = (cats[c] || 0) + 1;
+                });
+
+                chartArea.innerHTML = '<canvas id="categoryChart" height="280"></canvas>';
+                const ctx = document.getElementById('categoryChart');
+                // Destroy previous chart instance if any
+                const existing = Chart.getChart(ctx);
+                if (existing) existing.destroy();
+
+                const categoryColors = {
+                    'Environment': '#3B82F6',
+                    'Quality': '#10B981',
+                    'Delivery': '#8B5CF6',
+                    'Productivity': '#F59E0B',
+                    'Cost': '#EC4899',
+                    'Morale': '#06B6D4',
+                    'Safety': '#EF4444'
+                };
+                const vibrantColors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4', '#EF4444', '#F97316', '#6366F1'];
+                const bgColors = Object.keys(cats).map((cat, i) => categoryColors[cat] || vibrantColors[i % vibrantColors.length]);
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(cats),
+                        datasets: [{
+                            data: Object.values(cats),
+                            backgroundColor: bgColors,
+                            borderWidth: 3,
+                            borderColor: '#ffffff',
+                            hoverOffset: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { usePointStyle: true, padding: 16, font: { size: 11, weight: 600 } }
+                            }
+                        }
+                    }
+                });
+            },
+
+            renderStageChart(projects) {
+                const canvas = document.getElementById('stageChart');
+                if (!canvas) return;
+                const chartArea = canvas.parentElement;
+                if (!projects || projects.length === 0) {
+                    chartArea.innerHTML = QCMS.chartPlaceholder('Workflow Metrics');
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                const stageCounts = Array(8).fill(0);
+                projects.forEach(p => {
+                    const s = (p.stage || 1) - 1;
+                    if (s >= 0 && s < 8) stageCounts[s]++;
+                });
+
+                chartArea.innerHTML = '<canvas id="stageChart" height="280"></canvas>';
+                const ctx = document.getElementById('stageChart');
+                // Destroy previous chart instance if any
+                const existing = Chart.getChart(ctx);
+                if (existing) existing.destroy();
+
+                const stageColors = [
+                    '#6366F1', // S1: Indigo
+                    '#3B82F6', // S2: Royal Blue
+                    '#06B6D4', // S3: Cyan
+                    '#10B981', // S4: Emerald
+                    '#F59E0B', // S5: Amber
+                    '#F97316', // S6: Orange
+                    '#8B5CF6', // S7: Purple
+                    '#EC4899'  // S8: Pink / Rose
+                ];
+                const stageHoverColors = [
+                    '#4F46E5', '#2563EB', '#0891B2', '#059669', '#D97706', '#EA580C', '#7C3AED', '#DB2777'
+                ];
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'],
+                        datasets: [{
+                            label: 'Projects',
+                            data: stageCounts,
+                            backgroundColor: stageColors,
+                            hoverBackgroundColor: stageHoverColors,
+                            borderRadius: 6,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.04)' } },
+                            x: { grid: { display: false } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            },
+
+            async loadAuditLog() {
+                try {
+                    const logs = await api.get('/admin/audit-logs');
+                    const feed = document.getElementById('auditFeed');
+                    if (!logs || !logs.length) {
+                        feed.innerHTML = QCMS.emptyState('All Quiet', 'No security events to report.', 'shield');
+                        return;
+                    }
+                    feed.innerHTML = logs.slice(0, 8).map(l => `
+                    <div class="activity-item fade-in">
+                        <div class="activity-dot"><i data-lucide="user-check" style="width:14px;height:14px;"></i></div>
+                        <div class="activity-content">
+                            <p><span class="fw-semibold text-primary">${l.user}</span> executed <span class="text-muted">${l.action.replace(/_/g, ' ').toLowerCase()}</span></p>
+                            <span class="activity-time">${QCMS.formatRelative(l.timestamp)} · ${l.target}</span>
+                        </div>
+                    </div>
+                `).join('');
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    document.getElementById('auditFeed').innerHTML = '<p class="text-muted p-3">Audit log unavailable.</p>';
+                }
+            },
+
+            async loadUsers(page = 1, searchQuery = '') {
+                try {
+                    this.userPage = page;
+                    this.userSearchQuery = searchQuery !== undefined ? searchQuery : (this.userSearchQuery || '');
+                    const qParam = this.userSearchQuery ? `&q=${encodeURIComponent(this.userSearchQuery)}` : '';
+                    const res = await api.get(`/admin/users?page=${page}&per_page=${this.usersPerPage}${qParam}`);
+                    
+                    let users = [];
+                    let totalCount = 0;
+                    let totalPages = 1;
+
+                    if (Array.isArray(res)) {
+                        totalCount = res.length;
+                        totalPages = Math.ceil(totalCount / this.usersPerPage) || 1;
+                        const start = (page - 1) * this.usersPerPage;
+                        users = res.slice(start, start + this.usersPerPage);
+                    } else if (res && res.items) {
+                        users = res.items;
+                        totalCount = res.total || users.length;
+                        totalPages = res.total_pages || Math.ceil(totalCount / this.usersPerPage) || 1;
+                    }
+
+                    this.allUsers = users;
+                    this.userTotalPages = totalPages;
+                    this.userTotalCount = totalCount;
+                    this.renderUsers(users, totalCount, page, totalPages);
+                } catch (e) {
+                    document.getElementById('usersBody').innerHTML = '<tr><td colspan="5" class="p-4 text-center text-muted">User registry unavailable.</td></tr>';
+                    const paginationContainer = document.getElementById('usersPagination');
+                    if (paginationContainer) paginationContainer.innerHTML = '';
+                }
+            },
+
+            renderUsers(users, totalCount = 0, page = 1, totalPages = 1) {
+                const body = document.getElementById('usersBody');
+                const paginationContainer = document.getElementById('usersPagination');
+                if (!users || !users.length) {
+                    body.innerHTML = `<tr><td colspan="5">${QCMS.emptyState('Access Directory Empty', 'No stakeholders match your current criteria.', 'users')}</td></tr>`;
+                    if (paginationContainer) paginationContainer.innerHTML = '';
+                    return;
+                }
+                body.innerHTML = users.map(u => `
+                    <tr class="fade-in">
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                ${QCMS.renderAvatar(u, 32)}
+                                <div class="truncate">
+                                    <div class="fw-bold text-sm">${u.full_name || u.username}</div>
+                                    <div class="text-xs text-muted">@${u.username}</div>
+                                    <div class="text-xxs text-muted fst-italic">${u.email}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${QCMS.badge(u.role, u.role === 'Admin' ? 'red' : 'blue')}</td>
+                        <td><span class="text-xs font-medium">${u.department || 'Corporate'}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="ds-badge-dot ${u.is_active ? 'green' : 'gray'}"></span>
+                                <span class="text-xxs fw-medium">${u.is_active ? 'Authorized' : 'Suspended'}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="text-xs text-muted">${u.last_login ? QCMS.formatRelative(u.last_login) : 'Never'}</span>
+                        </td>
+                    </tr>
+                `).join('');
+                if (window.lucide) lucide.createIcons();
+
+                if (paginationContainer) {
+                    if (totalCount > 0) {
+                        const startIndex = (page - 1) * this.usersPerPage + 1;
+                        const endIndex = Math.min(page * this.usersPerPage, totalCount);
+                        const isPrevDisabled = page <= 1;
+                        const isNextDisabled = page >= totalPages;
+
+                        paginationContainer.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center mt-3 px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                                <div class="text-xs text-secondary" style="font-weight: 500;">
+                                    Showing <strong>${startIndex}-${endIndex}</strong> of <strong>${totalCount}</strong> stakeholders
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <button class="ds-btn ds-btn-sm border-0 d-flex align-items-center gap-1 px-3 py-2"
+                                            style="background: var(--ds-bg-hover, rgba(0,0,0,0.04)); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-primary);"
+                                            ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed; background: rgba(0,0,0,0.02); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-tertiary);"' : ''}
+                                            onclick="adminDash.setUserPage(${page - 1})">
+                                        <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> Prev
+                                    </button>
+                                    <span class="fw-bold text-sm text-main" style="white-space: nowrap;">Page ${page} of ${totalPages}</span>
+                                    <button class="ds-btn ds-btn-sm border-0 d-flex align-items-center gap-1 px-3 py-2"
+                                            style="background: var(--ds-bg-hover, rgba(0,0,0,0.04)); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-primary);"
+                                            ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed; background: rgba(0,0,0,0.02); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-tertiary);"' : ''}
+                                            onclick="adminDash.setUserPage(${page + 1})">
+                                        Next <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        if (window.lucide) lucide.createIcons();
+                    } else {
+                        paginationContainer.innerHTML = '';
+                    }
+                }
+            },
+
+            setUserPage(page) {
+                if (page < 1 || (this.userTotalPages && page > this.userTotalPages)) return;
+                this.loadUsers(page);
+            },
+
+            openEditUserModal(userId) {
+                const u = this.allUsers.find(x => x.id === userId);
+                if (!u) return;
+
+                document.getElementById('edit_user_id').value = u.id;
+                document.getElementById('edit_full_name').value = u.full_name || u.username;
+                document.getElementById('edit_username').value = u.username;
+                document.getElementById('edit_email').value = u.email;
+                document.getElementById('edit_role').value = u.role;
+                document.getElementById('edit_dept').value = u.department || 'Manufacturing';
+                document.getElementById('edit_is_active').checked = u.is_active;
+
+                new bootstrap.Modal(document.getElementById('editUserModal')).show();
+            },
+
+            async saveUserEdits() {
+                const id = document.getElementById('edit_user_id').value;
+                const payload = {
+                    full_name: document.getElementById('edit_full_name').value,
+                    email: document.getElementById('edit_email').value,
+                    role: document.getElementById('edit_role').value,
+                    department: document.getElementById('edit_dept').value,
+                    is_active: document.getElementById('edit_is_active').checked
+                };
+
+                try {
+                    await api.patch(`/admin/users/${id}`, payload);
+                    QCMS.toast('Stakeholder profile updated successfully.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+                    this.loadUsers();
+                } catch (e) {
+                    QCMS.toast(e.message, 'error');
+                }
+            },
+
+            async regenerateUserCredentials(userId) {
+                if (!confirm('This will invalidate the current password and send new temporary credentials to the user\'s email. Proceed?')) return;
+                
+                try {
+                    await api.post(`/admin/users/${userId}/regenerate-credentials`);
+                    QCMS.toast('New credentials dispatched to user email.', 'success');
+                } catch (e) {
+                    QCMS.toast(e.message, 'error');
+                }
+            },
+
+            async confirmRegenerateCredentials() {
+                const id = document.getElementById('edit_user_id').value;
+                await this.regenerateUserCredentials(id);
+            },
+
+            openCloseModal(id, title) {
+                this.closeTargetId = id;
+
+                // Find the project to determine closure type (check both current page + full list)
+                const project = (this.currentProjects || []).find(p => p.id === id)
+                              || (this.allProjects || []).find(p => p.id === id);
+                const isEarlyClosure = project && project.stage === 2 && project.status === 'Pending Closure';
+
+                const body = document.getElementById('closeProjectModalBody');
+                const modalTitle = document.getElementById('closeProjectModalTitle');
+
+                if (isEarlyClosure) {
+                    modalTitle.innerHTML = `<i data-lucide="check-circle-2" style="width:18px;height:18px;color:#0ea5e9;margin-right:8px;vertical-align:text-bottom;"></i> Early Project Closure — No Deviation Found`;
+                    body.innerHTML = `
+                        <div class="alert mb-3" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd);border:2px solid #0ea5e9;border-radius:10px;padding:16px;">
+                            <div class="d-flex align-items-start gap-3">
+                                <i data-lucide="check-circle-2" style="width:28px;height:28px;color:#0284c7;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-bold mb-1" style="color:#0369a1;font-size:0.95rem;">Problem Resolved — No Further Investigation Needed</div>
+                                    <div class="text-sm" style="color:#075985;line-height:1.5;">
+                                        The reviewer confirmed that <strong>no SOP, Specification, or Control Plan deviations</strong> were found for project <strong>${title}</strong>.
+                                        The problem was not systemic and no corrective action cycle is required.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-base mb-3">You are about to <strong>officially close</strong> the project <strong class="text-primary">${title}</strong> as an early resolution.</p>
+                        <div class="alert" style="background:rgba(14,165,233,0.07);border:1px solid rgba(14,165,233,0.25);border-radius:8px;padding:12px;">
+                            <p class="text-xs mb-1 fw-bold" style="color:#0284c7;">After Admin Closure Sign-off:</p>
+                            <ul class="text-xs mb-0" style="color:var(--ds-text-secondary);padding-left:16px;">
+                                <li>Project status changes to <strong>Closed</strong></li>
+                                <li>All Stage 2 data is archived to the Knowledge Repository</li>
+                                <li>All stage trackers are marked complete for clean metrics</li>
+                                <li>The project team is notified of the early closure</li>
+                            </ul>
+                        </div>
+                        <div class="mt-3">
+                            <label class="ds-label fw-bold mb-1" for="adminRejectComments">Rejection/Reset Comments (Required only for Reject)</label>
+                            <textarea class="ds-input" id="adminRejectComments" rows="3" placeholder="Explain why the project is being rejected and reset to Stage 1..."></textarea>
+                        </div>
+                    `;
+                } else {
+                    modalTitle.innerHTML = `<i data-lucide="check-circle" style="width:18px;height:18px;color:var(--ds-primary);margin-right:8px;vertical-align:text-bottom;"></i> Approve SOP &amp; Close Project`;
+                    body.innerHTML = `
+                        <div class="ds-badge green mb-3" style="font-size:0.75rem;">Facilitator Closure Signed Off ✓</div>
+                        <p class="text-base">You are approving the SOP and officially closing project <strong class="text-primary">${title}</strong>.</p>
+                        <div class="alert" style="background:rgba(var(--ds-primary-rgb),.07);border:1px solid rgba(var(--ds-primary-rgb),.2);border-radius:8px;padding:12px;margin-top:12px;">
+                            <p class="text-xs mb-1 fw-bold" style="color:var(--ds-primary);">After Admin Approval:</p>
+                            <ul class="text-xs mb-0" style="color:var(--ds-text-secondary);padding-left:16px;">
+                                <li>Project status changes to <strong>Closed</strong></li>
+                                <li>SOP becomes visible to all organization members</li>
+                                <li>All data is archived to the Knowledge Repository</li>
+                            </ul>
+                        </div>
+                        <div class="mt-3">
+                            <label class="ds-label fw-bold mb-1" for="adminRejectComments">Rejection/Reset Comments (Required only for Reject)</label>
+                            <textarea class="ds-input" id="adminRejectComments" rows="3" placeholder="Explain why the project is being rejected and reset to Stage 1..."></textarea>
+                        </div>
+                    `;
+                }
+
+                if (window.lucide) lucide.createIcons();
+                new bootstrap.Modal(document.getElementById('closeProjectModal')).show();
+            },
+
+            async confirmClose() {
+                try {
+                    await api.post(`/admin/projects/${this.closeTargetId}/close`);
+                    QCMS.toast('Project successfully closed and archived.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('closeProjectModal')).hide();
+                    this.init();
+                } catch (e) {
+                    QCMS.toast(e.message, 'error');
+                }
+            },
+
+            async rejectProject() {
+                const comments = document.getElementById('adminRejectComments').value.trim();
+                if (!comments) {
+                    return QCMS.toast('Please provide a reason / comments for rejection.', 'warning');
+                }
+                try {
+                    await api.post(`/admin/projects/${this.closeTargetId}/reject`, { comments: comments });
+                    QCMS.toast('Project successfully rejected and reset to Stage 1.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('closeProjectModal')).hide();
+                    this.init();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Failed to reject project.', 'error');
+                }
+            },
+
+            openAddUserModal() {
+                new bootstrap.Modal(document.getElementById('addUserModal')).show();
+            },
+
+            async saveQuickUser() {
+                const payload = {
+                    username: document.getElementById('new_username').value,
+                    full_name: document.getElementById('new_full_name').value || document.getElementById('new_username').value,
+                    email: document.getElementById('new_email').value,
+                    role: document.getElementById('new_role').value,
+                    department: document.getElementById('new_dept').value,
+                    password: document.getElementById('new_password').value
+                };
+                if (!payload.username || !payload.email) return QCMS.toast('Please fill all fields', 'warning');
+
+                try {
+                    await api.post('/admin/users', payload);
+                    QCMS.toast('New member provisioned successfully.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+                    this.loadUsers();
+                    this.loadStats();
+                } catch (e) {
+                    QCMS.toast(e.message, 'error');
+                }
+            },
+
+            async loadDepartments() {
+                try {
+                    const depts = await api.get('/admin/departments');
+                    const selects = [document.getElementById('projDept'), document.getElementById('editProjectDept')];
+                    selects.forEach(select => {
+                        if (select) {
+                            select.innerHTML = '<option value="">Select Department</option>' +
+                                depts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                        }
+                    });
+                } catch (e) {
+                    console.error('Dept load failed', e);
+                }
+            },
+
+            async loadFacilitators() {
+                try {
+                    const users = await api.get('/admin/users');
+                    const facilitators = users.filter(u => {
+                        const role = (u.role || '').toLowerCase();
+                        return role === 'facilitator' || role === 'technical facilitator';
+                    });
+                    
+                    console.log('[QCMS] Facilitators found:', facilitators.length);
+
+                    const selects = [document.getElementById('projFacilitator'), document.getElementById('editProjectFacilitator')];
+                    selects.forEach(select => {
+                        if (select) {
+                            const currentValue = select.value;
+                            select.innerHTML = '<option value="">Select Facilitator</option>' +
+                                facilitators.map(f => `<option value="${f.id}">${f.full_name || f.username}</option>`).join('');
+                            // Restore value if it still exists in the new list
+                            if (currentValue) select.value = currentValue;
+                        }
+                    });
+                    return facilitators;
+                } catch (e) {
+                    console.error('Facilitator load failed', e);
+                    return [];
+                }
+            },
+
+            async loadTeamPool(deptId, containerId = 'teamPool', leaderId = null, selectedMemberIds = []) {
+                if (!deptId) return;
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                
+                try {
+                    const users = await api.getPotentialMembers(deptId); 
+                    if (users.length === 0) {
+                        container.innerHTML = '<div class="p-4 text-center text-muted text-xs">No eligible members found in this department</div>';
+                        return;
+                    }
+                    
+                    const cbClass = containerId === 'editTeamPool' ? 'edit-member-cb' : 'member-cb';
+                    
+                    container.innerHTML = users.map(u => {
+                        const isLeader = leaderId && parseInt(u.id) === parseInt(leaderId);
+                        const isMember = selectedMemberIds.includes(parseInt(u.id));
+                        
+                        return `
+                        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom hover-bg">
+                            <div style="width: 40px;">
+                                <input type="radio" name="${containerId}Leader" value="${u.id}" 
+                                    class="leader-radio" ${isLeader ? 'checked' : ''} required 
+                                    onclick="adminDash.autoSelectMember('${u.id}', '${containerId}')">
+                            </div>
+                            <div style="width: 40px;">
+                                <input type="checkbox" value="${u.id}" class="${cbClass}" 
+                                    id="${containerId}-cb-${u.id}" ${isMember || isLeader ? 'checked' : ''}>
+                            </div>
+                            <div class="flex-grow-1">
+                                <span class="text-xs fw-medium d-block">${u.full_name || u.username}</span>
+                                <span class="text-xxs text-muted uppercase">${u.username} • ${u.role || 'Member'}</span>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    QCMS.toast('Failed to load team candidates', 'danger');
+                }
+            },
+
+            autoSelectMember(userId, containerId = 'teamPool') {
+                const cb = document.getElementById(`${containerId}-cb-${userId}`);
+                if (cb) cb.checked = true;
+            },
+
+            async handleFileUpload(file) {
+                if (!file) return;
+
+                const statusEl = document.getElementById('uploadStatus');
+                const zoneEl = document.getElementById('evidenceUploadZone');
+
+                try {
+                    statusEl.innerText = `Uploading ${file.name}...`;
+                    zoneEl.style.opacity = '0.7';
+                    zoneEl.style.pointerEvents = 'none';
+
+                    // Use the admin or team-leader upload endpoint based on context
+                    // dashboard-admin always uses admin endpoint
+                    const res = await api.uploadFile('/admin/upload-evidence', file);
+
+                    document.getElementById('projEvidence').value = res.url;
+                    statusEl.innerHTML = `<span class="text-success"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> ${file.name} uploaded</span>`;
+                    if (window.lucide) lucide.createIcons();
+                    QCMS.toast('File uploaded successfully', 'success');
+                } catch (e) {
+                    statusEl.innerText = 'Upload failed. Try again.';
+                    QCMS.toast(e.message || 'Upload failed', 'danger');
+                } finally {
+                    zoneEl.style.opacity = '1';
+                    zoneEl.style.pointerEvents = 'auto';
+                }
+            },
+
+
+            openInitModal() {
+                new bootstrap.Modal(document.getElementById('initModal')).show();
+            },
+
+            async initProject() {
+                const leaderRadio = document.querySelector('input[name="teamPoolLeader"]:checked');
+                const data = {
+                    title: document.getElementById('projTitle').value,
+                    category: document.getElementById('projCategory').value,
+                    department_id: parseInt(document.getElementById('projDept').value) || null,
+                    facilitator_id: parseInt(document.getElementById('projFacilitator').value) || null,
+                    team_leader_id: leaderRadio ? parseInt(leaderRadio.value) : null,
+                    problem_statement: document.getElementById('projProblemStatement').value,
+                    description: document.getElementById('projDesc').value,
+                    location: document.getElementById('projLocation').value,
+                    frequency: document.getElementById('projFrequency').value,
+                    evidence: document.getElementById('projEvidence').value,
+                    impact: document.getElementById('projImpact').value,
+                    deadline: document.getElementById('projDeadline').value || null,
+                    member_ids: Array.from(document.querySelectorAll('.member-cb:checked')).map(cb => parseInt(cb.value))
+                };
+
+                if (!data.title) return QCMS.toast('Project title is required', 'warning');
+                if (!data.team_leader_id) return QCMS.toast('Team Leader assignment is mandatory.', 'warning');
+                if (!data.department_id) return QCMS.toast('Department is required.', 'warning');
+
+                try {
+                    QCMS.setLoading('initSubmitBtn', true);
+                    await api.post('/projects', data);
+
+                    QCMS.toast('Project initialized successfully.', 'success');
+
+                    // Close Modal
+                    const modalEl = document.getElementById('initModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInstance.hide();
+
+                    // Refresh Data
+                    this.loadProjects();
+                    this.loadStats();
+
+                    // Reset Form
+                    document.getElementById('initProjectForm').reset();
+                    document.getElementById('teamPool').innerHTML = '<div class="p-4 text-center text-muted text-xs">Select a department to see eligible members</div>';
+                } catch (e) {
+                    QCMS.toast(e.message || 'Initialization failed', 'danger');
+                } finally {
+                    QCMS.setLoading('initSubmitBtn', false);
+                }
+            },
+
+            async showEditModal(id) {
+                try {
+                    const p = await api.get(`/projects/${id}`);
+                    if (!p) return;
+                    
+                    document.getElementById('editProjectId').value = p.id;
+                    document.getElementById('editProjectTitle').value = p.title;
+                    document.getElementById('editProjectCategory').value = p.category || 'Quality';
+                    
+                    if (p.deadline) document.getElementById('editProjectDeadline').value = p.deadline.split('T')[0];
+                    if (p.department_id) {
+                        const deptSelect = document.getElementById('editProjectDept');
+                        deptSelect.value = p.department_id;
+                        
+                        // Load pool for this department and pre-select TL/Members
+                        await this.loadTeamPool(p.department_id, 'editTeamPool', p.team_leader_id, p.member_ids || []);
+                    }
+                    
+                    // Ensure facilitator dropdown is populated
+                    const facSelect = document.getElementById('editProjectFacilitator');
+                    if (facSelect) {
+                        if (facSelect.options.length <= 1) {
+                            await this.loadFacilitators();
+                        }
+                        
+                        // Set the value - convert to string for reliable matching
+                        if (p.facilitator_id) {
+                            const val = String(p.facilitator_id);
+                            facSelect.value = val;
+                            
+                            // Debugging log
+                            console.log(`[QCMS] Pre-selecting facilitator ID: ${val}, Success: ${facSelect.value === val}`);
+                        } else {
+                            facSelect.value = "";
+                        }
+                    }
+
+                    this.editModal.show();
+                    document.getElementById('updateProjectBtn').onclick = () => this.handleUpdate();
+                } catch (e) {
+                    QCMS.toast('Failed to load project details: ' + e.message, 'danger');
+                }
+            },
+
+            async handleUpdate() {
+                const id = document.getElementById('editProjectId').value;
+                const leaderRadio = document.querySelector('input[name="editTeamPoolLeader"]:checked');
+                
+                const payload = {
+                    title: document.getElementById('editProjectTitle').value,
+                    category: document.getElementById('editProjectCategory').value,
+                    deadline: document.getElementById('editProjectDeadline').value || null,
+                    department_id: parseInt(document.getElementById('editProjectDept')?.value) || null,
+                    facilitator_id: parseInt(document.getElementById('editProjectFacilitator')?.value) || null,
+                    team_leader_id: leaderRadio ? parseInt(leaderRadio.value) : null,
+                    member_ids: [...document.querySelectorAll('.edit-member-cb:checked')].map(c => parseInt(c.value))
+                };
+                
+                if (!payload.title) return QCMS.toast('Project title is required', 'warning');
+                if (!payload.team_leader_id) return QCMS.toast('Team Leader assignment is mandatory.', 'warning');
+
+                try {
+                    QCMS.setLoading('updateProjectBtn', true);
+                    await api.patch(`/projects/${id}`, payload);
+                    QCMS.toast('Project updated successfully', 'success');
+                    this.editModal.hide();
+                    this.loadProjects();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Update failed', 'danger');
+                } finally {
+                    QCMS.setLoading('updateProjectBtn', false);
+                }
+            },
+
+            confirmDelete(id) {
+                this.deleteTargetId = id;
+                this.deleteModal.show();
+                document.getElementById('confirmDeleteBtn').onclick = () => this.handleDelete();
+            },
+
+            async handleDelete() {
+                try {
+                    QCMS.setLoading('confirmDeleteBtn', true);
+                    await api.delete(`/projects/${this.deleteTargetId}`);
+                    QCMS.toast('Project and data removed permanently.', 'success');
+                    this.deleteModal.hide();
+                    this.loadProjects();
+                    this.loadStats();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Deletion failed', 'danger');
+                } finally {
+                    QCMS.setLoading('confirmDeleteBtn', false);
+                }
+            },
+
+            confirmDeleteUser(id, fromModal = false) {
+                this.deleteUserTargetId = id;
+                if (fromModal) {
+                    const editModalEl = document.getElementById('editUserModal');
+                    const editModal = bootstrap.Modal.getInstance(editModalEl);
+                    if (editModal) editModal.hide();
+                }
+                if (!this.userDeleteModal) {
+                    this.userDeleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+                }
+                this.userDeleteModal.show();
+                document.getElementById('confirmDeleteUserBtn').onclick = () => this.handleDeleteUser();
+            },
+
+            async handleDeleteUser() {
+                try {
+                    QCMS.setLoading('confirmDeleteUserBtn', true);
+                    await api.delete(`/admin/users/${this.deleteUserTargetId}`);
+                    QCMS.toast('Stakeholder removed from organization.', 'success');
+                    this.userDeleteModal.hide();
+                    this.loadUsers();
+                    this.loadStats();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Deletion failed', 'danger');
+                } finally {
+                    QCMS.setLoading('confirmDeleteUserBtn', false);
+                }
+            }
+        };
+
+        window.submitReactivationRequest = async function() {
+            const textarea = document.getElementById('reactivationMsg');
+            const msg = textarea ? textarea.value.trim() : '';
+            if (!msg) {
+                QCMS.toast('Please write a message before submitting.', 'danger');
+                return;
+            }
+            QCMS.setLoading('submitReactivationBtn', true);
+            try {
+                const res = await api.post('/auth/request-reactivation', { message: msg });
+                QCMS.toast(res.message || 'Reactivation request submitted successfully.', 'success');
+                if (textarea) textarea.value = '';
+            } catch (err) {
+                QCMS.toast(err.message || 'Failed to submit reactivation request.', 'danger');
+            } finally {
+                QCMS.setLoading('submitReactivationBtn', false);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => adminDash.init().catch(e => console.error('[QCMS] Dashboard init failed:', e)));
+    </script>
+</body>
+
+</html>

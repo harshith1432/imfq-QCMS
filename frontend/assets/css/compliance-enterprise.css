@@ -1,0 +1,136 @@
+/* ==========================================================================
+   QCMS ENTERPRISE COMPLIANCE STANDARDS DESIGN SYSTEM
+   Natively matched to QCMS Design System (design-system.css & glass.css)
+   ========================================================================== */
+
+/* Remove custom font import - use native QCMS font stack */
+
+.ce-container {
+  font-family: inherit;
+  color: var(--ds-text-primary, var(--ds-text-main, #111827));
+}
+
+/* Base Card Styling using QCMS design system */
+.ce-card {
+  background: var(--ds-bg-card, var(--ds-surface, #ffffff));
+  border: 1px solid var(--ds-border-color, #e5e7eb);
+  border-radius: var(--ds-radius-lg, 16px);
+  box-shadow: var(--ds-shadow-sm, 0 2px 8px rgba(0,0,0,0.03));
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.ce-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ds-shadow-md, 0 8px 24px rgba(0,0,0,0.06));
+  border-color: var(--ds-border-hover, #d1d5db);
+}
+
+/* KPI Cards */
+.ce-kpi-card {
+  background: var(--ds-bg-card, var(--ds-surface, #ffffff));
+  border: 1px solid var(--ds-border-color, #e5e7eb);
+  border-radius: var(--ds-radius-md, 14px);
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.ce-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+}
+
+.ce-kpi-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-bg-subtle, #f3f4f6);
+  color: var(--ds-text-main, #111827);
+  margin-bottom: 0.5rem;
+}
+
+.ce-kpi-val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ds-text-main, #111827);
+  line-height: 1.1;
+}
+
+/* Progress Bars */
+.ce-progress-bg {
+  height: 6px;
+  background: var(--ds-border-color, #e5e7eb);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ce-progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: var(--ds-text-main, #111827);
+  transition: width 0.4s ease;
+}
+
+/* Expandable Details Container */
+.ce-expandable-section {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  opacity: 0;
+  border-top: 0px solid var(--ds-border-color, #e5e7eb);
+}
+
+.ce-expandable-section.open {
+  max-height: 800px;
+  opacity: 1;
+  border-top: 1px solid var(--ds-border-color, #e5e7eb);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+/* Filter Buttons */
+.ce-filter-btn {
+  padding: 0.375rem 0.875rem;
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ds-text-secondary, #6b7280);
+  background: var(--ds-bg-card, #ffffff);
+  border: 1px solid var(--ds-border-color, #e5e7eb);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ce-filter-btn:hover {
+  border-color: var(--ds-text-main, #111827);
+  color: var(--ds-text-main, #111827);
+}
+
+.ce-filter-btn.active {
+  background: var(--ds-text-main, #111827);
+  color: #ffffff !important;
+  border-color: var(--ds-text-main, #111827);
+  font-weight: 600;
+}
+
+/* Document Repository Cards */
+.ce-doc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  background: var(--ds-bg-card, #ffffff);
+  border: 1px solid var(--ds-border-color, #e5e7eb);
+  border-radius: var(--ds-radius-md, 12px);
+  transition: all 0.2s ease;
+}
+
+.ce-doc-item:hover {
+  border-color: var(--ds-border-hover, #9ca3af);
+  box-shadow: var(--ds-shadow-sm, 0 2px 8px rgba(0,0,0,0.03));
+}

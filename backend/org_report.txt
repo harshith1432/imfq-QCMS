@@ -1,0 +1,11 @@
+[QCMS] Verifying database connection to '127.0.0.1:5432' as user 'postgres'...
+[QCMS] Database 'imfq_db' verified.
+[QCMS] Connecting to database at: postgresql://postgres:****@127.0.0.1:5432/imfq_db
+[QCMS] Seeded Enterprise Feature Hierarchy (Parents & Children) successfully.
+[QCMS] Database tables verified, roles, super admin, tax rules, and billing settings seeded successfully.
+=== CHECKING ALL USERS & ORGS ===
+Traceback (most recent call last):
+  File "D:\projects softwares\imfq\backend\check_youtube_org.py", line 16, in <module>
+    out.append("\n=== SAAS PLAN 'test' & OTHER PLANS DETAILS ===")
+                   ^^^^^
+AttributeError: 'User' object has no attribute 'org'

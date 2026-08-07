@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Repository | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Styles moved to design-system.css and global components */
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+        <main class="app-main">
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner">
+                <!-- Standardized Header -->
+                <header class="ds-header-layout section-spacing px-0">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Knowledge Repository</h1>
+                            <p class="ds-text-secondary mb-0">Centralized archive of all completed quality projects. Learn from past solutions and promote best practices.</p>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Standardized Search Area -->
+                <div class="glass-card ds-card mb-4">
+                    <div class="ds-card-body p-4">
+                        <div class="h-stack justify-content-between flex-wrap gap-3">
+                            <div class="h-stack gap-3">
+                                <div class="v-stack">
+                                    <label class="ds-label mb-2">SEARCH</label>
+                                    <div class="position-relative">
+                                        <i data-lucide="search" class="position-absolute text-muted" style="left: 12px; top: 10px; width: 16px; height: 16px;"></i>
+                                        <input type="text" class="ds-input" id="repoSearchInput" placeholder="Search projects..." style="width: 250px; padding-left: 36px;" oninput="repoApp.onSearchInput()">
+                                    </div>
+                                </div>
+                                <div class="v-stack">
+                                    <label class="ds-label mb-2">DEPARTMENT</label>
+                                    <select class="ds-input ds-select" id="filterDept" style="width: 200px;" onchange="repoApp.search(1)">
+                                        <option value="">All Departments</option>
+                                    </select>
+                                </div>
+                                <div class="v-stack">
+                                    <label class="ds-label mb-2">CATEGORY</label>
+                                    <select class="ds-input ds-select" id="filterCategory" style="width: 180px;" onchange="repoApp.search(1)">
+                                        <option value="">All Categories</option>
+                                        <option value="Quality">Quality</option>
+                                        <option value="Productivity">Productivity</option>
+                                        <option value="Cost">Cost</option>
+                                        <option value="Delivery">Delivery</option>
+                                        <option value="Safety">Safety</option>
+                                        <option value="Morale">Morale</option>
+                                        <option value="Environment">Environment</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="browseSection">
+                    <div class="corporate-grid" id="projectGrid"></div>
+                    <nav class="mt-5 d-flex justify-content-center">
+                        <div id="pagination" class="d-flex gap-2"></div>
+                    </nav>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content glass-card">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title fw-bold" id="detailTitle">Project Title</h5>
+                        <p class="text-xs text-muted mb-0" id="detailMeta">Category • Archived on</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detailBody">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        const repoApp = {
+            currentPage: 1,
+            perPage: 12,
+
+            async init() {
+                QCMS.init();
+                const searchInput = document.getElementById('globalSearchInput');
+                if (searchInput) {
+                    searchInput.placeholder = "Search repository...";
+                    searchInput.oninput = () => this.onSearchInput();
+                }
+                this.loadDepartments();
+                this.search();
+                if (window.lucide) lucide.createIcons();
+            },
+
+            searchTimeout: null,
+            onSearchInput() {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => this.search(1), 300);
+            },
+
+            async loadDepartments() {
+                try {
+                    const depts = await api.get('/projects/departments');
+                    const select = document.getElementById('filterDept');
+                    depts.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.id;
+                        opt.textContent = d.name;
+                        select.appendChild(opt);
+                    });
+                } catch (e) { console.error("Failed to load departments:", e); }
+            },
+
+            async search(page = 1) {
+                this.currentPage = page;
+                const keyword = document.getElementById('repoSearchInput')?.value || document.getElementById('globalSearchInput')?.value || '';
+                const dept = document.getElementById('filterDept').value;
+                const category = document.getElementById('filterCategory').value;
+
+                let params = `page=${page}&per_page=${this.perPage}`;
+                if (keyword) params += `&q=${encodeURIComponent(keyword)}`;
+                if (dept) params += `&department_id=${dept}`;
+                if (category) params += `&category=${category}`;
+
+                const grid = document.getElementById('projectGrid');
+                grid.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>';
+
+                try {
+                    const result = await api.get(`/repository/search?${params}`);
+                    this.renderGrid(result.results, result.total, result.pages);
+                } catch (err) {
+                    grid.innerHTML = '<div class="col-12 text-center py-5"><p class="text-muted">No archived projects found.</p></div>';
+                }
+            },
+            renderGrid(projects, total, pages) {
+                const grid = document.getElementById('projectGrid');
+                const query = document.getElementById('repoSearchInput')?.value || document.getElementById('globalSearchInput')?.value || '';
+
+                if (!projects || projects.length === 0) {
+                    if (query) {
+                        grid.innerHTML = `<div class="col-12 py-5 px-3">
+                            ${QCMS.emptyState('No Projects Found', `We couldn't find any projects matching "${query}".`, 'search-x')}
+                        </div>`;
+                    } else {
+                        grid.innerHTML = `<div class="col-12 py-5 px-3">
+                            ${QCMS.emptyState('Archive Empty', 'No archived projects are currently available for the selected filters.', 'folder-search')}
+                        </div>`;
+                    }
+                    if (window.lucide) lucide.createIcons();
+                    document.getElementById('pagination').innerHTML = '';
+                    return;
+                }
+
+                grid.innerHTML = projects.map(p => `
+                <div class="glass-card ds-card fade-in h-100">
+                    <div class="ds-card-header h-stack justify-content-between">
+                        ${QCMS.categoryBadge(p.category || 'General')}
+                        ${p.department_name ? `<small class="text-xs text-secondary fw-bold uppercase opacity-60">${p.department_name}</small>` : ''}
+                    </div>
+                    <div class="ds-card-body p-4">
+                        <h5 class="fw-bold mb-3" style="font-size: 1.1rem; color: var(--ds-text-main);">${p.title}</h5>
+                        ${p.problem_summary ? `<p class="text-sm ds-text-secondary mb-4 line-clamp-2">${p.problem_summary}</p>` : ''}
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <div class="glass-panel p-2 text-center" style="background: rgba(var(--ds-primary-rgb), 0.03); border-radius: 10px; border: 1px solid var(--ds-border-color);">
+                                    <small class="text-muted d-block text-xxs uppercase mb-1">KPI Improvement</small>
+                                    <span class="fw-bold text-accent" style="font-size: 1rem;">${p.kpi_improvement_pct || 0}%</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="glass-panel p-2 text-center" style="background: rgba(var(--ds-green-rgb), 0.03); border-radius: 10px; border: 1px solid var(--ds-border-color);">
+                                    <small class="text-muted d-block text-xxs uppercase mb-1">Cost Savings</small>
+                                    <span class="fw-bold text-green" style="font-size: 1rem;">₹${(p.cost_savings || 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="ds-btn ds-btn-secondary w-100" onclick="repoApp.viewDetail(${p.id})">
+                            <i data-lucide="external-link" style="width:14px;height:14px;"></i> View Solution
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+                let pagHtml = '';
+                for (let i = 1; i <= pages; i++) {
+                    pagHtml += `<button class="ds-btn ${i === this.currentPage ? 'ds-btn-primary' : 'ds-btn-secondary'} ds-btn-sm" 
+                            style="min-width:40px;" onclick="repoApp.search(${i})">${i}</button>`;
+                }
+                document.getElementById('pagination').innerHTML = pagHtml;
+                if (window.lucide) lucide.createIcons();
+            },
+
+            async viewDetail(entryId) {
+                try {
+                    const detail = await api.get(`/repository/${entryId}`);
+                    document.getElementById('detailTitle').textContent = detail.title;
+                    document.getElementById('detailMeta').textContent = `${detail.category || 'General'} • Archived ${new Date(detail.archived_at).toLocaleDateString()}`;
+
+                    const stages = [
+                        'Stage 1: Problem Definition & Project Initiation',
+                        'Stage 2: Observation & Data Collection',
+                        'Stage 3: Cause Identification',
+                        'Stage 4: Root Cause Analysis & Verification',
+                        'Stage 5: Countermeasure Planning & Solution Development',
+                        'Stage 6: Implementation & Change Management',
+                        'Stage 7: Performance Verification & Benefits Realization',
+                        'Stage 8: Standardization, Knowledge Sharing & Project Closure'
+                    ];
+
+                    const accordionItems = stages.map((s, i) => {
+                        const stageNum = i + 1;
+                        const stageData = (detail.all_stages || {})[stageNum] || {};
+                        const stageHTML = repoApp.renderStageHTML(stageNum, stageData);
+                        
+                        return `
+                            <div class="accordion-item bg-transparent border-0 mb-3 glass-card">
+                                <h2 class="accordion-header" id="headingStage${stageNum}">
+                                    <button class="accordion-button collapsed bg-transparent ds-text-main fw-semibold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStage${stageNum}" aria-expanded="false" aria-controls="collapseStage${stageNum}" style="box-shadow: none;">
+                                        <span class="ds-icon-circle bg-primary-soft text-primary me-2" style="width:24px;height:24px;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;">${stageNum}</span>
+                                        ${s}
+                                    </button>
+                                </h2>
+                                <div id="collapseStage${stageNum}" class="accordion-collapse collapse" aria-labelledby="headingStage${stageNum}" data-bs-parent="#stageAccordion">
+                                    <div class="accordion-body border-top border-light p-4 text-xs text-secondary">
+                                        ${stageHTML}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    document.getElementById('detailBody').innerHTML = `
+                        <div class="glass-panel p-4 mb-4">
+                            <h6 class="text-xxs fw-bold uppercase text-muted mb-3">Project Lifecycle (All Stages Completed)</h6>
+                            <div class="stage-timeline">
+                                ${stages.map((s, i) => `
+                                    <div class="stage-step completed">
+                                        <div class="stage-dot">${i + 1}</div>
+                                        <small class="text-xxs d-block mt-1">Stage ${i + 1}</small>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-lg-12">
+                                <div class="accordion" id="stageAccordion">
+                                    ${accordionItems}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    new bootstrap.Modal(document.getElementById('detailModal')).show();
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) { 
+                    console.error(e);
+                    QCMS.toast('Failed to load details', 'error'); 
+                }
+            },
+
+            renderStageHTML(stageId, data) {
+                if (!data || Object.keys(data).length === 0) {
+                    return '<div class="text-secondary italic text-xs py-2">No data recorded for this stage.</div>';
+                }
+
+                switch (stageId) {
+                    case 1: {
+                        const team = data.team || {};
+                        const bg = data.background_5w2h || {};
+                        const cp = data.current_performance || {};
+                        const tts = data.theme_target_schedule || {};
+                        const members = team.team_members || [];
+                        return `
+                            <div class="text-xs">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4"><strong>Circle Name:</strong> ${team.circle_name || '--'}</div>
+                                    <div class="col-md-4"><strong>Improvement Theme:</strong> ${tts.improvement_theme || '--'}</div>
+                                    <div class="col-md-4"><strong>Expected Benefit:</strong> ${tts.expected_benefit || '--'}</div>
+                                </div>
+                                
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">5W2H Background Analysis</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-4"><strong>What:</strong> ${bg.what || '--'}</div>
+                                    <div class="col-md-4"><strong>Where:</strong> ${bg.where || '--'}</div>
+                                    <div class="col-md-4"><strong>When:</strong> ${bg.when || '--'}</div>
+                                    <div class="col-md-4"><strong>Who:</strong> ${bg.who || '--'}</div>
+                                    <div class="col-md-4"><strong>Why:</strong> ${bg.why || '--'}</div>
+                                    <div class="col-md-4"><strong>How Discovered:</strong> ${bg.how_discovered || '--'}</div>
+                                    <div class="col-md-4"><strong>How Big:</strong> ${bg.how_big || '--'}</div>
+                                    <div class="col-md-12"><strong>Problem Definition:</strong> ${bg.problem_definition || '--'}</div>
+                                </div>
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Current Performance Metrics</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-4"><strong>Current KPI Level:</strong> ${cp.current_kpi || '--'}</div>
+                                    <div class="col-md-4"><strong>Defect Rate:</strong> ${cp.defect_rate || '--'}</div>
+                                    <div class="col-md-4"><strong>Complaints Count:</strong> ${cp.complaint_count || '--'}</div>
+                                    <div class="col-md-4"><strong>Cost Impact:</strong> ${cp.cost_impact || '--'}</div>
+                                    <div class="col-md-4"><strong>Downtime:</strong> ${cp.downtime || '--'}</div>
+                                </div>
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Team Members</h6>
+                                ${members.length > 0 ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Member Name</th><th>Role</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${members.map(m => {
+                                                    const mName = typeof m === 'string' ? m : (m.name || m.member_name || m.full_name || m.user_name || m.username || '--');
+                                                    const mRole = typeof m === 'string' ? 'Team Member' : (m.role || m.designation || 'Team Member');
+                                                    return `<tr><td>${mName}</td><td>${mRole}</td></tr>`;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic">No team members added.</div>'}
+                            </div>
+                        `;
+                    }
+                    case 2: {
+                        const po = data.process_observation || {};
+                        const sv = data.standard_verification || {};
+                        const dc = data.data_collection || {};
+                        return `
+                            <div class="text-xs">
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Process Observation & Walk</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-4"><strong>Observer:</strong> ${po.observer || '--'}</div>
+                                    <div class="col-md-4"><strong>Date:</strong> ${po.date || '--'}</div>
+                                    <div class="col-md-4"><strong>Flow Version:</strong> ${po.flow_version || '--'}</div>
+                                    <div class="col-md-4"><strong>Area:</strong> ${po.area || '--'}</div>
+                                    <div class="col-md-4"><strong>Step Observed:</strong> ${po.step || '--'}</div>
+                                    <div class="col-md-12"><strong>Notes:</strong> ${po.notes || '--'}</div>
+                                </div>
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Standard & SOP Verification</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6"><strong>SOP:</strong> Available: ${sv.sop_avail ? 'Yes' : 'No'} | Followed: ${sv.sop_follow ? 'Yes' : 'No'} | Dev: ${sv.sop_dev ? 'Yes' : 'No'}</div>
+                                    <div class="col-md-6"><strong>SOP Details:</strong> ${sv.sop_details || '--'}</div>
+                                    <div class="col-md-6"><strong>Spec:</strong> Available: ${sv.spec_avail ? 'Yes' : 'No'} | Followed: ${sv.spec_follow ? 'Yes' : 'No'} | Dev: ${sv.spec_dev ? 'Yes' : 'No'}</div>
+                                    <div class="col-md-6"><strong>Spec Details:</strong> ${sv.spec_details || '--'}</div>
+                                </div>
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Data Collection Sources</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-6"><strong>Sources Checked:</strong> ${(dc.sources || []).join(', ') || '--'}</div>
+                                    <div class="col-md-6"><strong>Historical Trend:</strong> ${dc.trend || '--'}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    case 3: {
+                        const bs = data.brainstorming || {};
+                        const rawReg = (data.cause_register && data.cause_register.length > 0)
+                            ? data.cause_register
+                            : ((data.fishbone_l1 && data.fishbone_l1.length > 0) ? data.fishbone_l1 : (data.fishbone_l2 || []));
+                        const verList = data.cause_verification || [];
+
+                        return `
+                            <div class="text-xs">
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Brainstorming Session</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6"><strong>Session Name:</strong> ${bs.session_name || '--'}</div>
+                                    <div class="col-md-6"><strong>Facilitator:</strong> ${bs.facilitator || '--'}</div>
+                                    <div class="col-md-12"><strong>Participants:</strong> ${bs.participants || '--'}</div>
+                                    <div class="col-md-12"><strong>Notes:</strong> ${bs.notes || '--'}</div>
+                                </div>
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Cause Register</h6>
+                                ${rawReg.length > 0 ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Category</th><th>Identified Cause</th><th>Verification Method</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${rawReg.map(r => {
+                                                    const category = r.category || '--';
+                                                    const causeText = r.cause || r.description || r.level1 || r.level2 || '--';
+                                                    const verMatch = verList.find(v => v.cause && (causeText.includes(v.cause) || v.cause.includes(causeText))) || {};
+                                                    const methodText = r.verification_method || r.method || verMatch.method || verMatch.verification_method || r.origin || '--';
+                                                    return `<tr><td>${category}</td><td>${causeText}</td><td>${methodText}</td></tr>`;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic">No causes registered.</div>'}
+                            </div>
+                        `;
+                    }
+                    case 4: {
+                        const why = data.why_why_analysis || [];
+                        const reg = data.root_cause_register || [];
+                        return `
+                            <div class="text-xs">
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Why-Why Root Cause Analysis</h6>
+                                ${why.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Problem</th><th>Why 1</th><th>Why 2</th><th>Why 3</th><th>Why 4</th><th>Why 5</th><th>Root Cause</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${why.map(r => `<tr>
+                                                    <td>${r.problem || '--'}</td>
+                                                    <td>${r.why1 || '--'}</td>
+                                                    <td>${r.why2 || '--'}</td>
+                                                    <td>${r.why3 || '--'}</td>
+                                                    <td>${r.why4 || '--'}</td>
+                                                    <td>${r.why5 || '--'}</td>
+                                                    <td>${r.root_cause || '--'}</td>
+                                                </tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No Why-Why analysis records.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Root Cause Register</h6>
+                                ${reg.length > 0 ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>ID</th><th>Confirmed Root Cause</th><th>Source of Evidence</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${reg.map(r => `<tr><td>${r.id || '--'}</td><td>${r.root_cause || '--'}</td><td>${r.source || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic">No root causes registered.</div>'}
+                            </div>
+                        `;
+                    }
+                    case 5: {
+                        const map = data.root_cause_mapping || [];
+                        const cba = data.cost_benefit_analysis || [];
+                        const action = data.action_plan_3w1h || [];
+                        return `
+                            <div class="text-xs">
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Root Cause & Countermeasure Mapping</h6>
+                                ${map.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Root Cause</th><th>Proposed Permanent Solution</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${map.map(r => `<tr><td>${r.root_cause || '--'}</td><td>${r.proposed_solution || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No root cause mapping recorded.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Cost-Benefit Analysis</h6>
+                                ${cba.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Solution</th><th>Estimated Cost</th><th>Expected Benefit</th><th>Est. ROI</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${cba.map(r => `<tr><td>${r.solution || '--'}</td><td>${r.estimated_cost || '--'}</td><td>${r.expected_benefit || '--'}</td><td>${r.roi || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No cost benefit analysis.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Action Plan (3W1H)</h6>
+                                ${action.length > 0 ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Action Item</th><th>Owner</th><th>Target Date</th><th>How/Details</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${action.map(r => `<tr><td>${r.what || '--'}</td><td>${r.who || '--'}</td><td>${r.when || '--'}</td><td>${r.how || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic">No action plans.</div>'}
+                            </div>
+                        `;
+                    }
+                    case 6: {
+                        const exec = data.implementation_execution || [];
+                        const change = data.change_management || [];
+                        const training = data.training_awareness || [];
+                        return `
+                            <div class="text-xs">
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Execution & Deployment Log</h6>
+                                ${exec.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Action</th><th>Owner</th><th>Start</th><th>End</th><th>Status</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${exec.map(r => `<tr><td>${r.action || '--'}</td><td>${r.owner || '--'}</td><td>${r.start_date || '--'}</td><td>${r.end_date || '--'}</td><td>${r.status || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No execution logs.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Process Change Management</h6>
+                                ${change.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Change Description</th><th>SOP Updated?</th><th>Effective Date</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${change.map(r => `<tr><td>${r.change_description || '--'}</td><td>${r.sop_updated || '--'}</td><td>${r.date || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No process changes recorded.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Training & Awareness Details</h6>
+                                ${training.length > 0 ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Target Group</th><th>Module Name</th><th>Training Date</th><th>Attendance %</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${training.map(r => `<tr><td>${r.target_group || '--'}</td><td>${r.training_module || '--'}</td><td>${r.date || '--'}</td><td>${r.attendance_pct || '0'}%</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic">No training logs.</div>'}
+                            </div>
+                        `;
+                    }
+                    case 7: {
+                        const kpi = data.kpi_verification || [];
+                        const ba = data.before_vs_after || [];
+                        const roi = data.roi_validation || {};
+                        return `
+                            <div class="text-xs">
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">KPI Verification</h6>
+                                ${kpi.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Metric</th><th>Baseline</th><th>Target</th><th>Actual</th><th>Variance</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${kpi.map(r => `<tr><td>${r.metric || '--'}</td><td>${r.baseline || '--'}</td><td>${r.target || '--'}</td><td>${r.actual || '--'}</td><td>${r.variance || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No KPI metrics verified.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Before vs After Comparison</h6>
+                                ${ba.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Process / Metric</th><th>Before Condition</th><th>After Condition</th><th>Improvement %</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${ba.map(r => `<tr><td>${r.metric || '--'}</td><td>${r.before_condition || '--'}</td><td>${r.after_condition || '--'}</td><td>${r.improvement_pct || '0'}%</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No comparison records.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">ROI Verification</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-3"><strong>Total Investment:</strong> ${roi.total_investment || '--'}</div>
+                                    <div class="col-md-3"><strong>Annual Savings:</strong> ${roi.annual_savings || '--'}</div>
+                                    <div class="col-md-3"><strong>Payback Period:</strong> ${roi.payback_period || '--'}</div>
+                                    <div class="col-md-3"><strong>ROI %:</strong> ${roi.roi_pct || '--'}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    case 8: {
+                        const std = data.standardization || [];
+                        const deploy = data.horizontal_deployment || [];
+                        const lesson = data.lessons_learned || [];
+                        const team = data.team_recognition || [];
+                        return `
+                            <div class="text-xs">
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">SOP & Standardization</h6>
+                                ${std.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Document</th><th>Prev Version</th><th>New Version</th><th>Update Date</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${std.map(r => `<tr><td>${r.document || '--'}</td><td>${r.previous_version || '--'}</td><td>${r.new_version || '--'}</td><td>${r.update_date || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No standardized documents.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Horizontal Deployment</h6>
+                                ${deploy.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Area/Plant</th><th>Target Date</th><th>Status</th><th>Owner</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${deploy.map(r => `<tr><td>${r.area || '--'}</td><td>${r.target_date || '--'}</td><td>${r.status || '--'}</td><td>${r.owner || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No horizontal deployment.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Lessons Learned</h6>
+                                ${lesson.length > 0 ? `
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Category</th><th>Lesson</th><th>Future Recommendation</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${lesson.map(r => `<tr><td>${r.category || '--'}</td><td>${r.lesson || '--'}</td><td>${r.future_recommendation || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic mb-3">No lessons logged.</div>'}
+
+                                <h6 class="text-xxs fw-bold uppercase text-primary border-bottom pb-1 mb-2">Team Recognitions</h6>
+                                ${team.length > 0 ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
+                                            <thead>
+                                                <tr class="bg-light"><th>Member</th><th>Contribution</th><th>Award/Recognition</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${team.map(r => `<tr><td>${r.member || '--'}</td><td>${r.contribution || '--'}</td><td>${r.award || '--'}</td></tr>`).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : '<div class="text-secondary italic">No team recognitions.</div>'}
+                            </div>
+                        `;
+                    }
+                }
+            }
+        };
+        document.addEventListener('DOMContentLoaded', () => repoApp.init());
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,188 @@
+{
+  "common": {
+    "save": "ಬದಲಾವಣೆಗಳನ್ನು ಉಳಿಸಿ",
+    "cancel": "ರದ್ದುಮಾಡಿ",
+    "delete": "ಅಳಿಸಿ",
+    "edit": "ಸಂಪಾದಿಸಿ",
+    "view": "ವೀಕ್ಷಿಸಿ",
+    "search": "ಹುಡುಕಿ",
+    "loading": "ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
+    "no_data": "ಯಾವುದೇ ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ",
+    "actions": "ಕ್ರಮಗಳು",
+    "date": "ದಿನಾಂಕ",
+    "time": "ಸಮಯ",
+    "status_list": {
+      "active": "ಸಕ್ರಿಯ",
+      "trialing": "ಪ್ರಯೋಗ",
+      "suspended": "ಅಮಾನತುಗೊಳಿಸಲಾಗಿದೆ",
+      "expired": "ಅವಧಿ ಮೀರಿದೆ",
+      "pending": "ಬಾಕಿ ಉಳಿದಿದೆ",
+      "in_progress": "ಪ್ರಗತಿಯಲ್ಲಿದೆ",
+      "completed": "ಪೂರ್ಣಗೊಂಡಿದೆ",
+      "rejected": "ತಿರಸ್ಕರಿಸಲಾಗಿದೆ",
+      "failed": "ವಿಫಲವಾಗಿದೆ",
+      "done": "ಮುಗಿದಿದೆ",
+      "of": "of"
+    }
+  },
+  "sidebar": {
+    "labels": {
+      "master_control": "ಮಾಸ್ಟರ್ ಕಂಟ್ರೋಲ್",
+      "main": "ಮುಖ್ಯ",
+      "administration": "?????",
+      "management": "ನಿರ್ವಹಣೆ",
+      "resources": "ಸಂಪನ್ಮೂಲಗಳು",
+      "system": "ವ್ಯವಸ್ಥೆ"
+    },
+    "links": {
+      "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+      "platform_dashboard": "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+      "organizations": "ಸಂಸ್ಥೆಗಳು",
+      "revenue": "ಆದಾಯ ನಿಯಂತ್ರಣ",
+      "support": "ಬೆಂಬಲ ಡೆಸ್ಕ್",
+      "global_settings": "ಜಾಗತಿಕ ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+      "system_logs": "ಸಿಸ್ಟಮ್ ಲಾಗ್‌ಗಳು",
+      "overview": "ಅವಲೋಕನ",
+      "projects_repo": "ಪ್ರಾಜೆಕ್ಟ್ ರೆಪೋ",
+      "analytics": "ಅನಾಲಿಟಿಕ್ಸ್",
+      "user_management": "ಬಳಕೆದಾರರ ನಿರ್ವಹಣೆ",
+      "departments": "ಇಲಾಖೆಗಳು",
+      "audit_logs": "ಆಡಿಟ್ ಲಾಗ್‌ಗಳು",
+      "knowledge_base": "ಜ್ಞಾನದ ಮೂಲ",
+      "standards_sops": "ಮಾನದಂಡಗಳು ಮತ್ತು SOP ಗಳು",
+      "settings": "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+      "logout": "ಲಾಗ್ ಔಟ್",
+      "profile": "ಪ್ರೊಫೈಲ್"
+    }
+  },
+  "navbar": {
+    "search_placeholder": "ಪ್ರಾಜೆಕ್ಟ್‌ಗಳು ಅಥವಾ ಬಳಕೆದಾರರನ್ನು ಹುಡುಕಿ...",
+    "notifications": "ಅಧಿಸೂಚನೆಗಳು",
+    "light_mode": "ಲೈಟ್ ಮೋಡ್",
+    "dark_mode": "ಡಾರ್ಕ್ ಮೋಡ್"
+  },
+  "roles": {
+    "superadmin": "ಸೂಪರ್ ಅಡ್ಮಿನ್",
+    "admin": "ಅಡ್ಮಿನ್",
+    "team_leader": "ತಂಡದ ನಾಯಕ",
+    "facilitator": "ಫೆಸಿಲಿಟೇಟರ್",
+    "reviewer": "ವಿಮರ್ಶಕ",
+    "team_member": "ತಂಡದ ಸದಸ್ಯ"
+  },
+  "profile": {
+    "title": "ಬಳಕೆದಾರರ ಪ್ರೊಫೈಲ್",
+    "language_settings": "ಭಾಷಾ ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+    "select_language": "ಭಾಷೆಯನ್ನು ಆರಿಸಿ",
+    "update_profile": "ಪ್ರೊಫೈಲ್ ನವೀಕರಿಸಿ"
+  },
+  "settings": {
+    "branding": {
+      "title": "ಬ್ರ್ಯಾಂಡಿಂಗ್ ಮತ್ತು ಶೈಲಿ",
+      "primary_color": "ಪ್ರಾಥಮಿಕ ಥೀಮ್ ಬಣ್ಣ",
+      "logo_url": "ಲೋಗೋ URL / ಅಪ್‌ಲೋಡ್",
+      "favicon_url": "ಫೆವಿಕಾನ್ URL / ಅಪ್‌ಲೋಡ್",
+      "logo_preview": "ಲೋಗೋ ಮುನ್ನೋಟ",
+      "favicon_preview": "ಫೆವಿಕಾನ್ ಮುನ್ನೋಟ"
+    },
+    "localization": {
+      "title": "ಸ್ಥಳೀಕರಣ ಮತ್ತು UX",
+      "timezone": "ಸಿಸ್ಟಮ್ ಸಮಯ ವಲಯ",
+      "date_format": "ದಿನಾಂಕ ಸ್ವರೂಪ",
+      "currency": "ಮೂಲ ಕರೆನ್ಸಿ",
+      "language": "ಡೀಫಾಲ್ಟ್ ಭಾಷೆ"
+    }
+  },
+  "dashboards": {
+    "common": {
+      "overview": "ಅವಲೋಕನ",
+      "analytics": "ಅನಾಲಿಟಿಕ್ಸ್",
+      "all_status": "ಎಲ್ಲಾ ಸ್ಥಿತಿ",
+      "command": "ಕಮಾಂಡ್",
+      "loading": "ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
+      "department": "ಇಲಾಖೆ",
+      "status": "ಸ್ಥಿತಿ"
+    },
+    "admin": {
+      "title": "ಸಂಸ್ಥೆಯ ಅವಲೋಕನ",
+      "subtitle": "ಪ್ರಾಜೆಕ್ಟ್‌ಗಳನ್ನು ನಿರ್ವಹಿಸಿ, ಚಟುವಟಿಕೆಯನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡಿ ಮತ್ತು ಸಿಸ್ಟಮ್ ಬಳಕೆದಾರರನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡಿ.",
+      "strategic_distribution": "ಕಾರ್ಯತಂತ್ರದ ವಿತರಣೆ",
+      "projects_by_category": "ವರ್ಗದ ಪ್ರಕಾರ ಪ್ರಾಜೆಕ್ಟ್‌ಗಳು",
+      "workflow_metrics": "ವರ್ಕ್‌ಫ್ಲೋ ಮೆಟ್ರಿಕ್ಸ್",
+      "projects_by_stage": "ಹಂತದ ಪ್ರಕಾರ ಪ್ರಾಜೆಕ್ಟ್‌ಗಳು",
+      "pipeline_title": "ಸಕ್ರಿಯ ವಿಧಾನ ಪೈಪ್‌ಲೈನ್",
+      "init_project": "ಪ್ರಾಜೆಕ್ಟ್ ಪ್ರಾರಂಭಿಸಿ",
+      "project_identity": "ಪ್ರಾಜೆಕ್ಟ್ ಗುರುತು",
+      "current_stage": "ಪ್ರಸ್ತುತ ಹಂತ",
+      "methodology_status": "ವಿಧಾನದ ಸ್ಥಿತಿ",
+      "loading_pipeline": "ಪೈಪ್‌ಲೈನ್ ಡೇಟಾವನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ...",
+      "stakeholders_title": "ಉದ್ಯಮ ಪಾಲುದಾರರು",
+      "manage_users": "ಬಳಕೆದಾರರನ್ನು ನಿರ್ವಹಿಸಿ",
+      "provision_access": "ಪ್ರವೇಶ ಒದಗಿಸಿ",
+      "stakeholder": "ಪಾಲುದಾರ",
+      "corporate_role": "ಕಾರ್ಪೊರೇಟ್ ಪಾತ್ರ",
+      "access_status": "ಪ್ರವೇಶ ಸ್ಥಿತಿ",
+      "last_active": "ಕೊನೆಯದಾಗಿ ಸಕ್ರಿಯ",
+      "sync_directory": "ಬಳಕೆದಾರರ ಡೈರೆಕ್ಟರಿಯನ್ನು ಸಿಂಕ್ರೊನೈಸ್ ಮಾಡಲಾಗುತ್ತಿದೆ..."
+    },
+    "ceo": {
+      "executive_summary": "Executive Strategic Summary",
+      "financial_impact": "Cumulative Financial Impact",
+      "project_velocity": "Project Execution Velocity",
+      "quality_roi": "Quality Circle ROI",
+      "strategic_alignment": "Strategic Resource Alignment",
+      "org_health": "Organizational Quality Health",
+      "priority_initiatives": "Priority Strategic Initiatives",
+      "total_savings": "Total Savings",
+      "completion_rate": "Completion Rate",
+      "avg_improvement": "Avg. KPI Improvement",
+      "health_score": "Health Score",
+      "active_initiatives": "Active Strategic Initiatives",
+      "view_all_projects": "View All Projects",
+      "savings_trend": "Cost Savings Trend (6 Months)",
+      "impact_category": "Impact by Category",
+      "stage_completion": "Avg. Stage Completion",
+      "days": "days",
+      "subtitle": "Executive oversight of organizational performance and ROI analytics.",
+      "savings_trend_sub": "Monthly cost savings from quality circles",
+      "org_health_sub": "Composite efficiency index",
+      "insight_velocity": "Average project stage completion time is {days} days.",
+      "insight_success": "Project success rate stands at {rate}% across {total} initiatives.",
+      "insight_participation": "{active} departments ({rate}%) are actively utilizing the QCMS platform.",
+      "insight_recommendation": "Recommendation: Increase facilitator engagement in underperforming units.",
+      "active_initiatives_sub": "of {total} total projects",
+      "executive_access": "Executive Access",
+      "project_initiative": "Project Initiative",
+      "roi_priority": "ROI Priority",
+      "current_stage": "Current Stage",
+      "status": "Status",
+      "retrieving_initiatives": "Retrieving priority initiatives...",
+      "no_initiatives": "No active initiatives found."
+    },
+    "workflow": {
+      "stage1": "Problem Identification",
+      "stage2": "Problem Selection",
+      "stage3": "Initial Analysis",
+      "stage4": "Cause Analysis",
+      "stage5": "Root Cause Analysis",
+      "stage6": "Data Analysis",
+      "stage7": "Solution Development",
+      "stage8": "Implementation & ROI"
+    },
+    "analytics": {
+      "title": "Performance Analytics",
+      "subtitle": "Advanced KPI tracking and organizational impact metrics.",
+      "growth_trends": "Project Growth Trends",
+      "distribution": "Project Distribution by Dept",
+      "roi_distribution": "ROI Impact Distribution",
+      "velocity": "Department Velocity (Avg Days)",
+      "leaderboard": "Top Performance Leaderboard",
+      "leaderboard_sub": "Ranked by KPI Improvement %",
+      "project_title": "Project Title",
+      "kpi_improvement": "KPI Improvement",
+      "cost_savings": "Cost Savings",
+      "chart_velocity": "Project Velocity (Count)",
+      "chart_active_projects": "Active Projects",
+      "chart_avg_days": "Avg Days per Stage"
+    }
+  }
+}

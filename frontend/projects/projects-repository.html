@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Repository | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .stalled-row { background: rgba(239, 68, 68, 0.05) !important; border-left: 3px solid #ef4444 !important; }
+        .stalled-badge { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-left: 8px; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .efficiency-progress { height: 6px; background: rgba(var(--ds-primary-rgb), 0.05); border-radius: 3px; overflow: hidden; margin-top: 4px; width: 100px; }
+        .efficiency-fill { height: 100%; background: var(--ds-accent); }
+        .ds-label { font-size: 12px !important; letter-spacing: 0.02em !important; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner">
+                <header class="ds-header-layout section-spacing px-0">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Project Repository</h1>
+                            <p class="ds-text-secondary mb-0">Real-time database of all QCMS initiatives. Monitor progress, efficiency, and identify inactive projects across the organization.</p>
+                        </div>
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" id="initProjectBtn" 
+                            onclick="repoUI.openInitModal()"
+                            style="display:none;">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Create New Project
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Summary Stats Section -->
+                <div class="row g-4 mb-4" id="repoStats">
+                    <div class="col-md-3">
+                        <div class="ds-card p-3 h-100 skeleton">
+                            <div style="height: 100px;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="ds-card p-3 h-100 skeleton">
+                            <div style="height: 100px;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="ds-card p-3 h-100 skeleton">
+                            <div style="height: 100px;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="ds-card p-3 h-100 skeleton">
+                            <div style="height: 100px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters & Search -->
+                <div class="glass-card mb-4 fade-in">
+                    <div class="ds-card-body p-4">
+                        <div class="row g-4 align-items-end">
+
+                            <div class="col-lg-2 col-md-4">
+                                <label class="ds-label mb-2">
+                                    <i data-lucide="building-2"></i> DEPARTMENT
+                                </label>
+                                <select class="ds-input ds-select" id="deptFilter" onchange="repoUI.loadData()">
+                                    <option value="">All Departments</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-2 col-md-4">
+                                <label class="ds-label mb-2">
+                                    <i data-lucide="activity"></i> STATUS
+                                </label>
+                                <select class="ds-input ds-select" id="statusFilter" onchange="repoUI.loadData()">
+                                    <option value="">All Status</option>
+                                    <option value="Active" selected>Active</option>
+                                    <option value="Closed">Completed</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Pending Approval">Pending Approval</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-2 col-md-4">
+                                <label class="ds-label mb-2">
+                                    <i data-lucide="layers"></i> STAGE
+                                </label>
+                                <select class="ds-input ds-select" id="stageFilter" onchange="repoUI.loadData()">
+                                    <option value="">All Stages</option>
+                                    <option value="1">Stage 1: Problem Definition & Project Initiation</option>
+                                    <option value="2">Stage 2: Observation & Data Collection</option>
+                                    <option value="3">Stage 3: Cause Identification</option>
+                                    <option value="4">Stage 4: Root Cause Analysis & Verification</option>
+                                    <option value="5">Stage 5: Countermeasure Planning & Solution Development</option>
+                                    <option value="6">Stage 6: Implementation & Change Management</option>
+                                    <option value="7">Stage 7: Performance Verification & Benefits Realization</option>
+                                    <option value="8">Stage 8: Standardization, Knowledge Sharing & Project Closure</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-3 col-md-12 d-flex gap-2">
+                                <button class="ds-btn ds-btn-primary flex-grow-1" onclick="repoUI.loadData()">
+                                    <i data-lucide="refresh-cw"></i> Sync Data
+                                </button>
+                                <button class="ds-btn ds-btn-primary flex-grow-1" id="initProjectBtn"
+                                    style="display:none;" onclick="repoUI.openInitModal()">
+                                    <i data-lucide="plus"></i> Create New Project
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Master Table -->
+                <div class="ds-card fade-in">
+                    <div class="ds-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="ds-table ds-table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Project Identity</th>
+                                        <th>Leader / Team</th>
+                                        <th>Current progress</th>
+                                        <th>Efficiency</th>
+                                        <th>Last Update</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="repoTableBody">
+                                    <script>
+                                        document.write(QCMS.tableSkeleton(8));
+                                    </script>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Pagination Footer -->
+                    <div class="ds-card-footer px-4 py-3 border-top" id="repoPagination" style="display:none; background: var(--ds-bg-surface);">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <span class="text-sm text-muted fw-medium" id="repoPaginationInfo">Showing 1-10 of 0 projects</span>
+                            <div class="d-flex gap-2">
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm" id="repoPrevBtn" onclick="repoUI.changePage(-1)">
+                                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Previous
+                                </button>
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm" id="repoNextBtn" onclick="repoUI.changePage(1)">
+                                    Next <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <div class="modal fade" id="initModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content" style="border-radius:16px;border:1px solid var(--ds-border-color);background:#ffffff;box-shadow:0 25px 60px rgba(0,0,0,.18);overflow:hidden;">
+
+                <!-- Header -->
+                <div class="modal-header px-4 py-3" style="background:#f8f9fa;border-bottom:1px solid #e9ecef;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:40px;height:40px;border-radius:10px;background:var(--ds-primary);display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="folder-plus" style="width:20px;height:20px;color:#fff;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title mb-0 fw-bold">Create New Project</h5>
+                            <small class="ds-text-secondary">Fill in the details below to register your QC Story project</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body px-4 py-4" style="max-height:75vh;overflow-y:auto;">
+                    <form id="initProjectForm">
+
+                        <!-- ── Section 0: Project Source Selection ── -->
+                        <div class="p-3 mb-4 rounded-3 border" style="background:#f8fafc;">
+                            <label class="ds-label fw-bold mb-2 text-dark"><i data-lucide="git-branch" class="me-1"></i> Project Source</label>
+                            <div class="d-flex align-items-center gap-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="projectSourceOption" id="optCreateNew" value="new" checked onchange="repoUI.handleSourceOptionChange('new')">
+                                    <label class="form-check-label fw-semibold text-sm" for="optCreateNew">Create New Project</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="projectSourceOption" id="optImportIdea" value="import" onchange="repoUI.handleSourceOptionChange('import')">
+                                    <label class="form-check-label fw-semibold text-sm text-primary" for="optImportIdea">
+                                        <i data-lucide="sparkles" style="width:14px;height:14px;" class="me-1"></i> Import Approved Idea
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Idea Reference Code Box (Shown when 'Import Approved Idea' is selected) -->
+                            <div id="ideaImportBox" class="mt-3 p-3 rounded-3 border bg-white" style="display:none;">
+                                <label class="ds-label fw-bold mb-1 text-main">Idea Reference Code *</label>
+                                <div class="d-flex gap-2">
+                                    <input type="text" class="ds-input font-monospace text-uppercase" id="ideaCodeInput" placeholder="e.g. IDA-2026-006" oninput="repoUI.handleIdeaCodeInput(this.value)">
+                                    <button type="button" class="ds-btn ds-btn-primary" id="btnFetchIdea" disabled onclick="repoUI.fetchApprovedIdea()">
+                                        <i data-lucide="search" style="width:14px;height:14px;" class="me-1"></i> Fetch
+                                    </button>
+                                </div>
+                                <div id="ideaFetchStatus" class="mt-2"></div>
+                            </div>
+                        </div>
+
+                        <!-- ── Section 1: Project Identity ── -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
+                                <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ds-primary);">Project Identity</span>
+                                <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="type"></i> Project Title <span class="text-danger">*</span></label>
+                                        <input type="text" class="ds-input" id="projTitle" placeholder="e.g. Reduce Assembly Line Defects by 60%" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="tag"></i> Project Type <span class="text-danger">*</span></label>
+                                        <select class="ds-input ds-select" id="projType" required>
+                                            <option value="" disabled selected>Select Type</option>
+                                            <option value="Quality">Quality</option>
+                                            <option value="Productivity">Productivity</option>
+                                            <option value="Cost">Cost</option>
+                                            <option value="Delivery">Delivery</option>
+                                            <option value="Safety">Safety</option>
+                                            <option value="Morale">Morale</option>
+                                            <option value="Environment">Environment</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="hash"></i> Ref. Number</label>
+                                        <input type="text" class="ds-input" id="projRefNumber" placeholder="Optional">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Section 2: Location & Source ── -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
+                                <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ds-primary);">Location &amp; Source</span>
+                                <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="map-pin"></i> Work Area <span class="text-danger">*</span></label>
+                                        <input type="text" class="ds-input" id="projWorkArea" placeholder="e.g. Assembly Line 3" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="briefcase"></i> Department <span class="text-danger">*</span></label>
+                                        <select class="ds-input ds-select" id="projDepartment" onchange="repoUI.handleDepartmentChange(this.value)" required>
+                                            <option value="" disabled selected>Select Department</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="building-2"></i> Plant / Location <span class="text-danger">*</span></label>
+                                        <input type="text" class="ds-input" id="projPlant" placeholder="e.g. Unit 1 – Pune" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="git-merge"></i> Project Source <span class="text-danger">*</span></label>
+                                        <select class="ds-input ds-select" id="projSource" required>
+                                            <option value="" disabled selected>Select Source</option>
+                                            <option value="Policy">Policy</option>
+                                            <option value="MPCP">MPCP</option>
+                                            <option value="Problem Bank">Problem Bank</option>
+                                            <option value="Customer Complaint">Customer Complaint</option>
+                                            <option value="Audit Finding">Audit Finding</option>
+                                            <option value="Safety Incident">Safety Incident</option>
+                                            <option value="Employee Suggestion">Employee Suggestion</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Section 3: People ── -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
+                                <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ds-primary);">People</span>
+                                <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="user-check"></i> Facilitator <span class="text-danger">*</span></label>
+                                        <select class="ds-input ds-select" id="projFacilitator" required>
+                                            <option value="" disabled selected>Loading...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="shield-check"></i> Reviewer <span class="text-danger">*</span></label>
+                                        <select class="ds-input ds-select" id="projReviewer" required>
+                                            <option value="" disabled selected>Loading...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-12 mt-3">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="users"></i> Team Members <span class="ds-text-secondary fw-normal">(Select Multiple)</span></label>
+                                        <div class="mb-2">
+                                            <input type="text" class="ds-input py-1 px-3 text-sm" style="height:34px;" id="memberSearchInput" placeholder="Search members by name, email, or phone..." oninput="repoUI.handleMemberSearch(this.value)">
+                                        </div>
+                                        <div class="members-select-container p-2 border rounded d-flex flex-wrap gap-2 mb-2" style="background: var(--ds-surface); min-height: 54px; max-height: 150px; overflow-y: auto;" id="memberCheckboxes">
+                                            <span class="text-muted text-sm p-1">Select department first</span>
+                                        </div>
+                                        <div id="memberPaginationControls" class="d-flex align-items-center justify-content-between p-2 border rounded bg-light" style="font-size: 0.8rem; display: none !important;">
+                                            <span class="text-muted fw-medium" id="memberPageInfo">Showing 0 of 0 employees</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-0 text-xs" id="memberPrevPageBtn" onclick="repoUI.changeMemberPage(-1)" disabled><i data-lucide="chevron-left" style="width:12px;height:12px;"></i> Prev</button>
+                                                <span class="fw-bold text-primary px-2" id="memberPageBadge">Page 1 of 1</span>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-0 text-xs" id="memberNextPageBtn" onclick="repoUI.changeMemberPage(1)" disabled>Next <i data-lucide="chevron-right" style="width:12px;height:12px;"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Selected Members with Team Leader radio selection -->
+                                <div class="col-md-12 mb-3" id="selectedMembersGroup" style="display:none;">
+                                    <label class="ds-label mb-2"><i data-lucide="award"></i> Selected Project Team (Select the Team Leader)</label>
+                                    <div class="border rounded p-3 bg-light" id="selectedMembersList" style="display:flex; flex-direction:column; gap:8px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Section 4: Timeline ── -->
+                        <div class="mb-2">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
+                                <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ds-primary);">Timeline</span>
+                                <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="calendar"></i> Planned Start Date <span class="text-danger">*</span></label>
+                                        <input type="date" class="ds-input" id="projStartDate" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="ds-field">
+                                        <label class="ds-label"><i data-lucide="calendar-check"></i> Planned End Date <span class="text-danger">*</span></label>
+                                        <input type="date" class="ds-input" id="projEndDate" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer px-4 py-3" style="background:#f8f9fa;border-top:1px solid #e9ecef;">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <small class="ds-text-secondary"><i data-lucide="info" style="width:12px;height:12px;"></i> Fields marked * are required. You can add team members in Stage 1.</small>
+                        <div class="d-flex gap-2">
+                            <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                            <button class="ds-btn ds-btn-primary" onclick="repoUI.initProject()" style="min-width:160px;">
+                                <i data-lucide="zap" style="width:14px;height:14px;"></i> Create &amp; Go To Stage 1
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+        </main>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+    function esc(str) {
+        if (!str) return '';
+        return str.toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    const repoUI = {
+        data: [],
+        isAdmin: false,
+        loadedDepartmentMembers: [],
+        allOrgMembers: [],
+        checkedMemberIds: new Set(),
+        checkedMemberNames: {},
+        currentPage: 1,
+        totalPages: 1,
+        perPage: 10,
+        totalProjects: 0,
+
+        getSearchScore(member, q) {
+            const fname = (member.full_name || '').toLowerCase();
+            const uname = (member.username || '').toLowerCase();
+            const email = (member.email || '').toLowerCase();
+            const phone = (member.phone || '').toLowerCase();
+            const dept = (member.department || '').toLowerCase();
+            const role = (member.role || '').toLowerCase();
+
+            // 1. Exact matches
+            if (fname === q || uname === q) return 1;
+            if (email === q) return 2;
+            if (phone === q) return 3;
+
+            // 2. Prefix matches
+            if (fname.startsWith(q) || uname.startsWith(q)) return 4;
+            if (email.startsWith(q)) return 5;
+            if (phone.startsWith(q)) return 6;
+
+            // 3. Substring matches
+            if (fname.includes(q) || uname.includes(q)) return 7;
+            if (email.includes(q)) return 8;
+            if (phone.includes(q)) return 9;
+            if (dept.includes(q) || role.includes(q)) return 10;
+
+            return null;
+        },
+
+        async init() {
+            QCMS.init();
+            
+            const searchInput = document.getElementById('globalSearchInput');
+            if (searchInput) {
+                searchInput.placeholder = "Search projects...";
+            }
+
+            const memberSearchInput = document.getElementById('memberSearchInput');
+            if (memberSearchInput) {
+                memberSearchInput.addEventListener('input', (e) => {
+                    const q = e.target.value.toLowerCase().trim();
+                    if (!q) {
+                        const deptSel = document.getElementById('projDepartment');
+                        if (deptSel && deptSel.value) {
+                            this.renderMemberCheckboxes(this.loadedDepartmentMembers);
+                        } else {
+                            const memberCb = document.getElementById('memberCheckboxes');
+                            if (memberCb) {
+                                memberCb.innerHTML = '<span class="text-muted text-sm p-1">Select department first</span>';
+                            }
+                        }
+                        return;
+                    }
+                    
+                    const scored = this.allOrgMembers
+                        .map(m => ({ member: m, score: this.getSearchScore(m, q) }))
+                        .filter(x => x.score !== null)
+                        .sort((a, b) => a.score - b.score)
+                        .map(x => x.member);
+                        
+                    this.renderMemberCheckboxes(scored);
+                });
+            }
+
+            const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+            const roleName = (user.role && user.role.name) ? user.role.name : (user.role || '');
+            const role = roleName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            this.isAdmin = (role === 'admin' || role === 'superadmin');
+
+            // Show Initialize Project button ONLY for Team Members & Team Leaders (Admins cannot create/edit projects)
+            const allowedRoles = ['teamleader', 'teammember'];
+            if (allowedRoles.includes(role)) {
+                const btn = document.getElementById('initProjectBtn');
+                if (btn) btn.style.display = '';
+            }
+            
+            await this.loadDepartments();
+            await this.loadData();
+            
+            this.setupFilterListeners();
+        },
+
+        async handleDepartmentChange(deptId) {
+            if (!deptId) return;
+            try {
+                // Fetch facilitators, reviewers, and team members for this department
+                const [facs, revs, members] = await Promise.all([
+                    api.get(`/projects/facilitators?dept_id=${deptId}`),
+                    api.get(`/projects/potential-members?role=Reviewer&dept_id=${deptId}`),
+                    api.get(`/projects/potential-members?role=Team Member&dept_id=${deptId}`)
+                ]);
+                
+                const facSel = document.getElementById('projFacilitator');
+                if (facSel) {
+                    facSel.innerHTML = '<option value="" disabled selected>Select Facilitator</option>' +
+                        facs.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                }
+                
+                const revSel = document.getElementById('projReviewer');
+                if (revSel) {
+                    revSel.innerHTML = '<option value="" disabled selected>Select Reviewer</option>' +
+                        revs.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                }
+
+                // ── Ensure the creator is always visible in the member list ──
+                // Even if the API doesn't return them (e.g. different dept), inject them at top
+                const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+                const cuid = currentUser.id;
+                const memberList = Array.isArray(members) ? [...members] : [];
+                if (cuid && !memberList.some(m => m.id === cuid)) {
+                    memberList.unshift({
+                        id: cuid,
+                        full_name: currentUser.full_name || currentUser.username || 'You',
+                        username: currentUser.username || '',
+                        email: currentUser.email || ''
+                    });
+                }
+
+                this.loadedDepartmentMembers = memberList;
+
+                // Preserve existing checked state (creator stays checked across dept changes)
+                const preservedIds = new Set(this.checkedMemberIds);
+                const preservedNames = { ...this.checkedMemberNames };
+
+                this.checkedMemberIds.clear();
+                Object.keys(this.checkedMemberNames).forEach(k => delete this.checkedMemberNames[k]);
+
+                // Restore preserved checked members (keeps creator checked)
+                preservedIds.forEach(id => {
+                    this.checkedMemberIds.add(id);
+                    this.checkedMemberNames[id] = preservedNames[id];
+                });
+
+                const memberSearchInput = document.getElementById('memberSearchInput');
+                if (memberSearchInput) memberSearchInput.value = '';
+                
+                this.memberSearchQuery = '';
+                this.memberCurrentPage = 1;
+                this.memberPerPage = 5;
+                this.applyMemberFilters();
+                this.renderSelectedMembersList();
+            } catch (e) {
+                console.error('Failed to load department-wise members', e);
+            }
+        },
+
+        handleMemberSearch(query) {
+            this.memberSearchQuery = (query || '').toLowerCase().trim();
+            this.memberCurrentPage = 1;
+            this.applyMemberFilters();
+        },
+
+        changeMemberPage(delta) {
+            const totalPages = Math.ceil((this.filteredMemberList || []).length / (this.memberPerPage || 5)) || 1;
+            const newPage = (this.memberCurrentPage || 1) + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                this.memberCurrentPage = newPage;
+                this.renderMemberCheckboxesPage();
+            }
+        },
+
+        applyMemberFilters() {
+            const q = this.memberSearchQuery;
+            if (!q) {
+                this.filteredMemberList = [...(this.loadedDepartmentMembers || [])];
+            } else {
+                this.filteredMemberList = (this.loadedDepartmentMembers || []).filter(m => {
+                    const name = (m.full_name || m.username || '').toLowerCase();
+                    const email = (m.email || '').toLowerCase();
+                    const phone = (m.phone || '').toLowerCase();
+                    return name.includes(q) || email.includes(q) || phone.includes(q);
+                });
+            }
+            this.renderMemberCheckboxesPage();
+        },
+
+        renderMemberCheckboxesPage() {
+            const memberCb = document.getElementById('memberCheckboxes');
+            const pagControls = document.getElementById('memberPaginationControls');
+            const pageInfo = document.getElementById('memberPageInfo');
+            const pageBadge = document.getElementById('memberPageBadge');
+            const prevBtn = document.getElementById('memberPrevPageBtn');
+            const nextBtn = document.getElementById('memberNextPageBtn');
+
+            if (!memberCb) return;
+            const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+            const cuid = currentUser.id;
+
+            const list = this.filteredMemberList || [];
+            const total = list.length;
+            const perPage = this.memberPerPage || 5;
+            const totalPages = Math.ceil(total / perPage) || 1;
+
+            if (this.memberCurrentPage > totalPages) this.memberCurrentPage = totalPages;
+            if (this.memberCurrentPage < 1) this.memberCurrentPage = 1;
+
+            const startIdx = (this.memberCurrentPage - 1) * perPage;
+            const endIdx = Math.min(startIdx + perPage, total);
+            const pageMembers = list.slice(startIdx, endIdx);
+
+            if (total === 0) {
+                memberCb.innerHTML = '<span class="text-muted text-sm p-1">No matching members found</span>';
+                if (pagControls) pagControls.style.setProperty('display', 'none', 'important');
+                return;
+            }
+
+            memberCb.innerHTML = pageMembers.map(m => {
+                const isChecked = this.checkedMemberIds.has(m.id) ? 'checked' : '';
+                const isCreator = (m.id === cuid);
+                const youBadge = isCreator
+                    ? ` <span class="badge rounded-pill" style="font-size:0.65rem;background:var(--ds-primary-subtle);color:var(--ds-primary);padding:1px 7px;">You</span>`
+                    : '';
+                const disabledAttr = isCreator ? 'disabled title="You are automatically added as a member"' : '';
+                const details = [];
+                if (m.email) details.push(m.email);
+                if (m.phone) details.push(m.phone);
+                const detailsStr = details.length ? ` <span class="text-muted fw-normal text-xs" style="font-size:0.72rem; opacity:0.8;">(${esc(details.join(' | '))})</span>` : '';
+                return `
+                    <label class="member-chip${isCreator ? ' member-chip--you' : ''}">
+                        <input type="checkbox" value="${m.id}" class="member-cb" ${isChecked} ${disabledAttr} onchange="repoUI.handleMemberCheckboxChange(this, ${m.id}, '${esc(m.full_name || m.username)}')"> 
+                        <span>${esc(m.full_name || m.username)}${youBadge}${detailsStr}</span>
+                    </label>
+                `;
+            }).join('');
+
+            if (pagControls) {
+                pagControls.style.setProperty('display', 'flex', 'important');
+                if (pageInfo) pageInfo.textContent = `Showing ${startIdx + 1}-${endIdx} of ${total} employees`;
+                if (pageBadge) pageBadge.textContent = `Page ${this.memberCurrentPage} of ${totalPages}`;
+                if (prevBtn) prevBtn.disabled = (this.memberCurrentPage <= 1);
+                if (nextBtn) nextBtn.disabled = (this.memberCurrentPage >= totalPages);
+            }
+            if (window.lucide) lucide.createIcons();
+        },
+
+        handleMemberCheckboxChange(checkboxEl, memberId, memberName) {
+            if (checkboxEl.checked) {
+                this.checkedMemberIds.add(memberId);
+                this.checkedMemberNames[memberId] = memberName;
+            } else {
+                this.checkedMemberIds.delete(memberId);
+                delete this.checkedMemberNames[memberId];
+            }
+            this.renderSelectedMembersList();
+        },
+
+        renderSelectedMembersList() {
+            const group = document.getElementById('selectedMembersGroup');
+            const list = document.getElementById('selectedMembersList');
+            if (!group || !list) return;
+
+            if (this.checkedMemberIds.size === 0) {
+                group.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+
+            group.style.display = 'block';
+            let html = '';
+            
+            // Get currently checked radio selection if any
+            let currentSelectedTl = null;
+            const checkedRadio = list.querySelector('input[name="projTeamLeader"]:checked');
+            if (checkedRadio) {
+                currentSelectedTl = parseInt(checkedRadio.value);
+            }
+
+            Array.from(this.checkedMemberIds).forEach(mId => {
+                const name = this.checkedMemberNames[mId] || `Member #${mId}`;
+                const isSelected = (currentSelectedTl === mId) ? 'checked' : '';
+                html += `
+                    <div class="d-flex align-items-center justify-content-between p-2 rounded border bg-white">
+                        <span class="text-sm fw-semibold text-main">${esc(name)}</span>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="projTeamLeader" id="tl_radio_${mId}" value="${mId}" ${isSelected} required>
+                            <label class="form-check-label text-xs fw-semibold text-secondary mb-0" for="tl_radio_${mId}">
+                                Set as Team Leader
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+
+            // If only one member is selected, auto-select them as the Team Leader!
+            if (this.checkedMemberIds.size === 1) {
+                const singleRadio = list.querySelector('input[name="projTeamLeader"]');
+                if (singleRadio) singleRadio.checked = true;
+            }
+        },
+
+        async loadModalDropdowns() {
+            try {
+                const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+                const role = (user.role || '').toLowerCase();
+
+                const facSel = document.getElementById('projFacilitator');
+                const revSel = document.getElementById('projReviewer');
+                const deptSel = document.getElementById('projDepartment');
+                const memberCb = document.getElementById('memberCheckboxes');
+
+                // Clear previously loaded dropdowns
+                if (facSel) facSel.innerHTML = '<option value="" disabled selected>Select department first</option>';
+                if (revSel) revSel.innerHTML = '<option value="" disabled selected>Select department first</option>';
+                if (memberCb) memberCb.innerHTML = '<span class="text-muted text-sm p-1">Select department first</span>';
+
+                // ── Load departments ──
+                try {
+                    const depts = await api.get('/projects/departments');
+                    if (deptSel) {
+                        deptSel.innerHTML = '<option value="" disabled selected>Select Department</option>' +
+                            depts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                        
+                        // Auto-select department if Team Leader
+                        if (role === 'team leader' && user.department_id) {
+                            deptSel.value = user.department_id;
+                            deptSel.disabled = true; // TL can only create within their department
+                            this.handleDepartmentChange(user.department_id);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to load departments', e);
+                }
+
+                // ── Load all potential organization members for search ──
+                try {
+                    this.allOrgMembers = await api.get('/projects/potential-members?role=Team Member&ignore_dept=true');
+                } catch (e) {
+                    console.error('Failed to load all org potential members', e);
+                    this.allOrgMembers = [];
+                }
+            } catch (e) {
+                console.error('Modal dropdowns load failed', e);
+            }
+        },
+
+        importedIdeaData: null,
+        activeSourceOption: 'new',
+
+        handleSourceOptionChange(option) {
+            if (this.activeSourceOption === 'import' && option === 'new' && this.importedIdeaData) {
+                const confirmClear = confirm("Imported data will be cleared. Do you want to continue?");
+                if (!confirmClear) {
+                    const optImport = document.getElementById('optImportIdea');
+                    if (optImport) optImport.checked = true;
+                    return;
+                }
+                this.clearImportedIdeaData();
+            }
+
+            this.activeSourceOption = option;
+            const box = document.getElementById('ideaImportBox');
+            if (box) {
+                box.style.display = (option === 'import') ? 'block' : 'none';
+            }
+        },
+
+        handleIdeaCodeInput(val) {
+            const btn = document.getElementById('btnFetchIdea');
+            if (btn) {
+                btn.disabled = !val.trim();
+            }
+        },
+
+        async fetchApprovedIdea() {
+            const codeInput = document.getElementById('ideaCodeInput');
+            const code = codeInput ? codeInput.value.trim() : '';
+            const statusDiv = document.getElementById('ideaFetchStatus');
+            if (!code) return;
+
+            statusDiv.innerHTML = '<span class="text-muted text-xs"><i data-lucide="loader" class="spin me-1"></i> Searching Imported Ideas table...</span>';
+            if (window.lucide) lucide.createIcons();
+
+            const safeEscape = (str) => {
+                if (str === null || str === undefined) return '';
+                return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            };
+
+            try {
+                const res = await api.get(`/projects/imported-idea/${encodeURIComponent(code)}`);
+                if (res && res.found && res.idea) {
+                    const idea = res.idea;
+                    this.importedIdeaData = idea;
+
+                    const formattedBenefit = idea.tangible_benefit ? (window.QCMS && QCMS.formatINR ? QCMS.formatINR(idea.tangible_benefit) : `₹${Number(idea.tangible_benefit).toLocaleString()}`) : 'Non-monetary';
+
+                    // Display Success Message
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success border-0 bg-success-subtle p-3 text-xs mb-0 rounded-3">
+                            <div class="fw-bold fs-6 text-success mb-1 d-flex align-items-center gap-1">
+                                <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
+                                Approved Idea Imported Successfully
+                            </div>
+                            <div class="row g-2 mt-1 font-monospace text-dark">
+                                <div class="col-md-3"><strong>Idea Code:</strong> ${safeEscape(idea.idea_code)}</div>
+                                <div class="col-md-4"><strong>Project Title:</strong> ${safeEscape(idea.title)}</div>
+                                <div class="col-md-2"><strong>Department:</strong> ${safeEscape(idea.department || 'N/A')}</div>
+                                <div class="col-md-3"><strong>Idea Owner:</strong> ${safeEscape(idea.submitted_by || 'N/A')}</div>
+                                <div class="col-md-12"><strong>Expected Benefit:</strong> ${formattedBenefit} (Tangible) / ${safeEscape(idea.intangible_benefit || 'None')}</div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Populate fields
+                    const titleEl = document.getElementById('projTitle');
+                    if (titleEl) {
+                        titleEl.value = idea.title || '';
+                        this.attachImportIndicator(titleEl, idea.idea_code);
+                    }
+
+                    const typeEl = document.getElementById('projType');
+                    if (typeEl && idea.category) {
+                        let foundOpt = Array.from(typeEl.options).find(o => o.value.toLowerCase() === idea.category.toLowerCase());
+                        if (foundOpt) {
+                            typeEl.value = foundOpt.value;
+                        } else {
+                            const newOpt = document.createElement('option');
+                            newOpt.value = idea.category;
+                            newOpt.textContent = idea.category;
+                            typeEl.appendChild(newOpt);
+                            typeEl.value = idea.category;
+                        }
+                        this.attachImportIndicator(typeEl, idea.idea_code);
+                    }
+
+                    const refEl = document.getElementById('projRefNumber');
+                    if (refEl) {
+                        refEl.value = idea.idea_code;
+                        this.attachImportIndicator(refEl, idea.idea_code);
+                    }
+
+                    const srcEl = document.getElementById('projSource');
+                    if (srcEl) {
+                        srcEl.value = 'Employee Suggestion';
+                        this.attachImportIndicator(srcEl, idea.idea_code);
+                    }
+
+                    // Auto-select department if available in options
+                    const deptEl = document.getElementById('projDepartment');
+                    if (deptEl && idea.department) {
+                        let foundDept = Array.from(deptEl.options).find(o => o.textContent.trim().toLowerCase() === idea.department.trim().toLowerCase() || o.value.toLowerCase() === idea.department.trim().toLowerCase());
+                        if (foundDept) {
+                            deptEl.value = foundDept.value;
+                            this.handleDepartmentChange(foundDept.value);
+                            this.attachImportIndicator(deptEl, idea.idea_code);
+                        }
+                    }
+
+                    // Notification helper
+                    if (window.api && typeof api.showNotification === 'function') {
+                        api.showNotification('Approved Idea fetched successfully! Form fields populated.', 'success');
+                    } else if (window.QCMS && typeof QCMS.toast === 'function') {
+                        QCMS.toast('Approved Idea fetched successfully! Form fields populated.', 'success');
+                    }
+                } else {
+                    this.importedIdeaData = null;
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis p-3 text-xs mb-0 rounded-3">
+                            <i data-lucide="alert-triangle" class="me-1"></i>
+                            <strong>Idea Code not found.</strong> Please verify the reference code or create the project manually.
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('Error fetching approved idea:', e);
+                this.importedIdeaData = null;
+                const msg = (e && e.message) ? e.message : 'Please verify the reference code or create the project manually.';
+                statusDiv.innerHTML = `
+                    <div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis p-3 text-xs mb-0 rounded-3">
+                        <i data-lucide="alert-triangle" class="me-1"></i>
+                        <strong>Idea Code lookup error:</strong> ${safeEscape(msg)}
+                    </div>
+                `;
+            }
+            if (window.lucide) lucide.createIcons();
+        },
+
+        attachImportIndicator(element, ideaCode) {
+            if (!element) return;
+            element.style.borderColor = '#10b981';
+            let badge = element.parentNode.querySelector('.imported-field-indicator');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'imported-field-indicator text-xs text-success fw-bold mt-1 d-flex align-items-center gap-1';
+                badge.title = `Imported using Idea Code: ${ideaCode}`;
+                badge.innerHTML = `<i data-lucide="check" style="width:12px;height:12px;"></i> ✓ Imported from Approved Idea`;
+                element.parentNode.appendChild(badge);
+            } else {
+                badge.title = `Imported using Idea Code: ${ideaCode}`;
+            }
+            if (window.lucide) lucide.createIcons();
+        },
+
+        clearImportedIdeaData() {
+            this.importedIdeaData = null;
+            const statusDiv = document.getElementById('ideaFetchStatus');
+            if (statusDiv) statusDiv.innerHTML = '';
+            const codeInput = document.getElementById('ideaCodeInput');
+            if (codeInput) codeInput.value = '';
+            document.querySelectorAll('.imported-field-indicator').forEach(el => el.remove());
+            document.querySelectorAll('.ds-input').forEach(el => el.style.borderColor = '');
+        },
+
+        openInitModal() {
+            if (!this.initModal) {
+                this.initModal = new bootstrap.Modal(document.getElementById('initModal'));
+            }
+            // Reset member selection state before opening
+            this.checkedMemberIds.clear();
+            Object.keys(this.checkedMemberNames).forEach(k => delete this.checkedMemberNames[k]);
+
+            // ── Auto-add the current logged-in user as a project member ──
+            const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+            const currentUserId = currentUser.id;
+            if (currentUserId) {
+                this.currentUserId = currentUserId;
+                const displayName = currentUser.full_name || currentUser.username || 'You';
+                this.checkedMemberIds.add(currentUserId);
+                this.checkedMemberNames[currentUserId] = displayName;
+            }
+
+            this.loadModalDropdowns();
+            this.initModal.show();
+        },
+
+        async initProject() {
+            const title = document.getElementById('projTitle').value.trim();
+            const type = document.getElementById('projType').value;
+            const workArea = document.getElementById('projWorkArea').value.trim();
+            const deptId = document.getElementById('projDepartment').value;
+            const plant = document.getElementById('projPlant').value.trim();
+            const source = document.getElementById('projSource').value;
+            const refNumber = document.getElementById('projRefNumber').value.trim();
+            const facilitatorId = document.getElementById('projFacilitator').value;
+            const reviewerId = document.getElementById('projReviewer').value;
+            const startDate = document.getElementById('projStartDate').value;
+            const endDate = document.getElementById('projEndDate').value;
+            
+            // Get selected Team Leader from radio button
+            const tlRadio = document.querySelector('input[name="projTeamLeader"]:checked');
+            const teamLeaderId = tlRadio ? parseInt(tlRadio.value) : null;
+            
+            // Get all selected member IDs
+            const member_ids = Array.from(this.checkedMemberIds);
+
+            // Validate Idea Code if Import Approved Idea is selected
+            let ideaCodeVal = null;
+            if (this.activeSourceOption === 'import') {
+                const codeInput = document.getElementById('ideaCodeInput');
+                ideaCodeVal = codeInput ? codeInput.value.trim() : '';
+                if (!ideaCodeVal) {
+                    return QCMS.toast('Idea Reference Code is required when "Import Approved Idea" is selected.', 'warning');
+                }
+            }
+
+            if (!title || !type || !workArea || !deptId || !plant || !source || !facilitatorId || !reviewerId || !teamLeaderId || !startDate || !endDate) {
+                return QCMS.toast('Please fill all required (*) fields and designate a Team Leader.', 'warning');
+            }
+
+            const payload = {
+                title,
+                category: type,
+                department_id: parseInt(deptId),
+                facilitator_id: parseInt(facilitatorId),
+                reviewer_id: parseInt(reviewerId),
+                team_leader_id: teamLeaderId,
+                member_ids: member_ids,
+                deadline: endDate,
+                idea_code: ideaCodeVal,
+                source: this.activeSourceOption === 'import' ? 'Ideation Tool' : 'QCMS',
+                init_data: {
+                    work_area: workArea,
+                    plant,
+                    source: this.activeSourceOption === 'import' ? 'Ideation Tool' : source,
+                    ref_number: ideaCodeVal || refNumber,
+                    idea_code: ideaCodeVal,
+                    sponsor: '',
+                    planned_start_date: startDate,
+                    planned_end_date: endDate
+                }
+            };
+
+            try {
+                const res = await api.post('/projects', payload);
+                QCMS.toast('Project created! Redirecting to Stage 1...', 'success');
+                if (this.initModal) this.initModal.hide();
+                setTimeout(() => {
+                    window.location.href = `/projects/project-details.html?id=${res.id}`;
+                }, 800);
+            } catch (e) {
+                QCMS.toast(e.message || 'Failed to create project', 'error');
+            }
+        },
+
+        async loadDepartments() {
+            try {
+                const depts = await api.get('/projects/departments');
+                const select = document.getElementById('deptFilter');
+                if (select && Array.isArray(depts)) {
+                    select.innerHTML = '<option value="">All Departments</option>';
+                    depts.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.id;
+                        opt.textContent = d.name;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error('Failed to load departments', e); }
+        },
+
+        resetFilters() {
+            const search = document.getElementById('globalSearchInput');
+            const dept = document.getElementById('deptFilter');
+            const status = document.getElementById('statusFilter');
+            const stage = document.getElementById('stageFilter');
+            if (search) search.value = '';
+            if (dept) dept.value = '';
+            if (status) status.value = 'Active';
+            if (stage) stage.value = '';
+            this.loadData(1);
+        },
+
+        setupFilterListeners() {
+            ['globalSearchInput', 'deptFilter', 'statusFilter', 'stageFilter'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (id === 'globalSearchInput') {
+                    el.addEventListener('input', QCMS.debounce(() => this.loadData(1), 400));
+                } else {
+                    el.addEventListener('change', () => this.loadData(1));
+                    el.addEventListener('input', () => this.loadData(1));
+                }
+            });
+        },
+
+        async loadData(page = 1) {
+            try {
+                this.currentPage = page;
+                const filters = {
+                    q: document.getElementById('globalSearchInput')?.value || '',
+                    department_id: document.getElementById('deptFilter')?.value || '',
+                    status: document.getElementById('statusFilter')?.value || '',
+                    stage: document.getElementById('stageFilter')?.value || '',
+                    page: this.currentPage,
+                    per_page: this.perPage
+                };
+
+                const res = await api.getRepositoryProjects(filters);
+                this.data = res.projects || [];
+                this.totalProjects = res.total !== undefined ? res.total : this.data.length;
+                this.totalPages = res.total_pages !== undefined ? res.total_pages : 1;
+                this.currentPage = res.page !== undefined ? res.page : page;
+
+                this.renderStats(res.stats || { total: 0, active: 0, completed: 0, stalled: 0 });
+                this.renderTable();
+                this.renderPagination();
+            } catch (e) {
+                QCMS.toast('Failed to sync repository data', 'danger');
+                document.getElementById('repoTableBody').innerHTML = 
+                    `<tr><td colspan="6">${QCMS.emptyState('System Error', e.message, 'alert-circle')}</td></tr>`;
+                if (window.lucide) lucide.createIcons();
+            }
+        },
+
+        changePage(delta) {
+            const targetPage = this.currentPage + delta;
+            if (targetPage >= 1 && targetPage <= this.totalPages) {
+                this.loadData(targetPage);
+            }
+        },
+
+        renderPagination() {
+            const container = document.getElementById('repoPagination');
+            const info = document.getElementById('repoPaginationInfo');
+            const prevBtn = document.getElementById('repoPrevBtn');
+            const nextBtn = document.getElementById('repoNextBtn');
+
+            if (!container) return;
+
+            if (!this.totalProjects || this.totalProjects <= 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+
+            const start = (this.currentPage - 1) * this.perPage + 1;
+            const end = Math.min(this.currentPage * this.perPage, this.totalProjects);
+            info.textContent = `Showing ${start}-${end} of ${this.totalProjects} projects`;
+
+            if (prevBtn) prevBtn.disabled = (this.currentPage <= 1);
+            if (nextBtn) nextBtn.disabled = (this.currentPage >= this.totalPages);
+
+            if (window.lucide) lucide.createIcons();
+        },
+
+        renderStats(stats) {
+            const container = document.getElementById('repoStats');
+            container.innerHTML = `
+                <div class="col-md-3 col-sm-6">
+                    ${QCMS.kpiCard('Total Projects', stats.total, 'layers', 'blue')}
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    ${QCMS.kpiCard('Current Projects', stats.active, 'activity', 'green')}
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    ${QCMS.kpiCard('Completed Projects', stats.completed, 'check-circle', 'cyan')}
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    ${QCMS.kpiCard('Inactive Projects', stats.stalled, 'clock', 'red')}
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        },
+
+        renderTable() {
+            const body = document.getElementById('repoTableBody');
+            const query = document.getElementById('globalSearchInput')?.value || '';
+            const hasActiveFilters = document.getElementById('deptFilter')?.value || 
+                                     document.getElementById('statusFilter')?.value || 
+                                     document.getElementById('stageFilter')?.value || 
+                                     query;
+            
+            if (!this.data || !this.data.length) {
+                if (hasActiveFilters) {
+                    body.innerHTML = `<tr><td colspan="6" class="text-center py-5">
+                        ${QCMS.emptyState('No Matching Projects', query ? `No projects match "${query}" with current filters.` : 'No projects match your selected filter criteria.', 'layers')}
+                        <div class="mt-3">
+                            <button class="ds-btn ds-btn-ghost ds-btn-sm" onclick="repoUI.resetFilters()">
+                                <i data-lucide="rotate-ccw"></i> Reset Filters
+                            </button>
+                        </div>
+                    </td></tr>`;
+                } else {
+                    body.innerHTML = `<tr><td colspan="6" class="text-center py-5">
+                        ${QCMS.emptyState('Archive Empty', 'No projects found in the repository.', 'layers')}
+                    </td></tr>`;
+                }
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            body.innerHTML = this.data.map(p => `
+                <tr class="${p.is_stalled ? 'stalled-row' : ''} fade-in">
+                    <td>
+                        <div class="v-stack">
+                            <div class="h-stack gap-2 align-items-center mb-1">
+                                <span class="fw-bold text-dark">${p.title}</span>
+                                ${p.is_stalled ? '<span class="stalled-badge">Inactive</span>' : ''}
+                            </div>
+                            <div class="h-stack gap-2 align-items-center text-xs opacity-75">
+                                <span class="fw-bold text-accent">${p.project_uid}</span>
+                                <span class="text-muted">•</span>
+                                ${QCMS.categoryBadge(p.category)}
+                                <span class="text-muted">•</span>
+                                <span class="text-muted">${p.department}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-sm fw-medium">${p.team_leader}</div>
+                    </td>
+                    <td style="width:180px;">
+                        ${QCMS.projectProgress(p.current_stage || 1, 8)}
+                    </td>
+                    <td>
+                        <div class="text-sm fw-bold ${p.efficiency > 0 ? 'text-green' : 'text-muted'}">${p.efficiency}% Improvement</div>
+                        <div class="efficiency-progress">
+                            <div class="efficiency-fill" style="width: ${Math.min(p.efficiency, 100)}%"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-sm fw-medium">${QCMS.formatRelative(p.last_updated)}</div>
+                        <div class="text-xs text-muted">Latest update</div>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-1">
+                            <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-xs ds-btn-ghost d-flex align-items-center gap-1" title="Continue Workflow">
+                                <i data-lucide="play-circle" style="width:14px;"></i> Continue
+                            </a>
+                            <button class="ds-btn ds-btn-xs ds-btn-ghost d-flex align-items-center gap-1" onclick="repoUI.downloadReport(${p.id}, '${p.project_uid}', '${(p.title || '').replace(/'/g, "\\'")}');" title="Download Project PDF Report">
+                                <i data-lucide="file-text" class="text-danger" style="width:14px;"></i> Report
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
+        },
+
+        downloadReport(id, uid, title) {
+            if (window.FeatureEngine) {
+                const pdfEnabled = FeatureEngine.isEnabled('reports.pdf');
+                if (!pdfEnabled) {
+                    FeatureEngine.showDisabledModuleNotice('reports.pdf');
+                    return;
+                }
+            }
+            QCMS.toast(`Generating PDF report for "${title || uid}"...`, 'info');
+            const safeUid = uid || `PRJ-${id}`;
+            api.downloadFile(`/reports/export/pdf/${id}`, `${safeUid}_QC_Story_Report.pdf`)
+                .then(() => QCMS.toast(`Report downloaded for "${title || uid}"`, 'success'))
+                .catch(err => {
+                    console.warn('PDF direct export failed:', err);
+                    if (window.FeatureEngine && FeatureEngine.isEnabled('reports.pdf') === false) {
+                        FeatureEngine.showDisabledModuleNotice('reports.pdf');
+                        return;
+                    }
+                    QCMS.toast(err.message || 'PDF export failed', 'error');
+                });
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => repoUI.init());
+    </script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Departments | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+
+    <main class="app-main">
+        <header class="app-navbar" id="app-navbar"></header>
+
+        <div class="app-content-inner">
+            <header class="ds-header-layout section-spacing px-0">
+                <div class="h-stack justify-content-between w-100">
+                    <div class="v-stack">
+                        <h1 class="ds-title mb-0">Organization Units</h1>
+                        <p class="ds-text-secondary mb-0">Manage standard departments and operational units across the enterprise.</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="glass-card ds-card mb-4">
+                <div class="ds-card-header h-stack justify-content-between p-4 flex-wrap gap-3">
+                    <div class="v-stack">
+                        <h5 class="mb-0 fw-bold">Active Departments</h5>
+                        <p class="text-xs ds-text-secondary mb-0">Standardized operational units mapped to plant locations</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="text-xs fw-semibold text-muted text-uppercase mb-0">Filter Plant:</label>
+                            <select class="ds-input ds-select ds-input-sm" id="plantFilter" onchange="deptManager.filter()" style="width: 200px;">
+                                <option value="">All Plant Locations</option>
+                            </select>
+                        </div>
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="deptManager.openAddModal()">
+                            <i data-lucide="plus"></i> Add Department
+                        </button>
+                    </div>
+                </div>
+                <div class="ds-card-body p-0">
+                    <div class="table-responsive">
+                        <table class="ds-table ds-table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Department Name</th>
+                                    <th>Plant Location</th>
+                                    <th>Created At</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deptTableBody">
+                                <tr><td colspan="4" class="p-5 text-center text-muted">Loading departments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="ds-card-footer p-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2" id="deptPaginationFooter" style="display: none;">
+                        <div class="text-xs text-muted fw-medium" id="deptPaginationInfo">Showing 1 to 5 of 0 entries</div>
+                        <div class="d-flex align-items-center gap-2" id="deptPaginationControls">
+                            <button class="ds-btn ds-btn-ghost ds-btn-sm" id="btnPrevPage" onclick="deptManager.prevPage()">Previous</button>
+                            <span class="text-xs fw-semibold px-2" id="pageIndicator">Page 1 of 1</span>
+                            <button class="ds-btn ds-btn-ghost ds-btn-sm" id="btnNextPage" onclick="deptManager.nextPage()">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade" id="deptModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card ds-card">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-bold" id="modalTitle">Add Unit</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="deptForm">
+                        <input type="hidden" id="deptId">
+                        <div class="ds-field mb-3">
+                            <label class="ds-label">PLANT LOCATION <span class="text-danger">*</span></label>
+                            <select class="ds-input ds-select" id="deptPlantId">
+                                <option value="">Organization-Wide / All Plants</option>
+                            </select>
+                            <p class="text-xs text-muted mt-1">Assign this department to a specific plant location.</p>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label">DEPARTMENT NAME <span class="text-danger">*</span></label>
+                            <input type="text" class="ds-input" id="deptName" placeholder="e.g. Quality Assurance" required>
+                            <p class="text-xs text-muted mt-2">Enter the formal name of the operational department.</p>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary px-4" onclick="deptManager.save()">Save Department</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+    const deptManager = {
+        allDepts: [],
+        filteredDepts: [],
+        allPlants: [],
+        currentPage: 1,
+        pageSize: 5,
+
+        async init() {
+            try {
+                if (typeof QCMS !== 'undefined') QCMS.init();
+                const searchInput = document.getElementById('globalSearchInput');
+                if (searchInput) {
+                    searchInput.placeholder = "Search departments...";
+                    searchInput.addEventListener('input', () => this.filter());
+                }
+                await this.loadPlants();
+                await this.loadDepartments();
+            } catch (e) { console.error('Init failed:', e); }
+        },
+
+        async loadPlants() {
+            try {
+                const res = await api.getPlants();
+                this.allPlants = (res && res.plants) ? res.plants : [];
+                
+                // Populate Filter Dropdown
+                const filterSel = document.getElementById('plantFilter');
+                if (filterSel) {
+                    filterSel.innerHTML = '<option value="">All Plant Locations</option>' +
+                        this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                }
+
+                // Populate Modal Dropdown
+                const modalSel = document.getElementById('deptPlantId');
+                if (modalSel) {
+                    modalSel.innerHTML = '<option value="">Organization-Wide / All Plants</option>' +
+                        this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                }
+            } catch (e) {
+                console.error('Failed to load plants:', e);
+            }
+        },
+
+        async loadDepartments() {
+            try {
+                this.allDepts = await api.get('/admin/departments');
+                this.filter();
+            } catch (e) {
+                console.error(e);
+                const body = document.getElementById('deptTableBody');
+                body.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-danger">Failed to load departments.</td></tr>`;
+            }
+        },
+
+        filter() {
+            const q = document.getElementById('globalSearchInput')?.value.toLowerCase() || '';
+            const plantVal = document.getElementById('plantFilter')?.value || '';
+
+            let filtered = this.allDepts;
+            if (plantVal) {
+                filtered = filtered.filter(d => String(d.plant_id) === String(plantVal));
+            }
+            if (q) {
+                filtered = filtered.filter(d => d.name.toLowerCase().includes(q));
+            }
+            this.filteredDepts = filtered;
+            this.currentPage = 1;
+            this.render();
+        },
+
+        render() {
+            const body = document.getElementById('deptTableBody');
+            const q = document.getElementById('globalSearchInput')?.value || '';
+            const total = this.filteredDepts.length;
+            const totalPages = Math.ceil(total / this.pageSize) || 1;
+
+            if (this.currentPage > totalPages) this.currentPage = totalPages;
+            if (this.currentPage < 1) this.currentPage = 1;
+
+            const startIdx = (this.currentPage - 1) * this.pageSize;
+            const pageItems = this.filteredDepts.slice(startIdx, startIdx + this.pageSize);
+
+            const footer = document.getElementById('deptPaginationFooter');
+
+            if (!total) {
+                if (q) {
+                    body.innerHTML = `<tr><td colspan="4" class="text-center p-5 text-muted">
+                        <i data-lucide="search-x" class="mb-3 text-slate-400" style="width: 48px; height: 48px;"></i>
+                        <p class="mb-0">No results found for "${q}"</p>
+                    </td></tr>`;
+                } else {
+                    body.innerHTML = `<tr><td colspan="4">${QCMS.emptyState('building-2', 'No Departments Found', 'Start by adding a department or change your plant filter.')}</td></tr>`;
+                }
+                if (footer) footer.style.display = 'none';
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            if (footer) footer.style.display = 'flex';
+            const endIdx = Math.min(startIdx + this.pageSize, total);
+            document.getElementById('deptPaginationInfo').textContent = `Showing ${startIdx + 1} to ${endIdx} of ${total} entries`;
+            document.getElementById('pageIndicator').textContent = `Page ${this.currentPage} of ${totalPages}`;
+            document.getElementById('btnPrevPage').disabled = (this.currentPage <= 1);
+            document.getElementById('btnNextPage').disabled = (this.currentPage >= totalPages);
+
+            body.innerHTML = pageItems.map(d => `
+                <tr class="fade-in">
+                    <td><div class="fw-semibold text-slate-900">${QCMS.escapeHtml(d.name)}</div></td>
+                    <td>
+                        <span class="badge ${d.plant_id ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'} rounded-pill px-2.5 py-1">
+                            <i data-lucide="factory" class="me-1" style="width:12px;height:12px;"></i> ${QCMS.escapeHtml(d.plant_name || 'Organization-Wide')}
+                        </span>
+                    </td>
+                    <td><span class="text-sm text-muted">${d.created_at ? QCMS.formatRelative(d.created_at) : 'Active'}</span></td>
+                    <td class="text-end">
+                        <div class="dropdown">
+                            <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" data-bs-toggle="dropdown" data-bs-display="static">
+                                <i data-lucide="more-vertical" style="width:16px;"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="z-index: 10050 !important; min-width: 200px;">
+                                <li><a class="dropdown-item py-2 fw-medium" href="#" onclick="deptManager.openEditModal(${d.id}, '${d.name.replace(/'/g, "\\'")}', ${d.plant_id || 'null'})"><i data-lucide="edit-2" class="me-2 text-primary" style="width:15px;height:15px;"></i> Edit / Reassign Plant</a></li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li><a class="dropdown-item text-danger py-2 fw-medium" href="#" onclick="deptManager.delete(${d.id})"><i data-lucide="trash-2" class="me-2" style="width:15px;height:15px;"></i> Remove Dept</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
+        },
+
+        prevPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.render();
+            }
+        },
+
+        nextPage() {
+            const totalPages = Math.ceil(this.filteredDepts.length / this.pageSize) || 1;
+            if (this.currentPage < totalPages) {
+                this.currentPage++;
+                this.render();
+            }
+        },
+
+        openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Department';
+            document.getElementById('deptId').value = '';
+            document.getElementById('deptName').value = '';
+            const plantFilterVal = document.getElementById('plantFilter')?.value || '';
+            document.getElementById('deptPlantId').value = plantFilterVal;
+            new bootstrap.Modal(document.getElementById('deptModal')).show();
+        },
+
+        closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                const toggle = menu.parentElement.querySelector('[data-bs-toggle="dropdown"]');
+                if (toggle) {
+                    const dp = bootstrap.Dropdown.getInstance(toggle);
+                    if (dp) dp.hide();
+                }
+            });
+        },
+
+        openEditModal(id, name, plantId) {
+            this.closeAllDropdowns();
+            document.getElementById('modalTitle').textContent = 'Edit Department & Plant';
+            document.getElementById('deptId').value = id;
+            document.getElementById('deptName').value = name;
+            document.getElementById('deptPlantId').value = plantId ? String(plantId) : '';
+            new bootstrap.Modal(document.getElementById('deptModal')).show();
+        },
+
+        async save() {
+            const id = document.getElementById('deptId').value;
+            const name = document.getElementById('deptName').value.trim();
+            const plant_id = document.getElementById('deptPlantId').value;
+
+            if (!name) return QCMS.toast('Name is required', 'warning');
+
+            const payload = { name, plant_id: plant_id ? parseInt(plant_id) : null };
+
+            try {
+                if (id) {
+                    await api.put(`/admin/departments/${id}`, payload);
+                    QCMS.toast('Department updated successfully.', 'success');
+                } else {
+                    await api.post('/admin/departments', payload);
+                    QCMS.toast('Department created successfully.', 'success');
+                }
+                bootstrap.Modal.getInstance(document.getElementById('deptModal')).hide();
+                this.loadDepartments();
+            } catch (e) {
+                QCMS.toast(e.message, 'error');
+            }
+        },
+
+        async delete(id) {
+            this.closeAllDropdowns();
+            if (!confirm('Are you sure you want to remove this department? This cannot be undone.')) return;
+            try {
+                await api.delete(`/admin/departments/${id}`);
+                QCMS.toast('Department removed successfully.', 'success');
+                this.loadDepartments();
+            } catch (e) {
+                QCMS.toast(e.message, 'error');
+            }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => deptManager.init());
+    </script>
+</body>
+</html>

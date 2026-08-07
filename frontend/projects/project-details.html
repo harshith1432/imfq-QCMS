@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Details | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .stage-section { border-left: 3px solid var(--ds-primary); padding-left: 1rem; margin-bottom: 2rem; }
+        .stage-section-title { font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ds-primary); margin-bottom: .75rem; }
+        .section-divider { border: 0; border-top: 1px solid var(--ds-border-color); margin: 2rem 0; }
+        .s1-status-badge { font-size: .72rem; font-weight: 700; padding: .35rem .85rem; border-radius: 50px; }
+        .review-panel { background: linear-gradient(135deg, rgba(var(--ds-primary-rgb),.05), transparent); border: 1px solid var(--ds-border-color); border-radius: var(--radius-lg); padding: 1.5rem; }
+        .milestone-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; align-items: end; }
+        .milestone-row + .milestone-row { margin-top: .5rem; }
+        .team-member-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: .5rem; align-items: end; }
+        .team-member-row + .team-member-row { margin-top: .5rem; }
+        .locked-overlay { position: relative; }
+        .locked-overlay::after { content: 'Locked – Complete Stage 1 First'; position: absolute; inset: 0; background: rgba(0,0,0,.55); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; border-radius: var(--radius-lg); font-size: .9rem; backdrop-filter: blur(2px); pointer-events: all; }
+        
+        :root {
+            --ds-success: #22c55e;
+            --ds-success-rgb: 34, 197, 94;
+        }
+        
+        /* Premium custom styling for 7 QC Tools modal pills */
+        #qcAnalysisModal .nav-pills .nav-link {
+            color: var(--ds-text-secondary);
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid var(--ds-border-color);
+            transition: all 0.2s ease-in-out;
+            background: rgba(var(--ds-primary-rgb), 0.02);
+        }
+        #qcAnalysisModal .nav-pills .nav-link:hover {
+            background: rgba(var(--ds-primary-rgb), 0.06);
+            color: var(--ds-primary);
+        }
+        #qcAnalysisModal .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, var(--ds-primary), rgba(var(--ds-primary-rgb), 0.8)) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(var(--ds-primary-rgb), 0.25);
+            border-color: rgba(var(--ds-primary-rgb), 0.3);
+        }
+    </style>
+</head>
+<body class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+
+    <main class="app-main">
+        <header class="app-navbar" id="app-navbar"></header>
+
+        <div class="app-content-inner">
+
+            <!-- Page Header -->
+            <header class="ds-header-layout section-spacing px-0">
+                <div class="h-stack justify-content-between w-100 flex-wrap gap-3">
+                    <div class="v-stack">
+                        <div class="h-stack gap-2 mb-2 flex-wrap">
+                            <span class="ds-badge ds-badge-sm gray" id="projectUidDisplay">UID: ---</span>
+                            <span class="s1-status-badge" id="stageStatusBadge" style="background:rgba(var(--ds-warning-rgb),.12);color:var(--ds-warning)">Incomplete</span>
+                        </div>
+                        <h1 class="ds-title mb-0" id="projectTitleDisplay">Loading Project...</h1>
+                        <p class="ds-text-secondary mb-0 mt-1" id="projectMeta">Loading...</p>
+                    </div>
+                    <div class="h-stack gap-2">
+                        <button class="ds-btn ds-btn-ghost d-none" id="qcAnalysisBtn" onclick="ProjectApp.openQcAnalysisModal()">
+                            <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> QC Tools Analysis
+                        </button>
+                        <button class="ds-btn ds-btn-ghost d-none" id="exportReportBtn" onclick="ProjectApp.exportReport()">
+                            <i data-lucide="file-text" style="width:14px;height:14px;"></i> Export as Document
+                        </button>
+                        <button class="ds-btn ds-btn-ghost" id="saveDraftBtn" onclick="ProjectApp.saveDraft()">
+                            <i data-lucide="save" style="width:14px;height:14px;"></i> Save Draft
+                        </button>
+                        <button class="ds-btn ds-btn-primary" id="submitBtn" onclick="ProjectApp.submitForReview()">
+                            <i data-lucide="send" style="width:14px;height:14px;"></i> Submit For Review
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Visual Stage Stepper -->
+            <div id="stepperContainer" class="mb-5"></div>
+
+            <!-- Idea Information Card (Shown when project is created from an approved idea) -->
+            <div id="ideaInformationCard" class="glass-card ds-card p-4 mb-4 d-none" style="border-left: 4px solid var(--ds-primary);">
+                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <i data-lucide="sparkles" class="text-primary" style="width:20px;height:20px;"></i>
+                        <h6 class="fw-bold mb-0 text-main">Idea Information (Project Traceability)</h6>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Imported From Ideation Tool</span>
+                    </div>
+                    <button type="button" class="ds-btn ds-btn-xs ds-btn-outline-primary" onclick="ProjectApp.openOriginalIdeaModal()">
+                        <i data-lucide="external-link" style="width:12px;height:12px;" class="me-1"></i> View Original Idea
+                    </button>
+                </div>
+                <div class="row g-3 text-sm">
+                    <div class="col-md-3">
+                        <span class="text-xs text-muted d-block text-uppercase fw-bold">Idea Code</span>
+                        <span class="fw-bold font-monospace text-primary" id="ideaCardCode">---</span>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-xs text-muted d-block text-uppercase fw-bold">Idea Title</span>
+                        <span class="fw-semibold text-main" id="ideaCardTitle">---</span>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-xs text-muted d-block text-uppercase fw-bold">Idea Owner</span>
+                        <span class="fw-semibold text-main" id="ideaCardOwner">---</span>
+                    </div>
+                    <div class="col-md-2">
+                        <span class="text-xs text-muted d-block text-uppercase fw-bold">Import Date</span>
+                        <span class="fw-semibold text-main" id="ideaCardImportDate">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rejection Reason Banner -->
+            <div id="rejectionCommentsBanner" class="alert alert-danger mb-4 d-none"></div>
+
+            <!-- Review Panel (shown for Facilitator/Admin when submitted) -->
+            <div id="reviewPanel" class="review-panel mb-4 d-none">
+                <h6 class="fw-bold mb-3"><i data-lucide="shield-check" style="width:16px;height:16px;"></i> Stage Review Decision</h6>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="ds-label">Review Comments</label>
+                        <textarea class="ds-input ds-textarea" id="reviewComments" rows="2" placeholder="Enter your review comments..."></textarea>
+                    </div>
+                    <div class="col-md-4 d-flex flex-column gap-2 justify-content-end">
+                        <button class="ds-btn ds-btn-primary" onclick="ProjectApp.reviewStage('approve')">
+                            <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Approve & Unlock Next Stage
+                        </button>
+                        <button class="ds-btn ds-btn-ghost" onclick="ProjectApp.reviewStage('send_back')">
+                            <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Send Back for Revision
+                        </button>
+                        <button class="ds-btn" style="background:rgba(var(--ds-danger-rgb),.1);color:var(--ds-danger)" onclick="ProjectApp.reviewStage('reject')">
+                            <i data-lucide="x-circle" style="width:14px;height:14px;"></i> Reject
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 8: Reviewer redirect notice -->
+            <div id="stage8Notice" class="review-panel mb-4 d-none" style="background:rgba(var(--ds-primary-rgb),.07);border-color:rgba(var(--ds-primary-rgb),.2);">
+                <div class="d-flex align-items-center gap-3">
+                    <i data-lucide="info" style="width:28px;height:28px;color:var(--ds-primary);flex-shrink:0;"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1" style="color:var(--ds-primary);">Stage 8 — Action Required in Reviewer Dashboard</h6>
+                        <p class="text-sm mb-2" style="color:var(--ds-text-secondary);">Stage 8 review (Impact Review, SOP creation, and closure sign-off) is managed in your Reviewer Dashboard.</p>
+                        <a href="/dashboard/dashboard-reviewer.html" class="ds-btn ds-btn-sm ds-btn-primary">
+                            <i data-lucide="bar-chart-3" style="width:13px;height:13px;margin-right:4px;"></i> Go to Reviewer Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 8: Admin inline approval panel (shown only when status = Pending Closure) -->
+            <div id="stage8AdminApproval" class="review-panel mb-4 d-none" style="background:rgba(22,163,74,.06);border-color:rgba(22,163,74,.25);">
+                <div class="d-flex align-items-start gap-3">
+                    <i data-lucide="check-circle" style="width:28px;height:28px;color:#16a34a;flex-shrink:0;margin-top:2px;"></i>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1" style="color:#16a34a;">Reviewer Closure Signed Off — Admin Approval Required</h6>
+                        <p class="text-sm mb-3" style="color:var(--ds-text-secondary);">The Reviewer has completed the Impact Review, created the SOP, and signed off for closure. Your approval will officially close this project and make the SOP visible to all users.</p>
+                        <div class="d-flex gap-2">
+                            <button class="ds-btn ds-btn-primary" onclick="ProjectApp.adminApproveClose()" id="adminApproveCloseBtn">
+                                <i data-lucide="check-circle" style="width:14px;height:14px;margin-right:6px;"></i> Approve &amp; Close Project
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meetings Section -->
+            <div id="stageMeetingsSection" class="glass-card ds-card p-4 mb-4 d-none">
+                <div class="ds-card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title">
+                        <i data-lucide="calendar" class="me-2" style="width:18px;height:18px;vertical-align:text-bottom;color:var(--ds-primary);"></i>
+                        Stage Scheduled Meetings
+                    </h5>
+                    <button class="ds-btn ds-btn-primary ds-btn-sm" id="scheduleStageMeetingBtn" onclick="ProjectApp.openMeetingModal()">
+                        <i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Schedule Meeting
+                    </button>
+                </div>
+                <div class="ds-card-body p-0">
+                    <div id="stageMeetingsList" class="activity-feed p-4" style="max-height:400px; overflow-y:auto;">
+                        <!-- Dynamic list -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Facilitator Executive Review Panel -->
+            <div id="facilitatorExecutiveReview" class="glass-card ds-card p-4 mb-4 d-none"></div>
+
+            <div class="row g-4">
+                <div class="col-lg-9 col-12">
+                    <div id="stageContentContainer"></div>
+
+                    <!-- Bottom Action Bar for Stage Data Submission & Saving -->
+                    <div id="bottomStageActionsContainer" class="glass-card ds-card p-3 mb-4 d-flex flex-row justify-content-end align-items-center gap-3" style="display: flex !important; flex-direction: row !important; justify-content: flex-end !important; align-items: center !important;">
+                        <button class="ds-btn ds-btn-ghost" id="saveDraftBtnBottom" onclick="ProjectApp.saveDraft()" style="display: inline-flex !important; align-items: center;">
+                            <i data-lucide="save" style="width:14px;height:14px;margin-right:6px;"></i> Save Draft
+                        </button>
+                        <button class="ds-btn ds-btn-primary" id="submitBtnBottom" onclick="ProjectApp.submitForReview()" style="display: inline-flex !important; align-items: center;">
+                            <i data-lucide="send" style="width:14px;height:14px;margin-right:6px;"></i> Submit For Review
+                        </button>
+                    </div>
+
+                    <!-- Locked stages placeholder -->
+                    <div id="lockedStagesNotice" class="glass-card ds-card p-4 text-center mb-4 d-none">
+                        <i data-lucide="lock" style="width:40px;height:40px;color:var(--ds-text-secondary);"></i>
+                        <h5 class="mt-3 fw-bold">Stages Locked</h5>
+                        <p class="ds-text-secondary">Complete and get the previous stage approved to unlock this stage.</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-12">
+                    <!-- Facilitator Support Card -->
+                    <div id="facilitatorSupportCard" class="glass-card ds-card p-4 mb-4 position-sticky d-none" style="top: 2rem; border: 1px solid var(--ds-border-color) !important;">
+                        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size: 13px; color: var(--ds-text-main);">
+                            <i data-lucide="help-circle" class="text-primary" style="width:16px;height:16px;"></i>
+                            Assigned Facilitator
+                        </h6>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold text-sm" style="width: 44px; height: 44px; flex-shrink: 0;" id="facAvatar">
+                                F
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="fw-bold text-sm text-main text-truncate" id="facName">---</div>
+                                <div class="text-xxs text-muted">Methodological Guide</div>
+                            </div>
+                        </div>
+                        <div class="v-stack gap-2 text-xs mb-4">
+                            <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                <i data-lucide="mail" style="width:14px;height:14px;color:var(--ds-text-secondary); flex-shrink: 0;"></i>
+                                <span class="text-secondary text-truncate" id="facEmail">fac@qcms.com</span>
+                            </div>
+                        </div>
+                        <button class="ds-btn ds-btn-sm ds-btn-primary w-100 justify-content-center" onclick="ProjectApp.openFacilitatorRequestModal()">
+                            <i data-lucide="message-square" style="width:13px;height:13px;margin-right:4px;"></i> Approach Facilitator
+                        </button>
+                    </div>
+
+                    <!-- Facilitator Reply Card (shown per-stage when reply exists) -->
+                    <div id="facilitatorReplyCard" class="glass-card ds-card p-4 mb-4 d-none" style="border: 1px solid var(--ds-border-color) !important; border-left: 3px solid var(--ds-primary, #3b82f6) !important;">
+                        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size: 13px; color: var(--ds-text-main);">
+                            <i data-lucide="message-circle" class="text-primary" style="width:16px;height:16px;"></i>
+                            Facilitator Reply
+                            <span id="facReplyBadge" class="ds-badge orange ms-auto" style="font-size:10px;">Pending</span>
+                        </h6>
+                        <!-- Original message sent by team member -->
+                        <div class="mb-3 p-2 rounded" style="background:var(--ds-surface-1,#f8fafc);border:1px solid var(--ds-border-color);font-size:12px;">
+                            <div class="text-xxs text-muted mb-1 fw-semibold">YOUR REQUEST</div>
+                            <div id="facReplyOriginalMsg" style="color:var(--ds-text-secondary);white-space:pre-wrap;"></div>
+                        </div>
+                        <!-- Facilitator reply (hidden until responded) -->
+                        <div id="facReplyResponseWrap" class="mb-3 d-none">
+                            <div class="text-xxs text-muted mb-1 fw-semibold">FACILITATOR RESPONSE</div>
+                            <div id="facReplyResponseText" class="p-2 rounded" style="background:var(--ds-surface-2,#f0fdf4);border-left:3px solid #22c55e;font-size:13px;white-space:pre-wrap;color:var(--ds-text-main);"></div>
+                        </div>
+                        <!-- Status -->
+                        <div class="text-xxs text-muted mt-2" id="facReplyDate"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Schedule Meeting Modal -->
+    <div class="modal fade" id="scheduleMeetingModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card ds-card border-0">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);">
+                        <i data-lucide="calendar-plus" class="me-2 text-primary"></i> Schedule Stage Meeting
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <form id="meetingForm" onsubmit="event.preventDefault(); ProjectApp.saveMeeting();">
+                        <div class="mb-3">
+                            <label class="ds-label" for="meetingTitle">Meeting Topic / Title <span class="text-danger">*</span></label>
+                            <input type="text" class="ds-input form-control" id="meetingTitle" required placeholder="e.g., Stage 1 Review Session">
+                        </div>
+                        <div class="mb-3">
+                            <label class="ds-label" for="meetingType">Meeting Type <span class="text-danger">*</span></label>
+                            <select class="ds-input form-select" id="meetingType" required onchange="ProjectApp.onMeetingTypeChange(this.value)">
+                                <option value="online">Online Meeting</option>
+                                <option value="offline">Offline Meeting</option>
+                            </select>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="ds-label" for="meetingDateTime">Date &amp; Time <span class="text-danger">*</span></label>
+                                <input type="datetime-local" class="ds-input form-control" id="meetingDateTime" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="ds-label" for="meetingDuration">Duration (minutes) <span class="text-danger">*</span></label>
+                                <input type="number" class="ds-input form-control" id="meetingDuration" min="5" required value="30">
+                            </div>
+                        </div>
+                        <div class="mb-0" id="meetingUrlContainer">
+                            <label class="ds-label" for="meetingUrl">Meeting URL <span class="text-danger">*</span></label>
+                            <input type="url" class="ds-input form-control" id="meetingUrl" placeholder="https://meet.google.com/abc-def-ghi">
+                        </div>
+                        <div class="modal-footer border-0 px-0 pb-0 pt-4">
+                            <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="ds-btn ds-btn-primary">
+                                <i data-lucide="calendar-check" style="width:14px;height:14px;"></i> Schedule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOP View Modal (Formatted Preview) -->
+    <div class="modal fade" id="sopViewModal" tabindex="-1" aria-labelledby="sopViewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content glass-card ds-card border-0">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div class="v-stack">
+                        <span class="ds-badge ds-badge-sm blue mb-2" id="sop_v_status">Preview (Draft)</span>
+                        <h5 class="modal-title fw-bold" id="sop_v_title" style="color:var(--ds-text-main);">SOP Details</h5>
+                        <p class="text-xs text-muted mt-1 mb-0" id="sop_v_meta">SOP UID: Preview · Version: 1</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 py-4">
+                    <div class="sop-document-view" style="color:var(--ds-text-main);">
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2">1. Overview</h6>
+                            <div class="row g-3 text-sm">
+                                <div class="col-md-6"><strong>Process:</strong> <span id="sop_v_process">---</span></div>
+                                <div class="col-md-6"><strong>Type:</strong> <span id="sop_v_type">---</span></div>
+                                <div class="col-md-6"><strong>Category:</strong> <span id="sop_v_category">---</span></div>
+                                <div class="col-md-6"><strong>Version:</strong> <span id="sop_v_version">1</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2">2. Purpose & Scope</h6>
+                            <div class="mb-3">
+                                <strong>Purpose:</strong>
+                                <p class="text-muted mt-1 text-sm bg-surface p-2 rounded" id="sop_v_purpose" style="white-space:pre-wrap;">---</p>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Scope:</strong>
+                                <p class="text-muted mt-1 text-sm bg-surface p-2 rounded" id="sop_v_scope" style="white-space:pre-wrap;">---</p>
+                            </div>
+                            <div class="mb-3" id="sop_v_applicability_container">
+                                <strong>Applicability:</strong>
+                                <p class="text-muted mt-1 text-sm bg-surface p-2 rounded" id="sop_v_applicability">---</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2">3. Responsibilities</h6>
+                            <p class="text-muted text-sm bg-surface p-2 rounded" id="sop_v_responsibilities" style="white-space:pre-wrap;">---</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2">4. Procedure Steps</h6>
+                            <div id="sop_v_steps_list" class="v-stack gap-3">
+                                <!-- Steps list -->
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2">5. Workflow Stakeholders</h6>
+                            <div class="row g-3 text-sm">
+                                <div class="col-md-4"><strong>Author / Owner:</strong> <span id="sop_v_author">---</span></div>
+                                <div class="col-md-4"><strong>Reviewer:</strong> <span id="sop_v_reviewer">---</span></div>
+                                <div class="col-md-4"><strong>Approver:</strong> <span id="sop_v_approver">---</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Close Preview</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7 QC Tools Analysis Modal -->
+    <div class="modal fade" id="qcAnalysisModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 92%;">
+            <div class="modal-content glass-card ds-card border-0">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div class="v-stack">
+                        <span class="ds-badge ds-badge-sm green mb-2" style="background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success)">Project Completed</span>
+                        <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);">7 QC Tools Analysis &amp; Performance</h5>
+                        <p class="text-xs text-muted mt-1 mb-0" id="qc_modal_meta">Project: pillow · Comprehensive Quality Control Tools Data View</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 py-4">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="nav flex-column nav-pills me-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                                <button class="nav-link active text-start py-2.5 px-3 mb-2" id="pill-checksheet-tab" data-bs-toggle="pill" data-bs-target="#pill-checksheet" type="button" role="tab">
+                                    <i data-lucide="clipboard-list" class="me-2" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 1. Check Sheet
+                                </button>
+                                <button class="nav-link text-start py-2.5 px-3 mb-2" id="pill-histogram-tab" data-bs-toggle="pill" data-bs-target="#pill-histogram" type="button" role="tab">
+                                    <i data-lucide="bar-chart-2" class="me-2" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 2. Histogram
+                                </button>
+                                <button class="nav-link text-start py-2.5 px-3 mb-2" id="pill-pareto-tab" data-bs-toggle="pill" data-bs-target="#pill-pareto" type="button" role="tab">
+                                    <i data-lucide="trending-up" class="me-2" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 3. Pareto Chart
+                                </button>
+                                <button class="nav-link text-start py-2.5 px-3 mb-2" id="pill-fishbone-tab" data-bs-toggle="pill" data-bs-target="#pill-fishbone" type="button" role="tab">
+                                    <i data-lucide="git-branch" class="me-2" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 4. Fishbone Diagram
+                                </button>
+                                <button class="nav-link text-start py-2.5 px-3 mb-2" id="pill-control-tab" data-bs-toggle="pill" data-bs-target="#pill-control" type="button" role="tab">
+                                    <i data-lucide="activity" class="me-2" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 5. Control Chart
+                                </button>
+                                <button class="nav-link text-start py-2.5 px-3 mb-2" id="pill-scatter-tab" data-bs-toggle="pill" data-bs-target="#pill-scatter" type="button" role="tab">
+                                    <i data-lucide="scatter-chart" class="me-2" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 6. Scatter Diagram
+                                </button>
+                                <button class="nav-link text-start py-2.5 px-3 mb-2" id="pill-strat-tab" data-bs-toggle="pill" data-bs-target="#pill-strat" type="button" role="tab">
+                                    <i data-lucide="grid" class="me-2" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 7. Stratification
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="tab-content" id="v-pills-tabContent">
+                                <!-- Check Sheet -->
+                                <div class="tab-pane fade show active" id="pill-checksheet" role="tabpanel">
+                                    <h6 class="fw-bold text-primary mb-3">1. Check Sheet (Stage 2 Observation Data)</h6>
+                                    <div class="table-responsive">
+                                        <table class="ds-table table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Category</th>
+                                                    <th>Total Occurrences</th>
+                                                    <th>Gemba Locations Checked</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="qc_checksheet_body">
+                                                <tr><td colspan="3" class="text-center text-muted">No Check Sheet data loaded.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <!-- Histogram -->
+                                <div class="tab-pane fade" id="pill-histogram" role="tabpanel">
+                                    <h6 class="fw-bold text-primary mb-3">2. Histogram (Before vs After Comparison)</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <div style="height: 280px; position:relative;">
+                                                <canvas id="qc_histogram_canvas"></canvas>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="bg-light p-3 rounded border">
+                                                <div class="fw-bold text-xs text-secondary mb-2">Comparison Metrics</div>
+                                                <div class="text-xs mb-1"><strong>Before Mean:</strong> <span id="qc_hist_mean_bef">---</span></div>
+                                                <div class="text-xs mb-1"><strong>After Mean:</strong> <span id="qc_hist_mean_aft">---</span></div>
+                                                <div class="text-xs mb-1"><strong>Before SD:</strong> <span id="qc_hist_sd_bef">---</span></div>
+                                                <div class="text-xs mb-1"><strong>After SD:</strong> <span id="qc_hist_sd_aft">---</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pareto Chart -->
+                                <div class="tab-pane fade" id="pill-pareto" role="tabpanel">
+                                    <h6 class="fw-bold text-primary mb-3">3. Pareto Chart (Defect Frequency vs Cause Prioritization)</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3 bg-light">
+                                                <div class="fw-bold text-xs text-primary mb-2">Stage 2: Defect Pareto (Before Improvement)</div>
+                                                <div style="height:240px;position:relative;">
+                                                    <canvas id="qc_s2_pareto_canvas"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3 bg-light">
+                                                <div class="fw-bold text-xs text-primary mb-2">Stage 3: Suspect Cause Prioritization Pareto</div>
+                                                <div style="height:240px;position:relative;">
+                                                    <canvas id="qc_s3_pareto_canvas"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fishbone Diagram -->
+                                <div class="tab-pane fade" id="pill-fishbone" role="tabpanel">
+                                    <h6 class="fw-bold text-primary mb-3">4. Ishikawa (Fishbone) Diagrams</h6>
+                                    
+                                    <div class="row g-3">
+                                        <!-- Brainstormed Pre-Verification Fishbone -->
+                                        <div class="col-12">
+                                            <div class="border rounded p-3 bg-light shadow-sm">
+                                                <div class="fw-bold text-xs text-primary mb-2">1. Ishikawa (Fishbone) Diagram - Brainstormed (Pre-Verification)</div>
+                                                <div style="width:100%; max-width:800px; margin:0 auto; overflow-x:auto;">
+                                                    <svg viewBox="0 0 800 350" width="100%" height="100%" style="font-family: inherit; min-width:600px;">
+                                                        <defs>
+                                                            <marker id="arrow-pre" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                                                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--ds-primary)" />
+                                                            </marker>
+                                                        </defs>
+                                                        
+                                                        <!-- Main Spine -->
+                                                        <line x1="40" y1="175" x2="680" y2="175" stroke="var(--ds-primary)" stroke-width="4" marker-end="url(#arrow-pre)" />
+                                                        
+                                                        <!-- Effect Head (Right Side) -->
+                                                        <rect x="680" y="130" width="115" height="90" rx="8" fill="rgba(var(--ds-primary-rgb),0.08)" stroke="var(--ds-primary)" stroke-width="2" />
+                                                        <text x="737" y="152" text-anchor="middle" font-size="10" font-weight="bold" fill="var(--ds-primary)">EFFECT (PROBLEM)</text>
+                                                        <text x="737" y="178" text-anchor="middle" font-size="10" font-weight="bold" fill="var(--ds-text-main)" id="qc_fb_pre_effect">Problem Statement</text>
+                                                        
+                                                        <!-- Man Bone -->
+                                                        <line x1="160" y1="60" x2="230" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="160" y="52" font-size="11" font-weight="bold" fill="var(--ds-primary)">Man</text>
+                                                        <g id="qc_fb_pre_Man"></g>
+                                                        
+                                                        <!-- Machine Bone -->
+                                                        <line x1="330" y1="60" x2="400" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="330" y="52" font-size="11" font-weight="bold" fill="var(--ds-primary)">Machine</text>
+                                                        <g id="qc_fb_pre_Machine"></g>
+                                                        
+                                                        <!-- Material Bone -->
+                                                        <line x1="500" y1="60" x2="570" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="500" y="52" font-size="11" font-weight="bold" fill="var(--ds-primary)">Material</text>
+                                                        <g id="qc_fb_pre_Material"></g>
+                                                        
+                                                        <!-- Method Bone -->
+                                                        <line x1="160" y1="290" x2="230" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="160" y="305" font-size="11" font-weight="bold" fill="var(--ds-primary)">Method</text>
+                                                        <g id="qc_fb_pre_Method"></g>
+                                                        
+                                                        <!-- Measurement Bone -->
+                                                        <line x1="330" y1="290" x2="400" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="330" y="305" font-size="11" font-weight="bold" fill="var(--ds-primary)">Measurement</text>
+                                                        <g id="qc_fb_pre_Measurement"></g>
+                                                        
+                                                        <!-- Environment Bone -->
+                                                        <line x1="500" y1="290" x2="570" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="500" y="305" font-size="11" font-weight="bold" fill="var(--ds-primary)">Environment</text>
+                                                        <g id="qc_fb_pre_Environment"></g>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Verified Post-Verification Fishbone -->
+                                        <div class="col-12">
+                                            <div class="border rounded p-3 bg-light shadow-sm">
+                                                <div class="fw-bold text-xs text-success mb-2">2. Ishikawa (Fishbone) Diagram - Verified Causes (Post-Verification)</div>
+                                                <div style="width:100%; max-width:800px; margin:0 auto; overflow-x:auto;">
+                                                    <svg viewBox="0 0 800 350" width="100%" height="100%" style="font-family: inherit; min-width:600px;">
+                                                        <defs>
+                                                            <marker id="arrow-post" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                                                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--ds-success)" />
+                                                            </marker>
+                                                        </defs>
+                                                        
+                                                        <!-- Main Spine -->
+                                                        <line x1="40" y1="175" x2="680" y2="175" stroke="var(--ds-success)" stroke-width="4" marker-end="url(#arrow-post)" />
+                                                        
+                                                        <!-- Effect Head (Right Side) -->
+                                                        <rect x="680" y="130" width="115" height="90" rx="8" fill="rgba(var(--ds-success-rgb),0.08)" stroke="var(--ds-success)" stroke-width="2" />
+                                                        <text x="737" y="152" text-anchor="middle" font-size="10" font-weight="bold" fill="var(--ds-success)">EFFECT (PROBLEM)</text>
+                                                        <text x="737" y="178" text-anchor="middle" font-size="10" font-weight="bold" fill="var(--ds-text-main)" id="qc_fb_post_effect">Problem Statement</text>
+                                                        
+                                                        <!-- Man Bone -->
+                                                        <line x1="160" y1="60" x2="230" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="160" y="52" font-size="11" font-weight="bold" fill="var(--ds-success)">Man</text>
+                                                        <g id="qc_fb_post_Man"></g>
+                                                        
+                                                        <!-- Machine Bone -->
+                                                        <line x1="330" y1="60" x2="400" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="330" y="52" font-size="11" font-weight="bold" fill="var(--ds-success)">Machine</text>
+                                                        <g id="qc_fb_post_Machine"></g>
+                                                        
+                                                        <!-- Material Bone -->
+                                                        <line x1="500" y1="60" x2="570" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="500" y="52" font-size="11" font-weight="bold" fill="var(--ds-success)">Material</text>
+                                                        <g id="qc_fb_post_Material"></g>
+                                                        
+                                                        <!-- Method Bone -->
+                                                        <line x1="160" y1="290" x2="230" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="160" y="305" font-size="11" font-weight="bold" fill="var(--ds-success)">Method</text>
+                                                        <g id="qc_fb_post_Method"></g>
+                                                        
+                                                        <!-- Measurement Bone -->
+                                                        <line x1="330" y1="290" x2="400" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="330" y="305" font-size="11" font-weight="bold" fill="var(--ds-success)">Measurement</text>
+                                                        <g id="qc_fb_post_Measurement"></g>
+                                                        
+                                                        <!-- Environment Bone -->
+                                                        <line x1="500" y1="290" x2="570" y2="175" stroke="#4b5563" stroke-width="2" />
+                                                        <text x="500" y="305" font-size="11" font-weight="bold" fill="var(--ds-success)">Environment</text>
+                                                        <g id="qc_fb_post_Environment"></g>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Control Chart -->
+                                <div class="tab-pane fade" id="pill-control" role="tabpanel">
+                                    <h6 class="fw-bold text-primary mb-3">5. Control Chart (Before vs After Stability Comparison)</h6>
+                                    <div class="border rounded p-3 bg-light">
+                                        <div style="height: 300px; position:relative;">
+                                            <canvas id="qc_control_comparison_canvas"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Scatter Diagram -->
+                                <div class="tab-pane fade" id="pill-scatter" role="tabpanel">
+                                    <h6 class="fw-bold text-primary mb-3">6. Scatter Diagram (Cause-and-Effect Relationship)</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <div style="height: 280px; position:relative;">
+                                                <canvas id="qc_scatter_canvas"></canvas>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="bg-light p-3 rounded border">
+                                                <div class="fw-bold text-xs text-secondary mb-2">Regression Statistics</div>
+                                                <div class="text-xs mb-1"><strong>R Correlation Coefficient:</strong> <span id="qc_scatter_r_val">---</span></div>
+                                                <div class="text-xs mb-1"><strong>Relationship Strength:</strong> <span id="qc_scatter_strength">---</span></div>
+                                                <div class="text-xs mb-1"><strong>Formula:</strong> y = <span id="qc_scatter_m_val">---</span>x + <span id="qc_scatter_c_val">---</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stratification -->
+                                <div class="tab-pane fade" id="pill-strat" role="tabpanel">
+                                    <h6 class="fw-bold text-primary mb-3">7. Stratification Analysis (Stage 2 Observations Breakdowns)</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3 bg-light">
+                                                <div class="fw-bold text-xs text-primary mb-2">Stratification by Shift</div>
+                                                <div class="table-responsive">
+                                                    <table class="ds-table table-bordered">
+                                                        <thead><tr><th>Shift</th><th>Defect Count</th></tr></thead>
+                                                        <tbody id="qc_strat_shift_body"></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3 bg-light">
+                                                <div class="fw-bold text-xs text-primary mb-2">Stratification by Location</div>
+                                                <div class="table-responsive">
+                                                    <table class="ds-table table-bordered">
+                                                        <thead><tr><th>Location</th><th>Defect Count</th></tr></thead>
+                                                        <tbody id="qc_strat_location_body"></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Close Analysis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Facilitator Assistance Request Modal -->
+    <div class="modal fade" id="requestFacilitatorModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card ds-card border-0" style="border: 1px solid var(--ds-border-color) !important;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="facModalTitle" style="color:var(--ds-text-main);">
+                        <i data-lucide="message-square" class="me-2 text-primary" style="width:20px;height:20px;vertical-align:text-bottom;"></i> Approach Facilitator
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <form id="facilitatorRequestForm" onsubmit="event.preventDefault(); ProjectApp.submitFacilitatorRequest();">
+                        <div class="mb-3">
+                            <label class="ds-label" for="assistanceMessage">Describe your problem / query <span class="text-danger">*</span></label>
+                            <textarea class="ds-input ds-textarea" id="assistanceMessage" rows="4" required placeholder="What do you need help with? Explain the issue so the facilitator can assist you."></textarea>
+                        </div>
+                        <div class="modal-footer border-0 px-0 pb-0 pt-4">
+                            <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="ds-btn ds-btn-primary">
+                                <i data-lucide="send" style="width:14px;height:14px;margin-right:6px;"></i> Send Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Original Idea Details Modal -->
+    <div class="modal fade" id="originalIdeaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card ds-card">
+                <div class="modal-header border-bottom p-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i data-lucide="file-text" class="text-primary"></i>
+                        <h5 class="modal-title fw-bold mb-0">Original Approved Idea Details</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="originalIdeaModalBody">
+                    Loading idea details...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script src="/assets/js/stages/stage1.js"></script>
+    <script src="/assets/js/stages/stage2.js"></script>
+    <script src="/assets/js/stages/stage3.js"></script>
+    <script src="/assets/js/stages/stage4.js"></script>
+    <script src="/assets/js/stages/stage5.js"></script>
+    <script src="/assets/js/stages/stage6.js"></script>
+    <script src="/assets/js/stages/stage7.js"></script>
+    <script src="/assets/js/stages/stage8.js"></script>
+    <script src="/assets/js/stages/dynamic_renderer.js"></script>
+    <script src="/assets/js/project-details-app.js"></script>
+</body>
+</html>
+

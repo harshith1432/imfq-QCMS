@@ -1,0 +1,172 @@
+{
+  "common": {
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "search": "Search",
+    "loading": "Loading...",
+    "no_data": "No data available",
+    "actions": "Actions",
+    "date": "Date",
+    "time": "Time",
+    "status_list": {
+      "active": "Active",
+      "trialing": "Trialing",
+      "suspended": "Suspended",
+      "expired": "Expired",
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "rejected": "Rejected",
+      "failed": "Failed",
+      "done": "Done",
+      "of": "of"
+    }
+  },
+  "sidebar": {
+    "labels": {
+      "master_control": "Master Control",
+      "main": "Main",
+      "administration": "Administration",
+      "management": "Management",
+      "resources": "Resources",
+      "system": "System"
+    },
+    "links": {
+      "dashboard": "Dashboard",
+      "platform_dashboard": "Platform Dashboard",
+      "organizations": "Organizations",
+      "revenue": "Revenue Control",
+      "support": "Support Desk",
+      "global_settings": "Global Settings",
+      "system_logs": "System Logs",
+      "overview": "Overview",
+      "projects_repo": "Project Repository",
+      "analytics": "Analytics",
+      "user_management": "User Management",
+      "departments": "Departments",
+      "audit_logs": "Audit Logs",
+      "knowledge_base": "Knowledge Base",
+      "standards_sops": "Standards & SOPs",
+      "settings": "Settings",
+      "logout": "Logout",
+      "profile": "Profile"
+    }
+  },
+  "navbar": {
+    "search_placeholder": "Search projects or users...",
+    "notifications": "Notifications",
+    "light_mode": "Light Mode",
+    "dark_mode": "Dark Mode"
+  },
+  "roles": {
+    "superadmin": "Super Admin",
+    "admin": "Admin",
+    "team_leader": "Team Leader",
+    "facilitator": "Facilitator",
+    "reviewer": "Reviewer",
+    "team_member": "Team Member"
+  },
+  "profile": {
+    "title": "User Profile",
+    "language_settings": "Language Settings",
+    "select_language": "Select Language",
+    "update_profile": "Update Profile"
+  },
+  "settings": {
+    "branding": {
+      "title": "Branding & Style",
+      "primary_color": "PRIMARY THEME COLOR",
+      "logo_url": "LOGO URL / UPLOAD",
+      "favicon_url": "FAVICON URL / UPLOAD",
+      "logo_preview": "LOGO PREVIEW",
+      "favicon_preview": "FAVICON PREVIEW"
+    },
+    "localization": {
+      "title": "Localization & UX",
+      "timezone": "SYSTEM TIMEZONE",
+      "date_format": "DATE FORMAT",
+      "currency": "BASE CURRENCY",
+      "language": "DEFAULT LANGUAGE"
+    }
+  },
+  "dashboards": {
+    "common": {
+      "overview": "Overview",
+      "analytics": "Analytics",
+      "all_status": "All Status",
+      "command": "Command",
+      "loading": "Loading...",
+      "department": "Department",
+      "status": "Status"
+    },
+    "admin": {
+      "title": "Organization Overview",
+      "subtitle": "Manage projects, monitor activity, and oversee system users.",
+      "strategic_distribution": "Strategic Distribution",
+      "projects_by_category": "Projects by Category",
+      "workflow_metrics": "Workflow Metrics",
+      "projects_by_stage": "Projects by Stage",
+      "pipeline_title": "Active Projects",
+      "init_project": "Initialize Project",
+      "project_identity": "Project Identity",
+      "current_stage": "Current Stage",
+      "methodology_status": "Methodology Status",
+      "loading_pipeline": "Loading pipeline data...",
+      "stakeholders_title": "Enterprise Stakeholders",
+      "manage_users": "Manage Users",
+      "provision_access": "Provision Access",
+      "stakeholder": "Stakeholder",
+      "corporate_role": "Corporate Role",
+      "access_status": "Access Status",
+      "last_active": "Last Active",
+      "sync_directory": "Synchronizing user directory..."
+    },
+    "ceo": {
+      "executive_summary": "Executive Strategic Summary",
+      "financial_impact": "Cumulative Financial Impact",
+      "project_velocity": "Project Execution Velocity",
+      "quality_roi": "Quality Circle ROI",
+      "strategic_alignment": "Strategic Resource Alignment",
+      "org_health": "Organizational Quality Health",
+      "priority_initiatives": "Priority Strategic Initiatives",
+      "total_savings": "Total Savings",
+      "completion_rate": "Completion Rate",
+      "avg_improvement": "Avg. KPI Improvement",
+      "health_score": "Health Score",
+      "active_initiatives": "Active Strategic Initiatives",
+      "view_all_projects": "View All Projects",
+      "savings_trend": "Cost Savings Trend (6 Months)",
+      "impact_category": "Impact by Category",
+      "stage_completion": "Avg. Stage Completion",
+      "days": "days",
+      "subtitle": "Executive oversight of organizational performance and ROI analytics.",
+      "savings_trend_sub": "Monthly cost savings from quality circles",
+      "org_health_sub": "Composite efficiency index",
+      "active_initiatives_sub": "of {total} total projects",
+      "insight_velocity": "Average project stage completion time is {days} days.",
+      "insight_success": "Project success rate stands at {rate}% across {total} initiatives.",
+      "insight_participation": "{active} departments ({rate}%) are actively utilizing the QCMS platform.",
+      "insight_recommendation": "Recommendation: Increase facilitator engagement in underperforming units.",
+      "executive_access": "Executive Access",
+      "project_initiative": "Project Initiative",
+      "roi_priority": "ROI Priority",
+      "current_stage": "Current Stage",
+      "status": "Status",
+      "retrieving_initiatives": "Retrieving priority initiatives...",
+      "no_initiatives": "No active initiatives found."
+    },
+    "workflow": {
+      "stage1": "S0/S1 Plan & Establish Team",
+      "stage2": "S2 Define Problem",
+      "stage3": "S3 Interim Containment",
+      "stage4": "S4 Determine Root Causes",
+      "stage5": "S5 Choose Permanent Corrections",
+      "stage6": "S6 Implement Corrective Actions",
+      "stage7": "S7 Take Preventive Measures",
+      "stage8": "S8 Congratulate Team & Closure"
+    }
+  }
+}

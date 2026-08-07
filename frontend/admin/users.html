@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Directory | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+
+    <main class="app-main">
+        <header class="app-navbar" id="app-navbar"></header>
+
+        <div class="app-content-inner">
+            <header class="ds-header-layout section-spacing px-0">
+                <div class="h-stack justify-content-between w-100">
+                    <div class="v-stack">
+                        <h1 class="ds-title mb-0">Organization Directory</h1>
+                        <p class="ds-text-secondary mb-0">Manage user roles, departments, and system access across the organization.</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="glass-card ds-card mb-4">
+                <div class="ds-card-header h-stack justify-content-between p-4">
+                    <div class="v-stack">
+                        <h5 class="mb-0 fw-bold">Member Registry</h5>
+                        <p class="text-xs ds-text-secondary mb-0">Stakeholder access and role tracking</p>
+                    </div>
+                    <div class="h-stack gap-3">
+                        <div class="position-relative" style="width: 200px;">
+                            <i data-lucide="search" class="position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; pointer-events: none; opacity: 0.65; z-index: 10;"></i>
+                            <input type="text" class="ds-input" id="memberSearchInput" placeholder="Search members..." 
+                                style="padding-left: 36px !important; padding-right: 12px !important; padding-top: 6px !important; padding-bottom: 6px !important; height: 36px !important; font-size: 0.78rem; border: 1.5px solid rgba(120, 120, 120, 0.45) !important; background: var(--ds-input-bg) !important; color: var(--ds-text-main) !important; border-radius: 8px;" 
+                                oninput="Users.loadUsers()">
+                        </div>
+
+                        <select class="ds-input ds-select ds-input-sm" id="userPlantFilter" onchange="Users.loadUsers()" style="height: 36px !important; font-size: 0.78rem; border: 1.5px solid rgba(120, 120, 120, 0.45) !important; background: var(--ds-input-bg) !important; color: var(--ds-text-main) !important; border-radius: 8px; width: 170px;">
+                            <option value="">All Plant Locations</option>
+                        </select>
+
+                        <div class="ds-tab-group">
+                            <button class="ds-btn-tab active" onclick="Users.filter('all')">All</button>
+                            <button class="ds-btn-tab" onclick="Users.filter('active')">Active</button>
+                        </div>
+
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Users.openFieldsModal()">
+                            <i data-lucide="settings"></i> Configure Fields
+                        </button>
+
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Users.openBulkModal()">
+                            <i data-lucide="upload"></i> Bulk Import
+                        </button>
+
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="Users.openAddModal()">
+                            <i data-lucide="user-plus"></i> Add Member
+                        </button>
+                    </div>
+                </div>
+                <div class="ds-card-body p-0">
+                    <div class="table-responsive">
+                        <table class="ds-table ds-table-hover">
+                            <thead>
+                                <tr id="usersTheadRow">
+                                    <th data-i18n="dashboards.admin.stakeholder">Identity</th>
+                                    <th data-i18n="dashboards.admin.corporate_role">Role</th>
+                                    <th>Plant Location</th>
+                                    <th data-i18n="dashboards.common.department">Department</th>
+                                    <!-- custom field columns injected here by JS -->
+                                    <th data-i18n="dashboards.admin.access_status">State</th>
+                                    <th data-i18n="dashboards.admin.last_active">Last Active</th>
+                                    <th class="text-end" data-i18n="common.actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersBody">
+                                <!-- Loaded via script -->
+                                <tr><td colspan="7" class="p-5 text-center text-muted" data-i18n="dashboards.admin.sync_directory">Synchronizing directory...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="usersPaginationContainer"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    </div>
+
+    <!-- Actions consolidated into table row for single-init reliability -->
+
+
+    <!-- Add User Modal -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card ds-card" style="overflow: visible !important;">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-bold">Provision Access</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" style="overflow: visible !important;">
+                    <form id="userForm">
+                        <div class="ds-field">
+                            <label class="ds-label">DISPLAY NAME / IDENTITY <span class="text-danger">*</span></label>
+                            <input type="text" class="ds-input" id="username" placeholder="e.g. John Doe" required>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label">ENTERPRISE EMAIL <span class="text-danger">*</span></label>
+                            <input type="email" class="ds-input" id="email" placeholder="john@company.com" required>
+                        </div>
+                        <div class="ds-field mb-3">
+                            <label class="ds-label">PLANT LOCATION <span class="text-danger">*</span></label>
+                            <select class="ds-input ds-select" id="userPlantSelect" onchange="Users.onPlantChange(this.value)" style="appearance: auto;">
+                                <option value="">Select Plant Location</option>
+                            </select>
+                            <p class="text-xs text-muted mt-1">Selecting a plant location dynamically filters the available departments.</p>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label">SYSTEM ROLE <span class="text-danger">*</span></label>
+                                    <select class="ds-input ds-select" id="role" required style="appearance: auto;">
+                                        <option value="Team Member">Team Member</option>
+
+                                        <option value="Facilitator">Facilitator</option>
+                                        <option value="Reviewer">Reviewer</option>
+                                        <option value="Admin">Admin</option>
+                                        <option value="CEO">CEO</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label">DEPARTMENT <span class="text-danger">*</span></label>
+                                    <select class="ds-input ds-select" id="department" required style="appearance: auto;">
+                                        <!-- Options populated dynamically -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="dynamicCustomFieldsContainer"></div>
+                        <div class="ds-field" id="passwordFieldContainer">
+                            <label class="ds-label">Temporary Access Credentials <span class="text-danger">*</span></label>
+                            <div class="h-stack gap-2">
+                                <input type="text" class="ds-input flex-grow-1" id="password" placeholder="Initial access code" value="Welcome@123" style="letter-spacing: 0.1em; font-family: monospace; font-weight: 700;" autocomplete="new-password">
+                                <button type="button" class="ds-btn ds-btn-secondary ds-btn-icon" onclick="Users.generatePassword()" title="Regenerate Password" style="border: 1px solid var(--ds-border-color);">
+                                    <i data-lucide="refresh-cw" style="width:18px;height:18px;"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-muted mt-2">The user will be prompted to change their password upon first login.</p>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary px-4" onclick="Users.save()">Confirm Lifecycle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Import Modal -->
+    <div class="modal fade" id="bulkModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card ds-card">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-bold">Bulk Import Members</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-sm ds-text-secondary mb-4">
+                        Upload a list of stakeholders to provision access in bulk. Use the template provided below to format your data correctly.
+                    </p>
+                    
+                    <div class="d-flex gap-2 mb-4 justify-content-center">
+                        <button type="button" class="ds-btn ds-btn-secondary w-100" onclick="Users.downloadTemplate()">
+                            <i data-lucide="download"></i> Download Template (.CSV)
+                        </button>
+                    </div>
+
+                    <form id="bulkForm" onsubmit="event.preventDefault();">
+                        <div class="ds-field">
+                            <label class="ds-label">UPLOAD CSV FILE</label>
+                            <div class="file-upload-dropzone p-4 text-center border border-dashed rounded" id="bulkDropzone" style="cursor: pointer; background: rgba(255, 255, 255, 0.02); border-color: var(--ds-border-color) !important;">
+                                <i data-lucide="file-text" class="mb-2 text-muted" style="width: 32px; height: 32px;"></i>
+                                <div class="text-sm fw-medium" id="bulkDropzoneText">Click to browse or drag your file here</div>
+                                <div class="text-xs text-muted mt-1">Accepts CSV files up to 5MB</div>
+                                <input type="file" id="bulkFile" accept=".csv" style="display: none;">
+                            </div>
+                        </div>
+                    </form>
+
+                    <div id="bulkStatusContainer" class="mt-3" style="display: none;">
+                        <div class="progress mb-2" style="height: 6px; background: rgba(255, 255, 255, 0.1);">
+                            <div id="bulkProgressBar" class="progress-bar bg-primary" role="progressbar" style="width: 0%;"></div>
+                        </div>
+                        <div id="bulkStatusText" class="text-xs fw-medium text-center">Preparing upload...</div>
+                    </div>
+
+                    <div id="bulkErrorsContainer" class="mt-3 text-xs text-danger" style="max-height: 150px; overflow-y: auto; display: none;">
+                        <div class="fw-bold mb-1">Import Logs / Validation Errors:</div>
+                        <ul id="bulkErrorsList" class="ps-3 mb-0"></ul>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button class="ds-btn ds-btn-primary px-4" id="btnConfirmBulk" onclick="Users.processBulkUpload()">Process Upload</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Fields Modal -->
+    <div class="modal fade" id="fieldsModal" tabindex="-1">
+        <style>
+            #fieldsModal .modal-content {
+                background: var(--ds-bg-card) !important;
+                border: 1px solid var(--ds-border-color) !important;
+            }
+            #fieldsModal table.ds-custom-table {
+                width: 100%;
+                border-collapse: collapse;
+                background: transparent !important;
+            }
+            #fieldsModal table.ds-custom-table th,
+            #fieldsModal table.ds-custom-table td {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding-top: 10px !important;
+                padding-bottom: 10px !important;
+            }
+            #fieldsModal table.ds-custom-table tr {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+            }
+            #fieldsModal table.ds-custom-table tr:last-child {
+                border-bottom: none !important;
+            }
+            #fieldsModal table.ds-custom-table th {
+                color: var(--ds-text-tertiary) !important;
+                font-weight: 700 !important;
+                font-size: 0.68rem !important;
+                letter-spacing: 0.06em !important;
+                text-transform: uppercase !important;
+                padding-bottom: 8px !important;
+            }
+            #fieldsModal table.ds-custom-table td.font-mono-clean {
+                font-family: var(--ds-font-mono, monospace) !important;
+                font-size: 0.76rem !important;
+                color: var(--ds-text-secondary) !important;
+                opacity: 0.9;
+            }
+        </style>
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 700px;">
+            <div class="modal-content glass-card ds-card">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:32px;height:32px;border-radius:8px;background:rgba(var(--ds-accent-rgb),0.12);color:var(--ds-accent);display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="settings-2" style="width:16px;height:16px;"></i>
+                        </div>
+                        <h5 class="modal-title fw-bold">Configure Fields &amp; Login</h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" style="max-height:85vh;overflow-y:auto;">
+                    <!-- Field Definitions Table -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-xs uppercase tracking-wider mb-2 text-muted">Field Definitions</h6>
+                        <div class="table-responsive">
+                            <table class="ds-custom-table align-middle text-xs mb-0" style="color: var(--ds-text-main);">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%;" class="ps-0">DISPLAY NAME</th>
+                                        <th style="width: 25%;">DATABASE KEY</th>
+                                        <th style="width: 15%;">TYPE</th>
+                                        <th style="width: 20%;" class="text-center">REQUIRED</th>
+                                        <th style="width: 15%;" class="text-end pe-0">ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fieldsListContainer">
+                                    <!-- Populated dynamically (tr elements) -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Create Custom Field Form -->
+                    <div class="border-top pt-3 mb-4" style="border-color: var(--ds-border-color) !important;">
+                        <h6 class="fw-bold text-xs uppercase tracking-wider mb-3 text-muted">Create Custom Field</h6>
+                        <form id="newFieldForm" onsubmit="event.preventDefault();" class="row g-2 align-items-end">
+                            <div class="col-md-5 col-12">
+                                <div class="ds-field mb-0">
+                                    <label class="ds-label" style="font-size: 0.65rem; margin-bottom: 2px;">FIELD DISPLAY NAME</label>
+                                    <input type="text" class="ds-input" id="newFieldName" placeholder="e.g. Employee ID" required style="height: 38px; font-size: 0.85rem; padding: 6px 12px;">
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-12">
+                                <div class="ds-field mb-0">
+                                    <label class="ds-label" style="font-size: 0.65rem; margin-bottom: 2px;">DATA TYPE</label>
+                                    <select class="ds-input ds-select" id="newFieldDataType" style="appearance: auto; padding: 6px 12px; height: 38px; font-size: 0.85rem; line-height: 1.5;">
+                                        <option value="both">Alphanumeric</option>
+                                        <option value="character">Letters only</option>
+                                        <option value="numeric">Numbers only</option>
+                                        <option value="phone">Phone Number</option>
+                                        <option value="email">Email Address</option>
+                                        <option value="date">Date</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-12 d-flex flex-column justify-content-end" style="height: 56px; padding-bottom: 8px;">
+                                <div class="form-check form-switch mb-0 ps-4">
+                                    <input class="form-check-input" type="checkbox" id="newFieldRequired" style="cursor: pointer; width: 1.8em; height: 0.9em; margin-top: 0.35em;">
+                                    <label class="form-check-label" for="newFieldRequired" style="font-size: 0.72rem; color: var(--ds-text-secondary); cursor: pointer; user-select: none;">Compulsory</label>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <button type="button" class="ds-btn ds-btn-primary btn-sm py-1_5" onclick="Users.addCustomField()" style="height: 34px; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%;">
+                                    <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Custom Field
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Login Options -->
+                    <div class="border-top pt-3" style="border-color: var(--ds-border-color) !important;">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div style="width:24px;height:24px;border-radius:6px;background:rgba(var(--ds-accent-rgb),0.12);color:var(--ds-accent);display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="key-round" style="width:12px;height:12px;"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-xs uppercase tracking-wider mb-0 text-muted">Login Options</h6>
+                                <p class="text-xxs ds-text-secondary mb-0" style="opacity: 0.8; font-size: 0.68rem;">Select which fields users can use to sign in.</p>
+                            </div>
+                        </div>
+                        <div class="v-stack gap-1.5" id="loginOptionsContainer">
+                            <!-- Populated dynamically -->
+                            <div class="text-xs ds-text-secondary p-2 text-center">Loading...</div>
+                        </div>
+                        <button class="ds-btn ds-btn-primary w-100 btn-sm mt-3" id="saveLoginOptionsBtn" onclick="Users.saveLoginOptions()" style="display:none; height: 34px; font-size: 0.78rem;">
+                            <i data-lucide="save" style="width:14px;height:14px;"></i> Save Login Options
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button class="ds-btn ds-btn-ghost w-100 btn-sm" data-bs-dismiss="modal" style="height: 34px; font-size: 0.78rem;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        const Users = {
+            currentFilter: 'all',
+            editingUserId: null,
+            modalMode: 'ADD', // ADD, EDIT, REASSIGN
+
+            async init() {
+                try {
+                    if (typeof QCMS !== 'undefined') QCMS.init();
+                    
+                    const searchInput = document.getElementById('globalSearchInput');
+                    if (searchInput) {
+                        searchInput.addEventListener('input', () => this.loadUsers());
+                    }
+                    const memberSearchInput = document.getElementById('memberSearchInput');
+                    if (memberSearchInput) {
+                        memberSearchInput.addEventListener('input', () => this.loadUsers());
+                    }
+                    
+                    await this.fetchDepartments();
+                    await this.loadPlants();
+                    await this.loadCustomFields();
+                    this.loadUsers();
+                    
+                    const dropzone = document.getElementById('bulkDropzone');
+                    const fileInput = document.getElementById('bulkFile');
+                    if (dropzone && fileInput) {
+                        dropzone.addEventListener('click', () => fileInput.click());
+                        fileInput.addEventListener('change', (e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                                document.getElementById('bulkDropzoneText').innerHTML = `<strong>Selected:</strong> ${e.target.files[0].name}`;
+                            }
+                        });
+                        
+                        dropzone.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                            dropzone.style.background = 'rgba(255, 255, 255, 0.08)';
+                        });
+                        dropzone.addEventListener('dragleave', () => {
+                            dropzone.style.background = 'rgba(255, 255, 255, 0.02)';
+                        });
+                        dropzone.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                            dropzone.style.background = 'rgba(255, 255, 255, 0.02)';
+                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                fileInput.files = e.dataTransfer.files;
+                                document.getElementById('bulkDropzoneText').innerHTML = `<strong>Dropped:</strong> ${e.dataTransfer.files[0].name}`;
+                            }
+                        });
+                    }
+                } catch (e) { console.error('Init failed:', e); }
+            },
+
+            customFields: [],
+
+            async loadCustomFields() {
+                try {
+                    const fields = await api.get('/admin/users/custom-fields');
+                    this.customFields = fields;
+                } catch (e) {
+                    console.error('Failed to load custom fields:', e);
+                }
+            },
+
+            async openFieldsModal() {
+                await this.loadCustomFields();
+                const container = document.getElementById('fieldsListContainer');
+                if (!container) return;
+                
+                container.innerHTML = this.customFields.map(f => {
+                    const typeLabel = (f.data_type || 'both').toLowerCase();
+                    const typeBadgeClass = typeLabel === 'email' ? 'bg-info-subtle text-info' 
+                                         : typeLabel === 'phone' ? 'bg-warning-subtle text-warning'
+                                         : typeLabel === 'date' ? 'bg-success-subtle text-success'
+                                         : typeLabel === 'numeric' ? 'bg-primary-subtle text-primary'
+                                         : 'bg-secondary-subtle text-secondary';
+                    return `
+                        <tr>
+                            <td class="ps-0 fw-semibold text-sm ds-text-main">${f.display_name}</td>
+                            <td class="font-mono-clean">${f.field_key}</td>
+                            <td>
+                                <span class="badge ${typeBadgeClass} px-1.5 py-0.5 text-xxs font-mono" style="font-size:0.65rem; font-weight:600; text-transform:uppercase;">
+                                    ${typeLabel}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                ${f.is_required 
+                                    ? `<span class="badge bg-danger-subtle text-danger" style="font-size:0.62rem; font-weight:700; padding:1px 6px;">COMPULSORY</span>` 
+                                    : `<span class="text-muted" style="font-size:0.7rem; opacity:0.65;">Optional</span>`
+                                }
+                            </td>
+                            <td class="text-end pe-0">
+                                ${f.is_system ? `
+                                    <span class="text-muted" style="font-size:0.68rem; opacity:0.6;" title="System default fields cannot be deleted">
+                                        <i data-lucide="lock" style="width:10px;height:10px;margin-right:1px;"></i> System
+                                    </span>
+                                ` : `
+                                    <button type="button" class="btn btn-link text-danger p-0" onclick="Users.deleteCustomField(${f.id})" title="Delete Field">
+                                        <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                    </button>
+                                `}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                document.getElementById('newFieldForm').reset();
+
+                // Load login options section
+                await this.loadLoginOptions();
+
+                new bootstrap.Modal(document.getElementById('fieldsModal')).show();
+                if (window.lucide) lucide.createIcons();
+            },
+
+            loginOptionsData: { login_options: [], available_fields: [] },
+
+            async loadLoginOptions() {
+                try {
+                    const data = await api.get('/admin/login-options');
+                    this.loginOptionsData = data;
+                    this.renderLoginOptions(data);
+                } catch (e) {
+                    const container = document.getElementById('loginOptionsContainer');
+                    if (container) container.innerHTML = `<div class="text-xs text-danger p-2">Failed to load login options.</div>`;
+                }
+            },
+
+            renderLoginOptions(data) {
+                const container = document.getElementById('loginOptionsContainer');
+                const saveBtn   = document.getElementById('saveLoginOptionsBtn');
+                if (!container) return;
+
+                const activeOptions = data.login_options || ['email'];
+                const availFields   = data.available_fields || [];
+
+                container.innerHTML = availFields.map(f => {
+                    const isChecked  = activeOptions.includes(f.key);
+                    const isDisabled = !f.can_disable;  // email cannot be unchecked
+                    return `
+                        <label class="d-flex align-items-center justify-content-between p-2 rounded cursor-pointer mb-1 text-xs" style="border:1px solid rgba(255,255,255,0.04); background:rgba(255,255,255,0.015); cursor:pointer;" for="lo_${f.key}">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="checkbox" class="login-option-cb" id="lo_${f.key}" data-key="${f.key}"
+                                    ${isChecked  ? 'checked' : ''}
+                                    ${isDisabled ? 'disabled' : ''}
+                                    style="width:14px;height:14px;accent-color:var(--ds-accent);">
+                                <span class="fw-semibold ds-text-main">${f.label}</span>
+                                <span class="text-muted text-xxs font-mono" style="opacity:0.75;">(${f.key})</span>
+                            </div>
+                            <div>
+                                ${isDisabled 
+                                    ? `<span class="text-muted text-xxs" style="opacity:0.5; font-size: 0.65rem;">Required</span>` 
+                                    : isChecked 
+                                        ? `<span class="badge bg-success-subtle text-success" style="font-size:0.65rem; padding:1px 6px; border-radius:999px;">Enabled</span>` 
+                                        : `<span class="text-muted text-xxs" style="font-size: 0.65rem;">Disabled</span>`
+                                }
+                            </div>
+                        </label>`;
+                }).join('');
+
+                if (saveBtn) saveBtn.style.display = availFields.length ? 'block' : 'none';
+                if (window.lucide) lucide.createIcons();
+            },
+
+            async saveLoginOptions() {
+                const checkboxes = document.querySelectorAll('.login-option-cb');
+                const selected = [];
+                checkboxes.forEach(cb => {
+                    if (cb.checked) selected.push(cb.getAttribute('data-key'));
+                });
+                // Ensure email is always in there
+                if (!selected.includes('email')) selected.unshift('email');
+
+                const btn = document.getElementById('saveLoginOptionsBtn');
+                if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+                try {
+                    await api.put('/admin/login-options', { login_options: selected });
+                    QCMS.toast(`Login options saved! Users can log in with: ${selected.join(', ')}`, 'success');
+                    this.loginOptionsData.login_options = selected;
+                    this.renderLoginOptions(this.loginOptionsData);
+                } catch (e) {
+                    QCMS.toast(e.message || 'Failed to save login options', 'error');
+                } finally {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="save" style="width:14px;height:14px;"></i> Save Login Options'; if (window.lucide) lucide.createIcons(); }
+                }
+            },
+
+
+
+            async addCustomField() {
+                const name = document.getElementById('newFieldName').value.trim();
+                const is_required = document.getElementById('newFieldRequired').checked;
+                const data_type = document.getElementById('newFieldDataType').value;
+                
+                if (!name) return QCMS.toast('Please enter a display name', 'warning');
+                
+                try {
+                    QCMS.toast('Adding custom field...', 'info');
+                    await api.post('/admin/users/custom-fields', { display_name: name, is_required, data_type });
+                    QCMS.toast('Custom field added successfully!', 'success');
+                    await this.openFieldsModal();
+                    this.loadUsers();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Failed to add custom field', 'error');
+                }
+            },
+
+            async deleteCustomField(id) {
+                if (!confirm('Are you sure you want to delete this custom field? This will drop the column from the database and delete all stored values for this field.')) return;
+                try {
+                    QCMS.toast('Deleting custom field...', 'info');
+                    await api.delete(`/admin/users/custom-fields/${id}`);
+                    QCMS.toast('Custom field deleted successfully!', 'success');
+                    await this.openFieldsModal();
+                    this.loadUsers();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Failed to delete custom field', 'error');
+                }
+            },
+
+            renderDynamicFields(userValues = {}) {
+                const container = document.getElementById('dynamicCustomFieldsContainer');
+                if (!container) return;
+                
+                const customOnly = this.customFields.filter(f => !f.is_system);
+                if (customOnly.length === 0) {
+                    container.innerHTML = '';
+                    return;
+                }
+                
+                container.innerHTML = customOnly.map(f => {
+                    const val = userValues[f.field_key] || '';
+                    const dt = (f.data_type || 'both').toLowerCase();
+
+                    // Choose HTML input type and placeholder based on data_type
+                    let inputType = 'text';
+                    let placeholder = `Enter ${f.display_name.toLowerCase()}`;
+                    let extraAttrs = '';
+
+                    if (dt === 'email') {
+                        inputType = 'email';
+                        placeholder = 'user@example.com';
+                    } else if (dt === 'date') {
+                        inputType = 'date';
+                        placeholder = 'YYYY-MM-DD';
+                    } else if (dt === 'phone') {
+                        inputType = 'tel';
+                        placeholder = '9876543210 or +919876543210';
+                        extraAttrs = 'maxlength="14"';
+                    } else if (dt === 'numeric') {
+                        inputType = 'text';
+                        extraAttrs = 'inputmode="numeric" pattern="[0-9]*"';
+                    }
+
+                    return `
+                        <div class="ds-field">
+                            <label class="ds-label">${f.display_name.toUpperCase()} ${f.is_required ? '<span class="text-danger">*</span>' : ''}<span class="text-muted text-xs ms-2 fw-normal" style="font-size:0.72rem;opacity:0.7;">${dt === 'phone' ? '10-digit / +91 format' : dt === 'email' ? 'Valid email' : dt === 'date' ? 'YYYY-MM-DD' : dt === 'numeric' ? 'Numbers only' : dt === 'character' ? 'Letters only' : ''}</span></label>
+                            <input type="${inputType}" class="ds-input dynamic-custom-input" data-key="${f.field_key}" data-name="${f.display_name}" data-required="${f.is_required}" data-type="${dt}" value="${val}" placeholder="${placeholder}" ${extraAttrs}>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+
+            async loadPlants() {
+                try {
+                    const res = await api.getPlants();
+                    this.allPlants = (res && res.plants) ? res.plants : [];
+                    
+                    const filterSel = document.getElementById('userPlantFilter');
+                    if (filterSel) {
+                        filterSel.innerHTML = '<option value="">All Plant Locations</option>' +
+                            this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                    }
+
+                    const modalSel = document.getElementById('userPlantSelect');
+                    if (modalSel) {
+                        modalSel.innerHTML = '<option value="">All / Unassigned Plant</option>' +
+                            this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                    }
+                } catch (e) {
+                    console.error('Failed to load plants:', e);
+                }
+            },
+
+            onPlantChange(plantId, selectedDeptName = null) {
+                const deptSelect = document.getElementById('department');
+                if (!deptSelect) return;
+
+                let availableDepts = this.departments || [];
+                if (plantId && String(plantId) !== "") {
+                    // Filter departments mapped to this plant_id OR organization-wide departments (null/empty plant_id)
+                    availableDepts = availableDepts.filter(d => !d.plant_id || String(d.plant_id) === String(plantId));
+                }
+
+                const filteredDepts = availableDepts.filter(d => d.name !== 'N/A' && d.name !== 'All');
+                let selectHtml = `<option value="N/A">N/A</option>`;
+                selectHtml += filteredDepts.map(d => `
+                    <option value="${QCMS.escapeHtml(d.name)}">${QCMS.escapeHtml(d.name)}${d.plant_name ? ' (' + QCMS.escapeHtml(d.plant_name) + ')' : ''}</option>
+                `).join('');
+                deptSelect.innerHTML = selectHtml;
+
+                if (selectedDeptName) {
+                    deptSelect.value = selectedDeptName;
+                }
+            },
+
+            async fetchDepartments() {
+                try {
+                    const depts = await api.get('/admin/departments');
+                    this.departments = depts;
+                    this.populateDepartmentSelects(depts);
+                } catch (e) {
+                    console.error('Failed to fetch departments:', e);
+                }
+            },
+
+            populateDepartmentSelects(depts) {
+                this.onPlantChange(document.getElementById('userPlantSelect')?.value || '');
+            },
+
+            async loadUsers(page = 1) {
+                try {
+                    this.currentPage = page;
+                    const memberSearch = document.getElementById('memberSearchInput')?.value || '';
+                    const globalSearch = document.getElementById('globalSearchInput')?.value || '';
+                    const query = (memberSearch || globalSearch).trim();
+                    const filter = this.currentFilter || 'all';
+                    const plantVal = document.getElementById('userPlantFilter')?.value || '';
+
+                    const res = await api.get(`/admin/users?page=${page}&per_page=10&q=${encodeURIComponent(query)}&filter=${filter}&plant_id=${plantVal}&t=` + Date.now());
+
+                    let users = [];
+                    let total = 0;
+                    let totalPages = 1;
+
+                    if (res && res.items !== undefined) {
+                        users = res.items;
+                        total = res.total;
+                        totalPages = res.total_pages;
+                    } else if (Array.isArray(res)) {
+                        total = res.length;
+                        totalPages = Math.ceil(total / 10) || 1;
+                        users = res.slice((page - 1) * 10, page * 10);
+                    }
+
+                    const tbody = document.getElementById('usersBody');
+                    const pagContainer = document.getElementById('usersPaginationContainer');
+
+                    if (!users || users.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="6" class="py-5">
+                            ${QCMS.emptyState('No Members Found', `We couldn't find any stakeholders matching "${query}".`, 'search-x')}
+                        </td></tr>`;
+                        if (pagContainer) pagContainer.innerHTML = '';
+                        if (window.lucide) lucide.createIcons();
+                        return;
+                    }
+
+                    // --- Build dynamic custom field header columns ---
+                    const theadRow = document.getElementById('usersTheadRow');
+                    if (theadRow) {
+                        theadRow.querySelectorAll('.custom-field-th').forEach(el => el.remove());
+                        const staticThs = theadRow.querySelectorAll('th:not(.custom-field-th)');
+                        const insertBeforeTh = staticThs[3];
+                        const visibleCustomFields = (this.customFields || []).filter(f => !f.is_system);
+                        visibleCustomFields.forEach(f => {
+                            const th = document.createElement('th');
+                            th.className = 'custom-field-th';
+                            th.style.whiteSpace = 'nowrap';
+                            th.textContent = f.display_name.toUpperCase();
+                            theadRow.insertBefore(th, insertBeforeTh);
+                        });
+                    }
+
+                    const visibleCustomFields = (this.customFields || []).filter(f => !f.is_system);
+
+                    tbody.innerHTML = users.map(u => `
+                        <tr class="fade-in">
+                            <td>
+                                <div class="h-stack gap-3">
+                                    <div class="ds-avatar" style="background: ${u.profile_picture ? 'transparent' : this.getAvatarColor(u.username)}">
+                                        ${u.profile_picture ? `<img src="${u.profile_picture}">` : u.username.substring(0,2).toUpperCase()}
+                                    </div>
+                                    <div class="v-stack">
+                                        <div class="fw-bold text-sm ds-text-main">${u.username}</div>
+                                        <div class="text-xs ds-text-secondary">${u.email}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${this.roleBadge(u.role)}</td>
+                            <td>
+                                <span class="badge ${u.plant_id ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'} rounded-pill px-2.5 py-1 text-xs">
+                                    <i data-lucide="factory" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(u.plant_name || 'N/A')}
+                                </span>
+                            </td>
+                            <td><span class="text-sm fw-medium ds-text-main">${QCMS.escapeHtml(u.department)}</span></td>
+                            ${visibleCustomFields.map(f => {
+                                const cf = (u.custom_fields && u.custom_fields[f.field_key]) || (u[f.field_key]) || '';
+                                return `<td><span class="text-sm ds-text-main">${cf || '<span class="text-muted text-xs">—</span>'}</span></td>`;
+                            }).join('')}
+                            <td>
+                                <div class="h-stack gap-2">
+                                    <span class="ds-badge-dot ${u.is_active ? 'green' : 'gray'}"></span>
+                                    <span class="text-xs fw-bold uppercase opacity-70">${u.is_active ? 'Active' : 'Offline'}</span>
+                                </div>
+                            </td>
+                            <td><span class="text-xs ds-text-secondary">${(u.last_active || u.last_login) ? QCMS.formatRelative(u.last_active || u.last_login) : 'Never'}</span></td>
+                            <td class="text-end">
+                                <div class="dropdown d-inline-block">
+                                    <button class="ds-btn ds-btn-outline ds-btn-icon ds-btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i data-lucide="more-horizontal" style="width:18px;"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end ds-dropdown-premium shadow-lg">
+                                        <li><h6 class="dropdown-header text-xxs uppercase opacity-50 pb-1">Management</h6></li>
+                                        <li><a class="dropdown-item" href="#" onclick="Users.edit(${u.id})"><i data-lucide="edit-2"></i> Edit Member</a></li>
+                                        <li><a class="dropdown-item" href="/auth/profile.html?id=${u.id}"><i data-lucide="user"></i> View Profile</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="Users.reassign(${u.id})"><i data-lucide="refresh-cw"></i> Reassign Dept</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header text-xxs uppercase opacity-50 pb-1">Security</h6></li>
+                                        <li><a class="dropdown-item" href="#" onclick="Users.regenerate(${u.id})"><i data-lucide="key"></i> Regenerate Access</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="Users.archive(${u.id})"><i data-lucide="shield-off"></i> ${u.is_active ? 'Deactivate' : 'Activate'} Stakeholder</a></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="Users.delete(${u.id})"><i data-lucide="trash-2"></i> Remove Permanently</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+
+                    if (pagContainer) {
+                        const startIndex = Math.min((page - 1) * 10 + 1, total);
+                        const endIndex = Math.min(page * 10, total);
+
+                        if (totalPages > 1) {
+                            pagContainer.innerHTML = `
+                                <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                                    <div class="text-xs text-muted">
+                                        Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${total}</span> members
+                                    </div>
+                                    <div class="pagination-buttons d-flex gap-1 align-items-center">
+                                        <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="Users.loadUsers(${page - 1})">
+                                            <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                                        </button>
+                                        ${Array.from({ length: totalPages }, (_, idx) => idx + 1).map(p => `
+                                            <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="Users.loadUsers(${p})">
+                                                ${p}
+                                            </button>
+                                        `).join('')}
+                                        <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="Users.loadUsers(${page + 1})">
+                                            <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            pagContainer.innerHTML = `
+                                <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                                    <div class="text-xs text-muted">
+                                        Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${total}</span> members
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error('Failed to load users:', e);
+                    QCMS.toast('Failed to synchronize member directory.', 'error');
+                    const tbody = document.getElementById('usersBody');
+                    if (tbody) {
+                        const colspanErr = 6 + ((this.customFields || []).filter(f => !f.is_system).length);
+                        tbody.innerHTML = `<tr><td colspan="${colspanErr}" class="py-5">
+                            ${QCMS.emptyState('Connection Error', 'Unable to reach the server. Please check your network connection.', 'wifi-off')}
+                        </td></tr>`;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                }
+            },
+
+            filter(type) {
+                this.currentFilter = type;
+                document.querySelectorAll('.ds-btn-tab').forEach(btn => {
+                    const btnType = btn.getAttribute('onclick').includes(`'${type}'`);
+                    btn.classList.toggle('active', btnType);
+                });
+                this.loadUsers();
+            },
+
+            getAvatarColor(name) {
+                // Corporate Matt Palette: Slate, Navy, Deep Emerald, Muted Indigo, Charcoal, Deep Rose
+                const colors = ['#334155', '#1e293b', '#065f46', '#4338ca', '#3f3f46', '#9f1239'];
+                const index = (name || 'U').charCodeAt(0) % colors.length;
+                return colors[index];
+            },
+
+            roleBadge(role) {
+                const colors = {
+                    'Admin': 'red',
+                    'CEO': 'gold',
+                    'Team Leader': 'blue', // Neutralized to Slate in CSS
+                    'Facilitator': 'purple',
+                    'Reviewer': 'cyan',
+                    'Team Member': 'gray'
+                };
+                const color = colors[role] || 'gray';
+                return `<span class="ds-badge ${color}">${role}</span>`;
+            },
+
+            openAddModal() {
+                this.editingUserId = null;
+                this.modalMode = 'ADD';
+                document.getElementById('userForm').reset();
+                document.getElementById('password').value = 'Welcome@123';
+                document.getElementById('passwordFieldContainer').style.display = 'block';
+                document.querySelector('#userModal .modal-title').textContent = 'Provision Access';
+                document.querySelector('#userModal .ds-btn-primary').textContent = 'Confirm Provisioning';
+                
+                const plantFilterVal = document.getElementById('userPlantFilter')?.value || '';
+                const plantSel = document.getElementById('userPlantSelect');
+                if (plantSel) plantSel.value = plantFilterVal;
+                this.onPlantChange(plantFilterVal);
+
+                // Enable all fields
+                document.getElementById('username').disabled = false;
+                document.getElementById('email').disabled = false;
+                
+                this.renderDynamicFields({});
+                new bootstrap.Modal(document.getElementById('userModal')).show();
+            },
+
+            generatePassword() {
+                const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                let retVal = "QCMS@";
+                for (let i = 0, n = charset.length; i < 8; ++i) {
+                    retVal += charset.charAt(Math.floor(Math.random() * n));
+                }
+                const passField = document.getElementById('password');
+                if (passField) {
+                    passField.value = retVal;
+                    QCMS.toast('Temporary password regenerated.', 'info');
+                }
+            },
+
+            async edit(id) { 
+                try {
+                    this.editingUserId = id;
+                    this.modalMode = 'EDIT';
+                    QCMS.toast('Fetching stakeholder details...', 'info');
+                    
+                    const user = await api.get(`/admin/users/${id}`);
+                    
+                    document.getElementById('username').value = user.username;
+                    document.getElementById('email').value = user.email;
+                    document.getElementById('role').value = user.role;
+                    
+                    const userPlantVal = user.plant_id ? String(user.plant_id) : '';
+                    const plantSel = document.getElementById('userPlantSelect');
+                    if (plantSel) plantSel.value = userPlantVal;
+                    this.onPlantChange(userPlantVal, user.department);
+
+                    document.getElementById('password').value = ''; // Don't show password, but allow reset
+                    document.getElementById('passwordFieldContainer').style.display = 'none';
+                    
+                    // Enable fields for full edit
+                    document.getElementById('username').disabled = false;
+                    document.getElementById('email').disabled = false;
+                    
+                    document.querySelector('#userModal .modal-title').textContent = 'Edit Stakeholder';
+                    document.querySelector('#userModal .ds-btn-primary').textContent = 'Save Changes';
+                    
+                    this.renderDynamicFields(user.custom_fields || {});
+                    new bootstrap.Modal(document.getElementById('userModal')).show();
+                } catch (e) {
+                    QCMS.toast('Failed to load user details', 'error');
+                }
+            },
+
+            async reassign(id) { 
+                try {
+                    this.editingUserId = id;
+                    this.modalMode = 'REASSIGN';
+                    QCMS.toast('Opening reassignment workflow...', 'info');
+                    
+                    const user = await api.get(`/admin/users/${id}`);
+                    
+                    document.getElementById('username').value = user.username;
+                    document.getElementById('email').value = user.email;
+                    document.getElementById('role').value = user.role;
+
+                    const userPlantVal = user.plant_id ? String(user.plant_id) : '';
+                    const plantSel = document.getElementById('userPlantSelect');
+                    if (plantSel) plantSel.value = userPlantVal;
+                    this.onPlantChange(userPlantVal, user.department);
+
+                    document.getElementById('passwordFieldContainer').style.display = 'none';
+                    
+                    this.renderDynamicFields(user.custom_fields || {});
+                    new bootstrap.Modal(document.getElementById('userModal')).show();
+                    
+                    // Focus department select
+                    setTimeout(() => document.getElementById('department').focus(), 500);
+                } catch (e) {
+                    QCMS.toast('Failed to load user details', 'error');
+                }
+            },
+
+            async save() {
+                const username = document.getElementById('username').value;
+                const email = document.getElementById('email').value;
+                const role = document.getElementById('role').value;
+                const department = document.getElementById('department').value;
+                const plant_id = document.getElementById('userPlantSelect')?.value || '';
+                const password = document.getElementById('password').value;
+                
+                if (!username || !email) {
+                    return QCMS.toast('Please enter name and email', 'warning');
+                }
+
+                const customInputs = document.querySelectorAll('.dynamic-custom-input');
+                const customPayload = {};
+                let missingRequired = false;
+                let validationError = null;
+                
+                customInputs.forEach(input => {
+                    const key = input.getAttribute('data-key');
+                    const name = input.getAttribute('data-name');
+                    const required = input.getAttribute('data-required') === 'true';
+                    const dataType = input.getAttribute('data-type') || 'both';
+                    const val = input.value.trim();
+                    
+                    if (required && !val) {
+                        missingRequired = name;
+                    }
+                    
+                    if (val) {
+                        if (dataType === 'numeric' && !/^\d+$/.test(val)) {
+                            validationError = `Field '${name}' must contain numbers only.`;
+                        } else if (dataType === 'character' && !/^[a-zA-Z\s]+$/.test(val)) {
+                            validationError = `Field '${name}' must contain letters only.`;
+                        } else if (dataType === 'phone') {
+                            // Accept: 10 digits OR +91 followed by 10 digits (spaces/dashes stripped)
+                            const cleanPhone = val.replace(/[\s\-]/g, '');
+                            if (!/^(\+91)?\d{10}$/.test(cleanPhone)) {
+                                validationError = `Field '${name}' must be a valid 10-digit phone number (e.g. 9876543210 or +919876543210).`;
+                            }
+                        } else if (dataType === 'email') {
+                            if (!/^[\w.+\-]+@[\w\-]+\.[a-zA-Z]{2,}$/.test(val)) {
+                                validationError = `Field '${name}' must be a valid email address.`;
+                            }
+                        } else if (dataType === 'date') {
+                            const dateReg = /^\d{4}-\d{2}-\d{2}$/;
+                            if (!dateReg.test(val) && isNaN(Date.parse(val))) {
+                                validationError = `Field '${name}' must be a valid date (e.g. YYYY-MM-DD).`;
+                            }
+                        }
+                    }
+                    customPayload[key] = val;
+                });
+                
+                if (missingRequired) {
+                    return QCMS.toast(`Compulsory field '${missingRequired}' is required`, 'warning');
+                }
+                
+                if (validationError) {
+                    return QCMS.toast(validationError, 'warning');
+                }
+
+                try {
+                    const payload = { role, department };
+                    if (plant_id) payload.plant_id = parseInt(plant_id);
+                    if (this.modalMode !== 'REASSIGN') {
+                        payload.username = username;
+                        payload.email = email;
+                    } else {
+                        payload.role = document.getElementById('role').value;
+                    }
+                    if (password) payload.password = password;
+                    Object.assign(payload, customPayload);
+
+                    if (this.editingUserId) {
+                        QCMS.toast('Updating stakeholder...', 'info');
+                        await api.put(`/admin/users/${this.editingUserId}`, payload);
+                        QCMS.toast('Stakeholder updated successfully', 'success');
+                    } else {
+                        QCMS.toast('Provisioning stakeholder...', 'info');
+                        // For new users, ensure we have a password
+                        payload.password = password || 'QCMS@123';
+                        // Use standardized admin user creation endpoint instead of deprecated auth register
+                        await api.post('/admin/users', payload);
+                        QCMS.toast('Stakeholder provisioned successfully', 'success');
+                    }
+
+                    bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+                    document.getElementById('userForm').reset();
+                    this.loadUsers();
+                } catch (e) {
+                    console.error('Operation failed:', e);
+                    QCMS.toast(e.message || 'Operation failed', 'error');
+                }
+            },
+
+            async archive(id) { 
+                if (!confirm('Are you sure about this status change?')) return;
+                try {
+                    // Fetch existing state first
+                    const allUsers = await api.get('/admin/users');
+                    const user = allUsers.find(u => u.id === id);
+                    await api.put(`/admin/users/${id}`, { is_active: !user.is_active });
+                    QCMS.toast(`User status updated successfully`, 'success');
+                    this.loadUsers();
+                } catch (e) {
+                    QCMS.toast('Operation failed', 'error');
+                }
+            },
+
+            async delete(id) {
+                if (!confirm("Are you sure you want to permanently delete this member? This action cannot be undone and will only work if the user has no active project assignments or logs.")) {
+                    return;
+                }
+
+                try {
+                    QCMS.toast('Removing stakeholder...', 'info');
+                    const response = await api.delete(`/admin/users/${id}`);
+                    QCMS.toast(response.message || 'Stakeholder removed successfully', 'success');
+                    this.loadUsers();
+                } catch (e) {
+                    if (e.code === 'DEPENDENCY_EXISTS') {
+                        QCMS.toast(e.message, 'warning');
+                    } else {
+                        QCMS.toast(e.message || 'Failed to remove stakeholder.', 'error');
+                    }
+                }
+            },
+            
+            async regenerate(id) {
+                if (!confirm(`This will invalidate the current password and send new temporary credentials to the user's email. Proceed?`)) return;
+                
+                try {
+                    QCMS.toast('Regenerating credentials...', 'info');
+                    await api.post(`/admin/users/${id}/regenerate`);
+                    QCMS.toast('New credentials generated successfully.', 'success');
+                } catch (e) {
+                    QCMS.toast(e.message || 'Failed to regenerate credentials.', 'error');
+                }
+            },
+
+            openBulkModal() {
+                document.getElementById('bulkForm').reset();
+                document.getElementById('bulkDropzoneText').textContent = 'Click to browse or drag your file here';
+                document.getElementById('bulkStatusContainer').style.display = 'none';
+                document.getElementById('bulkErrorsContainer').style.display = 'none';
+                document.getElementById('bulkErrorsList').innerHTML = '';
+                new bootstrap.Modal(document.getElementById('bulkModal')).show();
+                if (window.lucide) lucide.createIcons();
+            },
+
+            async downloadTemplate() {
+                try {
+                    QCMS.toast('Generating template...', 'info');
+                    const response = await fetch(api.baseUrl + '/admin/users/template', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': 'Bearer ' + api.token
+                        }
+                    });
+                    if (!response.ok) throw new Error('Failed to generate template');
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'qcms_users_bulk_template.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    QCMS.toast('Template downloaded successfully!', 'success');
+                } catch (e) {
+                    console.error('Template download error:', e);
+                    QCMS.toast('Failed to download template. Please check authorization.', 'error');
+                }
+            },
+
+            async processBulkUpload() {
+                const fileInput = document.getElementById('bulkFile');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    return QCMS.toast('Please select a CSV file first.', 'warning');
+                }
+
+                const file = fileInput.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                document.getElementById('bulkStatusContainer').style.display = 'block';
+                document.getElementById('bulkProgressBar').style.width = '50%';
+                document.getElementById('bulkStatusText').textContent = 'Uploading and processing file...';
+                document.getElementById('btnConfirmBulk').disabled = true;
+
+                try {
+                    const response = await fetch(api.baseUrl + '/admin/users/bulk-upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + api.token
+                        },
+                        body: formData
+                    });
+
+                    const resData = await response.json();
+                    document.getElementById('bulkProgressBar').style.width = '100%';
+
+                    if (response.ok) {
+                        const added = resData.added_count || 0;
+                        const errors = resData.errors || [];
+                        
+                        QCMS.toast(`Successfully imported ${added} users!`, 'success');
+                        
+                        if (errors.length > 0) {
+                            document.getElementById('bulkStatusText').textContent = `Import complete: ${added} added, ${errors.length} failed.`;
+                            document.getElementById('bulkErrorsContainer').style.display = 'block';
+                            const list = document.getElementById('bulkErrorsList');
+                            list.innerHTML = errors.map(e => `
+                                <li>Row ${e.row}: <strong>${e.username || e.email || 'Unknown'}</strong> - ${e.error}</li>
+                            `).join('');
+                        } else {
+                            bootstrap.Modal.getInstance(document.getElementById('bulkModal')).hide();
+                        }
+                        
+                        this.loadUsers();
+                    } else {
+                        throw new Error(resData.message || 'Bulk upload failed.');
+                    }
+                } catch (e) {
+                    console.error('Bulk upload error:', e);
+                    QCMS.toast(e.message || 'Failed to process bulk upload.', 'error');
+                    document.getElementById('bulkStatusText').textContent = 'Upload failed.';
+                } finally {
+                    document.getElementById('btnConfirmBulk').disabled = false;
+                }
+            }
+
+        };
+
+        document.addEventListener('DOMContentLoaded', () => Users.init());
+
+        // Bulletproof fix for stacking context inside tables: 
+        // Elevate the row z-index when a dropdown opens, reset when it closes.
+        document.addEventListener('show.bs.dropdown', function (e) {
+            const tr = e.target.closest('tr');
+            if (tr) {
+                tr.style.position = 'relative';
+                tr.style.zIndex = '9999';
+            }
+        });
+        document.addEventListener('hide.bs.dropdown', function (e) {
+            const tr = e.target.closest('tr');
+            if (tr) {
+                tr.style.zIndex = '';
+            }
+        });
+    </script>
+
+    <script>
+        /* ── Custom Select Helpers ── */
+        function dsSelectToggle(selectId) {
+            const el = document.getElementById(selectId);
+            const isOpen = el.classList.contains('open');
+            // Close all open selects first
+            document.querySelectorAll('.ds-custom-select.open').forEach(s => s.classList.remove('open'));
+            if (!isOpen) el.classList.add('open');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function dsSelectPick(selectId, hiddenId, value, optionEl) {
+            // Update display text
+            document.querySelector('#' + selectId + ' .ds-custom-select-value').textContent = value;
+            // Sync hidden select
+            const hidden = document.getElementById(hiddenId);
+            if (hidden) { hidden.value = value; }
+            // Update selected class
+            document.querySelectorAll('#' + selectId + ' .ds-custom-select-option').forEach(o => o.classList.remove('selected'));
+            optionEl.classList.add('selected');
+            // Close panel
+            document.getElementById(selectId).classList.remove('open');
+        }
+
+        function dsSelectSet(selectId, hiddenId, value) {
+            const trigger = document.querySelector('#' + selectId + ' .ds-custom-select-value');
+            if (trigger) trigger.textContent = value || '';
+            const hidden = document.getElementById(hiddenId);
+            if (hidden) hidden.value = value || '';
+            document.querySelectorAll('#' + selectId + ' .ds-custom-select-option').forEach(o => {
+                o.classList.toggle('selected', o.textContent.trim() === value);
+            });
+        }
+
+        // Close custom selects when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.ds-custom-select')) {
+                document.querySelectorAll('.ds-custom-select.open').forEach(s => s.classList.remove('open'));
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Additional Sources — Ideation Repository | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <style>
+        .idea-card {
+            background: var(--ds-surface);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-lg);
+            padding: var(--ds-space-5);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .idea-card h6, .idea-card p, .idea-card div, .idea-card span {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .idea-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--ds-shadow-lg);
+            border-color: var(--ds-primary);
+        }
+
+        .idea-code-badge {
+            font-family: var(--ds-font-mono, monospace);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(var(--ds-primary-rgb), 0.1);
+            color: var(--ds-primary);
+            border: 1px solid rgba(var(--ds-primary-rgb), 0.2);
+            letter-spacing: 0.03em;
+            max-width: 65%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .idea-search-wrap {
+            position: relative;
+            flex-grow: 1;
+        }
+
+        .idea-search-wrap .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ds-text-secondary);
+            pointer-events: none;
+            width: 18px;
+            height: 18px;
+        }
+
+        .idea-search-wrap input {
+            padding-left: 42px !important;
+            height: 44px;
+            font-size: 0.95rem;
+            border-radius: var(--ds-radius-md);
+        }
+
+        .benefit-tag {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .api-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .api-pill-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #2563eb;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="app-main">
+            <!-- Navbar -->
+            <header class="glass-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner fade-in-up">
+                <!-- Page Header Layout -->
+                <header class="ds-header-layout section-spacing mb-4">
+                    <div class="row align-items-center g-3">
+                        <div class="col-lg-8">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h1 class="ds-title mb-0">Additional Sources</h1>
+                                <span class="api-pill"><span class="api-pill-dot"></span> Integration API v1</span>
+                            </div>
+                            <p class="ds-text-secondary mb-0">
+                                Real-time ideation & continuous improvement data received from external integrations (<code class="text-primary" id="ideasEndpointDisplay" style="font-size:0.8rem;">/api/v1/integrations/ideas</code>).
+                            </p>
+                        </div>
+                        <div class="col-lg-4 text-lg-end">
+                            <button class="ds-btn ds-btn-primary gap-2" onclick="AdditionalSources.syncIdeas()">
+                                <i data-lucide="refresh-cw" style="width:16px;height:16px;"></i>
+                                Sync Fresh Ideas
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- KPI Metric Cards Bar -->
+                <div class="row g-3 mb-4" id="kpiBar">
+                    <div class="col-md-3 col-sm-6">
+                        <div class="ds-card p-3 d-flex align-items-center gap-3">
+                            <div class="ds-icon-circle bg-primary-soft text-primary" style="width:44px;height:44px;">
+                                <i data-lucide="lightbulb" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs text-secondary text-uppercase font-mono fw-bold">Imported Ideas</div>
+                                <div class="text-xl fw-bold text-main" id="kpiTotalIdeas">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="ds-card p-3 d-flex align-items-center gap-3">
+                            <div class="ds-icon-circle bg-success-soft text-success" style="width:44px;height:44px;">
+                                <i data-lucide="indian-rupee" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs text-secondary text-uppercase font-mono fw-bold">Est. Tangible Savings</div>
+                                <div class="text-xl fw-bold text-main" id="kpiTotalBenefits">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="ds-card p-3 d-flex align-items-center gap-3">
+                            <div class="ds-icon-circle bg-warning-soft text-warning" style="width:44px;height:44px;">
+                                <i data-lucide="zap" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs text-secondary text-uppercase font-mono fw-bold">High Impact Ideas</div>
+                                <div class="text-xl fw-bold text-main" id="kpiHighImpact">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="ds-card p-3 d-flex align-items-center gap-3">
+                            <div class="ds-icon-circle bg-info-soft text-info" style="width:44px;height:44px;">
+                                <i data-lucide="layers" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs text-secondary text-uppercase font-mono fw-bold">QCMS Ready</div>
+                                <div class="text-xl fw-bold text-main" id="kpiApproved">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search & Filters Toolbar -->
+                <div class="glass-card ds-card p-3 mb-4">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-lg-5 col-md-12">
+                            <div class="idea-search-wrap">
+                                <i data-lucide="search" class="search-icon"></i>
+                                <input type="text" id="ideaSearchInput" class="ds-input" 
+                                       placeholder="Search by Idea Code (e.g. IDEA-2026-0891), Idea Number, Title, or Submitter..." 
+                                       oninput="AdditionalSources.applyFilters()">
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6">
+                            <select id="deptFilter" class="ds-input ds-select" onchange="AdditionalSources.applyFilters()">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6">
+                            <select id="catFilter" class="ds-input ds-select" onchange="AdditionalSources.applyFilters()">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6">
+                            <select id="statusFilter" class="ds-input ds-select" onchange="AdditionalSources.applyFilters()">
+                                <option value="">All Status</option>
+                                <option value="Approved">Approved</option>
+                                <option value="In Review">In Review</option>
+                                <option value="Implemented">Implemented</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-1 col-md-12 text-end">
+                            <button class="ds-btn ds-btn-ghost text-secondary px-2" title="Reset Filters" onclick="AdditionalSources.resetFilters()">
+                                <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Stats Bar -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-xs text-secondary fw-bold" id="resultCountBadge">Loading external ideas...</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary active" id="btnGridView" onclick="AdditionalSources.setView('grid')">
+                            <i data-lucide="grid" style="width:14px;height:14px;"></i> Grid
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnTableView" onclick="AdditionalSources.setView('table')">
+                            <i data-lucide="list" style="width:14px;height:14px;"></i> Table
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Idea Cards Container -->
+                <div id="ideasContainer" class="row g-4"></div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Idea Detail Modal -->
+    <div class="modal fade" id="ideaDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content ds-card border-0 shadow-lg">
+                <div class="modal-header border-bottom p-4">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="idea-code-badge" id="modalIdeaCode">IDEA-XXXX</span>
+                            <span class="ds-badge green" id="modalStatus">Approved</span>
+                            <span class="api-pill"><span class="api-pill-dot"></span> Cloudflare API v1</span>
+                        </div>
+                        <h5 class="modal-title fw-bold text-main" id="modalTitle">Idea Title</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" id="modalBody">
+                    <!-- Dynamic modal content -->
+                </div>
+                <div class="modal-footer border-top p-3 d-flex justify-content-end">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        const AdditionalSources = {
+            ideas: [],
+            filteredIdeas: [],
+            currentView: 'grid',
+            selectedIdea: null,
+
+            async init() {
+                QCMS.init();
+                await this.loadIdeas();
+            },
+
+            async loadIdeas() {
+                try {
+                    const res = await api.get('/admin/additional-sources/ideas');
+                    this.ideas = res.ideas || [];
+                    this.filteredIdeas = [...this.ideas];
+                    
+                    if (res.api_endpoint) {
+                        const el = document.getElementById('ideasEndpointDisplay');
+                        if (el) el.textContent = res.api_endpoint;
+                    }
+
+                    this.populateFilters();
+                    this.updateKPIs();
+                    this.render();
+                } catch (e) {
+                    console.error('Failed to load ideas from additional sources:', e);
+                    QCMS.toast('Error connecting to additional sources API.', 'error');
+                }
+            },
+
+            async syncIdeas() {
+                QCMS.toast('Synchronizing with Cloudflare Integration API...', 'info');
+                await this.loadIdeas();
+                QCMS.toast('Ideation data synchronized successfully.', 'success');
+            },
+
+            populateFilters() {
+                const depts = [...new Set(this.ideas.map(i => i.department).filter(Boolean))];
+                const cats = [...new Set(this.ideas.map(i => i.category).filter(Boolean))];
+
+                const deptSelect = document.getElementById('deptFilter');
+                deptSelect.innerHTML = '<option value="">All Departments</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+
+                const catSelect = document.getElementById('catFilter');
+                catSelect.innerHTML = '<option value="">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            },
+
+            updateKPIs() {
+                document.getElementById('kpiTotalIdeas').textContent = this.ideas.length;
+                
+                const totalSavings = this.ideas.reduce((sum, i) => sum + (parseFloat(i.tangible_benefit) || 0), 0);
+                document.getElementById('kpiTotalBenefits').textContent = QCMS.formatINR(totalSavings);
+
+                const highImpact = this.ideas.filter(i => (i.impact_level || '').toLowerCase() === 'high').length;
+                document.getElementById('kpiHighImpact').textContent = highImpact;
+
+                const approved = this.ideas.filter(i => (i.status || '').toLowerCase() === 'approved').length;
+                document.getElementById('kpiApproved').textContent = approved;
+            },
+
+            applyFilters() {
+                const query = (document.getElementById('ideaSearchInput').value || '').trim().toLowerCase();
+                const dept = document.getElementById('deptFilter').value;
+                const cat = document.getElementById('catFilter').value;
+                const status = document.getElementById('statusFilter').value;
+
+                this.filteredIdeas = this.ideas.filter(idea => {
+                    const codeMatch = (idea.idea_code || '').toLowerCase().includes(query);
+                    const titleMatch = (idea.title || '').toLowerCase().includes(query);
+                    const submitterMatch = (idea.submitted_by || '').toLowerCase().includes(query);
+                    const problemMatch = (idea.problem_statement || '').toLowerCase().includes(query);
+                    const textMatches = query === '' || codeMatch || titleMatch || submitterMatch || problemMatch;
+
+                    const deptMatches = !dept || idea.department === dept;
+                    const catMatches = !cat || idea.category === cat;
+                    const statusMatches = !status || idea.status === status;
+
+                    return textMatches && deptMatches && catMatches && statusMatches;
+                });
+
+                this.render();
+            },
+
+            resetFilters() {
+                document.getElementById('ideaSearchInput').value = '';
+                document.getElementById('deptFilter').value = '';
+                document.getElementById('catFilter').value = '';
+                document.getElementById('statusFilter').value = '';
+                this.applyFilters();
+            },
+
+            setView(mode) {
+                this.currentView = mode;
+                document.getElementById('btnGridView').classList.toggle('active', mode === 'grid');
+                document.getElementById('btnTableView').classList.toggle('active', mode === 'table');
+                this.render();
+            },
+
+            render() {
+                const container = document.getElementById('ideasContainer');
+                const badge = document.getElementById('resultCountBadge');
+
+                badge.textContent = `Showing ${this.filteredIdeas.length} of ${this.ideas.length} imported ideas`;
+
+                if (!this.ideas.length) {
+                    container.innerHTML = `
+                        <div class="col-12 py-5 text-center">
+                            <div class="glass-card ds-card p-5 mx-auto" style="max-width: 620px;">
+                                <div class="ds-icon-circle bg-primary-soft text-primary mx-auto mb-3" style="width:64px;height:64px;">
+                                    <i data-lucide="key" style="width:28px;height:28px;"></i>
+                                </div>
+                                <h5 class="fw-bold text-main mb-2">No Ideas Received via API Key Yet</h5>
+                                <p class="text-secondary text-sm mb-4">
+                                    External systems and tools (such as Ideation Apps, ERP, or CRM) can submit approved ideas directly to your organization using your Organization API Key.
+                                </p>
+                                <div class="p-3 bg-light rounded-3 border text-start mb-4">
+                                    <div class="text-xs text-secondary text-uppercase fw-bold mb-1">API Integration Endpoint</div>
+                                    <code class="text-primary font-mono text-sm fw-bold">POST ${window.location.origin}/api/v1/integrations/ideas</code>
+                                </div>
+                                <a href="/admin/settings.html" class="ds-btn ds-btn-primary gap-2">
+                                    <i data-lucide="shield-check" style="width:16px;height:16px;"></i>
+                                    View / Manage API Keys in Settings
+                                </a>
+                            </div>
+                        </div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                if (!this.filteredIdeas.length) {
+                    container.innerHTML = `
+                        <div class="col-12 py-5 text-center">
+                            ${QCMS.emptyState('No Matching Ideas Found', 'Try adjusting your search query or clear filters to view all imported ideas.', 'search-x')}
+                        </div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                if (this.currentView === 'grid') {
+                    container.innerHTML = this.filteredIdeas.map((idea, idx) => {
+                        const benefitFormatted = idea.tangible_benefit ? QCMS.formatINR(idea.tangible_benefit) : 'Non-monetary';
+                        return `
+                        <div class="col-lg-4 col-md-6">
+                            <div class="idea-card">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="idea-code-badge">${idea.idea_code}</span>
+                                        <span class="ds-badge ${idea.impact_level === 'High' ? 'red' : 'blue'} text-xs">${idea.impact_level || 'Medium'} Impact</span>
+                                    </div>
+                                    <h6 class="fw-bold text-main mb-2" style="font-size:1.05rem; line-height:1.4;">${idea.title}</h6>
+                                    <p class="text-secondary text-xs mb-3" style="display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+                                        ${idea.problem_statement || 'No problem statement description provided.'}
+                                    </p>
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
+                                        <span class="ds-badge gray text-xs">${idea.department || 'General'}</span>
+                                        <span class="ds-badge gray text-xs">${idea.category || 'Quality'}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center pt-3 border-top mb-3">
+                                        <div>
+                                            <div class="text-xxs text-secondary text-uppercase fw-bold">Est. Benefit</div>
+                                            <div class="benefit-tag text-xs">${benefitFormatted}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="text-xxs text-secondary text-uppercase fw-bold">Timeframe</div>
+                                            <div class="text-xs fw-bold text-main">${idea.implementation_time || '2 Weeks'}</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-xs text-secondary">
+                                            By: <strong>${idea.submitted_by || 'External User'}</strong>
+                                        </span>
+                                        <button class="ds-btn ds-btn-ghost ds-btn-sm text-primary py-1 px-2" onclick="AdditionalSources.openModal(${idx})">
+                                            View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                } else {
+                    // Table View
+                    container.innerHTML = `
+                    <div class="col-12">
+                        <div class="glass-card ds-card overflow-hidden">
+                            <div class="table-responsive">
+                                <table class="table ds-table mb-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Idea Code</th>
+                                            <th>Title</th>
+                                            <th>Department</th>
+                                            <th>Category</th>
+                                            <th>Est. Savings</th>
+                                            <th>Submitted By</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${this.filteredIdeas.map((idea, idx) => `
+                                            <tr>
+                                                <td><span class="idea-code-badge">${idea.idea_code}</span></td>
+                                                <td class="fw-bold text-main" style="max-width:300px; overflow-wrap:anywhere; word-break:break-word;">${idea.title}</td>
+                                                <td><span class="ds-badge gray text-xs">${idea.department}</span></td>
+                                                <td><span class="ds-badge gray text-xs">${idea.category}</span></td>
+                                                <td><span class="benefit-tag text-xs">${idea.tangible_benefit ? QCMS.formatINR(idea.tangible_benefit) : 'Non-monetary'}</span></td>
+                                                <td class="text-xs">${idea.submitted_by}</td>
+                                                <td><span class="ds-badge green text-xs">${idea.status}</span></td>
+                                                <td class="text-end">
+                                                    <button class="ds-btn ds-btn-ghost ds-btn-sm text-primary py-1 px-2" onclick="AdditionalSources.openModal(${idx})">
+                                                        View Details
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+
+                if (window.lucide) lucide.createIcons();
+            },
+
+            openModal(index) {
+                const idea = this.filteredIdeas[index];
+                if (!idea) return;
+                this.selectedIdea = idea;
+
+                document.getElementById('modalIdeaCode').textContent = idea.idea_code;
+                document.getElementById('modalStatus').textContent = idea.status || 'Approved';
+                document.getElementById('modalTitle').textContent = idea.title;
+
+                const coSuggesters = Array.isArray(idea.co_suggesters) && idea.co_suggesters.length ? idea.co_suggesters.join(', ') : 'None';
+
+                document.getElementById('modalBody').innerHTML = `
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="text-xs text-secondary text-uppercase fw-bold mb-1">Problem Statement</div>
+                            <div class="p-3 rounded-3 border bg-light text-sm" style="line-height:1.6; overflow-wrap:anywhere; word-break:break-word;">${idea.problem_statement || 'N/A'}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-xs text-secondary text-uppercase fw-bold mb-1">Proposed Solution</div>
+                            <div class="p-3 rounded-3 border bg-light text-sm" style="line-height:1.6;">${idea.proposed_solution || 'N/A'}</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 rounded-3 border">
+                                <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Tangible Benefit</div>
+                                <div class="fw-bold text-success text-base">${idea.tangible_benefit ? QCMS.formatINR(idea.tangible_benefit) : 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 rounded-3 border">
+                                <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Required Investment</div>
+                                <div class="fw-bold text-main text-base">${idea.investment_required ? QCMS.formatINR(idea.investment_required) : 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 rounded-3 border">
+                                <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Impact Level</div>
+                                <div class="fw-bold text-primary text-base">${idea.impact_level || 'High'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 rounded-3 border">
+                                <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Est. Timeframe</div>
+                                <div class="fw-bold text-main text-base">${idea.implementation_time || '2 Weeks'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-3 border bg-light">
+                        <div class="row g-2 text-xs">
+                            <div class="col-md-6"><strong>Submitted By:</strong> ${idea.submitted_by}</div>
+                            <div class="col-md-6"><strong>Co-Suggesters:</strong> ${coSuggesters}</div>
+                            <div class="col-md-6"><strong>Department:</strong> ${idea.department}</div>
+                            <div class="col-md-6"><strong>Category:</strong> ${idea.category}</div>
+                            <div class="col-md-6"><strong>Source:</strong> ${idea.source || 'Cloudflare Integration API'}</div>
+                            <div class="col-md-6"><strong>Intangible Benefit:</strong> ${idea.intangible_benefit || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+
+                new bootstrap.Modal(document.getElementById('ideaDetailModal')).show();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => AdditionalSources.init());
+    </script>
+</body>
+
+</html>

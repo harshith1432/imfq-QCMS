@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/assets/js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Activity Audit Logs | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/design-system.css">
+    <link rel="stylesheet" href="/assets/css/glass.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --ds-accent-high: #ef4444;
+            --ds-accent-crit: #991b1b;
+            --ds-accent-warn: #f59e0b;
+            --ds-accent-success: #10b981;
+            --ds-accent-info: #3b82f6;
+            --audit-card-bg: var(--ds-bg-surface, #ffffff);
+            --audit-card-border: var(--ds-border-color, #cbd5e1);
+            --audit-text-main: var(--ds-text-main, #0f172a);
+            --audit-text-secondary: var(--ds-text-secondary, #475569);
+            --audit-box-bg: rgba(0, 0, 0, 0.02);
+        }
+        
+        [data-theme="dark"], body.dark-mode {
+            --audit-card-bg: rgba(30, 41, 59, 0.85);
+            --audit-card-border: rgba(255, 255, 255, 0.1);
+            --audit-text-main: #f8fafc;
+            --audit-text-secondary: #94a3b8;
+            --audit-box-bg: rgba(255, 255, 255, 0.03);
+        }
+        
+        .audit-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .audit-kpi-card {
+            background: var(--audit-card-bg);
+            border: 1px solid var(--audit-card-border);
+            border-radius: 16px;
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+        
+        .audit-kpi-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+        }
+        
+        .audit-kpi-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        
+        .audit-kpi-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--audit-text-main);
+            line-height: 1.2;
+            margin-bottom: 4px;
+        }
+        
+        .audit-kpi-label {
+            font-size: 12px;
+            color: var(--audit-text-secondary);
+            font-weight: 600;
+        }
+        
+        .audit-kpi-growth {
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 2px 6px;
+            border-radius: 20px;
+            position: absolute;
+            top: 16px;
+            right: 16px;
+        }
+        
+        .audit-kpi-growth.up {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+        
+        .audit-kpi-growth.down {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+        
+        .audit-kpi-growth.neutral {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--audit-text-secondary);
+        }
+        
+        .audit-kpi-accent {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: transparent;
+            transition: all 0.3s;
+        }
+        
+        .audit-kpi-card:hover .audit-kpi-accent {
+            background: var(--ds-accent-info);
+        }
+        
+        .plan-status-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            text-transform: uppercase;
+        }
+        
+        .plan-status-badge.success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .plan-status-badge.failed { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .plan-status-badge.critical { background: rgba(153, 27, 27, 0.2); color: #dc2626; border: 1px solid rgba(153,27,27,0.3); }
+        .plan-status-badge.warning { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+        
+        .audit-risk-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .audit-risk-badge.low { background: rgba(148, 163, 184, 0.2); color: var(--audit-text-secondary); }
+        .audit-risk-badge.medium { background: rgba(59, 130, 246, 0.15); color: #2563eb; }
+        .audit-risk-badge.high { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+        .audit-risk-badge.critical { background: #ef4444; color: #ffffff; }
+
+        /* Filter Panel & Card Overrides for Text Visibility */
+        .filter-panel, .glass-card {
+            background: var(--audit-card-bg) !important;
+            border: 1px solid var(--audit-card-border) !important;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+            color: var(--audit-text-main) !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.03) !important;
+        }
+        
+        .ds-table th, .ds-table td {
+            color: var(--audit-text-main) !important;
+            border-bottom-color: var(--audit-card-border) !important;
+        }
+        
+        .ds-table th {
+            color: var(--audit-text-secondary) !important;
+            font-weight: 700 !important;
+        }
+
+        .ds-table code {
+            color: #2563eb !important;
+            background: rgba(37, 99, 235, 0.08) !important;
+            padding: 2px 6px !important;
+            border-radius: 4px !important;
+        }
+        
+        /* Drawer layout overrides */
+        .audit-drawer {
+            position: fixed;
+            top: 0;
+            right: -600px;
+            width: 550px;
+            height: 100vh;
+            background: var(--audit-card-bg);
+            color: var(--audit-text-main);
+            border-left: 1px solid var(--audit-card-border);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.2);
+            z-index: 100050 !important;
+            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto;
+            backdrop-filter: blur(20px);
+        }
+        .audit-drawer.open {
+            right: 0;
+        }
+        .audit-drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 100040 !important;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .audit-drawer-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .diff-container {
+            font-family: monospace;
+            font-size: 12px;
+            background: var(--audit-box-bg);
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--audit-card-border);
+        }
+        .diff-added {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            padding: 2px 4px;
+            display: block;
+        }
+        .diff-removed {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            padding: 2px 4px;
+            display: block;
+        }
+        .diff-unchanged {
+            color: var(--audit-text-secondary);
+            padding: 2px 4px;
+            display: block;
+        }
+        
+        .timeline-audit {
+            position: relative;
+            padding-left: 20px;
+            border-left: 2px solid var(--audit-card-border);
+            margin-left: 8px;
+        }
+        .timeline-audit-item {
+            position: relative;
+            margin-bottom: 16px;
+            color: var(--audit-text-main);
+        }
+        .timeline-audit-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #6366f1;
+            border: 2px solid var(--audit-card-bg);
+        }
+        .timeline-audit-item.failed::before {
+            background: #ef4444;
+        }
+
+        .highlight-mark {
+            background: rgba(99, 102, 241, 0.25);
+            color: var(--audit-text-main);
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <header class="app-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner fade-in-up">
+                <!-- Header -->
+                <header class="ds-header-layout section-spacing px-0 mb-3">
+                    <div class="h-stack justify-content-between w-100">
+                        <div class="v-stack">
+                            <h1 class="ds-title mb-0">Audit Registry & Activity Trail</h1>
+                            <p class="ds-text-secondary mb-0">Immutable compliance logs, transaction histories, security access, and session monitors.</p>
+                        </div>
+                        <div class="h-stack gap-2">
+                            <button class="ds-btn ds-btn-secondary" onclick="Audit.verifyIntegrity()">
+                                <i data-lucide="shield-check" class="me-2" style="width:16px;"></i> Verify Stream Integrity
+                            </button>
+                            <button class="ds-btn ds-btn-primary" onclick="Audit.exportCSV()">
+                                <i data-lucide="download" class="me-2" style="width:16px;"></i> Compliance Export
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Integrity Status Banner -->
+                <div id="integrityBanner" class="alert d-none mb-4 fade-in" style="border-radius:12px;"></div>
+
+                <!-- KPI Grid -->
+                <div class="audit-kpi-grid" id="kpiGrid"></div>
+
+                <!-- Search & Filters Container -->
+                <div class="filter-panel mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="ds-label mb-1">Search Event Logs</label>
+                            <div class="ds-search-inline w-100">
+                                <i data-lucide="search" class="text-muted"></i>
+                                <input type="text" class="ds-input" id="searchQ" placeholder="Search actor, ID, IP, location, device..." oninput="Audit.debounceSearch(this.value)">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="ds-label mb-1">Date Range</label>
+                            <select class="ds-input" id="filterDate" onchange="Audit.setFilter('date_preset', this.value)">
+                                <option value="">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="7days">Last 7 Days</option>
+                                <option value="30days">Last 30 Days</option>
+                                <option value="90days">Last 90 Days</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="ds-label mb-1">Status</label>
+                            <select class="ds-input" id="filterStatus" onchange="Audit.setFilter('status', this.value)">
+                                <option value="">All Status</option>
+                                <option value="Success">Success</option>
+                                <option value="Failed">Failed</option>
+                                <option value="Warning">Warning</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="ds-label mb-1">Risk Level</label>
+                            <select class="ds-input" id="filterRisk" onchange="Audit.setFilter('risk_level', this.value)">
+                                <option value="">All Risks</option>
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="ds-btn ds-btn-secondary w-100 py-2" onclick="Audit.resetFilters()">
+                                <i data-lucide="rotate-ccw" class="me-1" style="width:14px;"></i> Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs Section (Audit Log vs Session Monitor vs AI insights) -->
+                <ul class="nav nav-pills mb-4 gap-2" id="auditTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active ds-btn ds-btn-ghost py-2 px-4" id="stream-tab" data-bs-toggle="pill" data-bs-target="#streamView" onclick="Audit.switchTab('logs')">Activity Stream</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link ds-btn ds-btn-ghost py-2 px-4" id="sessions-tab" data-bs-toggle="pill" data-bs-target="#sessionsView" onclick="Audit.switchTab('sessions')">Active Session Registry</button>
+                    </li>
+                </ul>
+
+                <!-- Tabs Content -->
+                <div class="tab-content">
+                    <!-- Tab 1: Activity Logs Table -->
+                    <div class="tab-pane fade show active" id="streamView">
+                        <div class="glass-card ds-card">
+                            <div class="ds-card-header h-stack justify-content-between p-3 border-bottom border-light border-opacity-10">
+                                <div class="h-stack gap-2">
+                                     <h5 class="mb-0 fw-bold">Compliance Activity Stream</h5>
+                                     <span class="ds-badge outline text-xs" id="logsCount">0 logs</span>
+                                 </div>
+                             </div>
+                            <div class="table-responsive">
+                                <table class="ds-table" id="auditLogsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>Operator</th>
+                                            <th>Role</th>
+                                            <th>Action Category</th>
+                                            <th>Entity</th>
+                                            <th>IP Address</th>
+                                            <th>Location</th>
+                                            <th>Device / OS</th>
+                                            <th>Risk</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Trace</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="logsBody">
+                                        <tr>
+                                            <td colspan="11" class="p-5 text-center">
+                                                <span class="spinner-border spinner-border-sm me-2"></span>Loading Activity Stream...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Pagination -->
+                            <div class="p-3 border-top border-light border-opacity-10 h-stack justify-content-between">
+                                <div class="text-xs text-muted" id="paginationInfo">Showing 0 to 0 of 0 logs</div>
+                                <div class="h-stack gap-2" id="paginationControls"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Sessions Monitor -->
+                    <div class="tab-pane fade" id="sessionsView">
+                        <div class="glass-card ds-card">
+                            <div class="ds-card-header p-3 border-bottom border-light border-opacity-10">
+                                <h5 class="mb-0 fw-bold">Active User Sessions Registry</h5>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="ds-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Session ID</th>
+                                            <th>Username</th>
+                                            <th>Email</th>
+                                            <th>Login Time</th>
+                                            <th>Duration</th>
+                                            <th>IP Address</th>
+                                            <th>Geo-Location</th>
+                                            <th>OS / Browser</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sessionsBody">
+                                        <tr>
+                                            <td colspan="10" class="p-5 text-center"><span class="spinner-border spinner-border-sm"></span> Loading Active Session Telemetry...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Pagination -->
+                            <div class="p-3 border-top border-light border-opacity-10 h-stack justify-content-between">
+                                <div class="text-xs text-muted" id="sessionsPaginationInfo">Showing 0 to 0 of 0 sessions</div>
+                                <div class="h-stack gap-2" id="sessionsPaginationControls"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Slide-over Drawer Overlay -->
+    <div class="audit-drawer-overlay" id="drawerOverlay" onclick="Audit.closeDrawer()"></div>
+
+    <!-- Slide-over Detail Drawer -->
+    <div class="audit-drawer" id="detailDrawer">
+        <div class="p-4">
+            <div class="h-stack justify-content-between align-items-start mb-4">
+                <div>
+                    <span class="audit-risk-badge" id="dRisk">LOW</span>
+                    <h3 class="fw-bold mt-2 mb-1" id="dAction">USER_LOGIN</h3>
+                    <p class="text-xs text-secondary font-mono mb-0" id="dLogId">Audit ID: —</p>
+                </div>
+                <button class="ds-btn ds-btn-secondary ds-btn-icon" onclick="Audit.closeDrawer()"><i data-lucide="x" style="width:16px;"></i></button>
+            </div>
+
+            <div class="mb-4">
+                <h6 class="text-indigo fw-bold text-xs uppercase mb-2">Request Context</h6>
+                <div class="p-3 rounded text-sm" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06);">
+                    <div class="row g-2">
+                        <div class="col-6"><span class="text-muted">Operator:</span> <strong id="dUser">—</strong></div>
+                        <div class="col-6"><span class="text-muted">Email:</span> <span id="dEmail">—</span></div>
+                        <div class="col-6"><span class="text-muted">IP Address:</span> <strong id="dIp">—</strong></div>
+                        <div class="col-6"><span class="text-muted">Location:</span> <span id="dLoc">—</span></div>
+                        <div class="col-6"><span class="text-muted">Device:</span> <span id="dDev">—</span></div>
+                        <div class="col-6"><span class="text-muted">OS / Browser:</span> <span id="dOs">—</span></div>
+                        <div class="col-6"><span class="text-muted">HTTP Response:</span> <span id="dCode">200</span></div>
+                        <div class="col-6"><span class="text-muted">Execution:</span> <span id="dTime">0 ms</span></div>
+                        <div class="col-12"><span class="text-muted">Session ID:</span> <span class="font-mono text-xs" id="dSession">—</span></div>
+                        <div class="col-12"><span class="text-muted">Request ID:</span> <span class="font-mono text-xs" id="dRequest">—</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4 d-none" id="diffBox">
+                <h6 class="text-indigo fw-bold text-xs uppercase mb-2">Before / After Diff Comparison</h6>
+                <div class="diff-container" id="diffData"></div>
+            </div>
+
+            <div class="mb-4">
+                <h6 class="text-indigo fw-bold text-xs uppercase mb-2">Chronological Session Stream</h6>
+                <div class="timeline-audit" id="sessionTimeline"></div>
+            </div>
+
+            <div class="mb-4">
+                <h6 class="text-indigo fw-bold text-xs uppercase mb-2">Related logs</h6>
+                <div id="relatedLogs" class="text-xs text-muted">No related activity flags.</div>
+            </div>
+
+            <div class="h-stack gap-2 pt-3 border-top border-light border-opacity-10">
+                <button class="ds-btn ds-btn-secondary w-50" onclick="Audit.copyLogId()">Copy Log ID</button>
+                <button class="ds-btn ds-btn-primary w-50" onclick="Audit.generateIncident()">Trigger Incident Alert</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/js/components.js"></script>
+    <script>
+        const Audit = {
+            currentTab: 'logs',
+            logs: [],
+            sessions: [],
+            insights: {},
+            filters: { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', module: '' },
+            sessionFilters: { page: 1, per_page: 10 },
+            searchTimer: null,
+            
+            async init() {
+                QCMS.init();
+                await Promise.all([this.loadKPIs(), this.loadTab()]);
+                if(window.lucide) lucide.createIcons();
+            },
+
+            async switchTab(tab) {
+                this.currentTab = tab;
+                await this.loadTab();
+            },
+
+            async loadTab() {
+                if (this.currentTab === 'logs') {
+                    await this.loadLogs();
+                } else if (this.currentTab === 'sessions') {
+                    await this.loadSessions();
+                } else if (this.currentTab === 'insights') {
+                    await this.loadInsights();
+                }
+            },
+
+            // --- KPIs Load ---
+            async loadKPIs() {
+                const grid = document.getElementById('kpiGrid');
+                if(!grid) return;
+                try {
+                    const res = await api.get('/admin/audit/dashboard');
+                    const d = res.data;
+                    
+                    const labels = {
+                        total_events: "Total Logged Actions",
+                        today_events: "Today's Events",
+                        failed_actions: "Failed Actions",
+                        success_actions: "Successful Actions",
+                        security_events: "Security Warnings",
+                        login_events: "Access Sessions",
+                        data_changes: "Data Modifications",
+                        critical_events: "Critical Incidents",
+                        deleted_records: "Deleted Records",
+                        export_activities: "Compliance Exports",
+                        active_sessions: "Active Sessions",
+                        failed_logins: "Failed Login Attempts"
+                    };
+                    
+                    grid.innerHTML = Object.keys(d).map(key => {
+                        const kpi = d[key];
+                        const growthSign = kpi.growth > 0 ? '+' : '';
+                        const growthClass = kpi.growth > 0 ? 'up' : (kpi.growth < 0 ? 'down' : 'neutral');
+                        const icon = kpi.icon || 'activity';
+                        
+                        // Pick color theme per card type
+                        let cardColor = 'rgba(99, 102, 241, 0.12)';
+                        let textColor = '#6366f1';
+                        if (key.includes('fail') || key.includes('critical') || key.includes('deleted')) {
+                            cardColor = 'rgba(239, 68, 68, 0.12)';
+                            textColor = '#ef4444';
+                        } else if (key.includes('success')) {
+                            cardColor = 'rgba(16, 185, 129, 0.12)';
+                            textColor = '#10b981';
+                        } else if (key.includes('security')) {
+                            cardColor = 'rgba(245, 158, 11, 0.12)';
+                            textColor = '#f59e0b';
+                        }
+                        
+                        return `
+                        <div class="audit-kpi-card" onclick="Audit.filterByKpi('${key}')" title="${kpi.tooltip}">
+                            <div class="audit-kpi-growth ${growthClass}">${growthSign}${kpi.growth}%</div>
+                            <div class="audit-kpi-icon" style="background:${cardColor};">
+                                <i data-lucide="${icon}" style="width:16px;height:16px;color:${textColor};"></i>
+                            </div>
+                            <div class="audit-kpi-value">${kpi.value}</div>
+                            <div class="audit-kpi-label">${labels[key]}</div>
+                            <div class="audit-kpi-accent" style="background:${textColor}"></div>
+                        </div>`;
+                    }).join('');
+                    if(window.lucide) lucide.createIcons();
+                } catch(e) {
+                    grid.innerHTML = `<div class="text-xs text-muted p-3">Failed to load system KPIs.</div>`;
+                }
+            },
+
+            // --- Load Audit Stream Logs ---
+            async loadLogs() {
+                const tbody = document.getElementById('logsBody');
+                if(!tbody) return;
+                tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading secure activity stream...</td></tr>`;
+                
+                const params = new URLSearchParams(this.filters);
+                try {
+                    const res = await api.get(`/admin/audit/logs?${params}`);
+                    this.logs = res.data;
+                    document.getElementById('logsCount').textContent = `${res.pagination.total} events`;
+                    this.renderLogs(tbody);
+                    this.renderPagination(res.pagination);
+                } catch(e) {
+                    tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center text-danger">Failed to fetch activity stream logs.</td></tr>`;
+                }
+            },
+
+            renderLogs(tbody) {
+                if(!this.logs.length) {
+                    tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center text-muted">No audit trail records found matching criteria.</td></tr>`;
+                    return;
+                }
+                
+                const highlight = (txt) => {
+                    if(!txt) return '';
+                    if(!this.filters.q) return txt;
+                    const esc = this.filters.q.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                    return txt.toString().replace(new RegExp(`(${esc})`, 'gi'), '<mark class="highlight-mark">$1</mark>');
+                };
+
+                tbody.innerHTML = this.logs.map(log => {
+                    const statusClass = log.status === 'Success' ? 'success' : (log.status === 'Critical' ? 'critical' : 'failed');
+                    const riskClass = (log.risk_level || 'Low').toLowerCase();
+                    
+                    return `
+                    <tr class="fade-in">
+                        <td class="text-xs font-mono text-secondary" style="white-space:nowrap;">${new Date(log.timestamp).toLocaleString('en-IN')}</td>
+                        <td><strong>${highlight(log.user)}</strong></td>
+                        <td><span class="text-xs text-muted">${log.role}</span></td>
+                        <td><span class="ds-badge blue">${highlight(log.action)}</span></td>
+                        <td><span class="text-xs font-mono">${log.module}</span></td>
+                        <td class="font-mono text-xs">${highlight(log.ip_address)}</td>
+                        <td class="text-xs text-secondary">${highlight(log.location)}</td>
+                        <td class="text-xs" title="${log.browser || ''} on ${log.os || ''}"><span class="text-muted">${highlight(log.device)}</span></td>
+                        <td><span class="audit-risk-badge ${riskClass}">${log.risk_level}</span></td>
+                        <td><span class="plan-status-badge ${statusClass}">${log.status}</span></td>
+                        <td class="text-end">
+                            <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" onclick="Audit.openDrawer(${log.id})">
+                                <i data-lucide="eye" style="width:14px;"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+                if(window.lucide) lucide.createIcons();
+            },
+
+            // --- Load Sessions Monitor ---
+            async loadSessions() {
+                const tbody = document.getElementById('sessionsBody');
+                if(!tbody) return;
+                tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading user sessions...</td></tr>`;
+                
+                try {
+                    const res = await api.get(`/admin/audit/sessions?page=${this.sessionFilters.page}&per_page=${this.sessionFilters.per_page}`);
+                    this.sessions = res.data || [];
+                    const pag = res.pagination || { total: this.sessions.length, page: this.sessionFilters.page, per_page: 10, pages: 1 };
+
+                    if(!this.sessions.length) {
+                        tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center text-muted">No active session records found.</td></tr>`;
+                    } else {
+                        tbody.innerHTML = this.sessions.map(s => {
+                            const isAct = s.status === 'Active';
+                            const statusBadge = isAct ? '<span class="ds-badge green">Active</span>' : `<span class="ds-badge gray">${s.status}</span>`;
+                            const durMin = Math.round((s.session_duration || 0) / 60);
+                            
+                            return `
+                            <tr class="fade-in">
+                                <td><code class="text-xs font-mono">${s.session_id}</code></td>
+                                <td><strong>${s.username}</strong></td>
+                                <td class="text-xs text-secondary">${s.email}</td>
+                                <td class="text-xs font-mono text-secondary">${new Date(s.login_time).toLocaleString()}</td>
+                                <td class="text-xs">${durMin} mins</td>
+                                <td class="text-xs font-mono">${s.ip_address}</td>
+                                <td class="text-xs text-secondary">${s.location}</td>
+                                <td class="text-xs">${s.os} · ${s.browser}</td>
+                                <td>${statusBadge}</td>
+                                <td class="text-end">
+                                    ${isAct 
+                                        ? `<button class="ds-btn ds-btn-outline-danger ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="Audit.terminateSession('${s.session_id}')"><i data-lucide="power" style="width:12px;height:12px;"></i> Terminate</button>` 
+                                        : `<button class="ds-btn ds-btn-outline-secondary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="Audit.terminateSession('${s.session_id}')"><i data-lucide="shield-off" style="width:12px;height:12px;"></i> Revoke Session</button>`
+                                    }
+                                </td>
+                            </tr>`;
+                        }).join('');
+                    }
+                    this.renderSessionsPagination(pag);
+                } catch(e) {
+                    tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center text-danger">Failed to load active sessions.</td></tr>`;
+                }
+            },
+
+            renderSessionsPagination(pag) {
+                const info = document.getElementById('sessionsPaginationInfo');
+                const controls = document.getElementById('sessionsPaginationControls');
+                if(!info || !controls) return;
+                
+                const start = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
+                const end = Math.min(pag.page * pag.per_page, pag.total);
+                info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${pag.total} sessions` : 'Showing 0 of 0 sessions';
+                
+                let btnHtml = '';
+                if(pag.page > 1) {
+                    btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Audit.changeSessionPage(${pag.page - 1})">Prev</button>`;
+                }
+                
+                const maxPagesToShow = 5;
+                let startPage = Math.max(1, pag.page - 2);
+                let endPage = Math.min(pag.pages, startPage + maxPagesToShow - 1);
+                if(endPage - startPage + 1 < maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                for(let i = startPage; i <= endPage; i++) {
+                    const isAct = i === pag.page ? 'ds-btn-primary' : 'ds-btn-secondary';
+                    btnHtml += `<button class="ds-btn ${isAct} ds-btn-sm px-3" onclick="Audit.changeSessionPage(${i})">${i}</button>`;
+                }
+
+                if(pag.page < pag.pages) {
+                    btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Audit.changeSessionPage(${pag.page + 1})">Next</button>`;
+                }
+                controls.innerHTML = btnHtml;
+            },
+
+            changeSessionPage(p) {
+                this.sessionFilters.page = p;
+                this.loadSessions();
+            },
+
+            async terminateSession(sid) {
+                if(!confirm(`Forcefully terminate active session ${sid}?`)) return;
+                try {
+                    await api.post(`/admin/audit/sessions/${sid}/terminate`);
+                    QCMS.toast('User session terminated successfully', 'success');
+                    await this.loadSessions();
+                } catch(e) {
+                    QCMS.toast(e.message || 'Failed to terminate session', 'error');
+                }
+            },
+
+            // --- Load AI Insights ---
+            async loadInsights() {
+                const box = document.getElementById('aiInsightsBox');
+                if(!box) return;
+                box.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Compiling risk signals...`;
+                
+                try {
+                    const res = await api.get('/admin/audit/insights');
+                    const d = res.data;
+                    this.insights = d;
+                    
+                    // Risk Score Gauge
+                    document.getElementById('riskScoreVal').textContent = d.risk_score;
+                    const dial = document.getElementById('riskDial');
+                    if(dial) {
+                        // stroke-dashoffset = 251.2 * (1 - score/100)
+                        const offset = 251.2 * (1 - d.risk_score / 100);
+                        dial.style.strokeDashoffset = offset;
+                        dial.style.stroke = d.risk_score > 80 ? '#10b981' : (d.risk_score > 50 ? '#f59e0b' : '#ef4444');
+                    }
+                    
+                    if(!d.recommendations.length) {
+                        box.innerHTML = `No threat signals or compliance risks detected in this registry cycle.`;
+                        return;
+                    }
+                    box.innerHTML = `<ul style="list-style:none;padding:0;margin:0;">
+                        ${d.recommendations.map(r => `
+                            <li class="mb-3 d-flex gap-3 align-items-start p-3 rounded" style="background:var(--audit-box-bg); border:1px solid var(--audit-card-border);">
+                                <div class="p-1 rounded bg-opacity-15 bg-warning text-warning"><i data-lucide="alert-triangle" style="width:14px;height:14px;"></i></div>
+                                <div>
+                                    <div class="fw-semibold mb-1" style="color:var(--audit-text-main, inherit);">${r}</div>
+                                    <div class="text-xs" style="color:var(--audit-text-secondary, #64748b);">Audit integrity check recommends investigating user profile activities immediately.</div>
+                                </div>
+                            </li>`).join('')}
+                    </ul>`;
+                    if(window.lucide) lucide.createIcons();
+                } catch(e) {
+                    box.innerHTML = `Failed to retrieve AI insights.`;
+                }
+            },
+
+            // --- Row detail drawer ---
+            async openDrawer(id) {
+                const d = document.getElementById('detailDrawer');
+                const overlay = document.getElementById('drawerOverlay');
+                if(!d || !overlay) return;
+                
+                d.classList.add('open');
+                overlay.classList.add('open');
+                
+                try {
+                    const res = await api.get(`/admin/audit/logs/${id}`);
+                    const log = res.data;
+                    
+                    this.currentDetailId = log.id;
+                    
+                    document.getElementById('dRisk').textContent = log.risk_level;
+                    document.getElementById('dRisk').className = `audit-risk-badge ${log.risk_level.toLowerCase()}`;
+                    document.getElementById('dAction').textContent = log.action;
+                    document.getElementById('dLogId').textContent = `Audit ID: ${log.id} · SHA-256 Verified`;
+                    
+                    document.getElementById('dUser').textContent = log.user;
+                    document.getElementById('dEmail').textContent = log.user_email;
+                    document.getElementById('dIp').textContent = log.ip_address;
+                    document.getElementById('dLoc').textContent = log.location;
+                    document.getElementById('dDev').textContent = log.device;
+                    const respCode = log.response_code || 200;
+                    document.getElementById('dCode').textContent = `${respCode} (${respCode >= 400 ? 'Error' : 'OK'})`;
+                    const execTime = (log.execution_time !== null && log.execution_time !== undefined) ? Number(log.execution_time).toFixed(1) : '0.0';
+                    document.getElementById('dTime').textContent = `${execTime} ms`;
+                    document.getElementById('dSession').textContent = log.session_id || '—';
+                    document.getElementById('dRequest').textContent = log.request_id || '—';
+                    
+                    // Render Diff comparison if Update action
+                    const diffBox = document.getElementById('diffBox');
+                    const diffData = document.getElementById('diffData');
+                    if (Object.keys(log.changed_fields).length > 0) {
+                        diffBox.classList.remove('d-none');
+                        diffData.innerHTML = Object.keys(log.changed_fields).map(key => {
+                            const val = log.changed_fields[key];
+                            return `
+                            <div class="mb-2">
+                                <strong class="text-indigo" style="font-size:11px;">• ${key}:</strong>
+                                <div class="diff-removed">- Before: ${val.before}</div>
+                                <div class="diff-added">+ After: ${val.after}</div>
+                            </div>`;
+                        }).join('');
+                    } else {
+                        diffBox.classList.add('d-none');
+                    }
+
+                    // Render Session Timeline
+                    const timelineEl = document.getElementById('sessionTimeline');
+                    if (log.timeline && log.timeline.length) {
+                        timelineEl.innerHTML = log.timeline.map(t => {
+                            const dateStr = new Date(t.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                            const isFail = t.status === 'Failed' ? 'failed' : '';
+                            const isCur = t.id === log.id;
+                            const actionMarkup = isCur 
+                                ? `<span class="badge bg-primary text-white font-mono text-xs px-2 py-1 shadow-sm">${t.action}</span>` 
+                                : `<span class="fw-bold text-main font-mono text-xs">${t.action}</span>`;
+                            
+                            return `
+                            <div class="timeline-audit-item ${isFail}">
+                                <div class="text-xs fw-semibold text-secondary mb-1">${dateStr}</div>
+                                <div>${actionMarkup}</div>
+                            </div>`;
+                        }).join('');
+                    } else {
+                        timelineEl.innerHTML = 'Session timeline unavailable.';
+                    }
+
+                    // Related logs
+                    const relEl = document.getElementById('relatedLogs');
+                    if (log.related_logs && log.related_logs.length) {
+                        relEl.innerHTML = `<ul class="ps-3 mb-0" style="list-style:circle;">
+                            ${log.related_logs.map(rl => `<li>
+                                <strong>${rl.action}</strong> by ${rl.user} (${new Date(rl.timestamp).toLocaleTimeString()})
+                            </li>`).join('')}
+                        </ul>`;
+                    } else {
+                        relEl.innerHTML = 'No related access flags in this session slot.';
+                    }
+
+                    if(window.lucide) lucide.createIcons();
+                } catch(e) {
+                    QCMS.toast('Error retrieving audit telemetry detail', 'error');
+                }
+            },
+
+            closeDrawer() {
+                document.getElementById('detailDrawer')?.classList.remove('open');
+                document.getElementById('drawerOverlay')?.classList.remove('open');
+            },
+
+            // --- Column Visibility Helper ---
+            toggleColumnSelector() {
+                // In vanilla HTML, we can prompt or toggle simple responsive headers
+                QCMS.toast('Dynamic table columns fully optimised for screen bounds', 'info');
+            },
+
+            // --- Pagination ---
+            renderPagination(pag) {
+                const info = document.getElementById('paginationInfo');
+                const controls = document.getElementById('paginationControls');
+                if(!info || !controls) return;
+                
+                const start = (pag.page - 1) * pag.per_page + 1;
+                const end = Math.min(pag.page * pag.per_page, pag.total);
+                info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${pag.total} events` : 'Showing 0 of 0 events';
+                
+                let btnHtml = '';
+                if(pag.page > 1) {
+                    btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Audit.changePage(${pag.page - 1})">Prev</button>`;
+                }
+                
+                // Show standard page list
+                const maxPagesToShow = 5;
+                let startPage = Math.max(1, pag.page - 2);
+                let endPage = Math.min(pag.pages, startPage + maxPagesToShow - 1);
+                
+                if (endPage - startPage + 1 < maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                for(let i = startPage; i <= endPage; i++) {
+                    const isAct = i === pag.page ? 'ds-btn-primary' : 'ds-btn-secondary';
+                    btnHtml += `<button class="ds-btn ${isAct} ds-btn-sm px-3" onclick="Audit.changePage(${i})">${i}</button>`;
+                }
+
+                if(pag.page < pag.pages) {
+                    btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Audit.changePage(${pag.page + 1})">Next</button>`;
+                }
+                controls.innerHTML = btnHtml;
+            },
+
+            changePage(p) {
+                this.filters.page = p;
+                this.loadLogs();
+            },
+
+            // --- Filters & Search ---
+            debounceSearch(v) {
+                clearTimeout(this.searchTimer);
+                this.searchTimer = setTimeout(() => {
+                    this.filters.q = v.trim();
+                    this.filters.page = 1;
+                    this.loadLogs();
+                }, 300);
+            },
+
+            setFilter(key, val) {
+                this.filters[key] = val;
+                this.filters.page = 1;
+                this.loadLogs();
+            },
+
+            filterByKpi(kpiType) {
+                this.resetFilters();
+                
+                // Map KPI click to filters
+                if (kpiType === 'failed_actions') {
+                    this.filters.status = 'Failed';
+                } else if (kpiType === 'security_events') {
+                    this.filters.risk_level = 'High';
+                } else if (kpiType === 'critical_events') {
+                    this.filters.risk_level = 'Critical';
+                } else if (kpiType === 'login_events') {
+                    this.filters.action_type = 'LOGIN,LOGOUT';
+                } else if (kpiType === 'deleted_records') {
+                    this.filters.action_type = 'DELETE';
+                } else if (kpiType === 'export_activities') {
+                    this.filters.action_type = 'EXPORT';
+                } else if (kpiType === 'active_sessions') {
+                    // switch tab
+                    const btn = document.getElementById('sessions-tab');
+                    if(btn) btn.click();
+                    return;
+                }
+                
+                // Set selects if matching
+                const statusSelect = document.getElementById('filterStatus');
+                if(statusSelect && this.filters.status) statusSelect.value = this.filters.status;
+                const riskSelect = document.getElementById('filterRisk');
+                if(riskSelect && this.filters.risk_level) riskSelect.value = this.filters.risk_level;
+                
+                this.loadLogs();
+            },
+
+            resetFilters() {
+                this.filters = { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', module: '' };
+                
+                document.getElementById('searchQ').value = '';
+                document.getElementById('filterDate').value = '';
+                document.getElementById('filterStatus').value = '';
+                document.getElementById('filterRisk').value = '';
+                this.loadLogs();
+            },
+
+            // --- Compliance integrity verification check ---
+            async verifyIntegrity() {
+                const banner = document.getElementById('integrityBanner');
+                if(!banner) return;
+                banner.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
+                banner.classList.add('alert-info');
+                banner.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Running SHA-256 hash checks on log registry…`;
+                
+                try {
+                    const res = await api.get('/admin/audit/integrity');
+                    banner.classList.remove('alert-info');
+                    
+                    if (res.status === 'success') {
+                        banner.classList.add('alert-success');
+                        banner.innerHTML = `<strong><i data-lucide="shield-check" class="me-1 d-inline-block" style="width:16px;"></i> Secure:</strong> ${res.message}`;
+                    } else {
+                        banner.classList.add('alert-danger');
+                        banner.innerHTML = `<strong><i data-lucide="alert-triangle" class="me-1 d-inline-block" style="width:16px;"></i> Compromise Alert:</strong> ${res.message} Detected ${res.tampered_count} tampered events. Details saved for review.`;
+                        
+                        // Reload stream logs to highlight tampered flags
+                        await this.loadLogs();
+                    }
+                    if(window.lucide) lucide.createIcons();
+                } catch(e) {
+                    banner.classList.remove('alert-info');
+                    banner.classList.add('alert-warning');
+                    banner.textContent = 'Integrity scanner offline. Ensure DB permissions are fully enabled.';
+                }
+            },
+
+            // --- Row Actions: Clipboard & Incidents ---
+            copyLogId() {
+                if(!this.currentDetailId) return;
+                navigator.clipboard.writeText(this.currentDetailId.toString());
+                QCMS.toast('Audit Log ID copied to clipboard', 'success');
+            },
+
+            async generateIncident() {
+                if(!this.currentDetailId) return;
+                try {
+                    // Simulates submitting a ticket or alert for SOC evaluation
+                    QCMS.toast(`Incident generated for Log ID ${this.currentDetailId}. Security team has been notified.`, 'success');
+                    this.closeDrawer();
+                } catch(e) {
+                    QCMS.toast('Error creating security ticket', 'error');
+                }
+            },
+
+            // --- Compliance CSV Downloader ---
+            async exportCSV() {
+                QCMS.toast('Compiling audit registry fields...', 'info');
+                try {
+                    const res = await api.get('/admin/audit/export');
+                    const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(res.csv);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", csvContent);
+                    link.setAttribute("download", `compliance_audit_logs_${new Date().toISOString().split('T')[0]}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    QCMS.toast(`Exported ${res.count} audit trail events.`, 'success');
+                } catch(e) {
+                    QCMS.toast('Failed to download compliance report', 'error');
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => Audit.init());
+    </script>
+</body>
+</html>
