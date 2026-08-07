@@ -7,7 +7,9 @@ from sqlalchemy.dialects.postgresql import ARRAY
 database_url = os.environ.get('DATABASE_URL', '')
 is_local = '127.0.0.1' in database_url or 'localhost' in database_url or not database_url
 
-if is_local:
+try:
+    from pgvector.sqlalchemy import Vector
+except Exception:
     class LocalVector(db.TypeDecorator):
         impl = ARRAY(db.Float)
         cache_ok = True
@@ -18,8 +20,6 @@ if is_local:
                 return literal(0.0)
                 
     Vector = lambda dim: LocalVector
-else:
-    from pgvector.sqlalchemy import Vector
 
 class Role(db.Model):
     __tablename__ = 'roles'
