@@ -1798,105 +1798,113 @@ def get_plan_catalogue():
     price_filter = request.args.get('price_type', '') # Free, Paid, Custom
     search_q = request.args.get('q', '').strip()
 
-    plans_query = SaaSPlan.query
-    if status_filter:
-        plans_query = plans_query.filter(SaaSPlan.status == status_filter)
-    if type_filter:
-        plans_query = plans_query.filter(SaaSPlan.plan_type == type_filter)
-    if search_q:
-        plans_query = plans_query.filter(or_(
-            SaaSPlan.name.ilike(f'%{search_q}%'),
-            SaaSPlan.code.ilike(f'%{search_q}%')
-        ))
-    if billing_cycle:
-        plans_query = plans_query.join(SaaSPlanPricing).filter(SaaSPlanPricing.billing_cycle.ilike(billing_cycle))
+    try:
+        plans_query = SaaSPlan.query
+        if status_filter:
+            plans_query = plans_query.filter(SaaSPlan.status == status_filter)
+        if type_filter:
+            plans_query = plans_query.filter(SaaSPlan.plan_type == type_filter)
+        if search_q:
+            plans_query = plans_query.filter(or_(
+                SaaSPlan.name.ilike(f'%{search_q}%'),
+                SaaSPlan.code.ilike(f'%{search_q}%')
+            ))
+        if billing_cycle:
+            plans_query = plans_query.join(SaaSPlanPricing).filter(SaaSPlanPricing.billing_cycle.ilike(billing_cycle))
 
-    db_plans = plans_query.all()
+        db_plans = plans_query.all()
 
-    result = []
-    for plan in db_plans:
-        pricing_list = plan.pricing
-        
-        # Calculate active subscribers (trimmed & case-insensitive matching name or code)
-        subscriber_count = Organization.query.filter(
-            (Organization.is_deleted == False) &
-            (
-                (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
-                (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower())
-            )
-        ).count()
+        result = []
+        for plan in db_plans:
+            pricing_list = plan.pricing
+            
+            # Calculate active subscribers (trimmed & case-insensitive matching name or code)
+            subscriber_count = Organization.query.filter(
+                (Organization.is_deleted == False) &
+                (
+                    (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
+                    (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower())
+                )
+            ).count()
 
-        # Update analytics on the fly
-        if plan.analytics:
-            plan.analytics.subscriber_count = subscriber_count
-            mrr_total = 0.0
-            subs = Subscription.query.filter_by(plan_name=plan.name, subscription_status='Active').all()
-            for s in subs:
-                if s.billing_cycle == 'Monthly':
-                    mrr_total += s.base_price
-                elif s.billing_cycle == 'Quarterly':
-                    mrr_total += s.base_price / 3.0
-                elif s.billing_cycle == 'Yearly':
-                    mrr_total += s.base_price / 12.0
-            plan.analytics.mrr = mrr_total
-            plan.analytics.arr = mrr_total * 12.0
-            db.session.commit()
+            # Update analytics on the fly
+            if plan.analytics:
+                plan.analytics.subscriber_count = subscriber_count
+                mrr_total = 0.0
+                subs = Subscription.query.filter_by(plan_name=plan.name, subscription_status='Active').all()
+                for s in subs:
+                    if s.billing_cycle == 'Monthly':
+                        mrr_total += s.base_price
+                    elif s.billing_cycle == 'Quarterly':
+                        mrr_total += s.base_price / 3.0
+                    elif s.billing_cycle == 'Yearly':
+                        mrr_total += s.base_price / 12.0
+                plan.analytics.mrr = mrr_total
+                plan.analytics.arr = mrr_total * 12.0
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
 
-        # Extract features/modules
-        enabled_modules = [m.module_name for m in plan.modules if m.is_enabled]
-        
-        primary_pricing = None
-        if billing_cycle and pricing_list:
-            for pr in pricing_list:
-                if pr.billing_cycle and pr.billing_cycle.strip().lower() == billing_cycle.strip().lower():
-                    primary_pricing = pr
-                    break
-            if not primary_pricing:
-                continue
-        elif pricing_list:
-            primary_pricing = pricing_list[0]
-        
-        cycle = primary_pricing.billing_cycle if primary_pricing else (billing_cycle or 'Yearly')
-        price_val = primary_pricing.price if primary_pricing else 0.0
+            # Extract features/modules
+            enabled_modules = [m.module_name for m in plan.modules if m.is_enabled]
+            
+            primary_pricing = None
+            if billing_cycle and pricing_list:
+                for pr in pricing_list:
+                    if pr.billing_cycle and pr.billing_cycle.strip().lower() == billing_cycle.strip().lower():
+                        primary_pricing = pr
+                        break
+                if not primary_pricing:
+                    continue
+            elif pricing_list:
+                primary_pricing = pricing_list[0]
+            
+            cycle = primary_pricing.billing_cycle if primary_pricing else (billing_cycle or 'Yearly')
+            price_val = primary_pricing.price if primary_pricing else 0.0
 
-        if price_filter:
-            if price_filter == 'Free' and price_val > 0:
-                continue
-            if price_filter == 'Paid' and price_val == 0:
-                continue
-            if price_filter == 'Custom' and not plan.is_custom:
-                continue
+            if price_filter:
+                if price_filter == 'Free' and price_val > 0:
+                    continue
+                if price_filter == 'Paid' and price_val == 0:
+                    continue
+                if price_filter == 'Custom' and not plan.is_custom:
+                    continue
 
-        result.append({
-            'id': plan.id,
-            'plan_name': plan.name,
-            'name': plan.name,
-            'code': plan.code,
-            'description': plan.description,
-            'long_description': plan.long_description,
-            'icon': plan.icon,
-            'color': plan.color,
-            'status': plan.status,
-            'plan_type': plan.plan_type,
-            'billing_cycle': cycle,
-            'base_price': price_val,
-            'price': price_val,
-            'amount': price_val,
-            'monthly_price': price_val,
-            'yearly_price': price_val,
-            'max_users': plan.limits.max_users if plan.limits else 100,
-            'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0,
-            'api_limit': plan.limits.api_limit if plan.limits else 10000,
-            'support_level': plan.limits.support_level if (plan.limits and hasattr(plan.limits, 'support_level')) else 'Standard',
-            'enabled_modules': enabled_modules,
-            'features': [m.module_name for m in plan.modules],
-            'subscriber_count': subscriber_count,
-            'is_custom': plan.is_custom,
-            'created_at': plan.created_at.isoformat() if plan.created_at else None,
-            'updated_at': plan.updated_at.isoformat() if plan.updated_at else None
-        })
+            result.append({
+                'id': plan.id,
+                'plan_name': plan.name,
+                'name': plan.name,
+                'code': plan.code,
+                'description': plan.description,
+                'long_description': plan.long_description,
+                'icon': plan.icon,
+                'color': plan.color,
+                'status': plan.status,
+                'plan_type': plan.plan_type,
+                'billing_cycle': cycle,
+                'base_price': price_val,
+                'price': price_val,
+                'amount': price_val,
+                'monthly_price': price_val,
+                'yearly_price': price_val,
+                'max_users': plan.limits.max_users if plan.limits else 100,
+                'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0,
+                'api_limit': plan.limits.api_limit if plan.limits else 10000,
+                'support_level': plan.limits.support_level if (plan.limits and hasattr(plan.limits, 'support_level')) else 'Standard',
+                'enabled_modules': enabled_modules,
+                'features': [m.module_name for m in plan.modules],
+                'subscriber_count': subscriber_count,
+                'is_custom': plan.is_custom,
+                'created_at': plan.created_at.isoformat() if plan.created_at else None,
+                'updated_at': plan.updated_at.isoformat() if plan.updated_at else None
+            })
 
-    return jsonify({'status': 'success', 'data': result, 'billing_cycle': billing_cycle or 'Yearly'})
+        return jsonify({'status': 'success', 'data': result, 'billing_cycle': billing_cycle or 'Yearly'})
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"[GET PLAN CATALOGUE ERROR] {e}")
+        return jsonify({'status': 'success', 'data': [], 'billing_cycle': billing_cycle or 'Yearly'})
 
 
 @subscription_bp.route('/plans/<int:plan_id>', methods=['GET'])
