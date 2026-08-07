@@ -85,6 +85,24 @@ def seed_default_integrations():
     
     db.session.commit()
 
+@integrations_bp.route('/integrations/email-providers', methods=['GET'])
+@jwt_required()
+def get_email_providers():
+    """Return Communication-category integrations for use in announcement email channel selection."""
+    seed_default_integrations()
+    email_configs = IntegrationConfig.query.filter_by(category='Communication', status='Connected').all()
+    result = []
+    for c in email_configs:
+        settings = c.settings or {}
+        result.append({
+            "provider_id": c.provider_id,
+            "provider_name": c.provider_name,
+            "status": c.status,
+            "sender_email": settings.get('sender_email') or settings.get('api_url', ''),
+            "sender_name": settings.get('sender_name', ''),
+        })
+    return jsonify({"status": "success", "data": result}), 200
+
 @integrations_bp.route('/integrations/dashboard', methods=['GET'])
 @jwt_required()
 def get_dashboard_stats():

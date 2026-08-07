@@ -830,6 +830,114 @@ def get_ai_insights():
     }), 200
 
 
+@announcement_bp.route('/target-suggestions', methods=['GET'])
+@jwt_required()
+def get_target_suggestions():
+    user = get_current_user()
+    if not user:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    from app.infrastructure.database.models.models import Role, Organization, SaaSPlan
+
+    # 1. Real Plans from SaaSPlan & Organization table
+    plan_list = []
+    seen_plans = set()
+    try:
+        plans_db = SaaSPlan.query.filter_by(status='Active').all() if hasattr(SaaSPlan, 'status') else SaaSPlan.query.all()
+        for p in plans_db:
+            if p.name and p.name not in seen_plans:
+                seen_plans.add(p.name)
+                plan_list.append({
+                    "value": p.name,
+                    "label": f"{p.name} Plan",
+                    "desc": p.description or f"Code: {p.code}"
+                })
+    except Exception:
+        pass
+
+    try:
+        org_plans = db.session.query(Organization.subscription_plan).filter(Organization.subscription_plan != None).distinct().all()
+        for (op,) in org_plans:
+            if op and op not in seen_plans:
+                seen_plans.add(op)
+                plan_list.append({
+                    "value": op,
+                    "label": f"{op} Plan",
+                    "desc": "Active organization tier"
+                })
+    except Exception:
+        pass
+
+    # 2. Real Roles from Role table
+    role_list = []
+    try:
+        roles_db = Role.query.all()
+        for r in roles_db:
+            if r.name:
+                role_list.append({
+                    "value": r.name,
+                    "label": r.name,
+                    "desc": f"System Role ID: {r.id}"
+                })
+    except Exception:
+        pass
+
+    # 3. Real Organizations from Organization table
+    org_list = []
+    try:
+        query_orgs = Organization.query
+        if hasattr(Organization, 'is_platform_org'):
+            query_orgs = query_orgs.filter(Organization.is_platform_org == False)
+        orgs_db = query_orgs.all()
+        for o in orgs_db:
+            org_list.append({
+                "value": str(o.id),
+                "label": f"Org #{o.id} — {o.name}",
+                "desc": f"ID: {o.id} · Plan: {o.subscription_plan or 'Free'}"
+            })
+    except Exception:
+        pass
+
+    # 4. Real Countries from Organization table
+    country_list = []
+    try:
+        country_rows = db.session.query(Organization.country).filter(Organization.country != None, Organization.country != '').distinct().all()
+        for (c,) in country_rows:
+            if c:
+                country_list.append({
+                    "value": c,
+                    "label": c,
+                    "desc": "Target Region"
+                })
+    except Exception:
+        pass
+
+    # 5. Real Account Statuses from Organization table
+    status_list = []
+    try:
+        status_rows = db.session.query(Organization.status).filter(Organization.status != None, Organization.status != '').distinct().all()
+        for (s,) in status_rows:
+            if s:
+                status_list.append({
+                    "value": s,
+                    "label": f"{s} Account",
+                    "desc": f"Organization Status: {s}"
+                })
+    except Exception:
+        pass
+
+    return jsonify({
+        "status": "success",
+        "data": {
+            "plan": plan_list,
+            "role": role_list,
+            "org": org_list,
+            "country": country_list,
+            "status": status_list
+        }
+    }), 200
+
+
 # ─── Recipient User Endpoints ──────────────────────────────────────────────────
 
 @announcement_bp.route('/user-active', methods=['GET'])

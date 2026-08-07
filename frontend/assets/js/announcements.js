@@ -20,6 +20,7 @@ const AnnouncementsModule = {
     
     // Wizard state
     wizardStep: 1,
+    emailIntegrations: [],
     wizardData: {
         title: '',
         summary: '',
@@ -29,52 +30,24 @@ const AnnouncementsModule = {
         tags: [],
         audience_type: 'all',
         audience: [],
-        channels: { in_app: true, email: false, sms: false, push: false },
+        channels: { in_app: true, email: false, email_provider: '', sms: false, push: false },
         publish_at: '',
         expires_at: '',
         timezone: 'UTC',
         action: 'draft'
     },
 
-    CRIT_SUGGESTIONS: {
-        'plan': [
-            { value: 'Enterprise', label: 'Enterprise Plan', desc: 'Unlimited Users & High Performance' },
-            { value: 'Professional', label: 'Professional Plan', desc: '50 Users Limit' },
-            { value: 'Starter', label: 'Starter Plan', desc: '10 Users Limit' },
-            { value: 'Enterprise Test Matrix Plan', label: 'Enterprise Test Matrix Plan', desc: 'Custom Sandbox Tier' },
-            { value: 'Custom', label: 'Custom Contract', desc: 'Tailored Enterprise Plan' }
-        ],
-        'role': [
-            { value: 'Admin', label: 'Admin (Tenant Leader)', desc: 'Organization Admin Control' },
-            { value: 'SuperAdmin', label: 'Super Admin', desc: 'Platform Governance & Operations' },
-            { value: 'Reviewer', label: 'Quality Reviewer', desc: 'Gatekeeper Approval Permissions' },
-            { value: 'Facilitator', label: 'Methodology Facilitator', desc: 'RCA & Quality Guidance' },
-            { value: 'Team Leader', label: 'Project Team Leader', desc: 'Project Owner & Lead' },
-            { value: 'Team Member', label: 'Team Contributor', desc: 'Execution & Data Input' }
-        ],
-        'org': [
-            { value: '1', label: 'Org #1 — Quality Circle Inc', desc: 'ID: 1 · Active Enterprise Tier' },
-            { value: '2', label: 'Org #2 — ACME Enterprise', desc: 'ID: 2 · Professional Tier' },
-            { value: '3', label: 'Org #3 — Global QC Systems', desc: 'ID: 3 · Starter Tier' }
-        ],
-        'country': [
-            { value: 'IN', label: 'IN — India', desc: 'Asia-Pacific Region' },
-            { value: 'US', label: 'US — United States', desc: 'North America Region' },
-            { value: 'UK', label: 'UK — United Kingdom', desc: 'Europe Region' },
-            { value: 'DE', label: 'DE — Germany', desc: 'Europe Region' },
-            { value: 'FR', label: 'FR — France', desc: 'Europe Region' },
-            { value: 'ES', label: 'ES — Spain', desc: 'Europe Region' },
-            { value: 'CA', label: 'CA — Canada', desc: 'North America Region' },
-            { value: 'AU', label: 'AU — Australia', desc: 'Asia-Pacific Region' },
-            { value: 'SG', label: 'SG — Singapore', desc: 'Asia-Pacific Region' },
-            { value: 'AE', label: 'AE — UAE', desc: 'Middle East Region' }
-        ],
-        'status': [
-            { value: 'Active', label: 'Active Subscription', desc: 'Running active accounts' },
-            { value: 'Trial', label: 'Trial Period', desc: 'Orgs currently in 14-day trial' },
-            { value: 'Suspended', label: 'Suspended Account', desc: 'Locked organization accounts' },
-            { value: 'Expired', label: 'Expired Subscription', desc: 'Unpaid or lapsed subscriptions' }
-        ]
+    liveCritSuggestions: { plan: [], role: [], org: [], country: [], status: [] },
+
+    async fetchTargetSuggestions() {
+        try {
+            const res = await api.get('/announcements/target-suggestions');
+            if (res && res.status === 'success' && res.data) {
+                this.liveCritSuggestions = res.data;
+            }
+        } catch (e) {
+            console.error('Failed to load target suggestions', e);
+        }
     },
 
     async init(containerId) {
@@ -612,6 +585,8 @@ const AnnouncementsModule = {
     // ─── 5-Step Creation Wizard Modal ─────────────────────────────────────────────
 
     openWizard() {
+        this.fetchTargetSuggestions();
+        this.loadEmailIntegrations();
         this.wizardStep = 1;
         this.wizardData = {
             title: '',
@@ -622,7 +597,7 @@ const AnnouncementsModule = {
             tags: [],
             audience_type: 'all',
             audience: [],
-            channels: { in_app: true, email: false, sms: false, push: false },
+            channels: { in_app: true, email: false, email_provider: '', sms: false, push: false },
             publish_at: '',
             expires_at: '',
             timezone: 'UTC',
@@ -632,6 +607,19 @@ const AnnouncementsModule = {
         const modal = new bootstrap.Modal(document.getElementById('annWizardModal'));
         modal.show();
         this.renderWizardStep();
+    },
+
+    async loadEmailIntegrations() {
+        try {
+            const res = await api.get('/integrations/email-providers');
+            if (res && res.status === 'success' && Array.isArray(res.data)) {
+                this.emailIntegrations = res.data;
+            } else {
+                this.emailIntegrations = [];
+            }
+        } catch (e) {
+            this.emailIntegrations = [];
+        }
     },
 
     renderWizardStep() {
@@ -725,7 +713,6 @@ const AnnouncementsModule = {
                                         <option value="plan">Subscription Plan</option>
                                         <option value="role">User Role</option>
                                         <option value="org">Org ID / Name</option>
-                                        <option value="country">Country / Region</option>
                                         <option value="status">Account Status</option>
                                     </select>
                                 </div>
@@ -744,15 +731,6 @@ const AnnouncementsModule = {
                                         <i data-lucide="plus" class="me-1" style="width:12px;height:12px;"></i> Add Rule
                                     </button>
                                 </div>
-                            </div>
-
-                            <!-- Quick Preset Shortcuts -->
-                            <div class="d-flex align-items-center gap-1.5 mb-3 flex-wrap p-2 rounded-2 border" style="background: rgba(255,255,255,0.02); border-color:var(--ds-border-color)!important;">
-                                <span class="text-xxs text-secondary fw-semibold">Quick Shortcuts:</span>
-                                <button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('plan', 'Enterprise')">+ Enterprise</button>
-                                <button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('role', 'SuperAdmin')">+ SuperAdmins</button>
-                                <button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('role', 'Admin')">+ Org Admins</button>
-                                <button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('country', 'IN')">+ India Region</button>
                             </div>
 
                             <div class="d-flex flex-wrap gap-2 mt-2" id="criteriaBadgeList">
@@ -775,13 +753,19 @@ const AnnouncementsModule = {
                         </div>
                     </label>
 
-                    <label class="d-flex align-items-center gap-3 p-3 rounded border cursor-pointer hover-card" style="border-color:var(--ds-border-color)!important; background:rgba(255,255,255,0.01);">
-                        <input type="checkbox" style="width:18px;height:18px;" ${this.wizardData.channels.email ? 'checked' : ''} onchange="AnnouncementsModule.wizardData.channels.email=this.checked">
-                        <div>
-                            <span class="text-xs fw-bold text-main d-block">Email Broadcast Dispatch</span>
-                            <span class="text-xxs text-secondary">SMTP fallback delivery directly to target user inboxes.</span>
+                    <!-- Email Channel with Integration Hub providers -->
+                    <div class="border rounded p-3" style="border-color:var(--ds-border-color)!important; background:rgba(255,255,255,0.01);">
+                        <label class="d-flex align-items-center gap-3 cursor-pointer mb-0">
+                            <input type="checkbox" style="width:18px;height:18px;" id="emailChannelCheck" ${this.wizardData.channels.email ? 'checked' : ''} onchange="AnnouncementsModule.toggleEmailChannel(this.checked)">
+                            <div>
+                                <span class="text-xs fw-bold text-main d-block">Email Broadcast Dispatch</span>
+                                <span class="text-xxs text-secondary">Deliver via your connected email integration from Integration Hub.</span>
+                            </div>
+                        </label>
+                        <div id="emailProviderSection" style="${this.wizardData.channels.email ? '' : 'display:none;'}" class="mt-3">
+                            ${this._renderEmailProviders()}
                         </div>
-                    </label>
+                    </div>
 
                 </div>
             `;
@@ -841,6 +825,42 @@ const AnnouncementsModule = {
         if (section) section.style.display = val === 'selected' ? 'block' : 'none';
     },
 
+    toggleEmailChannel(checked) {
+        this.wizardData.channels.email = checked;
+        const section = document.getElementById('emailProviderSection');
+        if (section) section.style.display = checked ? 'block' : 'none';
+        if (!checked) {
+            this.wizardData.channels.email_provider = '';
+        }
+    },
+
+    _renderEmailProviders() {
+        const providers = this.emailIntegrations;
+        if (!providers || providers.length === 0) {
+            return `<div class="p-3 rounded-3 text-center" style="background:rgba(255,200,0,0.06); border:1px dashed rgba(255,200,0,0.3);">
+                <i data-lucide="alert-triangle" class="text-warning mb-1" style="width:16px;height:16px;"></i>
+                <p class="text-xxs text-secondary mb-1">No email integrations connected in Integration Hub.</p>
+                <a href="/admin/super-admin.html?view=integrations" target="_blank" class="text-xs text-primary fw-semibold">Go to Integration Hub →</a>
+            </div>`;
+        }
+        const providerIcon = { resend: 'mail', zeptomail: 'mail-check', jio_dlt: 'message-square' };
+        return `<div class="d-flex flex-column gap-2">
+            <span class="text-xxs fw-semibold text-secondary mb-1">Select Email Provider (from Integration Hub):</span>
+            ${providers.map(p => `
+                <label class="d-flex align-items-center gap-3 p-2.5 rounded-3 cursor-pointer" style="border:1px solid var(--ds-border-color); background:rgba(37,99,235,0.03); transition:background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.07)'" onmouseout="this.style.background='rgba(37,99,235,0.03)'">
+                    <input type="radio" name="emailProviderRadio" value="${QCMS.escapeHtml(p.provider_id)}" ${this.wizardData.channels.email_provider === p.provider_id ? 'checked' : ''} onchange="AnnouncementsModule.wizardData.channels.email_provider='${QCMS.escapeHtml(p.provider_id)}'">
+                    <div class="p-1.5 rounded-2 bg-primary-subtle text-primary" style="flex-shrink:0;"><i data-lucide="${providerIcon[p.provider_id] || 'mail'}" style="width:14px;height:14px;"></i></div>
+                    <div style="flex:1;">
+                        <span class="text-xs fw-bold text-main d-block">${QCMS.escapeHtml(p.provider_name)}</span>
+                        <span class="text-xxs text-secondary">${p.sender_email ? 'From: ' + QCMS.escapeHtml(p.sender_email) : 'Connected'}</span>
+                    </div>
+                    <span class="badge bg-success-subtle text-success text-xxs px-2 py-0.5">Connected</span>
+                </label>
+            `).join('')}
+        </div>`;
+    },
+
+
     setScheduleMode(val) {
         this.wizardData.action = val;
         const section = document.getElementById('scheduleDetailsSection');
@@ -873,11 +893,36 @@ const AnnouncementsModule = {
         if (drop) drop.style.display = 'none';
     },
 
+    renderQuickShortcutButtons() {
+        const btns = [];
+        if (this.liveCritSuggestions.plan && this.liveCritSuggestions.plan.length > 0) {
+            const p = this.liveCritSuggestions.plan[0];
+            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('plan', '${QCMS.escapeHtml(p.value)}')">+ ${QCMS.escapeHtml(p.value)} Plan</button>`);
+        }
+        if (this.liveCritSuggestions.role && this.liveCritSuggestions.role.length > 0) {
+            const r = this.liveCritSuggestions.role[0];
+            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('role', '${QCMS.escapeHtml(r.value)}')">+ ${QCMS.escapeHtml(r.value)}s</button>`);
+        }
+        if (this.liveCritSuggestions.org && this.liveCritSuggestions.org.length > 0) {
+            const o = this.liveCritSuggestions.org[0];
+            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('org', '${QCMS.escapeHtml(o.value)}')">+ Org #${QCMS.escapeHtml(o.value)}</button>`);
+        }
+        if (this.liveCritSuggestions.country && this.liveCritSuggestions.country.length > 0) {
+            const c = this.liveCritSuggestions.country[0];
+            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('country', '${QCMS.escapeHtml(c.value)}')">+ ${QCMS.escapeHtml(c.value)} Region</button>`);
+        }
+
+        if (btns.length === 0) {
+            return `<span class="text-xxs text-muted">No shortcuts available yet. Create plans, roles, or orgs to see them here.</span>`;
+        }
+        return btns.join('');
+    },
+
     filterCritSuggestions(query) {
         const drop = document.getElementById('critSuggestionsDropdown');
         if (!drop) return;
         const type = document.getElementById('newCritType')?.value || 'plan';
-        const items = this.CRIT_SUGGESTIONS[type] || [];
+        const items = (this.liveCritSuggestions && this.liveCritSuggestions[type]) ? this.liveCritSuggestions[type] : [];
         const q = (query || '').toLowerCase().trim();
 
         const filtered = items.filter(it => 
@@ -886,12 +931,14 @@ const AnnouncementsModule = {
             (it.desc && it.desc.toLowerCase().includes(q))
         );
 
-        if (filtered.length === 0) {
+        if (items.length === 0) {
             if (q) {
-                drop.innerHTML = `<div class="p-2 text-xxs text-muted text-center">Use custom typed value: "<strong>${QCMS.escapeHtml(query)}</strong>"</div>`;
+                drop.innerHTML = `<div class="p-3 text-xxs text-muted text-center">No created <strong>${QCMS.escapeHtml(type)}</strong> items found in system database.<br>Use custom typed value: "<strong>${QCMS.escapeHtml(query)}</strong>"</div>`;
             } else {
-                drop.innerHTML = `<div class="p-2 text-xxs text-muted text-center">Type to search options...</div>`;
+                drop.innerHTML = `<div class="p-3 text-xxs text-muted text-center">No <strong>${QCMS.escapeHtml(type)}</strong> items created in system database yet.<br>Type to set a custom target value.</div>`;
             }
+        } else if (filtered.length === 0) {
+            drop.innerHTML = `<div class="p-2 text-xxs text-muted text-center">No matching system ${QCMS.escapeHtml(type)}s.<br>Use custom typed value: "<strong>${QCMS.escapeHtml(query)}</strong>"</div>`;
         } else {
             drop.innerHTML = filtered.map(it => `
                 <div class="p-2 rounded-2 cursor-pointer hover-bg-primary-subtle d-flex align-items-center justify-content-between text-xs my-0.5" style="transition: background 0.15s;" onmousedown="AnnouncementsModule.selectCritSuggestion('${QCMS.escapeHtml(it.value)}')">

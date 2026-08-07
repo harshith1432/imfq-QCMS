@@ -456,7 +456,7 @@
     gap: var(--ds-space-4);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .app-main {
         margin-left: 0;
     }
@@ -701,7 +701,7 @@
     }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .app-main {
         margin-left: 0 !important;
     }
@@ -715,7 +715,6 @@
         transform: translateX(0);
         box-shadow: 20px 0 50px rgba(0, 0, 0, 0.2);
     }
-
 }
 
 /* --- Workspace Layout --- */

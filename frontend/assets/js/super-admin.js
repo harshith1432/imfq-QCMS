@@ -878,16 +878,36 @@ const SuperAdmin = {
         }
 
         try {
-            // Append filters to stats call if backend supports it (otherwise ignores gracefully)
-            const stats = await api.get(`/v1/dashboard/stats?range=${this.selectedDateRange}`);
-            const logs = await api.get('/super-admin/logs');
-            const health = await api.get('/v1/dashboard/health');
-            const tickets = await api.get('/super-admin/tickets');
+            // Fetch overview endpoints concurrently to eliminate Vercel serverless cold-start timeouts
+            const [statsRes, logsRes, healthRes, ticketsRes] = await Promise.allSettled([
+                api.get(`/v1/dashboard/stats?range=${this.selectedDateRange}`),
+                api.get('/super-admin/logs'),
+                api.get('/v1/dashboard/health'),
+                api.get('/super-admin/tickets')
+            ]);
 
-            if (stats && stats.status === 'success') {
-                const data = stats.data;
-                this.lastStats = data;
-                const kpiGrid = document.getElementById('superKpiGrid');
+            const stats = statsRes.status === 'fulfilled' ? statsRes.value : null;
+            const logs = logsRes.status === 'fulfilled' ? logsRes.value : null;
+            const health = healthRes.status === 'fulfilled' ? healthRes.value : null;
+            const tickets = ticketsRes.status === 'fulfilled' ? ticketsRes.value : null;
+
+            const data = (stats && stats.status === 'success') ? stats.data : {
+                total_organizations: 0,
+                active_organizations: 0,
+                trial_organizations: 0,
+                inactive_20d_orgs: 0,
+                expired_licenses: 0,
+                storage_used: '0 MB',
+                revenue_in_period: 0,
+                pending_tickets: 0,
+                mrr: 0,
+                arr: 0,
+                growth_pct: 0
+            };
+
+            this.lastStats = data;
+            const kpiGrid = document.getElementById('superKpiGrid');
+            if (kpiGrid) {
                 
                 // Construct KPI cards with interactive click handlers
                 kpiGrid.innerHTML = `

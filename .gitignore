@@ -31,3 +31,6 @@ backend/sql_output.txt
 backend/cleanup_log.txt
 backend/*.pyc
 migrations/
+
+.vercel
+.env*
