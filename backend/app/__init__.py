@@ -916,4 +916,18 @@ def create_app():
         except Exception:
             pass
 
+    @app.errorhandler(Exception)
+    def handle_global_exception(e):
+        import traceback
+        tb = traceback.format_exc()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "traceback": tb
+        }), 500
+
     return app
