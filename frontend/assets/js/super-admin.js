@@ -2567,45 +2567,7 @@ const SuperAdmin = {
         }
     },
 
-    async openBillReportsModal() {
-        const modal = new bootstrap.Modal(document.getElementById('billReportsModal'));
-        modal.show();
 
-        try {
-            // Load Analytics Reports
-            const revRes = await api.get('/billing/reports/revenue');
-            if (revRes.status === 'success') {
-                const planDiv = document.getElementById('reportByPlanArea');
-                const planData = revRes.data.by_plan;
-                planDiv.innerHTML = Object.keys(planData).map(k => `
-                    <div class="d-flex justify-content-between mb-2"><span>${k}:</span><strong>₹${planData[k].toLocaleString('en-IN')}</strong></div>
-                `).join('') || '<div class="text-muted">No plan revenue found.</div>';
-
-                const countryDiv = document.getElementById('reportByCountryArea');
-                const countryData = revRes.data.by_country;
-                countryDiv.innerHTML = Object.keys(countryData).map(k => `
-                    <div class="d-flex justify-content-between mb-2"><span>${k}:</span><strong>₹${countryData[k].toLocaleString('en-IN')}</strong></div>
-                `).join('') || '<div class="text-muted">No regional revenue found.</div>';
-            }
-
-            // Load AI recommendations
-            const aiRes = await api.get('/billing/reports/ai-insights');
-            if (aiRes.status === 'success') {
-                const forecastDiv = document.getElementById('aiForecastArea');
-                const d = aiRes.data;
-                forecastDiv.innerHTML = `
-                    <p class="mb-2">💡 <strong>Revenue Forecast:</strong> ${d.revenue_forecast}</p>
-                    <p class="mb-2">⚠️ <strong>Late Payment Risk:</strong></p>
-                    <ul class="ps-3 mb-2">
-                        ${d.late_payment_prediction.map(x => `<li><strong>${x.company}</strong> (Risk: <span class="text-danger fw-bold">${x.risk}</span>) - ${x.reason}</li>`).join('')}
-                    </ul>
-                    <p class="mb-0">✨ <strong>Action Plan:</strong> Promote upgrades to custom integrations to lock in ₹45k expansion MRR.</p>
-                `;
-            }
-        } catch (e) {
-            console.error("Error loading analytics reports", e);
-        }
-    },
 
 
     async loadSupport() {

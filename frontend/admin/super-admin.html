@@ -1478,9 +1478,6 @@
                     </style>
                     <div class="view-header-actions" style="display:none;">
                         <div class="d-flex gap-2 flex-wrap">
-                            <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.openBillReportsModal()">
-                                <i data-lucide="line-chart" style="width:13px;height:13px;"></i> Analytics & AI
-                            </button>
                             <button class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.openBillCreateWizard()">
                                 <i data-lucide="plus" style="width:13px;height:13px;"></i> Create Invoice
                             </button>
@@ -5219,50 +5216,7 @@
         </div>
     </div>
 
-    <!-- Analytics & AI Reports Modal -->
-    <div class="modal fade" id="billReportsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content" style="border: 1px solid var(--ds-border-color); border-radius: var(--ds-radius-lg); background: var(--ds-bg-card);">
-                <div class="modal-header" style="border-bottom: 1px solid var(--ds-border-color);">
-                    <h5 class="modal-title fw-bold">Financial Analytics &amp; AI billing Insights</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body text-xs" style="max-height:500px;overflow-y:auto;">
-                    <!-- AI recommendation deck -->
-                    <div class="p-3 border rounded mb-4" style="background:rgba(99,102,241,0.05); border-left:4px solid var(--ds-primary)!important;">
-                        <h6 class="fw-bold d-flex align-items-center gap-2 mb-2" style="color:var(--ds-primary);">
-                            <i data-lucide="bot" style="width:16px;height:16px;"></i> Copilot Revenue Predictions &amp; Recommendations
-                        </h6>
-                        <div class="mb-3" id="aiForecastArea">Generating Forecasts...</div>
-                        <div class="row g-2 border-top pt-2 mt-2">
-                            <div class="col-6"><strong>Collection Risk:</strong> <span class="badge bg-warning text-dark text-xxs">Overdue Collections ₹1.24L</span></div>
-                            <div class="col-6"><strong>Upgrade Pipeline:</strong> <span class="badge bg-success text-xxs">+₹45k opportunity</span></div>
-                        </div>
-                    </div>
 
-                    <!-- Revenue Reports Tabulated -->
-                    <h6 class="fw-bold mb-3 text-sm">Revenue Breakdowns</h6>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="border p-3 rounded" style="background:var(--ds-surface-secondary);">
-                                <strong class="d-block mb-2">Revenue by Plan</strong>
-                                <div id="reportByPlanArea">Loading plans analysis...</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="border p-3 rounded" style="background:var(--ds-surface-secondary);">
-                                <strong class="d-block mb-2">Revenue by Region (Country)</strong>
-                                <div id="reportByCountryArea">Loading regional analysis...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--ds-border-color);">
-                    <button class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Add New Super Admin Modal -->
     <div class="modal fade" id="addSuperAdminModal" tabindex="-1" aria-hidden="true">

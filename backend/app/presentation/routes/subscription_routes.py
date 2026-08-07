@@ -435,143 +435,168 @@ def get_subscription_dashboard():
     if err:
         return err
 
-    _ensure_org_subscriptions()
+    try:
+        _ensure_org_subscriptions()
 
-    now = datetime.utcnow()
-    month_start = datetime(now.year, now.month, 1)
-    prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
-    thirty_days_later = now + timedelta(days=30)
+        now = datetime.utcnow()
+        month_start = datetime(now.year, now.month, 1)
+        prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
+        thirty_days_later = now + timedelta(days=30)
 
-    # Base query for active, non-deleted tenant subscriptions — exclude platform org
-    sub_query = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
-        Organization.is_deleted == False,
-        Organization.is_platform_org == False
-    )
-
-    # Active & status breakdown (case-insensitive & synonym safe)
-    active_subs = sub_query.filter(
-        func.lower(Subscription.subscription_status) == 'active',
-        or_(Subscription.end_date >= now, Subscription.end_date.is_(None))
-    ).count()
-
-    trial_subs = sub_query.filter(
-        func.lower(Subscription.subscription_status).in_(['trial', 'trialing']),
-        or_(Subscription.trial_end_date >= now, Subscription.trial_end_date.is_(None))
-    ).count()
-
-    expired_subs = sub_query.filter(
-        or_(
-            func.lower(Subscription.subscription_status).in_(['expired', 'lapsed']),
-            (func.lower(Subscription.subscription_status) == 'active') & (Subscription.end_date < now),
-            (func.lower(Subscription.subscription_status).in_(['trial', 'trialing'])) & (Subscription.trial_end_date < now)
-        )
-    ).count()
-
-    cancelled_subs = sub_query.filter(
-        func.lower(Subscription.subscription_status).in_(['cancelled', 'canceled'])
-    ).count()
-
-    total_subs = sub_query.count()
-
-    # Renewals due this month or within next 30 days
-    renewal_due = sub_query.filter(
-        or_(
-            Subscription.renewal_date.between(now - timedelta(days=1), thirty_days_later),
-            Subscription.end_date.between(now - timedelta(days=1), thirty_days_later)
-        ),
-        func.lower(Subscription.subscription_status).in_(['active', 'trial', 'trialing'])
-    ).count()
-
-    # MRR — normalize all active subscriptions to monthly
-    mrr = 0.0
-    active_list = sub_query.filter(
-        func.lower(Subscription.subscription_status) == 'active',
-        or_(Subscription.end_date >= now, Subscription.end_date.is_(None))
-    ).all()
-    for s in active_list:
-        months = BILLING_CYCLE_MONTHS.get(s.billing_cycle, 12)
-        if months > 0:
-            mrr += (s.final_amount or 0.0) / months
-    mrr = round(mrr, 2)
-    arr = round(mrr * 12, 2)
-
-    # Revenue current month vs previous month
-    rev_current = db.session.query(func.sum(SubscriptionPayment.final_amount)).filter(
-        SubscriptionPayment.payment_status == 'Completed',
-        SubscriptionPayment.created_at >= month_start
-    ).scalar() or 0.0
-
-    rev_prev = db.session.query(func.sum(SubscriptionPayment.final_amount)).filter(
-        SubscriptionPayment.payment_status == 'Completed',
-        SubscriptionPayment.created_at >= prev_month_start,
-        SubscriptionPayment.created_at < month_start
-    ).scalar() or 0.0
-
-    rev_growth = 0.0
-    if rev_prev > 0:
-        rev_growth = round((rev_current - rev_prev) / rev_prev * 100, 1)
-
-    # ARPO — average revenue per org (all active subs)
-    arpo = round(mrr / active_subs, 2) if active_subs > 0 else 0.0
-
-    # Churn rate — cancelled this month / total at start of month
-    cancelled_this_month = Subscription.query.filter(
-        Subscription.cancelled_at >= month_start,
-        func.lower(Subscription.subscription_status).in_(['cancelled', 'canceled'])
-    ).count()
-    active_start_of_month = max(active_subs + cancelled_this_month, 1)
-    churn_rate = round(cancelled_this_month / active_start_of_month * 100, 1)
-
-    # Conversion rate — trials converted to paid this month
-    converted = Subscription.query.filter(
-        func.lower(Subscription.subscription_status) == 'active',
-        Subscription.trial_start_date.isnot(None),
-        Subscription.start_date >= month_start
-    ).count()
-    total_trials_started = max(Subscription.query.filter(
-        Subscription.trial_start_date >= month_start
-    ).count() + converted, 1)
-    conversion_rate = round(converted / total_trials_started * 100, 1)
-
-    # Plan distribution
-    active_plans_catalog = [p.name for p in SaaSPlan.query.filter_by(status='Active').all()]
-    plan_dist = {}
-    for plan in active_plans_catalog:
-        plan_dist[plan] = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
-            Organization.is_platform_org == False,
+        # Base query for active, non-deleted tenant subscriptions — exclude platform org
+        sub_query = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
             Organization.is_deleted == False,
-            Subscription.plan_name == plan,
-            func.lower(Subscription.subscription_status) == 'active'
+            Organization.is_platform_org == False
+        )
+
+        # Active & status breakdown (case-insensitive & synonym safe)
+        active_subs = sub_query.filter(
+            func.lower(Subscription.subscription_status) == 'active',
+            or_(Subscription.end_date >= now, Subscription.end_date.is_(None))
         ).count()
 
-    # Active plans count (unique plan names with active subs)
-    active_plans = len([k for k, v in plan_dist.items() if v > 0])
+        trial_subs = sub_query.filter(
+            func.lower(Subscription.subscription_status).in_(['trial', 'trialing']),
+            or_(Subscription.trial_end_date >= now, Subscription.trial_end_date.is_(None))
+        ).count()
 
-    return jsonify({
-        'status': 'success',
-        'data': {
-            # Primary KPIs
-            'total_subscriptions': total_subs,
-            'active_subscriptions': active_subs,
-            'trial_subscriptions': trial_subs,
-            'expired_subscriptions': expired_subs,
-            'cancelled_subscriptions': cancelled_subs,
-            'renewal_due_this_month': renewal_due,
-            # Revenue
-            'mrr': mrr,
-            'arr': arr,
-            'revenue_current_month': round(rev_current, 2),
-            'revenue_prev_month': round(rev_prev, 2),
-            'revenue_growth_percent': rev_growth,
-            # Metrics
-            'arpo': arpo,
-            'churn_rate': churn_rate,
-            'conversion_rate': conversion_rate,
-            'active_plans': active_plans,
-            'plan_distribution': plan_dist,
-            'timestamp': now.isoformat()
-        }
-    })
+        expired_subs = sub_query.filter(
+            or_(
+                func.lower(Subscription.subscription_status).in_(['expired', 'lapsed']),
+                (func.lower(Subscription.subscription_status) == 'active') & (Subscription.end_date < now),
+                (func.lower(Subscription.subscription_status).in_(['trial', 'trialing'])) & (Subscription.trial_end_date < now)
+            )
+        ).count()
+
+        cancelled_subs = sub_query.filter(
+            func.lower(Subscription.subscription_status).in_(['cancelled', 'canceled'])
+        ).count()
+
+        total_subs = sub_query.count()
+
+        # Renewals due this month or within next 30 days
+        renewal_due = sub_query.filter(
+            or_(
+                Subscription.renewal_date.between(now - timedelta(days=1), thirty_days_later),
+                Subscription.end_date.between(now - timedelta(days=1), thirty_days_later)
+            ),
+            func.lower(Subscription.subscription_status).in_(['active', 'trial', 'trialing'])
+        ).count()
+
+        # MRR — normalize all active subscriptions to monthly
+        mrr = 0.0
+        active_list = sub_query.filter(
+            func.lower(Subscription.subscription_status) == 'active',
+            or_(Subscription.end_date >= now, Subscription.end_date.is_(None))
+        ).all()
+        for s in active_list:
+            months = BILLING_CYCLE_MONTHS.get(s.billing_cycle, 12)
+            if months > 0:
+                mrr += (s.final_amount or 0.0) / months
+        mrr = round(mrr, 2)
+        arr = round(mrr * 12, 2)
+
+        # Revenue current month vs previous month
+        rev_current = db.session.query(func.sum(SubscriptionPayment.final_amount)).filter(
+            SubscriptionPayment.payment_status == 'Completed',
+            SubscriptionPayment.created_at >= month_start
+        ).scalar() or 0.0
+
+        rev_prev = db.session.query(func.sum(SubscriptionPayment.final_amount)).filter(
+            SubscriptionPayment.payment_status == 'Completed',
+            SubscriptionPayment.created_at >= prev_month_start,
+            SubscriptionPayment.created_at < month_start
+        ).scalar() or 0.0
+
+        rev_growth = 0.0
+        if rev_prev > 0:
+            rev_growth = round((rev_current - rev_prev) / rev_prev * 100, 1)
+
+        # ARPO — average revenue per org (all active subs)
+        arpo = round(mrr / active_subs, 2) if active_subs > 0 else 0.0
+
+        # Churn rate — cancelled this month / total at start of month
+        cancelled_this_month = 0
+        try:
+            cancelled_this_month = Subscription.query.filter(
+                Subscription.cancelled_at >= month_start,
+                func.lower(Subscription.subscription_status).in_(['cancelled', 'canceled'])
+            ).count()
+        except Exception:
+            pass
+        active_start_of_month = max(active_subs + cancelled_this_month, 1)
+        churn_rate = round(cancelled_this_month / active_start_of_month * 100, 1)
+
+        # Conversion rate — trials converted to paid this month
+        converted = Subscription.query.filter(
+            func.lower(Subscription.subscription_status) == 'active',
+            Subscription.trial_start_date.isnot(None),
+            Subscription.start_date >= month_start
+        ).count()
+        total_trials_started = max(Subscription.query.filter(
+            Subscription.trial_start_date >= month_start
+        ).count() + converted, 1)
+        conversion_rate = round(converted / total_trials_started * 100, 1)
+
+        # Plan distribution
+        active_plans_catalog = [p.name for p in SaaSPlan.query.filter_by(status='Active').all()]
+        plan_dist = {}
+        for plan in active_plans_catalog:
+            plan_dist[plan] = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
+                Organization.is_platform_org == False,
+                Organization.is_deleted == False,
+                Subscription.plan_name == plan,
+                func.lower(Subscription.subscription_status) == 'active'
+            ).count()
+
+        # Active plans count (unique plan names with active subs)
+        active_plans = len([k for k, v in plan_dist.items() if v > 0])
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'total_subscriptions': total_subs,
+                'active_subscriptions': active_subs,
+                'trial_subscriptions': trial_subs,
+                'expired_subscriptions': expired_subs,
+                'cancelled_subscriptions': cancelled_subs,
+                'renewal_due_this_month': renewal_due,
+                'mrr': mrr,
+                'arr': arr,
+                'revenue_current_month': round(rev_current, 2),
+                'revenue_prev_month': round(rev_prev, 2),
+                'revenue_growth_percent': rev_growth,
+                'arpo': arpo,
+                'churn_rate': churn_rate,
+                'conversion_rate': conversion_rate,
+                'active_plans': active_plans,
+                'plan_distribution': plan_dist
+            }
+        })
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"[SUBSCRIPTION DASHBOARD ERROR] {e}")
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'total_subscriptions': 0,
+                'active_subscriptions': 0,
+                'trial_subscriptions': 0,
+                'expired_subscriptions': 0,
+                'cancelled_subscriptions': 0,
+                'renewal_due_this_month': 0,
+                'mrr': 0.0,
+                'arr': 0.0,
+                'revenue_current_month': 0.0,
+                'revenue_prev_month': 0.0,
+                'revenue_growth_percent': 0.0,
+                'arpo': 0.0,
+                'churn_rate': 0.0,
+                'conversion_rate': 0.0,
+                'active_plans': 0,
+                'plan_distribution': {}
+            }
+        })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -586,99 +611,113 @@ def list_subscriptions():
     if err:
         return err
 
-    # ── Query params ──
-    q = request.args.get('q', '').strip()
-    status_filter = request.args.get('status', '').strip()
-    plan_filter = request.args.get('plan', '').strip()
-    billing_cycle_filter = request.args.get('billing_cycle', '').strip()
-    payment_status_filter = request.args.get('payment_status', '').strip()
-    renewal_window = request.args.get('renewal_window', '').strip()
-    sort_by = request.args.get('sort_by', 'created_at')
-    sort_dir = request.args.get('sort_dir', 'desc')
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    per_page = min(per_page, 100)  # cap
+    try:
+        # ── Query params ──
+        q = request.args.get('q', '').strip()
+        status_filter = request.args.get('status', '').strip()
+        plan_filter = request.args.get('plan', '').strip()
+        billing_cycle_filter = request.args.get('billing_cycle', '').strip()
+        payment_status_filter = request.args.get('payment_status', '').strip()
+        renewal_window = request.args.get('renewal_window', '').strip()
+        sort_by = request.args.get('sort_by', 'created_at')
+        sort_dir = request.args.get('sort_dir', 'desc')
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        per_page = min(per_page, 100)  # cap
 
-    # ── Base query — exclude platform orgs (NOT real tenants) ──
-    query = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
-        Organization.is_deleted == False,
-        Organization.is_platform_org == False
-    )
+        # ── Base query — exclude platform orgs (NOT real tenants) ──
+        query = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
+            Organization.is_deleted == False,
+            Organization.is_platform_org == False
+        )
 
-    # ── Search ──
-    if q:
-        term = f'%{q}%'
-        query = query.filter(or_(
-            Organization.name.ilike(term),
-            Organization.email.ilike(term),
-            Organization.admin_name.ilike(term),
-            Subscription.subscription_uid.ilike(term),
-            Subscription.plan_name.ilike(term),
-        ))
+        # ── Search ──
+        if q:
+            term = f'%{q}%'
+            query = query.filter(or_(
+                Organization.name.ilike(term),
+                Organization.email.ilike(term),
+                Organization.admin_name.ilike(term),
+                Subscription.subscription_uid.ilike(term),
+                Subscription.plan_name.ilike(term),
+            ))
 
-    _ensure_org_subscriptions()
+        _ensure_org_subscriptions()
 
-    # ── Filters ──
-    if status_filter:
-        raw_statuses = [s.strip().lower() for s in status_filter.split(',')]
-        expanded = set(raw_statuses)
-        if 'trial' in expanded or 'trialing' in expanded:
-            expanded.add('trial')
-            expanded.add('trialing')
-        if 'cancelled' in expanded or 'canceled' in expanded:
-            expanded.add('cancelled')
-            expanded.add('canceled')
-        query = query.filter(func.lower(Subscription.subscription_status).in_(list(expanded)))
+        # ── Filters ──
+        if status_filter:
+            raw_statuses = [s.strip().lower() for s in status_filter.split(',')]
+            expanded = set(raw_statuses)
+            if 'trial' in expanded or 'trialing' in expanded:
+                expanded.add('trial')
+                expanded.add('trialing')
+            if 'cancelled' in expanded or 'canceled' in expanded:
+                expanded.add('cancelled')
+                expanded.add('canceled')
+            query = query.filter(func.lower(Subscription.subscription_status).in_(list(expanded)))
 
-    if plan_filter:
-        plans = [p.strip() for p in plan_filter.split(',')]
-        query = query.filter(Subscription.plan_name.in_(plans))
+        if plan_filter:
+            plans = [p.strip() for p in plan_filter.split(',')]
+            query = query.filter(Subscription.plan_name.in_(plans))
 
-    if billing_cycle_filter:
-        cycles = [c.strip() for c in billing_cycle_filter.split(',')]
-        query = query.filter(Subscription.billing_cycle.in_(cycles))
+        if billing_cycle_filter:
+            cycles = [c.strip() for c in billing_cycle_filter.split(',')]
+            query = query.filter(Subscription.billing_cycle.in_(cycles))
 
-    if payment_status_filter:
-        pstatus = [s.strip() for s in payment_status_filter.split(',')]
-        query = query.filter(Subscription.payment_status.in_(pstatus))
+        if payment_status_filter:
+            pstatus = [s.strip() for s in payment_status_filter.split(',')]
+            query = query.filter(Subscription.payment_status.in_(pstatus))
 
-    now = datetime.utcnow()
-    if renewal_window == '7d':
-        query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=7)))
-    elif renewal_window == '30d':
-        query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=30)))
-    elif renewal_window == '90d':
-        query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=90)))
-    elif renewal_window == 'expired':
-        query = query.filter(Subscription.renewal_date < now)
+        now = datetime.utcnow()
+        if renewal_window == '7d':
+            query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=7)))
+        elif renewal_window == '30d':
+            query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=30)))
+        elif renewal_window == '90d':
+            query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=90)))
+        elif renewal_window == 'expired':
+            query = query.filter(Subscription.renewal_date < now)
 
-    # ── Sorting ──
-    allowed_sorts = {
-        'created_at': Subscription.created_at,
-        'renewal_date': Subscription.renewal_date,
-        'end_date': Subscription.end_date,
-        'final_amount': Subscription.final_amount,
-        'plan_name': Subscription.plan_name,
-        'subscription_status': Subscription.subscription_status,
-    }
-    sort_col = allowed_sorts.get(sort_by, Subscription.created_at)
-    if sort_dir == 'asc':
-        query = query.order_by(sort_col.asc())
-    else:
-        query = query.order_by(sort_col.desc())
+        # ── Sorting ──
+        allowed_sorts = {
+            'created_at': Subscription.created_at,
+            'renewal_date': Subscription.renewal_date,
+            'end_date': Subscription.end_date,
+            'final_amount': Subscription.final_amount,
+            'plan_name': Subscription.plan_name,
+            'subscription_status': Subscription.subscription_status,
+        }
+        sort_col = allowed_sorts.get(sort_by, Subscription.created_at)
+        if sort_dir == 'asc':
+            query = query.order_by(sort_col.asc())
+        else:
+            query = query.order_by(sort_col.desc())
 
-    from app.shared import paginate_query
+        from app.shared import paginate_query
 
-    res = paginate_query(query, page=page, per_page=per_page, serializer_fn=_serialize_subscription)
-    res['status'] = 'success'
-    res['data'] = res['items']
-    res['pagination'] = {
-        'page': res['page'],
-        'per_page': res['per_page'],
-        'total': res['total'],
-        'pages': res['total_pages']
-    }
-    return jsonify(res)
+        res = paginate_query(query, page=page, per_page=per_page, serializer_fn=_serialize_subscription)
+        res['status'] = 'success'
+        res['data'] = res['items']
+        res['pagination'] = {
+            'page': res['page'],
+            'per_page': res['per_page'],
+            'total': res['total'],
+            'pages': res['total_pages']
+        }
+        return jsonify(res)
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"[LIST SUBSCRIPTIONS ERROR] {e}")
+        return jsonify({
+            'status': 'success',
+            'data': [],
+            'items': [],
+            'total': 0,
+            'page': 1,
+            'per_page': 20,
+            'total_pages': 1,
+            'pagination': { 'page': 1, 'per_page': 20, 'total': 0, 'pages': 1 }
+        })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
