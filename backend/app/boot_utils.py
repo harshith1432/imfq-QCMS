@@ -1,5 +1,4 @@
 import os
-import psycopg2
 from urllib.parse import urlparse, unquote
 
 def bootstrap_database():
@@ -8,6 +7,11 @@ def bootstrap_database():
     Skipped on Vercel serverless environment to prevent cold-start execution timeouts.
     """
     if os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
+        return
+
+    try:
+        import psycopg2
+    except ImportError:
         return
 
     db_url = os.getenv('DATABASE_URL')
