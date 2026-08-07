@@ -81,14 +81,9 @@ class Config:
             ssl_ctx.check_hostname = False
             ssl_ctx.verify_mode = ssl.CERT_NONE
             SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'ssl_context': ssl_ctx}
-        elif 'sslmode=require' in (SQLALCHEMY_DATABASE_URI or ''):
-            SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'sslmode': 'require'}
     elif SQLALCHEMY_DATABASE_URI and 'sqlite' not in SQLALCHEMY_DATABASE_URI:
         SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 5
         SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 5
-        # If Aiven (or any Postgres with sslmode=require), pass ssl args for psycopg2
-        if 'sslmode=require' in (SQLALCHEMY_DATABASE_URI or ''):
-            SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'sslmode': 'require'}
     else:
         # For SQLite (including :memory:) use StaticPool so every session and
         # every Flask request handler share the SAME single connection.
