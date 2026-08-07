@@ -476,6 +476,7 @@ def login():
     # Scoped access token
     # Include sa_sub_role in claims so the frontend can enforce sub-role
     # restrictions immediately without an extra API call.
+    role_name = user.role.name if user.role else 'SuperAdmin'
     sa_sub_role = None
     if user.role and user.role.name == 'SuperAdmin':
         cf = user.custom_fields if isinstance(user.custom_fields, dict) else {}
@@ -485,7 +486,7 @@ def login():
         identity=str(user.id),
         additional_claims={
             "org_id": user.org_id,
-            "role": user.role.name,
+            "role": role_name,
             "dept_id": user.department_id,
             "sa_sub_role": sa_sub_role,   # None for non-SuperAdmin users
         },
