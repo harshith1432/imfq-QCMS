@@ -21,7 +21,10 @@ class Config:
     }
     
     # File upload settings
-    UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploads'))
+    if os.getenv('VERCEL') == '1':
+        UPLOAD_FOLDER = '/tmp/uploads'
+    else:
+        UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploads'))
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB limit
     
     # CORS Configuration

@@ -29,7 +29,10 @@ def create_app():
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable static file caching for frontend
     
     # Ensure upload folder exists
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    except Exception:
+        pass
     
     # Initialize Extensions
     db.init_app(app)
