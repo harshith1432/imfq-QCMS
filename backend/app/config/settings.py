@@ -57,19 +57,24 @@ class Config:
         # Fallback to local SQLite if PostgreSQL URL is not defined (useful for development fallback)
         SQLALCHEMY_DATABASE_URI = 'sqlite:///qcms.db'
 
-    # Add connection pool parameters only if not using SQLite
-    if SQLALCHEMY_DATABASE_URI and 'sqlite' not in SQLALCHEMY_DATABASE_URI:
-        SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 20
-        SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 10
+    # Add connection pool parameters for Serverless vs standard PostgreSQL
+    if os.getenv('VERCEL') == '1':
+        from sqlalchemy.pool import NullPool
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'poolclass': NullPool,
+            'pool_pre_ping': True,
+        }
+        if 'sslmode=require' in (SQLALCHEMY_DATABASE_URI or ''):
+            SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'sslmode': 'require'}
+    elif SQLALCHEMY_DATABASE_URI and 'sqlite' not in SQLALCHEMY_DATABASE_URI:
+        SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 5
+        SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 5
         # If Aiven (or any Postgres with sslmode=require), pass ssl args for psycopg2
         if 'sslmode=require' in (SQLALCHEMY_DATABASE_URI or ''):
             SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'sslmode': 'require'}
     else:
         # For SQLite (including :memory:) use StaticPool so every session and
         # every Flask request handler share the SAME single connection.
-        # This is essential for testing: without it, QueuePool hands out a
-        # brand-new empty :memory: database for each pool checkout, making
-        # data committed by the test invisible to the app request handlers.
         from sqlalchemy.pool import StaticPool
         SQLALCHEMY_ENGINE_OPTIONS = {
             'connect_args': {'check_same_thread': False},
