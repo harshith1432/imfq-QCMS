@@ -5524,8 +5524,8 @@
                 if (window.lucide) lucide.createIcons();
             }
 
-            // Update top bar header org name (e.g. QCMS Admin Org -> {Software Short Name} Admin Org)
-            const headerOrgName = `${shortName} Admin Org`;
+            // Update top bar header org name (e.g. QCMS -> {Software Short Name})
+            const headerOrgName = shortName;
             if (window.Breadcrumbs && typeof window.Breadcrumbs.updateOrgName === 'function') {
                 window.Breadcrumbs.updateOrgName(headerOrgName);
             } else {

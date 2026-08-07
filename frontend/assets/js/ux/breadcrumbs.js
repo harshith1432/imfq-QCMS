@@ -31,7 +31,7 @@ const Breadcrumbs = {
     getOrgName() {
         if (window.QCMS && window.QCMS.user && window.QCMS.user.platform_short_name) {
             const short = window.QCMS.user.platform_short_name.trim();
-            if (short) return short + ' Admin Org';
+            if (short) return short;
         }
         try {
             const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
@@ -39,7 +39,7 @@ const Breadcrumbs = {
                 const u = JSON.parse(userStr);
                 if (u && u.platform_short_name) {
                     const short = u.platform_short_name.trim();
-                    if (short) return short + ' Admin Org';
+                    if (short) return short;
                 }
                 if (u && u.org_name) return u.org_name;
             }
@@ -47,7 +47,7 @@ const Breadcrumbs = {
         if (window.QCMS && window.QCMS.user && window.QCMS.user.org_name) {
             return window.QCMS.user.org_name;
         }
-        return 'QCMS Admin Org';
+        return 'QCMS';
     },
 
     escapeHtml(str) {
