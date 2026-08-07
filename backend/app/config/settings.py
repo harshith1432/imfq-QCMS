@@ -47,14 +47,17 @@ class Config:
             database = result.path.lstrip('/')
             query_string = result.query  # e.g. 'sslmode=require'
 
+            driver_prefix = "postgresql+pg8000" if is_serverless else "postgresql"
             if password:
                 encoded_password = quote_plus(password)
-                base_uri = f"postgresql://{username}:{encoded_password}@{host}:{port}/{database}"
+                base_uri = f"{driver_prefix}://{username}:{encoded_password}@{host}:{port}/{database}"
             else:
-                base_uri = f"postgresql://{username}@{host}:{port}/{database}"
+                base_uri = f"{driver_prefix}://{username}@{host}:{port}/{database}"
 
             # Re-append query string so sslmode=require etc. are preserved
             SQLALCHEMY_DATABASE_URI = f"{base_uri}?{query_string}" if query_string else base_uri
+            if is_serverless and SQLALCHEMY_DATABASE_URI.startswith('postgresql://'):
+                SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgresql://', 'postgresql+pg8000://', 1)
         except Exception as e:
             SQLALCHEMY_DATABASE_URI = db_url
     else:
