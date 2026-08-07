@@ -133,11 +133,13 @@ def create_app():
         from .presentation.middleware.security import register_security_middleware
         register_security_middleware(app)
 
-        # Auto-create all database tables if they don't exist
-        # This is safe — db.create_all() only creates tables that are missing,
-        # it will NOT drop or modify existing tables.
-        try:
-            db.create_all()
+        # Auto-create database tables on local environments
+        # Skipped on Vercel serverless to prevent 10s execution timeouts
+        if os.getenv('VERCEL') != '1':
+            try:
+                db.create_all()
+            except Exception:
+                pass
             from sqlalchemy import text
             alter_statements = [
                 "CREATE TABLE IF NOT EXISTS plants (id SERIAL PRIMARY KEY, org_id INTEGER NOT NULL REFERENCES organizations(id), name VARCHAR(100) NOT NULL, code VARCHAR(50), location VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
