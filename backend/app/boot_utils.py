@@ -7,7 +7,7 @@ def bootstrap_database():
     Checks if the database specified in DATABASE_URL exists.
     Skipped on Vercel serverless environment to prevent cold-start execution timeouts.
     """
-    if os.getenv('VERCEL') == '1':
+    if os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
         return
 
     db_url = os.getenv('DATABASE_URL')

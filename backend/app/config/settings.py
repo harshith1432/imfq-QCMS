@@ -21,7 +21,8 @@ class Config:
     }
     
     # File upload settings
-    if os.getenv('VERCEL') == '1':
+    is_serverless = bool(os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
+    if is_serverless:
         UPLOAD_FOLDER = '/tmp/uploads'
     else:
         UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploads'))
@@ -61,7 +62,7 @@ class Config:
         SQLALCHEMY_DATABASE_URI = 'sqlite:///qcms.db'
 
     # Add connection pool parameters for Serverless vs standard PostgreSQL
-    if os.getenv('VERCEL') == '1':
+    if is_serverless:
         from sqlalchemy.pool import NullPool
         SQLALCHEMY_ENGINE_OPTIONS = {
             'poolclass': NullPool,
