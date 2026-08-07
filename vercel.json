@@ -1,7 +1,7 @@
 {
   "builds": [
     {
-      "src": "backend/run.py",
+      "src": "api/index.py",
       "use": "@vercel/python"
     },
     {
@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "backend/run.py"
+      "dest": "api/index.py"
     },
     {
       "src": "/login",
@@ -28,7 +28,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/$1"
+      "dest": "frontend/index.html"
     }
   ]
 }
