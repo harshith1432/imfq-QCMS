@@ -377,7 +377,9 @@ def register_security_middleware(app):
 # Brute-Force / Login-Lockout helpers (used by auth routes)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def record_failed_login(identifier: str) -> tuple[bool, int]:
+from typing import Tuple
+
+def record_failed_login(identifier: str) -> Tuple[bool, int]:
     """
     Record a failed login for `identifier` (email or IP).
     Returns (is_locked: bool, attempts_so_far: int).
