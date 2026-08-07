@@ -71,7 +71,13 @@ class Config:
             'poolclass': NullPool,
             'pool_pre_ping': True,
         }
-        if 'sslmode=require' in (SQLALCHEMY_DATABASE_URI or ''):
+        if 'pg8000' in (SQLALCHEMY_DATABASE_URI or ''):
+            import ssl
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
+            SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'ssl_context': ssl_ctx}
+        elif 'sslmode=require' in (SQLALCHEMY_DATABASE_URI or ''):
             SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'sslmode': 'require'}
     elif SQLALCHEMY_DATABASE_URI and 'sqlite' not in SQLALCHEMY_DATABASE_URI:
         SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 5
