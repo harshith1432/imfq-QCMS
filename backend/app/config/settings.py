@@ -1,5 +1,5 @@
 import os
-from urllib.parse import urlparse, quote_plus, unquote
+from urllib.parse import urlparse, quote_plus, unquote, urlencode, parse_qs
 from dotenv import load_dotenv
 
 # Load env variables from root of backend
@@ -41,12 +41,16 @@ class Config:
             host = result.hostname
             port = result.port or 5432
             database = result.path.lstrip('/')
-            
+            query_string = result.query  # e.g. 'sslmode=require'
+
             if password:
                 encoded_password = quote_plus(password)
-                SQLALCHEMY_DATABASE_URI = f"postgresql://{username}:{encoded_password}@{host}:{port}/{database}"
+                base_uri = f"postgresql://{username}:{encoded_password}@{host}:{port}/{database}"
             else:
-                SQLALCHEMY_DATABASE_URI = db_url
+                base_uri = f"postgresql://{username}@{host}:{port}/{database}"
+
+            # Re-append query string so sslmode=require etc. are preserved
+            SQLALCHEMY_DATABASE_URI = f"{base_uri}?{query_string}" if query_string else base_uri
         except Exception as e:
             SQLALCHEMY_DATABASE_URI = db_url
     else:
@@ -57,6 +61,9 @@ class Config:
     if SQLALCHEMY_DATABASE_URI and 'sqlite' not in SQLALCHEMY_DATABASE_URI:
         SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 20
         SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 10
+        # If Aiven (or any Postgres with sslmode=require), pass ssl args for psycopg2
+        if 'sslmode=require' in (SQLALCHEMY_DATABASE_URI or ''):
+            SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'sslmode': 'require'}
     else:
         # For SQLite (including :memory:) use StaticPool so every session and
         # every Flask request handler share the SAME single connection.
