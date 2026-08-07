@@ -36,6 +36,47 @@ const AnnouncementsModule = {
         action: 'draft'
     },
 
+    CRIT_SUGGESTIONS: {
+        'plan': [
+            { value: 'Enterprise', label: 'Enterprise Plan', desc: 'Unlimited Users & High Performance' },
+            { value: 'Professional', label: 'Professional Plan', desc: '50 Users Limit' },
+            { value: 'Starter', label: 'Starter Plan', desc: '10 Users Limit' },
+            { value: 'Enterprise Test Matrix Plan', label: 'Enterprise Test Matrix Plan', desc: 'Custom Sandbox Tier' },
+            { value: 'Custom', label: 'Custom Contract', desc: 'Tailored Enterprise Plan' }
+        ],
+        'role': [
+            { value: 'Admin', label: 'Admin (Tenant Leader)', desc: 'Organization Admin Control' },
+            { value: 'SuperAdmin', label: 'Super Admin', desc: 'Platform Governance & Operations' },
+            { value: 'Reviewer', label: 'Quality Reviewer', desc: 'Gatekeeper Approval Permissions' },
+            { value: 'Facilitator', label: 'Methodology Facilitator', desc: 'RCA & Quality Guidance' },
+            { value: 'Team Leader', label: 'Project Team Leader', desc: 'Project Owner & Lead' },
+            { value: 'Team Member', label: 'Team Contributor', desc: 'Execution & Data Input' }
+        ],
+        'org': [
+            { value: '1', label: 'Org #1 — Quality Circle Inc', desc: 'ID: 1 · Active Enterprise Tier' },
+            { value: '2', label: 'Org #2 — ACME Enterprise', desc: 'ID: 2 · Professional Tier' },
+            { value: '3', label: 'Org #3 — Global QC Systems', desc: 'ID: 3 · Starter Tier' }
+        ],
+        'country': [
+            { value: 'IN', label: 'IN — India', desc: 'Asia-Pacific Region' },
+            { value: 'US', label: 'US — United States', desc: 'North America Region' },
+            { value: 'UK', label: 'UK — United Kingdom', desc: 'Europe Region' },
+            { value: 'DE', label: 'DE — Germany', desc: 'Europe Region' },
+            { value: 'FR', label: 'FR — France', desc: 'Europe Region' },
+            { value: 'ES', label: 'ES — Spain', desc: 'Europe Region' },
+            { value: 'CA', label: 'CA — Canada', desc: 'North America Region' },
+            { value: 'AU', label: 'AU — Australia', desc: 'Asia-Pacific Region' },
+            { value: 'SG', label: 'SG — Singapore', desc: 'Asia-Pacific Region' },
+            { value: 'AE', label: 'AE — UAE', desc: 'Middle East Region' }
+        ],
+        'status': [
+            { value: 'Active', label: 'Active Subscription', desc: 'Running active accounts' },
+            { value: 'Trial', label: 'Trial Period', desc: 'Orgs currently in 14-day trial' },
+            { value: 'Suspended', label: 'Suspended Account', desc: 'Locked organization accounts' },
+            { value: 'Expired', label: 'Expired Subscription', desc: 'Unpaid or lapsed subscriptions' }
+        ]
+    },
+
     async init(containerId) {
         this.containerId = containerId;
         this.renderShell();
@@ -666,44 +707,61 @@ const AnnouncementsModule = {
                         <label class="ds-label">Target Audience Pool</label>
                         <select class="ds-input ds-select" id="wizAudienceType" onchange="AnnouncementsModule.setAudienceType(this.value)">
                             <option value="all" ${this.wizardData.audience_type === 'all' ? 'selected' : ''}>All Organizations (Platform-wide)</option>
-                            <option value="selected" ${this.wizardData.audience_type === 'selected' ? 'selected' : ''}>Custom Targets</option>
+                            <option value="selected" ${this.wizardData.audience_type === 'selected' ? 'selected' : ''}>Custom Targets (Advanced Criteria Rules)</option>
                         </select>
                     </div>
                     
                     <div id="audienceCriteriaSection" style="${this.wizardData.audience_type === 'selected' ? '' : 'display:none;'}">
-                        <div class="border rounded p-3" style="border-color:var(--ds-border-color)!important;">
-                            <span class="text-xs fw-semibold text-secondary d-block mb-3">Add Target Criteria</span>
+                        <div class="border rounded-3 p-3 bg-body-tertiary bg-opacity-25" style="border-color:var(--ds-border-color)!important;">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <span class="text-xs fw-bold text-main d-flex align-items-center gap-1.5"><i data-lucide="filter" class="text-primary" style="width:14px;height:14px;"></i> Advanced Target Criteria</span>
+                                <span class="badge bg-primary-subtle text-primary text-xxs px-2 py-0.5" id="targetRuleCountBadge">${this.wizardData.audience.length} Active Rules</span>
+                            </div>
+
                             <div class="row g-2 align-items-end mb-3">
                                 <div class="col-md-4">
-                                    <label class="text-xxs text-secondary">Criterion Type</label>
-                                    <select class="ds-input ds-select py-1" id="newCritType">
+                                    <label class="text-xxs fw-semibold text-secondary mb-1">Criterion Type</label>
+                                    <select class="ds-input ds-select py-1.5 text-xs" id="newCritType" onchange="AnnouncementsModule.onCritTypeChange(this.value)">
                                         <option value="plan">Subscription Plan</option>
                                         <option value="role">User Role</option>
-                                        <option value="org">Org ID</option>
-                                        <option value="country">Country</option>
+                                        <option value="org">Org ID / Name</option>
+                                        <option value="country">Country / Region</option>
+                                        <option value="status">Account Status</option>
                                     </select>
                                 </div>
-                                <div class="col-md-5">
-                                    <label class="text-xxs text-secondary">Target Value</label>
-                                    <input type="text" class="ds-input py-1" id="newCritValue" placeholder="e.g. Enterprise, SuperAdmin, IN">
+                                <div class="col-md-5 position-relative">
+                                    <label class="text-xxs fw-semibold text-secondary mb-1">Target Value Search</label>
+                                    <div class="position-relative">
+                                        <input type="text" class="ds-input py-1.5 text-xs w-100 pe-4" id="newCritValue" placeholder="Search subscription plan..." autocomplete="off" oninput="AnnouncementsModule.filterCritSuggestions(this.value)" onfocus="AnnouncementsModule.showCritSuggestions()" onblur="setTimeout(() => AnnouncementsModule.hideCritSuggestions(), 200)">
+                                        <i data-lucide="search" class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted" style="width:13px;height:13px;pointer-events:none;"></i>
+                                    </div>
+                                    <!-- Search Autocomplete Suggestions Dropdown -->
+                                    <div id="critSuggestionsDropdown" class="glass-dropdown position-absolute w-100 mt-1 shadow-lg border rounded-3 p-1" style="max-height: 220px; overflow-y: auto; z-index: 1050; display: none; background: var(--ds-surface-card, #ffffff); border-color: var(--ds-border-color)!important;">
+                                    </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <button class="ds-btn ds-btn-primary ds-btn-sm w-100 py-2" onclick="AnnouncementsModule.addCriterion()">Add Rule</button>
+                                    <button class="ds-btn ds-btn-primary ds-btn-sm w-100 py-2 text-xs fw-semibold" onclick="AnnouncementsModule.addCriterion()">
+                                        <i data-lucide="plus" class="me-1" style="width:12px;height:12px;"></i> Add Rule
+                                    </button>
                                 </div>
                             </div>
 
+                            <!-- Quick Preset Shortcuts -->
+                            <div class="d-flex align-items-center gap-1.5 mb-3 flex-wrap p-2 rounded-2 border" style="background: rgba(255,255,255,0.02); border-color:var(--ds-border-color)!important;">
+                                <span class="text-xxs text-secondary fw-semibold">Quick Shortcuts:</span>
+                                <button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('plan', 'Enterprise')">+ Enterprise</button>
+                                <button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('role', 'SuperAdmin')">+ SuperAdmins</button>
+                                <button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('role', 'Admin')">+ Org Admins</button>
+                                <button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('country', 'IN')">+ India Region</button>
+                            </div>
+
                             <div class="d-flex flex-wrap gap-2 mt-2" id="criteriaBadgeList">
-                                ${this.wizardData.audience.map((crit, idx) => `
-                                    <span class="ds-badge gray h-stack gap-1.5" style="font-size:11px;">
-                                        <strong>${crit.type}:</strong> ${crit.value}
-                                        <a href="javascript:void(0)" class="text-danger fw-bold ms-1" onclick="AnnouncementsModule.removeCriterion(${idx})">&times;</a>
-                                    </span>
-                                `).join('') || '<span class="text-xs text-muted">No custom targets defined. Broadcast defaults to all.</span>'}
                             </div>
                         </div>
                     </div>
                 </div>
             `;
+            setTimeout(() => this.renderCriteriaBadges(), 0);
         } else if (this.wizardStep === 3) {
             body.innerHTML = `
                 <div class="d-flex flex-column gap-3">
@@ -789,13 +847,102 @@ const AnnouncementsModule = {
         if (section) section.style.display = val === 'schedule' ? 'block' : 'none';
     },
 
+    onCritTypeChange(type) {
+        const input = document.getElementById('newCritValue');
+        if (!input) return;
+        input.value = '';
+        const placeholders = {
+            'plan': 'Search plan e.g. Enterprise, Starter...',
+            'role': 'Search role e.g. Admin, Reviewer...',
+            'org': 'Search Org ID or Name e.g. 1...',
+            'country': 'Search country e.g. IN, US, UK...',
+            'status': 'Search status e.g. Active, Trial...'
+        };
+        input.placeholder = placeholders[type] || 'Search target value...';
+        this.filterCritSuggestions('');
+    },
+
+    showCritSuggestions() {
+        const type = document.getElementById('newCritType')?.value || 'plan';
+        const val = document.getElementById('newCritValue')?.value || '';
+        this.filterCritSuggestions(val);
+    },
+
+    hideCritSuggestions() {
+        const drop = document.getElementById('critSuggestionsDropdown');
+        if (drop) drop.style.display = 'none';
+    },
+
+    filterCritSuggestions(query) {
+        const drop = document.getElementById('critSuggestionsDropdown');
+        if (!drop) return;
+        const type = document.getElementById('newCritType')?.value || 'plan';
+        const items = this.CRIT_SUGGESTIONS[type] || [];
+        const q = (query || '').toLowerCase().trim();
+
+        const filtered = items.filter(it => 
+            it.value.toLowerCase().includes(q) || 
+            it.label.toLowerCase().includes(q) || 
+            (it.desc && it.desc.toLowerCase().includes(q))
+        );
+
+        if (filtered.length === 0) {
+            if (q) {
+                drop.innerHTML = `<div class="p-2 text-xxs text-muted text-center">Use custom typed value: "<strong>${QCMS.escapeHtml(query)}</strong>"</div>`;
+            } else {
+                drop.innerHTML = `<div class="p-2 text-xxs text-muted text-center">Type to search options...</div>`;
+            }
+        } else {
+            drop.innerHTML = filtered.map(it => `
+                <div class="p-2 rounded-2 cursor-pointer hover-bg-primary-subtle d-flex align-items-center justify-content-between text-xs my-0.5" style="transition: background 0.15s;" onmousedown="AnnouncementsModule.selectCritSuggestion('${QCMS.escapeHtml(it.value)}')">
+                    <div>
+                        <div class="fw-bold text-main" style="font-size: 12px;">${QCMS.escapeHtml(it.label)}</div>
+                        <div class="text-xxs text-secondary" style="font-size: 10px;">${QCMS.escapeHtml(it.desc || '')}</div>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary text-xxs font-monospace">${QCMS.escapeHtml(it.value)}</span>
+                </div>
+            `).join('');
+        }
+        drop.style.display = 'block';
+    },
+
+    selectCritSuggestion(val) {
+        const input = document.getElementById('newCritValue');
+        if (input) {
+            input.value = val;
+        }
+        this.hideCritSuggestions();
+    },
+
+    addQuickRule(type, val) {
+        const select = document.getElementById('newCritType');
+        if (select) select.value = type;
+        const input = document.getElementById('newCritValue');
+        if (input) input.value = val;
+        this.addCriterion();
+    },
+
     addCriterion() {
-        const type = document.getElementById('newCritType').value;
-        const value = document.getElementById('newCritValue').value.trim();
-        if (!value) return;
+        const typeSelect = document.getElementById('newCritType');
+        const valueInput = document.getElementById('newCritValue');
+        if (!typeSelect || !valueInput) return;
+
+        const type = typeSelect.value;
+        const value = valueInput.value.trim();
+        if (!value) {
+            QCMS.toast('Please enter or select a target value.', 'warning');
+            return;
+        }
+
+        const exists = this.wizardData.audience.some(c => c.type === type && c.value.toLowerCase() === value.toLowerCase());
+        if (exists) {
+            QCMS.toast('Target rule already exists.', 'info');
+            return;
+        }
 
         this.wizardData.audience.push({ type, value });
-        document.getElementById('newCritValue').value = '';
+        valueInput.value = '';
+        this.hideCritSuggestions();
         this.renderCriteriaBadges();
     },
 
@@ -806,13 +953,37 @@ const AnnouncementsModule = {
 
     renderCriteriaBadges() {
         const div = document.getElementById('criteriaBadgeList');
+        const countBadge = document.getElementById('targetRuleCountBadge');
+        if (countBadge) {
+            countBadge.innerText = `${this.wizardData.audience.length} Active Rules`;
+        }
         if (!div) return;
-        div.innerHTML = this.wizardData.audience.map((crit, idx) => `
-            <span class="ds-badge gray h-stack gap-1.5" style="font-size:11px;">
-                <strong>${crit.type}:</strong> ${crit.value}
-                <a href="javascript:void(0)" class="text-danger fw-bold ms-1" onclick="AnnouncementsModule.removeCriterion(${idx})">&times;</a>
-            </span>
-        `).join('') || '<span class="text-xs text-muted">No custom targets defined. Broadcast defaults to all.</span>';
+
+        const typeLabels = {
+            'plan': { label: 'Plan', icon: 'credit-card', color: 'primary' },
+            'role': { label: 'Role', icon: 'user-check', color: 'info' },
+            'org': { label: 'Org', icon: 'building-2', color: 'warning' },
+            'country': { label: 'Country', icon: 'globe', color: 'success' },
+            'status': { label: 'Status', icon: 'zap', color: 'danger' }
+        };
+
+        if (this.wizardData.audience.length === 0) {
+            div.innerHTML = '<span class="text-xs text-muted">No custom targets defined. Broadcast defaults to all.</span>';
+            return;
+        }
+
+        div.innerHTML = this.wizardData.audience.map((crit, idx) => {
+            const meta = typeLabels[crit.type] || { label: crit.type, icon: 'filter', color: 'secondary' };
+            return `
+                <span class="badge bg-${meta.color}-subtle text-${meta.color} border border-${meta.color}-subtle d-inline-flex align-items-center gap-1.5 px-2.5 py-1.5 rounded-pill text-xs shadow-sm">
+                    <i data-lucide="${meta.icon}" style="width:12px;height:12px;"></i>
+                    <strong>${meta.label}:</strong> ${QCMS.escapeHtml(crit.value)}
+                    <a href="javascript:void(0)" class="text-danger fw-bold ms-1 text-decoration-none" onclick="AnnouncementsModule.removeCriterion(${idx})" title="Remove Rule">&times;</a>
+                </span>
+            `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
     },
 
     prevStep() {

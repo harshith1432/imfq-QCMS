@@ -686,17 +686,7 @@ const QCMS = {
                 </div>
 
                 <div class="d-flex gap-2 gap-md-3 align-items-center">
-                    <!-- Global Search -->
-                    <div class="nav-search-wrapper d-none d-md-flex align-items-center position-relative">
-                        <div class="ds-search-inline glass-panel" style="width: 320px; background: rgba(var(--ds-primary-rgb), 0.03); border-radius: 12px; height: 40px; border: 1px solid rgba(120, 120, 120, 0.45) !important; display: flex; align-items: center; padding: 0 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                            <i data-lucide="search" style="width:18px; height:18px; opacity: 0.65; margin-right: 10px;"></i>
-                            <input type="search" class="ds-input border-0 bg-transparent p-0" placeholder="Search projects or users..." id="globalSearchInput" 
-                                   autocomplete="new-password" name="q_global_search" data-lpignore="true" spellcheck="false"
-                                   data-i18n-placeholder="navbar.search_placeholder"
-                                   style="height: 100%; font-size: 14px; font-weight: 500; flex: 1; outline: none; color: var(--ds-text-main);">
-                            <kbd class="ds-kbd d-none d-lg-inline-block" style="background: var(--ds-bg-card); border: 1px solid var(--ds-border-color); color: var(--ds-text-secondary); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">/</kbd>
-                        </div>
-                    </div>
+
 
                     <!-- Theme Toggle -->
                     <div class="theme-switcher-wrapper glass-panel p-1 d-flex gap-1" style="border-radius: 12px; background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-border-color);">
