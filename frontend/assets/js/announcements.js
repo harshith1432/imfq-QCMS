@@ -670,8 +670,8 @@ const AnnouncementsModule = {
                         <input type="text" class="ds-input" id="wizTitle" required placeholder="e.g. Critical Scheduled DB Maintenance" value="${this.wizardData.title}" oninput="AnnouncementsModule.wizardData.title=this.value">
                     </div>
                     <div class="ds-field">
-                        <label class="ds-label">Message Details (HTML content)</label>
-                        <textarea class="ds-input" id="wizBody" rows="5" placeholder="Write rich message content here..." oninput="AnnouncementsModule.wizardData.body=this.value">${this.wizardData.body}</textarea>
+                        <label class="ds-label">Message Details <span class="text-danger">*</span></label>
+                        <textarea class="ds-input" id="wizBody" required rows="5" placeholder="Write rich message content here..." oninput="AnnouncementsModule.wizardData.body=this.value">${this.wizardData.body}</textarea>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -995,9 +995,15 @@ const AnnouncementsModule = {
 
     async nextStep() {
         if (this.wizardStep < 5) {
-            if (this.wizardStep === 1 && !this.wizardData.title.trim()) {
-                QCMS.toast('Title is required.', 'error');
-                return;
+            if (this.wizardStep === 1) {
+                if (!this.wizardData.title.trim()) {
+                    QCMS.toast('Title is required.', 'error');
+                    return;
+                }
+                if (!this.wizardData.body.trim()) {
+                    QCMS.toast('Message details are required.', 'error');
+                    return;
+                }
             }
             this.wizardStep++;
             this.renderWizardStep();

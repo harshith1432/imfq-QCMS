@@ -111,24 +111,73 @@ def resolve_audience(ann):
     user_ids = set()
     for criterion in criteria:
         t = criterion.target_type
-        v = criterion.target_value
+        v = (criterion.target_value or '').strip()
+        if not v:
+            continue
         if t == 'org':
-            us = User.query.filter_by(org_id=int(v)).all()
-            user_ids.update(u.id for u in us)
+            if v.isdigit():
+                us = User.query.filter_by(org_id=int(v)).all()
+                user_ids.update(u.id for u in us)
+            else:
+                orgs = Organization.query.filter(Organization.name.ilike(f"%{v}%")).all()
+                for org in orgs:
+                    us = User.query.filter_by(org_id=org.id).all()
+                    user_ids.update(u.id for u in us)
         elif t == 'plan':
-            orgs = Organization.query.filter_by(subscription_plan=v).all()
+            orgs = Organization.query.filter(Organization.subscription_plan.ilike(f"%{v}%")).all()
             for org in orgs:
                 us = User.query.filter_by(org_id=org.id).all()
                 user_ids.update(u.id for u in us)
         elif t == 'role':
-            us = User.query.join(User.role).filter(db.text(f"roles.name = '{v}'")).all()
+            from app.infrastructure.database.models.models import Role
+            role_v = v.rstrip('s').strip()
+            us = User.query.join(Role, User.role_id == Role.id).filter(
+                db.or_(Role.name.ilike(f"%{v}%"), Role.name.ilike(f"%{role_v}%"))
+            ).all()
             user_ids.update(u.id for u in us)
         elif t == 'country':
-            orgs = Organization.query.filter_by(country=v).all()
+            orgs = Organization.query.filter(Organization.country.ilike(f"%{v}%")).all()
+            for org in orgs:
+                us = User.query.filter_by(org_id=org.id).all()
+                user_ids.update(u.id for u in us)
+        elif t == 'status':
+            orgs = Organization.query.filter(Organization.status.ilike(f"%{v}%")).all()
             for org in orgs:
                 us = User.query.filter_by(org_id=org.id).all()
                 user_ids.update(u.id for u in us)
     return list(user_ids)
+
+
+def user_matches_announcement(user, ann):
+    if not ann or ann.status not in ('Published', 'Expired'):
+        return False
+    if ann.audience_type == 'all':
+        return True
+    
+    org = db.session.get(Organization, user.org_id) if user.org_id else None
+    role_name = user.role.name if user.role else ''
+    
+    for c in ann.audience:
+        t = c.target_type
+        v = (c.target_value or '').strip()
+        if not v:
+            continue
+        if t == 'org':
+            if v.isdigit() and str(user.org_id) == str(v):
+                return True
+            elif org and org.name and v.lower() in org.name.lower():
+                return True
+        elif t == 'role':
+            role_target = v.rstrip('s').strip().lower()
+            if role_target in role_name.lower() or role_name.lower() in role_target:
+                return True
+        elif t == 'plan' and org and org.subscription_plan and v.lower() in org.subscription_plan.lower():
+            return True
+        elif t == 'country' and org and org.country and v.lower() in org.country.lower():
+            return True
+        elif t == 'status' and org and org.status and v.lower() in org.status.lower():
+            return True
+    return False
 
 
 # ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -288,8 +337,11 @@ def create_announcement():
 
     data = request.get_json() or {}
     title = (data.get('title') or '').strip()
+    body = (data.get('body') or '').strip()
     if not title:
         return jsonify({"message": "Title is required"}), 422
+    if not body:
+        return jsonify({"message": "Message details are required"}), 422
 
     # Parse dates
     publish_at = None
@@ -775,4 +827,121 @@ def get_ai_insights():
             "performance_score": round(min(100, (avg_read_rate * 0.6) + (min(total, 20) * 2)), 1),
             "suggested_category": "Maintenance" if datetime.utcnow().weekday() == 5 else "General",
         }
+    }), 200
+
+
+# ─── Recipient User Endpoints ──────────────────────────────────────────────────
+
+@announcement_bp.route('/user-active', methods=['GET'])
+@jwt_required()
+def get_user_active_announcements():
+    user = get_current_user()
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    now = datetime.utcnow()
+    # Published announcements that are active
+    query = Announcement.query.filter(
+        Announcement.status == 'Published',
+        db.or_(Announcement.publish_at == None, Announcement.publish_at <= now),
+        db.or_(Announcement.expires_at == None, Announcement.expires_at > now)
+    ).order_by(Announcement.created_at.desc())
+
+    published_anns = query.all()
+    user_anns = []
+
+    for ann in published_anns:
+        if user_matches_announcement(user, ann):
+            read_rec = AnnouncementRead.query.filter_by(announcement_id=ann.id, user_id=user.id).first()
+            is_read = bool(read_rec and read_rec.read_at)
+            is_dismissed = bool(read_rec and read_rec.dismissed_at)
+
+            d = ann_to_dict(ann, include_body=True)
+            d["is_read"] = is_read
+            d["is_dismissed"] = is_dismissed
+            user_anns.append(d)
+
+    return jsonify({
+        "status": "success",
+        "data": user_anns,
+        "count": len(user_anns)
+    }), 200
+
+
+@announcement_bp.route('/<int:ann_id>/dismiss', methods=['POST'])
+@jwt_required()
+def dismiss_announcement(ann_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    ann = db.session.get(Announcement, ann_id)
+    if not ann:
+        return jsonify({"message": "Announcement not found"}), 404
+
+    read_rec = AnnouncementRead.query.filter_by(announcement_id=ann_id, user_id=user.id).first()
+    now = datetime.utcnow()
+    if not read_rec:
+        read_rec = AnnouncementRead(
+            announcement_id=ann_id,
+            user_id=user.id,
+            org_id=user.org_id,
+            viewed_at=now,
+            dismissed_at=now,
+            device='Desktop',
+            ip_address=request.remote_addr
+        )
+        db.session.add(read_rec)
+        ann.total_viewed = max(0, ann.total_viewed + 1)
+    else:
+        read_rec.dismissed_at = now
+
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Announcement dismissed"}), 200
+
+
+@announcement_bp.route('/my-announcements', methods=['GET'])
+@jwt_required()
+def get_my_announcements():
+    user = get_current_user()
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    now = datetime.utcnow()
+    q_str = request.args.get('q', '').strip().lower()
+    cat_filter = request.args.get('category', '').strip()
+    unread_only = request.args.get('unread_only', 'false').lower() == 'true'
+
+    query = Announcement.query.filter(
+        Announcement.status.in_(['Published', 'Expired']),
+        db.or_(Announcement.publish_at == None, Announcement.publish_at <= now)
+    ).order_by(Announcement.created_at.desc())
+
+    if cat_filter:
+        query = query.filter(Announcement.category == cat_filter)
+
+    all_anns = query.all()
+    user_anns = []
+
+    for ann in all_anns:
+        if user_matches_announcement(user, ann):
+            if q_str and (q_str not in (ann.title or '').lower() and q_str not in (ann.summary or '').lower()):
+                continue
+
+            read_rec = AnnouncementRead.query.filter_by(announcement_id=ann.id, user_id=user.id).first()
+            is_read = bool(read_rec and read_rec.read_at)
+            is_dismissed = bool(read_rec and read_rec.dismissed_at)
+
+            if unread_only and is_read:
+                continue
+
+            d = ann_to_dict(ann, include_body=True)
+            d["is_read"] = is_read
+            d["is_dismissed"] = is_dismissed
+            user_anns.append(d)
+
+    return jsonify({
+        "status": "success",
+        "data": user_anns,
+        "total": len(user_anns)
     }), 200
