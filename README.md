@@ -8,27 +8,27 @@ An enterprise-grade, high-performance SaaS platform engineered for structured 8-
 
 ```mermaid
 graph TD
-    subgraph Client Layer [Frontend Client (Glassmorphism UI)]
-        LP[Landing & CMS] --> AUTH[Auth & SSO]
-        AUTH --> DASH[Role-Based Dashboards]
-        DASH --> WF[8-Stage Workflow Workspace]
-        DASH --> SA[Super Admin Governance]
-        DASH --> AN[Enterprise Analytics & Billing]
+    subgraph Client_Layer["Frontend Client (Glassmorphism UI)"]
+        LP["Landing & CMS"] --> AUTH["Auth & SSO"]
+        AUTH --> DASH["Role-Based Dashboards"]
+        DASH --> WF["8-Stage Workflow Workspace"]
+        DASH --> SA["Super Admin Governance"]
+        DASH --> AN["Enterprise Analytics & Billing"]
     end
 
-    subgraph API Layer [Flask Clean Architecture REST Engine]
-        ROUTER[Presentation Layer / REST Routes] --> MW[JWT & Subscription Guards]
-        MW --> APP[Application Services]
-        APP --> DOM[Domain Logic & Policy Engines]
-        DOM --> INFRA[Infrastructure & Repository Layer]
+    subgraph API_Layer["Flask Clean Architecture REST Engine"]
+        ROUTER["Presentation Layer / REST Routes"] --> MW["JWT & Subscription Guards"]
+        MW --> APP["Application Services"]
+        APP --> DOM["Domain Logic & Policy Engines"]
+        DOM --> INFRA["Infrastructure & Repository Layer"]
     end
 
-    subgraph Data & Storage Layer
-        DB[(PostgreSQL / Neon Serverless)]
-        UPL[Uploads & PDF Assets]
+    subgraph Data_Storage_Layer["Data & Storage Layer"]
+        DB[("PostgreSQL / Neon Serverless")]
+        UPL["Uploads & PDF Assets"]
     end
 
-    Client Layer -- REST APIs / JSON --> API Layer
+    Client_Layer -- REST APIs / JSON --> API_Layer
     INFRA -- SQLAlchemy ORM --> DB
     INFRA -- File I/O --> UPL
 ```
