@@ -499,40 +499,44 @@ def login():
     # Generate session ID
     session_id = f"SESS-{int(datetime.utcnow().timestamp())}-{user.id}"
     
-    # Track session in db
-    from app.infrastructure.database.models.models import SaaSUserSession
-    from app.presentation.routes.audit_routes import parse_user_agent, get_geo_location, log_audit_event
-    
-    # Mark old sessions as LoggedOut for security
-    SaaSUserSession.query.filter_by(user_id=user.id, status='Active').update({"status": "LoggedOut", "logout_time": datetime.utcnow()})
-    
-    ua_str = request.headers.get('User-Agent')
-    ip_addr = request.remote_addr
-    os_name, browser_name, device_name = parse_user_agent(ua_str)
-    
-    new_sess = SaaSUserSession(
-        session_id=session_id,
-        user_id=user.id,
-        org_id=user.org_id,
-        device=device_name,
-        browser=browser_name,
-        os=os_name,
-        ip_address=ip_addr,
-        location=get_geo_location(ip_addr),
-        status='Active'
-    )
-    db.session.add(new_sess)
-    db.session.commit()
+    # Track session in db safely
+    try:
+        from app.infrastructure.database.models.models import SaaSUserSession
+        from app.presentation.routes.audit_routes import parse_user_agent, get_geo_location, log_audit_event
+        
+        # Mark old sessions as LoggedOut for security
+        SaaSUserSession.query.filter_by(user_id=user.id, status='Active').update({"status": "LoggedOut", "logout_time": datetime.utcnow()})
+        
+        ua_str = request.headers.get('User-Agent')
+        ip_addr = request.remote_addr
+        os_name, browser_name, device_name = parse_user_agent(ua_str)
+        
+        new_sess = SaaSUserSession(
+            session_id=session_id,
+            user_id=user.id,
+            org_id=user.org_id,
+            device=device_name,
+            browser=browser_name,
+            os=os_name,
+            ip_address=ip_addr,
+            location=get_geo_location(ip_addr),
+            status='Active'
+        )
+        db.session.add(new_sess)
+        db.session.commit()
 
-    # Log enriched login audit event
-    log_audit_event(
-        org_id=user.org_id,
-        user_id=user.id,
-        action="USER_LOGIN",
-        target_table="users",
-        target_id=user.id,
-        details={"username": user.username, "ip": ip_addr}
-    )
+        # Log enriched login audit event
+        log_audit_event(
+            org_id=user.org_id,
+            user_id=user.id,
+            action="USER_LOGIN",
+            target_table="users",
+            target_id=user.id,
+            details={"username": user.username, "ip": ip_addr}
+        )
+    except Exception as sess_err:
+        db.session.rollback()
+        print(f"[LOGIN SESSION WARNING] {sess_err}")
 
     return jsonify({
         "access_token": access_token,
