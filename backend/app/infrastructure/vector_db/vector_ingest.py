@@ -1,4 +1,3 @@
-from sentence_transformers import SentenceTransformer
 from app import db
 from app.infrastructure.database.models.models import KnowledgeRepository
 
@@ -7,11 +6,12 @@ _model = None
 def get_embedding_model():
     global _model
     if _model is None:
-        print("[RAG] Loading embedding model 'all-MiniLM-L6-v2'...")
         try:
+            from sentence_transformers import SentenceTransformer
+            print("[RAG] Loading embedding model 'all-MiniLM-L6-v2'...")
             _model = SentenceTransformer('all-MiniLM-L6-v2')
         except Exception as e:
-            print(f"[RAG] SentenceTransformer load warning: {e}")
+            print(f"[RAG] SentenceTransformer load warning or missing: {e}")
             _model = None
     return _model
 
