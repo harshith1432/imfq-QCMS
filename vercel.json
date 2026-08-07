@@ -16,6 +16,18 @@
       "dest": "/backend/run.py"
     },
     {
+      "src": "/login(.html)?",
+      "dest": "/frontend/auth/login.html"
+    },
+    {
+      "src": "/register(.html)?",
+      "dest": "/frontend/auth/register-org.html"
+    },
+    {
+      "src": "/register-org(.html)?",
+      "dest": "/frontend/auth/register-org.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/frontend/$1"
     }
