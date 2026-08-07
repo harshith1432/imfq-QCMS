@@ -252,22 +252,24 @@ def create_app():
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS global_stages_config JSONB;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS security_settings JSONB;"
             ]
-            for statement in alter_statements:
-                try:
-                    db.session.execute(text(statement))
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-                    # Try fallback statement without IF NOT EXISTS if database is SQLite
-                    if "IF NOT EXISTS" in statement:
-                        fallback = statement.replace("IF NOT EXISTS ", "")
-                        if "JSONB" in fallback:
-                            fallback = fallback.replace("JSONB", "JSON")
-                        try:
-                            db.session.execute(text(fallback))
-                            db.session.commit()
-                        except Exception:
-                            db.session.rollback()
+            # Skip running 60+ ALTER TABLE statements on every Vercel request to prevent 10s serverless cold-start timeouts
+            if os.getenv('VERCEL') != '1':
+                for statement in alter_statements:
+                    try:
+                        db.session.execute(text(statement))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                        # Try fallback statement without IF NOT EXISTS if database is SQLite
+                        if "IF NOT EXISTS" in statement:
+                            fallback = statement.replace("IF NOT EXISTS ", "")
+                            if "JSONB" in fallback:
+                                fallback = fallback.replace("JSONB", "JSON")
+                            try:
+                                db.session.execute(text(fallback))
+                                db.session.commit()
+                            except Exception:
+                                db.session.rollback()
             
             from .infrastructure.database.models.models import (
                 Role, PlatformSettings, User, Organization, UserCustomField,
