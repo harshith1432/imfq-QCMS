@@ -888,7 +888,7 @@ def create_app():
             pass
         return jsonify({
             "status": "error",
-            "message": str(e) if app.debug else "An unexpected error occurred.",
+            "message": f"Server error: {str(e)}",
             "code": "SERVER_ERROR"
         }), 500
 
