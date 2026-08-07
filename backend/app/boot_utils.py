@@ -5,11 +5,11 @@ from urllib.parse import urlparse, unquote
 def bootstrap_database():
     """
     Checks if the database specified in DATABASE_URL exists.
-    For Aiven/cloud providers, skips maintenance DB check since:
-    - SSL is required for all connections
-    - The 'postgres' maintenance DB may not be accessible
-    - The target DB is guaranteed to exist on cloud providers
+    Skipped on Vercel serverless environment to prevent cold-start execution timeouts.
     """
+    if os.getenv('VERCEL') == '1':
+        return
+
     db_url = os.getenv('DATABASE_URL')
     if not db_url:
         print("[QCMS] Error: DATABASE_URL not set. Skipping bootstrap.")
