@@ -1,5 +1,4 @@
 import io
-import pandas as pd
 from fpdf import FPDF
 from app.domain.services.document_branding_service import DocumentBrandingService
 
@@ -17,11 +16,21 @@ def generate_excel_report(projects, org_id=None):
         "Start Date": p.start_date
     } for p in projects]
     
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Projects')
-    return output.getvalue()
+    try:
+        import pandas as pd
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Projects')
+        return output.getvalue()
+    except Exception:
+        import csv
+        output = io.StringIO()
+        if data:
+            writer = csv.DictWriter(output, fieldnames=list(data[0].keys()))
+            writer.writeheader()
+            writer.writerows(data)
+        return output.getvalue().encode('utf-8')
 
 class DynamicBrandedPDF(FPDF):
     def __init__(self, org_id=None, template_key='project'):
