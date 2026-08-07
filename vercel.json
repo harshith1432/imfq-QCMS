@@ -12,23 +12,23 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
+      "src": "^/api/(.*)",
       "dest": "api/index.py"
     },
     {
-      "src": "/login",
+      "src": "^/login$",
       "dest": "frontend/auth/login.html"
     },
     {
-      "src": "/register",
+      "src": "^/register$",
       "dest": "frontend/auth/register-org.html"
     },
     {
-      "src": "/register-org",
+      "src": "^/register-org$",
       "dest": "frontend/auth/register-org.html"
     },
     {
-      "src": "/(.*)",
+      "src": "^/(.*)",
       "dest": "frontend/$1"
     }
   ]
