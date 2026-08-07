@@ -1,8 +1,17 @@
-import json
+import sys
+import os
 
-def handler(environ, start_response):
-    body = b'{"status":"ok","message":"Vercel Python WSGI Working!"}'
-    start_response('200 OK', [('Content-Type', 'application/json'), ('Content-Length', str(len(body)))])
-    return [body]
+# Ensure the backend directory is in the Python path so 'app' module is found
+sys.path.insert(0, os.path.dirname(__file__))
 
-app = handler
+from app import create_app
+
+app = create_app()
+
+if __name__ == "__main__":
+    print("\n" + "=" * 50)
+    print("  QCMS Enterprise — Quality Management System")
+    print("  Server: http://127.0.0.1:5000")
+    print("  API:    http://127.0.0.1:5000/api/*")
+    print("=" * 50 + "\n")
+    app.run(debug=True, host='127.0.0.1', port=5000)

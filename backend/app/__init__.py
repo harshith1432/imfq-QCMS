@@ -136,15 +136,14 @@ def create_app():
         from .presentation.middleware.security import register_security_middleware
         register_security_middleware(app)
 
-        # Auto-create database tables on local environments
-        # Skipped on Vercel serverless to prevent 10s execution timeouts
-        is_serverless = bool(os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
-        if not is_serverless:
-            try:
-                db.create_all()
-            except Exception:
-                pass
-            from sqlalchemy import text
+        try:
+            is_serverless = bool(os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
+            if not is_serverless:
+                try:
+                    db.create_all()
+                except Exception:
+                    pass
+                from sqlalchemy import text
             alter_statements = [
                 "CREATE TABLE IF NOT EXISTS plants (id SERIAL PRIMARY KEY, org_id INTEGER NOT NULL REFERENCES organizations(id), name VARCHAR(100) NOT NULL, code VARCHAR(50), location VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
                 "ALTER TABLE departments ADD COLUMN IF NOT EXISTS plant_id INTEGER REFERENCES plants(id);",
