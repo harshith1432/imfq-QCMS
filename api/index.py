@@ -7,11 +7,34 @@ backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bac
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-from app import create_app
+flask_app = None
+init_error = None
+init_tb = None
 
-flask_app = create_app()
+try:
+    from app import create_app
+    flask_app = create_app()
+except Exception as e:
+    init_error = str(e)
+    init_tb = traceback.format_exc()
 
 def app(environ, start_response):
+    global flask_app, init_error, init_tb
+    if flask_app is None:
+        try:
+            from app import create_app
+            flask_app = create_app()
+            init_error = None
+            init_tb = None
+        except Exception as e:
+            init_error = str(e)
+            init_tb = traceback.format_exc()
+
+    if init_error:
+        body = json.dumps({"status": "error", "message": f"Flask Init Failed: {init_error}", "traceback": init_tb}).encode('utf-8')
+        start_response('500 Internal Server Error', [('Content-Type', 'application/json'), ('Content-Length', str(len(body)))])
+        return [body]
+
     try:
         raw_uri = environ.get('HTTP_X_MATCHED_PATH') or environ.get('REQUEST_URI') or environ.get('PATH_INFO', '')
         if '?' in raw_uri:
