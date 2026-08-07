@@ -152,6 +152,9 @@ const QCMS = {
             this.setupMobileSidebar();
             this.loadUpcomingMeetingsFeed();
             this.loadNotifications();
+            if (window.GlobalAnnouncementBanner) {
+                window.GlobalAnnouncementBanner.init();
+            }
  
             // Async: Fetch fresh branding from server to keep org theme in sync
             // This ensures all org users always see the latest admin-configured colors/logos
@@ -2084,7 +2087,12 @@ function showNotificationsPanel() {
                 <span class="fw-bold" style="color: var(--ds-text-main);">Notifications</span>
                 <button class="btn btn-sm btn-link text-decoration-none" onclick="QCMS.clearNotifications(); document.getElementById('notif-panel-overlay').remove()">Clear All</button>
             </div>
-            <div class="p-2" style="max-height:400px; overflow-y:auto; background: var(--ds-bg-surface);">${notifItems}</div>
+            <div class="p-2" style="max-height:360px; overflow-y:auto; background: var(--ds-bg-surface);">${notifItems}</div>
+            <div class="p-2 border-top text-center" style="border-color: var(--ds-border-color) !important; background:rgba(0,0,0,0.05);">
+                <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold text-xs" onclick="document.getElementById('notif-panel-overlay').remove(); UserAnnouncementsModal.open();">
+                    📢 View All Announcements
+                </button>
+            </div>
         </div>
     `;
     document.body.appendChild(overlay);
@@ -2237,5 +2245,301 @@ window.addEventListener('unhandledrejection', function(event) {
     // Prevent browser from logging the unhandled rejection in console (we already logged it)
     event.preventDefault();
 });
+
+
+// ─── Global Announcement Banner & User Modal Components ────────────────────────
+
+const GlobalAnnouncementBanner = {
+    activeAnnouncements: [],
+    currentIndex: 0,
+
+    async init() {
+        if (!document.getElementById('global-announcement-banner-container')) {
+            const container = document.createElement('div');
+            container.id = 'global-announcement-banner-container';
+            container.style.cssText = 'position: relative; z-index: 1040; width: 100%;';
+            document.body.prepend(container);
+        }
+        await this.fetchActiveAnnouncements();
+
+        window.addEventListener('qcms:announcement-published', () => {
+            this.fetchActiveAnnouncements();
+        });
+    },
+
+    async fetchActiveAnnouncements() {
+        try {
+            const res = await api.get('/announcements/user-active');
+            if (res && res.status === 'success' && Array.isArray(res.data)) {
+                this.activeAnnouncements = res.data.filter(a => !a.is_dismissed);
+                this.render();
+            }
+        } catch (e) {
+            console.error('Error loading active announcements', e);
+        }
+    },
+
+    render() {
+        const container = document.getElementById('global-announcement-banner-container');
+        if (!container) return;
+
+        if (!this.activeAnnouncements || this.activeAnnouncements.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        if (this.currentIndex >= this.activeAnnouncements.length) {
+            this.currentIndex = 0;
+        }
+
+        const ann = this.activeAnnouncements[this.currentIndex];
+
+        const priorityStyles = {
+            'Critical': 'background: linear-gradient(90deg, #450a0a, #7f1d1d); border-bottom: 2px solid #ef4444; color: #fecdd3;',
+            'High': 'background: linear-gradient(90deg, #451a03, #78350f); border-bottom: 2px solid #f97316; color: #ffedd5;',
+            'Medium': 'background: linear-gradient(90deg, #0c4a6e, #0369a1); border-bottom: 2px solid #38bdf8; color: #e0f2fe;',
+            'Low': 'background: linear-gradient(90deg, #064e3b, #047857); border-bottom: 2px solid #34d399; color: #d1fae5;'
+        };
+        const priorityIcons = {
+            'Critical': 'alert-octagon',
+            'High': 'alert-triangle',
+            'Medium': 'info',
+            'Low': 'megaphone'
+        };
+
+        const style = priorityStyles[ann.priority] || priorityStyles['Medium'];
+        const icon = priorityIcons[ann.priority] || 'megaphone';
+
+        const cleanSummary = ann.summary || (ann.body ? ann.body.replace(/<[^>]*>?/gm, '').substring(0, 100) : '');
+
+        container.innerHTML = `
+            <div class="global-ann-banner p-2.5 px-4 d-flex align-items-center justify-content-between gap-3 shadow-sm fade-in" style="${style}">
+                <div class="d-flex align-items-center gap-2.5 flex-grow-1 overflow-hidden">
+                    <span class="badge rounded-pill bg-black bg-opacity-25 px-2.5 py-1 text-uppercase font-monospace text-xxs fw-bold d-inline-flex align-items-center gap-1" style="border: 1px solid rgba(255,255,255,0.2);">
+                        <i data-lucide="${icon}" style="width:13px;height:13px;"></i> ${ann.priority} Notice
+                    </span>
+                    <strong class="text-xs text-truncate font-semibold">${QCMS.escapeHtml(ann.title)}:</strong>
+                    <span class="text-xs opacity-90 text-truncate d-none d-md-inline">${QCMS.escapeHtml(cleanSummary)}</span>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    <button class="btn btn-sm btn-light py-0.5 px-2.5 text-xxs fw-bold rounded-pill text-dark shadow-sm" onclick="GlobalAnnouncementBanner.openDetailModal(${ann.id})">
+                        View Notice
+                    </button>
+                    ${this.activeAnnouncements.length > 1 ? `
+                        <span class="text-xxs opacity-75 font-monospace">${this.currentIndex + 1}/${this.activeAnnouncements.length}</span>
+                        <button class="btn btn-sm btn-link text-white p-0 m-0" onclick="GlobalAnnouncementBanner.nextAnn()" title="Next Announcement">
+                            <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-link text-white p-0 m-0 opacity-75 hover-opacity-100" onclick="GlobalAnnouncementBanner.dismiss(${ann.id})" title="Dismiss Banner">
+                        <i data-lucide="x" style="width:16px;height:16px;"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        if (window.lucide) lucide.createIcons();
+    },
+
+    nextAnn() {
+        this.currentIndex = (this.currentIndex + 1) % this.activeAnnouncements.length;
+        this.render();
+    },
+
+    async dismiss(annId) {
+        try {
+            await api.post(`/announcements/${annId}/dismiss`);
+        } catch (e) {}
+        this.activeAnnouncements = this.activeAnnouncements.filter(a => a.id !== annId);
+        this.render();
+    },
+
+    openDetailModal(annId) {
+        const ann = this.activeAnnouncements.find(a => a.id === annId);
+        if (!ann) return;
+        
+        api.post(`/announcements/${annId}/mark-read`).catch(() => {});
+
+        const oldModal = document.getElementById('user-ann-reader-modal');
+        if (oldModal) oldModal.remove();
+
+        const modalEl = document.createElement('div');
+        modalEl.id = 'user-ann-reader-modal';
+        modalEl.className = 'modal fade show';
+        modalEl.style.cssText = 'display:block; background:rgba(0,0,0,0.65); z-index:20600; backdrop-filter:blur(4px);';
+
+        modalEl.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content glass-card border-0" style="background:var(--ds-bg-surface); border:1px solid var(--ds-border-color)!important; border-radius:16px;">
+                    <div class="modal-header border-bottom p-3" style="border-color:var(--ds-border-color)!important;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 text-xs">${ann.category}</span>
+                            <span class="badge ${ann.priority === 'Critical' ? 'bg-danger' : ann.priority === 'High' ? 'bg-warning text-dark' : 'bg-info'} text-xs">${ann.priority}</span>
+                            <h6 class="modal-title fw-bold mb-0 text-main ms-2">${QCMS.escapeHtml(ann.title)}</h6>
+                        </div>
+                        <button type="button" class="btn-close" style="filter:var(--ds-icon-filter, none);" onclick="document.getElementById('user-ann-reader-modal').remove()"></button>
+                    </div>
+                    <div class="modal-body p-4" style="max-height:65vh; overflow-y:auto;">
+                        <div class="text-xxs text-secondary mb-3">
+                            Published by <strong>${QCMS.escapeHtml(ann.created_by)}</strong> on ${ann.published_at ? new Date(ann.published_at).toLocaleString() : 'Recently'}
+                        </div>
+                        ${ann.summary ? `<div class="p-3 bg-body-tertiary rounded-3 mb-3 text-xs text-secondary border" style="border-color:var(--ds-border-color)!important;"><strong>Summary:</strong> ${QCMS.escapeHtml(ann.summary)}</div>` : ''}
+                        <div class="text-sm text-main leading-relaxed" style="white-space:pre-wrap;">
+                            ${ann.body || 'No detailed message provided.'}
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top p-3 d-flex justify-content-between align-items-center" style="border-color:var(--ds-border-color)!important;">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="GlobalAnnouncementBanner.dismiss(${ann.id}); document.getElementById('user-ann-reader-modal').remove();">
+                            Dismiss Banner
+                        </button>
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="document.getElementById('user-ann-reader-modal').remove();">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalEl);
+        if (window.lucide) lucide.createIcons();
+    }
+};
+
+
+const UserAnnouncementsModal = {
+    async open() {
+        const oldModal = document.getElementById('user-announcements-modal-container');
+        if (oldModal) oldModal.remove();
+
+        const modalEl = document.createElement('div');
+        modalEl.id = 'user-announcements-modal-container';
+        modalEl.className = 'modal fade show';
+        modalEl.style.cssText = 'display:block; background:rgba(0,0,0,0.65); z-index:20550; backdrop-filter:blur(4px);';
+
+        modalEl.innerHTML = `
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content glass-card border-0" style="background:var(--ds-bg-surface); border:1px solid var(--ds-border-color)!important; border-radius:16px;">
+                    <div class="modal-header border-bottom p-3" style="border-color:var(--ds-border-color)!important;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="p-2 rounded-circle bg-primary bg-opacity-10 text-primary">
+                                <i data-lucide="megaphone" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-bold text-main mb-0">Platform Announcements & Broadcasts</h5>
+                                <span class="text-xxs text-secondary">Official messages and alerts targeted to your organization</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" style="filter:var(--ds-icon-filter, none);" onclick="document.getElementById('user-announcements-modal-container').remove()"></button>
+                    </div>
+                    
+                    <div class="p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3" style="border-color:var(--ds-border-color)!important; background:rgba(255,255,255,0.01);">
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" class="ds-input py-1 px-3 text-xs" style="width:220px;" placeholder="Search announcements..." id="userAnnSearch" oninput="UserAnnouncementsModal.loadData()">
+                            <select class="ds-input ds-select py-1 px-2 text-xs" id="userAnnCategory" onchange="UserAnnouncementsModal.loadData()">
+                                <option value="">All Categories</option>
+                                <option value="General">General</option>
+                                <option value="Maintenance">Maintenance</option>
+                                <option value="Security">Security Alert</option>
+                                <option value="Feature Release">Feature Release</option>
+                            </select>
+                        </div>
+                        <div class="form-check form-switch text-xs mb-0">
+                            <input class="form-check-input" type="checkbox" id="userAnnUnreadOnly" onchange="UserAnnouncementsModal.loadData()">
+                            <label class="form-check-input-label text-secondary fw-semibold" for="userAnnUnreadOnly">Unread Only</label>
+                        </div>
+                    </div>
+
+                    <div class="modal-body p-4" id="userAnnModalBody" style="min-height:350px;">
+                        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+                    </div>
+
+                    <div class="modal-footer border-top p-3" style="border-color:var(--ds-border-color)!important;">
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="document.getElementById('user-announcements-modal-container').remove()">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalEl);
+        if (window.lucide) lucide.createIcons();
+        await this.loadData();
+    },
+
+    async loadData() {
+        const body = document.getElementById('userAnnModalBody');
+        if (!body) return;
+
+        const q = (document.getElementById('userAnnSearch')?.value || '').trim();
+        const cat = document.getElementById('userAnnCategory')?.value || '';
+        const unread = document.getElementById('userAnnUnreadOnly')?.checked || false;
+
+        let params = new URLSearchParams();
+        if (q) params.append('q', q);
+        if (cat) params.append('category', cat);
+        if (unread) params.append('unread_only', 'true');
+
+        try {
+            const res = await api.get(`/announcements/my-announcements?${params.toString()}`);
+            if (res.status !== 'success') throw new Error('Load failed');
+
+            const list = res.data || [];
+            if (list.length === 0) {
+                body.innerHTML = `
+                    <div class="text-center py-5 text-secondary">
+                        <i data-lucide="inbox" class="mb-2 opacity-50" style="width:40px;height:40px;"></i>
+                        <p class="mb-0 text-sm">No announcements found matching criteria.</p>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            body.innerHTML = `
+                <div class="d-flex flex-column gap-3">
+                    ${list.map(a => `
+                        <div class="p-3.5 rounded-3 border transition hover-card" style="background:rgba(255,255,255,0.02); border-color:var(--ds-border-color)!important;">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge ${a.priority === 'Critical' ? 'bg-danger' : a.priority === 'High' ? 'bg-warning text-dark' : 'bg-primary bg-opacity-15 text-primary'} text-xxs px-2 py-0.5">
+                                        ${a.priority}
+                                    </span>
+                                    <span class="badge bg-secondary-subtle text-secondary text-xxs px-2 py-0.5">${a.category}</span>
+                                    ${!a.is_read ? '<span class="badge bg-success text-xxs px-2 py-0.5">UNREAD</span>' : ''}
+                                </div>
+                                <span class="text-xxs text-secondary">${a.published_at ? new Date(a.published_at).toLocaleDateString() : 'Recently'}</span>
+                            </div>
+                            <h6 class="fw-bold text-main mb-1.5">${QCMS.escapeHtml(a.title)}</h6>
+                            <p class="text-xs text-secondary mb-3">${QCMS.escapeHtml(a.summary || a.body || '')}</p>
+                            <div class="d-flex align-items-center justify-content-between text-xxs border-top pt-2" style="border-color:var(--ds-border-color)!important;">
+                                <span class="text-muted">By: ${QCMS.escapeHtml(a.created_by)}</span>
+                                ${!a.is_read ? `
+                                    <button class="btn btn-sm btn-link text-primary p-0 text-xxs fw-bold text-decoration-none" onclick="UserAnnouncementsModal.markRead(${a.id})">
+                                        Mark as Read
+                                    </button>
+                                ` : '<span class="text-success"><i data-lucide="check-check" style="width:12px;height:12px;"></i> Read</span>'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+
+        } catch (e) {
+            body.innerHTML = `<div class="alert alert-danger">Error loading announcements.</div>`;
+        }
+    },
+
+    async markRead(id) {
+        try {
+            await api.post(`/announcements/${id}/mark-read`);
+            await this.loadData();
+            if (window.GlobalAnnouncementBanner) {
+                GlobalAnnouncementBanner.fetchActiveAnnouncements();
+            }
+        } catch (e) {}
+    }
+};
+
+window.GlobalAnnouncementBanner = GlobalAnnouncementBanner;
+window.UserAnnouncementsModal = UserAnnouncementsModal;
+
 
 

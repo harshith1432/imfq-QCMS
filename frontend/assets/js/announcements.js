@@ -1023,6 +1023,10 @@ const AnnouncementsModule = {
             const res = await api.post('/announcements/', payload);
             if (res.status === 'success') {
                 QCMS.toast('Broadcast successfully initialized!', 'success');
+                window.dispatchEvent(new CustomEvent('qcms:announcement-published'));
+                if (window.GlobalAnnouncementBanner) {
+                    window.GlobalAnnouncementBanner.fetchActiveAnnouncements();
+                }
                 const modalEl = document.getElementById('annWizardModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
@@ -1044,6 +1048,10 @@ const AnnouncementsModule = {
             const res = await api.post(`/announcements/${id}/publish`);
             if (res.status === 'success') {
                 QCMS.toast('Broadcast went live successfully!', 'success');
+                window.dispatchEvent(new CustomEvent('qcms:announcement-published'));
+                if (window.GlobalAnnouncementBanner) {
+                    window.GlobalAnnouncementBanner.fetchActiveAnnouncements();
+                }
                 this.loadRegistry();
             }
         } catch (e) {
