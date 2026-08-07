@@ -1,12 +1,50 @@
-from flask import Flask, jsonify, request
+import sys
+import os
+import json
+import traceback
 
-app = Flask(__name__)
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
-@app.route('/api/auth/login', methods=['POST'])
-def test_login():
-    return jsonify({"access_token": "test_token_12345", "status": "success"}), 200
+flask_app = None
+init_error = None
+init_tb = None
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def catch_all(path):
-    return jsonify({"status": "ok", "path": path}), 200
+try:
+    from app import create_app
+    flask_app = create_app()
+except Exception as e:
+    init_error = str(e)
+    init_tb = traceback.format_exc()
+
+def app(environ, start_response):
+    global flask_app, init_error, init_tb
+    if flask_app is None:
+        try:
+            from app import create_app
+            flask_app = create_app()
+            init_error = None
+            init_tb = None
+        except Exception as e:
+            init_error = str(e)
+            init_tb = traceback.format_exc()
+
+    if init_error:
+        body = json.dumps({"status": "error", "message": f"Flask Init Failed: {init_error}", "traceback": init_tb}).encode('utf-8')
+        start_response('500 Internal Server Error', [('Content-Type', 'application/json'), ('Content-Length', str(len(body)))])
+        return [body]
+
+    try:
+        raw_uri = environ.get('HTTP_X_MATCHED_PATH') or environ.get('REQUEST_URI') or environ.get('PATH_INFO', '')
+        if '?' in raw_uri:
+            raw_uri = raw_uri.split('?')[0]
+        if raw_uri and raw_uri.startswith('/api'):
+            environ['PATH_INFO'] = raw_uri
+
+        return flask_app(environ, start_response)
+    except Exception as e:
+        tb = traceback.format_exc()
+        body = json.dumps({"status": "error", "message": str(e), "traceback": tb}).encode('utf-8')
+        start_response('500 Internal Server Error', [('Content-Type', 'application/json'), ('Content-Length', str(len(body)))])
+        return [body]
