@@ -1,35 +1,24 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/index.py",
-      "use": "@vercel/python"
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
     },
     {
-      "src": "frontend/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "^/api/(.*)",
-      "dest": "/api/index.py"
+      "source": "/login",
+      "destination": "/frontend/auth/login.html"
     },
     {
-      "src": "^/login$",
-      "dest": "/frontend/auth/login.html"
+      "source": "/register",
+      "destination": "/frontend/auth/register-org.html"
     },
     {
-      "src": "^/register$",
-      "dest": "/frontend/auth/register-org.html"
+      "source": "/register-org",
+      "destination": "/frontend/auth/register-org.html"
     },
     {
-      "src": "^/register-org$",
-      "dest": "/frontend/auth/register-org.html"
-    },
-    {
-      "src": "^/(.*)",
-      "dest": "/frontend/$1"
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
     }
   ]
 }
