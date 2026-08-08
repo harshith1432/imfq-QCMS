@@ -14,7 +14,7 @@ def get_app():
         try:
             from app import create_app
             flask_app = create_app()
-        except Exception as e:
+        except BaseException as e:
             init_err = (str(e), traceback.format_exc())
     return flask_app
 
@@ -28,7 +28,7 @@ def app(environ, start_response):
 
     try:
         return a(environ, start_response)
-    except Exception as e:
+    except BaseException as e:
         tb = traceback.format_exc()
         body = json.dumps({"status": "error", "message": str(e), "traceback": tb}).encode('utf-8')
         start_response('200 OK', [('Content-Type', 'application/json'), ('Content-Length', str(len(body)))])
@@ -36,5 +36,5 @@ def app(environ, start_response):
 
 if __name__ == "__main__":
     a = get_app()
-    if a:
+    if a and hasattr(a, 'run'):
         a.run(debug=True, host='127.0.0.1', port=5000)

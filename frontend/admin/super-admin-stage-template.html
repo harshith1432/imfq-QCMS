@@ -770,6 +770,19 @@ function renderPaletteSidebar() {
 }
 
 // ── Property Inspector Panel (Canva / Wix Style Property Editor) ──────────────
+function getSectionFields(sec) {
+    if (!sec.fields && !sec.custom_fields) {
+        sec.fields = [];
+        sec.custom_fields = sec.fields;
+    } else if (!sec.fields) {
+        sec.fields = sec.custom_fields;
+    } else if (!sec.custom_fields) {
+        sec.custom_fields = sec.fields;
+    }
+    return sec.fields;
+}
+
+// ── Property Inspector Panel (Canva / Wix Style Property Editor) ──────────────
 function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
     const stage = stages[stageIdx];
     if (!stage) return;
@@ -789,11 +802,12 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
     const targetEl = document.querySelector(`[data-field-id="${fieldId}"]`);
     if (targetEl) targetEl.classList.add('active-editing');
 
+    const fields = getSectionFields(sec);
     let cfg = null;
     if (isPredefined) {
-        cfg = (sec.predefined_fields || {})[fieldId] || { label: fieldId, placeholder: '', required: true, disabled: false, col_span: 'col-md-6' };
+        cfg = (sec.predefined_fields || {})[fieldId] || fields.find(f => f.id === fieldId) || { label: fieldId, placeholder: '', required: true, disabled: false, col_span: 'col-md-6' };
     } else {
-        cfg = ((sec.custom_fields || [])).find(f => f.id === fieldId) || { label: 'Custom Field', placeholder: '', type: 'text', col_span: 'col-md-6' };
+        cfg = fields.find(f => f.id === fieldId) || (sec.predefined_fields || {})[fieldId] || { label: 'Custom Component', placeholder: '', type: 'text', col_span: 'col-md-6' };
     }
 
     const colSpan = cfg.col_span || cfg.col || 'col-md-6';
@@ -809,14 +823,25 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
     const allowedTypesVal = cfg.allowed_types || '.pdf, .png, .jpg, .xlsx, .docx';
     const maxSizeVal = cfg.max_size_mb || '10';
 
+    // Build complete Component Type options dynamically from TOOL_OPTIONS
+    let typeOptionsHtml = '';
+    TOOL_OPTIONS.forEach(cat => {
+        typeOptionsHtml += `<optgroup label="${esc(cat.category)}">`;
+        cat.items.forEach(item => {
+            const sel = typeVal === item.type ? 'selected' : '';
+            typeOptionsHtml += `<option value="${esc(item.type)}" ${sel}>${esc(item.label)}</option>`;
+        });
+        typeOptionsHtml += `</optgroup>`;
+    });
+
     let extraConfigHtml = '';
 
-    if (typeVal === 'select' || isPredefined) {
+    if (typeVal === 'select' || isPredefined || typeVal === 'table' || typeVal === 'multi_text') {
         extraConfigHtml += `
             <div class="mb-3 p-2.5 rounded border bg-light">
                 <label class="ds-label text-xs fw-semibold mb-1 text-primary">Data Source & Mapping</label>
                 <select class="ds-input ds-select text-xs mb-2" onchange="updateInspectorField('data_source', this.value)">
-                    <option value="custom" ${dataSourceVal==='custom'?'selected':''}>Static Custom Options</option>
+                    <option value="custom" ${dataSourceVal==='custom'?'selected':''}>Static Custom Choices / Headers</option>
                     <option value="stage1_team_members" ${dataSourceVal==='stage1_team_members'?'selected':''}>Stage 1: Team Members & Roles</option>
                     <option value="stage1_problem_background" ${dataSourceVal==='stage1_problem_background'?'selected':''}>Stage 1: Problem Statement / Theme</option>
                     <option value="stage2_observations" ${dataSourceVal==='stage2_observations'?'selected':''}>Stage 2: Gemba Observations</option>
@@ -831,9 +856,9 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
                 </select>
 
                 <div id="inspectorOptionsWrap" style="${dataSourceVal!=='custom'?'display:none;':''}">
-                    <label class="ds-label text-xs fw-semibold mb-1">Dropdown Choices (Comma / Newline separated)</label>
+                    <label class="ds-label text-xs fw-semibold mb-1">Items / Choices (Comma / Newline separated)</label>
                     <textarea class="ds-input ds-textarea text-xs" rows="3" placeholder="e.g. Low, Medium, High, Critical" oninput="updateInspectorField('options', this.value)">${esc(optionsVal)}</textarea>
-                    <span class="text-xxs text-muted mt-1 d-block">Type choices separated by commas or line breaks.</span>
+                    <span class="text-xxs text-muted mt-1 d-block">Type choices or table headers separated by commas or line breaks.</span>
                 </div>
             </div>
         `;
@@ -861,7 +886,7 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
         `;
     }
 
-    if (typeVal === 'file_upload') {
+    if (typeVal === 'file_upload' || typeVal === 'attachment') {
         extraConfigHtml += `
             <div class="mb-3 p-2.5 rounded border bg-light">
                 <label class="ds-label text-xs fw-semibold mb-1 text-primary">Upload Settings</label>
@@ -887,26 +912,14 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
             <input type="text" class="ds-input text-xs" value="${esc(cfg.label || '')}" oninput="updateInspectorField('label', this.value)">
         </div>
         <div class="mb-3">
-            <label class="ds-label text-xs fw-semibold mb-1">Placeholder Text</label>
+            <label class="ds-label text-xs fw-semibold mb-1">Placeholder / Helper Text</label>
             <input type="text" class="ds-input text-xs" value="${esc(cfg.placeholder || '')}" oninput="updateInspectorField('placeholder', this.value)">
         </div>
         ${!isPredefined ? `
         <div class="mb-3">
             <label class="ds-label text-xs fw-semibold mb-1">Input Component Type</label>
             <select class="ds-input ds-select text-xs" onchange="updateInspectorField('type', this.value)">
-                <option value="text" ${cfg.type==='text'?'selected':''}>Single-line Text</option>
-                <option value="textarea" ${cfg.type==='textarea'?'selected':''}>Multi-line Text Area</option>
-                <option value="number" ${cfg.type==='number'?'selected':''}>Numeric Input</option>
-                <option value="select" ${cfg.type==='select'?'selected':''}>Dropdown Select Box</option>
-                <option value="date" ${cfg.type==='date'?'selected':''}>Date Picker</option>
-                <option value="file_upload" ${cfg.type==='file_upload'?'selected':''}>File & Evidence Upload</option>
-                <option value="table" ${cfg.type==='table'?'selected':''}>Data Table</option>
-                <option value="five_why" ${cfg.type==='five_why'?'selected':''}>5-Why Table</option>
-                <option value="verification_table" ${cfg.type==='verification_table'?'selected':''}>Verification Table</option>
-                <option value="check_sheet" ${cfg.type==='check_sheet'?'selected':''}>Check Sheet</option>
-                <option value="pareto" ${cfg.type==='pareto'?'selected':''}>Pareto Chart</option>
-                <option value="fishbone" ${cfg.type==='fishbone'?'selected':''}>Ishikawa Fishbone</option>
-                <option value="signature" ${cfg.type==='signature'?'selected':''}>Reviewer Approval Gate</option>
+                ${typeOptionsHtml}
             </select>
         </div>` : ''}
         ${extraConfigHtml}
@@ -964,13 +977,23 @@ function updateInspectorField(prop, value) {
         if (!sec.predefined_fields[fieldId]) sec.predefined_fields[fieldId] = { label: fieldId };
         sec.predefined_fields[fieldId][prop] = value;
     } else {
-        if (!sec.custom_fields) sec.custom_fields = [];
-        const f = sec.custom_fields.find(item => item.id === fieldId);
-        if (f) f[prop] = value;
+        const fields = getSectionFields(sec);
+        const f = fields.find(item => item.id === fieldId);
+        if (f) {
+            f[prop] = value;
+            if (prop === 'col_span') f.col = value;
+        }
     }
 
     renderList();
     renderPreview();
+
+    if (prop === 'type') {
+        openInspector(stageIdx, secIdx, fieldId, isPredefined);
+    } else {
+        const targetEl = document.querySelector(`[data-field-id="${fieldId}"]`);
+        if (targetEl) targetEl.classList.add('active-editing');
+    }
 }
 
 function duplicateInspectorField() {
@@ -981,35 +1004,29 @@ function duplicateInspectorField() {
     const sec = (stage.sections || [])[secIdx];
     if (!sec) return;
 
-    const newId = `custom_${Date.now()}`;
-    if (!sec.custom_fields) sec.custom_fields = [];
+    const fields = getSectionFields(sec);
+    const srcField = isPredefined 
+        ? ((sec.predefined_fields || {})[fieldId] || { label: fieldId })
+        : (fields.find(f => f.id === fieldId) || { label: 'Custom Element' });
 
-    let srcLabel = 'Copied Field';
-    let srcType = 'text';
-    let srcPh = '';
+    const newId = `custom_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    const clonedField = JSON.parse(JSON.stringify(srcField));
+    clonedField.id = newId;
+    clonedField.label = (clonedField.label || 'Custom Element') + ' (Copy)';
+    clonedField.disabled = false;
+
     if (isPredefined) {
-        const pf = (sec.predefined_fields || {})[fieldId] || {};
-        srcLabel = (pf.label || fieldId) + ' (Copy)';
-        srcPh = pf.placeholder || '';
+        fields.push(clonedField);
     } else {
-        const cf = sec.custom_fields.find(f => f.id === fieldId) || {};
-        srcLabel = (cf.label || 'Custom Field') + ' (Copy)';
-        srcType = cf.type || 'text';
-        srcPh = cf.placeholder || '';
+        const srcIdx = fields.findIndex(f => f.id === fieldId);
+        if (srcIdx !== -1) fields.splice(srcIdx + 1, 0, clonedField);
+        else fields.push(clonedField);
     }
-
-    sec.custom_fields.push({
-        id: newId,
-        label: srcLabel,
-        type: srcType,
-        placeholder: srcPh,
-        required: false,
-        disabled: false
-    });
 
     renderList();
     renderPreview();
     openInspector(stageIdx, secIdx, newId, false);
+    showToast(`Duplicated "${clonedField.label}"`);
 }
 
 function deleteInspectorField() {
@@ -1025,14 +1042,15 @@ function deleteInspectorField() {
         if (!sec.predefined_fields[fieldId]) sec.predefined_fields[fieldId] = {};
         sec.predefined_fields[fieldId].disabled = true;
     } else {
-        if (sec.custom_fields) {
-            sec.custom_fields = sec.custom_fields.filter(f => f.id !== fieldId);
-        }
+        const fields = getSectionFields(sec);
+        sec.fields = fields.filter(f => f.id !== fieldId);
+        sec.custom_fields = sec.fields;
     }
 
     closeInspector();
     renderList();
     renderPreview();
+    showToast('Element deleted');
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -2406,19 +2424,43 @@ function deleteSection(stageIdx, secIdx) {
 window.deleteSection = deleteSection;
 
 function deleteSubField(stageIdx, secIdx, fIdx) {
-    if (!confirm('Are you sure you want to delete this field?')) return;
+    if (!confirm('Are you sure you want to delete this element?')) return;
     const sec = stages[stageIdx].sections[secIdx];
-    if (sec.fields) sec.fields.splice(fIdx, 1);
+    if (!sec) return;
+    const fields = getSectionFields(sec);
+    const deleted = fields[fIdx];
+
+    if (deleted) {
+        sec.fields = fields.filter(f => f.id !== deleted.id);
+        sec.custom_fields = sec.fields;
+    } else {
+        fields.splice(fIdx, 1);
+        sec.custom_fields = fields;
+    }
+
+    if (activeInspectorTarget && deleted && activeInspectorTarget.fieldId === deleted.id) {
+        closeInspector();
+    }
+
     renderList();
+    renderPreview();
+
     const list = document.getElementById('stageList');
-    const cont = list.children[stageIdx];
+    const cont = list ? list.children[stageIdx] : null;
     if (cont) {
-        cont.querySelector('.stage-sections-detail').style.display = 'block';
+        const detail = cont.querySelector('.stage-sections-detail');
+        if (detail) detail.style.display = 'block';
         const wrappers = cont.querySelectorAll('.visual-card-wrapper');
         const cardWrapper = wrappers[secIdx];
-        if (cardWrapper) { const bc = cardWrapper.querySelector('.card-body-collapse'); if (bc) bc.style.display = 'block'; const ti = cardWrapper.querySelector('.card-collapse-toggle i'); if (ti) ti.setAttribute('data-lucide','chevron-up'); }
+        if (cardWrapper) {
+            const bc = cardWrapper.querySelector('.card-body-collapse');
+            if (bc) bc.style.display = 'block';
+            const ti = cardWrapper.querySelector('.card-collapse-toggle i');
+            if (ti) ti.setAttribute('data-lucide', 'chevron-up');
+        }
     }
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
+    showToast('Element deleted.');
 }
 window.deleteSubField = deleteSubField;
 
