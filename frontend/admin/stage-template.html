@@ -631,14 +631,15 @@
                 <div class="mb-3">
                     <label class="ds-label text-xs fw-semibold mb-1 d-block">Base Module (Binding)</label>
                     <select class="ds-input ds-select" id="newStageBaseModule">
-                        <option value="1">S0/S1 Plan & Establish Team</option>
+                        <option value="0">Blank / Custom Stage (Empty Canvas)</option>
+                        <option value="1">S0/S1 Plan &amp; Establish Team</option>
                         <option value="2">S2 Define Problem</option>
                         <option value="3">S3 Interim Containment</option>
                         <option value="4">S4 Determine Root Causes</option>
                         <option value="5">S5 Choose Permanent Corrections</option>
                         <option value="6">S6 Implement Corrective Actions</option>
                         <option value="7">S7 Take Preventive Measures</option>
-                        <option value="8" selected>S8 Congratulate Team & Closure</option>
+                        <option value="8" selected>S8 Congratulate Team &amp; Closure</option>
                     </select>
                 </div>
                 <div class="mb-3">
@@ -733,8 +734,117 @@ const STAGE_COLORS = [
     { bg:'rgba(245,158,11,.09)', color:'#d97706'  },
     { bg:'rgba(234,88,12,.08)',  color:'#c2410c'  },
     { bg:'rgba(22,163,74,.08)',  color:'#15803d'  },
-    { bg:'rgba(6,182,212,.08)',  color:'#0e7490'  },
+            { bg:'rgba(6,182,212,.08)',  color:'#0e7490'  },
 ];
+
+// ── Catalog Element Drop Handler & Dropzone Factory ───────────────────────────
+function handleCatalogElementDropOnStage(stageIdx, payload) {
+    if (!payload || !payload.type || !payload.label || !stages[stageIdx]) return;
+    const st = stageIdx;
+    const newSecId = `sec_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    const newSec = {
+        id: newSecId,
+        type: payload.type || 'custom',
+        label: payload.label || 'Custom Section',
+        required: true,
+        order: (stages[st].sections || []).length + 1,
+        fields: [
+            {
+                id: `${newSecId}_field_${Date.now()}`,
+                type: payload.type,
+                label: payload.label,
+                placeholder: '',
+                required: true,
+                disabled: false
+            }
+        ]
+    };
+    if (!stages[st].sections) stages[st].sections = [];
+    stages[st].sections.push(newSec);
+
+    renderList();
+
+    const list = document.getElementById('stageList');
+    const cont = list ? list.children[st] : null;
+    if (cont) {
+        const detail = cont.querySelector('.stage-sections-detail');
+        if (detail) detail.style.display = 'block';
+        const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+        const lastWrapper = wrappers[wrappers.length - 1];
+        if (lastWrapper) {
+            const bc = lastWrapper.querySelector('.card-body-collapse');
+            if (bc) bc.style.display = 'block';
+            const ti = lastWrapper.querySelector('.card-collapse-toggle i');
+            if (ti) ti.setAttribute('data-lucide', 'chevron-up');
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    if (typeof openInspector === 'function') openInspector(st, stages[st].sections.length - 1, newSec.fields[0].id, false);
+    showToast(`Added "${payload.label}" section to Stage ${st + 1}`);
+}
+
+function createStageDropzone(stageIdx, isEmpty = false) {
+    const dz = document.createElement('div');
+    dz.className = `drop-target-zone ${isEmpty ? 'empty-stage-dropzone p-4 my-2' : 'stage-level-dropzone mt-3 p-3'}`;
+    dz.dataset.stage = stageIdx;
+
+    if (isEmpty) {
+        dz.style.cssText = 'border: 2px dashed var(--ds-accent, #6366f1); border-radius: 12px; background: rgba(99,102,241,0.04); transition: all 0.2s ease; cursor: pointer; display: flex; flex-direction: column; align-items: center; text-align: center;';
+        dz.innerHTML = `
+            <div class="drop-hint d-flex flex-column align-items-center gap-1 py-2">
+                <i data-lucide="plus-circle" style="width:28px;height:28px;" class="text-primary mb-1"></i>
+                <span class="fw-bold text-sm text-dark">Drag &amp; Drop elements here from Element Catalog</span>
+                <span class="text-xs text-secondary">or click here to select a Data Input / QC Component</span>
+            </div>
+        `;
+    } else {
+        dz.style.cssText = 'border: 2px dashed rgba(99,102,241,0.3); border-radius: 10px; background: rgba(99,102,241,0.03); transition: all 0.2s ease; cursor: pointer; margin-top: 12px;';
+        dz.innerHTML = `
+            <div class="drop-hint d-flex align-items-center justify-content-center gap-2">
+                <i data-lucide="plus-circle" style="width:16px;height:16px;" class="text-primary"></i>
+                <span class="text-xs fw-semibold text-primary">Drag &amp; Drop element here to add a new Section / Column to Stage ${stageIdx + 1}</span>
+            </div>
+        `;
+    }
+
+    dz.addEventListener('click', () => {
+        if (typeof openToolPicker === 'function') openToolPicker(stageIdx);
+    });
+
+    dz.addEventListener('dragover', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.dataTransfer.dropEffect = 'copy';
+        dz.classList.add('drop-over');
+    });
+
+    dz.addEventListener('dragleave', (ev) => {
+        ev.stopPropagation();
+        dz.classList.remove('drop-over');
+    });
+
+    dz.addEventListener('drop', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        dz.classList.remove('drop-over');
+
+        const st = parseInt(dz.dataset.stage);
+        if (isNaN(st)) return;
+
+        let payload = null;
+        try {
+            const raw = ev.dataTransfer.getData('application/json') || ev.dataTransfer.getData('text/plain');
+            if (raw) payload = JSON.parse(raw);
+        } catch (_) {}
+
+        if (payload) {
+            handleCatalogElementDropOnStage(st, payload);
+        }
+    });
+
+    return dz;
+}
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let stages = [];
@@ -1929,19 +2039,41 @@ document.getElementById('addStageConfirmBtn').addEventListener('click', () => {
     const baseModule = parseInt(document.getElementById('newStageBaseModule').value);
     const icon = document.getElementById('newStageIcon').value;
 
+    let baseSections = [];
+    if (baseModule > 0) {
+        const matchDefault = DEFAULT_STAGES.find(ds => ds.original_id === baseModule);
+        if (matchDefault && matchDefault.sections) {
+            baseSections = JSON.parse(JSON.stringify(matchDefault.sections));
+        }
+    }
+
     const newStg = {
         stage_id: stages.length + 1,
-        original_id: baseModule,
+        original_id: baseModule || 8,
         title: title,
         icon: icon,
-        sections: []
+        sections: baseSections
     };
     stages.push(newStg);
     renumber();
     renderList();
     renderPreview();
     bsAddStageModal.hide();
-    showToast('New stage added successfully! Expand it to customize sections.');
+
+    setTimeout(() => {
+        const newStageIdx = stages.length - 1;
+        const list = document.getElementById('stageList');
+        const cont = list ? list.children[newStageIdx] : null;
+        if (cont) {
+            const detail = cont.querySelector('.stage-sections-detail');
+            const toggleIcon = cont.querySelector('.collapse-toggle i');
+            if (detail) detail.style.display = 'block';
+            if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
+            if (window.lucide) lucide.createIcons();
+        }
+    }, 50);
+
+    showToast('New stage added! Drag & drop elements from catalog or click to customize.');
 });
 
 // ── Delete stage ───────────────────────────────────────────────────────────────
