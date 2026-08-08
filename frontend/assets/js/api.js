@@ -94,9 +94,9 @@ const api = {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            // Support AbortController and default timeout of 15 seconds
+            // Support AbortController and default timeout of 60 seconds (60000ms) for cloud serverless cold-starts
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), options.timeout || 15000);
+            const timeoutId = setTimeout(() => controller.abort(), options.timeout || 60000);
 
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, {
