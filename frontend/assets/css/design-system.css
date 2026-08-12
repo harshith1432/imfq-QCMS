@@ -67,13 +67,15 @@
 [data-theme="dark"] {
     --ds-primary: #38bdf8;
     --ds-primary-rgb: 56, 189, 248;
-    --ds-accent: #94a3b8;
-    --ds-accent-hover: #cbd5e1;
-    --ds-accent-rgb: 148, 163, 184;
+    --ds-accent: #2563eb;
+    --ds-accent-hover: #1d4ed8;
+    --ds-accent-rgb: 37, 99, 235;
 
     --ds-bg-main: #020617;
     --ds-bg-surface: rgba(15, 23, 42, 0.85);
     --ds-bg-card: rgba(30, 41, 59, 0.9);
+    --ds-bg-subtle: rgba(30, 41, 59, 0.6);
+    --ds-bg-elevated: rgba(51, 65, 85, 0.7);
     --ds-text-main: #f8fafc;
     --ds-text-secondary: #cbd5e1;
     --ds-text-tertiary: #94a3b8;
@@ -224,8 +226,7 @@ h6,
     }
     
     .app-sidebar {
-        width: 0; /* Sidebar logic handled by JS toggle usually */
-        overflow: hidden;
+        width: var(--ds-sidebar-width, 260px);
     }
 }
 

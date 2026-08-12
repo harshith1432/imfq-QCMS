@@ -1,6 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        (function() {
+            function getActiveTheme() {
+                let theme = localStorage.getItem('qcms-theme') || localStorage.getItem('theme');
+                if (!theme && window.parent && window.parent !== window) {
+                    try {
+                        theme = window.parent.document.documentElement.getAttribute('data-theme');
+                    } catch(e){}
+                }
+                return theme || 'dark';
+            }
+            const activeTheme = getActiveTheme();
+            document.documentElement.setAttribute('data-theme', activeTheme);
+
+            function applyCurrentTheme() {
+                const t = getActiveTheme();
+                document.documentElement.setAttribute('data-theme', t);
+            }
+
+            window.addEventListener('storage', applyCurrentTheme);
+            window.addEventListener('message', function(e) {
+                if (e.data && (e.data.type === 'THEME_CHANGED' || e.data.theme)) {
+                    const t = e.data.theme || e.data.payload;
+                    if (t) document.documentElement.setAttribute('data-theme', t);
+                    else applyCurrentTheme();
+                }
+            });
+
+            document.addEventListener('DOMContentLoaded', function() {
+                applyCurrentTheme();
+                try {
+                    if (window.parent && window.parent.document && window.parent.document.documentElement) {
+                        const observer = new MutationObserver(applyCurrentTheme);
+                        observer.observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+                    }
+                } catch(e){}
+            });
+        })();
+    </script>
     <script src="/assets/js/auth-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -344,7 +383,7 @@
                 <!-- Left Sticky Element Palette Sidebar -->
                 <aside class="palette-sidebar" id="paletteSidebar">
                     <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                        <h7 class="fw-bold text-xs text-uppercase text-dark mb-0 d-flex align-items-center gap-2">
+                        <h7 class="fw-bold text-xs text-uppercase text-main mb-0 d-flex align-items-center gap-2">
                             <i data-lucide="layers" style="width:15px;height:15px;" class="text-primary"></i> Element Catalog
                         </h7>
                         <span class="badge bg-primary-soft text-primary text-xxs">Drag to Stage</span>
@@ -363,7 +402,7 @@
                 <!-- Right Inline Property Inspector Panel -->
                 <aside class="inspector-panel d-none" id="inspectorPanel">
                     <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                        <h7 class="fw-bold text-xs text-uppercase text-dark mb-0 d-flex align-items-center gap-2">
+                        <h7 class="fw-bold text-xs text-uppercase text-main mb-0 d-flex align-items-center gap-2">
                             <i data-lucide="sliders" style="width:15px;height:15px;" class="text-primary"></i> Property Inspector
                         </h7>
                         <button type="button" class="btn-close text-xs" onclick="closeInspector()"></button>
@@ -1195,7 +1234,7 @@ function createStageDropzone(stageIdx, isEmpty = false) {
         dz.innerHTML = `
             <div class="drop-hint d-flex flex-column align-items-center gap-1 py-2">
                 <i data-lucide="plus-circle" style="width:28px;height:28px;" class="text-primary mb-1"></i>
-                <span class="fw-bold text-sm text-dark">Drag &amp; Drop elements here from Element Catalog</span>
+                <span class="fw-bold text-sm text-main">Drag &amp; Drop elements here from Element Catalog</span>
                 <span class="text-xs text-secondary">or click here to select a Data Input / QC Component</span>
             </div>
         `;

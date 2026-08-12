@@ -84,7 +84,21 @@ class ThemeManager {
 
     applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        localStorage.setItem('qcms-theme', theme);
         this.theme = theme;
+
+        // Broadcast theme change to all child iframes (e.g. Global Stage Templates)
+        document.querySelectorAll('iframe').forEach(iframe => {
+            try {
+                if (iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({ type: 'THEME_CHANGED', theme: theme }, '*');
+                }
+                if (iframe.contentDocument && iframe.contentDocument.documentElement) {
+                    iframe.contentDocument.documentElement.setAttribute('data-theme', theme);
+                }
+            } catch (e) {}
+        });
 
         // Dispatch event
         window.dispatchEvent(new CustomEvent('qcms-theme-change', { detail: { theme } }));
@@ -390,47 +404,54 @@ const QCMS = {
             document.body.appendChild(backdrop);
         }
 
-        const sidebar = document.getElementById('app-sidebar');
-        const toggleBtn = document.getElementById('sidebar-toggle-btn');
-
         // Check saved desktop state
         if (localStorage.getItem('qcms-sidebar-collapsed') === 'true') {
             document.body.classList.add('sidebar-collapsed');
         }
 
-        if (toggleBtn && sidebar && backdrop) {
-            toggleBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (window.innerWidth <= 1024) {
-                    sidebar.classList.toggle('show');
-                    backdrop.classList.toggle('show');
-                } else {
-                    document.body.classList.toggle('sidebar-collapsed');
-                    localStorage.setItem('qcms-sidebar-collapsed', document.body.classList.contains('sidebar-collapsed'));
-                    setTimeout(() => window.dispatchEvent(new Event('resize')), 350);
+        // Delegate click for sidebar-toggle-btn globally on document
+        if (!this._sidebarToggleBound) {
+            this._sidebarToggleBound = true;
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('#sidebar-toggle-btn');
+                if (btn) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    this.toggleSidebar(e);
                 }
-            };
+            });
+        }
 
+        if (backdrop) {
             backdrop.onclick = () => {
-                sidebar.classList.remove('show');
+                const sidebar = document.getElementById('app-sidebar');
+                if (sidebar) sidebar.classList.remove('show');
                 backdrop.classList.remove('show');
             };
-
-            sidebar.querySelectorAll('.sidebar-link').forEach(link => {
-                link.addEventListener('click', () => {
-                    if (window.innerWidth <= 1024) {
-                        sidebar.classList.remove('show');
-                        backdrop.classList.remove('show');
-                    }
-                });
-            });
         }
     },
 
-    toggleSidebar() {
+    toggleSidebar(event) {
+        if (event) {
+            if (typeof event.stopPropagation === 'function') event.stopPropagation();
+            if (typeof event.preventDefault === 'function') event.preventDefault();
+        }
+        let backdrop = document.getElementById('sidebar-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'sidebar-backdrop';
+            backdrop.className = 'sidebar-backdrop';
+            document.body.appendChild(backdrop);
+            backdrop.onclick = () => {
+                const sidebar = document.getElementById('app-sidebar');
+                if (sidebar) sidebar.classList.remove('show');
+                backdrop.classList.remove('show');
+            };
+        }
+
+        const sidebar = document.getElementById('app-sidebar');
+
         if (window.innerWidth <= 1024) {
-            const sidebar = document.getElementById('app-sidebar');
-            const backdrop = document.getElementById('sidebar-backdrop');
             if (sidebar) sidebar.classList.toggle('show');
             if (backdrop) backdrop.classList.toggle('show');
         } else {
@@ -704,7 +725,7 @@ const QCMS = {
             <div class="container-fluid d-flex align-items-center justify-content-between h-100 px-2 px-md-4">
                 <div class="d-flex align-items-center">
                     <!-- Sidebar Toggle -->
-                    <button class="ds-btn ds-btn-ghost p-1 me-2" id="sidebar-toggle-btn" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;">
+                    <button class="ds-btn ds-btn-ghost p-1 me-2" id="sidebar-toggle-btn" onclick="QCMS.toggleSidebar(event)" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;" title="Toggle Navigation Sidebar">
                         <i data-lucide="menu" style="width: 22px; height: 22px;"></i>
                     </button>
 
@@ -1903,15 +1924,19 @@ const QCMS = {
 
     async loadNotifications() {
         try {
-            const notifs = await api.get('/notifications');
-            this.notifications = notifs || [];
+            const notifs = await api.get('/notifications').catch(() => null);
+            // Guard: backend returns a raw array; treat any non-array response as empty
+            this.notifications = Array.isArray(notifs) ? notifs : [];
             const badge = document.getElementById('notif-badge');
             if (badge) {
                 const unread = this.notifications.some(n => !n.is_read);
                 badge.style.display = unread ? 'block' : 'none';
             }
         } catch (e) {
-            console.error('Failed to load notifications', e);
+            // Silently fail — no notifications is not an error state
+            this.notifications = [];
+            const badge = document.getElementById('notif-badge');
+            if (badge) badge.style.display = 'none';
         }
     },
 

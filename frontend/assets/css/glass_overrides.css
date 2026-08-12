@@ -93,15 +93,20 @@ body {
     }
     
     .app-sidebar, .glass-sidebar {
+        width: 280px !important;
+        max-width: 85vw !important;
         transform: translateX(-100%) !important;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease !important;
         box-shadow: none !important;
-        z-index: 1050 !important;
+        z-index: 1060 !important;
     }
     
     .app-sidebar.show, .glass-sidebar.show {
         transform: translateX(0) !important;
-        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25) !important;
+        box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5) !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: flex !important;
     }
     
     .glass-navbar {
@@ -506,4 +511,425 @@ select.form-select {
     background-color: #0f172a !important;
     color: #f8fafc !important;
     padding: 8px 12px !important;
+}
+
+/* ============================================================
+   UNIVERSAL DARK THEME BUTTON & ICON VISIBILITY ENHANCEMENTS
+   ============================================================ */
+
+/* Primary Buttons in Dark Mode */
+[data-theme="dark"] .ds-btn-primary,
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] button.btn-primary,
+[data-theme="dark"] button.ds-btn-primary,
+[data-theme="dark"] a.btn-primary,
+[data-theme="dark"] a.ds-btn-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ds-btn-primary:hover,
+[data-theme="dark"] .btn-primary:hover,
+[data-theme="dark"] button.btn-primary:hover,
+[data-theme="dark"] button.ds-btn-primary:hover {
+    background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
+    color: #ffffff !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Secondary & Outline Buttons in Dark Mode */
+[data-theme="dark"] .ds-btn-secondary,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .ds-btn-outline,
+[data-theme="dark"] .btn-outline-primary,
+[data-theme="dark"] .btn-outline-secondary,
+[data-theme="dark"] button.btn-secondary,
+[data-theme="dark"] button.btn-outline-primary {
+    background: rgba(30, 41, 59, 0.85) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ds-btn-secondary:hover,
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .ds-btn-outline:hover,
+[data-theme="dark"] .btn-outline-primary:hover,
+[data-theme="dark"] .btn-outline-secondary:hover {
+    background: rgba(56, 189, 248, 0.15) !important;
+    color: #38bdf8 !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Ghost & Light Buttons in Dark Mode */
+[data-theme="dark"] .ds-btn-ghost,
+[data-theme="dark"] .btn-ghost,
+[data-theme="dark"] .btn-light,
+[data-theme="dark"] .ds-btn-light {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #f1f5f9 !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ds-btn-ghost:hover,
+[data-theme="dark"] .btn-ghost:hover,
+[data-theme="dark"] .btn-light:hover {
+    background: rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Danger / Success / Warning / Info Buttons in Dark Mode */
+[data-theme="dark"] .ds-btn-danger,
+[data-theme="dark"] .btn-danger {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border-color: #ef4444 !important;
+}
+
+[data-theme="dark"] .ds-btn-danger:hover,
+[data-theme="dark"] .btn-danger:hover {
+    background: #b91c1c !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-success,
+[data-theme="dark"] .ds-btn-success {
+    background: #16a34a !important;
+    color: #ffffff !important;
+    border-color: #22c55e !important;
+}
+
+[data-theme="dark"] .btn-warning,
+[data-theme="dark"] .ds-btn-warning {
+    background: #d97706 !important;
+    color: #ffffff !important;
+    border-color: #f59e0b !important;
+}
+
+/* Ensure ALL Icons inside Dark Mode Buttons have crisp, matching stroke/fill */
+[data-theme="dark"] .ds-btn svg,
+[data-theme="dark"] .btn svg,
+[data-theme="dark"] button svg,
+[data-theme="dark"] .ds-btn i,
+[data-theme="dark"] .btn i,
+[data-theme="dark"] button i,
+[data-theme="dark"] .ds-btn [data-lucide],
+[data-theme="dark"] .btn [data-lucide],
+[data-theme="dark"] button [data-lucide] {
+    stroke: currentColor !important;
+    color: currentColor !important;
+    opacity: 0.95 !important;
+}
+
+[data-theme="dark"] .ds-btn-primary svg,
+[data-theme="dark"] .btn-primary svg,
+[data-theme="dark"] button.btn-primary svg,
+[data-theme="dark"] .ds-btn-primary i,
+[data-theme="dark"] .btn-primary i,
+[data-theme="dark"] button.btn-primary i,
+[data-theme="dark"] .ds-btn-primary [data-lucide],
+[data-theme="dark"] .btn-primary [data-lucide] {
+    stroke: #ffffff !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+/* Theme Toggle Button & Topbar Icons Visibility in Dark Mode */
+[data-theme="dark"] .top-bar-action,
+[data-theme="dark"] .topbar-action-btn,
+[data-theme="dark"] #themeToggleBtn,
+[data-theme="dark"] .theme-toggle-btn {
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-theme="dark"] .top-bar-action svg,
+[data-theme="dark"] .topbar-action-btn svg,
+[data-theme="dark"] #themeToggleBtn svg {
+    stroke: #f8fafc !important;
+    color: #f8fafc !important;
+}
+
+/* Universal Top-Layer Modal z-index Guarantee */
+#sdGlobalModalsContainer {
+    position: relative;
+    z-index: 1055 !important;
+}
+
+#sdGlobalModalsContainer .modal,
+.modal.show {
+    z-index: 1055 !important;
+}
+
+.modal-backdrop.show {
+    z-index: 1050 !important;
+}
+
+/* Settings Matrix Navigation Sidebar High-Contrast Text Rules */
+.ps-nav-item:not(.active) .ps-nav-title {
+    color: var(--ds-text-main, #0f172a) !important;
+}
+.ps-nav-item:not(.active) .ps-nav-desc {
+    color: var(--ds-text-secondary, #64748b) !important;
+}
+.ps-nav-item.active .ps-nav-title,
+.ps-nav-item.active .ps-nav-desc {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .ps-nav-item:not(.active) .ps-nav-title {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .ps-nav-item:not(.active) .ps-nav-desc {
+    color: #94a3b8 !important;
+}
+
+/* ── Landing CMS & Platform Settings Dark Mode Overrides ────────────────── */
+
+[data-theme="dark"] #ps-cms-editor-panel .card,
+html[data-theme="dark"] #ps-cms-editor-panel .card,
+[data-theme="dark"] .ps-tab-pane .card,
+html[data-theme="dark"] .ps-tab-pane .card {
+    background-color: var(--ds-bg-card, rgba(30, 41, 59, 0.9)) !important;
+    background: var(--ds-bg-card, rgba(30, 41, 59, 0.9)) !important;
+    border-color: var(--ds-border-color, rgba(255, 255, 255, 0.15)) !important;
+    color: var(--ds-text-main, #f8fafc) !important;
+}
+
+[data-theme="dark"] #ps-cms-editor-panel .card-header,
+[data-theme="dark"] #ps-cms-editor-panel .card-header.bg-light,
+html[data-theme="dark"] #ps-cms-editor-panel .card-header,
+html[data-theme="dark"] #ps-cms-editor-panel .card-header.bg-light,
+[data-theme="dark"] .ps-tab-pane .card-header,
+html[data-theme="dark"] .ps-tab-pane .card-header {
+    background-color: var(--ds-bg-elevated, rgba(51, 65, 85, 0.5)) !important;
+    background: var(--ds-bg-elevated, rgba(51, 65, 85, 0.5)) !important;
+    color: var(--ds-text-main, #f8fafc) !important;
+    border-color: var(--ds-border-color, rgba(255, 255, 255, 0.15)) !important;
+}
+
+[data-theme="dark"] #ps-pane-landing-cms .bg-body-tertiary,
+html[data-theme="dark"] #ps-pane-landing-cms .bg-body-tertiary,
+[data-theme="dark"] .ps-tab-pane .bg-body-tertiary,
+html[data-theme="dark"] .ps-tab-pane .bg-body-tertiary {
+    background-color: var(--ds-bg-card, rgba(30, 41, 59, 0.9)) !important;
+    background: var(--ds-bg-card, rgba(30, 41, 59, 0.9)) !important;
+    border-color: var(--ds-border-color, rgba(255, 255, 255, 0.15)) !important;
+    color: var(--ds-text-main, #f8fafc) !important;
+}
+
+[data-theme="dark"] #ps-pane-landing-cms .bg-primary-subtle,
+html[data-theme="dark"] #ps-pane-landing-cms .bg-primary-subtle {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    background: rgba(56, 189, 248, 0.15) !important;
+    color: var(--ds-primary, #38bdf8) !important;
+}
+
+[data-theme="dark"] #ps-pane-landing-cms .form-control,
+[data-theme="dark"] #ps-pane-landing-cms .form-select,
+html[data-theme="dark"] #ps-pane-landing-cms .form-control,
+html[data-theme="dark"] #ps-pane-landing-cms .form-select {
+    background-color: var(--ds-input-bg, rgba(15,23,42,0.85)) !important;
+    background: var(--ds-input-bg, rgba(15,23,42,0.85)) !important;
+    border-color: var(--ds-input-border, rgba(255,255,255,0.25)) !important;
+    color: var(--ds-text-main, #f8fafc) !important;
+}
+
+[data-theme="dark"] #ps-pane-landing-cms .form-control::placeholder,
+html[data-theme="dark"] #ps-pane-landing-cms .form-control::placeholder {
+    color: var(--ds-text-tertiary, #94a3b8) !important;
+}
+
+[data-theme="dark"] #ps-cms-editor-panel .input-group-text,
+html[data-theme="dark"] #ps-cms-editor-panel .input-group-text {
+    background-color: rgba(51, 65, 85, 0.6) !important;
+    background: rgba(51, 65, 85, 0.6) !important;
+    border-color: var(--ds-input-border, rgba(255,255,255,0.25)) !important;
+    color: var(--ds-text-secondary, #cbd5e1) !important;
+}
+
+[data-theme="dark"] #ps-pane-landing-cms .form-select option,
+html[data-theme="dark"] #ps-pane-landing-cms .form-select option {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] #footerPageModal .modal-content,
+html[data-theme="dark"] #footerPageModal .modal-content {
+    background-color: var(--ds-bg-surface, rgba(15, 23, 42, 0.95)) !important;
+    background: var(--ds-bg-surface, rgba(15, 23, 42, 0.95)) !important;
+    color: var(--ds-text-main, #f8fafc) !important;
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS, COMPACT KPI CARDS & SIDEBAR SCROLLING FIXES
+   ========================================================================== */
+
+/* 1. App Sidebar Flex Layout & Full Vertical Scrolling */
+.app-sidebar, .glass-sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+}
+
+.sidebar-brand {
+    flex-shrink: 0 !important;
+}
+
+.sidebar-section {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 1rem 0.75rem !important;
+}
+
+.sidebar-nav {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+}
+
+.sidebar-footer {
+    flex-shrink: 0 !important;
+    border-top: 1px solid var(--ds-border-color) !important;
+    padding: 0.75rem 1rem !important;
+    background: var(--ds-bg-surface) !important;
+}
+
+/* 2. Platform Settings Matrix Side Panel (.ps-workspace) on Mobile */
+@media (max-width: 991px) {
+    .ps-workspace {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+    
+    .ps-sidebar-card {
+        margin-bottom: 0.75rem !important;
+    }
+    
+    .ps-nav-list {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+        gap: 8px !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    
+    .ps-nav-item {
+        padding: 8px 10px !important;
+        min-height: 42px !important;
+    }
+    
+    .ps-nav-desc {
+        display: none !important;
+    }
+}
+
+/* 3. Sleek Mobile KPI Grid Cards (< 768px) */
+@media (max-width: 768px) {
+    /* Responsive Grid: 2 columns on mobile */
+    #superKpiGrid, #orgKpiGrid, #eaKpiGrid, .kpi-grid, .sub-kpi-grid, .lic-kpi-grid, .mod-kpi-grid, .plan-kpi-grid, .bill-kpi-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+        margin-bottom: 1rem !important;
+        overflow-x: visible !important;
+    }
+
+    /* Compact KPI Card Layout */
+    #superKpiGrid .glass-card, 
+    #orgKpiGrid .glass-card, 
+    .kpi-card, 
+    .ea-kpi-card, 
+    .sub-kpi-card, 
+    .lic-kpi-card, 
+    .mod-kpi-card, 
+    .plan-kpi-card, 
+    .bill-kpi-card {
+        min-height: 70px !important;
+        height: auto !important;
+        padding: 0.45rem 0.35rem !important;
+        border-radius: 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    /* Compact KPI Icons */
+    #superKpiGrid .glass-card div[style*="width:36px"],
+    #superKpiGrid .glass-card div[style*="width:40px"],
+    #orgKpiGrid .glass-card div[style*="width:36px"],
+    #orgKpiGrid .glass-card div[style*="width:40px"],
+    .kpi-icon,
+    .sub-kpi-card .kpi-icon,
+    .lic-kpi-card .kpi-icon,
+    .mod-kpi-card .kpi-icon {
+        width: 26px !important;
+        height: 26px !important;
+        border-radius: 7px !important;
+        margin: 0 auto 0.25rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    #superKpiGrid .glass-card div[style*="width:36px"] i,
+    #superKpiGrid .glass-card div[style*="width:40px"] i,
+    #orgKpiGrid .glass-card div[style*="width:36px"] i,
+    #orgKpiGrid .glass-card div[style*="width:40px"] i,
+    .kpi-icon i,
+    .sub-kpi-card .kpi-icon i {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    /* Compact KPI Value Numbers */
+    .kpi-value, 
+    #superKpiGrid .text-xl, 
+    #superKpiGrid .text-2xl, 
+    #orgKpiGrid .text-xl, 
+    #orgKpiGrid .text-2xl {
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
+        line-height: 1.15 !important;
+        margin-bottom: 1px !important;
+    }
+
+    /* Compact KPI Labels */
+    .kpi-label, 
+    #superKpiGrid .text-muted, 
+    #orgKpiGrid .text-muted,
+    #superKpiGrid .text-xs, 
+    #orgKpiGrid .text-xs {
+        font-size: 10px !important;
+        line-height: 1.15 !important;
+        margin-top: 1px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+    }
+
+    /* Info Icon positioning inside compact cards */
+    #superKpiGrid .position-absolute, #orgKpiGrid .position-absolute {
+        top: 4px !important;
+        right: 4px !important;
+    }
 }

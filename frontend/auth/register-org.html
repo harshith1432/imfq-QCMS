@@ -329,6 +329,20 @@
     <script>
         if (window.lucide) lucide.createIcons();
 
+        function nextStep(step) {
+            // Hide all form steps
+            document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
+            // Show target step
+            const target = document.getElementById('step' + step);
+            if (target) {
+                target.classList.add('active');
+                // Scroll to top of form smoothly
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            // Re-render lucide icons in newly visible step
+            if (window.lucide) lucide.createIcons();
+        }
+
         function togglePassword(inputId, btn) {
             const input = document.getElementById(inputId);
             const icon = btn.querySelector('i');

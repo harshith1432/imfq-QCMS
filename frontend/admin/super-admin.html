@@ -956,10 +956,15 @@
 
         .ps-nav-item {
             min-width: 0 !important;
-            width: 100% !important;
             overflow: hidden !important;
-            flex-shrink: 0 !important;
-            min-height: 50px !important;
+            min-height: 44px !important;
+        }
+        @media (min-width: 992px) {
+            .ps-nav-item {
+                width: 100% !important;
+                flex-shrink: 0 !important;
+                min-height: 50px !important;
+            }
         }
     </style>
 </head>
@@ -2017,13 +2022,13 @@
                                                 <div class="d-flex align-items-start gap-2 p-3 rounded-3" style="background: rgba(37, 99, 235, 0.12); border: 1px solid rgba(37, 99, 235, 0.25);">
                                                     <i data-lucide="info" class="mt-0.5 flex-shrink-0" style="width:15px;height:15px; color:#60a5fa!important;"></i>
                                                     <div>
-                                                        <strong style="color:#ffffff!important;">Multi-Admin Accounts:</strong> <span style="color:rgba(255,255,255,0.8)!important;">You can add multiple Super Admin logins with granular sub-roles (Owner, Billing, Support, Platform Operations).</span>
+                                                        <strong style="color:var(--ds-text-main)!important;">Multi-Admin Accounts:</strong> <span style="color:var(--ds-text-secondary)!important;">You can add multiple Super Admin logins with granular sub-roles (Owner, Billing, Support, Platform Operations).</span>
                                                     </div>
                                                 </div>
                                                 <div class="d-flex align-items-start gap-2 p-3 rounded-3" style="background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.2);">
                                                     <i data-lucide="lock" class="mt-0.5 flex-shrink-0" style="width:15px;height:15px; color:#94a3b8!important;"></i>
                                                     <div>
-                                                        <strong style="color:#ffffff!important;">Credential Security:</strong> <span style="color:rgba(255,255,255,0.8)!important;">Password hashes are encrypted using Bcrypt. Verification of your current password is mandatory when modifying email or credentials.</span>
+                                                        <strong style="color:var(--ds-text-main)!important;">Credential Security:</strong> <span style="color:var(--ds-text-secondary)!important;">Password hashes are encrypted using Bcrypt. Verification of your current password is mandatory when modifying email or credentials.</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2096,7 +2101,7 @@
                                     </div>
 
                                     <!-- LANDING PAGE ACCESS CONTROL TOGGLE -->
-                                    <div class="p-3 mb-3 border rounded-3 bg-body-tertiary d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="p-3 mb-3 border rounded-3 glass-card d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="p-2 rounded-2 bg-primary-subtle text-primary">
                                                 <i data-lucide="power" style="width:22px;height:22px;"></i>
@@ -2115,8 +2120,8 @@
                                     <!-- EDITOR PANEL -->
                                     <div id="ps-cms-editor-panel">
                                         <!-- Section 1: Hero -->
-                                        <div class="card border mb-3">
-                                            <div class="card-header bg-light fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-hero">
+                                        <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
+                                            <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-hero" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>🚀 1. Hero & Header Banner</span>
                                                 <i data-lucide="chevron-down" style="width:14px;"></i>
                                             </div>
@@ -2172,8 +2177,8 @@
                                         </div>
 
                                         <!-- Section 2: Trust Ticker & Badges -->
-                                        <div class="card border mb-3">
-                                            <div class="card-header bg-light fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-trust">
+                                        <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
+                                            <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-trust" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>🏅 2. Trust Ticker & Credential Badges</span>
                                                 <i data-lucide="chevron-down" style="width:14px;"></i>
                                             </div>
@@ -2246,8 +2251,8 @@
                                         </div>
 
                                         <!-- Section 3: Features -->
-                                        <div class="card border mb-3">
-                                            <div class="card-header bg-light fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-features">
+                                        <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
+                                            <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-features" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>⚡ 2. Core Capabilities (Features Grid)</span>
                                                 <i data-lucide="chevron-down" style="width:14px;"></i>
                                             </div>
@@ -2268,8 +2273,8 @@
                                         </div>
 
                                         <!-- Section 3: How It Works / Steps -->
-                                        <div class="card border mb-3">
-                                            <div class="card-header bg-light fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-steps">
+                                        <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
+                                            <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-steps" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>🪜 3. Onboarding Flow (How It Works Steps)</span>
                                                 <i data-lucide="chevron-down" style="width:14px;"></i>
                                             </div>
@@ -2290,8 +2295,8 @@
                                         </div>
 
                                         <!-- Section 4: Pricing Plans -->
-                                        <div class="card border mb-3">
-                                            <div class="card-header bg-light fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-pricing">
+                                        <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
+                                            <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-pricing" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>💳 4. Simple Pricing Plans</span>
                                                 <i data-lucide="chevron-down" style="width:14px;"></i>
                                             </div>
@@ -2312,8 +2317,8 @@
                                         </div>
 
                                         <!-- Section 5: FAQs -->
-                                        <div class="card border mb-3">
-                                            <div class="card-header bg-light fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-faqs">
+                                        <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
+                                            <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-faqs" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>❓ 5. FAQ Section</span>
                                                 <i data-lucide="chevron-down" style="width:14px;"></i>
                                             </div>
@@ -2334,8 +2339,8 @@
                                         </div>
 
                                         <!-- Section 6: CTA Offer Banner -->
-                                        <div class="card border mb-3">
-                                            <div class="card-header bg-light fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-cta">
+                                        <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
+                                            <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-cta" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>📢 6. CTA Offer Banner</span>
                                                 <i data-lucide="chevron-down" style="width:14px;"></i>
                                             </div>
@@ -2362,8 +2367,8 @@
                                         </div>
 
                                         <!-- Section 7: Footer -->
-                                        <div class="card border mb-3">
-                                            <div class="card-header bg-light fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-footer">
+                                        <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
+                                            <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-footer" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>👣 7. Footer & Legal Pages</span>
                                                 <i data-lucide="chevron-down" style="width:14px;"></i>
                                             </div>
@@ -6453,51 +6458,69 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Settings Matrix Navigation Sidebar Contrast Fixes */
+/* Settings Matrix Navigation Sidebar Contrast Fixes (Light & Dark Themes) */
 .ps-nav-item {
-    color: rgba(255, 255, 255, 0.75) !important;
+    color: var(--ds-text-main, #0f172a);
     transition: all 0.2s ease;
 }
 
 .ps-nav-item:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
-    color: #ffffff !important;
+    background: rgba(37, 99, 235, 0.08) !important;
+    border-color: rgba(37, 99, 235, 0.2) !important;
 }
 
 .ps-nav-item.active {
     background: var(--ds-primary, #2563eb) !important;
-    border-color: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(37, 99, 235, 0.3) !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45) !important;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35) !important;
 }
 
 .ps-nav-item.active .ps-nav-title,
 .ps-nav-item.active .ps-nav-desc,
-.ps-nav-item.active .ps-nav-icon {
+.ps-nav-item.active .ps-nav-icon,
+.ps-nav-item.active .ps-nav-icon i,
+.ps-nav-item.active .ps-nav-icon svg {
     color: #ffffff !important;
+    stroke: #ffffff !important;
 }
 
 .ps-nav-item.active .ps-nav-icon {
-    background: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.25) !important;
 }
 
 .ps-nav-title {
-    color: #ffffff !important;
+    color: var(--ds-text-main, #0f172a);
     font-weight: 600;
 }
 
 .ps-nav-desc {
-    color: rgba(255, 255, 255, 0.6) !important;
+    color: var(--ds-text-secondary, #64748b);
+    font-size: 0.75rem;
 }
 
 .ps-nav-icon {
-    color: var(--ds-primary, #60a5fa) !important;
-    background: rgba(37, 99, 235, 0.1) !important;
+    color: var(--ds-primary, #2563eb);
+    background: rgba(37, 99, 235, 0.1);
     border-radius: 8px;
     padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Dark Mode Specific Overrides */
+[data-theme="dark"] .ps-nav-title {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .ps-nav-desc {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .ps-nav-icon {
+    color: #38bdf8 !important;
+    background: rgba(56, 189, 248, 0.15) !important;
 }
 
 /* Primary Action Button High-Contrast Overrides */
@@ -6524,6 +6547,31 @@
     color: #ffffff !important;
     box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55) !important;
     transform: translateY(-1px);
+}
+
+/* Fix double border on search inline input fields while preserving single border on standalone search inputs */
+.ds-search-inline .ds-input,
+.ds-search-inline input,
+[data-theme="dark"] .ds-search-inline .ds-input,
+[data-theme="dark"] .ds-search-inline input {
+    border: none !important;
+    border-color: transparent !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.ds-search-inline .ds-input:focus,
+.ds-search-inline input:focus,
+[data-theme="dark"] .ds-search-inline .ds-input:focus,
+[data-theme="dark"] .ds-search-inline input:focus {
+    border: none !important;
+    border-color: transparent !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 </style>
 </body>

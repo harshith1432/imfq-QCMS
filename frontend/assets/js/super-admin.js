@@ -1617,7 +1617,7 @@ const SuperAdmin = {
                     <td>
                         <div class="fw-bold">${inv.org_name}</div>
                     </td>
-                    <td data-col-name="plan"><span class="badge bg-light text-dark">${inv.plan_name}</span></td>
+                    <td data-col-name="plan"><span class="badge" style="background:var(--ds-bg-elevated,rgba(100,116,139,0.15));color:var(--ds-text-main)">${inv.plan_name}</span></td>
                     <td data-col-name="cycle"><span class="text-xs">${inv.billing_cycle}</span></td>
                     <td data-col-name="dates">${QCMS.formatDate(inv.due_date)}</td>
                     <td data-col-name="pricing" class="fw-bold">₹${inv.total_amount.toLocaleString('en-IN')}</td>
@@ -3065,7 +3065,7 @@ const SuperAdmin = {
                         <div class="modal-body p-4">
                             <div class="row g-4">
                                 <div class="col-md-6 text-center">
-                                    <div class="p-3 bg-light rounded-3 border h-100 d-flex flex-column justify-content-center align-items-center" id="receiptImagePane_${p.id}">
+                                    <div class="p-3 rounded-3 border h-100 d-flex flex-column justify-content-center align-items-center" style="background:var(--ds-bg-card)" id="receiptImagePane_${p.id}">
                                         ${p.screenshot_url ? (() => {
                                             const _tok = encodeURIComponent(localStorage.getItem('token') || sessionStorage.getItem('token') || '');
                                             return `
@@ -3121,14 +3121,14 @@ const SuperAdmin = {
                                             <div class="text-xs text-secondary">Billing Cycle: <strong>${QCMS.escapeHtml(p.billing_cycle || 'Monthly')}</strong></div>
                                         </div>
 
-                                        <div class="p-3 bg-light rounded-3 border mb-3">
+                                        <div class="p-3 rounded-3 border mb-3" style="background:var(--ds-bg-card)">
                                             <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Transaction Reference (UTR)</div>
                                             <div class="font-monospace text-sm fw-bold text-main mb-1">${QCMS.escapeHtml(p.transaction_id)}</div>
                                             ${p.notes ? `<div class="text-xs text-secondary italic">" ${QCMS.escapeHtml(p.notes)} "</div>` : ''}
                                             <div class="text-xxs text-secondary mt-2"><i data-lucide="calendar" style="width:11px;height:11px;" class="me-1"></i>Submitted on: ${p.created_at || 'N/A'}</div>
                                         </div>
 
-                                        <div class="p-3 bg-white rounded-3 border mb-3">
+                                        <div class="p-3 rounded-3 border mb-3" style="background:var(--ds-bg-card)">
                                             <label class="text-xxs text-secondary text-uppercase fw-bold mb-1 d-block">
                                                 <i data-lucide="edit-3" style="width:12px;height:12px;" class="me-1"></i>
                                                 Rejection Review Feedback / Remarks <span class="text-danger">*</span>
@@ -3773,8 +3773,8 @@ const SuperAdmin = {
 
             const statsHtml = `
                 <span class="badge bg-secondary ms-2" title="Total logs scanned">${total} scanned</span>
-                <span class="badge bg-success ms-1" title="Signature matched">${passed} passed</span>
-                ${backfilled > 0 ? `<span class="badge bg-info ms-1" title="Logs without a prior hash — assigned now">${backfilled} backfilled</span>` : ''}
+                <span class="badge bg-success ms-1" title="Signature matched">${passed} intact</span>
+                ${backfilled > 0 ? `<span class="badge bg-info ms-1" title="Logs without a prior hash — recovered now">${backfilled} recovered</span>` : ''}
                 ${tampered   > 0 ? `<span class="badge bg-danger ms-1">${tampered} tampered</span>` : ''}
             `;
 
@@ -4579,7 +4579,7 @@ const SuperAdmin = {
                 <tr>
                     <td>
                         <div class="fw-bold text-main text-sm">${orgName}</div>
-                        <div class="text-xxs text-muted">ID: ${o.id} &bull; Code: <span class="badge bg-light text-dark font-mono">${orgCode}</span></div>
+                        <div class="text-xxs text-muted">ID: ${o.id} &bull; Code: <span class="badge font-mono" style="background:var(--ds-bg-elevated,rgba(100,116,139,0.15));color:var(--ds-text-main)">${orgCode}</span></div>
                     </td>
                     <td>
                         <span class="badge bg-primary-subtle text-primary font-semibold text-xs">${planName}</span>
@@ -4604,7 +4604,7 @@ const SuperAdmin = {
                             <span class="fw-semibold text-muted">${pct}% Used</span>
                             <span class="text-muted">${usedFmt} / ${limitGb} GB</span>
                         </div>
-                        <div class="progress" style="height: 6px; border-radius: 4px; background: rgba(0,0,0,0.06);">
+                        <div class="progress" style="height: 6px; border-radius: 4px; background: var(--ds-border-color, rgba(100,116,139,0.25));">
                             <div class="progress-bar ${barBg}" role="progressbar" style="width: ${Math.min(100, pct)}%; border-radius: 4px;"></div>
                         </div>
                     </td>

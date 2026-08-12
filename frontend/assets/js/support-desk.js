@@ -78,17 +78,27 @@ const SupportDesk = {
                     <!-- Loaded dynamically -->
                 </div>
             </div>
+        `;
 
+        // Render modals as a direct child of document.body so they pop up on the top layer without clipping
+        let modalsContainer = document.getElementById('sdGlobalModalsContainer');
+        if (!modalsContainer) {
+            modalsContainer = document.createElement('div');
+            modalsContainer.id = 'sdGlobalModalsContainer';
+            document.body.appendChild(modalsContainer);
+        }
+
+        modalsContainer.innerHTML = `
             <!-- Ticket View/Edit Modal -->
             <div class="modal fade" id="sdTicketDetailModal" tabindex="-1">
                 <div class="modal-dialog modal-xl modal-dialog-centered">
-                    <div class="modal-content glass-card" style="background: rgba(25,25,35,0.96); border: 1px solid rgba(255,255,255,0.15);">
+                    <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
                         <div class="modal-header border-0 pb-0">
                             <div class="h-stack gap-2">
                                 <span class="ds-badge" id="sdModalTicketNumber" style="font-family:monospace;">TKT-000000</span>
                                 <h5 class="modal-title fw-bold text-main mb-0" id="sdModalSubject" style="color:var(--ds-text-main);">Ticket Title</h5>
                             </div>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body pb-0">
                             <div class="row g-4">
@@ -200,10 +210,10 @@ const SupportDesk = {
             <!-- Audit Trail Modal -->
             <div class="modal fade" id="sdAuditModal" tabindex="-1">
                 <div class="modal-dialog modal-md modal-dialog-centered">
-                    <div class="modal-content glass-card" style="background: rgba(25,25,35,0.96); border: 1px solid rgba(255,255,255,0.15);">
+                    <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
                         <div class="modal-header border-0 pb-0">
-                            <h5 class="modal-title fw-bold text-main"><i data-lucide="history" class="me-1 text-primary"></i> Support Audit Trail</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            <h5 class="modal-title fw-bold text-main" style="color:var(--ds-text-main);"><i data-lucide="history" class="me-1 text-primary"></i> Support Audit Trail</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body scroll-y" style="max-height:400px;" id="sdAuditListBody">
                             <!-- Populated dynamically -->
@@ -215,7 +225,7 @@ const SupportDesk = {
             <!-- CSAT Submission Modal -->
             <div class="modal fade" id="sdCSATModal" tabindex="-1">
                 <div class="modal-dialog modal-sm modal-dialog-centered">
-                    <div class="modal-content glass-card" style="background: rgba(25,25,35,0.96); border: 1px solid rgba(255,255,255,0.15);">
+                    <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
                         <div class="modal-body text-center p-4">
                             <h6 class="fw-bold mb-3 text-main">How satisfied were you?</h6>
                             <div class="h-stack justify-content-center gap-2 mb-3">
@@ -239,10 +249,10 @@ const SupportDesk = {
             <!-- Create KB Article Modal -->
             <div class="modal fade" id="sdCreateKbModal" tabindex="-1">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content glass-card" style="background: rgba(25,25,35,0.96); border: 1px solid rgba(255,255,255,0.15);">
+                    <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
                         <div class="modal-header border-0 pb-0">
                             <h5 class="modal-title fw-bold text-main" style="color:var(--ds-text-main);"><i data-lucide="book-open" class="me-1 text-primary"></i> Add Knowledge Base Article</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
                             <form id="sdCreateKbForm" onsubmit="event.preventDefault(); SupportDesk.submitKbArticle();">
@@ -281,6 +291,8 @@ const SupportDesk = {
                         </div>
                     </div>
                 </div>
+            </div>
+
             <!-- Sales Enquiry Detail Modal -->
             <div class="modal fade" id="sdEnquiryDetailModal" tabindex="-1">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -296,7 +308,7 @@ const SupportDesk = {
                             <input type="hidden" id="enqModalId">
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">
-                                    <div class="p-3 rounded" style="background: var(--ds-bg-subtle, #f8fafc); border: 1px solid var(--ds-border-color, #e2e8f0);">
+                                    <div class="p-3 rounded" style="background: var(--ds-bg-card); border: 1px solid var(--ds-border-color);">
                                         <div class="text-xxs text-secondary uppercase fw-bold mb-1">Prospect Contact Details</div>
                                         <div class="fw-bold text-main fs-6" id="enqModalName" style="color: var(--ds-text-main, #0f172a);">-</div>
                                         <div class="text-xs text-primary mt-1 d-flex align-items-center gap-1.5">
@@ -321,7 +333,7 @@ const SupportDesk = {
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="p-3 rounded" style="background: var(--ds-bg-subtle, #f8fafc); border: 1px solid var(--ds-border-color, #e2e8f0);">
+                                    <div class="p-3 rounded" style="background: var(--ds-bg-card); border: 1px solid var(--ds-border-color);">
                                         <div class="text-xxs text-secondary uppercase fw-bold mb-1">Status & Submission Date</div>
                                         <div class="mb-2" id="enqModalStatusBadge"><span class="ds-badge blue">New</span></div>
                                         <div class="text-xs text-secondary" id="enqModalDate">Submitted: -</div>
@@ -331,7 +343,7 @@ const SupportDesk = {
 
                             <div class="mb-4">
                                 <label class="form-label text-xs fw-bold text-secondary uppercase">Submitted Message / Requirements</label>
-                                <div class="p-3 rounded text-sm text-main" id="enqModalMessage" style="background: var(--ds-bg-subtle, #f8fafc); border: 1px solid var(--ds-border-color, #e2e8f0); color: var(--ds-text-main, #0f172a); white-space:pre-wrap; min-height:80px;">-</div>
+                                <div class="p-3 rounded text-sm text-main" id="enqModalMessage" style="background: var(--ds-bg-card); border: 1px solid var(--ds-border-color); white-space:pre-wrap; min-height:80px;">-</div>
                             </div>
 
                             <div class="row g-3 mb-3">

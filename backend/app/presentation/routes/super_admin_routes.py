@@ -3018,7 +3018,8 @@ def delete_admin_login(admin_id):
         from app.infrastructure.database.models.models import (
             Announcement, AnnouncementAudit, SuperAdminLog, AuditLog,
             AnnouncementDelivery, AnnouncementRead, AnnouncementAudience,
-            Notification, SupportTicket, SupportComment, SupportAudit
+            Notification, SupportTicket, SupportComment, SupportAudit,
+            SaaSUserSession
         )
         # Reassign authored records
         Announcement.query.filter_by(created_by=target.id).update({"created_by": current_admin_id}, synchronize_session=False)
@@ -3026,13 +3027,15 @@ def delete_admin_login(admin_id):
         SuperAdminLog.query.filter_by(admin_id=target.id).update({"admin_id": current_admin_id}, synchronize_session=False)
         AuditLog.query.filter_by(user_id=target.id).update({"user_id": current_admin_id}, synchronize_session=False)
         
-        # Remove user delivery, read, and notification records
+        # Remove user delivery, read, notification, and session records
         AnnouncementDelivery.query.filter_by(user_id=target.id).delete(synchronize_session=False)
         AnnouncementRead.query.filter_by(user_id=target.id).delete(synchronize_session=False)
         Notification.query.filter_by(user_id=target.id).delete(synchronize_session=False)
+        SaaSUserSession.query.filter_by(user_id=target.id).delete(synchronize_session=False)
         
         # Support ticket references
         SupportTicket.query.filter_by(assigned_engineer_id=target.id).update({"assigned_engineer_id": None}, synchronize_session=False)
+        SupportTicket.query.filter_by(created_by_id=target.id).update({"created_by_id": current_admin_id}, synchronize_session=False)
         SupportComment.query.filter_by(user_id=target.id).update({"user_id": current_admin_id}, synchronize_session=False)
         SupportAudit.query.filter_by(user_id=target.id).update({"user_id": current_admin_id}, synchronize_session=False)
     except Exception as ex:

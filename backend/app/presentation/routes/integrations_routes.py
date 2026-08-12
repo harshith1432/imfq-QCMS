@@ -16,8 +16,10 @@ def hash_key(key: str) -> str:
 
 # Helper to seed default integration cards if none exist
 def seed_default_integrations():
-    """Ensure all default integration providers exist in the database"""
-    
+    """Ensure all default integration providers exist in the database with unconfigured/empty credentials."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import json
+
     # Remove deprecated / unneeded / removed providers
     to_remove = [
         "stripe", "twilio_sms", "anthropic", "openai", "aws_s3", "azure_blob", 
@@ -25,63 +27,74 @@ def seed_default_integrations():
         "postgresql", "api_keys", "sentry", "health_checks"
     ]
     db.session.query(IntegrationConfig).filter(IntegrationConfig.provider_id.in_(to_remove)).delete(synchronize_session=False)
-    db.session.commit()
 
     defaults = [
         # Payments
-        ("razorpay", "Razorpay Gateway", "Payments", "Connected", "v2.0", {
-            "key_id": "rzp_live_qcms_enterprise_key",
-            "key_secret": "secret_qcms_live_key_998877",
-            "webhook_secret": "whsec_qcms_razorpay",
+        ("razorpay", "Razorpay Gateway", "Payments", "Disconnected", "v2.0", {
+            "key_id": "",
+            "key_secret": "",
+            "webhook_secret": "",
             "currency": "INR",
-            "is_active": True
+            "is_active": False
         }),
-        ("dynamic_qr", "Dynamic QR Gateway", "Payments", "Connected", "v1.0", {
-            "upi_id": "qcms@upi",
-            "account_name": "QCMS Enterprise Solutions Pvt Ltd",
-            "qr_code_url": "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi%3A%2F%2Fpay%3Fpa%3Dqcms%40upi%26pn%3DQCMS%2520Enterprise%26cu%3DINR",
-            "instructions": "Scan using GPay, PhonePe, Paytm or any UPI app. After payment, enter your Transaction ID (UTR) and upload payment screenshot.",
-            "is_active": True
+        ("dynamic_qr", "Dynamic QR Gateway", "Payments", "Disconnected", "v1.0", {
+            "upi_id": "",
+            "account_name": "",
+            "qr_code_url": "",
+            "instructions": "",
+            "is_active": False
         }),
 
         # Communication
-        ("resend", "Resend Mail", "Communication", "Connected", "v1.3.0", {
-            "sender_email": "notifications@qcms.io",
-            "sender_name": "QCMS Cloud",
-            "api_key": "re_abc123xyz"
+        ("resend", "Resend Mail", "Communication", "Disconnected", "v1.3.0", {
+            "sender_email": "",
+            "sender_name": "",
+            "api_key": "",
+            "is_active": False
         }),
-        ("jio_dlt", "Jio DLT SMS OTP", "Communication", "Connected", "v1.0.0", {
-            "entity_id": "1101234567890123456",
-            "sender_id": "QCMOTP",
-            "template_id": "1107161234567890123",
-            "api_key": "jio_live_auth_key_998877",
+        ("jio_dlt", "Jio DLT SMS OTP", "Communication", "Disconnected", "v1.0.0", {
+            "entity_id": "",
+            "sender_id": "",
+            "template_id": "",
+            "api_key": "",
             "api_url": "https://api.jiodlt.com/sms/v1/send",
-            "is_active": True
+            "is_active": False
         }),
-        ("zeptomail", "ZeptoMail (Zoho)", "Communication", "Connected", "v1.0.0", {
-            "api_key": "Zoho-enczapikey_live_secret_key_887766",
-            "sender_email": "otp@qcms.io",
-            "sender_name": "QCMS OTP Service",
+        ("zeptomail", "ZeptoMail (Zoho)", "Communication", "Disconnected", "v1.0.0", {
+            "api_key": "",
+            "sender_email": "",
+            "sender_name": "",
             "api_url": "https://api.zeptomail.in/v1.1/email/send",
-            "is_active": True
+            "is_active": False
         })
     ]
     
-    for prov_id, name, cat, status, ver, settings in defaults:
+    # Values that were previously seeded as fake defaults
+    fake_markers = ["qcms_enterprise_key", "secret_qcms", "qcms@upi", "notifications@qcms.io", "re_abc123xyz", "1101234567890123456", "QCMOTP", "jio_live_auth", "Zoho-enczapikey_live_secret_key_887766", "otp@qcms.io"]
+
+    for prov_id, name, cat, default_status, ver, empty_settings in defaults:
         existing = IntegrationConfig.query.filter_by(provider_id=prov_id).first()
         if not existing:
             cfg = IntegrationConfig(
                 provider_id=prov_id,
                 provider_name=name,
                 category=cat,
-                status=status,
+                status=default_status,
                 version=ver,
-                settings=settings,
-                health_score=100 if status == "Connected" else 0,
+                settings=empty_settings,
+                health_score=0,
                 usage_count=0,
                 error_count=0
             )
             db.session.add(cfg)
+        else:
+            # Clean up old fake credentials if row still contains legacy fake markers
+            settings_str = json.dumps(existing.settings or {})
+            if any(fm in settings_str for fm in fake_markers):
+                existing.settings = empty_settings
+                existing.status = "Disconnected"
+                existing.health_score = 0
+                flag_modified(existing, "settings")
     
     db.session.commit()
 
@@ -174,23 +187,33 @@ def save_config(provider_id):
         
     data = request.get_json() or {}
     
-    # Save settings and enable/disable transition
-    cfg.settings = data.get('settings', cfg.settings)
+    # Save settings directly to database JSON column
+    if 'settings' in data:
+        new_settings = dict(data['settings'])
+        cfg.settings = new_settings
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(cfg, "settings")
+
     if 'status' in data:
         cfg.status = data['status']
+        if cfg.status == 'Connected':
+            cfg.health_score = 100
+        elif cfg.status in ['Disabled', 'Disconnected']:
+            cfg.health_score = 0
         
     cfg.updated_at = datetime.utcnow()
     
-    # Add audit log
+    action_label = "Credential Update" if 'settings' in data else "Status Toggle"
     audit = IntegrationAuditLog(
-        action="Credential Update", 
+        action=action_label, 
         provider_id=provider_id, 
-        details={"status": cfg.status, "updated_fields": list(data.get('settings', {}).keys())}
+        details={"status": cfg.status, "updated_fields": list(data.get('settings', {}).keys()) if 'settings' in data else ["status"]}
     )
     db.session.add(audit)
     db.session.commit()
     
-    return jsonify({"message": f"Configuration saved for '{provider_id}'", "status": cfg.status}), 200
+    return jsonify({"message": f"Configuration saved for '{provider_id}'", "status": cfg.status, "health_score": cfg.health_score, "settings": cfg.settings}), 200
+
 
 @integrations_bp.route('/integrations/<provider_id>/test', methods=['POST'])
 @jwt_required()

@@ -10,6 +10,7 @@ env/
 
 # Environment Variables (CRITICAL)
 .env
+backend/.env
 .flaskenv
 
 # Docker
@@ -34,4 +35,6 @@ migrations/
 
 .vercel
 .env*
+!.env.example
+!backend/.env.example
 scratch/

@@ -103,10 +103,10 @@ const EnterpriseAnalytics = {
             <!-- Custom Date Modal -->
             <div class="modal fade" id="customDateModal" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
-                    <div class="modal-content glass-card" style="background: rgba(25,25,35,0.95); border: 1px solid rgba(255,255,255,0.15);">
+                    <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
                         <div class="modal-header border-0 pb-0">
                             <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);">Custom Date Range</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
                             <div class="v-stack gap-3">
@@ -131,10 +131,10 @@ const EnterpriseAnalytics = {
             <!-- Custom Report Builder Modal -->
             <div class="modal fade" id="reportBuilderModal" tabindex="-1">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content glass-card" style="background: rgba(25,25,35,0.95); border: 1px solid rgba(255,255,255,0.15);">
+                    <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
                         <div class="modal-header border-0 pb-0">
                             <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);"><i data-lucide="sliders" class="me-2 text-primary"></i> Custom Report Builder</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body pb-0">
                             <div class="row g-4">

@@ -933,7 +933,7 @@ class SaaSUserSession(db.Model):
     location = db.Column(db.String(100))
     status = db.Column(db.String(20), default='Active')  # Active, LoggedOut, Terminated
 
-    user = db.relationship('User', backref='sessions')
+    user = db.relationship('User', backref=db.backref('sessions', cascade='all, delete-orphan'))
     organization = db.relationship('Organization', backref='sessions')
 
 class AuditRiskAlert(db.Model):

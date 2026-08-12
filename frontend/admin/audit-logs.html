@@ -1012,8 +1012,8 @@
 
                     const statsHtml = `
                         <span class="badge bg-secondary ms-2" title="Total logs scanned">${total} scanned</span>
-                        <span class="badge bg-success ms-1" title="Signature matched">${passed} passed</span>
-                        ${backfilled > 0 ? `<span class="badge bg-info ms-1" title="Logs without a prior hash — assigned now">${backfilled} backfilled</span>` : ''}
+                        <span class="badge bg-success ms-1" title="Signature matched">${passed} intact</span>
+                        ${backfilled > 0 ? `<span class="badge bg-info ms-1" title="Logs without a prior hash — recovered now">${backfilled} recovered</span>` : ''}
                         ${tampered   > 0 ? `<span class="badge bg-danger ms-1">${tampered} tampered</span>` : ''}
                     `;
                     

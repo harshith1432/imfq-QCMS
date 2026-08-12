@@ -17,95 +17,139 @@ class EmailUtils:
 
     @staticmethod
     def send_email(to_email, subject, html_content):
-        """Sends an email using Resend API."""
-        # Ensure resend is initialized with latest key from env
-        resend.api_key = os.getenv("RESEND_API_KEY")
-        if not resend.api_key:
-            print("[QCMS] Error: RESEND_API_KEY not found in environment.")
+        """Sends an email using the active connected integration provider (ZeptoMail or Resend) from the database."""
+        import requests
+        from app.infrastructure.database.models.models import IntegrationConfig
+
+        provider_type, settings = None, {}
+        try:
+            configs = IntegrationConfig.query.filter(
+                IntegrationConfig.category == 'Communication',
+                IntegrationConfig.status == 'Connected',
+                IntegrationConfig.provider_id.in_(['zeptomail', 'resend'])
+            ).all()
+
+            for cfg in configs:
+                s = cfg.settings or {}
+                if cfg.provider_id == 'zeptomail' and s.get('api_key') and s.get('sender_email'):
+                    provider_type, settings = 'zeptomail', s
+                    break
+                elif cfg.provider_id == 'resend' and s.get('api_key'):
+                    provider_type, settings = 'resend', s
+                    break
+        except Exception as e:
+            if current_app:
+                current_app.logger.warning(f"Could not query integration config: {e}")
+
+        # Fallback to env vars if no DB integration is active
+        if not provider_type:
+            resend_key = os.getenv("RESEND_API_KEY")
+            if resend_key:
+                provider_type = 'resend'
+                settings = {
+                    'api_key': resend_key,
+                    'sender_email': os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev"),
+                    'sender_name': "QCMS Notifications"
+                }
+
+        if not provider_type:
+            print("[QCMS] Error: No active connected email integration provider (ZeptoMail/Resend) found.")
             return None
 
-        # Determine the sender address
-        from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
-        
-        # If it's the default onboarding email, try to use the APP_URL domain if available
-        if from_email == "onboarding@resend.dev":
-            app_url = EmailUtils._get_app_url()
-            if "localhost" not in app_url:
-                from urllib.parse import urlparse
-                try:
-                    domain = urlparse(app_url).netloc
-                    if domain:
-                        # Extract just the domain part (strip port if present)
-                        clean_domain = domain.split(":")[0]
-                        from_email = f"no-reply@{clean_domain}"
-                except:
-                    pass
-
-        # Ensure from_email is just the email address if the user provided "Name <email>" in .env
-        clean_from = from_email
-        if "<" in from_email and ">" in from_email:
-            clean_from = from_email.split("<")[1].split(">")[0]
+        # Determine sender email and name
+        sender_email = settings.get('sender_email') or 'noreply@ifqm.org.in'
+        sender_name = settings.get('sender_name') or 'QCMS Notifications'
+        clean_from = sender_email
+        if "<" in sender_email and ">" in sender_email:
+            clean_from = sender_email.split("<")[1].split(">")[0]
 
         is_dev = os.getenv("FLASK_ENV") == "development"
-        
-        # In development mode, always log the email to the console
+
+        # Log email dispatch in development/console
         if is_dev:
             print("\n" + "="*50)
-            print(f"DEVELOPMENT MODE: EMAIL SENT")
-            print(f"FROM: {clean_from}")
+            print(f"DEVELOPMENT MODE: EMAIL SENT VIA {provider_type.upper()}")
+            print(f"FROM: {sender_name} <{clean_from}>")
             print(f"TO: {to_email}")
             print(f"SUBJECT: {subject}")
             print("-" * 50)
-            # Try to extract 6-digit OTP if it's an OTP email
+
             otp_match = re.search(r'>\s*(\d{6})\s*<', html_content)
             if otp_match:
                 print(f"OTP CODE: {otp_match.group(1)}")
-            
-            # Extract and list links to make it easier to click/copy
+
             links = re.findall(r'href="([^"]+)"', html_content)
             if links:
                 print("EXTRACTED LINKS:")
                 for link in links:
                     print(f"  - {link}")
                 print("-" * 50)
-            
-            # Print the entire email content
+
             print("EMAIL CONTENT:")
             print(html_content)
             print("="*50 + "\n")
-            
-            # Bypass actual Resend API in dev mode unless explicitly requested
+
             if os.getenv("FORCE_REAL_EMAIL_IN_DEV", "false").lower() != "true":
                 if current_app:
-                    current_app.logger.info(f"Development mode: Skipped sending actual email via Resend from {clean_from} to {to_email}")
+                    current_app.logger.info(f"Development mode: Skipped sending actual email via {provider_type} from {clean_from} to {to_email}")
                 return {"id": "dev_mode_dummy_id"}
 
+        # Real Email Dispatch
         try:
-            params = {
-                "from": f"QCMS Notifications <{clean_from}>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content,
-            }
-            
-            # Log what we are trying to send (without sensitive info)
-            if current_app:
-                current_app.logger.info(f"Attempting to send email via Resend from {clean_from} to {to_email}")
+            if provider_type == 'zeptomail':
+                api_url = settings.get('api_url') or 'https://api.zeptomail.in/v1.1/email/send'
+                api_key = settings.get('api_key', '')
+                auth_header = api_key if api_key.startswith("Zoho-enczapikey") else f"Zoho-enczapikey {api_key}"
 
-            email = resend.Emails.send(params)
-            return email
+                payload = {
+                    "from": {
+                        "address": clean_from,
+                        "name": sender_name
+                    },
+                    "to": [
+                        {
+                            "email_address": {
+                                "address": to_email
+                            }
+                        }
+                    ],
+                    "subject": subject,
+                    "htmlbody": html_content
+                }
+
+                resp = requests.post(
+                    api_url,
+                    headers={
+                        "Authorization": auth_header,
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    json=payload,
+                    timeout=10
+                )
+                if resp.status_code in [200, 201]:
+                    return resp.json()
+                else:
+                    error_msg = f"ZeptoMail API Error ({resp.status_code}): {resp.text}"
+                    if current_app: current_app.logger.error(error_msg)
+                    else: print(error_msg)
+                    return None
+
+            elif provider_type == 'resend':
+                resend.api_key = settings.get('api_key')
+                params = {
+                    "from": f"{sender_name} <{clean_from}>",
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html_content,
+                }
+                email = resend.Emails.send(params)
+                return email
         except Exception as e:
-            error_msg = f"Resend API Error: {str(e)}"
-            if "403" in str(e) or "forbidden" in str(e).lower():
-                error_msg += " (Likely unverified domain or restricted recipient on free tier. Visit resend.com/domains)"
-            
-            if current_app:
-                current_app.logger.error(error_msg)
-            else:
-                print(error_msg)
-            
-            if is_dev:
-                return {"id": "dev_mode_dummy_id"}
+            error_msg = f"Email Provider ({provider_type}) Error: {str(e)}"
+            if current_app: current_app.logger.error(error_msg)
+            else: print(error_msg)
+            if is_dev: return {"id": "dev_mode_dummy_id"}
             return None
 
     @staticmethod

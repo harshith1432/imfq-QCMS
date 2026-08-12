@@ -109,10 +109,10 @@
                             <div class="sidebar-section pb-3" id="gov-group">
                                 <div class="sidebar-section-label" data-i18n="settings.nav.governance">Governance</div>
                                 <nav class="sidebar-nav">
-                                    <button type="button" class="sidebar-link" data-target="audit" onclick="settingsManager.switchTab('audit', this)">
+                                    <a href="/admin/audit-logs.html" class="sidebar-link">
                                         <i class="link-icon" data-lucide="history"></i>
                                         <span data-i18n="settings.nav.audit_logs">Audit Logs</span>
-                                    </button>
+                                    </a>
                                 </nav>
                             </div>
 
@@ -1238,32 +1238,18 @@ console.log(data);
 
                         <!-- Audit Log Section -->
                         <div class="settings-pane" id="pane-audit">
-                            <div class="glass-card ds-card mb-4">
-                                <div class="ds-card-header p-4 border-bottom h-stack justify-content-between">
-                                    <h5 class="mb-0 fw-bold" data-i18n="settings.audit.title">System Audit Logs</h5>
-                                    <button class="ds-btn ds-btn-sm ds-btn-outline" onclick="settingsManager.loadAuditLogs()">
-                                        <i data-lucide="refresh-cw" style="width:14px;" class="me-1"></i> Refresh
-                                    </button>
+                            <div class="glass-card ds-card p-5 text-center my-3">
+                                <div class="p-3 bg-primary-subtle text-primary rounded-circle d-inline-flex mb-3">
+                                    <i data-lucide="shield-check" style="width:32px;height:32px;"></i>
                                 </div>
-                                <div class="ds-card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="table ds-table mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th data-i18n="settings.audit.timestamp">TIMESTAMP</th>
-                                                    <th data-i18n="settings.audit.user">USER</th>
-                                                    <th data-i18n="settings.audit.action">ACTION</th>
-                                                    <th data-i18n="settings.audit.target">TARGET</th>
-                                                    <th data-i18n="settings.audit.details">DETAILS</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="audit-log-table">
-                                                <tr>
-                                                    <td colspan="5" class="text-center py-4 ds-text-secondary">Loading logs...</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                <h5 class="fw-bold text-main mb-2" data-i18n="settings.audit.title">Enterprise Activity Audit Logs</h5>
+                                <p class="text-secondary text-sm mb-4 mx-auto" style="max-width: 520px;">
+                                    Audit logging has been centralized into the primary Enterprise Activity Audit Logs module under Administration for full security tracking, KPI analytics, risk alerts, and export capabilities.
+                                </p>
+                                <div>
+                                    <a href="/admin/audit-logs.html" class="ds-btn ds-btn-primary ds-btn-sm d-inline-flex align-items-center gap-1.5 px-4 py-2">
+                                        <i data-lucide="external-link" style="width:14px;height:14px;"></i> Open Full Audit Logs Module
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -4601,7 +4587,7 @@ console.log(data);
 
             // Specific tab handlers
             if (target === 'billing') this.loadBillingHistory();
-            if (target === 'audit') this.loadAuditLogs();
+            if (target === 'audit') { window.location.href = '/admin/audit-logs.html'; return; }
             if (target === 'compliance') {
                 setTimeout(() => {
                     if (window.ComplianceEnterprise) {
@@ -6028,31 +6014,21 @@ ET`;
             container.innerHTML = '<div class="text-muted text-sm py-4 text-center"><i data-lucide="loader-2" class="me-2 spinner"></i>Loading subscription plans...</div>';
 
             try {
-                const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
-                const res = await fetch('/api/subscriptions/plans', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.ok) {
-                    const body = await res.json();
-                    const plans = body.data || body || [];
-                    if (Array.isArray(plans) && plans.length > 0) {
-                        loadedCheckoutPlans = plans;
-                        renderCheckoutPlanCards(plans);
-                        return;
-                    }
+                const res = await api.get('/subscriptions/plans');
+                const plans = res?.data || (Array.isArray(res) ? res : []);
+                if (Array.isArray(plans) && plans.length > 0) {
+                    loadedCheckoutPlans = plans;
+                    renderCheckoutPlanCards(plans);
+                    return;
                 }
             } catch (e) {
-                console.warn('Could not fetch dynamic plans, falling back to defaults:', e);
+                console.warn('Could not fetch dynamic plans from backend:', e);
             }
 
-            // Fallback default plans if API returns empty
-            loadedCheckoutPlans = [
-                { id: 'starter', name: 'Starter Plan', code: 'STARTER', base_price: 2500, billing_cycle: 'Monthly', max_users: 100, storage_limit_gb: 10, description: 'Standard tools for small teams', enabled_modules: ['Core Platform', 'Document Identity'] },
-                { id: 'professional', name: 'Professional Plan', code: 'PRO', base_price: 7999, billing_cycle: 'Monthly', max_users: 500, storage_limit_gb: 50, description: 'Complete SaaS suite for growing organizations', enabled_modules: ['Analytics', 'Audits', 'Integrations'] },
-                { id: 'enterprise', name: 'Enterprise Plan', code: 'ENT', base_price: 24999, billing_cycle: 'Monthly', max_users: 99999, storage_limit_gb: 500, description: 'Custom scale for enterprise deployments', enabled_modules: ['All Modules Included', 'Custom Workflows', 'Priority SLA'] }
-            ];
-            renderCheckoutPlanCards(loadedCheckoutPlans);
+            loadedCheckoutPlans = [];
+            container.innerHTML = '<div class="text-muted text-sm py-4 text-center">No active subscription plans available.</div>';
+            const countTag = document.getElementById('checkoutPlanCountTag');
+            if (countTag) countTag.textContent = '0 Catalog Plans';
         }
 
         function renderCheckoutPlanCards(plans) {

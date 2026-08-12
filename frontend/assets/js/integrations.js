@@ -264,7 +264,8 @@
                 <div class="row g-3">
                     ${list.map(i => {
                         const scoreColor = i.health_score > 90 ? 'text-success' : (i.health_score > 70 ? 'text-warning' : 'text-danger');
-                        const statusBadgeClass = i.status === 'Connected' ? 'green' : (i.status === 'Disconnected' ? 'gray' : (i.status === 'Disabled' ? 'orange' : 'red'));
+                        const isConnected = i.status === 'Connected';
+                        const statusBadgeClass = isConnected ? 'green' : (i.status === 'Disconnected' ? 'gray' : (i.status === 'Disabled' ? 'orange' : 'red'));
                         const providerIcon = this.getProviderIconName(i.provider_id);
                         
                         return `
@@ -274,7 +275,7 @@
                                      onclick="window.IntegrationsModule.openDetails('${i.provider_id}')">
                                     
                                     <div>
-                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
                                             <div class="d-flex align-items-center gap-2">
                                                 <div class="rounded-3 p-1.5 bg-primary bg-opacity-5 d-flex align-items-center justify-content-center">
                                                     <i data-lucide="${providerIcon}" class="text-primary" style="width:16px; height:16px;"></i>
@@ -284,7 +285,19 @@
                                                     <span class="text-xxs text-secondary">${i.version}</span>
                                                 </div>
                                             </div>
-                                            <span class="ds-badge ${statusBadgeClass}" style="font-size:9.5px; padding:2px 6px;">${i.status}</span>
+                                            <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                                                <span class="ds-badge ${statusBadgeClass}" style="font-size:9.5px; padding:2px 6px;">${i.status}</span>
+                                                <div class="form-check form-switch m-0 p-0 d-flex align-items-center" title="Toggle integration status">
+                                                    <input class="form-check-input ms-0" type="checkbox" role="switch" 
+                                                           style="width:34px; height:18px; cursor:pointer;" 
+                                                           ${isConnected ? 'checked' : ''} 
+                                                           onchange="event.stopPropagation(); window.IntegrationsModule.toggleIntegrationStatus('${i.provider_id}', this.checked)">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            ${this.getProviderUsageTag(i.provider_id)}
                                         </div>
 
                                         <div class="d-flex justify-content-between text-xxs text-secondary border-bottom pb-2 mb-2" style="border-color:var(--ds-border-color)!important;">
@@ -315,6 +328,42 @@
                     }).join('')}
                 </div>
             `;
+        },
+
+        getProviderUsageTag(id) {
+            const tags = {
+                jio_dlt: '<span class="badge rounded-pill text-xxs px-2 py-1" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);"><i data-lucide="smartphone" class="me-1" style="width:11px; height:11px; vertical-align:-1px;"></i> Used for SMS & Phone OTP</span>',
+                zeptomail: '<span class="badge rounded-pill text-xxs px-2 py-1" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2);"><i data-lucide="mail" class="me-1" style="width:11px; height:11px; vertical-align:-1px;"></i> Used for Email OTP Service</span>',
+                resend: '<span class="badge rounded-pill text-xxs px-2 py-1" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);"><i data-lucide="send" class="me-1" style="width:11px; height:11px; vertical-align:-1px;"></i> Used for Transactional Emails</span>',
+                razorpay: '<span class="badge rounded-pill text-xxs px-2 py-1" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.2);"><i data-lucide="credit-card" class="me-1" style="width:11px; height:11px; vertical-align:-1px;"></i> Used for Online Card & UPI Gateway</span>',
+                dynamic_qr: '<span class="badge rounded-pill text-xxs px-2 py-1" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);"><i data-lucide="qr-code" class="me-1" style="width:11px; height:11px; vertical-align:-1px;"></i> Used for Dynamic UPI QR Payment</span>'
+            };
+            return tags[id] || '<span class="badge bg-secondary bg-opacity-10 text-muted rounded-pill text-xxs px-2 py-1"><i data-lucide="cpu" class="me-1" style="width:11px; height:11px; vertical-align:-1px;"></i> Custom Integration</span>';
+        },
+
+        async toggleIntegrationStatus(providerId, isConnected) {
+            const newStatus = isConnected ? 'Connected' : 'Disabled';
+            const item = this.integrations.find(i => i.provider_id === providerId);
+            const providerName = item ? item.provider_name : providerId;
+
+            try {
+                await api.post(`/super-admin/integrations/${providerId}/config`, {
+                    status: newStatus
+                });
+                
+                if (window.QCMS && typeof QCMS.toast === 'function') {
+                    QCMS.toast(`${providerName} status updated to ${newStatus}`, isConnected ? 'success' : 'info');
+                }
+                await this.loadData();
+                this.render();
+            } catch (e) {
+                console.error("Failed to toggle integration status:", e);
+                if (window.QCMS && typeof QCMS.toast === 'function') {
+                    QCMS.toast(`Failed to update ${providerName} status`, 'error');
+                }
+                await this.loadData();
+                this.render();
+            }
         },
 
         getProviderIconName(id) {
@@ -757,15 +806,15 @@
             const form = document.getElementById('integrationConfigForm');
             if (!form) return;
 
-            const isChecked = document.getElementById('cfg_status_toggle').checked;
+            const isChecked = document.getElementById('cfg_status_toggle')?.checked;
             const status = isChecked ? 'Connected' : 'Disconnected';
             
             const settings = {};
-            // Scrapes inputs
-            form.querySelectorAll('input[id^="cfg_"]').forEach(inp => {
+            // Scrapes all input, textarea, and select elements
+            form.querySelectorAll('[id^="cfg_"]').forEach(inp => {
                 if (inp.id === 'cfg_status_toggle') return;
                 const key = inp.id.replace('cfg_', '');
-                settings[key] = inp.value.trim();
+                settings[key] = (inp.value || '').trim();
             });
 
             try {
@@ -774,9 +823,11 @@
                     settings: settings
                 });
                 
-                QCMS.toast(`Configuration saved for ${providerId}`, 'success');
+                if (window.QCMS && typeof QCMS.toast === 'function') {
+                    QCMS.toast(`Configuration saved for ${providerId}`, 'success');
+                }
                 
-                // Hide modal and refresh
+                // Hide modal and refresh data
                 const modalEl = document.getElementById('integrationDetailModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) {
@@ -788,7 +839,11 @@
                 await this.init();
             } catch (e) {
                 console.error("Save config failed", e);
-                QCMS.toast('Failed to save configuration settings', 'error');
+                if (window.QCMS && typeof QCMS.toast === 'function') {
+                    QCMS.toast('Failed to save configuration settings', 'error');
+                } else {
+                    alert('Failed to save configuration settings');
+                }
             }
         },
 
