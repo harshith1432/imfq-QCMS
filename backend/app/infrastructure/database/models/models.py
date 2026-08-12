@@ -1471,7 +1471,7 @@ class SubscriptionInvoice(db.Model):
     # Draft, Sent, Paid, Overdue, Cancelled, Refunded
 
     # Link to payment
-    payment_id = db.Column(db.Integer, db.ForeignKey('subscription_payments.id'), nullable=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('subscription_payments.id', use_alter=True, name='fk_invoice_payment_id'), nullable=True)
 
     # Storage
     pdf_path = db.Column(db.String(500))

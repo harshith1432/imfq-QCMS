@@ -116,9 +116,19 @@ def get_geo_location(ip):
     if ip in _geo_cache:
         return _geo_cache[ip]
 
-    target_ip = "" if is_private_ip(ip) else ip
-    url = f"http://ip-api.com/json/{target_ip}"
-    
+    # Directly identify loopback or localhost
+    if ip in ('127.0.0.1', '::1', 'localhost'):
+        loc_str = "Localhost"
+        _geo_cache[ip] = loc_str
+        return loc_str
+
+    # Directly identify private networks
+    if is_private_ip(ip):
+        loc_str = "Private Network"
+        _geo_cache[ip] = loc_str
+        return loc_str
+
+    url = f"http://ip-api.com/json/{ip}"
     try:
         req = urllib.request.urlopen(url, timeout=1.5)
         data = json.loads(req.read().decode('utf-8'))
@@ -129,13 +139,12 @@ def get_geo_location(ip):
             
             parts = [p for p in [city, region, country] if p]
             loc_str = ", ".join(parts) if parts else "Unknown Location"
-
             _geo_cache[ip] = loc_str
             return loc_str
     except Exception:
         pass
 
-    fallback = "Localhost (India)" if is_private_ip(ip) else f"IP {ip}"
+    fallback = f"IP {ip}"
     _geo_cache[ip] = fallback
     return fallback
 

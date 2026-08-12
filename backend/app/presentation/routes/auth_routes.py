@@ -562,7 +562,6 @@ def login():
     )
     
     # Update last login time
-    from datetime import datetime
     user.last_login = datetime.utcnow()
     
     # Track session in db safely
