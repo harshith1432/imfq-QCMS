@@ -23,7 +23,16 @@
       "rejected": "नकार दिला",
       "failed": "अयशस्वी",
       "done": "झाले",
-      "of": "of"
+      "of": "पैकी"
+    },
+    "languages": {
+      "en": "इंग्रजी (English)",
+      "hi": "हिंदी (Hindi)",
+      "mr": "मराठी (Marathi)",
+      "kn": "कन्नड (Kannada)",
+      "te": "तेलगू (Telugu)",
+      "ta": "तमिळ (Tamil)",
+      "ml": "मळयाळम (Malayalam)"
     }
   },
   "sidebar": {

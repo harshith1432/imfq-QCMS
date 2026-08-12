@@ -1,8 +1,8 @@
 // Login Logic
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const username = (document.getElementById('username')?.value || '').trim();
+    const password = document.getElementById('password')?.value || '';
     const errorMsg = document.getElementById('errorMsg');
 
     try {

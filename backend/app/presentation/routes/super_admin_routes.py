@@ -2927,16 +2927,15 @@ def create_new_admin_login():
         
     sa_role = Role.query.filter_by(name='SuperAdmin').first()
     if not sa_role:
-        sa_role = Role.query.filter_by(name='Admin').first()
-        
-    admin_org = Organization.query.first()
-    org_id = admin_org.id if admin_org else 1
-    
+        sa_role = Role(name='SuperAdmin', description='Platform Super Admin')
+        db.session.add(sa_role)
+        db.session.flush()
+
     new_admin = User(
         username=username,
         email=email,
-        role_id=sa_role.id if sa_role else 1,
-        org_id=org_id,
+        role_id=sa_role.id,
+        org_id=None,
         is_active=True,
         is_verified=True,
         status='Active',

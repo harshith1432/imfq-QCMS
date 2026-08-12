@@ -111,11 +111,16 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.status === 401) {
-                    console.warn('[AuthGuard] Active session was terminated or invalidated — logging out user.');
+                    const data = await res.json().catch(() => ({}));
+                    console.warn('[AuthGuard] 401 received during session check:', data);
                     sessionStorage.clear();
                     localStorage.clear();
                     if (!window.location.pathname.includes('login.html')) {
-                        window.location.href = '/auth/login.html?reason=session_terminated';
+                        if (data && (data.session_terminated || (data.message && (data.message.toLowerCase().includes('terminated') || data.message.toLowerCase().includes('deactivated'))))) {
+                            window.location.href = '/auth/login.html?reason=session_terminated';
+                        } else {
+                            window.location.href = '/auth/login.html';
+                        }
                     }
                 }
             } catch (_) {
@@ -124,9 +129,9 @@
             }
         };
 
-        // Run check initial delay after 2s, repeat every 10s & on tab focus
-        setTimeout(verifySessionStatus, 2000);
-        setInterval(verifySessionStatus, 10000);
+        // Run initial check after 3s, repeat every 30s & on tab focus
+        setTimeout(verifySessionStatus, 3000);
+        setInterval(verifySessionStatus, 30000);
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') verifySessionStatus();
         });

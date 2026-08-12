@@ -69,11 +69,9 @@ const api = {
         // 3. Lock associated button if provided
         const targetBtn = options.button || options.lockElement;
         if (targetBtn && window.ActionLock) {
-            if (window.ActionLock.isLocked(targetBtn)) {
-                console.warn('[API Deduplication] Button is locked. Request suppressed.');
-                return;
+            if (!window.ActionLock.isLocked(targetBtn)) {
+                window.ActionLock.lockButton(targetBtn, options.loadingText);
             }
-            window.ActionLock.lockButton(targetBtn, options.loadingText);
         }
 
         const requestPromise = (async () => {

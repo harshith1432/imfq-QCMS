@@ -308,7 +308,7 @@ def generate_live_preview():
     if preview_type == 'platform':
         logo_img = f'<img src="{ctx["logo_url"]}" style="max-height:48px; max-width:180px; object-fit:contain;" />' if ctx.get("logo_url") else '<div style="background:#2563eb; color:#fff; padding:8px 12px; border-radius:6px; font-weight:bold;">QCMS</div>'
         html = f"""
-        <div style="font-family: Inter, system-ui, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff;">
+        <div style="font-family: Inter, system-ui, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff; color: #0f172a;">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 20px;">
                 <div style="display:flex; align-items:center; gap:12px;">
                     {logo_img}
@@ -351,17 +351,17 @@ def generate_live_preview():
 
     elif preview_type == 'company':
         html = f"""
-        <div style="font-family: Arial, sans-serif; padding: 28px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff;">
+        <div style="font-family: Arial, sans-serif; padding: 28px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff; color: #0f172a;">
             <div style="border-bottom: 2px dashed #94a3b8; padding-bottom: 16px; margin-bottom: 20px; text-align:center;">
                 <h2 style="margin:0; color:#0f172a; font-size:22px;">{ctx['legal_company_name']}</h2>
-                <p style="margin:4px 0 0 0; font-size:13px; color:#64748b;">Trading Name: <strong>{ctx['trading_name']}</strong></p>
+                <p style="margin:4px 0 0 0; font-size:13px; color:#64748b;">Trading Name: <strong style="color:#0f172a;">{ctx['trading_name']}</strong></p>
             </div>
 
-            <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px;">
+            <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; color:#0f172a;">
                 <tbody>
-                    <tr><td style="padding:8px; font-weight:bold; color:#475569; width:30%; border-bottom:1px solid #e2e8f0;">GSTIN / Tax ID:</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold;">{ctx['gstin']}</td></tr>
-                    <tr><td style="padding:8px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;">PAN Number:</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold;">{ctx['pan']}</td></tr>
-                    <tr><td style="padding:8px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;">Corporate Identification (CIN):</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold;">{ctx['cin']}</td></tr>
+                    <tr><td style="padding:8px; font-weight:bold; color:#475569; width:30%; border-bottom:1px solid #e2e8f0;">GSTIN / Tax ID:</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold; color:#0f172a;">{ctx['gstin']}</td></tr>
+                    <tr><td style="padding:8px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;">PAN Number:</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold; color:#0f172a;">{ctx['pan']}</td></tr>
+                    <tr><td style="padding:8px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;">Corporate Identification (CIN):</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold; color:#0f172a;">{ctx['cin']}</td></tr>
                 </tbody>
             </table>
 
@@ -380,7 +380,7 @@ def generate_live_preview():
 
     elif preview_type == 'address':
         html = f"""
-        <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff;">
+        <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff; color: #0f172a;">
             <h3 style="margin:0 0 16px 0; color:#1e293b; border-bottom:2px solid #3b82f6; padding-bottom:8px;">Office Addresses & Location Directory</h3>
             
             <div style="margin-bottom:20px; padding:16px; background:#eff6ff; border-left:4px solid #2563eb; border-radius:4px;">
@@ -397,35 +397,35 @@ def generate_live_preview():
 
     elif preview_type == 'contacts':
         html = f"""
-        <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff;">
+        <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff; color: #0f172a;">
             <h3 style="margin:0 0 16px 0; color:#1e293b; border-bottom:2px solid #10b981; padding-bottom:8px;">Official Contact Directory</h3>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; font-size:13px;">
-                <div style="padding:12px; background:#f8fafc; border-radius:6px;"><strong>General Email:</strong> <span style="color:#2563eb;">{ctx['general_email']}</span></div>
-                <div style="padding:12px; background:#f8fafc; border-radius:6px;"><strong>Support Email:</strong> <span style="color:#2563eb;">{ctx['support_email']}</span></div>
-                <div style="padding:12px; background:#f8fafc; border-radius:6px;"><strong>Billing Email:</strong> <span style="color:#2563eb;">{ctx['billing_email']}</span></div>
-                <div style="padding:12px; background:#f8fafc; border-radius:6px;"><strong>Sales Email:</strong> <span style="color:#2563eb;">{ctx['sales_email']}</span></div>
-                <div style="padding:12px; background:#f8fafc; border-radius:6px;"><strong>General Hotline:</strong> {ctx['general_phone']}</div>
-                <div style="padding:12px; background:#f8fafc; border-radius:6px;"><strong>Support Hotline:</strong> {ctx['support_phone']}</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; font-size:13px; color:#0f172a;">
+                <div style="padding:12px; background:#f8fafc; border-radius:6px; color:#0f172a;"><strong style="color:#334155;">General Email:</strong> <span style="color:#2563eb;">{ctx['general_email']}</span></div>
+                <div style="padding:12px; background:#f8fafc; border-radius:6px; color:#0f172a;"><strong style="color:#334155;">Support Email:</strong> <span style="color:#2563eb;">{ctx['support_email']}</span></div>
+                <div style="padding:12px; background:#f8fafc; border-radius:6px; color:#0f172a;"><strong style="color:#334155;">Billing Email:</strong> <span style="color:#2563eb;">{ctx['billing_email']}</span></div>
+                <div style="padding:12px; background:#f8fafc; border-radius:6px; color:#0f172a;"><strong style="color:#334155;">Sales Email:</strong> <span style="color:#2563eb;">{ctx['sales_email']}</span></div>
+                <div style="padding:12px; background:#f8fafc; border-radius:6px; color:#0f172a;"><strong style="color:#334155;">General Hotline:</strong> <span style="color:#0f172a;">{ctx['general_phone']}</span></div>
+                <div style="padding:12px; background:#f8fafc; border-radius:6px; color:#0f172a;"><strong style="color:#334155;">Support Hotline:</strong> <span style="color:#0f172a;">{ctx['support_phone']}</span></div>
             </div>
         </div>
         """
 
     elif preview_type == 'usage_map':
         html = f"""
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff;">
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff; color: #0f172a;">
             <h3 style="margin:0 0 12px 0; color:#0f172a;">Setting Dependency Usage Mapping Matrix</h3>
             <p style="margin:0 0 16px 0; font-size:13px; color:#64748b;">Centralized identity settings trace automatically across all code files, generators, and exports.</p>
-            <div style="padding:12px; background:#f8fafc; border-radius:8px; font-size:12px;">
-                <p style="margin:0 0 6px 0;"><strong>Active Export Targets:</strong> PDF Reports, Excel Worksheets, CSV Files, HTML Emails</p>
-                <p style="margin:0 0 6px 0;"><strong>Backend Services:</strong> DocumentBrandingService, ReportGenerator, PDFTemplateEngine</p>
-                <p style="margin:0;"><strong>Registered Dependencies:</strong> 12 Active System Setting Key Mappings</p>
+            <div style="padding:12px; background:#f8fafc; border-radius:8px; font-size:12px; color:#0f172a;">
+                <p style="margin:0 0 6px 0; color:#0f172a;"><strong style="color:#1e293b;">Active Export Targets:</strong> PDF Reports, Excel Worksheets, CSV Files, HTML Emails</p>
+                <p style="margin:0 0 6px 0; color:#0f172a;"><strong style="color:#1e293b;">Backend Services:</strong> DocumentBrandingService, ReportGenerator, PDFTemplateEngine</p>
+                <p style="margin:0; color:#0f172a;"><strong style="color:#1e293b;">Registered Dependencies:</strong> 12 Active System Setting Key Mappings</p>
             </div>
         </div>
         """
 
     elif preview_type == 'invoice':
         html = f"""
-        <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;">
+        <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
             <div style="display:flex; justify-content:space-between; border-bottom: 2px solid #2563eb; padding-bottom: 16px;">
                 <div>
                     <h2 style="margin:0; color:#1e293b;">{ctx['software_display_name']}</h2>
@@ -434,37 +434,37 @@ def generate_live_preview():
                 </div>
                 <div style="text-align:right;">
                     <h3 style="margin:0; color:#2563eb;">{tmpl['header_title']}</h3>
-                    <p style="margin:4px 0; font-size:13px; font-weight:bold;">INVOICE #INV-2026-9901</p>
+                    <p style="margin:4px 0; font-size:13px; font-weight:bold; color:#0f172a;">INVOICE #INV-2026-9901</p>
                     <p style="margin:0; font-size:12px; color:#64748b;">Date: {meta['generated_at']}</p>
                 </div>
             </div>
             <div style="margin: 20px 0; padding: 12px; background: #f8fafc; border-radius: 6px;">
                 <p style="margin:0 0 4px 0; font-size:12px; font-weight:bold; color:#475569;">BILLED TO:</p>
-                <p style="margin:0; font-size:14px; font-weight:bold;">{ctx['organization_name']}</p>
+                <p style="margin:0; font-size:14px; font-weight:bold; color:#0f172a;">{ctx['organization_name']}</p>
                 <p style="margin:4px 0 0 0; font-size:13px; color:#64748b;">Enterprise Subscription Plan — Monthly Billing</p>
             </div>
-            <table style="width:100%; border-collapse:collapse; margin-bottom: 20px; font-size:13px;">
+            <table style="width:100%; border-collapse:collapse; margin-bottom: 20px; font-size:13px; color:#0f172a;">
                 <thead>
-                    <tr style="background:#f1f5f9; text-align:left;">
-                        <th style="padding:8px;">Item Description</th>
-                        <th style="padding:8px;">Qty</th>
-                        <th style="padding:8px;">Rate</th>
-                        <th style="padding:8px; text-align:right;">Amount</th>
+                    <tr style="background:#f1f5f9; text-align:left; color:#0f172a;">
+                        <th style="padding:8px; color:#0f172a;">Item Description</th>
+                        <th style="padding:8px; color:#0f172a;">Qty</th>
+                        <th style="padding:8px; color:#0f172a;">Rate</th>
+                        <th style="padding:8px; text-align:right; color:#0f172a;">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td style="padding:8px; border-bottom:1px solid #e2e8f0;">{ctx['software_name']} License Tier (Unlimited Users)</td>
-                        <td style="padding:8px; border-bottom:1px solid #e2e8f0;">1</td>
-                        <td style="padding:8px; border-bottom:1px solid #e2e8f0;">₹49,999.00</td>
-                        <td style="padding:8px; border-bottom:1px solid #e2e8f0; text-align:right;">₹49,999.00</td>
+                    <tr style="color:#0f172a;">
+                        <td style="padding:8px; border-bottom:1px solid #e2e8f0; color:#0f172a;">{ctx['software_name']} License Tier (Unlimited Users)</td>
+                        <td style="padding:8px; border-bottom:1px solid #e2e8f0; color:#0f172a;">1</td>
+                        <td style="padding:8px; border-bottom:1px solid #e2e8f0; color:#0f172a;">₹49,999.00</td>
+                        <td style="padding:8px; border-bottom:1px solid #e2e8f0; text-align:right; color:#0f172a;">₹49,999.00</td>
                     </tr>
-                    <tr>
-                        <td colspan="3" style="padding:8px; text-align:right; font-weight:bold;">GST (18%):</td>
-                        <td style="padding:8px; text-align:right; font-weight:bold;">₹8,999.82</td>
+                    <tr style="color:#0f172a;">
+                        <td colspan="3" style="padding:8px; text-align:right; font-weight:bold; color:#0f172a;">GST (18%):</td>
+                        <td style="padding:8px; text-align:right; font-weight:bold; color:#0f172a;">₹8,999.82</td>
                     </tr>
-                    <tr style="background:#eff6ff;">
-                        <td colspan="3" style="padding:8px; text-align:right; font-weight:bold; font-size:15px;">TOTAL AMOUNT:</td>
+                    <tr style="background:#eff6ff; color:#0f172a;">
+                        <td colspan="3" style="padding:8px; text-align:right; font-weight:bold; font-size:15px; color:#0f172a;">TOTAL AMOUNT:</td>
                         <td style="padding:8px; text-align:right; font-weight:bold; font-size:15px; color:#2563eb;">₹58,998.82</td>
                     </tr>
                 </tbody>
@@ -472,8 +472,8 @@ def generate_live_preview():
             <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; padding-top:16px; font-size:12px; color:#64748b;">
                 <div>
                     <p style="margin:0; font-weight:bold; color:#334155;">Terms & Conditions:</p>
-                    <p style="margin:2px 0 0 0;">{tmpl['terms_and_conditions']}</p>
-                    <p style="margin:6px 0 0 0; font-size:11px;">{tmpl['footer_text']}</p>
+                    <p style="margin:2px 0 0 0; color:#475569;">{tmpl['terms_and_conditions']}</p>
+                    <p style="margin:6px 0 0 0; font-size:11px; color:#64748b;">{tmpl['footer_text']}</p>
                 </div>
                 <div style="text-align:center;">
                     <img src="{meta['qr_image_url']}" style="width:70px; height:70px; display:block; margin:0 auto;" />
@@ -485,7 +485,7 @@ def generate_live_preview():
 
     elif preview_type == 'qc_story':
         html = f"""
-        <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;">
+        <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
             <div style="border-bottom: 2px solid #10b981; padding-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <h3 style="margin:0; color:#065f46;">{tmpl['header_title']}</h3>
@@ -493,11 +493,11 @@ def generate_live_preview():
                 </div>
                 <span style="background:#ecfdf5; color:#047857; padding:4px 10px; border-radius:4px; font-size:12px; font-weight:bold;">ISO 9001 VERIFIED</span>
             </div>
-            <div style="margin:16px 0; padding:12px; background:#fafafa; border-left:4px solid #10b981;">
-                <p style="margin:0; font-size:13px;"><strong>Project Name:</strong> Quality Improvement & Scrap Reduction Cycle</p>
+            <div style="margin:16px 0; padding:12px; background:#fafafa; border-left:4px solid #10b981; color:#0f172a;">
+                <p style="margin:0; font-size:13px; color:#0f172a;"><strong style="color:#047857;">Project Name:</strong> Quality Improvement & Scrap Reduction Cycle</p>
                 <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Generated By: {meta['generated_by']} | Engine: {meta['software']} ({meta['version']})</p>
             </div>
-            <div style="border:1px dashed #e2e8f0; padding:16px; text-align:center; color:#94a3b8; font-style:italic; margin-bottom:16px;">
+            <div style="border:1px dashed #e2e8f0; padding:16px; text-align:center; color:#64748b; font-style:italic; margin-bottom:16px;">
                 [{tmpl['watermark_text']} — QC Story Problem-Solving Methodology Steps 1-7 Content]
             </div>
             <div style="border-top:1px solid #e2e8f0; padding-top:12px; font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
@@ -509,7 +509,7 @@ def generate_live_preview():
 
     elif preview_type == 'certificate':
         html = f"""
-        <div style="font-family: 'Georgia', serif; padding: 32px; border: 4px double #d97706; border-radius: 12px; background: #fffbf0; text-align: center;">
+        <div style="font-family: 'Georgia', serif; padding: 32px; border: 4px double #d97706; border-radius: 12px; background: #fffbf0; color: #78350f; text-align: center;">
             <p style="margin:0; font-size:13px; font-weight:bold; letter-spacing:2px; color:#b45309;">{ctx['legal_company_name']}</p>
             <h2 style="margin:12px 0 4px 0; color:#78350f; font-size:24px;">{tmpl['header_title']}</h2>
             <p style="margin:0; font-size:13px; color:#92400e; font-style:italic;">{tmpl['subtitle']}</p>
@@ -535,11 +535,11 @@ def generate_live_preview():
 
     else:
         html = f"""
-        <div style="font-family: Arial, sans-serif; padding: 20px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;">
-            <h3>{tmpl.get('header_title', 'Live Preview')}</h3>
-            <p>{tmpl.get('subtitle', '')}</p>
-            <hr>
-            <p style="font-size:13px; color:#475569;">Live preview generated dynamically by DocumentBrandingService engine for <strong>{ctx['software_name']}</strong>.</p>
+        <div style="font-family: Arial, sans-serif; padding: 20px; border:1px solid #e2e8f0; border-radius:6px; background:#ffffff; color:#0f172a;">
+            <h3 style="margin:0 0 8px 0; color:#0f172a;">{tmpl.get('header_title', 'Live Preview')}</h3>
+            <p style="color:#475569;">{tmpl.get('subtitle', '')}</p>
+            <hr style="border-color:#e2e8f0;">
+            <p style="font-size:13px; color:#475569;">Live preview generated dynamically by DocumentBrandingService engine for <strong style="color:#0f172a;">{ctx['software_name']}</strong>.</p>
         </div>
         """
 

@@ -438,3 +438,72 @@ body {
 .filter-panel select.ds-input, .plan-filter-container select.ds-input, .sub-filter-bar select.ds-input, .mod-filter-bar select.ds-input {
     padding-right: 28px !important;
 }
+
+/* ============================================================
+   UNIVERSAL SELECT DROPDOWN ARROW FIX (PREVENT REPEATED ICON)
+   ============================================================ */
+select,
+.ds-select,
+select.ds-input,
+select.ds-select,
+.form-select,
+select.form-select,
+select.form-control {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 16px !important;
+    padding-right: 2.25rem !important;
+}
+
+select,
+.ds-select,
+select.ds-input,
+select.ds-select,
+.form-select,
+select.form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+}
+
+[data-theme="dark"] select,
+[data-theme="dark"] .ds-select,
+[data-theme="dark"] select.ds-input,
+[data-theme="dark"] select.ds-select,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] select.form-select,
+[data-theme="dark"] select.form-control {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 16px !important;
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-theme="dark"] select:focus,
+[data-theme="dark"] .ds-select:focus,
+[data-theme="dark"] select.ds-input:focus,
+[data-theme="dark"] select.ds-select:focus,
+[data-theme="dark"] .form-select:focus {
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 16px !important;
+    background-color: #0f172a !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
+}
+
+[data-theme="dark"] select option,
+[data-theme="dark"] .ds-select option,
+[data-theme="dark"] select.ds-input option,
+[data-theme="dark"] .form-select option {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    padding: 8px 12px !important;
+}

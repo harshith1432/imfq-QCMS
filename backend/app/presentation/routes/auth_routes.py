@@ -568,8 +568,8 @@ def get_login_config():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
-    identifier = data.get('username') or data.get('email') or data.get('identifier')
+    data = request.get_json() or {}
+    identifier = (data.get('username') or data.get('email') or data.get('identifier') or '').strip()
     password = data.get('password', '')
     
     if not identifier:
@@ -787,16 +787,20 @@ def login():
 def get_profile():
     user_id = int(get_jwt_identity())
     user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-        
+    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+
+    if not is_super_admin and (not user.is_active or user.status == 'Inactive'):
+        return jsonify({
+            "status": "error",
+            "message": "Your account has been deactivated by an administrator.",
+            "session_terminated": True
+        }), 401
+
     try:
         from app.domain.services.document_branding_service import DocumentBrandingService
         branding_ctx = DocumentBrandingService.get_branding_context(user.org_id if user.role.name != 'SuperAdmin' else None)
     except Exception as e:
         branding_ctx = {}
-
-    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
 
     return jsonify({
         "id": user.id,

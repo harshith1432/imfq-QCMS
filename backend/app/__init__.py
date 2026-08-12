@@ -47,19 +47,29 @@ def create_app():
             session_id = jwt_payload.get("session_id")
             user_id = jwt_payload.get("sub")
             
-            from app.infrastructure.database.models.models import SaaSUserSession
-            
+            from app.infrastructure.database.models.models import SaaSUserSession, User
+
+            # Check if user account itself has been deactivated or deleted
+            if user_id:
+                try:
+                    uid = int(user_id)
+                    user = User.query.get(uid)
+                    if not user or user.is_deleted or not user.is_active or user.status == 'Inactive':
+                        return True # Account deactivated/deleted by admin
+                except Exception:
+                    pass
+
             if session_id:
                 sess = SaaSUserSession.query.filter_by(session_id=session_id).first()
-                if sess and sess.status in ('Terminated', 'Revoked', 'LoggedOut'):
-                    return True # Token is revoked!
+                if sess and sess.status in ('Terminated', 'Revoked'):
+                    return True # Token was explicitly terminated/revoked by admin!
             elif user_id:
                 try:
                     uid = int(user_id)
                     term_sess = SaaSUserSession.query.filter_by(user_id=uid, status='Terminated').order_by(SaaSUserSession.login_time.desc()).first()
                     if term_sess:
                         active_sess = SaaSUserSession.query.filter_by(user_id=uid, status='Active').order_by(SaaSUserSession.login_time.desc()).first()
-                        if not active_sess or (active_sess.login_time <= term_sess.login_time):
+                        if not active_sess or (active_sess.login_time < term_sess.login_time):
                             return True
                 except (ValueError, TypeError):
                     pass
@@ -685,8 +695,8 @@ def create_app():
             print("[QCMS] Seeded Enterprise Feature Hierarchy (Parents & Children) successfully.")
             
             # Seed Default Super Admin
-            sa_username = os.getenv('SUPER_ADMIN_USERNAME', 'harshithkd6@gmail.com')
-            sa_password = os.getenv('SUPER_ADMIN_PASSWORD', '123456')
+            sa_username = (os.getenv('SUPER_ADMIN_USERNAME') or getattr(Config, 'SUPER_ADMIN_USERNAME', '') or 'harshithkd6@gmail.com').strip().lower()
+            sa_password = os.getenv('SUPER_ADMIN_PASSWORD') or getattr(Config, 'SUPER_ADMIN_PASSWORD', '') or '123456'
             if sa_username and sa_password:
                 sa_role = Role.query.filter_by(name='SuperAdmin').first()
                 if sa_role:

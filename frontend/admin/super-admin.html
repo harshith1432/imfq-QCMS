@@ -2013,17 +2013,17 @@
                                                 <span class="badge bg-primary-subtle text-primary text-xxs" id="adminAccountsCountBadge">1 Account</span>
                                             </div>
 
-                                            <div class="v-stack gap-3 text-xs text-secondary mb-4">
-                                                <div class="d-flex align-items-start gap-2 p-2.5 rounded bg-primary-subtle bg-opacity-10 border border-primary border-opacity-10">
-                                                    <i data-lucide="info" class="text-primary mt-0.5 flex-shrink-0" style="width:15px;height:15px;"></i>
+                                            <div class="v-stack gap-3 text-xs mb-4">
+                                                <div class="d-flex align-items-start gap-2 p-3 rounded-3" style="background: rgba(37, 99, 235, 0.12); border: 1px solid rgba(37, 99, 235, 0.25);">
+                                                    <i data-lucide="info" class="mt-0.5 flex-shrink-0" style="width:15px;height:15px; color:#60a5fa!important;"></i>
                                                     <div>
-                                                        <strong class="text-main">Multi-Admin Accounts:</strong> You can add multiple Super Admin logins with granular sub-roles (Owner, Billing, Support, Platform Operations).
+                                                        <strong style="color:#ffffff!important;">Multi-Admin Accounts:</strong> <span style="color:rgba(255,255,255,0.8)!important;">You can add multiple Super Admin logins with granular sub-roles (Owner, Billing, Support, Platform Operations).</span>
                                                     </div>
                                                 </div>
-                                                <div class="d-flex align-items-start gap-2 p-2.5 rounded bg-secondary-subtle bg-opacity-10 border border-secondary border-opacity-10">
-                                                    <i data-lucide="lock" class="text-secondary mt-0.5 flex-shrink-0" style="width:15px;height:15px;"></i>
+                                                <div class="d-flex align-items-start gap-2 p-3 rounded-3" style="background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.2);">
+                                                    <i data-lucide="lock" class="mt-0.5 flex-shrink-0" style="width:15px;height:15px; color:#94a3b8!important;"></i>
                                                     <div>
-                                                        <strong class="text-main">Credential Security:</strong> Password hashes are encrypted using Bcrypt. Verification of your current password is mandatory when modifying email or credentials.
+                                                        <strong style="color:#ffffff!important;">Credential Security:</strong> <span style="color:rgba(255,255,255,0.8)!important;">Password hashes are encrypted using Bcrypt. Verification of your current password is mandatory when modifying email or credentials.</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -4222,7 +4222,7 @@
                                             <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Very bottom footer of all exported PDF reports, invoices, & certificates. <b>What to type:</b> Legal copyright/confidentiality disclaimer.</div>
                                         </div>
                                         <div class="col-12 mt-3">
-                                            <div class="p-3 rounded-3 border" style="background: var(--ds-surface-secondary, #f8fafc); border-color: var(--ds-border-color)!important;">
+                                            <div class="p-3 rounded-3 border" style="background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1)!important;">
                                                 <div class="d-flex align-items-center justify-content-between mb-3">
                                                     <div>
                                                         <div class="fw-bold text-sm text-main"><i data-lucide="image" class="me-1 text-primary" style="width:16px;height:16px;"></i> Platform Logo & Branding Image</div>
@@ -6359,6 +6359,171 @@
 @keyframes sbm-slide-in {
     from { opacity: 0; transform: translateY(-20px) scale(0.97); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Document Identity & Branding Dark Mode Contrast Fixes */
+#doc-identity-tabs-sa {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px);
+}
+
+#doc-identity-tabs-sa .nav-link {
+    color: rgba(255, 255, 255, 0.75) !important;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+#doc-identity-tabs-sa .nav-link:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+#doc-identity-tabs-sa .nav-link.active {
+    color: #ffffff !important;
+    background: var(--ds-primary, #2563eb) !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+#doc-identityView .text-secondary,
+#doc-identityView .text-muted,
+#doc-identityView .text-xxs {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+#doc-identityView .text-secondary b,
+#doc-identityView .text-muted b,
+#doc-identityView .text-secondary strong,
+#doc-identityView .text-muted strong {
+    color: #ffffff !important;
+}
+
+#doc-identityView .bg-light-subtle {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+#doc-identityView .bg-light {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--ds-primary, #60a5fa) !important;
+}
+
+#sa-di-logo-status-badge {
+    background: rgba(37, 99, 235, 0.2) !important;
+    color: #60a5fa !important;
+    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+}
+
+#sa-doc-preview-modal .modal-content {
+    background: #0f172a !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+}
+
+#sa-doc-preview-modal .modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+#sa-preview-modal-tabs button.ds-btn-outline {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+#sa-preview-modal-tabs button.ds-btn-outline:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
+#sa-preview-modal-tabs button.ds-btn-primary {
+    background: var(--ds-primary, #2563eb) !important;
+    color: #ffffff !important;
+    border-color: var(--ds-primary, #2563eb) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4) !important;
+}
+
+#sa-doc-preview-body {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-radius: 0 0 16px 16px;
+}
+
+#sa-doc-preview-body > div {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Settings Matrix Navigation Sidebar Contrast Fixes */
+.ps-nav-item {
+    color: rgba(255, 255, 255, 0.75) !important;
+    transition: all 0.2s ease;
+}
+
+.ps-nav-item:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #ffffff !important;
+}
+
+.ps-nav-item.active {
+    background: var(--ds-primary, #2563eb) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45) !important;
+}
+
+.ps-nav-item.active .ps-nav-title,
+.ps-nav-item.active .ps-nav-desc,
+.ps-nav-item.active .ps-nav-icon {
+    color: #ffffff !important;
+}
+
+.ps-nav-item.active .ps-nav-icon {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.ps-nav-title {
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+.ps-nav-desc {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.ps-nav-icon {
+    color: var(--ds-primary, #60a5fa) !important;
+    background: rgba(37, 99, 235, 0.1) !important;
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Primary Action Button High-Contrast Overrides */
+#settingsView .ds-btn-primary,
+.ps-content-card .ds-btn-primary,
+.view-section .ds-btn-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+    font-weight: 600 !important;
+}
+
+#settingsView .ds-btn-primary *,
+.ps-content-card .ds-btn-primary *,
+.view-section .ds-btn-primary * {
+    color: #ffffff !important;
+}
+
+#settingsView .ds-btn-primary:hover,
+.ps-content-card .ds-btn-primary:hover,
+.view-section .ds-btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55) !important;
+    transform: translateY(-1px);
 }
 </style>
 </body>

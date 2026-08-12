@@ -14,7 +14,7 @@ class LanguageManager {
         this.enTranslations = null; // English dictionary cache
         this.translationMap = {};  // Flat map: English string -> Target string
         this.isLoaded = false;
-        this.supportedLanguages = ['en', 'hi', 'kn', 'te', 'ta', 'ml'];
+        this.supportedLanguages = ['en', 'hi', 'mr', 'kn', 'te', 'ta', 'ml'];
         // Resolve the base path to translations from any page depth
         this._basePath = this._resolveBasePath();
         // Determine the initial language (user-specific > global > default)
@@ -25,6 +25,7 @@ class LanguageManager {
         this.locales = {
             'en': 'en-IN',
             'hi': 'hi-IN',
+            'mr': 'mr-IN',
             'kn': 'kn-IN',
             'te': 'te-IN',
             'ta': 'ta-IN',
