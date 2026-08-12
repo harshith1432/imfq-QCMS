@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import db, User, Organization, SupportTicket, SubscriptionPayment, SuperAdminLog, Subscription
+from sqlalchemy import func
 from sqlalchemy import func, text
 
 super_admin_v1_bp = Blueprint('super_admin_v1', __name__)
@@ -634,9 +635,13 @@ def create_org_v1():
     if not comp_data.get('name') or not admin_data.get('email'):
         return jsonify({"error": "Validation Error", "fields": {"name": "Required", "email": "Required"}}), 422
 
-    existing_name = Organization.query.filter_by(name=comp_data['name']).first()
+    comp_name = comp_data['name'].strip()
+    existing_name = Organization.query.filter(
+        func.lower(Organization.name) == comp_name.lower(),
+        Organization.is_deleted == False
+    ).first()
     if existing_name:
-        return jsonify({"error": "Validation Error", "fields": {"name": "An organization with this name already exists"}}), 422
+        return jsonify({"error": "Validation Error", "message": "An organization with this company name already exists", "fields": {"name": "An organization with this company name already exists"}}), 422
 
     existing_email = User.query.filter_by(email=admin_data['email']).first()
     if existing_email:
@@ -711,7 +716,16 @@ def update_org_v1(org_id):
     old_val = {"name": org.name, "industry": org.industry, "gst_number": org.gst_number}
     
     if comp_data.get('name'):
-        org.name = comp_data['name']
+        new_name = comp_data['name'].strip()
+        if new_name.lower() != (org.name or '').lower():
+            dup_org = Organization.query.filter(
+                func.lower(Organization.name) == new_name.lower(),
+                Organization.id != org_id,
+                Organization.is_deleted == False
+            ).first()
+            if dup_org:
+                return jsonify({"error": "Validation Error", "message": "An organization with this company name already exists"}), 422
+        org.name = new_name
     if 'industry' in comp_data:
         org.industry = comp_data['industry']
     if 'gst_number' in comp_data:

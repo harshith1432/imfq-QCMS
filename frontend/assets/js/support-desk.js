@@ -67,6 +67,7 @@ const SupportDesk = {
                     <div class="ds-tab-group scroll-x">
                         <button class="ds-tab active" id="sd-tab-dashboard" onclick="SupportDesk.switchTab('dashboard')"><i data-lucide="gauge" class="me-1" style="width:14px;"></i> Dashboard</button>
                         <button class="ds-tab" id="sd-tab-tickets" onclick="SupportDesk.switchTab('tickets')"><i data-lucide="list" class="me-1" style="width:14px;"></i> Tickets List</button>
+                        <button class="ds-tab" id="sd-tab-enquiry" onclick="SupportDesk.switchTab('enquiry')"><i data-lucide="phone-call" class="me-1" style="width:14px;"></i> Sales Enquiries</button>
                         <button class="ds-tab" id="sd-tab-create" onclick="SupportDesk.switchTab('create')"><i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Create Ticket</button>
                         <button class="ds-tab" id="sd-tab-kb" onclick="SupportDesk.switchTab('kb')"><i data-lucide="book-open" class="me-1" style="width:14px;"></i> Knowledge Base</button>
                     </div>
@@ -280,6 +281,89 @@ const SupportDesk = {
                         </div>
                     </div>
                 </div>
+            <!-- Sales Enquiry Detail Modal -->
+            <div class="modal fade" id="sdEnquiryDetailModal" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content glass-card p-3" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #e2e8f0); color: var(--ds-text-main, #0f172a); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);">
+                        <div class="modal-header border-0 pb-2">
+                            <div>
+                                <span class="ds-badge blue mb-1" id="enqModalSource">Talk to Sales</span>
+                                <h5 class="modal-title fw-bold text-main" id="enqModalCompany" style="color: var(--ds-text-main, #0f172a);">Company Name</h5>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="enqModalId">
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded" style="background: var(--ds-bg-subtle, #f8fafc); border: 1px solid var(--ds-border-color, #e2e8f0);">
+                                        <div class="text-xxs text-secondary uppercase fw-bold mb-1">Prospect Contact Details</div>
+                                        <div class="fw-bold text-main fs-6" id="enqModalName" style="color: var(--ds-text-main, #0f172a);">-</div>
+                                        <div class="text-xs text-primary mt-1 d-flex align-items-center gap-1.5">
+                                            <i data-lucide="mail" style="width:13px;height:13px;"></i>
+                                            <span id="enqModalEmail">-</span>
+                                        </div>
+                                        <div class="text-xs text-secondary mt-1 d-flex align-items-center gap-1.5">
+                                            <i data-lucide="phone" style="width:13px;height:13px;"></i>
+                                            <span id="enqModalPhone">-</span>
+                                        </div>
+                                        <div class="mt-3 pt-2.5 border-top d-flex gap-2 flex-wrap" style="border-color: var(--ds-border-color, #e2e8f0)!important;">
+                                            <a href="#" id="enqModalEmailBtn" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#2563eb; border-color:rgba(37,99,235,0.4);">
+                                                <i data-lucide="mail" style="width:12px;height:12px;"></i> Contact Email
+                                            </a>
+                                            <a href="#" id="enqModalPhoneBtn" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#059669; border-color:rgba(16,185,129,0.4);">
+                                                <i data-lucide="phone-call" style="width:12px;height:12px;"></i> Call Phone
+                                            </a>
+                                            <a href="#" id="enqModalWhatsappBtn" target="_blank" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#16a34a; border-color:rgba(34,197,94,0.4);">
+                                                <i data-lucide="message-square" style="width:12px;height:12px;"></i> WhatsApp
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded" style="background: var(--ds-bg-subtle, #f8fafc); border: 1px solid var(--ds-border-color, #e2e8f0);">
+                                        <div class="text-xxs text-secondary uppercase fw-bold mb-1">Status & Submission Date</div>
+                                        <div class="mb-2" id="enqModalStatusBadge"><span class="ds-badge blue">New</span></div>
+                                        <div class="text-xs text-secondary" id="enqModalDate">Submitted: -</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label text-xs fw-bold text-secondary uppercase">Submitted Message / Requirements</label>
+                                <div class="p-3 rounded text-sm text-main" id="enqModalMessage" style="background: var(--ds-bg-subtle, #f8fafc); border: 1px solid var(--ds-border-color, #e2e8f0); color: var(--ds-text-main, #0f172a); white-space:pre-wrap; min-height:80px;">-</div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-xs fw-bold text-secondary uppercase">Update Pipeline Status</label>
+                                    <select class="ds-input text-xs" id="enqModalStatusSelect">
+                                        <option value="New">New</option>
+                                        <option value="Contacted">Contacted</option>
+                                        <option value="In Progress">In Progress</option>
+                                        <option value="Converted">Converted</option>
+                                        <option value="Closed">Closed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end gap-2">
+                                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm w-100 py-2" onclick="SupportDesk.saveEnquiryStatus()">Update Status</button>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-xs fw-bold text-secondary uppercase">Internal Sales / Admin Notes</label>
+                                <textarea class="ds-input text-xs" id="enqModalNotes" rows="3" placeholder="Add internal notes about call discussions, follow-up dates, plan interest..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 justify-content-between">
+                            <button type="button" class="ds-btn ds-btn-outline-danger ds-btn-sm" onclick="SupportDesk.deleteCurrentEnquiry()">Delete Enquiry</button>
+                            <div class="h-stack gap-2">
+                                <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="SupportDesk.saveEnquiryNotes()">Save Notes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
         if (window.lucide) lucide.createIcons();
@@ -299,6 +383,8 @@ const SupportDesk = {
             this.renderWizard();
         } else if (tabId === 'kb') {
             await this.renderKB();
+        } else if (tabId === 'enquiry') {
+            await this.renderEnquiryTab();
         }
     },
 
@@ -527,14 +613,41 @@ const SupportDesk = {
         const data = this.wizards.data;
 
         if (this.wizards.step === 1) {
+            let selectedOrgName = '';
+            if (data.organization_id) {
+                const found = (this.organizations || []).find(o => o.id == data.organization_id);
+                if (found) selectedOrgName = found.name;
+                else if (this.orgSelectorState && this.orgSelectorState.selectedOrg) selectedOrgName = this.orgSelectorState.selectedOrg.name;
+            }
+
             stepView.innerHTML = `
                 <div class="v-stack gap-3">
-                    <div class="ds-field">
+                    <div class="ds-field position-relative" id="sdOrgSelectorWrapper">
                         <label class="ds-label">Organization Name</label>
-                        <select class="ds-input ds-select" id="wizOrgId" onchange="SupportDesk.wizards.data.organization_id = this.value">
-                            <option value="">Select Tenant Organization...</option>
-                            ${this.organizations.map(o => `<option value="${o.id}" ${data.organization_id == o.id ? 'selected' : ''}>${o.name}</option>`).join('')}
-                        </select>
+                        <div class="position-relative">
+                            <input type="text" 
+                                   class="ds-input w-100 pe-5" 
+                                   id="wizOrgInput" 
+                                   placeholder="Type or select Tenant Organization..." 
+                                   autocomplete="off"
+                                   value="${selectedOrgName}" 
+                                   onfocus="SupportDesk.openOrgDropdown()"
+                                   oninput="SupportDesk.handleOrgSearch(this.value)">
+                            <i data-lucide="chevron-down" class="position-absolute end-0 top-50 translate-middle-y me-3 text-secondary pointer-events-none" style="width:16px;height:16px;"></i>
+                        </div>
+                        
+                        <div class="dropdown-menu w-100 p-1.5 shadow-lg glass-dropdown custom-scroll mt-1" 
+                             id="wizOrgMenu" 
+                             style="max-height: 230px; overflow-y: auto; display: none; position: absolute; z-index: 1050; background: rgba(22, 27, 38, 0.98); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; backdrop-filter: blur(12px);"
+                             onscroll="SupportDesk.handleOrgMenuScroll(this)">
+                            <div id="wizOrgList" class="v-stack gap-1"></div>
+                            <div id="wizOrgLoader" class="text-center p-2 text-xs text-muted" style="display:none;">
+                                <span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;"></span> Loading next 20 organizations...
+                            </div>
+                            <div id="wizOrgEmpty" class="text-center p-3 text-xs text-muted" style="display:none;">
+                                No matching tenant organizations found.
+                            </div>
+                        </div>
                     </div>
                     <div class="ds-field">
                         <label class="ds-label">Requester Name</label>
@@ -546,6 +659,8 @@ const SupportDesk = {
                     </div>
                 </div>
             `;
+            this.initOrgSelector();
+            if (window.lucide) lucide.createIcons();
         } else if (this.wizards.step === 2) {
             stepView.innerHTML = `
                 <div class="v-stack gap-3">
@@ -632,6 +747,195 @@ const SupportDesk = {
                 </div>
             `;
         }
+    },
+
+    // --- TYPABLE SEARCHABLE PAGINATED ORG SELECTOR ---
+    orgSelectorState: {
+        page: 1,
+        perPage: 20,
+        total: 0,
+        search: '',
+        items: [],
+        isLoading: false,
+        hasMore: true,
+        selectedOrg: null,
+        debounceTimer: null
+    },
+
+    async initOrgSelector() {
+        this.orgSelectorState = {
+            page: 1,
+            perPage: 20,
+            total: 0,
+            search: '',
+            items: [],
+            isLoading: false,
+            hasMore: true,
+            selectedOrg: this.orgSelectorState?.selectedOrg || null,
+            debounceTimer: null
+        };
+        
+        const selectedId = this.wizards.data.organization_id;
+        if (selectedId && this.organizations && this.organizations.length > 0) {
+            const found = this.organizations.find(o => o.id == selectedId);
+            if (found) {
+                this.orgSelectorState.selectedOrg = found;
+            }
+        }
+        
+        if (!this._orgOutsideClickAttached) {
+            this._orgOutsideClickAttached = true;
+            document.addEventListener('click', (e) => {
+                const wrapper = document.getElementById('sdOrgSelectorWrapper');
+                const menu = document.getElementById('wizOrgMenu');
+                if (wrapper && menu && !wrapper.contains(e.target)) {
+                    menu.style.display = 'none';
+                }
+            });
+        }
+        
+        await this.fetchOrgsBatch(true);
+    },
+
+    async fetchOrgsBatch(isNewSearch = false) {
+        if (isNewSearch) {
+            this.orgSelectorState.page = 1;
+            this.orgSelectorState.items = [];
+            this.orgSelectorState.hasMore = true;
+        }
+
+        if (!this.orgSelectorState.hasMore || this.orgSelectorState.isLoading) return;
+
+        this.orgSelectorState.isLoading = true;
+        
+        const loader = document.getElementById('wizOrgLoader');
+        if (loader) loader.style.display = 'block';
+
+        try {
+            const search = encodeURIComponent(this.orgSelectorState.search || '');
+            const page = this.orgSelectorState.page;
+            const perPage = this.orgSelectorState.perPage;
+            
+            const res = await api.get(`/super-admin/companies?page=${page}&per_page=${perPage}&search=${search}`);
+            const newOrgs = (res && Array.isArray(res.data)) ? res.data : (res?.organizations || []);
+            const pagination = res?.pagination || {};
+            const total = pagination.total || newOrgs.length;
+            const totalPages = pagination.pages || Math.ceil(total / perPage) || 1;
+
+            this.orgSelectorState.total = total;
+            
+            // Append newly fetched batch of 20
+            this.orgSelectorState.items = [...this.orgSelectorState.items, ...newOrgs];
+            this.orgSelectorState.hasMore = page < totalPages && newOrgs.length >= perPage;
+
+            this.renderOrgList();
+        } catch (e) {
+            console.error("Failed to fetch organizations batch", e);
+        } finally {
+            this.orgSelectorState.isLoading = false;
+            if (loader) loader.style.display = 'none';
+        }
+    },
+
+    handleOrgSearch(val) {
+        this.orgSelectorState.search = val.trim();
+        
+        if (!val.trim()) {
+            this.wizards.data.organization_id = '';
+            this.orgSelectorState.selectedOrg = null;
+        }
+
+        const menu = document.getElementById('wizOrgMenu');
+        if (menu) menu.style.display = 'block';
+
+        if (this.orgSelectorState.debounceTimer) {
+            clearTimeout(this.orgSelectorState.debounceTimer);
+        }
+
+        this.orgSelectorState.debounceTimer = setTimeout(() => {
+            this.fetchOrgsBatch(true);
+        }, 250);
+    },
+
+    openOrgDropdown() {
+        const menu = document.getElementById('wizOrgMenu');
+        if (menu) menu.style.display = 'block';
+        
+        if (this.orgSelectorState.items.length === 0 && !this.orgSelectorState.isLoading) {
+            this.fetchOrgsBatch(true);
+        }
+    },
+
+    handleOrgMenuScroll(menuEl) {
+        if (!menuEl) return;
+        if (menuEl.scrollTop + menuEl.clientHeight >= menuEl.scrollHeight - 20) {
+            if (this.orgSelectorState.hasMore && !this.orgSelectorState.isLoading) {
+                this.orgSelectorState.page++;
+                this.fetchOrgsBatch(false);
+            }
+        }
+    },
+
+    renderOrgList() {
+        const listEl = document.getElementById('wizOrgList');
+        const emptyEl = document.getElementById('wizOrgEmpty');
+        if (!listEl) return;
+
+        const items = this.orgSelectorState.items;
+        const selectedId = this.wizards.data.organization_id;
+
+        if (items.length === 0 && !this.orgSelectorState.isLoading) {
+            listEl.innerHTML = '';
+            if (emptyEl) emptyEl.style.display = 'block';
+            return;
+        }
+
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        listEl.innerHTML = items.map(o => {
+            const isSelected = selectedId == o.id;
+            const safeName = (o.name || '').replace(/'/g, "\\'");
+            const safeEmail = (o.email || '').replace(/'/g, "\\'");
+            const safeAdmin = (o.admin_name || '').replace(/'/g, "\\'");
+            
+            return `
+                <div class="org-item-option p-2 rounded text-xs d-flex align-items-center justify-content-between text-main hover-highlight"
+                     style="cursor: pointer; transition: background 0.15s ease-in-out; border-radius: 6px; ${isSelected ? 'background: rgba(37, 99, 235, 0.18); color: var(--ds-primary, #3b82f6);' : ''}"
+                     onmouseover="this.style.background='rgba(255,255,255,0.08)'"
+                     onmouseout="this.style.background='${isSelected ? 'rgba(37, 99, 235, 0.18)' : 'transparent'}'"
+                     onclick="SupportDesk.selectOrg(${o.id}, '${safeName}', '${safeEmail}', '${safeAdmin}')">
+                    <div>
+                        <div class="fw-semibold ${isSelected ? 'text-primary' : 'text-main'}">${o.name}</div>
+                        ${o.email ? `<div class="text-xxs text-secondary">${o.email}</div>` : ''}
+                    </div>
+                    ${isSelected ? '<i data-lucide="check" class="text-primary" style="width:14px;height:14px;"></i>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
+    },
+
+    selectOrg(id, name, email, adminName) {
+        this.wizards.data.organization_id = id;
+        this.orgSelectorState.selectedOrg = { id, name, email, adminName };
+
+        const inputEl = document.getElementById('wizOrgInput');
+        if (inputEl) inputEl.value = name;
+
+        if (email && !this.wizards.data.requester_email) {
+            this.wizards.data.requester_email = email;
+            const emailEl = document.getElementById('wizReqEmail');
+            if (emailEl) emailEl.value = email;
+        }
+        if (adminName && !this.wizards.data.requester_name) {
+            this.wizards.data.requester_name = adminName;
+            const nameEl = document.getElementById('wizReqName');
+            if (nameEl) nameEl.value = adminName;
+        }
+
+        const menu = document.getElementById('wizOrgMenu');
+        if (menu) menu.style.display = 'none';
     },
 
     prevStep() {
@@ -1022,6 +1326,308 @@ const SupportDesk = {
         } catch (e) {
             console.error('CSV Export Error:', e);
             QCMS.toast('Failed to generate export file', 'error');
+        }
+    },
+
+    // --- 5. SALES ENQUIRIES MODULE ---
+    enquiryPage: 1,
+    enquiryFilters: {
+        q: '',
+        status: 'All'
+    },
+    currentEnquiryId: null,
+    currentEnquiryData: null,
+
+    async renderEnquiryTab() {
+        await this.loadEnquiriesList();
+    },
+
+    async loadEnquiriesList() {
+        const view = document.getElementById('sdMainViewport');
+        if (!view) return;
+        view.innerHTML = `<div class="d-flex justify-content-center p-5"><div class="spinner-border text-primary" role="status"></div></div>`;
+
+        try {
+            const q = encodeURIComponent(this.enquiryFilters.q || '');
+            const status = encodeURIComponent(this.enquiryFilters.status || 'All');
+            const res = await api.get(`/support/enquiries?page=${this.enquiryPage}&per_page=10&status=${status}&q=${q}`);
+            
+            if (!res || res.status !== 'success') {
+                view.innerHTML = `<div class="alert alert-danger">Failed to load sales enquiries.</div>`;
+                return;
+            }
+
+            const items = res.data || [];
+            const m = res.metrics || { total: 0, new: 0, contacted: 0, converted: 0 };
+            const pag = res.pagination || { page: 1, pages: 1, total: 0 };
+
+            view.innerHTML = `
+                <div class="v-stack gap-4 fade-in">
+                    <!-- KPI Stat Row -->
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="glass-card p-3 d-flex align-items-center gap-3">
+                                <div class="p-2.5 rounded-3" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
+                                    <i data-lucide="phone-call" style="width:22px;height:22px;"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-muted fw-semibold uppercase">Total Enquiries</div>
+                                    <div class="fs-4 fw-extrabold text-main">${m.total}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="glass-card p-3 d-flex align-items-center gap-3">
+                                <div class="p-2.5 rounded-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                                    <i data-lucide="bell" style="width:22px;height:22px;"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-muted fw-semibold uppercase">New Prospects</div>
+                                    <div class="fs-4 fw-extrabold text-main">${m.new}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="glass-card p-3 d-flex align-items-center gap-3">
+                                <div class="p-2.5 rounded-3" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                                    <i data-lucide="message-square" style="width:22px;height:22px;"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-muted fw-semibold uppercase">Contacted</div>
+                                    <div class="fs-4 fw-extrabold text-main">${m.contacted}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="glass-card p-3 d-flex align-items-center gap-3">
+                                <div class="p-2.5 rounded-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                    <i data-lucide="check-circle-2" style="width:22px;height:22px;"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-muted fw-semibold uppercase">Converted</div>
+                                    <div class="fs-4 fw-extrabold text-main">${m.converted}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Panel -->
+                    <div class="glass-card p-3">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-5">
+                                <div class="position-relative">
+                                    <i data-lucide="search" class="position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; pointer-events: none;"></i>
+                                    <input type="text" class="ds-input text-xs" style="padding-left: 36px;" placeholder="Search prospect name, email, company, phone..." value="${this.enquiryFilters.q}" oninput="SupportDesk.filterEnquiriesQuery(this.value)">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="ds-input text-xs" onchange="SupportDesk.filterEnquiriesStatus(this.value)">
+                                    <option value="All" ${this.enquiryFilters.status === 'All' ? 'selected' : ''}>All Statuses</option>
+                                    <option value="New" ${this.enquiryFilters.status === 'New' ? 'selected' : ''}>New</option>
+                                    <option value="Contacted" ${this.enquiryFilters.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
+                                    <option value="In Progress" ${this.enquiryFilters.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                    <option value="Converted" ${this.enquiryFilters.status === 'Converted' ? 'selected' : ''}>Converted</option>
+                                    <option value="Closed" ${this.enquiryFilters.status === 'Closed' ? 'selected' : ''}>Closed</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <button class="ds-btn ds-btn-outline ds-btn-sm" onclick="SupportDesk.loadEnquiriesList()">
+                                    <i data-lucide="refresh-cw" class="me-1" style="width:13px;"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Enquiries Table -->
+                    <div class="glass-card p-0 overflow-hidden">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle text-xs">
+                                <thead class="table-light">
+                                    <tr class="text-secondary uppercase border-bottom">
+                                        <th>Submitted Date</th>
+                                        <th>Prospect Name</th>
+                                        <th>Work Email</th>
+                                        <th>Phone Number</th>
+                                        <th>Company Name</th>
+                                        <th>Source</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items.length === 0 ? `
+                                        <tr><td colspan="8" class="text-center p-5 text-muted">No sales enquiries found matching filter criteria.</td></tr>
+                                    ` : items.map(item => {
+                                        let badgeClass = 'blue';
+                                        if (item.status === 'New') badgeClass = 'red';
+                                        else if (item.status === 'Contacted') badgeClass = 'yellow';
+                                        else if (item.status === 'In Progress') badgeClass = 'cyan';
+                                        else if (item.status === 'Converted') badgeClass = 'green';
+                                        else if (item.status === 'Closed') badgeClass = 'gray';
+
+                                        const dateStr = item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A';
+
+                                        return `
+                                            <tr>
+                                                <td><span class="text-secondary font-mono">${dateStr}</span></td>
+                                                <td><strong class="text-main">${item.name}</strong></td>
+                                                <td>
+                                                    <a href="mailto:${item.email}?subject=QCMS%20Enterprise%20Inquiry" class="text-primary text-decoration-none d-inline-flex align-items-center gap-1" title="Send Email">
+                                                        <i data-lucide="mail" style="width:12px;height:12px;"></i> ${item.email}
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <a href="tel:${item.phone}" class="text-secondary text-decoration-none font-mono d-inline-flex align-items-center gap-1" title="Call Phone">
+                                                        <i data-lucide="phone" style="width:12px;height:12px;"></i> ${item.phone}
+                                                    </a>
+                                                </td>
+                                                <td><span class="fw-semibold">${item.company_name}</span></td>
+                                                <td><span class="ds-badge gray">${item.source}</span></td>
+                                                <td><span class="ds-badge ${badgeClass}">${item.status}</span></td>
+                                                <td class="text-end">
+                                                    <div class="h-stack gap-1 justify-content-end">
+                                                        <a href="mailto:${item.email}?subject=QCMS%20Enterprise%20Inquiry" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#818cf8; border-color:rgba(99,102,241,0.4);" title="Contact via Email">
+                                                            <i data-lucide="mail" style="width:12px;height:12px;"></i> Email
+                                                        </a>
+                                                        <a href="tel:${item.phone}" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#34d399; border-color:rgba(16,185,129,0.4);" title="Contact via Phone">
+                                                            <i data-lucide="phone" style="width:12px;height:12px;"></i> Call
+                                                        </a>
+                                                        <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="SupportDesk.openEnquiryDetailModal(${item.id})">
+                                                            <i data-lucide="eye" style="width:12px;height:12px;"></i> View & Action
+                                                        </button>
+                                                        <button class="ds-btn ds-btn-outline-danger ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="SupportDesk.deleteEnquiryRecord(${item.id})">
+                                                            <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        } catch (e) {
+            view.innerHTML = `<div class="alert alert-danger">Error loading sales enquiries: ${e.message}</div>`;
+        }
+    },
+
+    filterEnquiriesQuery(q) {
+        this.enquiryFilters.q = q;
+        this.enquiryPage = 1;
+        this.loadEnquiriesList();
+    },
+
+    filterEnquiriesStatus(status) {
+        this.enquiryFilters.status = status;
+        this.enquiryPage = 1;
+        this.loadEnquiriesList();
+    },
+
+    async openEnquiryDetailModal(id) {
+        try {
+            const res = await api.get(`/support/enquiries?page=1&per_page=100`);
+            const items = res.data || [];
+            const item = items.find(x => x.id === id);
+            if (!item) {
+                QCMS.toast('Enquiry record not found', 'error');
+                return;
+            }
+
+            this.currentEnquiryId = id;
+            this.currentEnquiryData = item;
+
+            document.getElementById('enqModalId').value = item.id;
+            document.getElementById('enqModalCompany').textContent = item.company_name;
+            document.getElementById('enqModalSource').textContent = item.source || 'Talk to Sales';
+            document.getElementById('enqModalName').textContent = item.name;
+            document.getElementById('enqModalEmail').textContent = item.email;
+            document.getElementById('enqModalPhone').textContent = item.phone;
+            document.getElementById('enqModalDate').textContent = 'Submitted: ' + (item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A');
+            document.getElementById('enqModalMessage').textContent = item.message || 'No additional message provided.';
+            document.getElementById('enqModalStatusSelect').value = item.status || 'New';
+            document.getElementById('enqModalNotes').value = item.notes || '';
+
+            const rawPhone = (item.phone || '').replace(/[^0-9]/g, '');
+            document.getElementById('enqModalEmailBtn').href = `mailto:${item.email}?subject=QCMS%20Enterprise%20Inquiry%20Follow-up`;
+            document.getElementById('enqModalPhoneBtn').href = `tel:${item.phone}`;
+            document.getElementById('enqModalWhatsappBtn').href = `https://wa.me/${rawPhone}`;
+
+            let badgeClass = 'blue';
+            if (item.status === 'New') badgeClass = 'red';
+            else if (item.status === 'Contacted') badgeClass = 'yellow';
+            else if (item.status === 'In Progress') badgeClass = 'cyan';
+            else if (item.status === 'Converted') badgeClass = 'green';
+            else if (item.status === 'Closed') badgeClass = 'gray';
+
+            document.getElementById('enqModalStatusBadge').innerHTML = `<span class="ds-badge ${badgeClass}">${item.status}</span>`;
+
+            const modal = new bootstrap.Modal(document.getElementById('sdEnquiryDetailModal'));
+            modal.show();
+        } catch (e) {
+            QCMS.toast('Failed to load enquiry details', 'error');
+        }
+    },
+
+    async saveEnquiryStatus() {
+        if (!this.currentEnquiryId) return;
+        const newStatus = document.getElementById('enqModalStatusSelect').value;
+        try {
+            await api.put(`/support/enquiries/${this.currentEnquiryId}`, { status: newStatus });
+            QCMS.toast('Enquiry status updated successfully', 'success');
+            
+            let badgeClass = 'blue';
+            if (newStatus === 'New') badgeClass = 'red';
+            else if (newStatus === 'Contacted') badgeClass = 'yellow';
+            else if (newStatus === 'In Progress') badgeClass = 'cyan';
+            else if (newStatus === 'Converted') badgeClass = 'green';
+            else if (newStatus === 'Closed') badgeClass = 'gray';
+            document.getElementById('enqModalStatusBadge').innerHTML = `<span class="ds-badge ${badgeClass}">${newStatus}</span>`;
+
+            await this.loadEnquiriesList();
+        } catch (e) {
+            QCMS.toast(e.message || 'Failed to update status', 'error');
+        }
+    },
+
+    async saveEnquiryNotes() {
+        if (!this.currentEnquiryId) return;
+        const notes = document.getElementById('enqModalNotes').value;
+        try {
+            await api.put(`/support/enquiries/${this.currentEnquiryId}`, { notes });
+            QCMS.toast('Enquiry notes saved successfully', 'success');
+            await this.loadEnquiriesList();
+        } catch (e) {
+            QCMS.toast(e.message || 'Failed to save notes', 'error');
+        }
+    },
+
+    async deleteCurrentEnquiry() {
+        if (!this.currentEnquiryId) return;
+        if (!confirm('Are you sure you want to delete this sales enquiry?')) return;
+        try {
+            await api.delete(`/support/enquiries/${this.currentEnquiryId}`);
+            QCMS.toast('Enquiry deleted successfully', 'success');
+            const modalEl = document.getElementById('sdEnquiryDetailModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            await this.loadEnquiriesList();
+        } catch (e) {
+            QCMS.toast(e.message || 'Failed to delete enquiry', 'error');
+        }
+    },
+
+    async deleteEnquiryRecord(id) {
+        if (!confirm('Are you sure you want to delete this sales enquiry?')) return;
+        try {
+            await api.delete(`/support/enquiries/${id}`);
+            QCMS.toast('Enquiry deleted successfully', 'success');
+            await this.loadEnquiriesList();
+        } catch (e) {
+            QCMS.toast(e.message || 'Failed to delete enquiry', 'error');
         }
     }
 };

@@ -208,7 +208,7 @@
                             <div class="ds-card glass-card" style="padding: var(--ds-space-8); background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-primary); border-radius: var(--ds-radius-lg);">
                                 <label class="ds-label mb-3">
                                     <i data-lucide="shield-check" class="inline-block w-4 h-4 mr-2 text-primary opacity-70"></i>
-                                    Verification Code
+                                    Email Verification Code
                                 </label>
                                 <div class="d-flex gap-3 align-items-center">
                                     <input type="text" class="ds-input" id="otp_code" placeholder="000000" maxlength="6" style="letter-spacing: 0.5em; text-align: center; font-weight: 800; font-size: 1.25rem; width: 220px; background: rgba(255,255,255,0.05);">
@@ -234,13 +234,37 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="ds-label"><i data-lucide="phone" class="w-4 h-4 mr-2"></i> Phone Number</label>
-                            <input type="tel" class="ds-input" id="phone" placeholder="+91 00000 00000">
+                            <label class="ds-label"><i data-lucide="phone" class="w-4 h-4 mr-2"></i> Phone Number <span id="phoneReqSpan" class="text-danger" style="display:none;">*</span></label>
+                            <div class="d-flex gap-2">
+                                <input type="tel" class="ds-input" id="phone" placeholder="+91 00000 00000">
+                                <button type="button" class="ds-btn ds-btn-outline-primary" id="sendPhoneOtpBtn" onclick="sendPhoneOtp()" style="white-space: nowrap; font-size: 0.8125rem; display: none;">
+                                    Send OTP
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-12" id="phoneOtpSection" style="display: none;">
+                            <div class="ds-card glass-card" style="padding: var(--ds-space-8); background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-primary); border-radius: var(--ds-radius-lg);">
+                                <label class="ds-label mb-3">
+                                    <i data-lucide="smartphone" class="inline-block w-4 h-4 mr-2 text-primary opacity-70"></i>
+                                    Phone Verification Code
+                                </label>
+                                <div class="d-flex gap-3 align-items-center">
+                                    <input type="text" class="ds-input" id="phone_otp_code" placeholder="000000" maxlength="6" style="letter-spacing: 0.5em; text-align: center; font-weight: 800; font-size: 1.25rem; width: 220px; background: rgba(255,255,255,0.05);">
+                                    <button type="button" class="ds-btn ds-btn-primary px-4" id="verifyPhoneOtpBtn" onclick="verifyPhoneOtp()">
+                                        Verify Code
+                                    </button>
+                                    <span id="phoneOtpSuccess" class="text-success fw-bold align-items-center" style="display: none;">
+                                        <i data-lucide="check-circle" class="me-2"></i> Verified
+                                    </span>
+                                </div>
+                                <p class="small text-white-50 mt-3 mb-0">Please enter the 6-digit code sent to your phone number.</p>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mt-5 pt-3 text-end">
-                        <button type="button" class="ds-btn ds-btn-primary px-5 ds-btn-lg" id="nextToStep2" onclick="nextStep(2)" disabled title="Please verify your email first">
+                        <button type="button" class="ds-btn ds-btn-primary px-5 ds-btn-lg" id="nextToStep2" onclick="nextStep(2)" disabled title="Please complete required verification step first">
                             Next: Admin Setup <i data-lucide="arrow-right" class="ms-2" style="width:18px; height:18px;"></i>
                         </button>
                     </div>
@@ -318,166 +342,219 @@
             if (window.lucide) lucide.createIcons();
         }
 
-        function nextStep(step) {
-            if (step === 2) {
-                // Simple validation for step 1
-                if (!document.getElementById('company_name').value || !document.getElementById('email').value) {
-                    showError("Please fill in company name and work email.");
-                    return;
+        let requireEmailOtp = true;
+        let requirePhoneOtp = false;
+        let isEmailVerified = false;
+        let isPhoneVerified = false;
+
+        function checkCanProceedToStep2() {
+            const nextBtn = document.getElementById('nextToStep2');
+            if (!nextBtn) return;
+
+            const emailOk = !requireEmailOtp || isEmailVerified;
+            const phoneOk = !requirePhoneOtp || isPhoneVerified;
+
+            if (emailOk && phoneOk) {
+                nextBtn.disabled = false;
+                nextBtn.title = "Proceed to Administrator Account Setup";
+            } else {
+                nextBtn.disabled = true;
+                if (!emailOk && !phoneOk) {
+                    nextBtn.title = "Please verify your email and phone number via OTP first.";
+                } else if (!emailOk) {
+                    nextBtn.title = "Please verify your email via OTP first.";
+                } else {
+                    nextBtn.title = "Please verify your phone number via OTP first.";
                 }
             }
-            
-            document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
-            document.getElementById('step' + step).classList.add('active');
-            
-            if (window.lucide) lucide.createIcons();
-            hideError();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-
-        function showError(msg) {
-            const err = document.getElementById('errorMsg');
-            err.querySelector('span').textContent = msg;
-            err.style.display = 'flex';
-        }
-
-        function hideError() {
-            document.getElementById('errorMsg').style.display = 'none';
-        }
-
-        let isEmailVerified = false;
-
-        // Reset verification if email changes
-        document.getElementById('email').addEventListener('input', function() {
-            if (isEmailVerified) {
-                isEmailVerified = false;
-                document.getElementById('otpSuccess').style.display = 'none';
-                document.getElementById('nextToStep2').disabled = true;
-                document.getElementById('nextToStep2').title = "Please verify your email first";
-                document.getElementById('otpSection').style.display = 'none';
-                document.getElementById('verifyOtpBtn').style.display = 'inline-flex';
-                document.getElementById('otp_code').disabled = false;
-                document.getElementById('otp_code').value = '';
-                document.getElementById('sendOtpBtn').disabled = false;
-                document.getElementById('sendOtpBtn').innerHTML = 'Send OTP';
-                if (window.lucide) lucide.createIcons();
-            }
-        });
 
         async function sendOtp() {
-            const emailInput = document.getElementById('email');
-            const email = emailInput.value;
-            if (!email || !email.includes('@')) {
-                showError("Please enter a valid work email.");
+            const email = document.getElementById('email').value.trim();
+            if (!email) {
+                showError("Please enter your work email first.");
                 return;
             }
-
             const btn = document.getElementById('sendOtpBtn');
-            const originalText = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
-            
-            // Explicitly hide verification state if re-sending
-            document.getElementById('otpSuccess').style.display = 'none';
-            document.getElementById('nextToStep2').disabled = true;
-            
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Sending...`;
             hideError();
 
             try {
-                const response = await api.post('/auth/request-registration-otp', { email });
+                await api.post('/auth/request-registration-otp', { email });
                 document.getElementById('otpSection').style.display = 'block';
-                // Only disable email after successful OTP send
-                emailInput.readOnly = true; 
-                btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i> Resend OTP';
-                
-                // Allow editing email again via a "Change" button if needed, 
-                // but for now let's just make it clear it's locked for this OTP session
-                
-                setTimeout(() => { btn.disabled = false; }, 30000); // 30s cooldown
-                
+                btn.innerHTML = `Resend OTP`;
                 if (window.lucide) lucide.createIcons();
-                showNotification(response.msg, 'success');
-            } catch (err) {
-                showError(err.message || "Failed to send OTP.");
+            } catch (e) {
+                showError(e.message || "Failed to send OTP code.");
+                btn.innerHTML = `Send OTP`;
+            } finally {
                 btn.disabled = false;
-                btn.innerHTML = originalText;
             }
         }
 
         async function verifyOtp() {
-            const email = document.getElementById('email').value;
-            const otp = document.getElementById('otp_code').value;
-            
+            const email = document.getElementById('email').value.trim();
+            const otp = document.getElementById('otp_code').value.trim();
             if (!otp || otp.length !== 6) {
-                showError("Please enter the 6-digit code.");
+                showError("Please enter a valid 6-digit OTP code.");
                 return;
             }
-
             const btn = document.getElementById('verifyOtpBtn');
             btn.disabled = true;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
-            
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Verifying...`;
             hideError();
 
             try {
-                const response = await api.post('/auth/verify-registration-otp', { email, otp });
+                await api.post('/auth/verify-registration-otp', { email, otp });
                 isEmailVerified = true;
-                
-                // Success UI sequence
-                const successBadge = document.getElementById('otpSuccess');
-                successBadge.style.display = 'inline-flex';
-                document.getElementById('otp_code').disabled = true;
+                document.getElementById('otpSuccess').style.display = 'inline-flex';
                 btn.style.display = 'none';
-                
-                const nextBtn = document.getElementById('nextToStep2');
-                nextBtn.disabled = false;
-                nextBtn.title = "";
-                
-                if (window.lucide) lucide.createIcons();
-                showNotification(response.msg, 'success');
-            } catch (err) {
-                showError(err.message || "Verification failed.");
+                document.getElementById('otp_code').disabled = true;
+                document.getElementById('sendOtpBtn').style.display = 'none';
+                document.getElementById('email').readOnly = true;
+                checkCanProceedToStep2();
+            } catch (e) {
+                showError(e.message || "Invalid or expired OTP code.");
+            } finally {
                 btn.disabled = false;
-                btn.innerHTML = originalText;
+                btn.innerHTML = `Verify Code`;
             }
         }
 
-        function showNotification(msg, type) {
-            // Helper for local notifications if QCMS not fully ready
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast(msg, type);
+        async function sendPhoneOtp() {
+            const phone = document.getElementById('phone').value.trim();
+            if (!phone) {
+                showError("Please enter your phone number first.");
+                return;
+            }
+            const btn = document.getElementById('sendPhoneOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Sending...`;
+            hideError();
+
+            try {
+                const res = await api.post('/auth/request-phone-otp', { phone });
+                document.getElementById('phoneOtpSection').style.display = 'block';
+                btn.innerHTML = `Resend OTP`;
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                showError(e.message || "Failed to send phone OTP code.");
+                btn.innerHTML = `Send OTP`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function verifyPhoneOtp() {
+            const phone = document.getElementById('phone').value.trim();
+            const otp = document.getElementById('phone_otp_code').value.trim();
+            if (!otp || otp.length !== 6) {
+                showError("Please enter a valid 6-digit phone OTP code.");
+                return;
+            }
+            const btn = document.getElementById('verifyPhoneOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Verifying...`;
+            hideError();
+
+            try {
+                await api.post('/auth/verify-phone-otp', { phone, otp });
+                isPhoneVerified = true;
+                document.getElementById('phoneOtpSuccess').style.display = 'inline-flex';
+                btn.style.display = 'none';
+                document.getElementById('phone_otp_code').disabled = true;
+                document.getElementById('sendPhoneOtpBtn').style.display = 'none';
+                document.getElementById('phone').readOnly = true;
+                checkCanProceedToStep2();
+            } catch (e) {
+                showError(e.message || "Invalid or expired phone OTP code.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `Verify Code`;
+            }
+        }
+
+        function hideError() {
+            const err = document.getElementById('errorMsg');
+            if (err) err.style.display = 'none';
+        }
+
+        function showError(msg) {
+            const err = document.getElementById('errorMsg');
+            if (!err) return;
+            const span = err.querySelector('span');
+            if (!msg) {
+                err.style.display = 'none';
+                return;
+            }
+            if (msg.includes('@')) {
+                span.innerHTML = msg.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, '<a href="mailto:$1" style="color: inherit; text-decoration: underline; font-weight: bold;">$1</a>');
             } else {
-                alert(msg);
+                span.textContent = msg;
             }
+            err.style.display = 'flex';
         }
 
-        function toggleOtherIndustry(val) {
-            const container = document.getElementById('otherIndustryContainer');
-            if (container) {
-                container.style.display = val === 'Other' ? 'block' : 'none';
-                if (val === 'Other') {
-                    const otherInput = document.getElementById('other_industry');
-                    if (otherInput) otherInput.focus();
-                }
-            }
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 if (typeof api !== 'undefined') {
                     const res = await api.get('/auth/registration-status');
-                    if (res && res.registration_open === false) {
-                        const card = document.getElementById('onboardingCard');
-                        const banner = document.getElementById('disabledSignupBanner');
-                        if (card) card.style.display = 'none';
-                        if (banner) banner.style.display = 'block';
-                        
-                        showError(res.message || "Self-service organization sign-up is currently disabled by the Super Admin.");
-                        document.querySelectorAll('#onboardingForm input, #onboardingForm select, #onboardingForm button').forEach(el => el.disabled = true);
-                        if (window.lucide) lucide.createIcons();
+                    if (res) {
+                        if (res.registration_open === false) {
+                            const card = document.getElementById('onboardingCard');
+                            const banner = document.getElementById('disabledSignupBanner');
+                            if (card) card.style.display = 'none';
+                            if (banner) banner.style.display = 'block';
+                            
+                            const supportEmail = res.support_email || 'support@qcms.com';
+                            const descEl = banner ? banner.querySelector('p') : null;
+                            if (descEl) {
+                                if (res.has_trial_plan === false) {
+                                    descEl.innerHTML = `Something went wrong. Please contact the support team at <a href="mailto:${supportEmail}" class="fw-bold text-primary text-decoration-underline">${supportEmail}</a>.`;
+                                } else {
+                                    descEl.innerHTML = `Self-service organization sign-up is currently disabled by the Super Admin. New organization accounts must be provisioned directly by system administration.<br>Need assistance? Contact support at <a href="mailto:${supportEmail}" class="fw-bold text-primary text-decoration-underline">${supportEmail}</a>.`;
+                                }
+                            }
+                            showError(res.message || `Something went wrong. Please contact the support team at ${supportEmail}.`);
+                            document.querySelectorAll('#onboardingForm input, #onboardingForm select, #onboardingForm button').forEach(el => el.disabled = true);
+                            if (window.lucide) lucide.createIcons();
+                            return;
+                        }
+
+                        // Apply OTP verification flags dynamically
+                        requireEmailOtp = res.require_email_otp !== false;
+                        requirePhoneOtp = !!res.require_phone_otp;
+
+                        if (!requireEmailOtp) {
+                            document.getElementById('sendOtpBtn').style.display = 'none';
+                            document.getElementById('otpSection').style.display = 'none';
+                            isEmailVerified = true;
+                        } else {
+                            document.getElementById('sendOtpBtn').style.display = 'inline-block';
+                            isEmailVerified = false;
+                        }
+
+                        if (requirePhoneOtp) {
+                            document.getElementById('sendPhoneOtpBtn').style.display = 'inline-block';
+                            document.getElementById('phoneReqSpan').style.display = 'inline';
+                            document.getElementById('phone').required = true;
+                            isPhoneVerified = false;
+                        } else {
+                            document.getElementById('sendPhoneOtpBtn').style.display = 'none';
+                            document.getElementById('phoneReqSpan').style.display = 'none';
+                            document.getElementById('phone').required = false;
+                            isPhoneVerified = true;
+                        }
+
+                        checkCanProceedToStep2();
                     }
                 }
             } catch (e) {
                 console.warn('Could not verify registration status:', e);
+                requireEmailOtp = true;
+                requirePhoneOtp = false;
+                checkCanProceedToStep2();
             }
         });
 

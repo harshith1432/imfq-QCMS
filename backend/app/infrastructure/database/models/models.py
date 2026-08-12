@@ -322,6 +322,17 @@ class EmailVerification(db.Model):
     expires_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
+class PhoneVerification(db.Model):
+    __tablename__ = 'phone_verifications'
+    id = db.Column(db.Integer, primary_key=True)
+    phone = db.Column(db.String(50), unique=True, nullable=False)
+    otp = db.Column(db.String(6), nullable=False)
+    is_verified = db.Column(db.Boolean, default=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class Project(db.Model):
     __tablename__ = 'projects'
     id = db.Column(db.Integer, primary_key=True)
@@ -1114,6 +1125,8 @@ class PlatformSettings(db.Model):
     site_name = db.Column(db.String(100), default="QCMS Enterprise")
     maintenance_mode = db.Column(db.Boolean, default=False)
     registration_open = db.Column(db.Boolean, default=True)
+    require_email_otp = db.Column(db.Boolean, default=True)
+    require_phone_otp = db.Column(db.Boolean, default=False)
     global_notification = db.Column(db.Text, nullable=True)
     support_email = db.Column(db.String(120), default="support@qcms.com")
     system_version = db.Column(db.String(20), default="1.0.0")
@@ -1293,6 +1306,22 @@ class SupportAudit(db.Model):
 
     ticket = db.relationship('SupportTicket', backref=db.backref('audits', lazy=True, cascade='all, delete-orphan'))
     user = db.relationship('User', backref='support_audit_actions')
+
+
+class SalesEnquiry(db.Model):
+    __tablename__ = 'sales_enquiries'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(30), nullable=False)
+    company_name = db.Column(db.String(100), nullable=False)
+    message = db.Column(db.Text, nullable=True)
+    source = db.Column(db.String(50), default='Talk to Sales')
+    status = db.Column(db.String(30), default='New')  # New, Contacted, In Progress, Converted, Closed
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 class SubscriptionPayment(db.Model):
     __tablename__ = 'subscription_payments'

@@ -580,13 +580,16 @@ def create_company():
     except ValidationError as ve:
         return jsonify({"status": "error", "message": ve.message}), 400
         
-    # Duplicate Checks (ignoring soft-deleted Recycle Bin records)
-    existing_org = Organization.query.filter_by(name=name).first()
+    # Case-insensitive Duplicate Checks (ignoring soft-deleted Recycle Bin records)
+    name_clean = name.strip()
+    existing_org = Organization.query.filter(
+        func.lower(Organization.name) == name_clean.lower()
+    ).first()
     if existing_org:
         if not existing_org.is_deleted:
-            return jsonify({"status": "error", "message": "Organization name already exists"}), 400
+            return jsonify({"status": "error", "message": "An organization with this company name already exists"}), 400
         else:
-            existing_org.name = f"{name} (Archived #{existing_org.id})"
+            existing_org.name = f"{existing_org.name} (Archived #{existing_org.id})"
             db.session.flush()
 
     existing_user_email = User.query.filter_by(email=email).first()
@@ -727,8 +730,17 @@ def update_company(org_id):
     }
     
     # Update company details
-    if 'name' in comp_data:
-        org.name = comp_data['name']
+    if 'name' in comp_data and comp_data['name']:
+        new_name = comp_data['name'].strip()
+        if new_name.lower() != (org.name or '').lower():
+            dup_org = Organization.query.filter(
+                func.lower(Organization.name) == new_name.lower(),
+                Organization.id != org_id,
+                Organization.is_deleted == False
+            ).first()
+            if dup_org:
+                return jsonify({"status": "error", "message": "An organization with this company name already exists"}), 400
+        org.name = new_name
     if 'industry' in comp_data:
         org.industry = comp_data['industry']
     if 'gst_number' in comp_data:
@@ -2128,6 +2140,8 @@ def platform_settings():
                 "site_name": s.site_name,
                 "maintenance_mode": s.maintenance_mode,
                 "registration_open": s.registration_open,
+                "require_email_otp": getattr(s, 'require_email_otp', True),
+                "require_phone_otp": getattr(s, 'require_phone_otp', False),
                 "global_notification": s.global_notification,
                 "support_email": s.support_email,
                 "system_version": s.system_version,
@@ -2191,6 +2205,8 @@ def platform_settings():
     if 'site_name' in data: s.site_name = data['site_name']
     if 'maintenance_mode' in data: s.maintenance_mode = bool(data['maintenance_mode'])
     if 'registration_open' in data: s.registration_open = bool(data['registration_open'])
+    if 'require_email_otp' in data: s.require_email_otp = bool(data['require_email_otp'])
+    if 'require_phone_otp' in data: s.require_phone_otp = bool(data['require_phone_otp'])
     if 'global_notification' in data: s.global_notification = data['global_notification']
     if 'support_email' in data: s.support_email = data['support_email']
     if 'default_plan' in data: s.default_plan = data['default_plan']

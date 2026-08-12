@@ -298,11 +298,14 @@ def create_app():
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS organizations_settings JSONB;",
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS billing_settings JSONB;",
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS modules_settings JSONB;",
+                "CREATE TABLE IF NOT EXISTS sales_enquiries (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(120) NOT NULL, phone VARCHAR(30) NOT NULL, company_name VARCHAR(100) NOT NULL, message TEXT, source VARCHAR(50) DEFAULT 'Talk to Sales', status VARCHAR(30) DEFAULT 'New', notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS developer_settings JSONB;",
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS audit_logs_settings JSONB;",
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS system_health_settings JSONB;",
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS about_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS global_stages_config JSONB;",
+                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS require_email_otp BOOLEAN DEFAULT TRUE;",
+                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS require_phone_otp BOOLEAN DEFAULT FALSE;",
+                "CREATE TABLE IF NOT EXISTS phone_verifications (id SERIAL PRIMARY KEY, phone VARCHAR(50) UNIQUE NOT NULL, otp VARCHAR(6) NOT NULL, is_verified BOOLEAN DEFAULT FALSE, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS security_settings JSONB;"
             ]
             for statement in alter_statements:

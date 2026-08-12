@@ -338,6 +338,8 @@ const PlatformSettings = {
             this._val('ps-default-trial-days', d.trial_period_days || 14);
             this._val('ps-max-auto-trial-extensions', d.max_auto_trial_extensions !== undefined ? d.max_auto_trial_extensions : 2);
             this._chk('ps-registration-open', d.registration_open);
+            this._chk('ps-require-email-otp', d.require_email_otp !== false);
+            this._chk('ps-require-phone-otp', !!d.require_phone_otp);
             this._val('ps-global-notification', d.global_notification);
 
             // Branding
@@ -969,11 +971,24 @@ const PlatformSettings = {
                 trial_period_days: parseInt(this._getVal('ps-default-trial-days') || this._getVal('ps-trial-days') || 14),
                 max_auto_trial_extensions: parseInt(this._getVal('ps-max-auto-trial-extensions') || 2),
                 registration_open: this._getChk('ps-registration-open'),
+                require_email_otp: this._getChk('ps-require-email-otp'),
+                require_phone_otp: this._getChk('ps-require-phone-otp'),
                 global_notification: this._getVal('ps-global-notification')
             };
             await this._put('/settings', payload);
             QCMS.toast('General settings saved.', 'success');
         } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+    },
+
+    async saveOtpSettings() {
+        try {
+            const reqEmail = !!document.getElementById('ps-require-email-otp')?.checked;
+            const reqPhone = !!document.getElementById('ps-require-phone-otp')?.checked;
+            await this._put('/settings', { require_email_otp: reqEmail, require_phone_otp: reqPhone });
+            QCMS.toast('Registration OTP settings updated successfully.', 'success');
+        } catch (e) {
+            QCMS.toast(e.message || 'Failed to update OTP settings.', 'error');
+        }
     },
 
     async saveRegistrationOpenImmediate(inputEl) {
@@ -2508,7 +2523,10 @@ Object.assign(PlatformSettings, {
         if (countBadge) countBadge.textContent = `${admins.length} Account${admins.length === 1 ? '' : 's'}`;
 
         const me = JSON.parse(sessionStorage.getItem('user') || '{}');
-        if (ownEmailInput && me.email) {
+        const activeAdmin = admins.find(a => String(a.id) === String(me.id));
+        if (ownEmailInput && activeAdmin) {
+            ownEmailInput.value = activeAdmin.email;
+        } else if (ownEmailInput && me.email) {
             ownEmailInput.value = me.email;
         } else if (ownEmailInput && admins.length > 0) {
             ownEmailInput.value = admins[0].email;

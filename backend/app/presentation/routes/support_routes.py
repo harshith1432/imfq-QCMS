@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
     db, User, Organization, Role, SupportTicket, SupportComment,
     SupportAttachment, SupportSLA, SupportEscalation, SupportRating,
-    SupportKnowledge, SupportAudit, Subscription
+    SupportKnowledge, SupportAudit, Subscription, SalesEnquiry
 )
 from datetime import datetime, timedelta
 from sqlalchemy import func, or_, desc
@@ -780,4 +780,161 @@ def export_tickets():
         
     csv_content = "\n".join(csv_rows)
     return jsonify({"status": "success", "csv": csv_content}), 200
+
+
+# --- 12. SALES ENQUIRIES & LANDING PAGE PROSPECT INTAKE ---
+
+@support_bp.route('/public/enquiry', methods=['POST'])
+def submit_public_enquiry():
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip()
+    phone = (data.get('phone') or '').strip()
+    company_name = (data.get('company_name') or '').strip()
+    message = (data.get('message') or '').strip()
+    source = (data.get('source') or 'Talk to Sales').strip()
+
+    if not name or not email or not phone or not company_name:
+        return jsonify({
+            "status": "error",
+            "message": "Full Name, Email Address, Phone Number, and Company Name are required fields."
+        }), 400
+
+    enquiry = SalesEnquiry(
+        name=name,
+        email=email,
+        phone=phone,
+        company_name=company_name,
+        message=message if message else None,
+        source=source,
+        status='New',
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+
+    db.session.add(enquiry)
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": "Thank you! Your inquiry has been submitted. Our sales team will contact you shortly.",
+        "enquiry_id": enquiry.id
+    }), 201
+
+
+@support_bp.route('/enquiries', methods=['GET'])
+@jwt_required()
+def list_enquiries():
+    user, err = get_current_user_and_check_rbac()
+    if err:
+        return jsonify({"status": "error", "message": err}), 403
+
+    status_filter = request.args.get('status', '').strip()
+    search_q = request.args.get('q', '').strip()
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+
+    query = SalesEnquiry.query
+
+    if status_filter and status_filter.lower() != 'all':
+        query = query.filter(SalesEnquiry.status == status_filter)
+
+    if search_q:
+        pattern = f"%{search_q}%"
+        query = query.filter(
+            or_(
+                SalesEnquiry.name.ilike(pattern),
+                SalesEnquiry.email.ilike(pattern),
+                SalesEnquiry.company_name.ilike(pattern),
+                SalesEnquiry.phone.ilike(pattern),
+                SalesEnquiry.message.ilike(pattern)
+            )
+        )
+
+    total_count = SalesEnquiry.query.count()
+    new_count = SalesEnquiry.query.filter_by(status='New').count()
+    contacted_count = SalesEnquiry.query.filter_by(status='Contacted').count()
+    converted_count = SalesEnquiry.query.filter_by(status='Converted').count()
+
+    paginated = query.order_by(SalesEnquiry.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+    items = []
+    for item in paginated.items:
+        items.append({
+            "id": item.id,
+            "name": item.name,
+            "email": item.email,
+            "phone": item.phone,
+            "company_name": item.company_name,
+            "message": item.message or '',
+            "source": item.source or 'Talk to Sales',
+            "status": item.status or 'New',
+            "notes": item.notes or '',
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+            "updated_at": item.updated_at.isoformat() if item.updated_at else None
+        })
+
+    return jsonify({
+        "status": "success",
+        "data": items,
+        "metrics": {
+            "total": total_count,
+            "new": new_count,
+            "contacted": contacted_count,
+            "converted": converted_count
+        },
+        "pagination": {
+            "total": paginated.total,
+            "page": paginated.page,
+            "per_page": paginated.per_page,
+            "pages": paginated.pages
+        }
+    }), 200
+
+
+@support_bp.route('/enquiries/<int:enquiry_id>', methods=['PUT'])
+@jwt_required()
+def update_enquiry(enquiry_id):
+    user, err = get_current_user_and_check_rbac()
+    if err:
+        return jsonify({"status": "error", "message": err}), 403
+
+    enquiry = SalesEnquiry.query.get_or_404(enquiry_id)
+    data = request.get_json() or {}
+
+    if 'status' in data:
+        enquiry.status = data['status']
+    if 'notes' in data:
+        enquiry.notes = data['notes']
+
+    enquiry.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": f"Enquiry #{enquiry_id} updated successfully.",
+        "data": {
+            "id": enquiry.id,
+            "status": enquiry.status,
+            "notes": enquiry.notes
+        }
+    }), 200
+
+
+@support_bp.route('/enquiries/<int:enquiry_id>', methods=['DELETE'])
+@jwt_required()
+def delete_enquiry(enquiry_id):
+    user, err = get_current_user_and_check_rbac()
+    if err:
+        return jsonify({"status": "error", "message": err}), 403
+
+    enquiry = SalesEnquiry.query.get_or_404(enquiry_id)
+    db.session.delete(enquiry)
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": f"Enquiry #{enquiry_id} removed successfully."
+    }), 200
+
 

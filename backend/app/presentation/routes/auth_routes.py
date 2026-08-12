@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
-from app.infrastructure.database.models.models import User, Role, Department, Organization, EmailVerification, SupportTicket, Notification, db
+from app.infrastructure.database.models.models import User, Role, Department, Organization, EmailVerification, PhoneVerification, SupportTicket, Notification, db
 import random
 from app import bcrypt
 from app.infrastructure.mailer.email_service import EmailUtils
@@ -32,14 +32,62 @@ def get_platform_settings_safe():
             pass
         return None
 
+def get_support_email_safe():
+    try:
+        from app.domain.services.document_branding_service import DocumentBrandingService
+        branding_ctx = DocumentBrandingService.get_branding_context()
+        if branding_ctx and branding_ctx.get('support_email'):
+            return branding_ctx['support_email']
+    except Exception:
+        pass
+        
+    try:
+        from app.infrastructure.database.models.models import CompanyContactsConfig
+        cont = CompanyContactsConfig.query.filter_by(org_id=None).first()
+        if cont and cont.support_email:
+            return cont.support_email
+    except Exception:
+        pass
+
+    try:
+        from app.infrastructure.database.models.models import PlatformSettings
+        ps = PlatformSettings.query.first()
+        if ps and ps.support_email:
+            return ps.support_email
+    except Exception:
+        pass
+
+    return "support@qcms.com"
+
 @auth_bp.route('/registration-status', methods=['GET'])
 def get_registration_status():
     settings = get_platform_settings_safe()
     is_open = bool(settings.registration_open) if (settings and settings.registration_open is not None) else True
+    
+    trial_plan_obj = SubscriptionManager.get_default_trial_plan()
+    has_trial_plan = trial_plan_obj is not None
+    support_email = get_support_email_safe()
+
+    require_email_otp = getattr(settings, 'require_email_otp', True) if settings else True
+    require_phone_otp = getattr(settings, 'require_phone_otp', False) if settings else False
+
+    if not is_open:
+        msg = "Self-service organization sign-up is currently disabled by the Super Admin."
+    elif not has_trial_plan:
+        msg = f"Something went wrong. Please contact the support team at {support_email}."
+    else:
+        msg = "Self-service organization sign-up is active"
+
     return jsonify({
         "status": "success",
-        "registration_open": is_open,
-        "message": "Self-service organization sign-up is active" if is_open else "Self-service organization sign-up is currently disabled by the Super Admin."
+        "registration_open": is_open and has_trial_plan,
+        "is_open": is_open,
+        "has_trial_plan": has_trial_plan,
+        "trial_plan_name": trial_plan_obj.name if trial_plan_obj else None,
+        "support_email": support_email,
+        "require_email_otp": require_email_otp,
+        "require_phone_otp": require_phone_otp,
+        "message": msg
     }), 200
 
 @auth_bp.route('/register-org', methods=['POST'])
@@ -70,37 +118,67 @@ def register_org():
     except ValidationError as ve:
         return jsonify({"msg": ve.message}), 400
 
-    if Organization.query.filter_by(email=email).first():
-        return jsonify({"msg": "Organization with this email already exists"}), 400
+    company_name_clean = company_name.strip()
+    from sqlalchemy import func
+    existing_org_name = Organization.query.filter(
+        func.lower(Organization.name) == company_name_clean.lower(),
+        Organization.is_deleted == False
+    ).first()
+    if existing_org_name:
+        return jsonify({"msg": "An organization with this company name already exists", "message": "An organization with this company name already exists"}), 400
+
+    email_clean = email.strip().lower()
+    existing_org_email = Organization.query.filter(
+        func.lower(Organization.email) == email_clean,
+        Organization.is_deleted == False
+    ).first()
+    if existing_org_email:
+        return jsonify({"msg": "An organization with this email address already exists", "message": "An organization with this email address already exists"}), 400
         
-    if User.query.filter_by(email=email).first():
+    if User.query.filter(func.lower(User.email) == email_clean).first():
         return jsonify({"msg": "A user with this email already exists"}), 400
         
-    if User.query.filter_by(username=username).first():
+    if User.query.filter(func.lower(User.username) == username.strip().lower()).first():
         return jsonify({"msg": "Username already taken"}), 400
 
-    # Check if verified in EmailVerification
-    verification = EmailVerification.query.filter_by(email=email).first()
-    if not verification or not verification.is_verified:
-        return jsonify({"msg": "Email not verified. Please verify your email first."}), 400
+    require_email_otp = getattr(settings, 'require_email_otp', True) if settings else True
+    if require_email_otp:
+        verification = EmailVerification.query.filter_by(email=email).first()
+        if not verification or not verification.is_verified:
+            return jsonify({"msg": "Email not verified. Please verify your email first."}), 400
+
+    require_phone_otp = getattr(settings, 'require_phone_otp', False) if settings else False
+    if require_phone_otp:
+        phone_num = (data.get('phone') or '').strip()
+        if not phone_num:
+            return jsonify({"msg": "Phone number is required for OTP verification."}), 400
+        phone_verif = PhoneVerification.query.filter_by(phone=phone_num).first()
+        if not phone_verif or not phone_verif.is_verified:
+            return jsonify({"msg": "Phone number not verified. Please verify your phone number via OTP first."}), 400
     
-    # 1. Create Organization
-    req_plan = data.get('plan_name')
+    # 1. Fetch Active Trial Plan & Support Email
     trial_plan_obj = SubscriptionManager.get_default_trial_plan()
-    
-    if not req_plan or req_plan in ['Starter', 'Trial']:
-        if trial_plan_obj:
-            plan_name = trial_plan_obj.name
-            plan_config = SubscriptionManager.get_plan_config(plan_name)
-            if trial_plan_obj.limits:
-                plan_config['max_users'] = trial_plan_obj.limits.max_users
-        else:
-            plan_name = req_plan or 'Starter'
-            plan_config = SubscriptionManager.get_plan_config(plan_name)
-    else:
-        plan_name = req_plan
-        plan_config = SubscriptionManager.get_plan_config(plan_name)
-    
+    support_email = get_support_email_safe()
+
+    # If NO active trial plan exists, reject organization registration with Support Email
+    if not trial_plan_obj:
+        err_msg = f"Something went wrong. Please contact the support team at {support_email}."
+        return jsonify({
+            "msg": err_msg,
+            "message": err_msg,
+            "support_email": support_email,
+            "error_code": "NO_TRIAL_PLAN"
+        }), 400
+
+    # Auto-assign the active Trial Plan to the registering organization
+    plan_name = trial_plan_obj.name
+    plan_config = SubscriptionManager.get_plan_config(plan_name)
+    if trial_plan_obj.limits:
+        if trial_plan_obj.limits.max_users:
+            plan_config['max_users'] = trial_plan_obj.limits.max_users
+        if trial_plan_obj.limits.storage_limit_gb:
+            plan_config['storage_limit_mb'] = trial_plan_obj.limits.storage_limit_gb * 1024.0
+
     trial_days = data.get('trial_days')
     if not trial_days and trial_plan_obj:
         trial_days = getattr(trial_plan_obj, 'trial_duration_days', None)
@@ -127,12 +205,36 @@ def register_org():
         subscription_status='Trialing',
         trial_ends_at=trial_ends,
         max_users=plan_config.get('max_users', 50),
+        storage_limit_mb=plan_config.get('storage_limit_mb', 5120.0),
         is_white_label=plan_config.get('white_label', False),
         multi_plant=plan_config.get('multi_plant', False),
         api_access=plan_config.get('api_access', False)
     )
     db.session.add(new_org)
     db.session.flush() # Get ID
+
+    # Create associated Subscription record linked to trial_plan_obj
+    try:
+        import uuid
+        sub_uid = f"SUB-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+        from app.infrastructure.database.models.models import Subscription
+        new_sub = Subscription(
+            org_id=new_org.id,
+            subscription_uid=sub_uid,
+            plan_name=plan_name,
+            billing_cycle='Trial',
+            subscription_status='Trial',
+            payment_status='Paid',
+            start_date=datetime.utcnow(),
+            end_date=trial_ends,
+            trial_start_date=datetime.utcnow(),
+            trial_end_date=trial_ends,
+            base_price=0.0,
+            final_amount=0.0
+        )
+        db.session.add(new_sub)
+    except Exception as se:
+        print(f"[QCMS Warning] Failed to create Subscription entity for new org: {se}")
 
     # 2. Create Admin User
     admin_role = Role.query.filter_by(name='Admin').first()
@@ -143,7 +245,7 @@ def register_org():
         username=username,
         email=email,
         hashed_password=hashed_pw,
-        role_id=admin_role.id,
+        role_id=admin_role.id if admin_role else None,
         status='Active',
         is_verified=True # Already verified via OTP
     )
@@ -154,7 +256,11 @@ def register_org():
     
     db.session.commit()
     
-    return jsonify({"msg": "Organization and Admin account created successfully."}), 201
+    return jsonify({
+        "msg": f"Organization '{new_org.name}' and Admin account created successfully under the '{plan_name}' Trial plan.",
+        "plan_name": plan_name,
+        "trial_ends_at": trial_ends.isoformat()
+    }), 201
 
 @auth_bp.route('/request-registration-otp', methods=['POST'])
 def request_registration_otp():
@@ -220,6 +326,58 @@ def verify_registration_otp():
     db.session.commit()
     
     return jsonify({"msg": "Email verified successfully. You can now proceed."}), 200
+
+
+@auth_bp.route('/request-phone-otp', methods=['POST'])
+def request_phone_otp():
+    settings = get_platform_settings_safe()
+    if settings and not settings.registration_open:
+        return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
+
+    data = request.get_json() or {}
+    phone = (data.get('phone') or '').strip()
+    if not phone:
+        return jsonify({"msg": "Phone number is required"}), 400
+
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    verif = PhoneVerification.query.filter_by(phone=phone).first()
+    if verif:
+        verif.otp = otp
+        verif.is_verified = False
+        verif.expires_at = datetime.utcnow() + timedelta(minutes=10)
+    else:
+        verif = PhoneVerification(
+            phone=phone,
+            otp=otp,
+            expires_at=datetime.utcnow() + timedelta(minutes=10)
+        )
+        db.session.add(verif)
+
+    db.session.commit()
+    print(f"[QCMS Phone OTP] Sent OTP {otp} to phone {phone}")
+    return jsonify({"msg": f"Verification code sent to {phone}.", "otp_debug": otp}), 200
+
+
+@auth_bp.route('/verify-phone-otp', methods=['POST'])
+def verify_phone_otp():
+    data = request.get_json() or {}
+    phone = (data.get('phone') or '').strip()
+    otp = str(data.get('otp') or '').strip()
+
+    if not phone or not otp:
+        return jsonify({"msg": "Phone number and OTP code are required"}), 400
+
+    verif = PhoneVerification.query.filter_by(phone=phone, otp=otp).first()
+    if not verif:
+        return jsonify({"msg": "Invalid phone verification code."}), 400
+
+    if verif.expires_at < datetime.utcnow():
+        return jsonify({"msg": "Phone verification code has expired. Please request a new code."}), 400
+
+    verif.is_verified = True
+    db.session.commit()
+    return jsonify({"msg": "Phone number verified successfully!"}), 200
+
 
 @auth_bp.route('/register', methods=['POST'])
 @jwt_required()
@@ -612,6 +770,7 @@ def login():
         "subscription_plan": user.organization.subscription_plan if user.organization else 'Starter',
         "subscription_status": user.organization.subscription_status if user.organization else 'Active',
         "username": user.username,
+        "email": user.email,
         "is_temp_password": user.is_temp_password,
         "language": user.language,
         "id": user.id,

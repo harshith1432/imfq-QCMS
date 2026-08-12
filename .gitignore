@@ -34,3 +34,4 @@ migrations/
 
 .vercel
 .env*
+scratch/

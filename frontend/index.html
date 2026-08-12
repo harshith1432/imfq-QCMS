@@ -642,7 +642,7 @@
                 <a href="register-org.html" class="ds-btn ds-btn-secondary px-5 py-3 fs-5"
                     style="border-radius: 12px; background: white; color: var(--primary-900); font-weight:700;" id="lp-cta-banner-btn1">Launch
                     Your Instance</a>
-                <a href="#" class="ds-btn ds-btn-ghost px-5 py-3 fs-5 text-white border-white" id="lp-cta-banner-btn2">Talk to Sales</a>
+                <a href="javascript:void(0)" onclick="openTalkToSalesModal()" class="ds-btn ds-btn-ghost px-5 py-3 fs-5 text-white border-white" id="lp-cta-banner-btn2">Talk to Sales</a>
             </div>
         </div>
     </div>
@@ -979,7 +979,108 @@
 
             window.renderFooterCols(pagesData);
         });
+
+        window.openTalkToSalesModal = function() {
+            const modalEl = document.getElementById('talkToSalesModal');
+            if (!modalEl) return;
+            document.getElementById('talkToSalesForm').classList.remove('d-none');
+            document.getElementById('salesSuccessState').classList.add('d-none');
+            document.getElementById('salesModalAlert').classList.add('d-none');
+            document.getElementById('talkToSalesForm').reset();
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('talkToSalesForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('salesSubmitBtn');
+                const alert = document.getElementById('salesModalAlert');
+                alert.classList.add('d-none');
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Submitting...`;
+
+                const name = document.getElementById('salesName').value.trim();
+                const email = document.getElementById('salesEmail').value.trim();
+                const phone = document.getElementById('salesPhone').value.trim();
+                const company_name = document.getElementById('salesCompany').value.trim();
+                const message = document.getElementById('salesMessage').value.trim();
+
+                try {
+                    const res = await fetch('/api/support/public/enquiry', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, phone, company_name, message, source: 'Talk to Sales' })
+                    });
+                    const data = await res.json();
+                    if (!res.ok || data.status !== 'success') {
+                        throw new Error(data.message || 'Failed to submit inquiry.');
+                    }
+
+                    document.getElementById('talkToSalesForm').classList.add('d-none');
+                    document.getElementById('salesSuccessState').classList.remove('d-none');
+                    if (window.lucide) lucide.createIcons();
+                } catch (err) {
+                    alert.textContent = err.message || 'Submission failed. Please try again.';
+                    alert.classList.remove('d-none');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = `Submit Inquiry`;
+                }
+            });
+        });
     </script>
+
+    <!-- Talk to Sales Modal -->
+    <div class="modal fade" id="talkToSalesModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+            <div class="modal-content glass-card p-4" style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: #fff;">
+                <div class="modal-header border-0 pb-2">
+                    <div>
+                        <h4 class="modal-title fw-bold text-white mb-1"><i data-lucide="phone-call" class="text-primary me-2" style="width:24px;height:24px;"></i>Talk to Sales</h4>
+                        <p class="text-xs text-muted mb-0">Fill in your details below and our team will get back to you shortly.</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <div id="salesModalAlert" class="alert alert-danger text-xs d-none" style="border-radius:10px;"></div>
+                    <form id="talkToSalesForm">
+                        <div class="mb-3">
+                            <label class="form-label text-xs fw-semibold text-white">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control text-sm bg-dark text-white border-secondary" id="salesName" placeholder="e.g. Alex Morgan" required style="border-radius: 10px; padding: 10px 14px;">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-xs fw-semibold text-white">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control text-sm bg-dark text-white border-secondary" id="salesEmail" placeholder="e.g. alex@gmail.com or alex@company.com" required style="border-radius: 10px; padding: 10px 14px;">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-xs fw-semibold text-white">Phone Number (Indian / International) <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control text-sm bg-dark text-white border-secondary" id="salesPhone" placeholder="e.g. +91 98765 43210" required style="border-radius: 10px; padding: 10px 14px;">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-xs fw-semibold text-white">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control text-sm bg-dark text-white border-secondary" id="salesCompany" placeholder="e.g. Acme Corp" required style="border-radius: 10px; padding: 10px 14px;">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-xs fw-semibold text-white">Message / Notes <span class="text-muted fw-normal">(Optional)</span></label>
+                            <textarea class="form-control text-sm bg-dark text-white border-secondary" id="salesMessage" rows="3" placeholder="Tell us about your team size or specific requirements..." style="border-radius: 10px; padding: 10px 14px;"></textarea>
+                        </div>
+                        <button type="submit" class="ds-btn ds-btn-primary w-100 py-3 text-sm fw-bold" id="salesSubmitBtn" style="border-radius: 12px;">
+                            Submit Inquiry
+                        </button>
+                    </form>
+                    <div id="salesSuccessState" class="text-center py-4 d-none">
+                        <div class="mb-3" style="width: 56px; height: 56px; background: rgba(16, 185, 129, 0.15); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #10b981;">
+                            <i data-lucide="check-circle-2" style="width:32px; height:32px;"></i>
+                        </div>
+                        <h5 class="fw-bold text-white mb-2">Inquiry Received!</h5>
+                        <p class="text-xs text-muted mb-4">Thank you for reaching out. A sales specialist will review your request and get in touch shortly.</p>
+                        <button type="button" class="ds-btn ds-btn-secondary px-4 py-2 text-xs" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

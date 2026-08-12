@@ -1,7 +1,5 @@
-"""
-Integration and Transactional Editing Test Suite
-Verifies that database updates are strictly transactional and only occur on explicit Save requests.
-"""
+import os
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
 import pytest
 import json

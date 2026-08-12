@@ -2245,21 +2245,186 @@ const SuperAdmin = {
 
     // ─── WIZARD CREATOR ──────────────────────────────────────────────────────
 
+    biOrgSelectorState: {
+        page: 1,
+        perPage: 20,
+        total: 0,
+        search: '',
+        items: [],
+        isLoading: false,
+        hasMore: true,
+        selectedOrg: null,
+        debounceTimer: null
+    },
+
+    async biInitOrgSelector() {
+        this.biOrgSelectorState = {
+            page: 1,
+            perPage: 20,
+            total: 0,
+            search: '',
+            items: [],
+            isLoading: false,
+            hasMore: true,
+            selectedOrg: null,
+            debounceTimer: null
+        };
+        
+        const inputEl = document.getElementById('biOrgInput');
+        if (inputEl) inputEl.value = '';
+        const selectEl = document.getElementById('biOrgSelect');
+        if (selectEl) selectEl.value = '';
+
+        if (!this._biOrgOutsideClickAttached) {
+            this._biOrgOutsideClickAttached = true;
+            document.addEventListener('click', (e) => {
+                const wrapper = document.getElementById('biOrgSelectorWrapper');
+                const menu = document.getElementById('biOrgMenu');
+                if (wrapper && menu && !wrapper.contains(e.target)) {
+                    menu.style.display = 'none';
+                }
+            });
+        }
+        
+        await this.biFetchOrgsBatch(true);
+    },
+
+    async biFetchOrgsBatch(isNewSearch = false) {
+        if (isNewSearch) {
+            this.biOrgSelectorState.page = 1;
+            this.biOrgSelectorState.items = [];
+            this.biOrgSelectorState.hasMore = true;
+        }
+
+        if (!this.biOrgSelectorState.hasMore || this.biOrgSelectorState.isLoading) return;
+
+        this.biOrgSelectorState.isLoading = true;
+        
+        const loader = document.getElementById('biOrgLoader');
+        if (loader) loader.style.display = 'block';
+
+        try {
+            const search = encodeURIComponent(this.biOrgSelectorState.search || '');
+            const page = this.biOrgSelectorState.page;
+            const perPage = this.biOrgSelectorState.perPage;
+            
+            const res = await api.get(`/super-admin/companies?page=${page}&per_page=${perPage}&search=${search}`);
+            const newOrgs = (res && Array.isArray(res.data)) ? res.data : (res?.organizations || []);
+            const pagination = res?.pagination || {};
+            const total = pagination.total || newOrgs.length;
+            const totalPages = pagination.pages || Math.ceil(total / perPage) || 1;
+
+            this.biOrgSelectorState.total = total;
+            
+            // Append newly fetched batch of 20
+            this.biOrgSelectorState.items = [...this.biOrgSelectorState.items, ...newOrgs];
+            this.biOrgSelectorState.hasMore = page < totalPages && newOrgs.length >= perPage;
+
+            this.biRenderOrgList();
+        } catch (e) {
+            console.error("Failed to fetch billing organizations batch", e);
+        } finally {
+            this.biOrgSelectorState.isLoading = false;
+            if (loader) loader.style.display = 'none';
+        }
+    },
+
+    biHandleOrgSearch(val) {
+        this.biOrgSelectorState.search = val.trim();
+        
+        if (!val.trim()) {
+            const selectEl = document.getElementById('biOrgSelect');
+            if (selectEl) selectEl.value = '';
+            this.biOrgSelectorState.selectedOrg = null;
+        }
+
+        const menu = document.getElementById('biOrgMenu');
+        if (menu) menu.style.display = 'block';
+
+        if (this.biOrgSelectorState.debounceTimer) {
+            clearTimeout(this.biOrgSelectorState.debounceTimer);
+        }
+
+        this.biOrgSelectorState.debounceTimer = setTimeout(() => {
+            this.biFetchOrgsBatch(true);
+        }, 250);
+    },
+
+    biOpenOrgDropdown() {
+        const menu = document.getElementById('biOrgMenu');
+        if (menu) menu.style.display = 'block';
+        
+        if (this.biOrgSelectorState.items.length === 0 && !this.biOrgSelectorState.isLoading) {
+            this.biFetchOrgsBatch(true);
+        }
+    },
+
+    biHandleOrgMenuScroll(menuEl) {
+        if (!menuEl) return;
+        if (menuEl.scrollTop + menuEl.clientHeight >= menuEl.scrollHeight - 20) {
+            if (this.biOrgSelectorState.hasMore && !this.biOrgSelectorState.isLoading) {
+                this.biOrgSelectorState.page++;
+                this.biFetchOrgsBatch(false);
+            }
+        }
+    },
+
+    biRenderOrgList() {
+        const listEl = document.getElementById('biOrgList');
+        const emptyEl = document.getElementById('biOrgEmpty');
+        if (!listEl) return;
+
+        const items = this.biOrgSelectorState.items;
+        const selectedId = document.getElementById('biOrgSelect')?.value || '';
+
+        if (items.length === 0 && !this.biOrgSelectorState.isLoading) {
+            listEl.innerHTML = '';
+            if (emptyEl) emptyEl.style.display = 'block';
+            return;
+        }
+
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        listEl.innerHTML = items.map(o => {
+            const isSelected = selectedId == o.id;
+            const safeName = (o.name || '').replace(/'/g, "\\'");
+            
+            return `
+                <div class="org-item-option p-2 rounded text-xs d-flex align-items-center justify-content-between text-main hover-highlight"
+                     style="cursor: pointer; transition: background 0.15s ease-in-out; border-radius: 6px; ${isSelected ? 'background: rgba(37, 99, 235, 0.18); color: var(--ds-primary, #3b82f6);' : ''}"
+                     onmouseover="this.style.background='rgba(255,255,255,0.08)'"
+                     onmouseout="this.style.background='${isSelected ? 'rgba(37, 99, 235, 0.18)' : 'transparent'}'"
+                     onclick="SuperAdmin.biSelectOrg(${o.id}, '${safeName}')">
+                    <div>
+                        <div class="fw-semibold ${isSelected ? 'text-primary' : 'text-main'}">${o.name}</div>
+                        ${o.email ? `<div class="text-xxs text-secondary">${o.email}</div>` : ''}
+                    </div>
+                    ${isSelected ? '<i data-lucide="check" class="text-primary" style="width:14px;height:14px;"></i>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
+    },
+
+    biSelectOrg(id, name) {
+        const selectEl = document.getElementById('biOrgSelect');
+        if (selectEl) selectEl.value = id;
+
+        const inputEl = document.getElementById('biOrgInput');
+        if (inputEl) inputEl.value = name;
+
+        const menu = document.getElementById('biOrgMenu');
+        if (menu) menu.style.display = 'none';
+
+        this.biLoadOrgSubscriptions(id);
+    },
+
     async openBillCreateWizard() {
         this._bill.wizStep = 1;
         this._bill.wizItems = [{ description: 'QCMS Platform Subscription Renewal', quantity: 1, unit_price: 15000 }];
         
-        // Load Organizations list
-        try {
-            const res = await api.get('/super-admin/dashboard'); // dashboard returns details of orgs
-            if (res.status === 'success' && res.data.active_organizations_list) {
-                const select = document.getElementById('biOrgSelect');
-                select.innerHTML = '<option value="">-- Choose Organization --</option>' + 
-                    res.data.active_organizations_list.map(org => `<option value="${org.id}">${org.name}</option>`).join('');
-            }
-        } catch (e) {
-            console.error("Error fetching organizations", e);
-        }
+        await this.biInitOrgSelector();
 
         // Setup wizard steps defaults
         document.getElementById('biInvNum').value = 'INV-2026-' + Math.floor(1000 + Math.random() * 9000);

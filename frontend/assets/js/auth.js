@@ -16,6 +16,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
         const userPayload = JSON.stringify({
             username: data.username,
+            email: data.email,
             role: data.role,
             org_id: data.org_id,
             org_name: data.org_name,

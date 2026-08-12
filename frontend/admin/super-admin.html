@@ -1716,6 +1716,28 @@
                                         </div>
                                     </div>
                                     <div class="col-12">
+                                        <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                            <div>
+                                                <div class="fw-bold text-sm text-main"><i data-lucide="mail-check" class="me-1.5 text-primary" style="width:14px;"></i> Email OTP Verification</div>
+                                                <div class="text-xs text-secondary">Require new organizations to verify their email address via 6-digit OTP during registration</div>
+                                            </div>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" id="ps-require-email-otp" onchange="PlatformSettings.saveOtpSettings()">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                            <div>
+                                                <div class="fw-bold text-sm text-main"><i data-lucide="smartphone" class="me-1.5 text-primary" style="width:14px;"></i> Phone OTP Verification</div>
+                                                <div class="text-xs text-secondary">Require new organizations to verify their phone number via 6-digit OTP during registration</div>
+                                            </div>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" id="ps-require-phone-otp" onchange="PlatformSettings.saveOtpSettings()">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
                                         <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background:rgba(239,68,68,0.03); border:1px solid rgba(239,68,68,0.2);">
                                             <div>
                                                 <div class="fw-bold text-sm text-danger"><i data-lucide="alert-triangle" class="me-1" style="width:14px;"></i> Maintenance Mode</div>
@@ -5166,11 +5188,32 @@
                     <!-- Step 1: Organization/Customer Context -->
                     <div class="bill-wiz-step active" id="bwp1">
                         <h6 class="fw-bold text-xs text-uppercase text-muted mb-3">Step 1: Customer Context</h6>
-                        <div class="ds-field">
+                        <div class="ds-field position-relative" id="biOrgSelectorWrapper">
                             <label class="ds-label">Select Organization <span class="text-danger">*</span></label>
-                            <select class="ds-input" id="biOrgSelect" onchange="SuperAdmin.biLoadOrgSubscriptions(this.value)">
-                                <option value="">-- Choose Organization --</option>
-                            </select>
+                            <div class="position-relative">
+                                <input type="text" 
+                                       class="ds-input w-100 pe-5" 
+                                       id="biOrgInput" 
+                                       placeholder="Type or select Organization..." 
+                                       autocomplete="off"
+                                       onfocus="SuperAdmin.biOpenOrgDropdown()"
+                                       oninput="SuperAdmin.biHandleOrgSearch(this.value)">
+                                <i data-lucide="chevron-down" class="position-absolute end-0 top-50 translate-middle-y me-3 text-secondary pointer-events-none" style="width:16px;height:16px;"></i>
+                            </div>
+                            <input type="hidden" id="biOrgSelect" value="">
+                            
+                            <div class="dropdown-menu w-100 p-1.5 shadow-lg glass-dropdown custom-scroll mt-1" 
+                                 id="biOrgMenu" 
+                                 style="max-height: 230px; overflow-y: auto; display: none; position: absolute; z-index: 1050; background: rgba(22, 27, 38, 0.98); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; backdrop-filter: blur(12px);"
+                                 onscroll="SuperAdmin.biHandleOrgMenuScroll(this)">
+                                <div id="biOrgList" class="v-stack gap-1"></div>
+                                <div id="biOrgLoader" class="text-center p-2 text-xs text-muted" style="display:none;">
+                                    <span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;"></span> Loading next 20 organizations...
+                                </div>
+                                <div id="biOrgEmpty" class="text-center p-3 text-xs text-muted" style="display:none;">
+                                    No matching tenant organizations found.
+                                </div>
+                            </div>
                         </div>
                         <div class="ds-field mt-3">
                             <label class="ds-label">Linked Subscription <span class="text-danger">*</span></label>
