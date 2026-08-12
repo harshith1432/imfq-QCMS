@@ -34,6 +34,15 @@ def app(environ, start_response):
         start_response('200 OK', [('Content-Type', 'application/json'), ('Content-Length', str(len(body)))])
         return [body]
 
+# Pre-initialize the Flask app at import time.
+# With gunicorn --preload, this runs ONCE in the master process before
+# workers fork, so _DB_AUTO_MIGRATED=True is inherited by all workers
+# and migrations never repeat across worker processes.
+try:
+    _preloaded_app = get_app()
+except Exception:
+    _preloaded_app = None
+
 if __name__ == "__main__":
     a = get_app()
     if a and hasattr(a, 'run'):
