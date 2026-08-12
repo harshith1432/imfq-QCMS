@@ -59,7 +59,17 @@ class SubscriptionManager:
             (SaaSPlan.is_default_trial == True) | 
             (func.lower(SaaSPlan.plan_type).like('%trial%')) | 
             (func.lower(SaaSPlan.name).like('%trial%'))
-        ).order_by(SaaSPlan.is_default_trial.desc(), SaaSPlan.id.desc()).first()
+        ).order_by(SaaSPlan.is_default_trial.desc(), SaaSPlan.id.asc()).first()
+        
+        if not trial_plan:
+            trial_plan = SaaSPlan.query.filter_by(status='Active').order_by(SaaSPlan.id.asc()).first()
+            if trial_plan and hasattr(trial_plan, 'is_default_trial') and not trial_plan.is_default_trial:
+                try:
+                    from app import db
+                    trial_plan.is_default_trial = True
+                    db.session.commit()
+                except Exception:
+                    pass
         return trial_plan
 
     @staticmethod
