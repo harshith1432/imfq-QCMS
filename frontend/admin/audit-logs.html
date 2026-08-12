@@ -609,7 +609,7 @@
             async loadLogs() {
                 const tbody = document.getElementById('logsBody');
                 if(!tbody) return;
-                tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading secure activity stream...</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading secure activity stream...</td></tr>`;
                 
                 const params = new URLSearchParams(this.filters);
                 try {
@@ -619,13 +619,13 @@
                     this.renderLogs(tbody);
                     this.renderPagination(res.pagination);
                 } catch(e) {
-                    tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center text-danger">Failed to fetch activity stream logs.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center text-danger">Failed to fetch activity stream logs.</td></tr>`;
                 }
             },
 
             renderLogs(tbody) {
                 if(!this.logs.length) {
-                    tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center text-muted">No audit trail records found matching criteria.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center text-muted">No audit trail records found matching criteria.</td></tr>`;
                     return;
                 }
                 

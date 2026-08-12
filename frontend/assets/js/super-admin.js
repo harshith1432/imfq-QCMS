@@ -3187,7 +3187,7 @@ const SuperAdmin = {
     async loadLogs() {
         const tbody = document.getElementById('superLogsBody');
         if (!tbody) return;
-        tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading secure activity stream...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading secure activity stream...</td></tr>`;
         
         const params = new URLSearchParams();
         Object.keys(this.auditFilters).forEach(k => {
@@ -3205,13 +3205,13 @@ const SuperAdmin = {
             this.renderAuditLogs(tbody);
             this.renderAuditPagination(pag);
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center text-danger">Failed to fetch activity stream logs.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center text-danger">Failed to fetch activity stream logs.</td></tr>`;
         }
     },
 
     renderAuditLogs(tbody) {
         if (!this.auditLogs.length) {
-            tbody.innerHTML = `<tr><td colspan="11" class="p-5 text-center text-muted">No audit trail records found matching criteria.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center text-muted">No audit trail records found matching criteria.</td></tr>`;
             return;
         }
         
@@ -3232,7 +3232,6 @@ const SuperAdmin = {
                 <td><strong>${highlight(log.user)}</strong></td>
                 <td><span class="text-xs text-muted">${log.role}</span></td>
                 <td><span class="ds-badge blue">${highlight(log.action)}</span></td>
-                <td><span class="text-xs font-mono">${log.module}</span></td>
                 <td class="font-mono text-xs">${highlight(log.ip_address)}</td>
                 <td class="text-xs text-secondary">${highlight(log.location)}</td>
                 <td class="text-xs" title="${log.browser || ''} on ${log.os || ''}"><span class="text-muted">${highlight(log.device)}</span></td>
