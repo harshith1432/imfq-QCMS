@@ -89,16 +89,15 @@ class EmailUtils:
             print(html_content)
             print("="*50 + "\n")
 
-            if os.getenv("FORCE_REAL_EMAIL_IN_DEV", "false").lower() != "true":
-                if current_app:
-                    current_app.logger.info(f"Development mode: Skipped sending actual email via {provider_type} from {clean_from} to {to_email}")
-                return {"id": "dev_mode_dummy_id"}
-
         # Real Email Dispatch
         try:
             if provider_type == 'zeptomail':
-                api_url = settings.get('api_url') or 'https://api.zeptomail.in/v1.1/email/send'
-                api_key = settings.get('api_key', '')
+                raw_url = (settings.get('api_url') or 'https://api.zeptomail.in/v1.1/email').rstrip('/')
+                if raw_url.endswith('/send'):
+                    raw_url = raw_url[:-5]
+                api_url = raw_url
+
+                api_key = (settings.get('api_key') or '').strip()
                 auth_header = api_key if api_key.startswith("Zoho-enczapikey") else f"Zoho-enczapikey {api_key}"
 
                 payload = {

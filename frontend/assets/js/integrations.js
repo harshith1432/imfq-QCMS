@@ -597,7 +597,7 @@
                     { key: 'api_key', label: 'ZeptoMail Send Mail Token (Zoho-enczapikey...)', type: 'password', placeholder: 'Enter Zoho-enczapikey ...' },
                     { key: 'sender_email', label: 'Verified Sender Email Address', type: 'text', placeholder: 'e.g. otp@yourdomain.com' },
                     { key: 'sender_name', label: 'Sender Display Label / App Name', type: 'text', placeholder: 'e.g. QCMS OTP Service' },
-                    { key: 'api_url', label: 'ZeptoMail API Endpoint URL', type: 'text', placeholder: 'https://api.zeptomail.in/v1.1/email/send' }
+                    { key: 'api_url', label: 'ZeptoMail API Endpoint URL', type: 'text', placeholder: 'https://api.zeptomail.in/v1.1/email' }
                 ];
             } else if (item.provider_id === 'razorpay') {
                 schemaFields = [

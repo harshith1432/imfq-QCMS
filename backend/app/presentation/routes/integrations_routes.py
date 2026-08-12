@@ -64,7 +64,7 @@ def seed_default_integrations():
             "api_key": "",
             "sender_email": "",
             "sender_name": "",
-            "api_url": "https://api.zeptomail.in/v1.1/email/send",
+            "api_url": "https://api.zeptomail.in/v1.1/email",
             "is_active": False
         })
     ]
