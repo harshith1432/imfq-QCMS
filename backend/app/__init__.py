@@ -646,42 +646,41 @@ def create_app():
             print("[QCMS] Seeded Enterprise Feature Hierarchy (Parents & Children) successfully.")
             
             # Seed Default Super Admin
-            sa_username = os.getenv('SUPER_ADMIN_USERNAME')
-            sa_password = os.getenv('SUPER_ADMIN_PASSWORD')
+            sa_username = os.getenv('SUPER_ADMIN_USERNAME', 'harshithkd6@gmail.com')
+            sa_password = os.getenv('SUPER_ADMIN_PASSWORD', '123456')
             if sa_username and sa_password:
                 sa_role = Role.query.filter_by(name='SuperAdmin').first()
                 if sa_role:
-                    # Check if a SuperAdmin already exists
-                    sa_exists = User.query.filter_by(role_id=sa_role.id).first()
-                    if not sa_exists:
-                        existing_user = User.query.filter_by(email=sa_username).first()
-                        if existing_user:
-                            # Promote existing user to SuperAdmin (disassociate from any org)
-                            existing_user.role_id = sa_role.id
-                            existing_user.org_id = None
-                            existing_user.is_verified = True
-                            existing_user.status = 'Active'
-                            existing_user.is_active = True
-                        else:
-                            hashed_pw = bcrypt.generate_password_hash(sa_password).decode('utf-8')
-                            new_sa = User(
-                                username=sa_username,
-                                email=sa_username,
-                                hashed_password=hashed_pw,
-                                role_id=sa_role.id,
-                                org_id=None,
-                                is_verified=True,
-                                status='Active',
-                                is_active=True
-                            )
-                            db.session.add(new_sa)
+                    hashed_pw = bcrypt.generate_password_hash(sa_password).decode('utf-8')
+                    existing_sa = User.query.filter_by(email=sa_username).first()
+                    if existing_sa:
+                        existing_sa.role_id = sa_role.id
+                        existing_sa.org_id = None
+                        existing_sa.is_verified = True
+                        existing_sa.status = 'Active'
+                        existing_sa.is_active = True
+                        existing_sa.hashed_password = hashed_pw
                     else:
-                        # Ensure all existing SuperAdmins have org_id = None
-                        sa_users = User.query.filter_by(role_id=sa_role.id).all()
-                        for sa_user in sa_users:
-                            sa_user.org_id = None
-                            sa_user.is_active = True
-                            sa_user.status = 'Active'
+                        new_sa = User(
+                            username=sa_username,
+                            email=sa_username,
+                            hashed_password=hashed_pw,
+                            role_id=sa_role.id,
+                            org_id=None,
+                            is_verified=True,
+                            status='Active',
+                            is_active=True
+                        )
+                        db.session.add(new_sa)
+                    db.session.commit()
+                    print(f"[QCMS] SuperAdmin '{sa_username}' synced with password from environment variables.")
+
+                    # Ensure all existing SuperAdmins have org_id = None
+                    sa_users = User.query.filter_by(role_id=sa_role.id).all()
+                    for sa_user in sa_users:
+                        sa_user.org_id = None
+                        sa_user.is_active = True
+                        sa_user.status = 'Active'
 
             db.session.commit()
             
