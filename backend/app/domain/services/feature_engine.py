@@ -72,7 +72,7 @@ class FeatureEngine:
         from sqlalchemy import func
 
         plan_hierarchy = {
-            'Starter': 1, 'Professional': 2,
+            'Trial': 1, 'Starter': 1, 'Professional': 2,
             'Enterprise': 3, 'Ultimate': 4, 'Custom': 5
         }
 

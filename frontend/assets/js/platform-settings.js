@@ -41,8 +41,9 @@ const PlatformSettings = {
     _activeTab: 'general',
 
     async init() {
-        const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-        const isSuperAdmin = user.role === 'SuperAdmin';
+        const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+        const role = window.QCMS && window.QCMS.normalizeRole ? window.QCMS.normalizeRole(user.role) : user.role;
+        const isSuperAdmin = role === 'SuperAdmin';
         if (!isSuperAdmin) return;
 
         // Show the Platform Admin nav group
@@ -334,6 +335,8 @@ const PlatformSettings = {
             this._val('ps-currency', d.currency);
             this._val('ps-default-plan', d.default_plan);
             this._val('ps-trial-days', d.trial_period_days);
+            this._val('ps-default-trial-days', d.trial_period_days || 14);
+            this._val('ps-max-auto-trial-extensions', d.max_auto_trial_extensions !== undefined ? d.max_auto_trial_extensions : 2);
             this._chk('ps-registration-open', d.registration_open);
             this._val('ps-global-notification', d.global_notification);
 
@@ -959,13 +962,70 @@ const PlatformSettings = {
                 time_format: this._getVal('ps-time-format'),
                 currency: this._getVal('ps-currency'),
                 default_plan: this._getVal('ps-default-plan'),
-                trial_period_days: parseInt(this._getVal('ps-trial-days') || 14),
+                trial_period_days: parseInt(this._getVal('ps-default-trial-days') || this._getVal('ps-trial-days') || 14),
+                max_auto_trial_extensions: parseInt(this._getVal('ps-max-auto-trial-extensions') || 2),
                 registration_open: this._getChk('ps-registration-open'),
                 global_notification: this._getVal('ps-global-notification')
             };
             await this._put('/settings', payload);
             QCMS.toast('General settings saved.', 'success');
         } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+    },
+
+    async saveRegistrationOpenImmediate(inputEl) {
+        try {
+            const isOpen = !!inputEl.checked;
+            await this._put('/settings', { registration_open: isOpen });
+            QCMS.toast(`Self-service sign-up ${isOpen ? 'enabled' : 'disabled'} successfully.`, isOpen ? 'success' : 'info');
+        } catch (e) {
+            QCMS.toast(e.message || 'Failed to update sign-up status.', 'error');
+        }
+    },
+
+    async saveTrialFieldImmediate(fieldKey, inputEl) {
+        const statusElId = inputEl.id + '-status';
+        const statusEl = document.getElementById(statusElId);
+        const val = parseInt(inputEl.value);
+
+        // Validate range
+        const min = parseInt(inputEl.min);
+        const max = parseInt(inputEl.max);
+        if (isNaN(val) || val < min || val > max) {
+            inputEl.classList.add('is-invalid');
+            if (statusEl) statusEl.textContent = `Range: ${min}–${max}`;
+            return;
+        }
+        inputEl.classList.remove('is-invalid');
+
+        // Show saving indicator
+        if (statusEl) {
+            statusEl.textContent = 'Saving...';
+            statusEl.style.color = 'var(--ds-accent, #3b82f6)';
+        }
+
+        try {
+            await this._put('/settings', { [fieldKey]: val });
+
+            // Update in-memory data cache
+            if (this._data) this._data[fieldKey] = val;
+
+            if (statusEl) {
+                statusEl.textContent = '✓ Saved';
+                statusEl.style.color = 'var(--ds-success, #22c55e)';
+                setTimeout(() => {
+                    if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; }
+                }, 2500);
+            }
+        } catch (e) {
+            if (statusEl) {
+                statusEl.textContent = '✗ Error';
+                statusEl.style.color = 'var(--ds-danger, #ef4444)';
+                setTimeout(() => {
+                    if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; }
+                }, 3000);
+            }
+            QCMS.toast(e.message || 'Failed to save setting.', 'error');
+        }
     },
 
     async saveEmail() {
@@ -2419,88 +2479,136 @@ Object.assign(PlatformSettings, {
     // SUPER ADMIN LOGINS & CREDENTIALS
     // ──────────────────────────────────────────────────────────
 
-    async loadAdminLogins() {
-        const tbody = document.getElementById('adminLoginsTableBody');
-        const ownEmailInput = document.getElementById('ownAdminNewEmail');
-        const countBadge = document.getElementById('adminAccountsCountBadge');
+    _adminLoginsPage: 1,
+    _adminLoginsPerPage: 5,
+    _adminLoginsAll: [],
 
+    async loadAdminLogins() {
         try {
             const res = await api.get('/super-admin/admin-logins');
             if (res.status === 'success') {
-                const admins = res.data || [];
-                if (countBadge) countBadge.textContent = `${admins.length} Account${admins.length === 1 ? '' : 's'}`;
-
-                // Set current user email in own credentials form
-                const me = JSON.parse(sessionStorage.getItem('user') || '{}');
-                if (ownEmailInput && me.email) {
-                    ownEmailInput.value = me.email;
-                } else if (ownEmailInput && admins.length > 0) {
-                    ownEmailInput.value = admins[0].email;
-                }
-
-                if (!tbody) return;
-
-                if (admins.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No Super Admin accounts found.</td></tr>`;
-                    return;
-                }
-
-                tbody.innerHTML = admins.map(a => {
-                    const isMe = me.id == a.id || me.email === a.email;
-                    const badgeClass = a.sub_role === 'Owner' ? 'bg-primary-subtle text-primary' : 'bg-info-subtle text-info';
-
-                    return `
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center" style="width:28px;height:28px;font-size:11px;">
-                                        ${(a.username || 'A').charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <div class="fw-semibold text-main">${a.username} ${isMe ? '<span class="badge bg-success-subtle text-success ms-1" style="font-size:9px;">You</span>' : ''}</div>
-                                        <div class="text-xxs text-secondary">ID #${a.id}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="font-monospace text-xs">${a.email}</td>
-                            <td><span class="badge ${badgeClass} text-xxs">${a.sub_role || 'Owner'}</span></td>
-                            <td><span class="badge bg-success-subtle text-success text-xxs">${a.status}</span></td>
-                            <td class="text-secondary text-xxs">${a.created_at ? a.created_at.slice(0, 10) : '—'}</td>
-                            <td class="text-end">
-                                <div class="dropdown d-inline-block">
-                                    <button class="ds-btn ds-btn-secondary ds-btn-xs px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Actions">
-                                        <i data-lucide="more-vertical" style="width:14px;height:14px;"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 text-xs" style="border-radius:10px; min-width: 170px;">
-                                        <li>
-                                            <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-primary" href="javascript:void(0)" onclick="PlatformSettings.openEditAdminModal(${a.id}, '${(a.username || '').replace(/'/g, "\\'")}', '${(a.email || '').replace(/'/g, "\\'")}', '${(a.sub_role || 'Owner').replace(/'/g, "\\'")}')">
-                                                <i data-lucide="edit-3" style="width:13px;height:13px;"></i> Edit Role & Account
-                                            </a>
-                                        </li>
-                                        ${!isMe ? `
-                                            <li><hr class="dropdown-divider my-1"></li>
-                                            <li>
-                                                <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="javascript:void(0)" onclick="PlatformSettings.deleteAdminAccount(${a.id}, '${(a.username || '').replace(/'/g, "\\'")}')">
-                                                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Remove Account
-                                                </a>
-                                            </li>
-                                        ` : `
-                                            <li><hr class="dropdown-divider my-1"></li>
-                                            <li><span class="dropdown-item-text text-xxs text-muted py-1"><i data-lucide="user-check" class="me-1" style="width:12px;"></i> Active Session (You)</span></li>
-                                        `}
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-
-                if (window.lucide) lucide.createIcons();
+                this._adminLoginsAll = res.data || [];
+                this.renderAdminLogins();
             }
-        } catch (e) {
-            console.error('[PlatformSettings] Load admin logins failed:', e);
-            if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-danger">Failed to load admin accounts.</td></tr>`;
+        } catch (e) { console.error('Failed to load super admin logins:', e); }
+    },
+
+    renderAdminLogins() {
+        const tbody = document.getElementById('adminLoginsTableBody');
+        const ownEmailInput = document.getElementById('ownAdminNewEmail');
+        const countBadge = document.getElementById('adminAccountsCountBadge');
+        const infoEl = document.getElementById('adminLoginsPaginationInfo');
+        const controlsEl = document.getElementById('adminLoginsPaginationControls');
+
+        const admins = this._adminLoginsAll || [];
+        if (countBadge) countBadge.textContent = `${admins.length} Account${admins.length === 1 ? '' : 's'}`;
+
+        const me = JSON.parse(sessionStorage.getItem('user') || '{}');
+        if (ownEmailInput && me.email) {
+            ownEmailInput.value = me.email;
+        } else if (ownEmailInput && admins.length > 0) {
+            ownEmailInput.value = admins[0].email;
         }
+
+        if (!tbody) return;
+
+        if (admins.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No Super Admin accounts found.</td></tr>`;
+            if (infoEl) infoEl.textContent = 'Showing 0 of 0 accounts';
+            if (controlsEl) controlsEl.innerHTML = '';
+            return;
+        }
+
+        const perPage = this._adminLoginsPerPage || 5;
+        const totalPages = Math.max(1, Math.ceil(admins.length / perPage));
+        this._adminLoginsPage = Math.min(Math.max(1, this._adminLoginsPage || 1), totalPages);
+        const currentPage = this._adminLoginsPage;
+
+        const start = (currentPage - 1) * perPage;
+        const pageAdmins = admins.slice(start, start + perPage);
+
+        tbody.innerHTML = pageAdmins.map(a => {
+            const isMe = me.id == a.id || me.email === a.email;
+            const badgeClass = a.sub_role === 'Owner' ? 'bg-primary-subtle text-primary' : 'bg-info-subtle text-info';
+
+            return `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center" style="width:28px;height:28px;font-size:11px;">
+                                ${(a.username || 'A').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-main">${a.username} ${isMe ? '<span class="badge bg-success-subtle text-success ms-1" style="font-size:9px;">You</span>' : ''}</div>
+                                <div class="text-xxs text-secondary">ID #${a.id}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="font-monospace text-xs">${a.email}</td>
+                    <td><span class="badge ${badgeClass} text-xxs">${a.sub_role || 'Owner'}</span></td>
+                    <td><span class="badge bg-success-subtle text-success text-xxs">${a.status}</span></td>
+                    <td class="text-secondary text-xxs">${a.created_at ? a.created_at.slice(0, 10) : '—'}</td>
+                    <td class="text-end">
+                        <div class="dropdown d-inline-block">
+                            <button class="ds-btn ds-btn-secondary ds-btn-xs px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Actions">
+                                <i data-lucide="more-vertical" style="width:14px;height:14px;"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 text-xs" style="border-radius:10px; min-width: 170px;">
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-primary" href="javascript:void(0)" onclick="PlatformSettings.openEditAdminModal(${a.id}, '${(a.username || '').replace(/'/g, "\\'")}', '${(a.email || '').replace(/'/g, "\\'")}', '${(a.sub_role || 'Owner').replace(/'/g, "\\'")}')">
+                                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i> Edit Role & Account
+                                    </a>
+                                </li>
+                                ${!isMe ? `
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="javascript:void(0)" onclick="PlatformSettings.deleteAdminAccount(${a.id}, '${(a.username || '').replace(/'/g, "\\'")}')">
+                                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Remove Account
+                                        </a>
+                                    </li>
+                                ` : `
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li><span class="dropdown-item-text text-xxs text-muted py-1"><i data-lucide="user-check" class="me-1" style="width:12px;"></i> Active Session (You)</span></li>
+                                `}
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
+
+        // Render pagination info and controls
+        const endDisplay = Math.min(start + perPage, admins.length);
+        const startDisplay = admins.length > 0 ? start + 1 : 0;
+        if (infoEl) infoEl.textContent = `Showing ${startDisplay} to ${endDisplay} of ${admins.length} accounts`;
+
+        if (controlsEl) {
+            if (window.SuperAdmin && typeof window.SuperAdmin.buildFourPagePagination === 'function') {
+                controlsEl.innerHTML = window.SuperAdmin.buildFourPagePagination(currentPage, totalPages, 'PlatformSettings.changeAdminLoginsPage');
+            } else {
+                let btnHtml = '';
+                btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm ${currentPage <= 1 ? 'disabled' : ''}" ${currentPage <= 1 ? 'disabled' : ''} onclick="PlatformSettings.changeAdminLoginsPage(${currentPage - 1})">Prev</button>`;
+                for (let i = 1; i <= totalPages; i++) {
+                    const isAct = i === currentPage ? 'ds-btn-primary' : 'ds-btn-secondary';
+                    btnHtml += `<button class="ds-btn ${isAct} ds-btn-sm px-3" onclick="PlatformSettings.changeAdminLoginsPage(${i})">${i}</button>`;
+                }
+                btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm ${currentPage >= totalPages ? 'disabled' : ''}" ${currentPage >= totalPages ? 'disabled' : ''} onclick="PlatformSettings.changeAdminLoginsPage(${currentPage + 1})">Next</button>`;
+                controlsEl.innerHTML = btnHtml;
+            }
+        }
+    },
+
+    changeAdminLoginsPage(p) {
+        this._adminLoginsPage = p;
+        this.renderAdminLogins();
+    },
+
+    adminLoginsSetPerPage(val) {
+        this._adminLoginsPerPage = parseInt(val) || 5;
+        this._adminLoginsPage = 1;
+        this.renderAdminLogins();
     },
 
     async updateOwnCredentials() {
@@ -2511,6 +2619,16 @@ Object.assign(PlatformSettings, {
 
         if (!currentPassword) {
             QCMS.toast('Current password is required to confirm changes.', 'warning');
+            return;
+        }
+
+        if (newEmail && !this.validateEmail(newEmail)) {
+            QCMS.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
+            const emailInput = document.getElementById('ownAdminNewEmail');
+            if (emailInput) {
+                emailInput.classList.add('is-invalid');
+                emailInput.focus();
+            }
             return;
         }
 
@@ -2561,6 +2679,39 @@ Object.assign(PlatformSettings, {
         }
     },
 
+    validateEmail(email) {
+        if (!email) return false;
+        const re = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+        return re.test(String(email).trim());
+    },
+
+    validateEmailInput(inputEl) {
+        if (!inputEl) return;
+        const val = inputEl.value.trim();
+        const errElId = inputEl.id === 'newAdminEmail' ? 'newAdminEmailError' : (inputEl.id === 'editAdminEmail' ? 'editAdminEmailError' : inputEl.id + 'Error');
+        const errEl = document.getElementById(errElId);
+
+        if (!val) {
+            inputEl.classList.remove('is-invalid', 'is-valid');
+            if (errEl) errEl.style.display = 'none';
+            return;
+        }
+
+        const isValid = this.validateEmail(val);
+        if (!isValid) {
+            inputEl.classList.add('is-invalid');
+            inputEl.classList.remove('is-valid');
+            if (errEl) {
+                errEl.textContent = 'Please enter a valid email address in format username@domain.extension (e.g. admin@qcms.com)';
+                errEl.style.display = 'block';
+            }
+        } else {
+            inputEl.classList.remove('is-invalid');
+            inputEl.classList.add('is-valid');
+            if (errEl) errEl.style.display = 'none';
+        }
+    },
+
     async createAdminAccount() {
         const username = document.getElementById('newAdminUsername')?.value?.trim();
         const email = document.getElementById('newAdminEmail')?.value?.trim();
@@ -2570,6 +2721,16 @@ Object.assign(PlatformSettings, {
 
         if (!username || !email || !password) {
             QCMS.toast('Username, email, and password are required.', 'warning');
+            return;
+        }
+
+        if (!this.validateEmail(email)) {
+            QCMS.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
+            const emailInput = document.getElementById('newAdminEmail');
+            if (emailInput) {
+                emailInput.classList.add('is-invalid');
+                emailInput.focus();
+            }
             return;
         }
 
@@ -2641,6 +2802,16 @@ Object.assign(PlatformSettings, {
 
         if (!adminId) {
             QCMS.toast('Invalid admin account selected.', 'error');
+            return;
+        }
+
+        if (email && !this.validateEmail(email)) {
+            QCMS.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
+            const emailInput = document.getElementById('editAdminEmail');
+            if (emailInput) {
+                emailInput.classList.add('is-invalid');
+                emailInput.focus();
+            }
             return;
         }
 

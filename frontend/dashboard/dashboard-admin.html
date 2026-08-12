@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
     <link rel="stylesheet" href="/assets/css/glass.css">
+    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
     <script src="/assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -699,8 +700,36 @@
                     }
                 }
 
-                const userStr = sessionStorage.getItem('user');
+                const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
                 const user = JSON.parse(userStr || '{}');
+                const isSuspended = user.subscription_status === 'Suspended';
+                const isSuperAdmin = user.role === 'SuperAdmin';
+                if (isSuspended && !isSuperAdmin) {
+                    const banner = document.createElement('div');
+                    banner.innerHTML = `
+                        <div class="alert alert-warning border-0 shadow-sm rounded-4 p-4 mb-4 fade-in">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle bg-warning bg-opacity-20 p-3 d-flex align-items-center justify-content-center">
+                                        <i data-lucide="alert-triangle" class="text-warning fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Organization Account Suspended</h6>
+                                        <p class="text-secondary small mb-0">Your organization account has been suspended by Administrator. Full functionality is currently restricted.</p>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-warning px-4 py-2 fw-bold text-dark rounded-3" data-bs-toggle="modal" data-bs-target="#reactivationModal">
+                                    <i data-lucide="mail-plus" class="me-1"></i> Request Reactivation
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    const container = document.querySelector('.app-content-inner');
+                    if (container && !document.querySelector('.alert-warning')) {
+                        container.insertBefore(banner.firstElementChild, container.firstChild);
+                    }
+                }
+
                 const roleName = (user.role && user.role.name) ? user.role.name : (user.role || '');
                 const role = roleName.toLowerCase().replace(/[^a-z0-9]/g, '');
                 const canCreate = ['teamleader', 'teammember'].includes(role);
@@ -751,9 +780,8 @@
                     const stats = await api.get('/admin/stats');
                     if (grid) {
                         grid.innerHTML =
-                            QCMS.kpiCard('Active Pipeline', stats.active_projects || 0, 'folder-kanban', 'blue', null) +
+                            QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'folder-kanban', 'blue', null) +
                             QCMS.kpiCard('Team Stakeholders', stats.total_members || 0, 'users', 'purple', null, '/admin/users.html') +
-                            QCMS.kpiCard('Pending Tasks', stats.pending_validations || 0, 'clock', 'orange', null, '/admin/audit-queue.html') +
                             QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green', null, '/analytics/analytics.html');
                         // Wire Active Pipeline card to scroll + filter
                         const kpiCols = document.querySelectorAll('#kpiGrid > div, #kpiGrid > a');

@@ -7,30 +7,26 @@
     --ds-font-title: var(--ds-font-body);
     --ds-font-main: var(--ds-font-body);
 
-    /* --- Professional Corporate Palette (Light Theme) --- */
-    --ds-primary: #0f172a;
-    /* Deep Navy for Corporate Feel */
-    --ds-primary-rgb: 15, 23, 42;
-    --ds-accent: #334155;
-    /* Neutral Corporate Slate for Actions */
-    --ds-accent-hover: #1e293b;
-    --ds-accent-rgb: 51, 65, 85;
+    /* --- Professional Enterprise SaaS Palette (Light Theme) --- */
+    --ds-primary: #2563eb;
+    --ds-primary-rgb: 37, 99, 235;
+    --ds-accent: #3b82f6;
+    --ds-accent-hover: #2563eb;
+    --ds-accent-rgb: 59, 130, 246;
 
-    --ds-bg-main: #fcfdfe;
-    /* even cleaner backdrop */
-    --ds-bg-surface: rgba(255, 255, 255, 0.75);
-    --ds-bg-card: rgba(255, 255, 255, 0.9);
+    --ds-bg-main: #f8fafc;
+    --ds-bg-surface: #ffffff;
+    --ds-bg-card: #ffffff;
     --ds-text-main: #0f172a;
     --ds-text-secondary: #475569;
     --ds-text-tertiary: #64748b;
-    --ds-border-color: rgba(15, 23, 42, 0.08);
-    --ds-input-bg: rgba(15, 23, 42, 0.05);
-    --ds-input-border: rgba(15, 23, 42, 0.25);
+    --ds-border-color: #e2e8f0;
+    --ds-input-bg: #ffffff;
+    --ds-input-border: #cbd5e1;
 
     /* Semantic Color RGBs for transparency support */
-    --ds-blue-rgb: 51, 65, 85;
-    /* Neutralized from 37, 99, 235 */
-    --ds-green-rgb: 34, 197, 94;
+    --ds-blue-rgb: 37, 99, 235;
+    --ds-green-rgb: 16, 185, 129;
     --ds-orange-rgb: 245, 158, 11;
     --ds-red-rgb: 239, 68, 68;
     --ds-purple-rgb: 139, 92, 246;
@@ -65,7 +61,7 @@
 
     --ds-navbar-height: 80px;
     /* Slight increase for breathing room */
-    --ds-sidebar-width: 300px;
+    --ds-sidebar-width: 260px;
 }
 
 [data-theme="dark"] {
@@ -175,13 +171,19 @@ h6,
 }
 
 .app-sidebar {
-    width: var(--ds-sidebar-width);
-    flex-shrink: 0;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: 100vh !important;
+    width: var(--ds-sidebar-width, 260px);
+    flex: 0 0 0px !important;
     z-index: 1001;
 }
 
 .app-main {
-    flex: 1;
+    flex: 1 1 auto;
+    margin-left: var(--ds-sidebar-width, 260px) !important;
+    width: calc(100% - var(--ds-sidebar-width, 260px)) !important;
     min-width: 0; /* Prevent horizontal overflow */
     display: flex;
     flex-direction: column;
@@ -191,11 +193,11 @@ h6,
 .app-content-inner {
     padding: var(--ds-space-6) var(--ds-space-8);
     width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
     flex: 1;
-    opacity: 0; /* For fade-in effect */
-    animation: ds-fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 1;
+    animation: ds-fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes ds-fade-in-up {
@@ -1193,9 +1195,7 @@ input[type="number"].obs-val {
 }
 
 .ds-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--ds-shadow-xl);
-    border-color: rgba(var(--ds-accent-rgb), 0.3);
+    transform: none !important;
 }
 
 /* Section Spacing Utility */

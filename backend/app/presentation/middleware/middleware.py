@@ -62,7 +62,8 @@ def _is_super_admin(user):
         return False
     role_name = user.role.name if user.role else ''
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    return role_name in ('SuperAdmin', 'Admin') or is_sa_custom
+    is_sa_flag = getattr(user, 'is_super_admin', False) or user.org_id is None
+    return role_name in ('SuperAdmin', 'Admin') or is_sa_custom or is_sa_flag
 
 
 def _get_sa_sub_role(user):

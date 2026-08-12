@@ -74,6 +74,8 @@ class Organization(db.Model):
     # Compliance & Licensing
     gst_number = db.Column(db.String(50), nullable=True)
     pan_number = db.Column(db.String(50), nullable=True)
+    udyam_number = db.Column(db.String(50), nullable=True)
+    org_scale = db.Column(db.String(50), default='Small') # Micro, Small, Medium, Large
     website = db.Column(db.String(255), nullable=True)
     org_code = db.Column(db.String(100), unique=True, nullable=True)
     license_number = db.Column(db.String(100), unique=True, nullable=True)
@@ -88,6 +90,7 @@ class Organization(db.Model):
 
     license_start_date = db.Column(db.DateTime, default=datetime.utcnow)
     license_expiry_date = db.Column(db.DateTime, nullable=True, index=True)
+    trial_extension_count = db.Column(db.Integer, default=0, nullable=False, server_default='0')
     storage_used_mb = db.Column(db.Float, default=0.0)
     
     # 8-Stage Workflow Template (org-level customization)
@@ -269,7 +272,7 @@ class Department(db.Model):
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False, index=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True, index=True)
     plant_id = db.Column(db.Integer, db.ForeignKey('plants.id'), nullable=True, index=True)
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
     full_name = db.Column(db.String(255))
@@ -305,6 +308,10 @@ class User(db.Model):
 
     def check_password(self, password):
         return bcrypt.check_password_hash(self.hashed_password, password)
+
+    @property
+    def org(self):
+        return self.organization
 
 class EmailVerification(db.Model):
     __tablename__ = 'email_verifications'
@@ -871,7 +878,7 @@ class KPIMetric(db.Model):
 class AuditLog(db.Model):
     __tablename__ = 'audit_logs'
     id = db.Column(db.Integer, primary_key=True)
-    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     action = db.Column(db.String(255), nullable=False)
@@ -904,7 +911,7 @@ class SaaSUserSession(db.Model):
     __tablename__ = 'saas_user_sessions'
     session_id = db.Column(db.String(100), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
     login_time = db.Column(db.DateTime, default=datetime.utcnow)
     logout_time = db.Column(db.DateTime)
     session_duration = db.Column(db.Integer)  # in seconds
@@ -1113,6 +1120,7 @@ class PlatformSettings(db.Model):
     
     default_plan = db.Column(db.String(50), default="Starter")
     trial_period_days = db.Column(db.Integer, default=14)
+    max_auto_trial_extensions = db.Column(db.Integer, default=2)
     payment_gateway_mode = db.Column(db.String(20), default="Test") # Test or Live
     plans_initial_seeded = db.Column(db.Boolean, default=False)
     
@@ -1367,6 +1375,7 @@ class Subscription(db.Model):
     gst_amount = db.Column(db.Float, default=0.0)
     final_amount = db.Column(db.Float, default=0.0)
     currency = db.Column(db.String(10), default='INR')
+    is_tax_inclusive = db.Column(db.Boolean, default=False)
 
     # Limits & Configuration
     max_users = db.Column(db.Integer, default=500)
@@ -1455,6 +1464,7 @@ class SubscriptionInvoice(db.Model):
     gst_amount = db.Column(db.Float, default=0.0)
     total_amount = db.Column(db.Float, default=0.0)
     currency = db.Column(db.String(10), default='INR')
+    is_tax_inclusive = db.Column(db.Boolean, default=False)
 
     # Status
     invoice_status = db.Column(db.String(20), default='Draft')
@@ -1772,9 +1782,12 @@ class SaaSPlan(db.Model):
     icon = db.Column(db.String(50), default='layers')
     color = db.Column(db.String(20), default='#3b82f6')
     status = db.Column(db.String(20), default='Active')      # Active, Inactive, Deprecated, Coming Soon
-    plan_type = db.Column(db.String(20), default='Professional') # Starter, Professional, Enterprise, Custom
+    plan_type = db.Column(db.String(100), default='Professional') # Starter, Professional, Enterprise, Custom, Trial
     currency = db.Column(db.String(10), default='INR')
     is_custom = db.Column(db.Boolean, default=False)
+    is_default_trial = db.Column(db.Boolean, default=False)
+    trial_duration_days = db.Column(db.Integer, default=14)
+    auto_approve_extensions_limit = db.Column(db.Integer, default=2)
     version = db.Column(db.Integer, default=1)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -1798,6 +1811,7 @@ class SaaSPlanPricing(db.Model):
     price = db.Column(db.Float, nullable=False)
     discount = db.Column(db.Float, default=0.0)              # Percentage discount
     tax = db.Column(db.Float, default=18.0)                  # Default tax rate
+    is_tax_inclusive = db.Column(db.Boolean, default=False)   # True if price includes GST
     is_active = db.Column(db.Boolean, default=True)
 
 
@@ -1809,7 +1823,6 @@ class SaaSPlanLimits(db.Model):
     plan_id = db.Column(db.Integer, db.ForeignKey('saas_plans.id', ondelete='CASCADE'), nullable=False)
     max_users = db.Column(db.Integer, default=100)
     max_departments = db.Column(db.Integer, default=10)
-    max_quality_circles = db.Column(db.Integer, default=5)
     max_projects = db.Column(db.Integer, default=25)
     storage_limit_gb = db.Column(db.Float, default=10.0)
     api_limit = db.Column(db.Integer, default=10000)
@@ -2583,7 +2596,6 @@ class CompanyInformationConfig(db.Model):
     registration_number = db.Column(db.String(100), default="REG-2026-98765")
     tax_number = db.Column(db.String(100), default="TAX-IN-889977")
     license_number = db.Column(db.String(100), default="LIC-QCMS-ENT-2026")
-    iso_certifications = db.Column(db.String(255), default="ISO 9001:2015 | ISO 27001:2022 | IATF 16949")
     trademark = db.Column(db.String(255), default="QCMS® Registered Trademark")
     official_seal_url = db.Column(db.String(500), default="/assets/img/official_seal.png")
     digital_signature_url = db.Column(db.String(500), default="/assets/img/digital_signature.png")

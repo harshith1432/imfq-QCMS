@@ -73,9 +73,8 @@
 }
 
 .glass-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--ds-shadow-lg) !important;
-    border-color: rgba(var(--ds-accent-rgb), 0.3) !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* Standardized Glass Card Internal Structure */
@@ -111,7 +110,7 @@
 }
 
 .glass-sidebar {
-    width: var(--ds-sidebar-width);
+    width: var(--ds-sidebar-width, 260px);
     background: var(--ds-bg-surface) !important;
     backdrop-filter: blur(var(--ds-glass-blur)) !important;
     border-right: 1px solid var(--ds-border-color) !important;
@@ -119,6 +118,7 @@
     position: fixed;
     left: 0;
     top: 0;
+    flex: 0 0 0px !important;
     display: flex;
     flex-direction: column;
     z-index: 1001;
@@ -432,20 +432,21 @@
 }
 
 .app-main {
-    flex: 1;
-    margin-left: var(--ds-sidebar-width);
+    flex: 1 1 auto;
+    margin-left: var(--ds-sidebar-width, 260px) !important;
+    width: calc(100% - var(--ds-sidebar-width, 260px)) !important;
     display: flex;
     flex-direction: column;
     min-width: 0;
     position: relative;
     padding-bottom: 3rem;
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-content-inner {
     width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
     /* Safe-Zone Padding: Responsive scaling with minimum 1.25rem to prevent border-touching */
     padding: clamp(1rem, 3vw, var(--ds-space-10));
     padding-top: var(--ds-space-2) !important;
@@ -624,13 +625,12 @@
         gap: var(--ds-space-4) !important;
     }
 
-    /* Make all KPI cards smaller */
-    .sub-kpi-card, .lic-kpi-card, .mod-kpi-card, .plan-kpi-card, .bill-kpi-card, .kpi-card,
+    /* Make all KPI cards legible with high-contrast text and clear layout */
     #superKpiGrid .glass-card, #orgKpiGrid .glass-card {
         padding: 0.75rem 0.6rem !important;
         border-radius: 12px !important;
         min-height: 110px !important;
-        height: 110px !important;
+        height: auto !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
@@ -643,7 +643,7 @@
         width: 32px !important;
         height: 32px !important;
         border-radius: 8px !important;
-        margin: 0 auto 6px !important;
+        margin: 0 auto 4px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -651,24 +651,32 @@
 
     #superKpiGrid .glass-card div[style*="width:40px"] i, #orgKpiGrid .glass-card div[style*="width:40px"] i,
     .sub-kpi-card .kpi-icon i, .lic-kpi-card .kpi-icon i, .mod-kpi-card .kpi-icon i, .plan-kpi-card .kpi-icon i, .bill-kpi-card .kpi-icon i {
-        width: 14px !important;
-        height: 14px !important;
+        width: 15px !important;
+        height: 15px !important;
     }
 
     .kpi-value, #superKpiGrid .text-2xl, #orgKpiGrid .text-2xl {
-        font-size: 1.15rem !important;
+        font-size: 1.25rem !important;
         font-weight: 700 !important;
         line-height: 1.2 !important;
         margin-bottom: 2px !important;
+        color: var(--ds-text-main) !important;
     }
 
     .kpi-label, #superKpiGrid .text-xs, #orgKpiGrid .text-xs {
-        font-size: 9.5px !important;
+        font-size: 11px !important;
         font-weight: 600 !important;
         text-transform: uppercase !important;
-        letter-spacing: .5px !important;
+        letter-spacing: .02em !important;
+        line-height: 1.25 !important;
         margin-top: 0 !important;
-        color: var(--ds-text-secondary) !important;
+        color: #334155 !important;
+    }
+
+    [data-theme="dark"] .kpi-label,
+    [data-theme="dark"] #superKpiGrid .text-xs,
+    [data-theme="dark"] #orgKpiGrid .text-xs {
+        color: #cbd5e1 !important;
     }
 }
 
@@ -1005,7 +1013,8 @@
     font-size: 0.875rem;
     color: var(--ds-text-main);
     border-bottom: 1px solid var(--ds-border-color);
-    vertical-align: middle;
+    vertical-align: middle !important;
+    line-height: 1.45 !important;
 }
 
 .ds-table tr:last-child td,
@@ -1031,27 +1040,41 @@
     height: 0 !important;
 }
 
-.glass-card:has(.table-responsive) {
+.glass-card:has(.table-responsive),
+.glass-card:has(.dropdown-menu.show),
+.card:has(.dropdown-menu.show),
+div:has(> .table-responsive) {
     overflow: visible !important;
 }
 
-/* Elevate the entire row that contains an open dropdown above subsequent rows */
-.ds-table tr:has(.dropdown.show) {
-    position: relative;
-    z-index: 9999 !important;
+/* Elevate the entire row & table cell that contains an open dropdown above subsequent rows */
+.ds-table tr:has(.dropdown.show),
+.ds-table tr:has(.dropdown-menu.show),
+.ds-table td:has(.dropdown-menu.show),
+tr:has(.dropdown-menu.show),
+td:has(.dropdown-menu.show) {
+    position: relative !important;
+    z-index: 99999 !important;
 }
 
-.table-responsive:has(.dropdown.show) {
+.table-responsive:has(.dropdown.show),
+.table-responsive:has(.dropdown-menu.show),
+.table-responsive:has(.show),
+.table-responsive:has(.dropdown) {
     overflow: visible !important;
 }
 
-/* Force dropdown to always render above everything */
+/* Force dropdown to always render on top layer of the web page */
 .ds-table .dropdown.show .dropdown-menu,
+.ds-table .dropdown-menu.show,
+.table-responsive .dropdown-menu.show,
 .dropdown.show .dropdown-menu,
-.dropdown-menu.show {
-    z-index: 10050 !important;
+.dropdown-menu.show,
+.dropdown-menu[data-bs-popper] {
+    z-index: 100000 !important;
     white-space: nowrap !important;
-    min-width: 200px !important;
+    min-width: 180px !important;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.18), 0 8px 10px -6px rgba(0,0,0,0.1) !important;
 }
 
 .dropdown-menu .dropdown-item {
@@ -1649,11 +1672,20 @@ select.ds-input,
 select.ds-select {
     appearance: none !important;
     -webkit-appearance: none !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: right 12px center !important;
     background-size: 16px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 14px !important;
     padding-right: 36px !important;
+    line-height: 40px !important;
+    height: 42px !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    color: var(--ds-text-main) !important;
+    vertical-align: middle !important;
     cursor: pointer !important;
 }
 
@@ -1662,6 +1694,7 @@ select.ds-select option {
     background: #ffffff;
     color: #0f172a;
     font-size: 0.9rem;
+    padding: 8px 12px;
 }
 
 /* --- Dark Mode Overrides --- */

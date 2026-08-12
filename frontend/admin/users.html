@@ -9,13 +9,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
     <link rel="stylesheet" href="/assets/css/glass.css">
+    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
     <script src="/assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="app-layout">
-    <aside class="app-sidebar" id="app-sidebar"></aside>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
 
-    <main class="app-main">
+        <main class="app-main">
         <header class="app-navbar" id="app-navbar"></header>
 
         <div class="app-content-inner">
@@ -29,39 +31,51 @@
             </header>
 
             <div class="glass-card ds-card mb-4">
-                <div class="ds-card-header h-stack justify-content-between p-4">
-                    <div class="v-stack">
-                        <h5 class="mb-0 fw-bold">Member Registry</h5>
-                        <p class="text-xs ds-text-secondary mb-0">Stakeholder access and role tracking</p>
+                <!-- 1. Header with Title & Primary Action Buttons -->
+                <div class="ds-card-header d-flex justify-content-between align-items-center flex-wrap gap-3 p-4 border-bottom">
+                    <div class="d-flex align-items-center gap-3">
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="mb-0 fw-bold fs-5">Member Registry</h5>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2.5 py-1 text-xs fw-semibold" id="memberCountBadge">0 members</span>
+                            </div>
+                            <p class="text-xs ds-text-secondary mb-0 mt-1">Stakeholder access, plant assignments, and system role tracking</p>
+                        </div>
                     </div>
-                    <div class="h-stack gap-3">
-                        <div class="position-relative" style="width: 200px;">
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.openFieldsModal()">
+                            <i data-lucide="settings" style="width:14px;height:14px;"></i> Configure Fields
+                        </button>
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.openBulkModal()">
+                            <i data-lucide="upload" style="width:14px;height:14px;"></i> Bulk Import
+                        </button>
+                        <button class="ds-btn ds-btn-primary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.openAddModal()">
+                            <i data-lucide="user-plus" style="width:14px;height:14px;"></i> Add Member
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Search & Filter Bar -->
+                <div class="p-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style="background: rgba(var(--ds-primary-rgb, 99, 102, 241), 0.02); border-bottom: 1px solid var(--ds-border-color);">
+                    <div class="d-flex align-items-center gap-3 flex-wrap flex-grow-1">
+                        <div class="position-relative" style="min-width: 240px; max-width: 320px; flex: 1;">
                             <i data-lucide="search" class="position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; pointer-events: none; opacity: 0.65; z-index: 10;"></i>
-                            <input type="text" class="ds-input" id="memberSearchInput" placeholder="Search members..." 
-                                style="padding-left: 36px !important; padding-right: 12px !important; padding-top: 6px !important; padding-bottom: 6px !important; height: 36px !important; font-size: 0.78rem; border: 1.5px solid rgba(120, 120, 120, 0.45) !important; background: var(--ds-input-bg) !important; color: var(--ds-text-main) !important; border-radius: 8px;" 
+                            <input type="text" class="ds-input" id="memberSearchInput" placeholder="Search members by name, email..." 
+                                style="padding-left: 36px !important; padding-right: 12px !important; padding-top: 6px !important; padding-bottom: 6px !important; height: 38px !important; font-size: 0.82rem; border: 1.5px solid rgba(120, 120, 120, 0.35) !important; background: var(--ds-input-bg) !important; color: var(--ds-text-main) !important; border-radius: 8px; width: 100%;" 
                                 oninput="Users.loadUsers()">
                         </div>
 
-                        <select class="ds-input ds-select ds-input-sm" id="userPlantFilter" onchange="Users.loadUsers()" style="height: 36px !important; font-size: 0.78rem; border: 1.5px solid rgba(120, 120, 120, 0.45) !important; background: var(--ds-input-bg) !important; color: var(--ds-text-main) !important; border-radius: 8px; width: 170px;">
+                        <select class="ds-input ds-select ds-input-sm" id="userPlantFilter" onchange="Users.loadUsers()" style="height: 38px !important; font-size: 0.82rem; border: 1.5px solid rgba(120, 120, 120, 0.35) !important; background: var(--ds-input-bg) !important; color: var(--ds-text-main) !important; border-radius: 8px; width: 190px;">
                             <option value="">All Plant Locations</option>
                         </select>
+                    </div>
 
+                    <div class="d-flex align-items-center gap-2">
                         <div class="ds-tab-group">
                             <button class="ds-btn-tab active" onclick="Users.filter('all')">All</button>
                             <button class="ds-btn-tab" onclick="Users.filter('active')">Active</button>
                         </div>
-
-                        <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Users.openFieldsModal()">
-                            <i data-lucide="settings"></i> Configure Fields
-                        </button>
-
-                        <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Users.openBulkModal()">
-                            <i data-lucide="upload"></i> Bulk Import
-                        </button>
-
-                        <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="Users.openAddModal()">
-                            <i data-lucide="user-plus"></i> Add Member
-                        </button>
                     </div>
                 </div>
                 <div class="ds-card-body p-0">
@@ -90,7 +104,6 @@
             </div>
         </div>
     </main>
-    </div>
 
     <!-- Actions consolidated into table row for single-init reliability -->
 
@@ -705,6 +718,9 @@
                         users = res.slice((page - 1) * 10, page * 10);
                     }
 
+                    const badge = document.getElementById('memberCountBadge');
+                    if (badge) badge.textContent = `${total} member${total === 1 ? '' : 's'}`;
+
                     const tbody = document.getElementById('usersBody');
                     const pagContainer = document.getElementById('usersPaginationContainer');
 
@@ -754,7 +770,7 @@
                                     <i data-lucide="factory" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(u.plant_name || 'N/A')}
                                 </span>
                             </td>
-                            <td><span class="text-sm fw-medium ds-text-main">${QCMS.escapeHtml(u.department)}</span></td>
+                            <td><span class="text-sm fw-medium ds-text-main">${QCMS.escapeHtml(u.department || 'N/A')}</span></td>
                             ${visibleCustomFields.map(f => {
                                 const cf = (u.custom_fields && u.custom_fields[f.field_key]) || (u[f.field_key]) || '';
                                 return `<td><span class="text-sm ds-text-main">${cf || '<span class="text-muted text-xs">—</span>'}</span></td>`;
@@ -1260,5 +1276,6 @@
             }
         });
     </script>
+    </div>
 </body>
 </html>

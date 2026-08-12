@@ -7,7 +7,8 @@ import os
 from sqlalchemy import func
 from app.infrastructure.database.models.models import (
     db, Organization, User, Project, SupportAttachment, 
-    AnnouncementAttachment, KnowledgeRepository, AuditLog, SupportTicket
+    AnnouncementAttachment, KnowledgeRepository, AuditLog, SupportTicket,
+    Subscription, SaaSPlan, SaaSPlanLimits
 )
 
 def calculate_org_storage_realtime(org_id=None):
@@ -22,15 +23,12 @@ def calculate_org_storage_realtime(org_id=None):
         query = query.filter(Organization.id == org_id)
     else:
         query = query.filter(
-            (Organization.is_platform_org == False) | (Organization.is_platform_org == None)
+            Organization.is_platform_org == False,
+            Organization.id != 1,
+            Organization.name != 'QCMS Admin Org'
         )
     
     orgs = query.all()
-    if not orgs and not org_id:
-        # Fallback: if no customer orgs returned with platform_org=False, include all non-deleted orgs
-        orgs = Organization.query.filter(
-            (Organization.is_deleted == False) | (Organization.is_deleted == None)
-        ).all()
     
     result = []
     total_platform_used_mb = 0.0
@@ -65,10 +63,32 @@ def calculate_org_storage_realtime(org_id=None):
         
         calc_used_mb = round(file_mb + db_mb + base_mb, 2)
         
-        # Sync with organization record
-        org.storage_used_mb = calc_used_mb
+        # Resolve dynamic storage limit from plan allocation
+        limit_mb = None
 
-        limit_mb = org.storage_limit_mb or 10240.0 # Default 10GB
+        # 1) Check active subscription record
+        active_sub = Subscription.query.filter_by(org_id=org.id).filter(
+            Subscription.subscription_status.in_(['Active', 'ACTIVE', 'Trialing', 'TRIALING'])
+        ).order_by(Subscription.id.desc()).first()
+        if active_sub and getattr(active_sub, 'storage_limit_gb', None) and active_sub.storage_limit_gb > 0:
+            limit_mb = active_sub.storage_limit_gb * 1024.0
+
+        # 2) Check matching SaaSPlan by name or code
+        if not limit_mb and org.subscription_plan:
+            saas_plan = SaaSPlan.query.filter(
+                (SaaSPlan.name.ilike(org.subscription_plan)) | (SaaSPlan.code.ilike(org.subscription_plan))
+            ).first()
+            if saas_plan:
+                plan_limits = SaaSPlanLimits.query.filter_by(plan_id=saas_plan.id).first()
+                if plan_limits and plan_limits.storage_limit_gb and plan_limits.storage_limit_gb > 0:
+                    limit_mb = plan_limits.storage_limit_gb * 1024.0
+
+        # 3) Fallback to organization's stored limit or 10 GB
+        if not limit_mb:
+            limit_mb = org.storage_limit_mb if (org.storage_limit_mb and org.storage_limit_mb > 0) else 10240.0
+
+        # Sync resolved storage limit to organization record
+        org.storage_limit_mb = limit_mb
         limit_gb = round(limit_mb / 1024.0, 2)
         used_gb = round(calc_used_mb / 1024.0, 2)
         pct = round((calc_used_mb / limit_mb * 100), 1) if limit_mb > 0 else 0.0
@@ -141,7 +161,7 @@ def calculate_org_storage_realtime(org_id=None):
             "total_limit_fmt": total_limit_fmt,
             "total_orgs": len(result),
             "high_usage_count": sum(1 for o in result if o["usage_percent"] >= 70),
-            "avg_usage_mb": round(total_platform_used_mb / max(1, len(result)), 2)
+            "avg_usage_mb": round(total_platform_used_mb / len(result), 2) if len(result) > 0 else 0.0
         }
     }
 

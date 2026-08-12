@@ -1677,7 +1677,7 @@ def get_license_analytics():
     user = User.query.get(get_jwt_identity())
     f = parse_filters(user)
     
-    orgs_q = Organization.query.filter_by(is_deleted=False)
+    orgs_q = Organization.query.filter_by(is_deleted=False).filter(Organization.is_platform_org == False)
     if f['org_id']:
         orgs_q = orgs_q.filter_by(id=f['org_id'])
         
@@ -2181,7 +2181,7 @@ def drill_down():
     segment = request.args.get('segment', 'revenue')
     
     if segment == 'revenue':
-        orgs = Organization.query.filter_by(is_deleted=False)
+        orgs = Organization.query.filter_by(is_deleted=False).filter(Organization.is_platform_org == False)
         if f['org_id']:
             orgs = orgs.filter_by(id=f['org_id'])
             
@@ -2215,7 +2215,7 @@ def drill_down():
         return jsonify({"status": "success", "drilldown": drill_data})
 
     else:
-        orgs = Organization.query.filter_by(is_deleted=False)
+        orgs = Organization.query.filter_by(is_deleted=False).filter(Organization.is_platform_org == False)
         if f['org_id']:
             orgs = orgs.filter_by(id=f['org_id'])
             
@@ -2251,6 +2251,6 @@ def get_realtime_analytics():
         "live_system_health_score": 99,
         "live_tickets": live_tickets,
         "live_notifications": 2,
-        "live_organizations_count": Organization.query.filter_by(is_deleted=False).count(),
+        "live_organizations_count": Organization.query.filter_by(is_deleted=False).filter(Organization.is_platform_org == False).count(),
         "timestamp": datetime.utcnow().isoformat()
     })

@@ -273,6 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                 }
+            });
         },
 
         openQCTools() {

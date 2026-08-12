@@ -116,7 +116,7 @@
                         class="text-muted fw-normal">Enterprise</span></span>
             </div>
             <div class="d-flex gap-3 align-items-center">
-                <a href="/auth/login.html" class="ds-btn ds-btn-ghost ds-btn-sm text-primary fw-bold">Sign In</a>
+                <a href="/auth/login.html?logout=true" onclick="sessionStorage.clear();localStorage.removeItem('token');localStorage.removeItem('access_token');localStorage.removeItem('user');" class="ds-btn ds-btn-ghost ds-btn-sm text-primary fw-bold">Sign In</a>
                 <a href="/auth/register-org.html" class="ds-btn ds-btn-primary ds-btn-sm px-4">Get Started</a>
             </div>
         </div>
@@ -914,7 +914,6 @@
 
                         if (window.lucide) lucide.createIcons();
                     }
-                }
             } catch(e) { console.error('Failed to load CMS content', e); }
         });</script>
 

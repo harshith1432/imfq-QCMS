@@ -108,31 +108,26 @@ const api = {
 
                 if (response.status === 401) {
                     const isLogin = endpoint.includes('/auth/login') || window.location.pathname.includes('login.html');
-                    // Match any super-admin page or any page under /admin/ (incl. iframes)
-                    const isSuperAdmin = window.location.pathname.includes('super-admin')
-                        || window.location.pathname.startsWith('/admin/');
-                    // Also detect if we're inside an iframe of a super-admin context (same origin)
+                    // Match only super-admin.html portal page (not standard org admin pages under /admin/)
+                    const isSuperAdminPortal = window.location.pathname.includes('super-admin.html');
                     const isInsideSuperAdminIframe = (() => {
                         try {
                             return window.parent && window.parent !== window
-                                && (window.parent.location.pathname.includes('super-admin')
-                                    || window.parent.location.pathname.startsWith('/admin/'));
+                                && window.parent.location.pathname.includes('super-admin.html');
                         } catch (_) { return false; }
                     })();
                     if (!isLogin) {
-                        if (isSuperAdmin || isInsideSuperAdminIframe) {
-                            console.warn('[API] 401 on admin page for:', endpoint, '— check token storage.');
+                        if (isSuperAdminPortal || isInsideSuperAdminIframe) {
+                            console.warn('[API] 401 on super-admin portal for:', endpoint);
                             return null;
                         }
-                        if (typeof window.logout === 'function') {
-                            window.logout();
-                        } else {
-                            sessionStorage.removeItem('token');
-                            if (!window.location.pathname.includes('login.html')) {
-                                window.location.href = '/auth/login.html';
-                            }
+                        console.warn('[API] 401 Unauthorized for:', endpoint, '— redirecting to login.');
+                        sessionStorage.removeItem('token');
+                        localStorage.removeItem('token');
+                        if (!window.location.pathname.includes('login.html')) {
+                            window.location.href = '/auth/login.html';
                         }
-                        return;
+                        return null;
                     }
                     if (isLogin) {
                         const data = await response.json().catch(() => ({}));

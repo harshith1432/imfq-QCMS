@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
     <link rel="stylesheet" href="/assets/css/glass.css">
+    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="/assets/js/i18n.js"></script>
@@ -361,7 +362,7 @@
                     }
 
                     if (profile) {
-                        const userStr = sessionStorage.getItem('user') || '{}';
+                        const userStr = sessionStorage.getItem('user') || localStorage.getItem('user') || '{}';
                         const userObj = JSON.parse(userStr);
                         userObj.subscription_status = profile.subscription_status;
                         userObj.trial_ends_at = profile.trial_ends_at;
@@ -369,7 +370,10 @@
                         if (profile.org_logo_url !== undefined) userObj.org_logo_url = profile.org_logo_url;
                         if (profile.org_favicon_url !== undefined) userObj.org_favicon_url = profile.org_favicon_url;
                         if (profile.org_name !== undefined) userObj.org_name = profile.org_name;
-                        sessionStorage.setItem('user', JSON.stringify(userObj));
+                        const synched = JSON.stringify(userObj);
+                        sessionStorage.setItem('user', synched);
+                        localStorage.setItem('user', synched);
+                    }
                         
                         if (profile.subscription_status === 'Suspended') {
                             const container = document.querySelector('.app-content-inner');
@@ -399,7 +403,6 @@
                             }
                             return;
                         }
-                    }
 
                     // Populate Departments filter options dynamically
                     const departments = await api.get('/admin/departments');

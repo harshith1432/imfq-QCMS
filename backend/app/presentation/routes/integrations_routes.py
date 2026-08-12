@@ -93,6 +93,8 @@ def get_email_providers():
     email_configs = IntegrationConfig.query.filter_by(category='Communication', status='Connected').all()
     result = []
     for c in email_configs:
+        if c.provider_id in ['jio_dlt', 'twilio_sms', 'dlt_sms']:
+            continue
         settings = c.settings or {}
         result.append({
             "provider_id": c.provider_id,

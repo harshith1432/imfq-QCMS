@@ -44,7 +44,8 @@ def get_super_admin_user():
         return None
     role_name = user.role.name if user.role else ''
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    if role_name in ('SuperAdmin', 'Admin') or is_sa_custom:
+    is_sa_flag = getattr(user, 'is_super_admin', False) or user.org_id is None
+    if role_name in ('SuperAdmin', 'Admin') or is_sa_custom or is_sa_flag:
         return user
     return None
 
@@ -151,21 +152,24 @@ def get_dashboard_stats():
     storage_used = storage_data["summary"]["total_used_mb"]
     storage_used_fmt = storage_data["summary"]["total_used_fmt"]
 
+    pmt_amount_col = func.coalesce(SubscriptionPayment.final_amount, SubscriptionPayment.amount)
+    sub_amount_col = func.coalesce(Subscription.final_amount, Subscription.base_price)
+
     # 7. Revenue in Selected Period (customer tenant payments only)
-    revenue_in_period = db.session.query(func.sum(SubscriptionPayment.amount)).join(
+    revenue_in_period = db.session.query(func.sum(pmt_amount_col)).join(
         Organization, SubscriptionPayment.org_id == Organization.id
     ).filter(
         Organization.is_platform_org == False,
-        SubscriptionPayment.payment_status == 'Completed',
+        SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID']),
         SubscriptionPayment.created_at >= start_date
     ).scalar() or 0.0
 
     # 8. Revenue in Previous Period (for Growth % calculation)
-    prev_revenue = db.session.query(func.sum(SubscriptionPayment.amount)).join(
+    prev_revenue = db.session.query(func.sum(pmt_amount_col)).join(
         Organization, SubscriptionPayment.org_id == Organization.id
     ).filter(
         Organization.is_platform_org == False,
-        SubscriptionPayment.payment_status == 'Completed',
+        SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID']),
         SubscriptionPayment.created_at >= prev_start_date,
         SubscriptionPayment.created_at < start_date
     ).scalar() or 0.0
@@ -177,11 +181,11 @@ def get_dashboard_stats():
 
     # 9. Revenue This Month
     month_start = datetime(now.year, now.month, 1)
-    revenue_this_month = db.session.query(func.sum(SubscriptionPayment.amount)).join(
+    revenue_this_month = db.session.query(func.sum(pmt_amount_col)).join(
         Organization, SubscriptionPayment.org_id == Organization.id
     ).filter(
         Organization.is_platform_org == False,
-        SubscriptionPayment.payment_status == 'Completed',
+        SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID']),
         SubscriptionPayment.created_at >= month_start
     ).scalar() or 0.0
 
@@ -228,17 +232,25 @@ def get_dashboard_stats():
         for i in range(days, -1, -step):
             d = now - timedelta(days=i)
             trend_labels.append(d.strftime('%b %d'))
-            day_start = datetime(d.year, d.month, d.day)
-            day_end = day_start + timedelta(days=1)
-            val = db.session.query(func.sum(SubscriptionPayment.amount)).join(
+            day_end = d + timedelta(days=1)
+            val = db.session.query(func.sum(pmt_amount_col)).join(
                 Organization, SubscriptionPayment.org_id == Organization.id
             ).filter(
-                Organization.is_platform_org == False,
-                SubscriptionPayment.payment_status == 'Completed',
-                SubscriptionPayment.created_at >= day_start,
-                SubscriptionPayment.created_at < day_end
+                Organization.is_deleted == False,
+                SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID']),
+                SubscriptionPayment.created_at <= day_end
             ).scalar() or 0.0
-            val_rounded = round(float(val), 2)
+
+            if val == 0.0:
+                val = db.session.query(func.sum(sub_amount_col)).join(
+                    Organization, Subscription.org_id == Organization.id
+                ).filter(
+                    Organization.is_deleted == False,
+                    Subscription.subscription_status.in_(['Active', 'ACTIVE']),
+                    Subscription.created_at <= day_end
+                ).scalar() or 0.0
+
+            val_rounded = round(float(val or 0.0), 2)
             trend_mrr.append(val_rounded)
             trend_arr.append(round(val_rounded * 12, 2))
     else:
@@ -258,15 +270,26 @@ def get_dashboard_stats():
                 next_m_year += 1
             m_next = datetime(next_m_year, next_m_month, 1)
 
-            val = db.session.query(func.sum(SubscriptionPayment.amount)).join(
+            val = db.session.query(func.sum(pmt_amount_col)).join(
                 Organization, SubscriptionPayment.org_id == Organization.id
             ).filter(
                 Organization.is_platform_org == False,
-                SubscriptionPayment.payment_status == 'Completed',
+                SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID']),
                 SubscriptionPayment.created_at >= m_date,
                 SubscriptionPayment.created_at < m_next
             ).scalar() or 0.0
-            val_rounded = round(float(val), 2)
+
+            if val == 0.0:
+                val = db.session.query(func.sum(sub_amount_col)).join(
+                    Organization, Subscription.org_id == Organization.id
+                ).filter(
+                    Organization.is_platform_org == False,
+                    Organization.is_deleted == False,
+                    Subscription.subscription_status.in_(['Active', 'ACTIVE']),
+                    Subscription.created_at < m_next
+                ).scalar() or 0.0
+
+            val_rounded = round(float(val or 0.0), 2)
             trend_mrr.append(val_rounded)
             trend_arr.append(round(val_rounded * 12, 2))
 

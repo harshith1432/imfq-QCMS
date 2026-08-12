@@ -1,8 +1,1 @@
-Testing Analytics API Trends for User ID 7, Org ID 3...
-
-=== EXECUTIVE SUMMARY KPI CARDS ===
-Total Projects: None
-Completed Projects: None
-Active Projects: None
-
-=== REAL-TIME PROJECT GROWTH & VELOCITY TRENDS ===
+'NoneType' object has no attribute 'id'

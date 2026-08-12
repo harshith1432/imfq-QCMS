@@ -10,13 +10,25 @@ from app.presentation.middleware.middleware import super_admin_required
 
 document_branding_bp = Blueprint('document_branding', __name__, url_prefix='/api/document-identity')
 
+def _get_user_and_org_id():
+    try:
+        identity = get_jwt_identity()
+        if isinstance(identity, dict):
+            u_id = identity.get('id') or identity.get('user_id')
+        else:
+            u_id = int(identity)
+        user = db.session.get(User, int(u_id)) if u_id else None
+        org_id = user.org_id if (user and hasattr(user, 'role') and user.role and user.role.name != 'SuperAdmin') else None
+        return user, org_id
+    except Exception:
+        db.session.rollback()
+        return None, None
+
 @document_branding_bp.route('/all', methods=['GET'])
 @jwt_required()
 def get_all_document_identity():
     """Retrieve all 10 Document Identity & Branding configuration sections."""
-    user_id = get_jwt_identity()
-    user = db.session.get(User, int(user_id))
-    org_id = user.org_id if user and user.role.name != 'SuperAdmin' else None
+    user, org_id = _get_user_and_org_id()
 
     # Ensure defaults are seeded
     SettingUsageScannerService.seed_initial_defaults()
@@ -52,76 +64,90 @@ def get_all_document_identity():
 @jwt_required()
 def update_document_identity():
     """Save & update document identity configuration sections."""
-    user_id = get_jwt_identity()
-    user = db.session.get(User, int(user_id))
-    org_id = user.org_id if user and user.role.name != 'SuperAdmin' else None
+    try:
+        user, org_id = _get_user_and_org_id()
 
-    data = request.json or {}
-    section = data.get('section', 'platform')
-    payload = data.get('payload', {})
+        data = request.json or {}
+        section = data.get('section', 'platform')
+        payload = data.get('payload', {})
 
-    if section == 'platform':
-        cfg = PlatformIdentityConfig.query.filter_by(org_id=org_id).first()
-        if not cfg:
-            cfg = PlatformIdentityConfig(org_id=org_id)
-            db.session.add(cfg)
-
-        for k, v in payload.items():
-            if hasattr(cfg, k):
-                setattr(cfg, k, v)
-
-    elif section == 'company':
-        cfg = CompanyInformationConfig.query.filter_by(org_id=org_id).first()
-        if not cfg:
-            cfg = CompanyInformationConfig(org_id=org_id)
-            db.session.add(cfg)
-
-        for k, v in payload.items():
-            if hasattr(cfg, k):
-                setattr(cfg, k, v)
-
-    elif section == 'contacts':
-        cfg = CompanyContactsConfig.query.filter_by(org_id=org_id).first()
-        if not cfg:
-            cfg = CompanyContactsConfig(org_id=org_id)
-            db.session.add(cfg)
-
-        for k, v in payload.items():
-            if hasattr(cfg, k):
-                setattr(cfg, k, v)
-
-    elif section == 'addresses':
-        cfg = CompanyAddressesConfig.query.filter_by(org_id=org_id).first()
-        if not cfg:
-            cfg = CompanyAddressesConfig(org_id=org_id)
-            db.session.add(cfg)
-
-        for k, v in payload.items():
-            if hasattr(cfg, k):
-                setattr(cfg, k, v)
-
-    elif section == 'template':
-        template_key = payload.get('template_key')
-        if template_key:
-            tmpl = DocumentTemplateConfig.query.filter_by(template_key=template_key, org_id=org_id).first()
-            if not tmpl:
-                tmpl = DocumentTemplateConfig(org_id=org_id, template_key=template_key, template_name=payload.get('template_name', template_key.title()))
-                db.session.add(tmpl)
+        if section == 'platform':
+            cfg = PlatformIdentityConfig.query.filter_by(org_id=org_id).first()
+            if not cfg:
+                cfg = PlatformIdentityConfig(org_id=org_id)
+                db.session.add(cfg)
 
             for k, v in payload.items():
-                if hasattr(tmpl, k):
-                    setattr(tmpl, k, v)
+                if hasattr(cfg, k):
+                    setattr(cfg, k, v)
 
-    db.session.commit()
-    DocumentBrandingService.invalidate_cache()
+        elif section == 'company':
+            cfg = CompanyInformationConfig.query.filter_by(org_id=org_id).first()
+            if not cfg:
+                cfg = CompanyInformationConfig(org_id=org_id)
+                db.session.add(cfg)
 
-    ctx = DocumentBrandingService.get_branding_context(org_id)
+            for k, v in payload.items():
+                if hasattr(cfg, k):
+                    setattr(cfg, k, v)
 
-    return jsonify({
-        "status": "success",
-        "message": f"Document identity section '{section}' updated successfully.",
-        "branding_context": ctx
-    }), 200
+        elif section == 'contacts':
+            cfg = CompanyContactsConfig.query.filter_by(org_id=org_id).first()
+            if not cfg:
+                cfg = CompanyContactsConfig(org_id=org_id)
+                db.session.add(cfg)
+
+            for k, v in payload.items():
+                if k == 'emergency_phone':
+                    cfg.emergency_contact = v
+                elif hasattr(cfg, k):
+                    setattr(cfg, k, v)
+
+        elif section == 'addresses':
+            cfg = CompanyAddressesConfig.query.filter_by(org_id=org_id).first()
+            if not cfg:
+                cfg = CompanyAddressesConfig(org_id=org_id)
+                db.session.add(cfg)
+
+            for k, v in payload.items():
+                if k == 'city_pin' and v:
+                    if '-' in v:
+                        parts = v.split('-', 1)
+                        cfg.city = parts[0].strip()
+                        cfg.pin = parts[1].strip()
+                    else:
+                        cfg.city = v.strip()
+                elif hasattr(cfg, k):
+                    setattr(cfg, k, v)
+
+        elif section == 'template':
+            template_key = payload.get('template_key')
+            if template_key:
+                tmpl = DocumentTemplateConfig.query.filter_by(template_key=template_key, org_id=org_id).first()
+                if not tmpl:
+                    tmpl = DocumentTemplateConfig(org_id=org_id, template_key=template_key, template_name=payload.get('template_name', template_key.title()))
+                    db.session.add(tmpl)
+
+                for k, v in payload.items():
+                    if hasattr(tmpl, k):
+                        setattr(tmpl, k, v)
+
+        db.session.commit()
+        DocumentBrandingService.invalidate_cache()
+
+        ctx = DocumentBrandingService.get_branding_context(org_id)
+
+        return jsonify({
+            "status": "success",
+            "message": f"Document identity section '{section}' updated successfully.",
+            "branding_context": ctx
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 
 @document_branding_bp.route('/upload-logo', methods=['POST'])
@@ -168,7 +194,9 @@ def upload_platform_logo():
     assets.print_logo_url = relative_url
     assets.pdf_logo_url = relative_url
 
-    if user.organization:
+    # Only update the org's logo_url when an org-level user uploads —
+    # SuperAdmin logo uploads are platform-level only and must NOT touch any org's logo_url
+    if org_id and user.organization:
         user.organization.logo_url = relative_url
 
     db.session.commit()
@@ -198,7 +226,7 @@ def remove_platform_logo():
         assets.print_logo_url = "/assets/img/logo-print.png"
         assets.pdf_logo_url = "/assets/img/logo-pdf.png"
 
-    if user.organization:
+    if org_id and user.organization:
         user.organization.logo_url = None
 
     db.session.commit()
@@ -334,7 +362,6 @@ def generate_live_preview():
                     <tr><td style="padding:8px; font-weight:bold; color:#475569; width:30%; border-bottom:1px solid #e2e8f0;">GSTIN / Tax ID:</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold;">{ctx['gstin']}</td></tr>
                     <tr><td style="padding:8px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;">PAN Number:</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold;">{ctx['pan']}</td></tr>
                     <tr><td style="padding:8px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;">Corporate Identification (CIN):</td><td style="padding:8px; border-bottom:1px solid #e2e8f0; font-family:monospace; font-weight:bold;">{ctx['cin']}</td></tr>
-                    <tr><td style="padding:8px; font-weight:bold; color:#475569;">ISO Accreditations:</td><td style="padding:8px; color:#047857; font-weight:bold;">{ctx['iso_certifications']}</td></tr>
                 </tbody>
             </table>
 
@@ -492,8 +519,6 @@ def generate_live_preview():
                 <h3 style="margin:8px 0; font-size:20px; color:#1e293b;">{user.username if user else "Sample Admin User"}</h3>
                 <p style="margin:0; font-size:13px; color:#78350f;">has successfully completed training on <strong>Standard Operating Procedure (SOP-QUAL-001)</strong></p>
             </div>
-
-            <p style="font-size:11px; color:#a16207;">Certified under Quality Standard Accreditation: {ctx['iso_certifications']}</p>
             
             <div style="display:flex; justify-content:space-around; align-items:center; margin-top: 30px; padding-top: 16px; border-top: 1px solid #fde68a;">
                 <div>

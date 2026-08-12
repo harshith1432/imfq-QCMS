@@ -3,6 +3,16 @@ from app import db
 from datetime import datetime
 
 PLAN_LIMITS = {
+    'Trial': {
+        'max_users': 50,
+        'max_active_projects': 25,
+        'features': ['basic_workflow', 'standard_reports', 'full_workflow', 'advanced_analytics'],
+        'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
+        'ai_assistant': True,
+        'white_label': False,
+        'multi_plant': False,
+        'api_access': True
+    },
     'Starter': {
         'max_users': 50,
         'max_active_projects': 1,
@@ -36,6 +46,22 @@ PLAN_LIMITS = {
 }
 
 class SubscriptionManager:
+    @staticmethod
+    def get_default_trial_plan():
+        """
+        Query the active SaaSPlan configured with plan_type='Trial'.
+        Returns SaaSPlan instance or None.
+        """
+        from app.infrastructure.database.models.models import SaaSPlan
+        from sqlalchemy import func
+        trial_plan = SaaSPlan.query.filter(
+            SaaSPlan.status == 'Active',
+            (SaaSPlan.is_default_trial == True) | 
+            (func.lower(SaaSPlan.plan_type).like('%trial%')) | 
+            (func.lower(SaaSPlan.name).like('%trial%'))
+        ).order_by(SaaSPlan.is_default_trial.desc(), SaaSPlan.id.desc()).first()
+        return trial_plan
+
     @staticmethod
     def get_organization_plan_limits(org_id):
         """
@@ -96,7 +122,7 @@ class SubscriptionManager:
             plan_name = plan_obj.name
 
         # 3. Fallback to PLAN_LIMITS dictionary if DB limit is not set
-        fallback = PLAN_LIMITS.get(plan_name, PLAN_LIMITS.get(plan_obj.plan_type if plan_obj else 'Starter', PLAN_LIMITS['Starter']))
+        fallback = PLAN_LIMITS.get(plan_name, PLAN_LIMITS.get(plan_obj.plan_type if plan_obj else 'Starter', PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])))
 
         final_max_projects = max_projects if max_projects is not None else fallback.get('max_active_projects', 25)
         final_max_users = max_users if max_users is not None else fallback.get('max_users', 50)
@@ -112,12 +138,27 @@ class SubscriptionManager:
     def get_plan_config(plan_name, org_id=None):
         if org_id:
             limits = SubscriptionManager.get_organization_plan_limits(org_id)
-            base = PLAN_LIMITS.get(limits['plan_name'], PLAN_LIMITS['Starter']).copy()
+            base = PLAN_LIMITS.get(limits['plan_name'], PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
             base['max_active_projects'] = limits['max_projects']
             base['max_users'] = limits['max_users']
             return base
 
-        base = PLAN_LIMITS.get(plan_name, PLAN_LIMITS['Starter']).copy()
+        if plan_name:
+            from app.infrastructure.database.models.models import SaaSPlan
+            from sqlalchemy import func
+            db_plan = SaaSPlan.query.filter(
+                (func.lower(SaaSPlan.name) == plan_name.lower()) |
+                (func.lower(SaaSPlan.plan_type) == plan_name.lower()) |
+                (func.lower(SaaSPlan.code) == plan_name.lower())
+            ).first()
+            if db_plan and db_plan.limits:
+                base = PLAN_LIMITS.get(db_plan.plan_type, PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
+                base['max_users'] = db_plan.limits.max_users
+                base['max_active_projects'] = db_plan.limits.max_projects
+                base['storage_limit_gb'] = db_plan.limits.storage_limit_gb
+                return base
+
+        base = PLAN_LIMITS.get(plan_name, PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
         return base
 
     @staticmethod

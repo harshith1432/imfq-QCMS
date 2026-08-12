@@ -163,7 +163,14 @@ def list_invoices():
     if cycle:
         query = query.filter(SubscriptionInvoice.billing_cycle == cycle)
     if plan:
-        query = query.filter(SubscriptionInvoice.plan_name == plan)
+        from app.infrastructure.database.models.models import SaaSPlan
+        matching_sp = [sp.name for sp in SaaSPlan.query.filter(
+            db.or_(SaaSPlan.plan_type.ilike(plan), SaaSPlan.name.ilike(plan), SaaSPlan.code.ilike(plan))
+        ).all()]
+        target_plans = set([plan] + matching_sp)
+        if plan.lower() in ('trial', 'trialing'):
+            target_plans.update(['Trial', 'Trialing', 'Default Trial Plan'])
+        query = query.filter(db.or_(*[SubscriptionInvoice.plan_name.ilike(p) for p in target_plans]))
 
     total = query.count()
     invoices = query.order_by(SubscriptionInvoice.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()

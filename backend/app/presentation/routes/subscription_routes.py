@@ -26,13 +26,13 @@ subscription_bp = Blueprint('subscriptions', __name__)
 # ─────────────────────────────────────────────────────────────────────────────
 PLAN_CATALOGUE = {
     'Starter': {
-        'base_price_monthly': 2999,
-        'max_users': 25,
-        'storage_limit_gb': 5.0,
-        'api_limit': 1000,
+        'base_price_monthly': 2500,
+        'max_users': 100,
+        'storage_limit_gb': 10.0,
+        'api_limit': 10000,
         'support_level': 'Standard',
         'enabled_modules': ['Projects', 'Reports'],
-        'features': ['Basic Projects', 'Email Support', '5 GB Storage', '25 Users']
+        'features': ['Basic Projects', 'Email Support', '10 GB Storage', '100 Users']
     },
     'Professional': {
         'base_price_monthly': 7999,
@@ -111,12 +111,94 @@ def _inv_uid():
     return f"INV-{year}-{count:06d}"
 
 
-def _calc_pricing(base_price, discount_percent, gst_percent):
-    discount_amount = round(base_price * discount_percent / 100, 2)
-    taxable = base_price - discount_amount
-    gst_amount = round(taxable * gst_percent / 100, 2)
-    final_amount = round(taxable + gst_amount, 2)
-    return discount_amount, gst_amount, final_amount
+def _calc_pricing(base_price, discount_percent, gst_percent, is_tax_inclusive=False):
+    base_price = float(base_price or 0.0)
+    discount_percent = float(discount_percent or 0.0)
+    gst_percent = float(gst_percent or 0.0)
+
+    if is_tax_inclusive:
+        final_amount = round(base_price, 2)
+        taxable = round(final_amount / (1.0 + (gst_percent / 100.0)), 2)
+        discount_amount = round(taxable * (discount_percent / 100.0), 2) if discount_percent else 0.0
+        calculated_base = round(taxable - discount_amount, 2)
+        gst_amount = round(final_amount - calculated_base, 2)
+        return discount_amount, gst_amount, final_amount, calculated_base
+    else:
+        discount_amount = round(base_price * (discount_percent / 100.0), 2) if discount_percent else 0.0
+        taxable = round(base_price - discount_amount, 2)
+        gst_amount = round(taxable * (gst_percent / 100.0), 2)
+        final_amount = round(taxable + gst_amount, 2)
+        return discount_amount, gst_amount, final_amount, base_price
+
+
+def _get_plan_details(plan_name, billing_cycle='Monthly'):
+    """
+    Look up plan pricing & limits dynamically from SaaSPlan & SaaSPlanPricing tables first.
+    Fall back to PLAN_CATALOGUE if not found in database.
+    """
+    if not plan_name:
+        return None
+        
+    multiplier = BILLING_CYCLE_MULTIPLIER.get(billing_cycle, 1)
+    
+    # 1. Search in SaaSPlan table first by name or code
+    db_plan = SaaSPlan.query.filter(
+        (func.lower(func.trim(SaaSPlan.name)) == plan_name.strip().lower()) |
+        (func.lower(func.trim(SaaSPlan.code)) == plan_name.strip().lower())
+    ).first()
+    
+    if db_plan:
+        # Check specific pricing for this billing cycle
+        specific_pricing = None
+        for pr in db_plan.pricing:
+            if pr.billing_cycle and pr.billing_cycle.strip().lower() == billing_cycle.strip().lower() and pr.price > 0:
+                specific_pricing = pr
+                break
+        
+        if not specific_pricing:
+            non_zero = [pr for pr in db_plan.pricing if pr.price > 0]
+            if non_zero:
+                specific_pricing = non_zero[0]
+
+        if specific_pricing:
+            if specific_pricing.billing_cycle and specific_pricing.billing_cycle.strip().lower() == billing_cycle.strip().lower():
+                base_price = float(specific_pricing.price)
+            else:
+                base_price = float(specific_pricing.price) * (multiplier if billing_cycle != 'Monthly' else 1)
+        else:
+            base_price = 0.0
+
+        limits = db_plan.limits
+        modules = [m.module_name for m in db_plan.modules if m.is_enabled]
+        is_tax_inclusive = getattr(specific_pricing, 'is_tax_inclusive', False) if specific_pricing else False
+        tax_rate = getattr(specific_pricing, 'tax', 18.0) if specific_pricing else 18.0
+        
+        return {
+            'plan_name': db_plan.name,
+            'base_price': base_price,
+            'tax_rate': tax_rate,
+            'is_tax_inclusive': is_tax_inclusive,
+            'max_users': limits.max_users if limits else 100,
+            'storage_limit_gb': limits.storage_limit_gb if limits else 10.0,
+            'api_limit': limits.api_limit if limits else 10000,
+            'support_level': 'Standard',
+            'enabled_modules': modules
+        }
+    
+    # 2. Fall back to PLAN_CATALOGUE
+    if plan_name in PLAN_CATALOGUE:
+        cat = PLAN_CATALOGUE[plan_name]
+        return {
+            'plan_name': plan_name,
+            'base_price': float(cat['base_price_monthly']) * multiplier,
+            'max_users': cat['max_users'],
+            'storage_limit_gb': cat['storage_limit_gb'],
+            'api_limit': cat['api_limit'],
+            'support_level': cat['support_level'],
+            'enabled_modules': cat['enabled_modules']
+        }
+    
+    return None
 
 
 def _compute_renewal_date(start_date, billing_cycle):
@@ -160,6 +242,7 @@ def _serialize_subscription(sub):
         'gst_amount': sub.gst_amount,
         'final_amount': sub.final_amount,
         'currency': sub.currency,
+        'is_tax_inclusive': getattr(sub, 'is_tax_inclusive', False),
         'max_users': sub.max_users,
         'current_users': len(org.users) if org else 0,
         'storage_limit_gb': sub.storage_limit_gb,
@@ -199,6 +282,7 @@ def _serialize_invoice(inv):
         'gst_amount': inv.gst_amount,
         'total_amount': inv.total_amount,
         'currency': inv.currency,
+        'is_tax_inclusive': getattr(inv, 'is_tax_inclusive', False),
         'invoice_status': inv.invoice_status,
         'payment_id': inv.payment_id,
         'notes': inv.notes,
@@ -397,11 +481,15 @@ def _ensure_org_subscriptions():
             if Subscription.query.filter_by(subscription_uid=sub_uid).first():
                 sub_uid = f"SUB-{now.year}-{org.id:04d}-{int(now.timestamp()) % 10000}"
 
+            plan_details = _get_plan_details(org.subscription_plan or 'Starter', 'Monthly')
+            base_price = plan_details['base_price'] if plan_details else 2500.0
+            discount_amount, gst_amount, final_amount = _calc_pricing(base_price, 0.0, 18.0)
+
             sub = Subscription(
                 org_id=org.id,
                 subscription_uid=sub_uid,
-                plan_name=org.subscription_plan or 'Professional',
-                billing_cycle='Yearly',
+                plan_name=org.subscription_plan or 'Starter',
+                billing_cycle='Monthly',
                 subscription_status=norm_status,
                 payment_status='Paid' if norm_status == 'Active' else 'Pending',
                 start_date=org.license_start_date or org.created_at or now,
@@ -409,12 +497,18 @@ def _ensure_org_subscriptions():
                 renewal_date=org.license_expiry_date or org.trial_ends_at or (now + timedelta(days=365)),
                 trial_start_date=org.created_at if norm_status == 'Trial' else None,
                 trial_end_date=org.trial_ends_at if norm_status == 'Trial' else None,
-                base_price=199.0 if (org.subscription_plan or '').lower() == 'professional' else (499.0 if (org.subscription_plan or '').lower() == 'enterprise' else 0.0),
-                final_amount=199.0 if (org.subscription_plan or '').lower() == 'professional' else (499.0 if (org.subscription_plan or '').lower() == 'enterprise' else 0.0),
+                base_price=base_price,
+                discount_percent=0.0,
+                discount_amount=discount_amount,
+                gst_percent=18.0,
+                gst_amount=gst_amount,
+                final_amount=final_amount,
                 currency=org.currency or 'INR',
-                max_users=org.max_users or 500,
+                max_users=org.max_users or (plan_details['max_users'] if plan_details else 100),
                 storage_limit_gb=(org.storage_limit_mb or 10240.0) / 1024.0,
-                api_limit=10000,
+                api_limit=plan_details['api_limit'] if plan_details else 10000,
+                enabled_modules=plan_details['enabled_modules'] if plan_details else ['Projects', 'Reports'],
+                support_level=plan_details['support_level'] if plan_details else 'Standard',
                 created_at=org.created_at or now
             )
             db.session.add(sub)
@@ -658,7 +752,20 @@ def list_subscriptions():
 
         if plan_filter:
             plans = [p.strip() for p in plan_filter.split(',')]
-            query = query.filter(Subscription.plan_name.in_(plans))
+            from app.infrastructure.database.models.models import SaaSPlan
+            matching_sp_names = [
+                sp.name for sp in SaaSPlan.query.filter(
+                    db.or_(
+                        SaaSPlan.plan_type.in_(plans),
+                        SaaSPlan.name.in_(plans),
+                        SaaSPlan.code.in_(plans)
+                    )
+                ).all()
+            ]
+            all_target_plans = set(plans + matching_sp_names)
+            if any(p.lower() in ('trial', 'trialing') for p in plans):
+                all_target_plans.update(['Trial', 'Trialing', 'Default Trial Plan'])
+            query = query.filter(func.lower(Subscription.plan_name).in_([p.lower() for p in all_target_plans]))
 
         if billing_cycle_filter:
             cycles = [c.strip() for c in billing_cycle_filter.split(',')]
@@ -746,7 +853,8 @@ def create_subscription():
     if not org:
         return jsonify({'error': 'Organization not found'}), 404
 
-    if plan_name not in PLAN_CATALOGUE:
+    plan_info = _get_plan_details(plan_name, billing_cycle)
+    if not plan_info:
         return jsonify({'error': f'Invalid plan: {plan_name}'}), 422
 
     if billing_cycle not in BILLING_CYCLE_MULTIPLIER:
@@ -761,12 +869,11 @@ def create_subscription():
         return jsonify({'error': 'This organization already has an active subscription', 'existing_id': existing.id}), 409
 
     # ── Pricing ──
-    plan_info = PLAN_CATALOGUE[plan_name]
-    multiplier = BILLING_CYCLE_MULTIPLIER[billing_cycle]
-    base_price = data.get('base_price', plan_info['base_price_monthly'] * multiplier)
+    base_price = float(data.get('base_price', plan_info['base_price']))
     discount_percent = float(data.get('discount_percent', 0.0))
-    gst_percent = float(data.get('gst_percent', 18.0))
-    discount_amount, gst_amount, final_amount = _calc_pricing(base_price, discount_percent, gst_percent)
+    gst_percent = float(data.get('gst_percent', plan_info.get('tax_rate', 18.0)))
+    is_tax_inclusive = bool(data.get('is_tax_inclusive', plan_info.get('is_tax_inclusive', False)))
+    discount_amount, gst_amount, final_amount, calc_base = _calc_pricing(base_price, discount_percent, gst_percent, is_tax_inclusive)
 
     # ── Dates ──
     start_date = datetime.utcnow()
@@ -790,13 +897,14 @@ def create_subscription():
         start_date=start_date,
         end_date=end_date,
         renewal_date=renewal_date,
-        base_price=base_price,
+        base_price=calc_base,
         discount_percent=discount_percent,
         discount_amount=discount_amount,
         gst_percent=gst_percent,
         gst_amount=gst_amount,
         final_amount=final_amount,
         currency=data.get('currency', org.currency or 'INR'),
+        is_tax_inclusive=is_tax_inclusive,
         max_users=max_users,
         storage_limit_gb=storage_limit_gb,
         api_limit=api_limit,
@@ -822,13 +930,14 @@ def create_subscription():
         billing_period_end=end_date,
         plan_name=plan_name,
         billing_cycle=billing_cycle,
-        base_amount=base_price,
+        base_amount=calc_base,
         discount_percent=discount_percent,
         discount_amount=discount_amount,
         gst_percent=gst_percent,
         gst_amount=gst_amount,
         total_amount=final_amount,
         currency=sub.currency,
+        is_tax_inclusive=is_tax_inclusive,
         invoice_status='Sent' if data.get('payment_status') == 'Paid' else 'Draft',
     )
     db.session.add(inv)
@@ -1074,32 +1183,13 @@ def upgrade_plan(sub_id):
     if err:
         return err
 
-    sub = Subscription.query.get_or_404(sub_id)
-    data = request.get_json(silent=True) or {}
-
-    new_plan = data.get('plan_name')
-    db_plan = SaaSPlan.query.filter((SaaSPlan.name == new_plan) | (SaaSPlan.code == new_plan)).first() if new_plan else None
-
-    if not new_plan or (new_plan not in PLAN_CATALOGUE and not db_plan):
-        return jsonify({'error': 'Valid plan_name required'}), 422
+    plan_info = _get_plan_details(new_plan, sub.billing_cycle)
+    if not plan_info:
+        return jsonify({'error': f'Valid plan_name required: {new_plan}'}), 422
 
     old_plan = sub.plan_name
-    if new_plan in PLAN_CATALOGUE:
-        plan_info = PLAN_CATALOGUE[new_plan]
-    else:
-        plan_info = {
-            'base_price_monthly': db_plan.price_monthly or 0,
-            'max_users': db_plan.max_users or 50,
-            'storage_limit_gb': db_plan.storage_limit_gb or 10.0,
-            'api_limit': db_plan.api_limit or 1000,
-            'support_level': db_plan.support_level or 'Standard',
-            'enabled_modules': db_plan.enabled_modules or ['Projects', 'Reports']
-        }
-
-    multiplier = BILLING_CYCLE_MULTIPLIER.get(sub.billing_cycle, 12)
-
     sub.plan_name = new_plan
-    sub.base_price = data.get('base_price', plan_info['base_price_monthly'] * multiplier)
+    sub.base_price = float(data.get('base_price', plan_info['base_price']))
     sub.max_users = data.get('max_users', plan_info['max_users'])
     sub.storage_limit_gb = data.get('storage_limit_gb', plan_info['storage_limit_gb'])
     sub.api_limit = data.get('api_limit', plan_info['api_limit'])
@@ -1138,28 +1228,13 @@ def downgrade_plan(sub_id):
     data = request.get_json(silent=True) or {}
 
     new_plan = data.get('plan_name')
-    db_plan = SaaSPlan.query.filter((SaaSPlan.name == new_plan) | (SaaSPlan.code == new_plan)).first() if new_plan else None
-
-    if not new_plan or (new_plan not in PLAN_CATALOGUE and not db_plan):
-        return jsonify({'error': 'Valid plan_name required'}), 422
+    plan_info = _get_plan_details(new_plan, sub.billing_cycle)
+    if not plan_info:
+        return jsonify({'error': f'Valid plan_name required: {new_plan}'}), 422
 
     old_plan = sub.plan_name
-    if new_plan in PLAN_CATALOGUE:
-        plan_info = PLAN_CATALOGUE[new_plan]
-    else:
-        plan_info = {
-            'base_price_monthly': db_plan.price_monthly or 0,
-            'max_users': db_plan.max_users or 50,
-            'storage_limit_gb': db_plan.storage_limit_gb or 10.0,
-            'api_limit': db_plan.api_limit or 1000,
-            'support_level': db_plan.support_level or 'Standard',
-            'enabled_modules': db_plan.enabled_modules or ['Projects', 'Reports']
-        }
-
-    multiplier = BILLING_CYCLE_MULTIPLIER.get(sub.billing_cycle, 12)
-
     sub.plan_name = new_plan
-    sub.base_price = data.get('base_price', plan_info['base_price_monthly'] * multiplier)
+    sub.base_price = float(data.get('base_price', plan_info['base_price']))
     sub.max_users = data.get('max_users', plan_info['max_users'])
     sub.storage_limit_gb = data.get('storage_limit_gb', plan_info['storage_limit_gb'])
     sub.api_limit = data.get('api_limit', plan_info['api_limit'])
@@ -1561,6 +1636,112 @@ def extend_trial(sub_id):
     })
 
 
+@subscription_bp.route('/request-trial-extension', methods=['POST'])
+@jwt_required()
+def request_trial_extension():
+    user = _get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    org_id = getattr(user, 'organization_id', None)
+    if not org_id and user.role == 'SuperAdmin':
+        data = request.get_json(silent=True) or {}
+        org_id = data.get('organization_id')
+        
+    if not org_id:
+        return jsonify({'error': 'Organization ID not found for user'}), 404
+        
+    org = Organization.query.get(org_id)
+    if not org:
+        return jsonify({'error': 'Organization not found'}), 404
+
+    trial_plan = SubscriptionManager.get_default_trial_plan()
+    ps = PlatformSettings.query.first()
+    max_auto = (getattr(trial_plan, 'auto_approve_extensions_limit', None) if trial_plan else None)
+    if max_auto is None:
+        max_auto = (ps.max_auto_trial_extensions if ps and hasattr(ps, 'max_auto_trial_extensions') and ps.max_auto_trial_extensions is not None else 2)
+        
+    default_days = (getattr(trial_plan, 'trial_duration_days', None) if trial_plan else None)
+    if not default_days:
+        default_days = (ps.trial_period_days if ps and ps.trial_period_days else 14)
+
+    data = request.get_json(silent=True) or {}
+    days = int(data.get('days', default_days))
+    
+    current_count = getattr(org, 'trial_extension_count', 0) or 0
+    
+    if current_count < max_auto:
+        # Auto-Approved!
+        org.trial_extension_count = current_count + 1
+        base = org.trial_ends_at or datetime.utcnow()
+        if base < datetime.utcnow():
+            base = datetime.utcnow()
+        org.trial_ends_at = base + timedelta(days=days)
+        org.subscription_status = 'Trialing'
+        
+        # Also sync subscription record if present
+        sub = Subscription.query.filter_by(organization_id=org.id).first()
+        if sub:
+            sub.trial_end_date = org.trial_ends_at
+            sub.end_date = org.trial_ends_at
+            sub.subscription_status = 'Trial'
+            
+        db.session.commit()
+        
+        _log(user, 'TRIAL_AUTO_EXTENDED', 'Organization', org.id,
+             None, {'days': days, 'extension_count': org.trial_extension_count, 'max_auto': max_auto})
+             
+        return jsonify({
+            'status': 'success',
+            'auto_approved': True,
+            'extension_count': org.trial_extension_count,
+            'max_auto_allowed': max_auto,
+            'message': f'Trial extension auto-approved! Applied +{days} days. ({org.trial_extension_count}/{max_auto} auto-approvals used)',
+            'trial_ends_at': org.trial_ends_at.isoformat()
+        })
+    else:
+        # Requires Super Admin approval
+        ticket = SupportTicket(
+            organization_id=org.id,
+            user_id=user.id,
+            subject=f"Trial Extension Approval Request: {org.name}",
+            description=f"Organization '{org.name}' (Admin: {user.email}) requested a +{days}-day trial extension. This organization has reached the auto-approval limit ({current_count}/{max_auto} used). Super Admin approval is required.",
+            status="Open",
+            priority="High",
+            category="Billing & Subscription"
+        )
+        db.session.add(ticket)
+
+        # Notify Super Admins
+        super_admins = User.query.filter(
+            (User.role == 'SuperAdmin') | (User.system_role == 'SuperAdmin')
+        ).all()
+        for sa in super_admins:
+            notif = Notification(
+                user_id=sa.id,
+                title=f"Trial Extension Request: {org.name}",
+                message=f"Organization '{org.name}' requested a +{days}-day trial extension ({current_count}/{max_auto} auto-approvals used). Super Admin review required.",
+                notification_type="TrialExtensionRequest",
+                priority="High",
+                is_read=False,
+                link_url=f"/admin/super-admin.html?view=organizations&search={org.name}"
+            )
+            db.session.add(notif)
+        db.session.commit()
+        
+        _log(user, 'TRIAL_EXTENSION_REQUESTED', 'Organization', org.id,
+             None, {'days': days, 'extension_count': current_count, 'max_auto': max_auto, 'ticket_id': ticket.id})
+             
+        return jsonify({
+            'status': 'pending_approval',
+            'auto_approved': False,
+            'extension_count': current_count,
+            'max_auto_allowed': max_auto,
+            'message': f'You have reached the maximum limit of auto-approved trial extensions ({current_count}/{max_auto} used). Your request for +{days} days has been submitted to Super Admin for manual approval.',
+            'ticket_id': ticket.id
+        })
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 20. TRIAL — CANCEL
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1788,9 +1969,7 @@ def export_subscriptions():
 @jwt_required()
 def get_plan_catalogue():
     user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+    is_super_admin = user and (getattr(user, 'role', '') == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False))
 
     billing_cycle = request.args.get('billing_cycle', '')
     status_filter = request.args.get('status', '') # Active, Inactive, Deprecated, Coming Soon
@@ -1800,7 +1979,9 @@ def get_plan_catalogue():
 
     try:
         plans_query = SaaSPlan.query
-        if status_filter:
+        if not is_super_admin and not status_filter:
+            plans_query = plans_query.filter(SaaSPlan.status == 'Active')
+        elif status_filter:
             plans_query = plans_query.filter(SaaSPlan.status == status_filter)
         if type_filter:
             plans_query = plans_query.filter(SaaSPlan.plan_type == type_filter)
@@ -1896,6 +2077,9 @@ def get_plan_catalogue():
                 'features': [m.module_name for m in plan.modules],
                 'subscriber_count': subscriber_count,
                 'is_custom': plan.is_custom,
+                'is_default_trial': getattr(plan, 'is_default_trial', False),
+                'trial_duration_days': getattr(plan, 'trial_duration_days', 14),
+                'auto_approve_extensions_limit': getattr(plan, 'auto_approve_extensions_limit', 2),
                 'created_at': plan.created_at.isoformat() if plan.created_at else None,
                 'updated_at': plan.updated_at.isoformat() if plan.updated_at else None
             })
@@ -1917,17 +2101,25 @@ def get_plan_detail(plan_id):
 
     plan = SaaSPlan.query.get_or_404(plan_id)
     
-    pricing = [{
-        'billing_cycle': p.billing_cycle,
-        'price': p.price,
-        'discount': p.discount,
-        'tax': p.tax
-    } for p in plan.pricing]
+    seen_cycles = set()
+    pricing = []
+    non_zero_pricing = [p for p in plan.pricing if p.price > 0]
+    source_pricing = non_zero_pricing if non_zero_pricing else plan.pricing
+    for p in source_pricing:
+        if p.billing_cycle not in seen_cycles:
+            seen_cycles.add(p.billing_cycle)
+            pricing.append({
+                'billing_cycle': p.billing_cycle,
+                'price': p.price,
+                'discount': p.discount,
+                'tax': p.tax,
+                'is_tax_inclusive': getattr(p, 'is_tax_inclusive', False)
+            })
 
     limits = {
         'max_users': plan.limits.max_users if plan.limits else 100,
         'max_departments': plan.limits.max_departments if plan.limits else 10,
-        'max_quality_circles': plan.limits.max_quality_circles if plan.limits else 5,
+
         'max_projects': plan.limits.max_projects if plan.limits else 25,
         'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0,
         'api_limit': plan.limits.api_limit if plan.limits else 10000,
@@ -1979,6 +2171,15 @@ def get_plan_detail(plan_id):
     })
 
 
+def _clean_plan_type(val):
+    if not val:
+        return 'Professional'
+    v = str(val).strip()
+    if v.lower().startswith('trial') or 'trial' in v.lower():
+        return 'Trial'
+    return v[:100]
+
+
 @subscription_bp.route('/plans', methods=['POST'])
 @jwt_required()
 def create_plan():
@@ -2007,13 +2208,23 @@ def create_plan():
         icon=data.get('icon', 'layers'),
         color=data.get('color', '#3b82f6'),
         status=data.get('status', 'Active'),
-        plan_type=data.get('plan_type', 'Professional'),
+        plan_type=_clean_plan_type(data.get('plan_type', 'Professional')),
         currency=data.get('currency', 'INR'),
         is_custom=data.get('is_custom', False),
+        is_default_trial=bool(data.get('is_default_trial', False)) or ('trial' in str(data.get('plan_type', '')).lower()),
+        trial_duration_days=int(data.get('trial_duration_days', 14)),
+        auto_approve_extensions_limit=int(data.get('auto_approve_extensions_limit', 2)),
         version=1
     )
     db.session.add(plan)
     db.session.flush()
+
+    if plan.is_default_trial:
+        SaaSPlan.query.filter(SaaSPlan.id != plan.id).update({'is_default_trial': False})
+        ps = PlatformSettings.query.first()
+        if ps:
+            ps.trial_period_days = plan.trial_duration_days
+            ps.max_auto_trial_extensions = plan.auto_approve_extensions_limit
 
     # Add Pricing Cycles
     pricing_data = data.get('pricing', [])
@@ -2023,7 +2234,8 @@ def create_plan():
             billing_cycle=p.get('billing_cycle'),
             price=float(p.get('price', 0.0)),
             discount=float(p.get('discount', 0.0)),
-            tax=float(p.get('tax', 18.0))
+            tax=float(p.get('tax', 18.0)),
+            is_tax_inclusive=bool(p.get('is_tax_inclusive', False))
         )
         db.session.add(pricing)
 
@@ -2033,7 +2245,7 @@ def create_plan():
         plan_id=plan.id,
         max_users=int(lim.get('max_users', 100)),
         max_departments=int(lim.get('max_departments', 10)),
-        max_quality_circles=int(lim.get('max_quality_circles', 5)),
+
         max_projects=int(lim.get('max_projects', 25)),
         storage_limit_gb=float(lim.get('storage_limit_gb', 10.0)),
         api_limit=int(lim.get('api_limit', 10000)),
@@ -2112,6 +2324,25 @@ def update_plan(plan_id):
     plan.icon = data.get('icon', plan.icon)
     plan.color = data.get('color', plan.color)
     plan.status = data.get('status', plan.status)
+    plan.plan_type = _clean_plan_type(data.get('plan_type', plan.plan_type))
+    plan.is_custom = data.get('is_custom', plan.is_custom)
+    
+    if 'is_default_trial' in data:
+        plan.is_default_trial = bool(data['is_default_trial'])
+    elif 'trial' in plan.plan_type.lower():
+        plan.is_default_trial = True
+
+    if 'trial_duration_days' in data:
+        plan.trial_duration_days = int(data['trial_duration_days'])
+    if 'auto_approve_extensions_limit' in data:
+        plan.auto_approve_extensions_limit = int(data['auto_approve_extensions_limit'])
+
+    if plan.is_default_trial:
+        SaaSPlan.query.filter(SaaSPlan.id != plan.id).update({'is_default_trial': False})
+        ps = PlatformSettings.query.first()
+        if ps:
+            ps.trial_period_days = plan.trial_duration_days
+            ps.max_auto_trial_extensions = plan.auto_approve_extensions_limit
 
     # Update Pricing
     if 'pricing' in data:
@@ -2123,7 +2354,8 @@ def update_plan(plan_id):
                 billing_cycle=p.get('billing_cycle'),
                 price=float(p.get('price', 0.0)),
                 discount=float(p.get('discount', 0.0)),
-                tax=float(p.get('tax', 18.0))
+                tax=float(p.get('tax', 18.0)),
+                is_tax_inclusive=bool(p.get('is_tax_inclusive', False))
             )
             db.session.add(pricing)
 
@@ -2134,6 +2366,31 @@ def update_plan(plan_id):
         plan.limits.max_projects = int(lim.get('max_projects', plan.limits.max_projects))
         plan.limits.storage_limit_gb = float(lim.get('storage_limit_gb', plan.limits.storage_limit_gb))
         plan.limits.api_limit = int(lim.get('api_limit', plan.limits.api_limit))
+
+    # Apply to existing subscribers check
+    apply_to_existing = bool(data.get('apply_to_existing', True))
+    synced_org_count = 0
+    if apply_to_existing:
+        orgs_to_sync = Organization.query.filter(
+            (Organization.is_deleted == False) &
+            (Organization.is_platform_org == False) &
+            (
+                (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
+                (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower()) |
+                (func.lower(func.trim(Organization.subscription_plan)) == old_snapshot['name'].strip().lower()) |
+                (func.lower(func.trim(Organization.subscription_plan)) == old_snapshot['code'].strip().lower())
+            )
+        ).all()
+        synced_org_count = len(orgs_to_sync)
+
+        new_storage_mb = plan.limits.storage_limit_gb * 1024.0 if plan.limits else 10240.0
+        new_max_users = plan.limits.max_users if plan.limits else 100
+
+        for o in orgs_to_sync:
+            o.storage_limit_mb = new_storage_mb
+            o.max_users = new_max_users
+            if 'name' in data and data['name']:
+                o.subscription_plan = data['name']
 
     # Update Modules
     if 'modules' in data:
@@ -2171,7 +2428,13 @@ def update_plan(plan_id):
     db.session.commit()
 
     _log(user, 'EDIT_PLAN', 'SaaSPlan', plan.id, old_snapshot, new_snapshot)
-    return jsonify({'status': 'success', 'message': f"Plan updated to Version {plan.version} successfully"})
+
+    if apply_to_existing:
+        resp_msg = f"Plan updated to Version {plan.version} successfully and applied immediately to {synced_org_count} existing active subscriber organization(s)."
+    else:
+        resp_msg = f"Plan template updated to Version {plan.version} for future subscribers. Existing active subscribers remain on their current terms."
+
+    return jsonify({'status': 'success', 'message': resp_msg, 'data': {'version': plan.version, 'synced_orgs': synced_org_count, 'applied_to_existing': apply_to_existing}})
 
 
 @subscription_bp.route('/plans/<int:plan_id>/duplicate', methods=['POST'])
@@ -2229,7 +2492,7 @@ def duplicate_plan(plan_id):
             plan_id=clone.id,
             max_users=parent.limits.max_users,
             max_departments=parent.limits.max_departments,
-            max_quality_circles=parent.limits.max_quality_circles,
+
             max_projects=parent.limits.max_projects,
             storage_limit_gb=parent.limits.storage_limit_gb,
             api_limit=parent.limits.api_limit,
@@ -2331,10 +2594,20 @@ def delete_plan(plan_id):
 
     # Prevent deleting plans with active subscribers
     org_subscribers = Organization.query.filter(
-        (Organization.subscription_plan == plan.name) | (Organization.subscription_plan == plan.code)
+        (Organization.is_deleted == False) &
+        (Organization.is_platform_org == False) &
+        (
+            (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
+            (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower())
+        )
     ).count()
-    active_subs = Subscription.query.filter(
-        ((Subscription.plan_name == plan.name) | (Subscription.plan_name == plan.code)) &
+    active_subs = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
+        (Organization.is_deleted == False) &
+        (Organization.is_platform_org == False) &
+        (
+            (func.lower(func.trim(Subscription.plan_name)) == plan.name.strip().lower()) |
+            (func.lower(func.trim(Subscription.plan_name)) == plan.code.strip().lower())
+        ) &
         (Subscription.subscription_status.in_(['Active', 'Trial', 'Grace Period']))
     ).count()
     subscribers = max(org_subscribers, active_subs)
@@ -2472,7 +2745,14 @@ def get_plan_subscribers(plan_id):
         return err
 
     plan = SaaSPlan.query.get_or_404(plan_id)
-    orgs = Organization.query.filter(Organization.subscription_plan == plan.name).all()
+    orgs = Organization.query.filter(
+        (Organization.is_deleted == False) &
+        (Organization.is_platform_org == False) &
+        (
+            (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
+            (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower())
+        )
+    ).all()
 
     sub_list = []
     for org in orgs:

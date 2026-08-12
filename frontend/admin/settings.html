@@ -9,15 +9,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
     <link rel="stylesheet" href="/assets/css/glass.css">
+    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
     <link rel="stylesheet" href="/assets/css/compliance-enterprise.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="app-layout">
-    <aside class="app-sidebar" id="app-sidebar"></aside>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar"></aside>
 
-    <main class="app-main">
+        <main class="app-main">
         <header class="app-navbar" id="app-navbar"></header>
         
         <div class="app-content-inner">
@@ -107,10 +109,6 @@
                             <div class="sidebar-section pb-3" id="gov-group">
                                 <div class="sidebar-section-label" data-i18n="settings.nav.governance">Governance</div>
                                 <nav class="sidebar-nav">
-                                    <button type="button" class="sidebar-link" data-target="compliance" onclick="settingsManager.switchTab('compliance', this)">
-                                        <i class="link-icon" data-lucide="check-square"></i>
-                                        <span data-i18n="settings.nav.compliance">Compliance Standards</span>
-                                    </button>
                                     <button type="button" class="sidebar-link" data-target="audit" onclick="settingsManager.switchTab('audit', this)">
                                         <i class="link-icon" data-lucide="history"></i>
                                         <span data-i18n="settings.nav.audit_logs">Audit Logs</span>
@@ -210,7 +208,7 @@
                     <div id="tab-content-container">
                         
                         <!-- Personal Section -->
-                        <div class="settings-pane active" id="pane-personal">
+                        <div class="settings-pane active" id="pane-personal" style="display: block !important;">
                             <div class="glass-card ds-card mb-4">
                                 <div class="ds-card-header p-4 border-bottom">
                                     <h5 class="mb-0 fw-bold">My Profile</h5>
@@ -605,97 +603,6 @@
                                                     <label class="ds-label" data-i18n="settings.security.data_retention">DATA RETENTION (DAYS) <span class="text-danger">*</span></label>
                                                     <input type="number" class="ds-input" id="data_retention" min="30" max="3650">
                                                     <span class="text-xs text-muted">Range: 30 - 3650 days</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Auto Archive & Global Notifications -->
-                                        <div class="h-stack justify-content-between p-3 glass-card rounded-3">
-                                            <div class="v-stack">
-                                                <span class="fw-bold ds-text-main" data-i18n="settings.security.auto_archive">Auto-Archive Strategy</span>
-                                                <p class="text-xs ds-text-secondary mb-0" data-i18n="settings.security.auto_archive_desc">Automatically move completed projects to knowledge repository after 90 days.</p>
-                                            </div>
-                                            <div class="form-check form-switch ms-3">
-                                                <input class="form-check-input" type="checkbox" id="auto_archive">
-                                            </div>
-                                        </div>
-
-                                        <div class="h-stack justify-content-between p-3 glass-card rounded-3">
-                                            <div class="v-stack">
-                                                <span class="fw-bold ds-text-main" data-i18n="settings.security.notifications">Global Notifications</span>
-                                                <p class="text-xs ds-text-secondary mb-0" data-i18n="settings.security.notifications_desc">Enable automated email triggers for all stakeholders.</p>
-                                            </div>
-                                            <div class="form-check form-switch ms-3">
-                                                <input class="form-check-input" type="checkbox" id="notifications_enabled">
-                                            </div>
-                                        </div>
-                                        
-                                        <hr class="my-2 opacity-10">
-                                        
-                                        <!-- SSO / SAML 2.0 Integration -->
-                                        <div class="p-3 glass-card rounded-3">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <div>
-                                                    <span class="fw-bold ds-text-main">SSO / SAML 2.0 Integration</span>
-                                                    <p class="text-xs ds-text-secondary mb-0">Enterprise Single Sign-On via Okta, Azure AD, or Google Workspace.</p>
-                                                </div>
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input" type="checkbox" id="sso_enabled">
-                                                </div>
-                                            </div>
-                                            <div class="row g-3">
-                                                <div class="col-md-6">
-                                                    <label class="ds-label text-xs">IDENTITY PROVIDER</label>
-                                                    <select class="ds-input text-xs" id="sso_provider">
-                                                        <option value="okta">Okta</option>
-                                                        <option value="azure">Azure AD / Entra ID</option>
-                                                        <option value="google">Google Workspace</option>
-                                                        <option value="generic">Generic SAML 2.0</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="ds-label text-xs">ENTITY ID / ISSUER URL <span class="text-danger">*</span></label>
-                                                    <input type="text" class="ds-input text-xs" id="sso_entity_id" placeholder="https://idp.example.com/metadata">
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Advanced IP Whitelisting -->
-                                        <div class="p-3 glass-card rounded-3">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <div>
-                                                    <span class="fw-bold ds-text-main">Advanced IP Whitelisting</span>
-                                                    <p class="text-xs ds-text-secondary mb-0">Restrict access to specific corporate IP addresses or CIDR ranges.</p>
-                                                </div>
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input" type="checkbox" id="ip_whitelist_enabled">
-                                                </div>
-                                            </div>
-                                            <div class="ds-field">
-                                                <label class="ds-label text-xs">WHITELISTED IPS / CIDR RANGES (COMMA SEPARATED)</label>
-                                                <input type="text" class="ds-input text-xs" id="ip_whitelist_cidrs" placeholder="192.168.1.1, 10.0.0.0/24">
-                                            </div>
-                                        </div>
-
-                                        <!-- Password Policy -->
-                                        <div class="p-3 glass-card rounded-3">
-                                            <span class="fw-bold ds-text-main mb-2 d-block">Password Complexity & Policy</span>
-                                            <div class="row g-3">
-                                                <div class="col-6 col-md-3">
-                                                    <label class="ds-label text-xs">MIN LENGTH <span class="text-danger">*</span></label>
-                                                    <input type="number" class="ds-input text-xs" id="pass_min_length" min="8" max="32" value="8">
-                                                </div>
-                                                <div class="col-6 col-md-3">
-                                                    <label class="ds-label text-xs">MAX ATTEMPTS <span class="text-danger">*</span></label>
-                                                    <input type="number" class="ds-input text-xs" id="pass_max_attempts" min="3" max="10" value="5">
-                                                </div>
-                                                <div class="col-6 col-md-3">
-                                                    <label class="ds-label text-xs">EXPIRY (DAYS) <span class="text-danger">*</span></label>
-                                                    <input type="number" class="ds-input text-xs" id="pass_expiry_days" min="0" max="365" value="90">
-                                                </div>
-                                                <div class="col-6 col-md-3">
-                                                    <label class="ds-label text-xs">LOCKOUT (MINS) <span class="text-danger">*</span></label>
-                                                    <input type="number" class="ds-input text-xs" id="pass_lockout_mins" min="5" max="1440" value="15">
                                                 </div>
                                             </div>
                                         </div>
@@ -4359,12 +4266,7 @@ console.log(data);
                                                 <div class="col-md-4"><label class="ds-label">Software Name</label><input type="text" class="ds-input" id="di-software-name"></div>
                                                 <div class="col-md-4"><label class="ds-label">Software Short Name</label><input type="text" class="ds-input" id="di-software-short"></div>
                                                 <div class="col-md-4"><label class="ds-label">Display Name</label><input type="text" class="ds-input" id="di-software-display"></div>
-                                                <div class="col-md-6"><label class="ds-label">Platform Title</label><input type="text" class="ds-input" id="di-platform-title"></div>
-                                                <div class="col-md-6"><label class="ds-label">Platform Subtitle</label><input type="text" class="ds-input" id="di-platform-subtitle"></div>
-                                                <div class="col-md-6"><label class="ds-label">Version</label><input type="text" class="ds-input" id="di-version"></div>
-                                                <div class="col-md-6"><label class="ds-label">Edition</label><input type="text" class="ds-input" id="di-edition"></div>
-                                                <div class="col-md-6"><label class="ds-label">Website URL</label><input type="text" class="ds-input" id="di-website"></div>
-                                                <div class="col-md-6"><label class="ds-label">Support Portal URL</label><input type="text" class="ds-input" id="di-support-portal"></div>
+                                                <div class="col-12"><label class="ds-label">Platform Title</label><input type="text" class="ds-input" id="di-platform-title"></div>
                                                 <div class="col-12"><label class="ds-label">Footer Copyright Disclaimer</label><input type="text" class="ds-input" id="di-footer-copyright"></div>
                                             </div>
                                             <div class="mt-4"><button class="ds-btn ds-btn-primary ds-btn-sm" onclick="DocIdentityManager.saveSection('platform')">Save Platform Identity</button></div>
@@ -4378,7 +4280,6 @@ console.log(data);
                                                 <div class="col-md-4"><label class="ds-label">GSTIN / Tax ID</label><input type="text" class="ds-input" id="di-gstin"></div>
                                                 <div class="col-md-4"><label class="ds-label">PAN Number</label><input type="text" class="ds-input" id="di-pan"></div>
                                                 <div class="col-md-4"><label class="ds-label">CIN Number</label><input type="text" class="ds-input" id="di-cin"></div>
-                                                <div class="col-12"><label class="ds-label">ISO & Compliance Accreditation Badges</label><input type="text" class="ds-input" id="di-iso"></div>
                                             </div>
                                             <div class="mt-4"><button class="ds-btn ds-btn-primary ds-btn-sm" onclick="DocIdentityManager.saveSection('company')">Save Company Info</button></div>
                                         </div>
@@ -4550,7 +4451,7 @@ console.log(data);
         }
 
         .settings-pane {
-            display: none !important;
+            display: none;
         }
 
         .settings-pane.active {
@@ -4637,15 +4538,16 @@ console.log(data);
         },
 
         async init() {
-            const userStr = sessionStorage.getItem('user');
+            const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
             if (!userStr) {
-                window.location.href = 'login.html';
+                window.location.href = '/auth/login.html';
                 return;
             }
             
             const user = JSON.parse(userStr);
             this.currentUser = user;
-            const isAdmin = ['Admin', 'SuperAdmin'].includes(user.role);
+            const role = window.QCMS && window.QCMS.normalizeRole ? window.QCMS.normalizeRole(user.role) : (user.role || 'Team Member');
+            const isAdmin = ['Admin', 'SuperAdmin'].includes(role);
 
             // Role-Based Access Control - Hide organization settings for non-admins
             if (!isAdmin) {
@@ -4676,13 +4578,13 @@ console.log(data);
                 return;
             }
 
-            // Deactivate all settings sidebar link highlights and activate current
-            document.querySelectorAll('#settings-tabs .sidebar-link, #settings-tabs .ps-nav-item, #ps-settings-nav .ps-nav-item, .sidebar-link, .ps-nav-item').forEach(t => t.classList.remove('active'));
+            // Deactivate settings sidebar link highlights and activate current target (scoped to settings tabs container)
+            document.querySelectorAll('#settings-tabs .sidebar-link, #settings-tabs .ps-nav-item, #ps-settings-nav .ps-nav-item').forEach(t => t.classList.remove('active'));
             if (btnEl) {
                 const targetBtn = btnEl.closest ? (btnEl.closest('.sidebar-link, .ps-nav-item') || btnEl) : btnEl;
                 targetBtn.classList.add('active');
             } else {
-                const link = document.querySelector(`#settings-tabs .sidebar-link[data-target="${target}"], .sidebar-link[data-target="${target}"], #ps-settings-nav .ps-nav-item[data-tab="${target}"]`);
+                const link = document.querySelector(`#settings-tabs .sidebar-link[data-target="${target}"], #ps-settings-nav .ps-nav-item[data-tab="${target}"]`);
                 if (link) link.classList.add('active');
             }
 
@@ -4734,6 +4636,8 @@ console.log(data);
             const initialTab = urlParams.get('tab') || window.location.hash.replace('#', '');
             if (initialTab) {
                 this.switchTab(initialTab);
+            } else {
+                this.switchTab('personal');
             }
         },
 
@@ -4795,11 +4699,17 @@ console.log(data);
         async loadPersonalProfile() {
             try {
                 const profile = await api.get('/auth/me');
-                document.getElementById('personal_name').value = profile.full_name || profile.username || '';
-                document.getElementById('personal_lang').value = profile.language || 'en';
-                
-                const avatarUrl = profile.profile_picture || 'assets/img/avatar-placeholder.png';
-                document.getElementById('personal_avatar_preview').innerHTML = `<img src="${avatarUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">`;
+                if (profile) {
+                    const nameEl = document.getElementById('personal_name');
+                    if (nameEl) nameEl.value = profile.full_name || profile.username || '';
+                    
+                    const langEl = document.getElementById('personal_lang');
+                    if (langEl) langEl.value = profile.language || 'en';
+                    
+                    const avatarUrl = profile.profile_picture || '/assets/img/avatar-placeholder.png';
+                    const avatarEl = document.getElementById('personal_avatar_preview');
+                    if (avatarEl) avatarEl.innerHTML = `<img src="${avatarUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">`;
+                }
             } catch (e) {
                 console.error("Failed to load personal profile", e);
             }
@@ -4814,7 +4724,7 @@ console.log(data);
 
             try {
                 QCMS.toast('Uploading avatar...', 'info');
-                const token = sessionStorage.getItem('token');
+                const token = sessionStorage.getItem('token') || localStorage.getItem('token');
                 const response = await fetch(`${api.baseUrl || '/api'}/auth/profile`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -4826,9 +4736,11 @@ console.log(data);
                 document.getElementById('personal_avatar_preview').innerHTML = `<img src="${res.profile_picture || '/assets/img/avatar-placeholder.png'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">`;
                 
                 // Update session
-                const user = JSON.parse(sessionStorage.getItem('user'));
+                const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
                 user.profile_picture = res.profile_picture;
-                sessionStorage.setItem('user', JSON.stringify(user));
+                const synchedUser = JSON.stringify(user);
+                sessionStorage.setItem('user', synchedUser);
+                localStorage.setItem('user', synchedUser);
                 QCMS.user = user;
                 QCMS.renderNavbar(); // Refresh navbar avatar
                 QCMS.toast('Avatar updated successfully.', 'success');
@@ -4867,20 +4779,7 @@ console.log(data);
             const secPayload = {
                 maintenance_mode: document.getElementById('maintenance_mode')?.checked || false,
                 session_timeout: parseInt(document.getElementById('session_timeout')?.value, 10) || 30,
-                data_retention_days: parseInt(document.getElementById('data_retention')?.value, 10) || 365,
-                auto_archive: document.getElementById('auto_archive')?.checked || false,
-                notifications_enabled: document.getElementById('notifications_enabled')?.checked || false,
-                security_settings: {
-                    sso_enabled: document.getElementById('sso_enabled')?.checked || false,
-                    sso_provider: document.getElementById('sso_provider')?.value || 'saml',
-                    sso_entity_id: document.getElementById('sso_entity_id')?.value || '',
-                    ip_whitelist_enabled: document.getElementById('ip_whitelist_enabled')?.checked || false,
-                    ip_whitelist_cidrs: document.getElementById('ip_whitelist_cidrs')?.value || '',
-                    pass_min_length: parseInt(document.getElementById('pass_min_length')?.value) || 8,
-                    pass_max_attempts: parseInt(document.getElementById('pass_max_attempts')?.value) || 5,
-                    pass_expiry_days: parseInt(document.getElementById('pass_expiry_days')?.value) || 90,
-                    pass_lockout_mins: parseInt(document.getElementById('pass_lockout_mins')?.value) || 15
-                }
+                data_retention_days: parseInt(document.getElementById('data_retention')?.value, 10) || 365
             };
             try {
                 await api.put('/admin/org-settings', secPayload);
@@ -4903,11 +4802,13 @@ console.log(data);
                 if (settings) {
                     if (settings.name) {
                         try {
-                            const userStr = sessionStorage.getItem('user');
+                            const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
                             if (userStr) {
                                 const uObj = JSON.parse(userStr);
                                 uObj.org_name = settings.name;
-                                sessionStorage.setItem('user', JSON.stringify(uObj));
+                                const synchedUser = JSON.stringify(uObj);
+                                sessionStorage.setItem('user', synchedUser);
+                                localStorage.setItem('user', synchedUser);
                                 if (window.QCMS) window.QCMS.user = uObj;
                                 if (window.QCMS && typeof window.QCMS.applyBranding === 'function') {
                                     window.QCMS.applyBranding();
@@ -4949,19 +4850,6 @@ console.log(data);
                     const mm = document.getElementById('maintenance_mode'); if (mm) mm.checked = !!settings.maintenance_mode;
                     const st = document.getElementById('session_timeout'); if (st) st.value = settings.session_timeout || 60;
                     const dr = document.getElementById('data_retention'); if (dr) dr.value = settings.data_retention_days || 365;
-                    const aa = document.getElementById('auto_archive'); if (aa) aa.checked = settings.auto_archive !== false;
-                    const ne = document.getElementById('notifications_enabled'); if (ne) ne.checked = settings.notifications_enabled !== false;
-                    
-                    const secBlob = settings.security_settings || {};
-                    const ssoEn = document.getElementById('sso_enabled'); if (ssoEn) ssoEn.checked = !!secBlob.sso_enabled;
-                    const ssoProv = document.getElementById('sso_provider'); if (ssoProv && secBlob.sso_provider) ssoProv.value = secBlob.sso_provider;
-                    const ssoEnt = document.getElementById('sso_entity_id'); if (ssoEnt) ssoEnt.value = secBlob.sso_entity_id || '';
-                    const ipEn = document.getElementById('ip_whitelist_enabled'); if (ipEn) ipEn.checked = !!secBlob.ip_whitelist_enabled;
-                    const ipCidr = document.getElementById('ip_whitelist_cidrs'); if (ipCidr) ipCidr.value = secBlob.ip_whitelist_cidrs || '';
-                    const pMin = document.getElementById('pass_min_length'); if (pMin) pMin.value = secBlob.pass_min_length || 8;
-                    const pMax = document.getElementById('pass_max_attempts'); if (pMax) pMax.value = secBlob.pass_max_attempts || 5;
-                    const pExp = document.getElementById('pass_expiry_days'); if (pExp) pExp.value = secBlob.pass_expiry_days || 90;
-                    const pLock = document.getElementById('pass_lockout_mins'); if (pLock) pLock.value = secBlob.pass_lockout_mins || 15;
                     
                     // Compliance
                     const standards = settings.compliance_standards || [];
@@ -5390,10 +5278,12 @@ ET`;
                         language: lang
                     });
                     
-                    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+                    const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
                     user.full_name = name;
                     user.language = lang;
-                    sessionStorage.setItem('user', JSON.stringify(user));
+                    const synchedUser = JSON.stringify(user);
+                    sessionStorage.setItem('user', synchedUser);
+                    localStorage.setItem('user', synchedUser);
                     QCMS.user = user;
                     
                     if (window.i18n) window.i18n.setLanguage(lang);
@@ -5473,14 +5363,16 @@ ET`;
                 this.isDirty = false;
 
                 // Update session storage so branding applies immediately
-                const userStr = sessionStorage.getItem('user');
+                const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
                 if (userStr) {
                     const user = JSON.parse(userStr);
                     user.org_primary_color = payload.primary_color;
                     user.org_logo_url = payload.logo_url;
                     user.org_favicon_url = payload.favicon_url;
                     user.org_name = payload.name;
-                    sessionStorage.setItem('user', JSON.stringify(user));
+                    const synchedUser = JSON.stringify(user);
+                    sessionStorage.setItem('user', synchedUser);
+                    localStorage.setItem('user', synchedUser);
                     
                     QCMS.user = user;
                     if (typeof QCMS.applyBranding === 'function') QCMS.applyBranding();
@@ -6015,31 +5907,13 @@ ET`;
                 <div class="modal-body p-4 text-start">
                     <div class="row g-4">
                         <div class="col-md-7 border-end pe-4">
-                            <h6 class="fw-bold mb-3">Select a Plan</h6>
-                            <div class="v-stack gap-3 mb-4">
-                                <div class="p-3 border rounded border-primary bg-primary-subtle d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="selectPlan('Starter', 2999)">
-                                    <div>
-                                        <div class="fw-bold">Starter Plan</div>
-                                        <div class="text-xs text-muted">Up to 25 Users</div>
-                                    </div>
-                                    <div class="fw-bold fs-5">₹2,999<span class="text-xs text-muted">/mo</span></div>
-                                    <input class="form-check-input" type="radio" name="planSelect" id="planStarter" value="Starter">
-                                </div>
-                                <div class="p-3 border rounded d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="selectPlan('Professional', 7999)">
-                                    <div>
-                                        <div class="fw-bold">Professional Plan</div>
-                                        <div class="text-xs text-muted">Up to 500 Users</div>
-                                    </div>
-                                    <div class="fw-bold fs-5">₹7,999<span class="text-xs text-muted">/mo</span></div>
-                                    <input class="form-check-input" type="radio" name="planSelect" id="planProfessional" value="Professional" checked>
-                                </div>
-                                <div class="p-3 border rounded d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="selectPlan('Enterprise', 24999)">
-                                    <div>
-                                        <div class="fw-bold">Enterprise Plan</div>
-                                        <div class="text-xs text-muted">Unlimited Users</div>
-                                    </div>
-                                    <div class="fw-bold fs-5">₹24,999<span class="text-xs text-muted">/mo</span></div>
-                                    <input class="form-check-input" type="radio" name="planSelect" id="planEnterprise" value="Enterprise">
+                            <h6 class="fw-bold mb-3 d-flex align-items-center justify-content-between">
+                                <span>Select a Plan</span>
+                                <span class="text-xs text-muted font-normal ms-2" id="checkoutPlanCountTag">Catalog Plans</span>
+                            </h6>
+                            <div class="v-stack gap-3 mb-4" id="checkoutPlanListContainer" style="max-height: 420px; overflow-y: auto; padding-right: 4px;">
+                                <div class="text-muted text-sm py-4 text-center">
+                                    <i data-lucide="loader-2" class="me-2 spinner"></i>Loading available subscription plans...
                                 </div>
                             </div>
                             
@@ -6049,27 +5923,48 @@ ET`;
                             </div>
                         </div>
                         <div class="col-md-5">
-                            <div class="p-3 bg-light rounded v-stack gap-3 h-100 position-relative">
-                                <h6 class="fw-bold border-bottom pb-2">Order Summary</h6>
-                                <div class="d-flex justify-content-between text-sm">
+                            <div class="p-3 bg-light rounded v-stack gap-2.5 h-100 position-relative" style="background: var(--ds-surface, #f8fafc) !important; border: 1px solid var(--ds-border-color);">
+                                <h6 class="fw-bold border-bottom pb-2 mb-1 text-main">Order Summary & Details</h6>
+                                
+                                <div class="d-flex justify-content-between align-items-start text-sm">
                                     <span class="text-muted">Selected Plan</span>
-                                    <span class="fw-bold" id="summaryPlan">Professional</span>
+                                    <div class="text-end">
+                                        <span class="fw-bold text-main d-block" id="summaryPlan">Professional</span>
+                                        <div class="text-xxs text-primary font-monospace fw-bold mt-0.5" id="summaryPlanCode"></div>
+                                    </div>
                                 </div>
                                 <div class="d-flex justify-content-between text-sm">
                                     <span class="text-muted">Billing Cycle</span>
-                                    <span class="fw-bold">Monthly</span>
+                                    <span class="fw-bold text-main" id="summaryBillingCycle">Monthly</span>
                                 </div>
                                 <div class="d-flex justify-content-between text-sm">
-                                    <span class="text-muted">Amount</span>
-                                    <span class="fw-bold" id="summaryAmount">₹7,999.00</span>
+                                    <span class="text-muted">User Capacity</span>
+                                    <span class="fw-bold text-main" id="summaryUsers">100 users</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-sm">
+                                    <span class="text-muted">Storage Limit</span>
+                                    <span class="fw-bold text-main" id="summaryStorage">10 GB</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-sm border-top pt-2">
+                                    <span class="text-muted">Base Amount</span>
+                                    <span class="fw-bold text-main" id="summaryAmount">₹7,999.00</span>
                                 </div>
                                 <div class="d-flex justify-content-between text-sm border-bottom pb-2">
                                     <span class="text-muted">Tax (18% GST)</span>
-                                    <span class="fw-bold" id="summaryTax">₹1,439.82</span>
+                                    <span class="fw-bold text-main" id="summaryTax">₹1,439.82</span>
                                 </div>
-                                <div class="d-flex justify-content-between text-lg mt-2">
-                                    <span class="fw-bold text-main">Total</span>
+                                <div class="d-flex justify-content-between text-lg mt-1">
+                                    <span class="fw-bold text-main">Total Payable</span>
                                     <span class="fw-bold text-primary fs-4" id="summaryTotal">₹9,438.82</span>
+                                </div>
+
+                                <!-- Included Modules & Features List -->
+                                <div class="mt-2 pt-2 border-top">
+                                    <div class="text-xxs uppercase fw-bold text-secondary mb-1">Included Modules & Features</div>
+                                    <div id="summaryModulesList" class="d-flex flex-wrap gap-1 mb-1">
+                                        <!-- Dynamic module badges -->
+                                    </div>
+                                    <div class="text-xs text-muted fst-italic mt-1" id="summaryDesc"></div>
                                 </div>
                                 
                                 <div id="upiQrContainer" class="mt-4 text-center d-none" style="background: white; padding: 15px; border-radius: 8px; border: 1px dashed var(--ds-primary);">
@@ -6121,22 +6016,141 @@ ET`;
         let selectedGateway = null;
         let paymentTotal = 9438.82; // With GST
 
-        function selectPlan(name, price) {
-            const radio = document.getElementById(`plan${name}`);
-            if (radio) radio.checked = true;
-            document.querySelectorAll('input[name="planSelect"]').forEach(input => {
-                input.parentElement.classList.remove('border-primary', 'bg-primary-subtle');
-                if(input.checked) input.parentElement.classList.add('border-primary', 'bg-primary-subtle');
+        let loadedCheckoutPlans = [];
+        let selectedPlanObj = null;
+
+        async function fetchDynamicCheckoutPlans() {
+            const container = document.getElementById('checkoutPlanListContainer');
+            if (!container) return;
+
+            container.innerHTML = '<div class="text-muted text-sm py-4 text-center"><i data-lucide="loader-2" class="me-2 spinner"></i>Loading subscription plans...</div>';
+
+            try {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+                const res = await fetch('/api/subscriptions/plans', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    const body = await res.json();
+                    const plans = body.data || body || [];
+                    if (Array.isArray(plans) && plans.length > 0) {
+                        loadedCheckoutPlans = plans;
+                        renderCheckoutPlanCards(plans);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not fetch dynamic plans, falling back to defaults:', e);
+            }
+
+            // Fallback default plans if API returns empty
+            loadedCheckoutPlans = [
+                { id: 'starter', name: 'Starter Plan', code: 'STARTER', base_price: 2500, billing_cycle: 'Monthly', max_users: 100, storage_limit_gb: 10, description: 'Standard tools for small teams', enabled_modules: ['Core Platform', 'Document Identity'] },
+                { id: 'professional', name: 'Professional Plan', code: 'PRO', base_price: 7999, billing_cycle: 'Monthly', max_users: 500, storage_limit_gb: 50, description: 'Complete SaaS suite for growing organizations', enabled_modules: ['Analytics', 'Audits', 'Integrations'] },
+                { id: 'enterprise', name: 'Enterprise Plan', code: 'ENT', base_price: 24999, billing_cycle: 'Monthly', max_users: 99999, storage_limit_gb: 500, description: 'Custom scale for enterprise deployments', enabled_modules: ['All Modules Included', 'Custom Workflows', 'Priority SLA'] }
+            ];
+            renderCheckoutPlanCards(loadedCheckoutPlans);
+        }
+
+        function renderCheckoutPlanCards(plans) {
+            const container = document.getElementById('checkoutPlanListContainer');
+            const countTag = document.getElementById('checkoutPlanCountTag');
+            if (countTag) countTag.textContent = `${plans.length} Catalog ${plans.length === 1 ? 'Plan' : 'Plans'}`;
+            if (!container) return;
+
+            container.innerHTML = plans.map((p, idx) => {
+                const planKey = String(p.id || p.name);
+                const priceNum = parseFloat(p.base_price ?? p.price ?? 0);
+                const priceFmt = priceNum ? priceNum.toLocaleString('en-IN') : '0';
+                const usersFmt = p.max_users >= 99999 ? 'Unlimited Users (∞)' : `Up to ${p.max_users} Users`;
+                const isChecked = idx === 0 ? 'checked' : '';
+                const initialClass = idx === 0 ? 'border-primary bg-primary-subtle' : '';
+
+                return `
+                <div class="p-3 border rounded plan-card-item d-flex justify-content-between align-items-center ${initialClass}" style="cursor: pointer; transition: all 0.2s ease;" onclick="selectCheckoutPlan('${planKey}')" id="checkoutPlanCard_${planKey}">
+                    <div>
+                        <div class="fw-bold d-flex align-items-center gap-2 text-main">
+                            ${QCMS.escapeHtml(p.name || p.plan_name)}
+                            ${p.code ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size:10px;padding:1px 5px;font-family:monospace;">${QCMS.escapeHtml(p.code)}</span>` : ''}
+                        </div>
+                        <div class="text-xs text-muted mt-1">
+                            ${usersFmt} · ${p.storage_limit_gb || 10} GB Storage
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="fw-bold fs-5 text-main">₹${priceFmt}<span class="text-xs text-muted">/${p.billing_cycle || 'mo'}</span></div>
+                        <input class="form-check-input" type="radio" name="planSelect" id="planRadio_${planKey}" value="${QCMS.escapeHtml(p.name || p.plan_name)}" ${isChecked}>
+                    </div>
+                </div>`;
+            }).join('');
+
+            if (plans.length > 0) {
+                selectCheckoutPlan(plans[0].id || plans[0].name);
+            }
+        }
+
+        function selectCheckoutPlan(planIdOrName) {
+            const plan = loadedCheckoutPlans.find(p => String(p.id) === String(planIdOrName) || p.name === planIdOrName || p.plan_name === planIdOrName) || loadedCheckoutPlans[0];
+            if (!plan) return;
+
+            selectedPlanObj = plan;
+            const planKey = String(plan.id || plan.name);
+
+            // Update UI card highlight & radio button
+            document.querySelectorAll('#checkoutPlanListContainer .plan-card-item').forEach(card => {
+                card.classList.remove('border-primary', 'bg-primary-subtle');
             });
+            const activeCard = document.getElementById(`checkoutPlanCard_${planKey}`);
+            if (activeCard) activeCard.classList.add('border-primary', 'bg-primary-subtle');
+
+            const radio = document.getElementById(`planRadio_${planKey}`);
+            if (radio) radio.checked = true;
+
+            // Calculate details & totals
+            const price = parseFloat(plan.base_price ?? plan.price ?? 0);
             currentPlanPrice = price;
-            document.getElementById('summaryPlan').innerText = name;
-            document.getElementById('summaryAmount').innerText = `₹${price.toLocaleString('en-IN')}.00`;
             const tax = price * 0.18;
-            document.getElementById('summaryTax').innerText = `₹${tax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             paymentTotal = price + tax;
+
+            // Update Summary Side Panel Details
+            document.getElementById('summaryPlan').innerText = plan.name || plan.plan_name;
+            if (document.getElementById('summaryPlanCode')) {
+                document.getElementById('summaryPlanCode').innerText = plan.code ? `(${plan.code})` : '';
+            }
+            if (document.getElementById('summaryBillingCycle')) {
+                document.getElementById('summaryBillingCycle').innerText = plan.billing_cycle || 'Monthly';
+            }
+            document.getElementById('summaryAmount').innerText = `₹${price.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('summaryTax').innerText = `₹${tax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             document.getElementById('summaryTotal').innerText = `₹${paymentTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            
+
+            // Update Full Details (Users, Storage, Modules, Description) in Summary Panel
+            if (document.getElementById('summaryUsers')) {
+                document.getElementById('summaryUsers').innerText = plan.max_users >= 99999 ? 'Unlimited (∞)' : `${plan.max_users} users`;
+            }
+            if (document.getElementById('summaryStorage')) {
+                document.getElementById('summaryStorage').innerText = `${plan.storage_limit_gb || 10} GB`;
+            }
+            if (document.getElementById('summaryDesc')) {
+                document.getElementById('summaryDesc').innerText = plan.description || 'Configured enterprise SaaS tier.';
+            }
+
+            const modulesContainer = document.getElementById('summaryModulesList');
+            if (modulesContainer) {
+                const mods = plan.enabled_modules || plan.features || [];
+                if (mods && mods.length > 0) {
+                    modulesContainer.innerHTML = mods.slice(0, 8).map(m => `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size:10px;padding:2px 6px;margin:2px;">${QCMS.escapeHtml(m)}</span>`).join('');
+                } else {
+                    modulesContainer.innerHTML = '<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size:10px;padding:2px 6px;">All Standard Modules</span>';
+                }
+            }
+
             updateUpiQr();
+        }
+
+        function selectPlan(name, price) {
+            selectCheckoutPlan(name);
         }
         
         function selectGateway(key) {
@@ -6172,7 +6186,7 @@ ET`;
             const pn = encodeURIComponent(qrInfo.account_name || 'QCMS Enterprise Solutions Pvt Ltd');
             const pa = encodeURIComponent(qrInfo.upi_id || 'qcms@upi');
             const am = paymentTotal.toFixed(2);
-            const plan = document.querySelector('input[name="planSelect"]:checked')?.value || 'Professional';
+            const plan = selectedPlanObj ? (selectedPlanObj.name || selectedPlanObj.plan_name) : (document.querySelector('input[name="planSelect"]:checked')?.value || 'Professional');
             const uri = `upi://pay?pa=${pa}&pn=${pn}&am=${am}&cu=INR&tn=QCMS%20Plan%20Upgrade%20to%20${plan}`;
             
             const qrUrl = qrInfo.qr_code_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(uri)}`;
@@ -6274,6 +6288,7 @@ ET`;
             hideProofSubmissionForm();
             const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
             modal.show();
+            await fetchDynamicCheckoutPlans();
             await fetchPaymentGateways();
         }
 

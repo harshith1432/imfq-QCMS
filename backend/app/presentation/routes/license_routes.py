@@ -209,7 +209,14 @@ def list_licenses():
             query = query.filter(Organization.subscription_status == status)
             
     if plan:
-        query = query.filter(Organization.subscription_plan == plan)
+        from app.infrastructure.database.models.models import SaaSPlan
+        matching_sp = [sp.name for sp in SaaSPlan.query.filter(
+            db.or_(SaaSPlan.plan_type.ilike(plan), SaaSPlan.name.ilike(plan), SaaSPlan.code.ilike(plan))
+        ).all()]
+        target_plans = set([plan] + matching_sp)
+        if plan.lower() in ('trial', 'trialing'):
+            target_plans.update(['Trial', 'Trialing', 'Default Trial Plan'])
+        query = query.filter(db.or_(*[Organization.subscription_plan.ilike(p) for p in target_plans]))
         
     now = datetime.utcnow()
     if expiry_window == '7d':

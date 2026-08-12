@@ -222,10 +222,10 @@ def get_dashboard():
     ).count()
     growth = round(((curr_total - prev_total) / prev_total * 100) if prev_total > 0 else 0, 1)
 
-    # Recent activity (last 10 published)
-    recent = Announcement.query.filter(
+    # Recent active broadcasts (page 1, 5 per page)
+    active_pagination = Announcement.query.filter(
         Announcement.status.in_(['Published', 'Scheduled'])
-    ).order_by(Announcement.created_at.desc()).limit(10).all()
+    ).order_by(Announcement.created_at.desc()).paginate(page=1, per_page=5, error_out=False)
 
     # Category breakdown
     cat_counts = db.session.query(
@@ -251,9 +251,48 @@ def get_dashboard():
                 "total_views": {"icon": "eye", "value": total_viewed, "growth": 0, "tooltip": "Total cumulative views across all broadcast notices by organization users.", "last_updated": now.isoformat()},
                 "failed_deliveries": {"icon": "alert-circle", "value": failed_deliveries, "growth": 0, "tooltip": "Total delivery failure attempts across recipient organizations.", "last_updated": now.isoformat()},
             },
-            "recent": [ann_to_dict(a) for a in recent],
+            "recent": [ann_to_dict(a) for a in active_pagination.items],
+            "active_broadcasts": {
+                "items": [ann_to_dict(a) for a in active_pagination.items],
+                "total": active_pagination.total,
+                "page": active_pagination.page,
+                "per_page": active_pagination.per_page,
+                "pages": active_pagination.pages or 1,
+                "has_prev": active_pagination.has_prev,
+                "has_next": active_pagination.has_next
+            },
             "by_category": {row[0]: row[1] for row in cat_counts},
             "by_priority": {row[0]: row[1] for row in pri_counts},
+        }
+    }), 200
+
+
+@announcement_bp.route('/active-broadcasts', methods=['GET'])
+@jwt_required()
+def get_active_broadcasts():
+    user = get_current_user()
+    if not user or not user.role or user.role.name not in READ_ROLES:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 5, type=int)
+
+    query = Announcement.query.filter(
+        Announcement.status.in_(['Published', 'Scheduled'])
+    ).order_by(Announcement.created_at.desc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return jsonify({
+        "status": "success",
+        "data": {
+            "items": [ann_to_dict(a) for a in pagination.items],
+            "total": pagination.total,
+            "page": pagination.page,
+            "per_page": pagination.per_page,
+            "pages": pagination.pages or 1,
+            "has_prev": pagination.has_prev,
+            "has_next": pagination.has_next
         }
     }), 200
 
@@ -540,6 +579,38 @@ def archive_announcement(ann_id):
     return jsonify({"status": "success", "message": f"{ann.ann_number} archived."}), 200
 
 
+# ─── Unarchive ────────────────────────────────────────────────────────────────
+
+@announcement_bp.route('/<int:ann_id>/unarchive', methods=['POST'])
+@jwt_required()
+def unarchive_announcement(ann_id):
+    user = get_current_user()
+    err = require_admin(user)
+    if err:
+        return err
+
+    ann = db.session.get(Announcement, ann_id)
+    if not ann:
+        return jsonify({"message": "Not found"}), 404
+
+    now = datetime.utcnow()
+    pub_at = ann.publish_at.replace(tzinfo=None) if ann.publish_at and ann.publish_at.tzinfo else ann.publish_at
+    exp_at = ann.expires_at.replace(tzinfo=None) if ann.expires_at and ann.expires_at.tzinfo else ann.expires_at
+
+    if pub_at and pub_at > now:
+        ann.status = 'Scheduled'
+    elif exp_at and exp_at < now:
+        ann.status = 'Draft'
+    elif pub_at and pub_at <= now:
+        ann.status = 'Published'
+    else:
+        ann.status = 'Draft'
+
+    log_ann_event(ann.id, user.id, 'UNARCHIVED')
+    db.session.commit()
+    return jsonify({"status": "success", "message": f"{ann.ann_number} unarchived.", "data": ann_to_dict(ann)}), 200
+
+
 # ─── Duplicate ────────────────────────────────────────────────────────────────
 
 @announcement_bp.route('/<int:ann_id>/duplicate', methods=['POST'])
@@ -596,15 +667,9 @@ def delete_announcement(ann_id):
     if not ann:
         return jsonify({"message": "Not found"}), 404
 
-    # Log before delete
-    log_ann_event(ann.id, user.id, 'DELETED', {"title": ann.title})
+    db.session.delete(ann)
     db.session.commit()
-
-    # Archive instead of hard-delete to preserve history
-    ann.status = 'Archived'
-    ann.title = f"[DELETED] {ann.title}"
-    db.session.commit()
-    return jsonify({"status": "success", "message": "Announcement deleted (archived for audit trail)."}), 200
+    return jsonify({"status": "success", "message": "Announcement deleted successfully."}), 200
 
 
 # ─── Delivery Status ──────────────────────────────────────────────────────────

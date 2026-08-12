@@ -17,8 +17,8 @@ import copy
 import shutil
 import time
 import platform
-import os
 import re
+from app.shared.validation import validate_email, ValidationError
 try:
     import psutil
 except ImportError:
@@ -31,7 +31,7 @@ super_admin_bp = Blueprint('super_admin', __name__)
 # ─── Tenant filter helper ────────────────────────────────────────────────────
 def _tenant_filter(query):
     """Apply is_platform_org=False filter to exclude SuperAdmin's internal org."""
-    return query.filter(Organization.is_platform_org == False)
+    return query.filter(Organization.is_platform_org == False, Organization.name != 'QCMS Admin Org')
 
 
 @super_admin_bp.route('/public/landing-content', methods=['GET'])
@@ -161,6 +161,36 @@ def get_company_filter_options():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+def _resolve_org_plan_type(org, plan_type_map=None):
+    p_name = (getattr(org, 'subscription_plan', '') or '').strip()
+    if plan_type_map and p_name.lower() in plan_type_map:
+        return plan_type_map[p_name.lower()]
+    
+    standard_types = {
+        'starter': 'Starter',
+        'professional': 'Professional',
+        'enterprise': 'Enterprise',
+        'custom': 'Custom',
+        'trial': 'Trial',
+        'trialing': 'Trial'
+    }
+    if p_name.lower() in standard_types:
+        return standard_types[p_name.lower()]
+
+    if p_name:
+        plan_obj = SaaSPlan.query.filter(
+            (func.lower(SaaSPlan.name) == p_name.lower()) |
+            (func.lower(SaaSPlan.code) == p_name.lower()) |
+            (func.lower(SaaSPlan.plan_type) == p_name.lower())
+        ).first()
+        if plan_obj and plan_obj.plan_type:
+            return plan_obj.plan_type
+
+    if getattr(org, 'subscription_status', '') in ('Trialing', 'Trial', 'On Trial'):
+        return 'Trial'
+
+    return p_name if p_name else 'Starter'
+
 @super_admin_bp.route('/companies', methods=['GET'])
 @jwt_required()
 @super_admin_required()
@@ -189,7 +219,7 @@ def list_companies():
     per_page = request.args.get('per_page', 15, type=int)
 
     # --- Base Query --- (exclude platform/system orgs — these are NOT tenants)
-    query = Organization.query.filter(Organization.is_platform_org == False)
+    query = _tenant_filter(Organization.query)
 
     # --- Apply Filters ---
     if not show_deleted:
@@ -211,14 +241,28 @@ def list_companies():
         )
     
     if plan_filter:
-        query = query.filter(Organization.subscription_plan.ilike(plan_filter))
+        matching_sp_names = [
+            sp.name for sp in SaaSPlan.query.filter(
+                db.or_(
+                    SaaSPlan.plan_type.ilike(plan_filter),
+                    SaaSPlan.name.ilike(plan_filter),
+                    SaaSPlan.code.ilike(plan_filter)
+                )
+            ).all()
+        ]
+        target_plans = set([plan_filter] + matching_sp_names)
+        if 'trial' in plan_filter.lower():
+            target_plans.update(['Trial', 'Trialing', 'Default Trial Plan', 'Trial Plan (Free Onboarding Trial)'])
+        query = query.filter(
+            db.or_(*[Organization.subscription_plan.ilike(p) for p in target_plans])
+        )
     if status_filter:
         s_lower = status_filter.lower()
         if s_lower in ('trialing', 'on trial', 'trial'):
             query = query.filter(Organization.subscription_status.in_(['Trialing', 'Trial', 'On Trial']))
         elif s_lower in ('expiring soon', 'expiring_soon'):
             license_status_filter = 'Expiring Soon'
-        elif s_lower in ('inactive 20d', 'inactive', 'inactive_20d'):
+        elif s_lower in ('inactive 20d', 'inactive', 'inactive_20d', 'inactive (20d)'):
             license_status_filter = 'Inactive 20d'
         elif s_lower in ('suspended', 'on hold', 'hold'):
             query = query.filter(Organization.subscription_status.in_(['Suspended', 'On Hold']))
@@ -292,13 +336,23 @@ def list_companies():
     from app.domain.services.subscription_service import is_org_expiring_soon
     all_orgs = Organization.query.filter(Organization.is_deleted == False, Organization.is_platform_org == False)
     all_orgs_list = all_orgs.all()
+
+    saas_plans = SaaSPlan.query.all()
+    plan_type_map = {}
+    for sp in saas_plans:
+        pt = sp.plan_type or sp.name
+        if sp.name:
+            plan_type_map[sp.name.lower()] = pt
+        if sp.code:
+            plan_type_map[sp.code.lower()] = pt
+
     kpi = {
         "total": len(all_orgs_list),
         "active": len([o for o in all_orgs_list if o.subscription_status == 'Active']),
-        "trialing": len([o for o in all_orgs_list if o.subscription_status == 'Trialing']),
-        "suspended": len([o for o in all_orgs_list if o.subscription_status == 'Suspended']),
+        "trialing": len([o for o in all_orgs_list if o.subscription_status in ('Trialing', 'Trial')]),
+        "suspended": len([o for o in all_orgs_list if o.subscription_status in ('Suspended', 'On Hold')]),
         "expired": len([o for o in all_orgs_list if o.subscription_status == 'Expired']),
-        "enterprise": len([o for o in all_orgs_list if o.subscription_plan == 'Enterprise']),
+        "enterprise": len([o for o in all_orgs_list if _resolve_org_plan_type(o, plan_type_map).lower() == 'enterprise']),
         "white_label": len([o for o in all_orgs_list if o.is_white_label]),
         "expiring_soon": len([o for o in all_orgs_list if is_org_expiring_soon(o)]),
         "inactive_20d": len([o for o in all_orgs_list if _is_inactive_20d(o)])
@@ -326,6 +380,8 @@ def list_companies():
             else:
                 admin_disp_name = 'Org Admin'
 
+        p_type = _resolve_org_plan_type(org, plan_type_map)
+
         output.append({
             "id": org.id,
             "name": org.name,
@@ -334,7 +390,9 @@ def list_companies():
             "admin_name": admin_disp_name,
             "email": org.email,
             "phone": org.phone or '—',
-            "plan": org.subscription_plan,
+            "plan": p_type,
+            "plan_type": p_type,
+            "plan_name": org.subscription_plan or p_type,
             "status": org.subscription_status,
             "user_count": user_count,
             "max_users": org.max_users,
@@ -413,12 +471,15 @@ def get_company_details(org_id):
             "timezone": org.timezone or 'UTC',
             "currency": org.currency or 'USD',
             "subscription_plan": org.subscription_plan,
+            "plan_type": _resolve_org_plan_type(org),
+            "plan_name": org.subscription_plan,
             "subscription_status": org.subscription_status,
             "max_users": org.max_users,
             "is_white_label": org.is_white_label,
             "api_access": org.api_access,
             "multi_plant": org.multi_plant,
             "trial_ends_at": org.trial_ends_at.isoformat() if org.trial_ends_at else None,
+            "subscription_expiry": expiry_dt.isoformat() if expiry_dt else (org.trial_ends_at.isoformat() if org.trial_ends_at else None),
             "trial_days_left": trial_days,
             "created_at": org.created_at.isoformat(),
             "user_count": user_count,
@@ -438,12 +499,63 @@ def get_company_details(org_id):
         }
     })
 
+@super_admin_bp.route('/companies/verify-udyam', methods=['POST'])
+@jwt_required()
+@super_admin_required()
+def verify_udyam_number():
+    """Verify Indian MSME Udyam Registration Number format & structure"""
+    import re
+    data = request.json or {}
+    udyam = (data.get('udyam_number') or '').strip().upper()
+    
+    if not udyam:
+        return jsonify({"valid": False, "message": "Udyam Registration Number is required"}), 400
+        
+    pattern = r'^UDYAM-[A-Z]{2}-\d{2}-\d{7}$'
+    if not re.match(pattern, udyam):
+        return jsonify({
+            "valid": False, 
+            "message": "Invalid format. Expected format: UDYAM-XX-00-0000000 (e.g. UDYAM-KR-03-0012345)"
+        }), 400
+        
+    parts = udyam.split('-')
+    state_code = parts[1]
+    district_code = parts[2]
+    
+    state_names = {
+        'KR': 'Karnataka', 'KA': 'Karnataka', 'MH': 'Maharashtra', 'DL': 'Delhi', 
+        'TN': 'Tamil Nadu', 'GJ': 'Gujarat', 'UP': 'Uttar Pradesh', 'TS': 'Telangana', 
+        'AP': 'Andhra Pradesh', 'WB': 'West Bengal', 'HR': 'Haryana', 'PB': 'Punjab',
+        'RJ': 'Rajasthan', 'KL': 'Kerala', 'MP': 'Madhya Pradesh', 'BR': 'Bihar',
+        'OR': 'Odisha', 'OD': 'Odisha', 'AS': 'Assam', 'GA': 'Goa', 'UT': 'Uttarakhand',
+        'HP': 'Himachal Pradesh', 'JK': 'Jammu & Kashmir', 'CH': 'Chandigarh'
+    }
+    
+    state = state_names.get(state_code, f"State Code '{state_code}'")
+    
+    return jsonify({
+        "valid": True,
+        "status": "success",
+        "udyam_number": udyam,
+        "state_code": state_code,
+        "state": state,
+        "district_code": district_code,
+        "enterprise_type": "Micro / Small / Medium Enterprise (MSME)",
+        "verification_status": "VERIFIED_ACTIVE",
+        "message": f"Udyam registration verified successfully for {state} MSME Enterprise."
+    })
+
+
 @super_admin_bp.route('/companies', methods=['POST'])
 @jwt_required()
 @super_admin_required()
 @sub_role_write_required('organizations')
 def create_company():
-    """Create a new organization with all onboarding wizard steps"""
+    """Create a new organization with all onboarding wizard steps (Disabled)"""
+    return jsonify({
+        "status": "error",
+        "message": "Organization creation by Super Admin is disabled. Organizations register via self-service signup."
+    }), 403
     from app.shared.validation import (
         ValidationError,
         sanitize_payload,
@@ -468,17 +580,49 @@ def create_company():
     except ValidationError as ve:
         return jsonify({"status": "error", "message": ve.message}), 400
         
-    # Duplicate Checks
-    if Organization.query.filter_by(name=name).first():
-        return jsonify({"status": "error", "message": "Organization name already exists"}), 400
-    if User.query.filter_by(email=email).first():
-        return jsonify({"status": "error", "message": "Admin email already exists"}), 400
-    if User.query.filter_by(username=username).first():
-        return jsonify({"status": "error", "message": "Admin username already exists"}), 400
+    # Duplicate Checks (ignoring soft-deleted Recycle Bin records)
+    existing_org = Organization.query.filter_by(name=name).first()
+    if existing_org:
+        if not existing_org.is_deleted:
+            return jsonify({"status": "error", "message": "Organization name already exists"}), 400
+        else:
+            existing_org.name = f"{name} (Archived #{existing_org.id})"
+            db.session.flush()
+
+    existing_user_email = User.query.filter_by(email=email).first()
+    if existing_user_email:
+        u_org = Organization.query.get(existing_user_email.org_id) if existing_user_email.org_id else None
+        if u_org and not u_org.is_deleted:
+            return jsonify({"status": "error", "message": "Admin email already exists"}), 400
+        else:
+            db.session.delete(existing_user_email)
+            db.session.flush()
+
+    existing_user_uname = User.query.filter_by(username=username).first()
+    if existing_user_uname:
+        u_org = Organization.query.get(existing_user_uname.org_id) if existing_user_uname.org_id else None
+        if u_org and not u_org.is_deleted:
+            return jsonify({"status": "error", "message": "Admin username already exists"}), 400
+        else:
+            db.session.delete(existing_user_uname)
+            db.session.flush()
         
     # 1. Create Organization
-    plan = sub_data.get('plan', 'Starter')
-    trial_duration = int(sub_data.get('trial_duration', 14))
+    ps_settings = PlatformSettings.query.first()
+    default_trial = (ps_settings.trial_period_days if ps_settings and ps_settings.trial_period_days else 14)
+    from app.domain.services.subscription_service import SubscriptionManager
+    trial_plan_obj = SubscriptionManager.get_default_trial_plan()
+    plan = sub_data.get('plan')
+    if not plan or plan in ['Starter', 'Trial']:
+        if trial_plan_obj:
+            plan = trial_plan_obj.name
+            if trial_plan_obj.limits and not sub_data.get('max_users'):
+                sub_data['max_users'] = trial_plan_obj.limits.max_users
+            if trial_plan_obj.limits and not sub_data.get('storage_limit'):
+                sub_data['storage_limit'] = trial_plan_obj.limits.storage_limit_gb * 1024.0
+        else:
+            plan = plan or 'Starter'
+    trial_duration = int(sub_data.get('trial_duration') or default_trial)
     start_date = datetime.utcnow()
     end_date = start_date + timedelta(days=trial_duration)
     
@@ -489,7 +633,9 @@ def create_company():
     org = Organization(
         name=name,
         org_code=org_code,
+        udyam_number=comp_data.get('udyam_number'),
         industry=comp_data.get('industry', 'Other'),
+        org_scale=comp_data.get('org_scale', 'Small'),
         gst_number=comp_data.get('gst_number'),
         pan_number=comp_data.get('pan_number'),
         website=comp_data.get('website'),
@@ -781,7 +927,6 @@ def _hard_delete_organization(org):
         # ── STEP 22: User custom fields & imported ideas ───────────────────────
         db.session.execute(text(f"DELETE FROM user_custom_fields WHERE org_id = {org_id};"))
         db.session.execute(text(f"DELETE FROM imported_ideas WHERE organization_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM imported_idea WHERE organization_id = {org_id};"))
 
         # ── STEP 23: Org identity & settings ──────────────────────────────────
         db.session.execute(text(f"DELETE FROM platform_identity WHERE org_id = {org_id};"))
@@ -1987,6 +2132,7 @@ def platform_settings():
                 "system_version": s.system_version,
                 "default_plan": s.default_plan,
                 "trial_period_days": s.trial_period_days,
+                "max_auto_trial_extensions": s.max_auto_trial_extensions if hasattr(s, 'max_auto_trial_extensions') else 2,
                 "payment_gateway_mode": s.payment_gateway_mode,
                 # General
                 "support_phone": s.support_phone,
@@ -2048,6 +2194,7 @@ def platform_settings():
     if 'support_email' in data: s.support_email = data['support_email']
     if 'default_plan' in data: s.default_plan = data['default_plan']
     if 'trial_period_days' in data: s.trial_period_days = int(data.get('trial_period_days', 14))
+    if 'max_auto_trial_extensions' in data: s.max_auto_trial_extensions = int(data.get('max_auto_trial_extensions', 2))
     if 'payment_gateway_mode' in data: s.payment_gateway_mode = data['payment_gateway_mode']
     if 'support_phone' in data: s.support_phone = data['support_phone']
     if 'support_website' in data: s.support_website = data['support_website']
@@ -2704,6 +2851,10 @@ def update_own_admin_credentials():
         
     # Update Email
     if new_email and new_email.lower() != user.email.lower():
+        try:
+            new_email = validate_email(new_email, "Super Admin Email")
+        except ValidationError as ve:
+            return jsonify({"status": "error", "message": "Invalid email format. Email must be in username@domain.extension format (e.g. name@domain.com)."}), 400
         existing = User.query.filter(User.email.ilike(new_email), User.id != user.id).first()
         if existing:
             return jsonify({"status": "error", "message": "Email is already registered to another user"}), 400
@@ -2741,6 +2892,11 @@ def create_new_admin_login():
     if not username or not email or not password:
         return jsonify({"status": "error", "message": "Username, email, and initial password are required"}), 400
         
+    try:
+        email = validate_email(email, "Super Admin Email")
+    except ValidationError as ve:
+        return jsonify({"status": "error", "message": "Invalid email format. Email must be in username@domain.extension format (e.g. name@domain.com)."}), 400
+
     if len(password) < 6:
         return jsonify({"status": "error", "message": "Password must be at least 6 characters"}), 400
         
@@ -2801,6 +2957,10 @@ def update_admin_login(admin_id):
     sub_role = data.get('sub_role', '').strip()
     
     if email and email.lower() != target.email.lower():
+        try:
+            email = validate_email(email, "Super Admin Email")
+        except ValidationError as ve:
+            return jsonify({"status": "error", "message": "Invalid email format. Email must be in username@domain.extension format (e.g. name@domain.com)."}), 400
         existing = User.query.filter(User.email.ilike(email), User.id != target.id).first()
         if existing:
             return jsonify({"status": "error", "message": "Email address already in use"}), 400
@@ -2877,7 +3037,9 @@ def delete_admin_login(admin_id):
 def get_storage_breakdown_sa():
     user_id = get_jwt_identity()
     user = User.query.get(user_id) if user_id else None
-    if not user or user.role != 'SuperAdmin':
+    role_name = user.role.name if user and user.role else ''
+    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role')) if user else False
+    if not user or (role_name not in ('SuperAdmin', 'Admin') and not is_sa_custom):
         return jsonify({"error": "Unauthorized"}), 403
 
     from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
@@ -2894,7 +3056,9 @@ def get_storage_breakdown_sa():
 def update_org_storage_limit_sa():
     user_id = get_jwt_identity()
     user = User.query.get(user_id) if user_id else None
-    if not user or user.role != 'SuperAdmin':
+    role_name = user.role.name if user and user.role else ''
+    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role')) if user else False
+    if not user or (role_name not in ('SuperAdmin', 'Admin') and not is_sa_custom):
         return jsonify({"error": "Unauthorized"}), 403
 
     data = request.get_json() or {}

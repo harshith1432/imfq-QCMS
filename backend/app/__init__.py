@@ -145,10 +145,13 @@ def create_app():
                     pass
                 from sqlalchemy import text
             alter_statements = [
+                "ALTER TABLE company_information DROP COLUMN IF EXISTS iso_certifications;",
+                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS org_scale VARCHAR(50) DEFAULT 'Small';",
                 "CREATE TABLE IF NOT EXISTS plants (id SERIAL PRIMARY KEY, org_id INTEGER NOT NULL REFERENCES organizations(id), name VARCHAR(100) NOT NULL, code VARCHAR(50), location VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
                 "ALTER TABLE departments ADD COLUMN IF NOT EXISTS plant_id INTEGER REFERENCES plants(id);",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS plant_id INTEGER REFERENCES plants(id);",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_fields JSONB;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMP;",
                 "ALTER TABLE user_custom_fields ADD COLUMN IF NOT EXISTS data_type VARCHAR(50) DEFAULT 'both';",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50);",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS website VARCHAR(255);",
@@ -161,12 +164,18 @@ def create_app():
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS is_platform_org BOOLEAN DEFAULT FALSE;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS gst_number VARCHAR(50);",
+                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS udyam_number VARCHAR(50);",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS license_start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS license_expiry_date TIMESTAMP;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS storage_used_mb FLOAT DEFAULT 0.0;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stages_config JSONB;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS login_options JSONB;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS security_settings JSONB;",
+                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS trial_extension_count INTEGER DEFAULT 0;",
+                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS max_auto_trial_extensions INTEGER DEFAULT 2;",
+                "ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS is_default_trial BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS trial_duration_days INTEGER DEFAULT 14;",
+                "ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS auto_approve_extensions_limit INTEGER DEFAULT 2;",
                 # ── Enterprise Subscription Management additions ──────────────────────
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;",
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;",
@@ -179,6 +188,9 @@ def create_app():
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS gst_amount FLOAT DEFAULT 0.0;",
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS final_amount FLOAT DEFAULT 0.0;",
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'INR';",
+                "ALTER TABLE saas_plan_pricing ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE subscription_invoices ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE;",
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS max_users INTEGER DEFAULT 500;",
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS storage_limit_gb FLOAT DEFAULT 10.0;",
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS api_limit INTEGER DEFAULT 10000;",
@@ -642,30 +654,14 @@ def create_app():
                     # Check if a SuperAdmin already exists
                     sa_exists = User.query.filter_by(role_id=sa_role.id).first()
                     if not sa_exists:
-                        # Check if the email is already used by another role
                         existing_user = User.query.filter_by(email=sa_username).first()
-                        from .infrastructure.database.models.models import Organization
-                        sa_org = Organization.query.filter_by(name='QCMS Admin Org').first()
-                        if not sa_org:
-                            sa_org = Organization(
-                                name='QCMS Admin Org',
-                                email='admin@qcms.com',
-                                subscription_plan='Enterprise',
-                                subscription_status='Active'
-                            )
-                            db.session.add(sa_org)
-                            db.session.commit()
-                        else:
-                            # Ensure existing org stays Active
-                            sa_org.subscription_status = 'Active'
-                            sa_org.subscription_plan = 'Enterprise'
-
                         if existing_user:
-                            # Promote existing user to SuperAdmin
+                            # Promote existing user to SuperAdmin (disassociate from any org)
                             existing_user.role_id = sa_role.id
-                            existing_user.org_id = sa_org.id
+                            existing_user.org_id = None
                             existing_user.is_verified = True
                             existing_user.status = 'Active'
+                            existing_user.is_active = True
                         else:
                             hashed_pw = bcrypt.generate_password_hash(sa_password).decode('utf-8')
                             new_sa = User(
@@ -673,11 +669,19 @@ def create_app():
                                 email=sa_username,
                                 hashed_password=hashed_pw,
                                 role_id=sa_role.id,
-                                org_id=sa_org.id,
+                                org_id=None,
                                 is_verified=True,
-                                status='Active'
+                                status='Active',
+                                is_active=True
                             )
                             db.session.add(new_sa)
+                    else:
+                        # Ensure all existing SuperAdmins have org_id = None
+                        sa_users = User.query.filter_by(role_id=sa_role.id).all()
+                        for sa_user in sa_users:
+                            sa_user.org_id = None
+                            sa_user.is_active = True
+                            sa_user.status = 'Active'
 
             db.session.commit()
             
@@ -705,6 +709,10 @@ def create_app():
 
             print("[QCMS] Database tables verified, roles, super admin, tax rules, and billing settings seeded successfully.")
         except Exception as e:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             print(f"[QCMS] Warning: Could not auto-initialize database: {e}")
 
     # Helper to check if public landing page is enabled
@@ -906,11 +914,10 @@ def create_app():
 
     @app.teardown_request
     def teardown_request(exception=None):
-        if exception:
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         try:
             db.session.remove()
         except Exception:

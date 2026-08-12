@@ -20,14 +20,28 @@ def allowed_file(filename):
 
 auth_bp = Blueprint('auth', __name__)
 
+@auth_bp.route('/registration-status', methods=['GET'])
+def get_registration_status():
+    from app.infrastructure.database.models.models import PlatformSettings
+    settings = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    is_open = bool(settings.registration_open) if (settings and settings.registration_open is not None) else True
+    return jsonify({
+        "status": "success",
+        "registration_open": is_open,
+        "message": "Self-service organization sign-up is active" if is_open else "Self-service organization sign-up is currently disabled by the Super Admin."
+    }), 200
+
 @auth_bp.route('/register-org', methods=['POST'])
 def register_org():
-    # Check PlatformSettings to see if native registration is disabled
+    # Check PlatformSettings to see if self-service registration is disabled
     from app.infrastructure.database.models.models import PlatformSettings
-    settings = PlatformSettings.query.first()
-    auth_settings = (settings.authentication_settings or {}) if settings else {}
-    if auth_settings.get('native_email_enabled') is False:
-        return jsonify({"msg": "Direct registration is disabled. Please use Single Sign-On (SSO)."}), 403
+    settings = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    if settings:
+        if not settings.registration_open:
+            return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin.", "message": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
+        auth_settings = settings.authentication_settings or {}
+        if auth_settings.get('native_email_enabled') is False:
+            return jsonify({"msg": "Direct registration is disabled. Please use Single Sign-On (SSO)."}), 403
 
     from app.shared.validation import (
         ValidationError,
@@ -62,25 +76,51 @@ def register_org():
         return jsonify({"msg": "Email not verified. Please verify your email first."}), 400
     
     # 1. Create Organization
-    plan_name = data.get('plan_name', 'Starter')
-    plan_config = SubscriptionManager.get_plan_config(plan_name)
+    req_plan = data.get('plan_name')
+    trial_plan_obj = SubscriptionManager.get_default_trial_plan()
     
-    trial_days = 14
-    trial_ends = datetime.utcnow() + timedelta(days=trial_days)
+    if not req_plan or req_plan in ['Starter', 'Trial']:
+        if trial_plan_obj:
+            plan_name = trial_plan_obj.name
+            plan_config = SubscriptionManager.get_plan_config(plan_name)
+            if trial_plan_obj.limits:
+                plan_config['max_users'] = trial_plan_obj.limits.max_users
+        else:
+            plan_name = req_plan or 'Starter'
+            plan_config = SubscriptionManager.get_plan_config(plan_name)
+    else:
+        plan_name = req_plan
+        plan_config = SubscriptionManager.get_plan_config(plan_name)
+    
+    trial_days = data.get('trial_days')
+    if not trial_days and trial_plan_obj:
+        trial_days = getattr(trial_plan_obj, 'trial_duration_days', None)
+        if not trial_days and trial_plan_obj.pricing:
+            import re
+            for pr in trial_plan_obj.pricing:
+                match = re.search(r'(\d+)', pr.billing_cycle or '')
+                if match:
+                    trial_days = int(match.group(1))
+                    break
+    if not trial_days:
+        trial_days = 14
+    
+    trial_ends = datetime.utcnow() + timedelta(days=int(trial_days))
     
     new_org = Organization(
         name=data.get('company_name'),
         industry=data.get('industry'),
+        org_scale=data.get('org_scale', 'Small'),
         admin_name=data.get('admin_name'),
         email=email,
         phone=data.get('phone'),
         subscription_plan=plan_name,
         subscription_status='Trialing',
         trial_ends_at=trial_ends,
-        max_users=plan_config['max_users'],
-        is_white_label=plan_config['white_label'],
-        multi_plant=plan_config['multi_plant'],
-        api_access=plan_config['api_access']
+        max_users=plan_config.get('max_users', 50),
+        is_white_label=plan_config.get('white_label', False),
+        multi_plant=plan_config.get('multi_plant', False),
+        api_access=plan_config.get('api_access', False)
     )
     db.session.add(new_org)
     db.session.flush() # Get ID
@@ -109,7 +149,12 @@ def register_org():
 
 @auth_bp.route('/request-registration-otp', methods=['POST'])
 def request_registration_otp():
-    data = request.get_json()
+    from app.infrastructure.database.models.models import PlatformSettings
+    settings = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    if settings and not settings.registration_open:
+        return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin.", "message": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
+
+    data = request.get_json() or {}
     email = data.get('email')
     
     if not email:
@@ -144,7 +189,12 @@ def request_registration_otp():
 
 @auth_bp.route('/verify-registration-otp', methods=['POST'])
 def verify_registration_otp():
-    data = request.get_json()
+    from app.infrastructure.database.models.models import PlatformSettings
+    settings = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    if settings and not settings.registration_open:
+        return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin.", "message": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
+
+    data = request.get_json() or {}
     email = data.get('email')
     otp = data.get('otp')
     
@@ -573,32 +623,36 @@ def get_profile():
     except Exception as e:
         branding_ctx = {}
 
+    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+
     return jsonify({
         "id": user.id,
         "username": user.username,
         "full_name": user.full_name or user.username,
         "email": user.email,
-        "role_name": user.role.name,
+        "role": user.role.name if user.role else 'SuperAdmin',
+        "role_name": user.role.name if user.role else 'SuperAdmin',
         "department": user.dept.name if user.dept else None,
-        "org_id": user.org_id,
-        "org_name": user.organization.name,
-        "status": user.status,
-        "is_active": user.is_active,
-        "deactivated_at": user.deactivated_at.isoformat() if getattr(user, 'deactivated_at', None) else None,
+        "org_id": None if is_super_admin else user.org_id,
+        "org_name": None if is_super_admin else (user.organization.name if user.organization else None),
+        "status": 'Active' if is_super_admin else user.status,
+        "is_active": True if is_super_admin else user.is_active,
+        "deactivated_at": None if is_super_admin else (user.deactivated_at.isoformat() if getattr(user, 'deactivated_at', None) else None),
         "profile_picture": get_profile_picture_url(user),
         "banner_image": user.banner_image,
         "language": user.language,
         "org_primary_color": user.organization.primary_color if user.organization else None,
-        "org_logo_url": (user.organization.logo_url if user.organization and user.organization.logo_url else branding_ctx.get("logo_url")),
+        "org_logo_url": (user.organization.logo_url if user.organization and user.organization.logo_url else None),
         "platform_logo_url": branding_ctx.get("logo_url"),
         "platform_software_name": branding_ctx.get("software_name"),
         "platform_short_name": branding_ctx.get("software_short_name"),
         "platform_title": branding_ctx.get("platform_title"),
+        "platform_subtitle": branding_ctx.get("platform_subtitle"),
         "org_favicon_url": user.organization.favicon_url if user.organization else None,
         "org_timezone": user.organization.timezone if user.organization else "Asia/Kolkata",
-        "subscription_status": user.organization.subscription_status if user.organization else 'Active',
-        "subscription_plan": user.organization.subscription_plan if user.organization else 'Starter',
-        "trial_ends_at": user.organization.trial_ends_at.isoformat() if user.organization and user.organization.trial_ends_at else None
+        "subscription_status": 'Active' if is_super_admin else (user.organization.subscription_status if user.organization else 'Active'),
+        "subscription_plan": 'Enterprise' if is_super_admin else (user.organization.subscription_plan if user.organization else 'Starter'),
+        "trial_ends_at": None if is_super_admin else (user.organization.trial_ends_at.isoformat() if user.organization and user.organization.trial_ends_at else None)
     }), 200
 
 @auth_bp.route('/user-reactivation-request', methods=['POST'])

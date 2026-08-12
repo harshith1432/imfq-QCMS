@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
     <link rel="stylesheet" href="/assets/css/glass.css">
+    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -590,7 +591,6 @@
                         
                         return `
                         <div class="audit-kpi-card" onclick="Audit.filterByKpi('${key}')" title="${kpi.tooltip}">
-                            <div class="audit-kpi-growth ${growthClass}">${growthSign}${kpi.growth}%</div>
                             <div class="audit-kpi-icon" style="background:${cardColor};">
                                 <i data-lucide="${icon}" style="width:16px;height:16px;color:${textColor};"></i>
                             </div>

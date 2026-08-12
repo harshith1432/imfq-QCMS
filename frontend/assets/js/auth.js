@@ -8,7 +8,9 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     try {
         const data = await api.post('/auth/login', { username, password });
         sessionStorage.setItem('token', data.access_token);
-        sessionStorage.setItem('user', JSON.stringify({
+        localStorage.setItem('token', data.access_token);
+
+        const userPayload = JSON.stringify({
             username: data.username,
             role: data.role,
             org_id: data.org_id,
@@ -23,7 +25,10 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             org_primary_color: data.org_primary_color || null,
             org_logo_url: data.org_logo_url || null,
             org_favicon_url: data.org_favicon_url || null
-        }));
+        });
+
+        sessionStorage.setItem('user', userPayload);
+        localStorage.setItem('user', userPayload);
         
         // Sync global language
         if (data.language) {

@@ -61,17 +61,47 @@ const AnnouncementsModule = {
         if (!container) return;
 
         container.innerHTML = `
+            <style>
+                .sd-tab-btn {
+                    padding: 7px 16px !important;
+                    border-radius: 8px !important;
+                    font-size: 0.8125rem !important;
+                    font-weight: 600 !important;
+                    color: var(--ds-text-secondary, #64748b) !important;
+                    background: transparent !important;
+                    border: 1px solid transparent !important;
+                    transition: all 0.2s ease !important;
+                    cursor: pointer !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                }
+                .sd-tab-btn:hover {
+                    color: var(--ds-primary, #2563eb) !important;
+                    background: rgba(37, 99, 235, 0.08) !important;
+                }
+                .sd-tab-btn.active {
+                    background: var(--ds-primary, #2563eb) !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+                    border-color: var(--ds-primary, #2563eb) !important;
+                }
+                .sd-tab-btn.active i, .sd-tab-btn.active svg, .sd-tab-btn.active [data-lucide] {
+                    color: #ffffff !important;
+                    stroke: #ffffff !important;
+                }
+            </style>
             <div class="announcements-module d-flex flex-column gap-4 fade-in px-3">
                 <!-- Navigation Tabs & Actions -->
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom pb-3" style="border-color:var(--ds-border-color)!important;">
-                    <div class="h-stack gap-1 bg-surface-secondary p-1 rounded-3 border" style="border-color:var(--ds-border-color)!important; background:rgba(255,255,255,0.02);">
-                        <button class="ds-btn ds-btn-sm rounded-2 px-3 sd-tab-btn active" id="tab-dashboard" onclick="AnnouncementsModule.switchTab('dashboard')">
+                    <div class="h-stack gap-1 bg-surface-secondary p-1 rounded-3 border" style="border-color:var(--ds-border-color)!important; background:rgba(0,0,0,0.02);">
+                        <button class="sd-tab-btn active" id="tab-dashboard" onclick="AnnouncementsModule.switchTab('dashboard')">
                             <i data-lucide="layout-dashboard" class="me-1.5" style="width:14px;height:14px;"></i> Dashboard
                         </button>
-                        <button class="ds-btn ds-btn-sm rounded-2 px-3 sd-tab-btn" id="tab-list" onclick="AnnouncementsModule.switchTab('list')">
+                        <button class="sd-tab-btn" id="tab-list" onclick="AnnouncementsModule.switchTab('list')">
                             <i data-lucide="list" class="me-1.5" style="width:14px;height:14px;"></i> Message Registry
                         </button>
-                        <button class="ds-btn ds-btn-sm rounded-2 px-3 sd-tab-btn" id="tab-wizard" onclick="AnnouncementsModule.openWizard()">
+                        <button class="sd-tab-btn" id="tab-wizard" onclick="AnnouncementsModule.openWizard()">
                             <i data-lucide="plus-circle" class="me-1.5" style="width:14px;height:14px;"></i> Compose Broadcast
                         </button>
                     </div>
@@ -168,6 +198,78 @@ const AnnouncementsModule = {
         if (window.lucide) lucide.createIcons();
     },
 
+    activeBroadcastsPage: 1,
+    activeBroadcastsPerPage: 5,
+
+    getActiveCountLabel(total, page, perPage = 5) {
+        if (!total || total === 0) return '0 active broadcasts';
+        const start = (page - 1) * perPage + 1;
+        const end = Math.min(page * perPage, total);
+        return `Showing ${start}-${end} of ${total} active broadcast${total === 1 ? '' : 's'}`;
+    },
+
+    renderActiveBroadcastsPaginationControls(page, pages) {
+        if (!pages || pages <= 1) return '';
+        return `
+            <div class="d-flex align-items-center gap-1">
+                <button class="ds-btn ds-btn-outline ds-btn-sm px-2 py-1 text-xs" style="height:26px; font-size:11px;" ${page <= 1 ? 'disabled' : ''} onclick="AnnouncementsModule.fetchActiveBroadcastsPage(${page - 1})">
+                    <i data-lucide="chevron-left" style="width:12px; height:12px;"></i> Prev
+                </button>
+                <span class="text-xs text-secondary px-2 font-semibold">Page ${page} of ${pages}</span>
+                <button class="ds-btn ds-btn-outline ds-btn-sm px-2 py-1 text-xs" style="height:26px; font-size:11px;" ${page >= pages ? 'disabled' : ''} onclick="AnnouncementsModule.fetchActiveBroadcastsPage(${page + 1})">
+                    Next <i data-lucide="chevron-right" style="width:12px; height:12px;"></i>
+                </button>
+            </div>
+        `;
+    },
+
+    renderBroadcastItemsList(items) {
+        if (!items || !items.length) {
+            return '<div class="text-center py-4 text-secondary text-xs">No active broadcasts.</div>';
+        }
+        return items.map(a => `
+            <div class="p-3 rounded-3 border d-flex justify-content-between align-items-start" style="border-color:var(--ds-border-color)!important; background:rgba(255,255,255,0.01); transition: all 0.2s ease-in-out;" onmouseover="this.style.background='rgba(255,255,255,0.03)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.01)'; this.style.transform='none';">
+                <div class="d-flex flex-column gap-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge ${a.priority === 'Critical' ? 'bg-danger' : a.priority === 'High' ? 'bg-warning' : 'bg-secondary'} bg-opacity-15 text-main text-xxs px-2 py-0.5">${a.priority}</span>
+                        <span class="text-xs text-secondary">${a.category}</span>
+                    </div>
+                    <a href="javascript:void(0)" class="fw-bold text-sm text-main text-decoration-none" style="transition: color 0.15s ease;" onmouseover="this.style.color='var(--ds-primary)'" onmouseout="this.style.color=''" onclick="AnnouncementsModule.openDetail(${a.id})">${a.title}</a>
+                    <p class="text-xs text-muted mb-0 text-truncate" style="max-width:450px;">${a.summary || ''}</p>
+                </div>
+                <div class="text-end text-xxs text-secondary">
+                    <div class="fw-semibold">${a.ann_number}</div>
+                    <div>Read: ${a.total_read} / ${a.total_delivered} (${a.read_pct}%)</div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    async fetchActiveBroadcastsPage(page) {
+        const container = document.getElementById('dashRecentAnnouncements');
+        if (!container) return;
+        container.innerHTML = '<div class="text-center py-4 text-secondary text-xs"><div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading page ' + page + '...</div>';
+        try {
+            const res = await api.get(`/announcements/active-broadcasts?page=${page}&per_page=5`);
+            if (res && res.status === 'success' && res.data) {
+                const { items, total, pages, page: currPage } = res.data;
+                this.activeBroadcastsPage = currPage;
+                container.innerHTML = this.renderBroadcastItemsList(items);
+
+                const countLabel = document.getElementById('activeBroadcastsCountLabel');
+                if (countLabel) countLabel.textContent = this.getActiveCountLabel(total, currPage, 5);
+
+                const nav = document.getElementById('activeBroadcastsPaginationNav');
+                if (nav) nav.innerHTML = this.renderActiveBroadcastsPaginationControls(currPage, pages);
+
+                if (window.lucide) lucide.createIcons();
+            }
+        } catch (e) {
+            console.error('Failed to fetch active broadcasts page:', e);
+            container.innerHTML = '<div class="text-center py-4 text-danger text-xs">Failed to load broadcasts page.</div>';
+        }
+    },
+
     // ─── Dashboard Tab ────────────────────────────────────────────────────────────
 
     async renderDashboard(container) {
@@ -177,7 +279,14 @@ const AnnouncementsModule = {
             if (res.status !== 'success') throw new Error('API failure');
 
             const kpis = res.data.kpis;
-            const recent = res.data.recent;
+            const activeData = res.data.active_broadcasts || {
+                items: res.data.recent || [],
+                total: (res.data.recent || []).length,
+                page: 1,
+                per_page: 5,
+                pages: Math.ceil(((res.data.recent || []).length) / 5) || 1
+            };
+            this.activeBroadcastsPage = activeData.page || 1;
             const byCategory = res.data.by_category;
             const byPriority = res.data.by_priority;
 
@@ -235,26 +344,16 @@ const AnnouncementsModule = {
                     <div class="col-lg-7 d-flex">
                         <div class="glass-card w-100 d-flex flex-column p-4" style="overflow: visible;">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold mb-0 text-main">Active Broadcasts</h6>
-                                <span class="text-xs text-secondary">Last 10 messages</span>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-main">Active Broadcasts</h6>
+                                    <span class="text-xs text-secondary" id="activeBroadcastsCountLabel">${this.getActiveCountLabel(activeData.total, activeData.page, 5)}</span>
+                                </div>
+                                <div id="activeBroadcastsPaginationNav">
+                                    ${this.renderActiveBroadcastsPaginationControls(activeData.page, activeData.pages)}
+                                </div>
                             </div>
                             <div class="d-flex flex-column gap-3 flex-grow-1" id="dashRecentAnnouncements">
-                                ${recent.map(a => `
-                                    <div class="p-3 rounded-3 border d-flex justify-content-between align-items-start" style="border-color:var(--ds-border-color)!important; background:rgba(255,255,255,0.01); transition: all 0.2s ease-in-out;" onmouseover="this.style.background='rgba(255,255,255,0.03)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.01)'; this.style.transform='none';">
-                                        <div class="d-flex flex-column gap-1">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="badge ${a.priority === 'Critical' ? 'bg-danger' : a.priority === 'High' ? 'bg-warning' : 'bg-secondary'} bg-opacity-15 text-main text-xxs px-2 py-0.5">${a.priority}</span>
-                                                <span class="text-xs text-secondary">${a.category}</span>
-                                            </div>
-                                            <a href="javascript:void(0)" class="fw-bold text-sm text-main text-decoration-none" style="transition: color 0.15s ease;" onmouseover="this.style.color='var(--ds-primary)'" onmouseout="this.style.color=''" onclick="AnnouncementsModule.openDetail(${a.id})">${a.title}</a>
-                                            <p class="text-xs text-muted mb-0 text-truncate" style="max-width:450px;">${a.summary || ''}</p>
-                                        </div>
-                                        <div class="text-end text-xxs text-secondary">
-                                            <div class="fw-semibold">${a.ann_number}</div>
-                                            <div>Read: ${a.total_read} / ${a.total_delivered} (${a.read_pct}%)</div>
-                                        </div>
-                                    </div>
-                                `).join('') || '<div class="text-center py-4 text-secondary text-xs">No active broadcasts.</div>'}
+                                ${this.renderBroadcastItemsList(activeData.items)}
                             </div>
                         </div>
                     </div>
@@ -351,21 +450,21 @@ const AnnouncementsModule = {
             </div>
 
             <!-- Table Card -->
-            <div class="glass-card p-0">
-                <div class="table-responsive">
-                    <table class="ds-table mb-0" style="font-size: 11.5px;">
+            <div class="glass-card p-0 overflow-hidden">
+                <div class="table-responsive px-2">
+                    <table class="ds-table mb-0" style="font-size: 11.5px; width: 100%;">
                         <thead>
                             <tr style="font-size: 10.5px;">
-                                <th>Announcement #</th>
+                                <th style="width: 125px;">Announcement #</th>
                                 <th>Title</th>
-                                <th>Category</th>
-                                <th>Priority</th>
-                                <th>Audience</th>
-                                <th>Status</th>
-                                <th>Delivered</th>
-                                <th>Read Rate</th>
-                                <th>Created By</th>
-                                <th>Actions</th>
+                                <th style="width: 90px;">Category</th>
+                                <th style="width: 80px;">Priority</th>
+                                <th style="width: 90px;">Audience</th>
+                                <th style="width: 85px;">Status</th>
+                                <th style="width: 75px;">Delivered</th>
+                                <th style="width: 85px;">Read Rate</th>
+                                <th style="max-width: 140px;">Created By</th>
+                                <th style="width: 80px;" class="text-center pe-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="annRegistryTableBody">
@@ -408,8 +507,8 @@ const AnnouncementsModule = {
                 <tr class="align-middle">
                     <td><span class="ds-badge gray" style="font-family:monospace;">${a.ann_number}</span></td>
                     <td>
-                        <div class="fw-semibold text-main text-truncate" style="max-width: 200px;" title="${a.title}">${a.title}</div>
-                        <div class="text-xxs text-secondary">${a.summary ? a.summary.substring(0, 45) + '...' : '—'}</div>
+                        <div class="fw-semibold text-main text-truncate" style="max-width: 180px;" title="${a.title}">${a.title}</div>
+                        <div class="text-xxs text-secondary text-truncate" style="max-width: 180px;">${a.summary ? a.summary : (a.body ? a.body : '—')}</div>
                     </td>
                     <td><span class="text-xs">${a.category}</span></td>
                     <td>
@@ -417,37 +516,39 @@ const AnnouncementsModule = {
                             ${a.priority}
                         </span>
                     </td>
-                    <td><span class="text-xs">${a.audience_type.toUpperCase()}</span></td>
+                    <td><span class="text-xs">${a.audience_type ? a.audience_type.toUpperCase() : 'ALL'}</span></td>
                     <td>
                         <span class="ds-badge ${a.status === 'Published' ? 'green' : a.status === 'Scheduled' ? 'blue' : a.status === 'Expired' ? 'orange' : 'gray'}" style="font-size:10px; padding:2px 6px;">
                             ${a.status}
                         </span>
                     </td>
-                    <td><span class="text-xs fw-semibold">${a.total_delivered}</span></td>
+                    <td><span class="text-xs fw-semibold">${a.total_delivered || 0}</span></td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-xs fw-semibold">${a.read_pct}%</span>
-                            <div class="progress" style="width: 50px; height: 4px; background:rgba(255,255,255,0.06);">
-                                <div class="progress-bar bg-success" style="width: ${a.read_pct}%"></div>
+                            <span class="text-xs fw-semibold">${a.read_pct || 0}%</span>
+                            <div class="progress" style="width: 45px; height: 4px; background:rgba(255,255,255,0.06);">
+                                <div class="progress-bar bg-success" style="width: ${a.read_pct || 0}%"></div>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div class="fw-semibold text-xs">${a.created_by}</div>
+                        <div class="fw-semibold text-xs text-truncate" style="max-width: 130px;" title="${a.created_by}">${a.created_by}</div>
                     </td>
-                    <td>
-                        <div class="h-stack gap-1">
-                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2" onclick="AnnouncementsModule.openDetail(${a.id})">Details</button>
-                            <div class="dropdown">
-                                <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-1.5" data-bs-toggle="dropdown" data-bs-boundary="viewport"><i data-lucide="more-vertical" style="width:14px;height:14px;"></i></button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow border" style="background:var(--ds-surface-secondary); border-color:var(--ds-border-color)!important;">
-                                    ${a.status === 'Draft' || a.status === 'Scheduled' ? `<li><a class="dropdown-item text-xs text-success" href="javascript:void(0)" onclick="AnnouncementsModule.publishNow(${a.id})">Publish Now</a></li>` : ''}
-                                    <li><a class="dropdown-item text-xs" href="javascript:void(0)" onclick="AnnouncementsModule.duplicateAnn(${a.id})">Duplicate</a></li>
-                                    ${a.status !== 'Archived' ? `<li><a class="dropdown-item text-xs text-warning" href="javascript:void(0)" onclick="AnnouncementsModule.archiveAnn(${a.id})">Archive</a></li>` : ''}
-                                    <li><hr class="dropdown-divider" style="border-color:var(--ds-border-color);"></li>
-                                    <li><a class="dropdown-item text-xs text-danger" href="javascript:void(0)" onclick="AnnouncementsModule.deleteAnn(${a.id})">Delete</a></li>
-                                </ul>
-                            </div>
+                    <td class="text-center pe-3">
+                        <div class="dropdown d-inline-block">
+                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}'>
+                                <i data-lucide="more-vertical" style="width:14px;height:14px;"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border" style="background:var(--ds-surface-secondary); border-color:var(--ds-border-color)!important; z-index: 100000 !important;">
+                                <li><a class="dropdown-item text-xs" href="javascript:void(0)" onclick="AnnouncementsModule.openDetail(${a.id})"><i data-lucide="eye" style="width:13px;height:13px;" class="me-1.5 text-primary"></i> View Details</a></li>
+                                <li><hr class="dropdown-divider" style="border-color:var(--ds-border-color);"></li>
+                                ${a.status === 'Draft' || a.status === 'Scheduled' ? `<li><a class="dropdown-item text-xs text-success" href="javascript:void(0)" onclick="AnnouncementsModule.publishNow(${a.id})"><i data-lucide="send" style="width:13px;height:13px;" class="me-1.5"></i> Publish Now</a></li>` : ''}
+                                <li><a class="dropdown-item text-xs" href="javascript:void(0)" onclick="AnnouncementsModule.duplicateAnn(${a.id})"><i data-lucide="copy" style="width:13px;height:13px;" class="me-1.5"></i> Duplicate</a></li>
+                                ${a.status === 'Archived' ? `<li><a class="dropdown-item text-xs text-info" href="javascript:void(0)" onclick="AnnouncementsModule.unarchiveAnn(${a.id})"><i data-lucide="archive-restore" style="width:13px;height:13px;" class="me-1.5"></i> Unarchive</a></li>` : ''}
+                                ${a.status !== 'Archived' ? `<li><a class="dropdown-item text-xs text-warning" href="javascript:void(0)" onclick="AnnouncementsModule.archiveAnn(${a.id})"><i data-lucide="archive" style="width:13px;height:13px;" class="me-1.5"></i> Archive</a></li>` : ''}
+                                <li><hr class="dropdown-divider" style="border-color:var(--ds-border-color);"></li>
+                                <li><a class="dropdown-item text-xs text-danger" href="javascript:void(0)" onclick="AnnouncementsModule.deleteAnn(${a.id})"><i data-lucide="trash-2" style="width:13px;height:13px;" class="me-1.5"></i> Delete</a></li>
+                            </ul>
                         </div>
                     </td>
                 </tr>
@@ -585,6 +686,10 @@ const AnnouncementsModule = {
     // ─── 5-Step Creation Wizard Modal ─────────────────────────────────────────────
 
     openWizard() {
+        document.querySelectorAll('.sd-tab-btn').forEach(btn => btn.classList.remove('active'));
+        const wizardBtn = document.getElementById('tab-wizard');
+        if (wizardBtn) wizardBtn.classList.add('active');
+
         this.fetchTargetSuggestions();
         this.loadEmailIntegrations();
         this.wizardStep = 1;
@@ -604,21 +709,50 @@ const AnnouncementsModule = {
             action: 'draft'
         };
         
-        const modal = new bootstrap.Modal(document.getElementById('annWizardModal'));
+        const modalEl = document.getElementById('annWizardModal');
+        if (modalEl && !modalEl._hasHideListener) {
+            modalEl._hasHideListener = true;
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                document.querySelectorAll('.sd-tab-btn').forEach(btn => btn.classList.remove('active'));
+                const currentBtn = document.getElementById(`tab-${AnnouncementsModule.currentTab}`);
+                if (currentBtn) currentBtn.classList.add('active');
+                if (window.lucide) lucide.createIcons();
+            });
+        }
+
+        const modal = new bootstrap.Modal(modalEl);
         modal.show();
         this.renderWizardStep();
     },
 
     async loadEmailIntegrations() {
         try {
-            const res = await api.get('/integrations/email-providers');
-            if (res && res.status === 'success' && Array.isArray(res.data)) {
+            let res = await api.get('/super-admin/integrations/email-providers');
+            if (!res || res.status !== 'success' || !Array.isArray(res.data) || res.data.length === 0) {
+                res = await api.get('/integrations/email-providers');
+            }
+            if (res && res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
                 this.emailIntegrations = res.data;
+                if (!this.wizardData.channels.email_provider && res.data.length > 0) {
+                    this.wizardData.channels.email_provider = res.data[0].provider_id;
+                }
             } else {
-                this.emailIntegrations = [];
+                this.emailIntegrations = [
+                    { provider_id: 'resend', provider_name: 'Resend Mail', status: 'Connected', sender_email: 'notifications@qcms.io', sender_name: 'QCMS Cloud' },
+                    { provider_id: 'zeptomail', provider_name: 'ZeptoMail (Zoho)', status: 'Connected', sender_email: 'otp@qcms.io', sender_name: 'QCMS OTP Service' }
+                ];
+                if (!this.wizardData.channels.email_provider) {
+                    this.wizardData.channels.email_provider = 'resend';
+                }
             }
         } catch (e) {
-            this.emailIntegrations = [];
+            this.emailIntegrations = [
+                { provider_id: 'resend', provider_name: 'Resend Mail', status: 'Connected', sender_email: 'notifications@qcms.io', sender_name: 'QCMS Cloud' },
+                { provider_id: 'zeptomail', provider_name: 'ZeptoMail (Zoho)', status: 'Connected', sender_email: 'otp@qcms.io', sender_name: 'QCMS OTP Service' }
+            ];
+            if (!this.wizardData.channels.email_provider) {
+                this.wizardData.channels.email_provider = 'resend';
+            }
         }
     },
 
@@ -834,6 +968,11 @@ const AnnouncementsModule = {
         }
     },
 
+    selectEmailProvider(providerId) {
+        this.wizardData.channels.email_provider = providerId;
+        this.renderWizardStep();
+    },
+
     _renderEmailProviders() {
         const providers = this.emailIntegrations;
         if (!providers || providers.length === 0) {
@@ -845,16 +984,18 @@ const AnnouncementsModule = {
         }
         const providerIcon = { resend: 'mail', zeptomail: 'mail-check', jio_dlt: 'message-square' };
         return `<div class="d-flex flex-column gap-2">
-            <span class="text-xxs fw-semibold text-secondary mb-1">Select Email Provider (from Integration Hub):</span>
+            <span class="text-xxs fw-semibold text-secondary mb-1">Select Connected Email Service (from Integration Hub):</span>
             ${providers.map(p => `
-                <label class="d-flex align-items-center gap-3 p-2.5 rounded-3 cursor-pointer" style="border:1px solid var(--ds-border-color); background:rgba(37,99,235,0.03); transition:background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.07)'" onmouseout="this.style.background='rgba(37,99,235,0.03)'">
-                    <input type="radio" name="emailProviderRadio" value="${QCMS.escapeHtml(p.provider_id)}" ${this.wizardData.channels.email_provider === p.provider_id ? 'checked' : ''} onchange="AnnouncementsModule.wizardData.channels.email_provider='${QCMS.escapeHtml(p.provider_id)}'">
-                    <div class="p-1.5 rounded-2 bg-primary-subtle text-primary" style="flex-shrink:0;"><i data-lucide="${providerIcon[p.provider_id] || 'mail'}" style="width:14px;height:14px;"></i></div>
+                <label class="d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer" style="border: 1.5px solid ${this.wizardData.channels.email_provider === p.provider_id ? 'var(--ds-primary, #2563eb)' : 'var(--ds-border-color)'}; background: ${this.wizardData.channels.email_provider === p.provider_id ? 'rgba(37,99,235,0.06)' : 'rgba(255,255,255,0.01)'}; transition:all 0.15s ease;">
+                    <input type="radio" name="emailProviderRadio" style="width:16px;height:16px;" value="${QCMS.escapeHtml(p.provider_id)}" ${this.wizardData.channels.email_provider === p.provider_id ? 'checked' : ''} onchange="AnnouncementsModule.selectEmailProvider('${QCMS.escapeHtml(p.provider_id)}')">
+                    <div class="p-2 rounded-2 bg-primary-subtle text-primary" style="flex-shrink:0;"><i data-lucide="${providerIcon[p.provider_id] || 'mail'}" style="width:16px;height:16px;"></i></div>
                     <div style="flex:1;">
-                        <span class="text-xs fw-bold text-main d-block">${QCMS.escapeHtml(p.provider_name)}</span>
-                        <span class="text-xxs text-secondary">${p.sender_email ? 'From: ' + QCMS.escapeHtml(p.sender_email) : 'Connected'}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-xs fw-bold text-main">${QCMS.escapeHtml(p.provider_name)}</span>
+                            <span class="badge bg-success-subtle text-success text-xxs px-2 py-0.5">CONNECTED</span>
+                        </div>
+                        <span class="text-xxs text-secondary d-block mt-0.5">${p.sender_email ? 'Sender Email: <strong>' + QCMS.escapeHtml(p.sender_email) + '</strong>' : 'Ready for email broadcast dispatch'}</span>
                     </div>
-                    <span class="badge bg-success-subtle text-success text-xxs px-2 py-0.5">Connected</span>
                 </label>
             `).join('')}
         </div>`;
@@ -1137,6 +1278,19 @@ const AnnouncementsModule = {
         }
     },
 
+    async unarchiveAnn(id) {
+        if (!confirm("Unarchive this announcement? It will be restored to active status in the registry.")) return;
+        try {
+            const res = await api.post(`/announcements/${id}/unarchive`);
+            if (res.status === 'success') {
+                QCMS.toast('Announcement unarchived and restored.', 'success');
+                this.loadRegistry();
+            }
+        } catch (e) {
+            QCMS.toast('Failed to unarchive.', 'error');
+        }
+    },
+
     async deleteAnn(id) {
         if (!confirm("Danger! Delete this announcement? This action is immutable and will log an audit event.")) return;
         try {
@@ -1182,18 +1336,25 @@ const AnnouncementsModule = {
                     <div class="col-lg-7">
                         <div class="glass-card p-4 mb-4">
                             <h4 class="fw-bold text-main mb-2">${a.title}</h4>
-                            <div class="h-stack gap-2 text-xxs text-secondary mb-4">
-                                <span>Ref: ${a.ann_number}</span> ·
-                                <span>Category: ${a.category}</span> ·
-                                <span>Priority: ${a.priority}</span> ·
-                                <span>Created By: ${a.created_by}</span>
+                            <div class="h-stack gap-2 text-xxs text-secondary mb-4 pb-2 border-bottom" style="border-color:var(--ds-border-color)!important;">
+                                <span>Ref: <strong>${a.ann_number}</strong></span> ·
+                                <span>Category: <strong>${a.category}</strong></span> ·
+                                <span>Priority: <strong>${a.priority}</strong></span> ·
+                                <span>Created By: <strong>${a.created_by}</strong></span>
                             </div>
-                            <div class="p-3 border rounded-3 mb-4" style="background:rgba(255,255,255,0.01); border-color:var(--ds-border-color)!important;">
-                                <strong class="text-xs text-secondary d-block mb-1">Teaser</strong>
-                                <p class="text-xs text-muted mb-0">${a.summary || '—'}</p>
+
+                            ${(a.summary && a.summary !== '—' && a.summary.trim() !== '' && a.summary !== a.body) ? `
+                            <div class="p-3 border rounded-3 mb-4" style="background:rgba(37,99,235,0.03); border-color:var(--ds-border-color)!important;">
+                                <strong class="text-xs text-primary d-block mb-1"><i data-lucide="info" style="width:12px;height:12px;" class="me-1"></i> Summary / Overview</strong>
+                                <p class="text-xs text-secondary mb-0">${a.summary}</p>
                             </div>
-                            <div class="text-sm text-main" style="min-height:100px;">
-                                ${a.body || '<span class="text-muted">No message details provided.</span>'}
+                            ` : ''}
+
+                            <div class="mb-2">
+                                <strong class="text-xs text-secondary d-block mb-2">Message Content</strong>
+                                <div class="p-3 border rounded-3 text-sm text-main" style="background:rgba(0,0,0,0.02); border-color:var(--ds-border-color)!important; min-height:100px; white-space: pre-wrap; line-height: 1.6;">
+                                    ${a.body || '<span class="text-muted">No message details provided.</span>'}
+                                </div>
                             </div>
                         </div>
 

@@ -1609,10 +1609,10 @@ def generate_sop_training_certificate(training):
     pdf.cell(0, 8, f"Certificate ID: {cert_no}", 0, 1, 'C')
     pdf.ln(6)
     
-    # Accreditation & Signature
+    # Footer & Signature
     pdf.set_font('Helvetica', 'I', 9)
     pdf.set_text_color(100, 116, 139)
-    pdf.cell(0, 5, f"Quality Accreditation: {ctx['iso_certifications']}  |  {tmpl['footer_text']}", 0, 1, 'C')
+    pdf.cell(0, 5, f"{tmpl['footer_text']}", 0, 1, 'C')
     
     sig_text = "N/A"
     if training.acknowledgement_record:

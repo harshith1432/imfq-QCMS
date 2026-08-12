@@ -117,11 +117,35 @@ const QCMS = {
         'CEO': { canCreate: false, canValidate: false, canApprove: false, isAdmin: false, isCEO: true }
     },
 
+    normalizeRole(role) {
+        if (!role) return 'Team Member';
+        let roleStr = role;
+        if (typeof role === 'object') {
+            roleStr = role.name || role.role_name || role.role || '';
+        }
+        if (!roleStr || typeof roleStr !== 'string') return 'Team Member';
+        const r = roleStr.trim().toLowerCase();
+        if (r === 'superadmin' || r === 'super admin' || r === 'super_admin') return 'SuperAdmin';
+        if (r === 'admin') return 'Admin';
+        if (r === 'team leader' || r === 'teamleader' || r === 'team_leader') return 'Team Leader';
+        if (r === 'team member' || r === 'teammember' || r === 'team_member') return 'Team Member';
+        if (r === 'facilitator') return 'Facilitator';
+        if (r === 'reviewer') return 'Reviewer';
+        if (r === 'ceo') return 'CEO';
+        return roleStr;
+    },
+
     init() {
-        const userStr = sessionStorage.getItem('user');
+        const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
         if (userStr) {
             try {
                 this.user = JSON.parse(userStr);
+                if (this.user && this.user.role) {
+                    this.user.role = this.normalizeRole(this.user.role);
+                }
+                const synched = JSON.stringify(this.user);
+                sessionStorage.setItem('user', synched);
+                localStorage.setItem('user', synched);
             } catch (e) {
                 console.error("Failed to parse user session:", e);
                 this.logout();
@@ -786,33 +810,37 @@ const QCMS = {
         const sidebar = document.getElementById('app-sidebar');
         if (!sidebar) return;
 
-        sidebar.className = 'glass-sidebar';
+        sidebar.className = 'app-sidebar glass-sidebar';
         const roleName = user.role || 'Team Member';
         const roleSlug = this.roleToSlug(roleName);
 
         // Brand header — shared across all roles
-        // For SuperAdmin: never show the internal platform org name — use the software/platform name instead
+        // SuperAdmin: show platform logo & platform name
+        // Org users: show org logo (if set) & org name — NEVER the platform logo
         const isSuperAdmin = (user.role === 'SuperAdmin' || user.role === 'Super Admin');
+
         const shortName = isSuperAdmin
             ? (user.platform_short_name || user.software_name || user.software_display_name || 'QCMS')
             : (user.org_name || user.platform_short_name || 'QCMS');
-        const displaySub = user.platform_title ? user.platform_title.replace(shortName, '').trim() || 'Enterprise OS' : 'Enterprise OS';
-        const logoUrl = user.platform_logo_url || user.org_logo_url;
+
+        const displaySub = isSuperAdmin
+            ? (user.platform_subtitle || 'ENTERPRISE OS')
+            : 'WORKSPACE';
+
+        // Strictly separate: SuperAdmin → platform logo, Org users → org logo only
+        const logoUrl = isSuperAdmin
+            ? (user.platform_logo_url)
+            : (user.org_logo_url);
 
         let logoIconHtml = `
             <div class="brand-icon" style="background: var(--ds-accent);">
-                <i data-lucide="shield-check" style="color:white;"></i>
+                <i data-lucide="${isSuperAdmin ? 'shield-check' : 'building-2'}" style="color:white;"></i>
             </div>
         `;
         let brandNameHtml = `${QCMS.escapeHtml(shortName)} <small style="color:var(--ds-accent); opacity:1;">${QCMS.escapeHtml(displaySub)}</small>`;
 
         if (logoUrl && logoUrl !== 'null' && logoUrl !== 'None' && !logoUrl.includes('/assets/img/logo.png')) {
             logoIconHtml = `<img src="${logoUrl}" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px;">`;
-        }
-
-        if (user.org_logo_url && user.org_logo_url !== 'null' && user.org_logo_url !== 'None' && user.role !== 'SuperAdmin') {
-            logoIconHtml = `<img src="${user.org_logo_url}" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px;">`;
-            brandNameHtml = `${QCMS.escapeHtml(user.org_name || shortName)} <small style="color:var(--ds-accent); opacity:1;">Workspace</small>`;
         }
 
         const brandHtml = `

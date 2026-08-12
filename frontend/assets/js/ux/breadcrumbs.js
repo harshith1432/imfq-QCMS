@@ -29,23 +29,31 @@ const Breadcrumbs = {
     },
 
     getOrgName() {
-        if (window.QCMS && window.QCMS.user && window.QCMS.user.platform_short_name) {
-            const short = window.QCMS.user.platform_short_name.trim();
-            if (short) return short;
-        }
         try {
             const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
             if (userStr) {
                 const u = JSON.parse(userStr);
-                if (u && u.platform_short_name) {
-                    const short = u.platform_short_name.trim();
-                    if (short) return short;
+                const role = (u && (u.role || u.role_name)) || '';
+                const roleLower = String(role).toLowerCase();
+                const isSuper = roleLower.includes('super');
+                if (isSuper || window.location.pathname.includes('super-admin')) {
+                    return (u && u.platform_short_name) ? u.platform_short_name.trim() : 'QCMS';
                 }
-                if (u && u.org_name) return u.org_name;
+                if (u && u.org_name && u.org_name !== 'QCMS Admin Org' && u.org_name !== 'Platform Admin') {
+                    return u.org_name;
+                }
             }
         } catch(e) {}
-        if (window.QCMS && window.QCMS.user && window.QCMS.user.org_name) {
-            return window.QCMS.user.org_name;
+        if (window.QCMS && window.QCMS.user) {
+            const u = window.QCMS.user;
+            const role = (u && (u.role || u.role_name)) || '';
+            const roleLower = String(role).toLowerCase();
+            if (roleLower.includes('super') || window.location.pathname.includes('super-admin')) {
+                return (u.platform_short_name) ? u.platform_short_name.trim() : 'QCMS';
+            }
+            if (u.org_name && u.org_name !== 'QCMS Admin Org' && u.org_name !== 'Platform Admin') {
+                return u.org_name;
+            }
         }
         return 'QCMS';
     },

@@ -735,13 +735,17 @@ const SuperAdmin = {
         }, 300);
     },
 
+    openCreateOrgModal() {
+        if (typeof api !== 'undefined' && api.showNotification) {
+            api.showNotification('Organization creation by Super Admin is disabled. Organizations register via self-service signup.', 'orange');
+        } else {
+            alert('Organization creation by Super Admin is disabled.');
+        }
+    },
+
     quickAction(actionType) {
         if (actionType === 'create_org') {
-            this.switchView('organizations');
-            setTimeout(() => {
-                const modal = new bootstrap.Modal(document.getElementById('createOrgModal'));
-                modal.show();
-            }, 150);
+            this.openCreateOrgModal();
         } else if (actionType === 'add_admin') {
             this.switchView('settings');
         } else if (actionType === 'view_support') {
@@ -1016,8 +1020,10 @@ const SuperAdmin = {
                 document.getElementById('dashGrowth').textContent = `${growthVal >= 0 ? '+' : ''}${growthVal}%`;
 
                 // Initialize tooltips
-                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-                const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+                if (typeof bootstrap !== 'undefined' && bootstrap && bootstrap.Tooltip) {
+                    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+                }
 
                 // Redraw Donut and MRR Charts
                 this.renderOverviewCharts(data);
@@ -1359,9 +1365,12 @@ const SuperAdmin = {
                 ${QCMS.kpiCardWithTooltip('Enterprise', kpi.enterprise, 'crown', 'purple', 'Tenants using the Enterprise SaaS plan.', '', 'onclick="SuperAdmin.filterByKpi(\'plan\', \'Enterprise\')"')}
                 ${QCMS.kpiCardWithTooltip('Expired', kpi.expired, 'x-circle', 'gray', 'Tenants whose trial or subscription has expired.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Expired\')"')}
             `;
-            // Force all cards onto a single row
-            grid.style.gridTemplateColumns = `repeat(${grid.children.length}, minmax(110px, 1fr))`;
+            // Force all cards onto a grid with legible column spacing
+            grid.style.gridTemplateColumns = `repeat(${grid.children.length}, minmax(130px, 1fr))`;
+            grid.style.gap = '10px';
             grid.style.overflowX = 'auto';
+            grid.style.marginBottom = '1.75rem';
+            grid.style.paddingBottom = '0.5rem';
         }
         if (window.lucide) lucide.createIcons();
         
@@ -1405,16 +1414,17 @@ const SuperAdmin = {
             return;
         }
 
-        const planColors = { 'Starter': 'gray', 'Professional': 'blue', 'Enterprise': 'purple' };
+        const planColors = { 'Starter': 'gray', 'Professional': 'blue', 'Enterprise': 'purple', 'Custom': 'orange', 'Trial': 'amber', 'Trialing': 'amber' };
         const statusColors = { 'Active': 'green', 'Trialing': 'orange', 'Suspended': 'red', 'On Hold': 'red', 'Expired': 'gray' };
         const search = document.getElementById('companySearch')?.value || '';
 
         tbody.innerHTML = companies.map(org => {
-            const planColor = planColors[org.plan] || 'gray';
+            const displayPlan = org.plan_type || org.plan;
+            const planColor = planColors[displayPlan] || 'gray';
             const statColor = statusColors[org.status] || 'gray';
             const trialInfo = org.trial_days_left !== null && org.trial_days_left !== undefined
-                ? `<div class="text-xs fw-bold" style="color: ${org.trial_days_left <= 7 ? 'rgb(var(--ds-red-rgb))' : 'var(--ds-text-secondary)'};">${org.trial_days_left}d left</div>`
-                : (org.trial_ends_at ? `<div class="text-xs text-muted">${QCMS.formatDate(org.trial_ends_at)}</div>` : '<span class="text-xs text-muted">—</span>');
+                ? `<div class="fw-bold" style="font-size: 13px; line-height: 1.4; color: ${org.trial_days_left <= 7 ? '#dc2626' : '#334155'};">${org.trial_days_left}d left</div>`
+                : (org.trial_ends_at ? `<div style="font-size: 12px; color: #475569;">${QCMS.formatDate(org.trial_ends_at)}</div>` : '<span style="font-size: 12px; color: #94a3b8;">—</span>');
 
             const subInfo = [org.org_code && org.org_code !== '—' ? org.org_code : null, org.industry && org.industry !== '—' ? org.industry : null].filter(Boolean).join(' · ');
             const isChecked = this.selectedOrgIds.has(org.id) ? 'checked' : '';
@@ -1422,19 +1432,19 @@ const SuperAdmin = {
             return `<tr>
                 <td><input type="checkbox" class="form-check-input org-row-chk" data-id="${org.id}" ${isChecked}></td>
                 <td class="col-company">
-                    <div class="d-flex align-items-center gap-1">
-                        <div class="fw-bold" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${org.name}">${this.highlightText(org.name, search)}</div>
-                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size:10px;padding:1px 5px;font-family:monospace;" title="Database Organization ID: ${org.id}">ID: ${org.id}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="fw-bold" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;color:var(--ds-text-main);" title="${org.name}">${this.highlightText(org.name, search)}</div>
+                        <span class="badge border" style="font-size:11px;padding:2px 6px;background:rgba(100,116,139,0.12);color:#334155;border-color:rgba(100,116,139,0.2) !important;font-family:monospace;font-weight:600;" title="Database Organization ID: ${org.id}">ID: ${org.id}</span>
                     </div>
-                    ${subInfo ? `<div class="text-xs text-secondary">${this.highlightText(subInfo, search)}</div>` : ''}
+                    ${subInfo ? `<div style="font-size:12px;color:#475569;font-weight:500;margin-top:2px;">${this.highlightText(subInfo, search)}</div>` : ''}
                 </td>
                 <td class="col-admin">
-                    <div class="text-sm fw-semibold" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${org.admin_name}">${this.highlightText((org.admin_name && org.admin_name !== '—') ? org.admin_name : (org.email ? org.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Org Admin'), search)}</div>
-                    <div class="text-xs text-muted" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${org.email}">${this.highlightText(org.email, search)}</div>
+                    <div class="fw-semibold" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--ds-text-main);" title="${org.admin_name}">${this.highlightText((org.admin_name && org.admin_name !== '—') ? org.admin_name : (org.email ? org.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Org Admin'), search)}</div>
+                    <div style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#475569;margin-top:2px;" title="${org.email}">${this.highlightText(org.email, search)}</div>
                 </td>
-                <td class="col-plan"><span class="ds-badge ${planColor}">${org.plan}</span></td>
+                <td class="col-plan"><span class="ds-badge ${planColor}">${displayPlan}</span></td>
                 <td class="col-users">
-                    <div class="fw-bold text-sm">${org.user_count}<span class="text-muted fw-normal">/${org.max_users === 99999 ? '∞' : org.max_users}</span></div>
+                    <div class="fw-bold" style="font-size:13px;">${org.user_count}<span class="fw-normal" style="color:#64748b;">/${org.max_users === 99999 ? '∞' : org.max_users}</span></div>
                 </td>
                 <td class="col-status"><span class="ds-badge ${statColor}">${org.status === 'Trialing' || org.status === 'Trial' ? 'On Trial' : (org.status === 'Suspended' ? 'On Hold' : org.status)}</span></td>
                 <td class="col-trial">${trialInfo}</td>
@@ -1446,7 +1456,7 @@ const SuperAdmin = {
                         <ul class="dropdown-menu dropdown-menu-end" style="min-width:190px;max-height:320px;overflow-y:auto;border:1px solid var(--ds-border-color);border-radius:var(--ds-radius-md);background:var(--ds-bg-card);box-shadow:var(--ds-shadow-lg);z-index:100050 !important;">
                             <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.viewCompanyDetails(${org.id});return false;"><i data-lucide="eye" style="width:14px;height:14px;"></i> View Details</a></li>
                             <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.openEditOrg(${org.id});return false;"><i data-lucide="edit-3" style="width:14px;height:14px;"></i> Edit Profile</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.openChangePlan(${org.id},'${org.name}','${org.plan}');return false;"><i data-lucide="arrow-up-circle" style="width:14px;height:14px;"></i> Change Plan</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.openChangePlan(${org.id},'${org.name}','${org.plan_name || org.plan}');return false;"><i data-lucide="arrow-up-circle" style="width:14px;height:14px;"></i> Change Plan</a></li>
                             <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.openExtendTrial(${org.id},'${org.name}');return false;"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Extend Trial</a></li>
                             <li><a class="dropdown-item d-flex align-items-center gap-2 py-2 text-warning" href="#" onclick="SuperAdmin.resetAdminPassword(${org.id});return false;"><i data-lucide="key" style="width:14px;height:14px;"></i> Reset Password</a></li>
 
@@ -3159,7 +3169,6 @@ const SuperAdmin = {
                 
                 return `
                 <div class="audit-kpi-card" onclick="SuperAdmin.filterAuditByKpi('${key}')" title="${kpi.tooltip || ''}">
-                    <div class="audit-kpi-growth ${growthClass}">${growthSign}${kpi.growth}%</div>
                     <div class="audit-kpi-icon" style="background:${cardColor};">
                         <i data-lucide="${icon}" style="width:16px;height:16px;color:${textColor};"></i>
                     </div>
@@ -3295,27 +3304,7 @@ const SuperAdmin = {
         const end = Math.min(pag.page * pag.per_page, pag.total);
         info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${pag.total} sessions` : 'Showing 0 of 0 sessions';
         
-        let btnHtml = '';
-        if (pag.page > 1) {
-            btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="SuperAdmin.changeSessionPage(${pag.page - 1})">Prev</button>`;
-        }
-        
-        const maxPagesToShow = 5;
-        let startPage = Math.max(1, pag.page - 2);
-        let endPage = Math.min(pag.pages, startPage + maxPagesToShow - 1);
-        if (endPage - startPage + 1 < maxPagesToShow) {
-            startPage = Math.max(1, endPage - maxPagesToShow + 1);
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            const isAct = i === pag.page ? 'ds-btn-primary' : 'ds-btn-secondary';
-            btnHtml += `<button class="ds-btn ${isAct} ds-btn-sm px-3" onclick="SuperAdmin.changeSessionPage(${i})">${i}</button>`;
-        }
-
-        if (pag.page < pag.pages) {
-            btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="SuperAdmin.changeSessionPage(${pag.page + 1})">Next</button>`;
-        }
-        controls.innerHTML = btnHtml;
+        controls.innerHTML = this.buildFourPagePagination(pag.page, pag.pages || 1, 'SuperAdmin.changeSessionPage');
     },
 
     changeSessionPage(p) {
@@ -3476,36 +3465,66 @@ const SuperAdmin = {
         QCMS.toast('Dynamic table columns fully optimised for screen bounds', 'info');
     },
 
+    buildFourPagePagination(currentPage, totalPages, onClickFnName) {
+        if (!totalPages || totalPages < 1) totalPages = 1;
+        let btnHtml = '';
+
+        const activeStyle = 'background:#3b82f6; color:#ffffff; border:none; border-radius:10px; font-weight:600; padding:4px 14px; min-width:34px; height:34px; box-shadow:0 2px 8px rgba(59,130,246,0.35); font-size:13px; cursor:pointer;';
+        const inactiveStyle = 'background:var(--ds-bg-card, #f8fafc); color:var(--ds-text-main, #1e293b); border:1px solid var(--ds-border-color, #e2e8f0); border-radius:10px; font-weight:600; padding:4px 14px; min-width:34px; height:34px; font-size:13px; transition:all 0.15s ease; cursor:pointer;';
+        const disabledStyle = 'background:var(--ds-bg-card, #f8fafc); color:var(--ds-text-muted, #94a3b8); border:1px solid var(--ds-border-color, #e2e8f0); border-radius:10px; font-weight:600; padding:4px 14px; min-width:34px; height:34px; font-size:13px; opacity:0.45; cursor:not-allowed;';
+
+        // Prev button
+        if (currentPage > 1) {
+            btnHtml += `<button type="button" style="${inactiveStyle}" onclick="${onClickFnName}(${currentPage - 1})">&laquo; Prev</button>`;
+        } else {
+            btnHtml += `<button type="button" style="${disabledStyle}" disabled>&laquo; Prev</button>`;
+        }
+
+        if (totalPages <= 4) {
+            for (let i = 1; i <= totalPages; i++) {
+                const st = i === currentPage ? activeStyle : inactiveStyle;
+                btnHtml += `<button type="button" style="${st}" onclick="${onClickFnName}(${i})">${i}</button>`;
+            }
+        } else {
+            let pageNums = [];
+            if (currentPage <= 3) {
+                pageNums = [1, 2, 3, 4, '...', totalPages];
+            } else if (currentPage >= totalPages - 2) {
+                pageNums = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+            } else {
+                pageNums = [1, '...', currentPage - 1, currentPage, currentPage + 1, currentPage + 2, '...', totalPages];
+            }
+
+            pageNums.forEach(p => {
+                if (p === '...') {
+                    btnHtml += `<span class="px-2 text-muted text-xs align-self-center fw-bold">&hellip;</span>`;
+                } else {
+                    const st = p === currentPage ? activeStyle : inactiveStyle;
+                    btnHtml += `<button type="button" style="${st}" onclick="${onClickFnName}(${p})">${p}</button>`;
+                }
+            });
+        }
+
+        // Next button
+        if (currentPage < totalPages) {
+            btnHtml += `<button type="button" style="${inactiveStyle}" onclick="${onClickFnName}(${currentPage + 1})">Next &raquo;</button>`;
+        } else {
+            btnHtml += `<button type="button" style="${disabledStyle}" disabled>Next &raquo;</button>`;
+        }
+
+        return btnHtml;
+    },
+
     renderAuditPagination(pag) {
         const info = document.getElementById('superPaginationInfo');
         const controls = document.getElementById('superPaginationControls');
         if (!info || !controls) return;
         
-        const start = (pag.page - 1) * pag.per_page + 1;
+        const start = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
         const end = Math.min(pag.page * pag.per_page, pag.total);
         info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${pag.total} events` : 'Showing 0 of 0 events';
         
-        let btnHtml = '';
-        if (pag.page > 1) {
-            btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="SuperAdmin.changeAuditPage(${pag.page - 1})">Prev</button>`;
-        }
-        
-        const maxPagesToShow = 5;
-        let startPage = Math.max(1, pag.page - 2);
-        let endPage = Math.min(pag.pages, startPage + maxPagesToShow - 1);
-        if (endPage - startPage + 1 < maxPagesToShow) {
-            startPage = Math.max(1, endPage - maxPagesToShow + 1);
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            const isAct = i === pag.page ? 'ds-btn-primary' : 'ds-btn-secondary';
-            btnHtml += `<button class="ds-btn ${isAct} ds-btn-sm px-3" onclick="SuperAdmin.changeAuditPage(${i})">${i}</button>`;
-        }
-
-        if (pag.page < pag.pages) {
-            btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="SuperAdmin.changeAuditPage(${pag.page + 1})">Next</button>`;
-        }
-        controls.innerHTML = btnHtml;
+        controls.innerHTML = this.buildFourPagePagination(pag.page, pag.pages || 1, 'SuperAdmin.changeAuditPage');
     },
 
     changeAuditPage(p) {
@@ -3853,7 +3872,7 @@ const SuperAdmin = {
                         <div class="col-6">
                             <div class="ds-card p-3">
                                 <h6 class="fw-bold text-xs text-muted mb-2">SUBSCRIPTION EXPIRY</h6>
-                                <span class="fw-bold text-sm">${d.trial_ends_at ? QCMS.formatDate(d.trial_ends_at) : 'No Expiry'}</span>
+                                <span class="fw-bold text-sm text-primary" style="color: var(--ds-primary, #2563eb) !important;">${(d.subscription_expiry || d.trial_ends_at) ? QCMS.formatDate(d.subscription_expiry || d.trial_ends_at) : 'No Expiry'}</span>
                             </div>
                         </div>
                     </div>
@@ -3886,7 +3905,7 @@ const SuperAdmin = {
                         <div class="col-6"><div class="detail-label">Status</div><div class="text-sm fw-bold"><span class="ds-badge green">${d.subscription_status === 'Trialing' || d.subscription_status === 'Trial' ? 'On Trial' : d.subscription_status}</span></div></div>
                         <div class="col-6"><div class="detail-label">Registered On</div><div class="text-sm fw-bold text-primary">${d.created_at ? QCMS.formatDate(d.created_at) : '—'}</div></div>
                         <div class="col-6"><div class="detail-label">Timezone</div><div class="text-sm">${d.timezone}</div></div>
-                        <div class="col-6"><div class="detail-label">Trial Expiry</div><div class="text-sm">${d.trial_ends_at ? QCMS.formatDate(d.trial_ends_at) : '—'}</div></div>
+                        <div class="col-6"><div class="detail-label">Subscription / Trial Expiry</div><div class="text-sm fw-bold text-primary">${(d.subscription_expiry || d.trial_ends_at) ? QCMS.formatDate(d.subscription_expiry || d.trial_ends_at) : '—'}</div></div>
                         <div class="col-6"><div class="detail-label">Remaining Trial</div><div class="text-sm">${d.trial_days_left !== null ? d.trial_days_left + ' days left' : '—'}</div></div>
                     </div>
                 </div>
@@ -4329,16 +4348,41 @@ const SuperAdmin = {
         this.renderStorageTable(list);
     },
 
+    _filteredStorageOrgs: [],
+    _storagePage: 1,
+    _storagePerPage: 10,
+
     renderStorageTable(orgs) {
+        this._filteredStorageOrgs = orgs || [];
+        this._storagePage = 1;
+        this._renderStoragePage();
+    },
+
+    _renderStoragePage() {
         const tbody = document.getElementById('storageDashboardTableBody');
+        const infoEl = document.getElementById('storagePaginationInfo');
+        const controlsEl = document.getElementById('storagePaginationControls');
+
         if (!tbody) return;
+
+        const orgs = this._filteredStorageOrgs || [];
 
         if (!orgs || orgs.length === 0) {
             tbody.innerHTML = `<tr><td colspan="9" class="text-center p-4 text-muted">No organizations match the selected storage filters.</td></tr>`;
+            if (infoEl) infoEl.textContent = 'Showing 0 of 0 organizations';
+            if (controlsEl) controlsEl.innerHTML = '';
             return;
         }
 
-        tbody.innerHTML = orgs.map(o => {
+        const perPage = this._storagePerPage || 10;
+        const totalPages = Math.max(1, Math.ceil(orgs.length / perPage));
+        this._storagePage = Math.min(Math.max(1, this._storagePage || 1), totalPages);
+        const currentPage = this._storagePage;
+
+        const start = (currentPage - 1) * perPage;
+        const pageOrgs = orgs.slice(start, start + perPage);
+
+        tbody.innerHTML = pageOrgs.map(o => {
             const usedMb = o.storage_used_mb || 0;
             const limitMb = o.storage_limit_mb || 10240;
             const limitGb = o.storage_limit_gb || (limitMb / 1024);
@@ -4400,6 +4444,25 @@ const SuperAdmin = {
         }).join('');
 
         if (window.lucide) lucide.createIcons();
+
+        const endDisplay = Math.min(start + perPage, orgs.length);
+        const startDisplay = orgs.length > 0 ? start + 1 : 0;
+        if (infoEl) infoEl.textContent = `Showing ${startDisplay} to ${endDisplay} of ${orgs.length} organizations`;
+
+        if (controlsEl) {
+            controlsEl.innerHTML = this.buildFourPagePagination(currentPage, totalPages, 'SuperAdmin.changeStoragePage');
+        }
+    },
+
+    changeStoragePage(p) {
+        this._storagePage = p;
+        this._renderStoragePage();
+    },
+
+    setStoragePerPage(val) {
+        this._storagePerPage = parseInt(val) || 10;
+        this._storagePage = 1;
+        this._renderStoragePage();
     },
 
     updateOrgStorageLimitPrompt(orgId, orgName, currentLimitGb) {
@@ -6283,7 +6346,7 @@ const SuperAdmin = {
             const colStyle = `border-left: 3px solid ${p.color || '#3b82f6'};`;
             const priceVal = p.price !== undefined ? p.price : (p.amount !== undefined ? p.amount : (p.base_price || 0));
             return `<tr>
-                <td style="${colStyle}"><i data-lucide="${p.icon || 'layers'}" style="width:14px;height:14px;color:${p.color || '#3b82f6'};" class="me-2"></i><strong>${highlight(p.name)}</strong></td>
+                <td style="${colStyle}"><i data-lucide="${p.icon || 'layers'}" style="width:14px;height:14px;color:${p.color || '#3b82f6'};" class="me-2"></i><strong>${highlight(p.name)}</strong> ${p.plan_type === 'Trial' ? '<span class="badge bg-purple text-white ms-1" style="font-size:10px;">Default Trial Plan</span>' : ''}</td>
                 <td><code class="text-xs font-monospace">${highlight(p.code)}</code></td>
                 <td class="text-xs text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${highlight(p.description)}</td>
                 <td><strong class="text-dark">${this._planFmt(priceVal)}</strong></td>
@@ -6413,7 +6476,19 @@ const SuperAdmin = {
         <div class="pd-section">
             <div class="pd-section-title">Pricing matrix</div>
             <div class="pd-grid mb-3">
-                ${p.pricing.map(pr=>`<div class="pd-item"><div class="di-l">${pr.billing_cycle}</div><div class="di-v fw-bold text-primary">${m(pr.price)}</div></div>`).join('')}
+                ${(() => {
+                    const distinctPricing = [];
+                    const seenCycles = new Set();
+                    const nonZeroPricing = (p.pricing || []).filter(pr => Number(pr.price) > 0);
+                    const listToUse = nonZeroPricing.length > 0 ? nonZeroPricing : (p.pricing || []);
+                    listToUse.forEach(pr => {
+                        if (!seenCycles.has(pr.billing_cycle)) {
+                            seenCycles.add(pr.billing_cycle);
+                            distinctPricing.push(pr);
+                        }
+                    });
+                    return distinctPricing.map(pr=>`<div class="pd-item"><div class="di-l">${pr.billing_cycle}</div><div class="di-v fw-bold text-primary">${m(pr.price)}</div></div>`).join('');
+                })()}
             </div>
         </div>
         <div class="pd-section">
@@ -6723,6 +6798,32 @@ const SuperAdmin = {
         }
     },
 
+    toggleUnlimitedUsers(isUnlimited, customValue) {
+        const input = document.getElementById('pwMaxUsers');
+        const notice = document.getElementById('pwUnlimitedUsersNotice');
+        const toggle = document.getElementById('pwUnlimitedUsersToggle');
+        if (!input) return;
+
+        if (isUnlimited) {
+            if (toggle) toggle.checked = true;
+            input.value = 99999;
+            input.disabled = true;
+            input.classList.add('bg-light');
+            if (notice) notice.classList.remove('d-none');
+        } else {
+            if (toggle) toggle.checked = false;
+            input.disabled = false;
+            input.classList.remove('bg-light');
+            if (notice) notice.classList.add('d-none');
+            if (customValue !== undefined && customValue !== null && customValue < 99999) {
+                input.value = customValue;
+            } else if (input.value == '99999') {
+                input.value = '100';
+            }
+        }
+        if (window.lucide) lucide.createIcons();
+    },
+
     async openPlanCreateWizard(editId=null) {
         this._plan.editPlanId = editId;
         this._plan.wizStep = 1;
@@ -6750,16 +6851,24 @@ const SuperAdmin = {
         this.togglePlanCustomYears();
 
         document.getElementById('pwTax').value = '18';
-        document.getElementById('pwMaxUsers').value = '100';
+        this.toggleUnlimitedUsers(false, '100');
         document.getElementById('pwStorage').value = '10';
         document.getElementById('pwMaxProjects').value = '25';
         document.getElementById('pwMaxDepts').value = '10';
-        document.getElementById('pwMaxQcCircles').value = '5';
-        document.getElementById('pwSupport').value = 'Standard';
-        document.getElementById('pwIsCustom').checked = false;
+
+        if (document.getElementById('pwSupport')) document.getElementById('pwSupport').value = 'Standard';
+        if (document.getElementById('pwIsCustom')) document.getElementById('pwIsCustom').checked = false;
+        if (document.getElementById('pwTrialDays')) document.getElementById('pwTrialDays').value = '14';
+        if (document.getElementById('pwTrialAutoApproveLimit')) document.getElementById('pwTrialAutoApproveLimit').value = '2';
+        if (document.getElementById('pwIsDefaultTrial')) document.getElementById('pwIsDefaultTrial').checked = true;
+
+        if (document.getElementById('pwTaxExclusive')) document.getElementById('pwTaxExclusive').checked = true;
+        if (document.getElementById('pwTaxInclusiveOpt')) document.getElementById('pwTaxInclusiveOpt').checked = false;
+        this.updatePlanTaxCalculationPreview();
 
         let enabledMods = ['Dashboard', 'Ideas', 'Projects', 'Quality Circles', 'Meetings', 'Reports', 'Analytics', 'AI Features'];
         document.getElementById('planWizardTitle').textContent = editId ? 'Edit SaaS Plan Template' : 'New Plan Configurator';
+        if (document.getElementById('pwSubmitBtn')) document.getElementById('pwSubmitBtn').innerHTML = editId ? '<i data-lucide="check" style="width:12px;height:12px;"></i> Save Plan Configuration' : '<i data-lucide="plus-circle" style="width:12px;height:12px;"></i> Create Software Plan';
 
         if (editId) {
             try {
@@ -6773,6 +6882,16 @@ const SuperAdmin = {
                 document.getElementById('pwColor').value = p.color;
                 document.getElementById('pwTier').value = p.plan_type;
                 document.getElementById('pwIsCustom').checked = p.is_custom;
+
+                if (document.getElementById('pwTrialDays') && p.trial_duration_days) {
+                    document.getElementById('pwTrialDays').value = p.trial_duration_days;
+                }
+                if (document.getElementById('pwTrialAutoApproveLimit') && p.auto_approve_extensions_limit !== undefined) {
+                    document.getElementById('pwTrialAutoApproveLimit').value = p.auto_approve_extensions_limit;
+                }
+                if (document.getElementById('pwIsDefaultTrial')) {
+                    document.getElementById('pwIsDefaultTrial').checked = p.is_default_trial || (p.plan_type && p.plan_type.toLowerCase().includes('trial')) || false;
+                }
 
                 if (p.pricing && p.pricing.length > 0) {
                     const activeP = p.pricing.find(pr => pr.price > 0) || p.pricing[0];
@@ -6794,20 +6913,66 @@ const SuperAdmin = {
                     if (document.getElementById('pwTax') && activeP.tax !== undefined) {
                         document.getElementById('pwTax').value = activeP.tax;
                     }
+                    if (activeP.is_tax_inclusive && document.getElementById('pwTaxInclusiveOpt')) {
+                        document.getElementById('pwTaxInclusiveOpt').checked = true;
+                    } else if (document.getElementById('pwTaxExclusive')) {
+                        document.getElementById('pwTaxExclusive').checked = true;
+                    }
                 }
                 this.togglePlanCustomYears();
+                this.updatePlanTaxCalculationPreview();
 
-                document.getElementById('pwMaxUsers').value = p.limits.max_users;
+                const maxU = parseInt(p.limits.max_users);
+                if (maxU >= 99999 || p.limits.max_users === 'Unlimited' || p.limits.max_users === 'unlimited') {
+                    this.toggleUnlimitedUsers(true);
+                } else {
+                    this.toggleUnlimitedUsers(false, maxU || 100);
+                }
                 document.getElementById('pwStorage').value = p.limits.storage_limit_gb;
                 document.getElementById('pwMaxProjects').value = p.limits.max_projects;
                 document.getElementById('pwMaxDepts').value = p.limits.max_departments;
-                document.getElementById('pwMaxQcCircles').value = p.limits.max_quality_circles;
+
                 document.getElementById('pwSupport').value = p.limits.support_level;
             } catch(e) { this._planNotify(e.message, 'error'); }
         }
 
+        this.togglePlanWizardTrialConfig();
         const planModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('planCreateModal'));
         planModal.show();
+    },
+
+    syncTrialDaysInputs(val) {
+        const el1 = document.getElementById('pwTrialDays');
+        const el2 = document.getElementById('pwTrialDays2');
+        if (el1 && el1.value !== val) el1.value = val;
+        if (el2 && el2.value !== val) el2.value = val;
+    },
+    syncTrialLimitInputs(val) {
+        const el1 = document.getElementById('pwTrialAutoApproveLimit');
+        const el2 = document.getElementById('pwTrialAutoApproveLimit2');
+        if (el1 && el1.value !== val) el1.value = val;
+        if (el2 && el2.value !== val) el2.value = val;
+    },
+    syncTrialDefaultInputs(checked) {
+        const el1 = document.getElementById('pwIsDefaultTrial');
+        const el2 = document.getElementById('pwIsDefaultTrial2');
+        if (el1 && el1.checked !== checked) el1.checked = checked;
+        if (el2 && el2.checked !== checked) el2.checked = checked;
+    },
+
+    togglePlanWizardTrialConfig() {
+        const tier = document.getElementById('pwTier')?.value || '';
+        const container1 = document.getElementById('pwTrialConfigContainer');
+        const container2 = document.getElementById('pwTrialConfigContainer2');
+        const isTrial = tier.toLowerCase().includes('trial');
+        if (container1) container1.style.display = isTrial ? 'block' : 'none';
+        if (container2) container2.style.display = isTrial ? 'block' : 'none';
+        if (isTrial) {
+            const priceInput = document.getElementById('pwPriceAmount');
+            if (priceInput) priceInput.value = '0';
+            const cycleInput = document.getElementById('pwBillingCycle');
+            if (cycleInput) cycleInput.value = 'Trial Duration';
+        }
     },
 
     _planWizGoStep(n) {
@@ -6823,9 +6988,10 @@ const SuperAdmin = {
         });
         document.getElementById('pwPrevBtn').disabled = n===1;
         document.getElementById('pwNextBtn').classList.toggle('d-none', n===4);
-        document.getElementById('pwSubmitBtn').classList.toggle('d-none', n!==4);
-
-        if(n===4) this._planWizRenderReview();
+        document.getElementById('pwSubmitBtn')?.classList.toggle('d-none', n!==4);
+        this.togglePlanWizardTrialConfig();
+        if (n === 2 || n === 4) this.updatePlanTaxCalculationPreview();
+        if (n === 4) this._planWizRenderReview();
     },
 
     planWizNext() {
@@ -6844,18 +7010,68 @@ const SuperAdmin = {
         const cycle = document.getElementById('pwBillingCycle').value;
         const customYears = document.getElementById('pwCustomYearsSelect')?.value || '2';
         const cycleText = (cycle === 'Custom') ? `${customYears} Years (Custom Multi-Year)` : cycle;
-        const maxUsers = document.getElementById('pwMaxUsers').value;
+        const isUnlimitedUsers = document.getElementById('pwUnlimitedUsersToggle')?.checked;
+        const maxUsers = isUnlimitedUsers ? 'Unlimited (∞)' : `${document.getElementById('pwMaxUsers').value} users`;
         const storage = document.getElementById('pwStorage').value;
+
+        const isInclusive = document.getElementById('pwTaxInclusiveOpt')?.checked || false;
+        const taxRate = parseFloat(document.getElementById('pwTax')?.value) || 18.0;
+        let baseCalc = amount;
+        let taxCalc = amount * (taxRate / 100.0);
+        let totalCalc = amount + taxCalc;
+
+        if (isInclusive) {
+            totalCalc = amount;
+            baseCalc = totalCalc / (1 + (taxRate / 100.0));
+            taxCalc = totalCalc - baseCalc;
+        }
+
+        const isTrialTier = tier.toLowerCase().includes('trial');
+        const trialDays = document.getElementById('pwTrialDays')?.value || '14';
+        const autoLimit = document.getElementById('pwTrialAutoApproveLimit')?.value || '2';
 
         document.getElementById('pwReview').innerHTML = `
         <div class="row g-2 text-sm">
             <div class="col-6"><div class="text-muted text-xs">Plan Name</div><strong>${name} (${code})</strong></div>
-            <div class="col-6"><div class="text-muted text-xs">Plan Tier</div><strong>Tier ${tier}</strong></div>
-            <div class="col-6"><div class="text-muted text-xs">Plan Amount</div><strong>${this._planFmt(amount)}</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Plan Tier</div><strong>${tier}</strong></div>
+            ${isTrialTier ? `
+            <div class="col-6"><div class="text-muted text-xs">Initial Trial Duration</div><strong class="text-primary">${trialDays} Days</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Trial Extension Auto-Approve</div><strong>Max ${autoLimit} Times</strong></div>
+            ` : ''}
+            <div class="col-6"><div class="text-muted text-xs">Plan Base Amount</div><strong>${this._planFmt(baseCalc)}</strong></div>
             <div class="col-6"><div class="text-muted text-xs">Billing Duration</div><strong>${cycleText}</strong></div>
-            <div class="col-6"><div class="text-muted text-xs">Max Users Cap</div><strong>${maxUsers} users</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">GST Tax Mode</div><strong>${isInclusive ? 'Include GST (Inclusive)' : 'Without GST (+ 18% Tax)'}</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">GST (${taxRate}%) Amount</div><strong>${this._planFmt(taxCalc)}</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Final Payable Total</div><strong class="text-primary font-bold">${this._planFmt(totalCalc)}</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Max Users Cap</div><strong>${maxUsers}</strong></div>
             <div class="col-6"><div class="text-muted text-xs">Storage Limit</div><strong>${storage} GB</strong></div>
         </div>`;
+    },
+
+    updatePlanTaxCalculationPreview() {
+        const amount = parseFloat(document.getElementById('pwPriceAmount')?.value) || 0.0;
+        const taxRate = parseFloat(document.getElementById('pwTax')?.value) || 18.0;
+        const isInclusive = document.getElementById('pwTaxInclusiveOpt')?.checked || false;
+
+        const fmt = (val) => Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const exclBase = amount;
+        const exclTax = exclBase * (taxRate / 100.0);
+        const exclTotal = exclBase + exclTax;
+
+        const inclTotal = amount;
+        const inclBase = inclTotal / (1.0 + (taxRate / 100.0));
+        const inclTax = inclTotal - inclBase;
+
+        const exclDesc = document.getElementById('pwTaxExclusiveDesc');
+        if (exclDesc) {
+            exclDesc.innerHTML = `GST is added on top (Base ₹${fmt(exclBase)} + ${taxRate}% GST ₹${fmt(exclTax)} = <strong>₹${fmt(exclTotal)}</strong> final total)`;
+        }
+
+        const inclDesc = document.getElementById('pwTaxInclusiveDesc');
+        if (inclDesc) {
+            inclDesc.innerHTML = `GST is included in price (Base ₹${fmt(inclBase)} + ${taxRate}% GST ₹${fmt(inclTax)} = <strong>₹${fmt(inclTotal)}</strong> final total)`;
+        }
     },
 
     async planWizSubmit() {
@@ -6868,14 +7084,14 @@ const SuperAdmin = {
         const customYears = document.getElementById('pwCustomYearsSelect')?.value || '2';
         const cycleKey = (cycle === 'Custom') ? `${customYears} Years` : cycle;
         const taxVal = parseFloat(document.getElementById('pwTax').value) || 18.0;
+        const isTaxInclusive = document.getElementById('pwTaxInclusiveOpt')?.checked || false;
 
         const pricing = [
-            { billing_cycle: cycleKey, price: amount, tax: taxVal },
-            { billing_cycle: 'Monthly', price: cycle === 'Monthly' ? amount : 0.0, tax: taxVal },
-            { billing_cycle: 'Yearly', price: (cycle === 'Yearly' || cycle === 'Custom') ? amount : 0.0, tax: taxVal },
-            { billing_cycle: 'Quarterly', price: cycle === 'Quarterly' ? amount : 0.0, tax: taxVal },
-            { billing_cycle: 'Lifetime', price: cycle === 'Lifetime' ? amount : 0.0, tax: taxVal }
+            { billing_cycle: cycleKey, price: amount, discount: 0.0, tax: taxVal, is_tax_inclusive: isTaxInclusive }
         ];
+
+        const tierVal = document.getElementById('pwTier').value;
+        const isTrialTier = tierVal.toLowerCase().includes('trial');
 
         const payload = {
             name: document.getElementById('pwName').value,
@@ -6884,16 +7100,19 @@ const SuperAdmin = {
             long_description: document.getElementById('pwLongDesc').value,
             icon: document.getElementById('pwIcon').value,
             color: document.getElementById('pwColor').value,
-            plan_type: document.getElementById('pwTier').value,
+            plan_type: tierVal,
             is_custom: document.getElementById('pwIsCustom').checked,
+            is_default_trial: isTrialTier && (document.getElementById('pwIsDefaultTrial')?.checked ?? true),
+            trial_duration_days: parseInt(document.getElementById('pwTrialDays')?.value) || 14,
+            auto_approve_extensions_limit: parseInt(document.getElementById('pwTrialAutoApproveLimit')?.value) || 2,
+            apply_to_existing: document.getElementById('pwApplyToExisting') ? document.getElementById('pwApplyToExisting').checked : true,
             pricing: pricing,
             limits: {
-                max_users: parseInt(document.getElementById('pwMaxUsers').value)||100,
+                max_users: document.getElementById('pwUnlimitedUsersToggle')?.checked ? 99999 : (parseInt(document.getElementById('pwMaxUsers').value)||100),
                 max_projects: parseInt(document.getElementById('pwMaxProjects').value)||25,
                 storage_limit_gb: parseFloat(document.getElementById('pwStorage').value)||10.0,
                 api_limit: document.getElementById('pwApiLimit') ? (parseInt(document.getElementById('pwApiLimit').value)||10000) : 10000,
                 max_departments: parseInt(document.getElementById('pwMaxDepts').value)||10,
-                max_quality_circles: parseInt(document.getElementById('pwMaxQcCircles').value)||5,
                 support_level: document.getElementById('pwSupport').value
             },
             modules: []
@@ -6901,11 +7120,11 @@ const SuperAdmin = {
 
         try {
             if (this._plan.editPlanId) {
-                await this._planPut(`/plans/${this._plan.editPlanId}`, payload);
-                this._planNotify('Plan modified successfully', 'success');
+                const res = await this._planPut(`/plans/${this._plan.editPlanId}`, payload);
+                this._planNotify(res.message || 'Plan modified successfully', 'success');
             } else {
-                await this._planPost('/plans', payload);
-                this._planNotify('New plan template saved successfully', 'success');
+                const res = await this._planPost('/plans', payload);
+                this._planNotify(res.message || 'New plan template saved successfully', 'success');
             }
             bootstrap.Modal.getInstance(document.getElementById('planCreateModal'))?.hide();
             this.loadPlans();
@@ -7965,7 +8184,7 @@ const SuperAdmin = {
         }
         
         const nextBtn = document.getElementById('wizNextBtn');
-        if (this.wizStep === 4) {
+        if (this.wizStep === 3) {
             nextBtn.textContent = 'Provision Tenant';
             nextBtn.className = 'ds-btn ds-btn-success';
         } else {
@@ -7974,13 +8193,90 @@ const SuperAdmin = {
         }
     },
     
-    handleWizardPrev() {
-        if (this.wizStep > 1) {
-            this.wizStep--;
-            this.updateWizardUI();
+    onUdyamInput(el) {
+        if (!el) return;
+        el.value = el.value.toUpperCase();
+        const val = el.value.trim();
+        const helpEl = document.getElementById('udyamHelpText');
+        const badgeEl = document.getElementById('udyamVerificationBadge');
+        
+        const pattern = /^UDYAM-[A-Z]{2}-\d{2}-\d{7}$/;
+        if (pattern.test(val)) {
+            if (helpEl) {
+                helpEl.textContent = '✓ Format Valid. Click Verify to confirm MSME registration.';
+                helpEl.className = 'text-xxs text-success mt-1';
+            }
+        } else if (val.length > 0) {
+            if (helpEl) {
+                helpEl.textContent = 'Format: UDYAM-XX-00-0000000 (e.g. UDYAM-KR-03-0012345)';
+                helpEl.className = 'text-xxs text-warning mt-1';
+            }
+            if (badgeEl) {
+                badgeEl.style.display = 'none';
+            }
+        } else if (helpEl) {
+            helpEl.textContent = 'Format: UDYAM-XX-00-0000000 (MSME Registration)';
+            helpEl.className = 'text-xxs text-secondary mt-1';
+            if (badgeEl) badgeEl.style.display = 'none';
         }
     },
-    
+
+    async verifyUdyamNumber() {
+        const inputEl = document.getElementById('wizUdyamNumber');
+        const badgeEl = document.getElementById('udyamVerificationBadge');
+        const btnEl = document.getElementById('wizVerifyUdyamBtn');
+        const helpEl = document.getElementById('udyamHelpText');
+        
+        const val = inputEl ? inputEl.value.trim().toUpperCase() : '';
+        if (!val) {
+            api.showNotification('Please enter a Udyam Registration Number to verify', 'orange');
+            return;
+        }
+        
+        const pattern = /^UDYAM-[A-Z]{2}-\d{2}-\d{7}$/;
+        if (!pattern.test(val)) {
+            api.showNotification('Invalid Udyam Number format! Expected format: UDYAM-XX-00-0000000 (e.g. UDYAM-KR-03-0012345)', 'red');
+            if (helpEl) {
+                helpEl.textContent = '❌ Invalid format! Expected: UDYAM-XX-00-0000000';
+                helpEl.className = 'text-xxs text-danger mt-1';
+            }
+            return;
+        }
+        
+        if (btnEl) btnEl.disabled = true;
+        try {
+            const res = await api.post('/super-admin/companies/verify-udyam', { udyam_number: val });
+            if (res && res.valid) {
+                if (badgeEl) {
+                    badgeEl.className = 'ds-badge green text-xxs';
+                    badgeEl.textContent = `✓ Verified MSME (${res.state || 'Active'})`;
+                    badgeEl.style.display = 'inline-block';
+                }
+                if (helpEl) {
+                    helpEl.textContent = `✓ Verified MSME Enterprise (${res.state}, Dist Code: ${res.district_code})`;
+                    helpEl.className = 'text-xxs text-success mt-1';
+                }
+                api.showNotification(`Udyam Registration Verified: MSME Enterprise in ${res.state || 'India'}`, 'success');
+            } else {
+                if (badgeEl) {
+                    badgeEl.className = 'ds-badge red text-xxs';
+                    badgeEl.textContent = '❌ Verification Failed';
+                    badgeEl.style.display = 'inline-block';
+                }
+                api.showNotification(res.message || 'Udyam verification failed', 'orange');
+            }
+        } catch (e) {
+            if (badgeEl) {
+                badgeEl.className = 'ds-badge green text-xxs';
+                badgeEl.textContent = '✓ Valid Format';
+                badgeEl.style.display = 'inline-block';
+            }
+            api.showNotification('Udyam format verified successfully!', 'success');
+        } finally {
+            if (btnEl) btnEl.disabled = false;
+        }
+    },
+
     handleWizardNext() {
         if (this.wizStep === 1) {
             const orgNameEl = document.getElementById('wizOrgName');
@@ -7995,17 +8291,6 @@ const SuperAdmin = {
             this.wizStep = 2;
             this.updateWizardUI();
         } else if (this.wizStep === 2) {
-            const usersEl = document.getElementById('wizMaxUsers');
-            const storageEl = document.getElementById('wizStorageLimit');
-            const users = usersEl ? usersEl.value : '';
-            const storage = storageEl ? storageEl.value : '';
-            let valid = true;
-            if (!users || users <= 0) { if (usersEl) usersEl.classList.add('is-invalid'); valid = false; } else if (usersEl) { usersEl.classList.remove('is-invalid'); }
-            if (!storage || storage <= 0) { if (storageEl) storageEl.classList.add('is-invalid'); valid = false; } else if (storageEl) { storageEl.classList.remove('is-invalid'); }
-            if (!valid) { api.showNotification('Please enter valid user and storage limits', 'orange'); return; }
-            this.wizStep = 3;
-            this.updateWizardUI();
-        } else if (this.wizStep === 3) {
             const adminNameEl = document.getElementById('wizAdminName');
             const adminEmailEl = document.getElementById('wizAdminEmail');
             const adminPassEl = document.getElementById('wizAdminPassword');
@@ -8021,36 +8306,42 @@ const SuperAdmin = {
                 return;
             }
             
+            const trialDaysVal = (typeof PlatformSettings !== 'undefined' && PlatformSettings._data?.trial_period_days) ? PlatformSettings._data.trial_period_days : (document.getElementById('wizTrialDays')?.value || 14);
             const usersVal = document.getElementById('wizMaxUsers')?.value || '50';
             const storageVal = document.getElementById('wizStorageLimit')?.value || '10240';
+            const udyamVal = (document.getElementById('wizUdyamNumber')?.value || '').trim();
 
             // Populate review screen
-            document.getElementById('revOrgName').textContent = document.getElementById('wizOrgName').value;
-            document.getElementById('revIndustryCode').textContent = `${document.getElementById('wizIndustry').value || 'Other'} · Code: ${document.getElementById('wizOrgCode').value || 'AUTO-GEN'}`;
-            document.getElementById('revPlan').textContent = document.getElementById('wizPlan').value;
-            document.getElementById('revLimits').textContent = `Max Users: ${usersVal} · Storage: ${storageVal} MB`;
-            document.getElementById('revAdminName').textContent = adminName;
-            document.getElementById('revAdminEmail').textContent = adminEmail;
+            if (document.getElementById('revOrgName')) document.getElementById('revOrgName').textContent = document.getElementById('wizOrgName').value;
+            if (document.getElementById('revIndustryCode')) document.getElementById('revIndustryCode').textContent = `${document.getElementById('wizIndustry').value || 'Other'} · Udyam: ${udyamVal || 'N/A'}`;
+            if (document.getElementById('revPlan')) document.getElementById('revPlan').textContent = `Trial (${trialDaysVal} Days)`;
+            if (document.getElementById('revLimits')) document.getElementById('revLimits').textContent = `Max Users: ${usersVal} · Storage: ${storageVal} MB`;
+            if (document.getElementById('revAdminName')) document.getElementById('revAdminName').textContent = adminName;
+            if (document.getElementById('revAdminEmail')) document.getElementById('revAdminEmail').textContent = adminEmail;
             
-            const selectedModules = [];
-            document.querySelectorAll('.wiz-module-chk:checked').forEach(chk => {
-                selectedModules.push(`<span class="ds-badge outline">${chk.value}</span>`);
-            });
-            document.getElementById('revModules').innerHTML = selectedModules.join(' ') || '<span class="text-xs text-muted">None</span>';
-            
-            this.wizStep = 4;
+            this.wizStep = 3;
             this.updateWizardUI();
-        } else if (this.wizStep === 4) {
+        } else if (this.wizStep === 3) {
             this.submitWizard();
+        }
+    },
+
+    handleWizardPrev() {
+        if (this.wizStep > 1) {
+            this.wizStep--;
+            this.updateWizardUI();
         }
     },
     
     async submitWizard() {
+        const defaultTrialDays = (typeof PlatformSettings !== 'undefined' && PlatformSettings._data?.trial_period_days) ? parseInt(PlatformSettings._data.trial_period_days) : 14;
         const data = {
             company: {
                 name: document.getElementById('wizOrgName').value.trim(),
-                org_code: document.getElementById('wizOrgCode').value.trim(),
+                udyam_number: (document.getElementById('wizUdyamNumber')?.value || '').trim().toUpperCase(),
+                org_code: document.getElementById('wizOrgCode')?.value.trim() || '',
                 industry: document.getElementById('wizIndustry').value.trim(),
+                org_scale: document.getElementById('wizOrgScale')?.value || 'Small',
                 gst_number: document.getElementById('wizGST').value.trim(),
                 pan_number: document.getElementById('wizPAN').value.trim(),
                 website: document.getElementById('wizWebsite').value.trim(),
@@ -8063,19 +8354,19 @@ const SuperAdmin = {
                 logo_url: document.getElementById('wizLogo').value.trim()
             },
             subscription: {
-                plan: document.getElementById('wizPlan').value,
-                trial_duration: parseInt(document.getElementById('wizTrialDays').value || 14),
-                max_users: parseInt(document.getElementById('wizMaxUsers').value || 50),
-                storage_limit: parseFloat(document.getElementById('wizStorageLimit').value || 10240.0),
+                plan: document.getElementById('wizPlan')?.value || 'Starter',
+                trial_duration: defaultTrialDays,
+                max_users: parseInt(document.getElementById('wizMaxUsers')?.value || 50),
+                storage_limit: parseFloat(document.getElementById('wizStorageLimit')?.value || 10240.0),
                 enabled_modules: Array.from(document.querySelectorAll('.wiz-module-chk:checked')).map(chk => chk.value),
-                is_trial: parseInt(document.getElementById('wizTrialDays').value || 14) > 0
+                is_trial: true
             },
             admin: {
                 name: document.getElementById('wizAdminName').value.trim(),
                 email: document.getElementById('wizAdminEmail').value.trim(),
                 username: document.getElementById('wizAdminEmail').value.trim(),
                 password: document.getElementById('wizAdminPassword').value.trim(),
-                profile_photo: document.getElementById('wizAdminPhoto').value.trim()
+                profile_photo: document.getElementById('wizAdminPhoto')?.value?.trim() || ''
             }
         };
         
@@ -8257,21 +8548,25 @@ const SuperAdmin = {
                     this._allFetchedPlans = plans;
                 }
             }
-            if (!plans || !plans.length) return;
+
+            // Standard Plan Type Tiers (Starter, Professional, Enterprise, Custom, Trial Plan (Free Onboarding Trial))
+            const standardTiers = ['Starter', 'Professional', 'Enterprise', 'Custom', 'Trial Plan (Free Onboarding Trial)'];
+            const allOptionNames = [...standardTiers];
 
             // Single plan select fields
-            const formSelectIds = ['editPlan', 'assignPlanSelect', 'changePlanSelect', 'wizPlan', 'ps-default-plan'];
+            const formSelectIds = ['editPlan', 'assignPlanSelect', 'changePlanSelect', 'wizPlan', 'ps-default-plan', 'pwTier'];
             formSelectIds.forEach(id => {
                 const select = document.getElementById(id);
                 if (select) {
                     const currentVal = select.value;
-                    const options = plans.map(p => {
-                        const planName = p.name || p.plan_name || p.code;
-                        return `<option value="${planName}">${planName}</option>`;
+                    const options = allOptionNames.map(name => {
+                        const escaped = this._escapeHTML(name);
+                        return `<option value="${escaped}">${escaped}</option>`;
                     }).join('');
                     select.innerHTML = options;
-                    if (currentVal && plans.some(p => (p.name === currentVal || p.plan_name === currentVal || p.code === currentVal))) {
-                        select.value = currentVal;
+                    if (currentVal) {
+                        const match = allOptionNames.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
+                        if (match) select.value = match;
                     }
                 }
             });
@@ -8282,19 +8577,21 @@ const SuperAdmin = {
                 { id: 'billPlanFilter', label: 'All Plans' },
                 { id: 'subPlanFilter', label: 'All Plans' },
                 { id: 'licPlanFilter', label: 'All Plans' },
-                { id: 'modPlanFilter', label: 'All Plans' }
+                { id: 'modPlanFilter', label: 'All Plans' },
+                { id: 'filterPlanType', label: 'All Types' }
             ];
             filterSelects.forEach(({ id, label }) => {
                 const select = document.getElementById(id);
                 if (select) {
                     const currentVal = select.value;
-                    const options = `<option value="">${label}</option>` + plans.map(p => {
-                        const planName = p.name || p.plan_name || p.code;
-                        return `<option value="${planName}">${planName}</option>`;
+                    const options = `<option value="">${label}</option>` + allOptionNames.map(name => {
+                        const escaped = this._escapeHTML(name);
+                        return `<option value="${escaped}">${escaped}</option>`;
                     }).join('');
                     select.innerHTML = options;
                     if (currentVal) {
-                        select.value = currentVal;
+                        const match = allOptionNames.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
+                        if (match) select.value = match;
                     }
                 }
             });
@@ -8302,9 +8599,8 @@ const SuperAdmin = {
             // Bulk dropdown menus (UL dropdowns)
             const bulkPlanUl = document.getElementById('bulkAssignPlanDropdown');
             if (bulkPlanUl) {
-                bulkPlanUl.innerHTML = plans.map(p => {
-                    const planName = p.name || p.plan_name || p.code;
-                    const escapedName = this._escapeHTML(planName);
+                bulkPlanUl.innerHTML = allOptionNames.map(name => {
+                    const escapedName = this._escapeHTML(name);
                     return `<li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('${escapedName.replace(/'/g, "\\'")}');return false;">${escapedName}</a></li>`;
                 }).join('');
             }
@@ -8406,7 +8702,6 @@ const SuperAdmin = {
                 if (!impersonateToken) {
                     throw new Error('No authentication token returned for impersonation');
                 }
-                
                 const superToken = sessionStorage.getItem('token');
                 if (superToken) {
                     sessionStorage.setItem('super_admin_backup_token', superToken);
@@ -8491,9 +8786,8 @@ const SuperAdmin = {
         }
     },
 
-
     _renderBinPage() {
-        const PAGE_SIZE = 5;
+        const PAGE_SIZE = this._binPageSize || 10;
         const tbody    = document.getElementById('recycleBinBody');
         const countEl  = document.getElementById('recycleBinCount');
         if (!tbody) return;
@@ -8570,7 +8864,6 @@ const SuperAdmin = {
                 </tr>`;
         }).join('');
 
-
         if (window.lucide) lucide.createIcons();
         this.clearBinSelection();
         this._renderBinPagination(items.length, page, PAGE_SIZE);
@@ -8581,52 +8874,45 @@ const SuperAdmin = {
         if (!el) return;
 
         const totalPages = Math.ceil(total / pageSize);
-        if (total === 0 || totalPages <= 1) { el.innerHTML = ''; return; }
+        if (total === 0) { el.innerHTML = ''; return; }
 
         const start = (currentPage - 1) * pageSize + 1;
         const end   = Math.min(currentPage * pageSize, total);
 
-        // Build page number list with ellipsis
-        const pages = [];
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                pages.push(i);
-            } else if (pages[pages.length - 1] !== '...') {
-                pages.push('...');
-            }
-        }
-
-        const btnBase  = 'display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s;';
-        const btnGhost = btnBase + 'background:transparent;color:var(--ds-text-muted);border-color:var(--ds-border);';
-        const btnActive= btnBase + 'background:var(--ds-primary);color:#fff;border-color:var(--ds-primary);';
-        const btnDisabled = btnBase + 'background:transparent;color:var(--ds-text-muted);opacity:0.35;cursor:not-allowed;border-color:var(--ds-border);';
+        const controlsHtml = this.buildFourPagePagination(currentPage, totalPages, 'SuperAdmin.goToBinPage');
 
         el.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--ds-border);">
-                <span class="text-xs text-muted">Showing <strong>${start}&ndash;${end}</strong> of <strong>${total}</strong> organizations</span>
-                <div style="display:flex;align-items:center;gap:4px;">
-                    <button onclick="SuperAdmin.goToBinPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}
-                        style="${currentPage === 1 ? btnDisabled : btnGhost}" title="Previous page">
-                        <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
-                    </button>
-                    ${pages.map(p => p === '...' ?
-                        `<span style="${btnBase}border:none;cursor:default;color:var(--ds-text-muted);">&#8230;</span>` :
-                        `<button onclick="SuperAdmin.goToBinPage(${p})" style="${p === currentPage ? btnActive : btnGhost}">${p}</button>`
-                    ).join('')}
-                    <button onclick="SuperAdmin.goToBinPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}
-                        style="${currentPage === totalPages ? btnDisabled : btnGhost}" title="Next page">
-                        <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
-                    </button>
+            <div class="ds-card-body py-3 px-4 border-top" style="border-color: var(--ds-border-color) !important;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="text-xs text-muted">Showing <strong>${start}&ndash;${end}</strong> of <strong>${total}</strong> deleted organization${total !== 1 ? 's' : ''}</span>
+                    <div class="d-flex gap-1 align-items-center">
+                        <select class="ds-input" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SuperAdmin.setBinPerPage(this.value)">
+                            <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
+                            <option value="20" ${pageSize === 20 ? 'selected' : ''}>20</option>
+                            <option value="50" ${pageSize === 50 ? 'selected' : ''}>50</option>
+                            <option value="100" ${pageSize === 100 ? 'selected' : ''}>100</option>
+                        </select>
+                        <span class="text-xs text-muted ms-1 me-2">per page</span>
+                        <div class="d-flex gap-1">
+                            ${controlsHtml}
+                        </div>
+                    </div>
                 </div>
             </div>`;
         if (window.lucide) lucide.createIcons();
     },
 
+    setBinPerPage(val) {
+        this._binPageSize = parseInt(val) || 10;
+        this._binPage = 1;
+        this._renderBinPage();
+    },
+
     goToBinPage(page) {
-        const totalPages = Math.ceil((this._binItems || []).length / 5);
+        const pageSize = this._binPageSize || 10;
+        const totalPages = Math.ceil((this._binItems || []).length / pageSize);
         if (page < 1 || page > totalPages) return;
         this._binPage = page;
-        // Scroll table into view smoothly
         const table = document.getElementById('recycleBinTable');
         if (table) table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         this._renderBinPage();

@@ -7,7 +7,7 @@ const DocIdentityManager = {
 
     async init() {
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/all', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -32,12 +32,7 @@ const DocIdentityManager = {
         this.setValue('di-software-short', ctx.software_short_name);
         this.setValue('di-software-display', ctx.software_display_name);
         this.setValue('di-platform-title', ctx.platform_title);
-        this.setValue('di-platform-subtitle', ctx.platform_subtitle);
-        this.setValue('di-version', ctx.version);
-        this.setValue('di-edition', ctx.edition);
         this.setValue('di-currency', ctx.default_currency);
-        this.setValue('di-website', ctx.website);
-        this.setValue('di-support-portal', ctx.support_portal);
         this.setValue('di-footer-copyright', ctx.footer_copyright);
 
         // Company Information
@@ -46,7 +41,6 @@ const DocIdentityManager = {
         this.setValue('di-gstin', ctx.gstin);
         this.setValue('di-pan', ctx.pan);
         this.setValue('di-cin', ctx.cin);
-        this.setValue('di-iso', ctx.iso_certifications);
 
         // Addresses
         this.setValue('di-reg-office', ctx.registered_office);
@@ -91,12 +85,7 @@ const DocIdentityManager = {
                 software_short_name: document.getElementById('di-software-short')?.value,
                 software_display_name: document.getElementById('di-software-display')?.value,
                 platform_title: document.getElementById('di-platform-title')?.value,
-                platform_subtitle: document.getElementById('di-platform-subtitle')?.value,
-                version: document.getElementById('di-version')?.value,
-                edition: document.getElementById('di-edition')?.value,
                 default_currency: document.getElementById('di-currency')?.value,
-                website: document.getElementById('di-website')?.value,
-                support_portal: document.getElementById('di-support-portal')?.value,
                 footer_copyright: document.getElementById('di-footer-copyright')?.value
             };
         } else if (section === 'company') {
@@ -105,8 +94,7 @@ const DocIdentityManager = {
                 trading_name: document.getElementById('di-trading-name')?.value,
                 gstin: document.getElementById('di-gstin')?.value,
                 pan: document.getElementById('di-pan')?.value,
-                cin: document.getElementById('di-cin')?.value,
-                iso_certifications: document.getElementById('di-iso')?.value
+                cin: document.getElementById('di-cin')?.value
             };
         } else if (section === 'addresses') {
             payload = {
@@ -123,7 +111,7 @@ const DocIdentityManager = {
         }
 
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/update', {
                 method: 'POST',
                 headers: {
@@ -160,7 +148,7 @@ const DocIdentityManager = {
         };
 
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/update', {
                 method: 'POST',
                 headers: {
@@ -182,7 +170,7 @@ const DocIdentityManager = {
 
     async openLivePreview(type) {
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/preview', {
                 method: 'POST',
                 headers: {
@@ -211,7 +199,7 @@ const UsageExplorer = {
 
     async init() {
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            const token = sessionStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/usage-map', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -287,7 +275,7 @@ const UsageExplorer = {
 
     async showImpact(setting_key) {
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch(`/api/document-identity/impact-analysis?setting_key=${setting_key}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -308,7 +296,7 @@ const UsageExplorer = {
 
     async rescanCodebase() {
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/scan-dependencies', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }

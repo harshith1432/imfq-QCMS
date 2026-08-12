@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/design-system.css">
     <link rel="stylesheet" href="/assets/css/glass.css">
+    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
     <script src="/assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -266,17 +267,17 @@
             position: relative !important;
             z-index: 15 !important;
         }
-        tr:has(.dropdown.show), td:has(.dropdown.show), .ds-table tr:has(.dropdown.show) {
+        tr:has(.dropdown.show), td:has(.dropdown.show), tr:has(.dropdown-menu.show), td:has(.dropdown-menu.show), .ds-table tr:has(.dropdown-menu.show) {
             position: relative !important;
-            z-index: 500 !important;
+            z-index: 99999 !important;
         }
-        .table-responsive {
+        .table-responsive, .glass-card {
             overflow: visible !important;
         }
         .dropdown-menu {
             max-height: 340px !important;
             overflow-y: auto !important;
-            z-index: 2000 !important;
+            z-index: 100000 !important;
             background-color: #ffffff !important;
             background: #ffffff !important;
             color: #0f172a !important;
@@ -1008,9 +1009,6 @@
                             <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-2" onclick="SuperAdmin.refreshDashboard()">
                                 <i data-lucide="refresh-cw" style="width:13px;height:13px;" id="refreshIcon"></i> Refresh
                             </button>
-                            <button class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-2" onclick="SuperAdmin.quickAction('create_org')">
-                                <i data-lucide="plus" style="width:13px;height:13px;"></i> Create Org
-                            </button>
                             <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-2" onclick="SuperAdmin.exportDashboard()">
                                 <i data-lucide="download" style="width:13px;height:13px;"></i> Export
                             </button>
@@ -1152,7 +1150,7 @@
                 <!-- 2. Organizations — Enterprise Tenant Management -->
                 <div id="organizationsView" class="view-section">
                     <!-- KPI Cards -->
-                    <div class="kpi-grid fade-in section-spacing" id="orgKpiGrid">
+                    <div class="kpi-grid fade-in section-spacing" id="orgKpiGrid" style="margin-bottom: 1.75rem !important; padding-bottom: 0.5rem !important;">
                         <!-- Injected by JS -->
                     </div>
 
@@ -1173,6 +1171,8 @@
                                         <option value="Starter">Starter</option>
                                         <option value="Professional">Professional</option>
                                         <option value="Enterprise">Enterprise</option>
+                                        <option value="Custom">Custom</option>
+                                        <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                                     </select>
                                 </div>
                                 <div class="col-lg-2 col-md-3 col-6">
@@ -1181,6 +1181,7 @@
                                         <option value="Active">Active</option>
                                         <option value="Trialing">On Trial</option>
                                         <option value="Expiring Soon">Expiring Soon</option>
+                                        <option value="Inactive 20d">Inactive (20d)</option>
                                         <option value="Suspended">On Hold</option>
                                         <option value="Expired">Expired</option>
                                     </select>
@@ -1197,7 +1198,7 @@
                     <!-- Bulk Actions Bar (Visible only when orgs are checked) -->
                     <div class="ds-card fade-in section-spacing d-none" id="bulkActionsBar" style="position: relative; z-index: 1050 !important; overflow: visible !important; background: rgba(var(--ds-primary-rgb), 0.08); border: 1px solid rgba(var(--ds-primary-rgb), 0.2);">
                         <div class="ds-card-body py-2 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2" style="overflow: visible !important;">
-                            <span class="text-sm fw-semibold" id="bulkSelectedText">Selected: 0 organizations</span>
+                            <span class="fw-semibold" id="bulkSelectedText" style="color: var(--ds-primary) !important; font-size: 13.5px !important;">Selected: 0 organizations</span>
                             <div class="d-flex align-items-center gap-2 flex-wrap" style="overflow: visible !important;">
                                 <button class="ds-btn ds-btn-sm ds-btn-secondary" onclick="SuperAdmin.triggerBulkAction('activate')">Activate</button>
                                 <button class="ds-btn ds-btn-sm ds-btn-secondary" onclick="SuperAdmin.triggerBulkAction('suspend')">Pause</button>
@@ -1209,6 +1210,8 @@
                                         <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Starter');return false;">Starter</a></li>
                                         <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Professional');return false;">Professional</a></li>
                                         <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Enterprise');return false;">Enterprise</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Custom');return false;">Custom</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Trial Plan (Free Onboarding Trial)');return false;">Trial Plan (Free Onboarding Trial)</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -1525,6 +1528,7 @@
                                     <option value="Professional">Professional</option>
                                     <option value="Enterprise">Enterprise</option>
                                     <option value="Custom">Custom</option>
+                                    <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                                 </select>
                             </div>
                         </div>
@@ -1646,16 +1650,6 @@
 
                 <!-- 5. Platform Settings -->
                 <div id="settingsView" class="view-section">
-                    <!-- Top Right Actions (Auto-mounted into page header by super-admin.js) -->
-                    <div class="view-header-actions" style="display:none;">
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <button class="ds-btn ds-btn-secondary ds-btn-sm px-3" onclick="PlatformSettings.loadAllSettings()">
-                                <i data-lucide="rotate-ccw" class="me-1.5" style="width:13px;height:13px;"></i> Discard
-                            </button>
-                            <button class="ds-btn ds-btn-primary ds-btn-sm px-4" onclick="PlatformSettings.saveCurrentTab()">
-                                <i data-lucide="check" class="me-1.5" style="width:13px;height:13px;"></i> Save Changes
-                        </div>
-                    </div>
                     <!-- 3-Column Settings Workspace (Matching Screenshot 3) -->
                     <div class="ps-workspace">
                         <!-- Left Navigation Sidebar (21 Categories) -->
@@ -1717,7 +1711,7 @@
                                                 <div class="text-xs text-secondary">Allow new organizations to create accounts online without manual admin approval</div>
                                             </div>
                                             <div class="form-check form-switch mb-0">
-                                                <input class="form-check-input" type="checkbox" id="ps-registration-open">
+                                                <input class="form-check-input" type="checkbox" id="ps-registration-open" onchange="PlatformSettings.saveRegistrationOpenImmediate(this)">
                                             </div>
                                         </div>
                                     </div>
@@ -1954,7 +1948,8 @@
                                             <form id="ownCredentialsForm" onsubmit="event.preventDefault(); PlatformSettings.updateOwnCredentials();">
                                                 <div class="mb-3">
                                                     <label class="text-xs fw-semibold text-secondary mb-1">New Email Address <span class="text-danger">*</span></label>
-                                                    <input type="email" id="ownAdminNewEmail" class="ds-input py-2 px-3 text-xs w-100" placeholder="admin@qcms.com" required>
+                                                    <input type="email" id="ownAdminNewEmail" class="ds-input py-2 px-3 text-xs w-100" placeholder="admin@qcms.com" oninput="PlatformSettings.validateEmailInput(this)" required>
+                                                    <div id="ownAdminNewEmailError" class="text-xxs text-danger mt-1" style="display:none;">Please enter a valid email address in format username@domain.extension (e.g. admin@qcms.com)</div>
                                                 </div>
                                                 <div class="mb-3">
                                                     <label class="text-xs fw-semibold text-secondary mb-1">Current Password <span class="text-danger">*</span></label>
@@ -2040,6 +2035,23 @@
                                                         </tr>
                                                     </tbody>
                                                 </table>
+                                            </div>
+
+                                            <!-- Pagination Footer -->
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 mt-3 border-top" style="border-color: var(--ds-border-color) !important;">
+                                                <span class="text-xs text-muted" id="adminLoginsPaginationInfo">—</span>
+                                                <div class="d-flex gap-1 align-items-center">
+                                                    <select class="ds-input" id="adminLoginsPerPageSelect" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="PlatformSettings.adminLoginsSetPerPage(this.value)">
+                                                        <option value="5" selected>5</option>
+                                                        <option value="10">10</option>
+                                                        <option value="20">20</option>
+                                                        <option value="50">50</option>
+                                                    </select>
+                                                    <span class="text-xs text-muted ms-1 me-2">per page</span>
+                                                    <div class="d-flex gap-1" id="adminLoginsPaginationControls">
+                                                        <!-- Dynamic -->
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -2516,23 +2528,23 @@
 
                     <!-- Search & Filters Container (Single Row Layout) -->
                     <div class="filter-panel mb-4 p-3 glass-card" style="border-radius:12px;">
-                        <div class="d-flex align-items-end gap-2.5 flex-wrap">
-                            <div style="flex: 1 1 180px; min-width: 140px;">
+                        <div class="d-flex align-items-end gap-3 flex-wrap" style="gap: 16px !important;">
+                            <div style="flex: 1 1 180px; min-width: 160px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Organization Filter</label>
-                                <select class="ds-input text-xs" id="superAuditOrgFilter" style="height:36px;" onchange="SuperAdmin.setAuditFilter('org_id', this.value)">
+                                <select class="ds-input text-xs" id="superAuditOrgFilter" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('org_id', this.value)">
                                     <option value="">All Organizations</option>
                                 </select>
                             </div>
-                            <div style="flex: 2 1 220px; min-width: 160px;">
+                            <div style="flex: 2 1 240px; min-width: 200px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Search Event Logs</label>
-                                <div class="ds-search-inline w-100" style="border: 1px solid var(--ds-border-color, #cbd5e1); border-radius: 20px; padding: 0 12px; background: var(--ds-bg-surface, #ffffff); display: flex; align-items: center; height: 36px;">
+                                <div class="ds-search-inline w-100" style="border: 1px solid var(--ds-border-color, #cbd5e1); border-radius: 20px; padding: 0 14px; background: var(--ds-bg-surface, #ffffff); display: flex; align-items: center; height: 38px;">
                                     <i data-lucide="search" class="text-muted me-2" style="width:14px;height:14px;flex-shrink:0;"></i>
                                     <input type="text" class="ds-input text-xs" id="superAuditSearchQ" style="height:100%; border:none !important; background:transparent !important; padding:0 !important; box-shadow:none !important; outline:none !important; width:100%;" placeholder="Search actor, ID, IP, location..." oninput="SuperAdmin.debounceAuditSearch(this.value)">
                                 </div>
                             </div>
-                            <div style="flex: 1 1 120px; min-width: 110px;">
+                            <div style="flex: 1 1 140px; min-width: 130px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Date Range</label>
-                                <select class="ds-input text-xs" id="superAuditFilterDate" style="height:36px;" onchange="SuperAdmin.setAuditFilter('date_preset', this.value)">
+                                <select class="ds-input text-xs" id="superAuditFilterDate" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('date_preset', this.value)">
                                     <option value="">All Time</option>
                                     <option value="today">Today</option>
                                     <option value="yesterday">Yesterday</option>
@@ -2541,9 +2553,9 @@
                                     <option value="90days">Last 90 Days</option>
                                 </select>
                             </div>
-                            <div style="flex: 1 1 110px; min-width: 100px;">
+                            <div style="flex: 1 1 130px; min-width: 120px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Status</label>
-                                <select class="ds-input text-xs" id="superAuditFilterStatus" style="height:36px;" onchange="SuperAdmin.setAuditFilter('status', this.value)">
+                                <select class="ds-input text-xs" id="superAuditFilterStatus" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('status', this.value)">
                                     <option value="">All Status</option>
                                     <option value="Success">Success</option>
                                     <option value="Failed">Failed</option>
@@ -2551,9 +2563,9 @@
                                     <option value="Critical">Critical</option>
                                 </select>
                             </div>
-                            <div style="flex: 1 1 110px; min-width: 100px;">
+                            <div style="flex: 1 1 130px; min-width: 120px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Risk Level</label>
-                                <select class="ds-input text-xs" id="superAuditFilterRisk" style="height:36px;" onchange="SuperAdmin.setAuditFilter('risk_level', this.value)">
+                                <select class="ds-input text-xs" id="superAuditFilterRisk" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('risk_level', this.value)">
                                     <option value="">All Risks</option>
                                     <option value="Low">Low</option>
                                     <option value="Medium">Medium</option>
@@ -2562,7 +2574,7 @@
                                 </select>
                             </div>
                             <div style="flex: 0 0 auto;">
-                                <button class="ds-btn ds-btn-secondary text-xs px-3 d-flex align-items-center gap-1" style="height:36px;" onclick="SuperAdmin.resetAuditFilters()">
+                                <button class="ds-btn ds-btn-secondary text-xs px-3 d-flex align-items-center gap-1" style="height:38px;" onclick="SuperAdmin.resetAuditFilters()">
                                     <i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i> Reset
                                 </button>
                             </div>
@@ -2787,6 +2799,7 @@
                             <option value="Professional">Professional</option>
                             <option value="Enterprise">Enterprise</option>
                             <option value="Custom">Custom</option>
+                            <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                         </select>
                         <select class="ds-input" id="subCycleFilter" style="height:34px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 125px; width:auto;" onchange="SuperAdmin.setSubFilter('billing_cycle',this.value)">
                             <option value="">All Cycles</option>
@@ -3276,6 +3289,7 @@
                                     <option value="Professional">Professional</option>
                                     <option value="Enterprise">Enterprise</option>
                                     <option value="Custom">Custom</option>
+                                    <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                                 </select>
                                 <select class="ds-input" id="filterPlanCycle" style="height:36px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 130px; width:auto;" onchange="SuperAdmin.setPlanFilter('billing_cycle',this.value)">
                                     <option value="" selected>All Cycles</option>
@@ -3407,15 +3421,53 @@
                                     <div class="row g-3">
                                         <div class="col-md-6"><div class="ds-field"><label class="ds-label">Plan Name <span class="text-danger">*</span></label><input type="text" class="ds-input" id="pwName" placeholder="e.g. Starter Pack, Growth Plan"></div></div>
                                         <div class="col-md-6"><div class="ds-field"><label class="ds-label">Plan Code <span class="text-danger">*</span></label><input type="text" class="ds-input" id="pwCode" placeholder="e.g. PLAN-STARTER"></div></div>
-                                        <div class="col-md-6"><div class="ds-field"><label class="ds-label">Plan Icon</label><input type="text" class="ds-input" id="pwIcon" value="layers" placeholder="lucide icon name"></div></div>
-                                        <div class="col-md-6"><div class="ds-field"><label class="ds-label">Accent Color (HEX)</label><input type="color" class="ds-input" id="pwColor" value="#3b82f6" style="height:42px;padding:2px;"></div></div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-4 col-4"><div class="ds-field"><label class="ds-label">Plan Icon</label><input type="text" class="ds-input" id="pwIcon" value="layers" placeholder="lucide icon name"></div></div>
+                                        <div class="col-md-4 col-4"><div class="ds-field"><label class="ds-label">Plan Theme Color</label><input type="color" class="ds-input" id="pwColor" value="#3b82f6" style="height:42px;padding:2px;width:100%;"></div></div>
+                                        <div class="col-md-4 col-4">
                                             <div class="ds-field"><label class="ds-label">Plan Type Tier</label>
-                                                <select class="ds-input" id="pwTier">
-                                                    <option>Starter</option><option>Professional</option><option>Enterprise</option><option>Custom</option>
+                                                <select class="ds-input" id="pwTier" onchange="SuperAdmin.togglePlanWizardTrialConfig()">
+                                                    <option value="Starter">Starter</option>
+                                                    <option value="Professional">Professional</option>
+                                                    <option value="Enterprise">Enterprise</option>
+                                                    <option value="Custom">Custom</option>
+                                                    <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                                                 </select>
                                             </div>
                                         </div>
+                                        
+                                        <!-- Dynamic Trial & Onboarding Configuration Panel (Step 1) -->
+                                        <div class="col-12" id="pwTrialConfigContainer" style="display: none;">
+                                            <div class="p-3 rounded-3 border" style="background: rgba(37,99,235,0.04); border-color: rgba(37,99,235,0.2) !important;">
+                                                <div class="fw-bold text-sm text-primary mb-2 d-flex align-items-center gap-1.5">
+                                                    <i data-lucide="gift" style="width:16px;height:16px;"></i> Free Onboarding Trial Configuration
+                                                </div>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Default Onboarding Trial Period (Days) <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwTrialDays" value="14" min="1" max="365" placeholder="e.g. 14" oninput="SuperAdmin.syncTrialDaysInputs(this.value)">
+                                                            <div class="text-xxs text-muted mt-1">Number of days new organizations get for their initial trial period.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Auto-Approve Trial Extensions Limit <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwTrialAutoApproveLimit" value="2" min="0" max="10" placeholder="e.g. 2" oninput="SuperAdmin.syncTrialLimitInputs(this.value)">
+                                                            <div class="text-xxs text-muted mt-1">Auto-approves up to X extension requests. On request X+1, notifies Super Admin for approval.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-check m-0">
+                                                            <input class="form-check-input" type="checkbox" id="pwIsDefaultTrial" checked onchange="SuperAdmin.syncTrialDefaultInputs(this.checked)">
+                                                            <label class="form-check-label text-xs fw-semibold text-main" for="pwIsDefaultTrial">
+                                                                Set as Default Onboarding Trial Plan for all newly registered organizations
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div class="col-12"><div class="ds-field"><label class="ds-label">Short Description <span class="text-danger">*</span></label><input type="text" class="ds-input" id="pwDesc" placeholder="e.g. Standard tools for small teams"></div></div>
                                         <div class="col-12"><div class="ds-field"><label class="ds-label">Long Description</label><textarea class="ds-input" id="pwLongDesc" rows="3" placeholder="Enter full details here..."></textarea></div></div>
                                     </div>
@@ -3424,10 +3476,43 @@
                                 <!-- Step 2: Pricing -->
                                 <div class="wiz-panel" id="pwp2">
                                     <div class="row g-3">
+                                        <!-- Dynamic Trial & Onboarding Configuration Panel (Step 2) -->
+                                        <div class="col-12" id="pwTrialConfigContainer2" style="display: none;">
+                                            <div class="p-3 rounded-3 border" style="background: rgba(37,99,235,0.06); border-color: rgba(37,99,235,0.25) !important;">
+                                                <div class="fw-bold text-sm text-primary mb-2 d-flex align-items-center gap-1.5">
+                                                    <i data-lucide="gift" style="width:16px;height:16px;"></i> Free Onboarding Trial Configuration Parameters
+                                                </div>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Default Onboarding Trial Period (Days) <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwTrialDays2" value="14" min="1" max="365" placeholder="e.g. 14" oninput="SuperAdmin.syncTrialDaysInputs(this.value)">
+                                                            <div class="text-xxs text-muted mt-1">Number of days new organizations get for their initial trial period.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Auto-Approve Trial Extensions Limit <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwTrialAutoApproveLimit2" value="2" min="0" max="10" placeholder="e.g. 2" oninput="SuperAdmin.syncTrialLimitInputs(this.value)">
+                                                            <div class="text-xxs text-muted mt-1">Auto-approves up to X extension requests. On request X+1, notifies Super Admin for manual approval.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-check m-0">
+                                                            <input class="form-check-input" type="checkbox" id="pwIsDefaultTrial2" checked onchange="SuperAdmin.syncTrialDefaultInputs(this.checked)">
+                                                            <label class="form-check-label text-xs fw-semibold text-main" for="pwIsDefaultTrial2">
+                                                                Set as Default Onboarding Trial Plan for all newly registered organizations
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div class="col-md-6">
                                             <div class="ds-field">
                                                 <label class="ds-label">Plan Amount (₹) <span class="text-danger">*</span></label>
-                                                <input type="number" class="ds-input" id="pwPriceAmount" placeholder="e.g. 499" value="0" min="0">
+                                                <input type="number" class="ds-input" id="pwPriceAmount" placeholder="e.g. 499" value="0" min="0" oninput="SuperAdmin.updatePlanTaxCalculationPreview()" onkeyup="SuperAdmin.updatePlanTaxCalculationPreview()" onchange="SuperAdmin.updatePlanTaxCalculationPreview()" onpaste="SuperAdmin.updatePlanTaxCalculationPreview()">
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -3439,6 +3524,7 @@
                                                     <option value="Yearly" selected>Yearly (1 Year)</option>
                                                     <option value="Custom">Custom (Multi-Year)</option>
                                                     <option value="Lifetime">Lifetime Plan</option>
+                                                    <option value="Trial Duration">Trial Duration (Free Trial)</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -3461,7 +3547,28 @@
                                         <div class="col-md-6">
                                             <div class="ds-field">
                                                 <label class="ds-label">Default Tax (%)</label>
-                                                <input type="number" class="ds-input" id="pwTax" value="18" min="0" max="100">
+                                                <input type="number" class="ds-input" id="pwTax" value="18" min="0" max="100" oninput="SuperAdmin.updatePlanTaxCalculationPreview()" onkeyup="SuperAdmin.updatePlanTaxCalculationPreview()" onchange="SuperAdmin.updatePlanTaxCalculationPreview()">
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="ds-field mb-1">
+                                                <label class="ds-label mb-2 fw-semibold">GST / Tax Pricing Mode <span class="text-danger">*</span></label>
+                                                <div class="d-flex gap-4 align-items-center flex-wrap p-3 rounded" style="background: rgba(99,102,241,0.04); border: 1px solid var(--ds-border-color);">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="pwTaxInclusive" id="pwTaxExclusive" value="false" checked onchange="SuperAdmin.updatePlanTaxCalculationPreview()">
+                                                        <label class="form-check-label text-sm fw-medium" for="pwTaxExclusive">
+                                                            <strong>Without GST (Exclusive)</strong>
+                                                            <div class="text-xs text-muted" id="pwTaxExclusiveDesc">GST is added on top (Base ₹0.00 + 18% GST ₹0.00 = <strong>₹0.00</strong> final total)</div>
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="pwTaxInclusive" id="pwTaxInclusiveOpt" value="true" onchange="SuperAdmin.updatePlanTaxCalculationPreview()">
+                                                        <label class="form-check-label text-sm fw-medium" for="pwTaxInclusiveOpt">
+                                                            <strong>Include GST (Inclusive)</strong>
+                                                            <div class="text-xs text-muted" id="pwTaxInclusiveDesc">GST is included in price (Base ₹0.00 + 18% GST ₹0.00 = <strong>₹0.00</strong> final total)</div>
+                                                        </label>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="col-12">
@@ -3476,11 +3583,25 @@
                                 <!-- Step 3: Limits -->
                                 <div class="wiz-panel" id="pwp3">
                                     <div class="row g-3">
-                                        <div class="col-md-4"><div class="ds-field"><label class="ds-label">Max Users</label><input type="number" class="ds-input" id="pwMaxUsers" value="100"></div></div>
+                                        <div class="col-md-4">
+                                            <div class="ds-field">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="ds-label mb-0">Max Users</label>
+                                                    <div class="form-check form-switch m-0" title="Enable Unlimited Users">
+                                                        <input class="form-check-input" type="checkbox" id="pwUnlimitedUsersToggle" style="cursor: pointer;" onchange="SuperAdmin.toggleUnlimitedUsers(this.checked)">
+                                                        <label class="form-check-label text-xs font-semibold text-primary ms-1" for="pwUnlimitedUsersToggle" style="font-size: 11px; cursor: pointer;">Unlimited</label>
+                                                    </div>
+                                                </div>
+                                                <input type="number" class="ds-input" id="pwMaxUsers" value="100" placeholder="e.g. 100" min="1">
+                                                <div class="text-xs text-primary mt-1 d-none" id="pwUnlimitedUsersNotice" style="font-size: 11px;">
+                                                    <i data-lucide="infinity" style="width: 13px; height: 13px; vertical-align: middle;"></i> Unlimited Users (∞)
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="col-md-4"><div class="ds-field"><label class="ds-label">Storage limit (GB)</label><input type="number" class="ds-input" id="pwStorage" value="10"></div></div>
                                         <div class="col-md-4"><div class="ds-field"><label class="ds-label">Max Projects</label><input type="number" class="ds-input" id="pwMaxProjects" value="25"></div></div>
                                         <div class="col-md-4"><div class="ds-field"><label class="ds-label">Max Departments</label><input type="number" class="ds-input" id="pwMaxDepts" value="10"></div></div>
-                                        <div class="col-md-4"><div class="ds-field"><label class="ds-label">Max Quality Circles</label><input type="number" class="ds-input" id="pwMaxQcCircles" value="5"></div></div>
+
                                         <div class="col-md-4"><div class="ds-field"><label class="ds-label">Support Level</label><select class="ds-input" id="pwSupport"><option>Standard</option><option>Priority</option><option>Enterprise</option></select></div></div>
                                     </div>
                                 </div>
@@ -3490,16 +3611,31 @@
                                     <div id="pwReview" class="p-3 rounded" style="background:rgba(99,102,241,.03);border:1px solid var(--ds-border-color);font-size:13px;">
                                         <!-- Snapshot review populated by JS -->
                                     </div>
+
+                                    <!-- Apply to existing subscribers choice card -->
+                                    <div id="pwApplyToExistingContainer" class="p-3 rounded-3 mt-3 border" style="background: rgba(37,99,235,0.04); border-color: rgba(37,99,235,0.2) !important; display: none;">
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="checkbox" id="pwApplyToExisting" checked>
+                                            <label class="form-check-label text-sm fw-semibold text-main" for="pwApplyToExisting">
+                                                Apply update immediately to all existing active subscribers of this plan
+                                            </label>
+                                        </div>
+                                        <div class="text-xs text-secondary mt-1 ms-4">
+                                            <i data-lucide="info" style="width:12px;height:12px;" class="me-1"></i>
+                                            Unchecked: Changes will apply only to next coming users buying this plan. Existing active subscribers remain on their current active terms.
+                                        </div>
+                                    </div>
+
                                     <div class="form-check mt-3">
                                         <input class="form-check-input" type="checkbox" id="pwConfirm">
-                                        <label class="form-check-label text-sm" for="pwConfirm">I confirm this plan configuration. This will create Version 1 snapshot and write to database catalogue.</label>
+                                        <label class="form-check-label text-sm" for="pwConfirm" id="pwConfirmLabel">I confirm this plan configuration. This will save version snapshot and write to database catalogue.</label>
                                     </div>
                                 </div>
                             </div>
                             <div class="modal-footer border-0 pt-0">
                                 <button class="ds-btn ds-btn-secondary" id="pwPrevBtn" onclick="SuperAdmin.planWizPrev()" disabled><i data-lucide="arrow-left" style="width:12px;height:12px;"></i> Prev</button>
                                 <button class="ds-btn ds-btn-primary" id="pwNextBtn" onclick="SuperAdmin.planWizNext()">Next <i data-lucide="arrow-right" style="width:12px;height:12px;"></i></button>
-                                <button class="ds-btn ds-btn-primary d-none" id="pwSubmitBtn" onclick="SuperAdmin.planWizSubmit()"><i data-lucide="check" style="width:12px;height:12px;"></i> Save Plan Configuration</button>
+                                <button class="ds-btn ds-btn-primary d-none" id="pwSubmitBtn" onclick="SuperAdmin.planWizSubmit()"><i data-lucide="plus-circle" style="width:12px;height:12px;"></i> Create Software Plan</button>
                             </div>
                         </div>
                     </div>
@@ -3651,6 +3787,8 @@
                             <option value="Starter">Starter</option>
                             <option value="Professional">Professional</option>
                             <option value="Enterprise">Enterprise</option>
+                            <option value="Custom">Custom</option>
+                            <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                         </select>
                         <button class="ds-btn ds-btn-secondary btn-sm ms-auto" onclick="SuperAdmin.resetModFilters()" style="height:34px;">
                             <i data-lucide="x" style="width:11px;height:11px;"></i> Reset
@@ -4026,13 +4164,6 @@
 
                 <!-- 14. Announcements -->
                 <div id="announcementsView" class="view-section">
-                    <div class="view-header-actions" style="display:none;">
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button class="ds-btn ds-btn-outline ds-btn-sm d-flex align-items-center gap-1" onclick="AnnouncementsModule.exportCSV()">
-                                <i data-lucide="download" style="width:13px;height:13px;"></i> Export Data
-                            </button>
-                        </div>
-                    </div>
                     <div id="superAdminAnnouncementsContainer" class="mt-0">
                         <!-- Loaded dynamically via announcements.js -->
                     </div>
@@ -4067,16 +4198,36 @@
                                 <!-- 1. Platform Identity -->
                                 <div class="tab-pane fade show active" id="doc-sa-platform">
                                     <div class="row g-3">
-                                        <div class="col-md-4"><label class="ds-label">Software Name</label><input type="text" class="ds-input" id="sa-di-software-name"></div>
-                                        <div class="col-md-4"><label class="ds-label">Software Short Name</label><input type="text" class="ds-input" id="sa-di-software-short"></div>
-                                        <div class="col-md-4"><label class="ds-label">Display Name</label><input type="text" class="ds-input" id="sa-di-software-display"></div>
-                                        <div class="col-md-6"><label class="ds-label">Platform Title</label><input type="text" class="ds-input" id="sa-di-platform-title"></div>
-                                        <div class="col-md-6"><label class="ds-label">Platform Subtitle</label><input type="text" class="ds-input" id="sa-di-platform-subtitle"></div>
-                                        <div class="col-md-6"><label class="ds-label">Version</label><input type="text" class="ds-input" id="sa-di-version"></div>
-                                        <div class="col-md-6"><label class="ds-label">Edition</label><input type="text" class="ds-input" id="sa-di-edition"></div>
-                                        <div class="col-md-6"><label class="ds-label">Website URL</label><input type="text" class="ds-input" id="sa-di-website"></div>
-                                        <div class="col-md-6"><label class="ds-label">Support Portal URL</label><input type="text" class="ds-input" id="sa-di-support-portal"></div>
-                                        <div class="col-12"><label class="ds-label">Footer Copyright Disclaimer</label><input type="text" class="ds-input" id="sa-di-footer-copyright"></div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">Software Name</label>
+                                            <input type="text" class="ds-input" id="sa-di-software-name" placeholder="e.g. QCMS Enterprise OS">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Browser tab title, login header, and PDF headers. <b>What to type:</b> Full platform commercial name.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">Software Short Name</label>
+                                            <input type="text" class="ds-input" id="sa-di-software-short" placeholder="e.g. QCMS">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Sidebar logo header, top bar breadcrumbs, & navbar. <b>What to type:</b> Compact acronym or short code.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">Display Name</label>
+                                            <input type="text" class="ds-input" id="sa-di-software-display" placeholder="e.g. QCMS Enterprise Quality Platform">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> User welcome banners, email footers, and splash screens. <b>What to type:</b> Full user-facing display title.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">Platform Title</label>
+                                            <input type="text" class="ds-input" id="sa-di-platform-title" placeholder="e.g. QCMS Quality Management System">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Login screen header title & analytics headers. <b>What to type:</b> Main application suite heading.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">Platform Subtitle (Sidebar Tagline)</label>
+                                            <input type="text" class="ds-input" id="sa-di-platform-subtitle" placeholder="e.g. Enterprise OS">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Sidebar header tagline & login subtitle. <b>What to type:</b> Sidebar tagline (e.g. Enterprise OS).</div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="ds-label">Footer Copyright Disclaimer</label>
+                                            <input type="text" class="ds-input" id="sa-di-footer-copyright" placeholder="e.g. Confidential & Proprietary — Generated by QCMS Enterprise OS">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Very bottom footer of all exported PDF reports, invoices, & certificates. <b>What to type:</b> Legal copyright/confidentiality disclaimer.</div>
+                                        </div>
                                         <div class="col-12 mt-3">
                                             <div class="p-3 rounded-3 border" style="background: var(--ds-surface-secondary, #f8fafc); border-color: var(--ds-border-color)!important;">
                                                 <div class="d-flex align-items-center justify-content-between mb-3">
@@ -4089,17 +4240,14 @@
                                                 <div class="d-flex align-items-center gap-3">
                                                     <div class="p-2 border rounded-3 text-center" style="width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.02); cursor: pointer;" onclick="document.getElementById('sa-di-logo-input').click()" title="Click to upload custom platform logo">
                                                         <img id="sa-di-logo-preview" src="" alt="Platform Logo" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;" onerror="DocIdentityManagerSA.showLogoPlaceholder()">
-                                                        <div id="sa-di-logo-placeholder" class="d-flex flex-column align-items-center justify-content-center text-muted">
+                                                        <div id="sa-di-logo-placeholder" class="flex-column align-items-center justify-content-center text-muted" style="display: flex;">
                                                             <i data-lucide="upload-cloud" style="width: 28px; height: 28px; color: var(--ds-primary, #2563eb);"></i>
                                                             <span class="text-xxs mt-0.5 fw-semibold" style="font-size: 8px; color: var(--ds-primary, #2563eb);">UPLOAD</span>
                                                         </div>
                                                     </div>
                                                     <div class="d-flex flex-column gap-2">
                                                         <input type="file" id="sa-di-logo-input" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="d-none" onchange="DocIdentityManagerSA.uploadPlatformLogo(this)">
-                                                        <div class="d-flex gap-2">
-                                                            <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="document.getElementById('sa-di-logo-input').click()">
-                                                                <i data-lucide="upload" style="width:13px;height:13px;" class="me-1"></i> Upload Platform Logo
-                                                            </button>
+                                                        <div>
                                                             <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-danger border-danger" onclick="DocIdentityManagerSA.removePlatformLogo()">
                                                                 <i data-lucide="trash-2" style="width:13px;height:13px;" class="me-1"></i> Remove Logo
                                                             </button>
@@ -4110,44 +4258,103 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="mt-4"><button class="ds-btn ds-btn-primary ds-btn-sm" onclick="DocIdentityManagerSA.saveSection('platform')">Save Platform Identity</button></div>
+                                    <div class="mt-4"><button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="btnSavePlatformIdentity" onclick="savePlatformIdentity(this)">Save Platform Identity</button></div>
                                 </div>
 
                                 <!-- 2. Company Information -->
                                 <div class="tab-pane fade" id="doc-sa-company">
                                     <div class="row g-3">
-                                        <div class="col-md-6"><label class="ds-label">Legal Company Name</label><input type="text" class="ds-input" id="sa-di-legal-name"></div>
-                                        <div class="col-md-6"><label class="ds-label">Trading Name</label><input type="text" class="ds-input" id="sa-di-trading-name"></div>
-                                        <div class="col-md-4"><label class="ds-label">GSTIN / Tax ID</label><input type="text" class="ds-input" id="sa-di-gstin"></div>
-                                        <div class="col-md-4"><label class="ds-label">PAN Number</label><input type="text" class="ds-input" id="sa-di-pan"></div>
-                                        <div class="col-md-4"><label class="ds-label">CIN Number</label><input type="text" class="ds-input" id="sa-di-cin"></div>
-                                        <div class="col-12"><label class="ds-label">ISO &amp; Compliance Accreditation Badges</label><input type="text" class="ds-input" id="sa-di-iso"></div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">Legal Company Name</label>
+                                            <input type="text" class="ds-input" id="sa-di-legal-name" placeholder="e.g. QCMS Technologies Pvt Ltd">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> B2B tax invoices, legal agreements, and compliance certificates. <b>What to type:</b> Registered legal entity name.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">Trading Name</label>
+                                            <input type="text" class="ds-input" id="sa-di-trading-name" placeholder="e.g. QCMS Solutions">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Billing receipts, customer email signatures, & portal footers. <b>What to type:</b> Operating brand/trade name.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">GSTIN / Tax ID</label>
+                                            <input type="text" class="ds-input" id="sa-di-gstin" placeholder="e.g. 27AAACQ1234F1Z9">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Official GST tax invoices & financial exports. <b>What to type:</b> 15-digit Tax Identification / GSTIN number.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">PAN Number</label>
+                                            <input type="text" class="ds-input" id="sa-di-pan" placeholder="e.g. AAACQ1234F">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Financial tax summaries, TDS certificates, & vendor forms. <b>What to type:</b> 10-digit Permanent Account Number (PAN).</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">CIN Number</label>
+                                            <input type="text" class="ds-input" id="sa-di-cin" placeholder="e.g. U72200MH2026PTC123456">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Corporate statutory footers & legal statements. <b>What to type:</b> Corporate Identity Number (CIN).</div>
+                                        </div>
                                     </div>
-                                    <div class="mt-4"><button class="ds-btn ds-btn-primary ds-btn-sm" onclick="DocIdentityManagerSA.saveSection('company')">Save Company Info</button></div>
+                                    <div class="mt-4"><button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="btnSaveCompanyInfo" onclick="saveCompanyInfo(this)">Save Company Info</button></div>
                                 </div>
 
                                 <!-- 3. Office Address -->
                                 <div class="tab-pane fade" id="doc-sa-address">
                                     <div class="row g-3">
-                                        <div class="col-12"><label class="ds-label">Registered Office Address</label><textarea class="ds-input" id="sa-di-reg-office" rows="2"></textarea></div>
-                                        <div class="col-12"><label class="ds-label">Corporate Headquarters Address</label><textarea class="ds-input" id="sa-di-corp-office" rows="2"></textarea></div>
-                                        <div class="col-md-4"><label class="ds-label">Country</label><input type="text" class="ds-input" id="sa-di-country"></div>
-                                        <div class="col-md-4"><label class="ds-label">State</label><input type="text" class="ds-input" id="sa-di-state"></div>
-                                        <div class="col-md-4"><label class="ds-label">City &amp; PIN</label><input type="text" class="ds-input" id="sa-di-city-pin"></div>
+                                        <div class="col-12">
+                                            <label class="ds-label">Registered Office Address</label>
+                                            <textarea class="ds-input" id="sa-di-reg-office" rows="2" placeholder="e.g. Suite 800, Innovation Tower, BKC, Mumbai, MH 400051, India"></textarea>
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Official tax invoices, receipts, and legal notices. <b>What to type:</b> Full registered legal office address.</div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="ds-label">Corporate Headquarters Address</label>
+                                            <textarea class="ds-input" id="sa-di-corp-office" rows="2" placeholder="e.g. Tech Park Phase 2, Whitefield, Bengaluru, KA 560066, India"></textarea>
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Contact directory, audit report headers, & correspondence PDFs. <b>What to type:</b> Corporate HQ physical address.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">Country</label>
+                                            <input type="text" class="ds-input" id="sa-di-country" placeholder="e.g. India">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Tax invoice headers & international compliance tags. <b>What to type:</b> Primary operating country.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">State</label>
+                                            <input type="text" class="ds-input" id="sa-di-state" placeholder="e.g. Maharashtra">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> State GST calculations & invoice location footers. <b>What to type:</b> State / province name.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">City &amp; PIN</label>
+                                            <input type="text" class="ds-input" id="sa-di-city-pin" placeholder="e.g. Mumbai - 400051">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Dispatch slips, office location cards, & billing summaries. <b>What to type:</b> City name and postal PIN code.</div>
+                                        </div>
                                     </div>
-                                    <div class="mt-4"><button class="ds-btn ds-btn-primary ds-btn-sm" onclick="DocIdentityManagerSA.saveSection('addresses')">Save Office Addresses</button></div>
+                                    <div class="mt-4"><button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="btnSaveOfficeAddresses" onclick="saveOfficeAddresses(this)">Save Office Addresses</button></div>
                                 </div>
 
                                 <!-- 4. Contact Directory -->
                                 <div class="tab-pane fade" id="doc-sa-contacts">
                                     <div class="row g-3">
-                                        <div class="col-md-4"><label class="ds-label">General Info Email</label><input type="email" class="ds-input" id="sa-di-email-general"></div>
-                                        <div class="col-md-4"><label class="ds-label">Support Email</label><input type="email" class="ds-input" id="sa-di-email-support"></div>
-                                        <div class="col-md-4"><label class="ds-label">Billing &amp; Accounts Email</label><input type="email" class="ds-input" id="sa-di-email-billing"></div>
-                                        <div class="col-md-6"><label class="ds-label">General Support Hotline</label><input type="text" class="ds-input" id="sa-di-phone-general"></div>
-                                        <div class="col-md-6"><label class="ds-label">24/7 Emergency Technical Support</label><input type="text" class="ds-input" id="sa-di-phone-emergency"></div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">General Info Email</label>
+                                            <input type="email" class="ds-input" id="sa-di-email-general" placeholder="e.g. info@qcms.com">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Public landing page contact links & general email footers. <b>What to type:</b> Main public email address.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">Support Email</label>
+                                            <input type="email" class="ds-input" id="sa-di-email-support" placeholder="e.g. support@qcms.com">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Support ticket emails, user help drawer, & SLA guides. <b>What to type:</b> Customer support desk email.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label">Billing &amp; Accounts Email</label>
+                                            <input type="email" class="ds-input" id="sa-di-email-billing" placeholder="e.g. billing@qcms.com">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Subscription receipts, tax invoices, & billing alerts. <b>What to type:</b> Accounts and billing department email.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">General Support Hotline</label>
+                                            <input type="text" class="ds-input" id="sa-di-phone-general" placeholder="e.g. +1 (800) 555-0199">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Standard inspection report headers & help contact cards. <b>What to type:</b> Customer service phone number.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">24/7 Emergency Technical Support</label>
+                                            <input type="text" class="ds-input" id="sa-di-phone-emergency" placeholder="e.g. +1 (800) 555-0100">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Priority SLA support drawer & critical incident notifications. <b>What to type:</b> 24/7 technical hotline number.</div>
+                                        </div>
                                     </div>
-                                    <div class="mt-4"><button class="ds-btn ds-btn-primary ds-btn-sm" onclick="DocIdentityManagerSA.saveSection('contacts')">Save Contact Directory</button></div>
+                                    <div class="mt-4"><button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="btnSaveContactDirectory" onclick="saveContactDirectory(this)">Save Contact Directory</button></div>
                                 </div>
 
                                 <!-- 5. Document & Report Templates -->
@@ -4168,13 +4375,33 @@
                                                 <i data-lucide="eye" class="me-1"></i> Preview Selected Template
                                             </button>
                                         </div>
-                                        <div class="col-md-6"><label class="ds-label">Header Title Override</label><input type="text" class="ds-input" id="sa-di-tmpl-title"></div>
-                                        <div class="col-md-6"><label class="ds-label">Subtitle / Sub-Header Override</label><input type="text" class="ds-input" id="sa-di-tmpl-subtitle"></div>
-                                        <div class="col-12"><label class="ds-label">Footer Terms &amp; Conditions</label><textarea class="ds-input" id="sa-di-tmpl-footer" rows="2"></textarea></div>
-                                        <div class="col-md-6"><label class="ds-label">Watermark Text</label><input type="text" class="ds-input" id="sa-di-tmpl-watermark"></div>
-                                        <div class="col-md-6"><label class="ds-label">Confidentiality Notice Header</label><input type="text" class="ds-input" id="sa-di-tmpl-confidential"></div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">Header Title Override</label>
+                                            <input type="text" class="ds-input" id="sa-di-tmpl-title" placeholder="e.g. TAX INVOICE & BILLING RECEIPT">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Top header title on exported PDF documents. <b>What to type:</b> Primary document title.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">Subtitle / Sub-Header Override</label>
+                                            <input type="text" class="ds-input" id="sa-di-tmpl-subtitle" placeholder="e.g. Official Quality Audit & Compliance Record">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Directly under header title on generated PDF files. <b>What to type:</b> Sub-header description.</div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="ds-label">Footer Terms &amp; Conditions</label>
+                                            <textarea class="ds-input" id="sa-di-tmpl-footer" rows="2" placeholder="e.g. Payment due within 30 days. Certified quality record verified by QCMS OS."></textarea>
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Footer section of generated PDFs above signature block. <b>What to type:</b> Standard terms & legal notes.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">Watermark Text</label>
+                                            <input type="text" class="ds-input" id="sa-di-tmpl-watermark" placeholder="e.g. CONFIDENTIAL & PROPRIETARY">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Diagonally across background of exported PDF pages. <b>What to type:</b> Transparent watermark text.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ds-label">Confidentiality Notice Header</label>
+                                            <input type="text" class="ds-input" id="sa-di-tmpl-confidential" placeholder="e.g. STRICTLY CONFIDENTIAL — FOR INTERNAL USE ONLY">
+                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Top/bottom confidentiality security notice on PDF reports. <b>What to type:</b> Security classification banner text.</div>
+                                        </div>
                                     </div>
-                                    <div class="mt-4"><button class="ds-btn ds-btn-primary ds-btn-sm" onclick="DocIdentityManagerSA.saveTemplateForm()">Save Template Settings</button></div>
+                                    <div class="mt-4"><button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="btnSaveTemplateSettings" onclick="saveTemplateSettings(this)">Save Template Settings</button></div>
                                 </div>
 
                                 <!-- 6. Usage Mapping Explorer -->
@@ -4338,6 +4565,28 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Pagination Footer -->
+                        <div class="ds-card-footer p-3 border-top" style="border-color: var(--ds-border-color) !important;">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="text-xs text-secondary" id="storagePaginationInfo">Showing 0 to 0 of 0 organizations</span>
+                                    <div class="d-flex align-items-center gap-1.5 text-xs text-secondary ms-2">
+                                        <span class="fw-medium">Limits</span>
+                                        <select class="ds-input text-xs rounded-pill" id="storagePerPageSelect" style="height:32px; padding: 2px 28px 2px 12px; width:auto; border-radius:20px !important;" onchange="SuperAdmin.setStoragePerPage(this.value)">
+                                            <option value="10" selected>10 / page</option>
+                                            <option value="15">15 / page</option>
+                                            <option value="20">20 / page</option>
+                                            <option value="50">50 / page</option>
+                                            <option value="100">100 / page</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-1.5 align-items-center" id="storagePaginationControls">
+                                    <!-- Dynamic -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div><!-- /storageView -->
 
@@ -4400,15 +4649,15 @@
 
     <!-- Upgraded Tabbed Organization Detail Modal -->
     <div class="modal fade" id="orgDetailModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content" style="border: 1px solid var(--ds-border-color); border-radius: var(--ds-radius-lg); background: var(--ds-bg-card);">
-                <div class="modal-header" style="border-bottom: 1px solid var(--ds-border-color);">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" style="max-width: 900px; width: 92%; margin: 1.75rem auto;">
+            <div class="modal-content" style="border: 1px solid var(--ds-border-color); border-radius: 16px; background: var(--ds-bg-card); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25); overflow: hidden;">
+                <div class="modal-header px-4 py-3" style="border-bottom: 1px solid var(--ds-border-color);">
                     <h5 class="modal-title fw-bold" id="orgDetailTitle">Organization Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-0 d-flex flex-column flex-md-row" style="min-height: 500px;">
+                <div class="modal-body p-0 d-flex flex-column flex-md-row" style="max-height: 70vh;">
                     <!-- Sidebar Tabs -->
-                    <div class="border-end p-3" style="width: 220px; background: rgba(255,255,255,0.01); border-color: var(--ds-border-color) !important;">
+                    <div class="border-end p-3 flex-shrink-0" style="width: 200px; background: rgba(0, 0, 0, 0.02); border-color: var(--ds-border-color) !important;">
                         <ul class="nav nav-pills flex-column gap-1 text-sm" id="orgDetailTabs" role="tablist">
                             <li class="nav-item">
                                 <button class="nav-link w-100 text-start active" id="tab-overview-btn" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button">Overview</button>
@@ -4434,7 +4683,7 @@
                         </ul>
                     </div>
                     <!-- Content Pane -->
-                    <div class="tab-content flex-grow-1 p-4" id="orgDetailTabContent" style="max-height: 600px; overflow-y: auto;">
+                    <div class="tab-content flex-grow-1 p-4" id="orgDetailTabContent" style="max-height: 70vh; overflow-y: auto;">
                         <!-- Content will be injected dynamically by JS -->
                     </div>
                 </div>
@@ -4454,7 +4703,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <!-- Stepper Progress Header -->
+                    <!-- Stepper Progress Header (3 Steps) -->
                     <div class="d-flex justify-content-between mb-4 border-bottom pb-3" id="wizardStepper">
                         <div class="text-center flex-grow-1 step-header active" data-step="1">
                             <div class="step-num mx-auto">1</div>
@@ -4462,20 +4711,22 @@
                         </div>
                         <div class="text-center flex-grow-1 step-header" data-step="2">
                             <div class="step-num mx-auto">2</div>
-                            <span class="text-xs fw-semibold mt-1 d-block">Subscription & Features</span>
+                            <span class="text-xs fw-semibold mt-1 d-block">Org Admin</span>
                         </div>
                         <div class="text-center flex-grow-1 step-header" data-step="3">
                             <div class="step-num mx-auto">3</div>
-                            <span class="text-xs fw-semibold mt-1 d-block">Org Admin</span>
-                        </div>
-                        <div class="text-center flex-grow-1 step-header" data-step="4">
-                            <div class="step-num mx-auto">4</div>
                             <span class="text-xs fw-semibold mt-1 d-block">Review & Provision</span>
                         </div>
                     </div>
 
                     <!-- Step Forms -->
                     <form id="wizardForm">
+                        <!-- Hidden inputs for fallback subscription params -->
+                        <input type="hidden" id="wizPlan" value="Starter">
+                        <input type="hidden" id="wizTrialDays" value="14">
+                        <input type="hidden" id="wizMaxUsers" value="50">
+                        <input type="hidden" id="wizStorageLimit" value="10240">
+
                         <!-- Step 1: Company Info -->
                         <div class="wizard-step active-step" data-step="1">
                             <h6 class="fw-bold mb-3">Company Details</h6>
@@ -4488,14 +4739,31 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="ds-field">
-                                        <label class="ds-label">Organization Code</label>
-                                        <input type="text" class="ds-input" id="wizOrgCode" placeholder="e.g. ACME">
+                                        <label class="ds-label d-flex align-items-center justify-content-between">
+                                            <span>Udyam Registration Number</span>
+                                            <span id="udyamVerificationBadge" class="ds-badge gray text-xxs" style="display:none;">Unverified</span>
+                                        </label>
+                                        <input type="text" class="ds-input font-monospace text-uppercase" id="wizUdyamNumber" placeholder="UDYAM-KR-03-0012345" oninput="SuperAdmin.onUdyamInput(this)">
+                                        <div id="udyamHelpText" class="text-xxs text-secondary mt-1">Format: UDYAM-XX-00-0000000 (MSME Registration)</div>
                                     </div>
+                                    <!-- Hidden fallback for org_code -->
+                                    <input type="hidden" id="wizOrgCode" value="">
                                 </div>
                                 <div class="col-md-6">
                                     <div class="ds-field">
                                         <label class="ds-label">Industry</label>
                                         <input type="text" class="ds-input" id="wizIndustry" placeholder="e.g. Manufacturing">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="ds-field">
+                                        <label class="ds-label">Organization Scale</label>
+                                        <select class="ds-input ds-select" id="wizOrgScale">
+                                            <option value="Micro">Micro Enterprise</option>
+                                            <option value="Small" selected>Small Enterprise</option>
+                                            <option value="Medium">Medium Enterprise</option>
+                                            <option value="Large">Large Enterprise</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -4561,78 +4829,8 @@
                             </div>
                         </div>
 
-                        <!-- Step 2: Subscription -->
+                        <!-- Step 2: Admin Credentials -->
                         <div class="wizard-step" data-step="2">
-                            <h6 class="fw-bold mb-3">Subscription Details</h6>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <div class="ds-field">
-                                        <label class="ds-label">Subscription Plan</label>
-                                        <select class="ds-input" id="wizPlan">
-                                            <option value="Starter">Starter Plan</option>
-                                            <option value="Professional" selected>Professional Plan</option>
-                                            <option value="Enterprise">Enterprise Plan</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="ds-field">
-                                        <label class="ds-label">Trial Period Days</label>
-                                        <input type="number" class="ds-input" id="wizTrialDays" value="14" min="0">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="ds-field">
-                                        <label class="ds-label">Maximum Users</label>
-                                        <input type="number" class="ds-input" id="wizMaxUsers" value="50" min="1">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="ds-field">
-                                        <label class="ds-label">Storage Limit (MB)</label>
-                                        <input type="number" class="ds-input" id="wizStorageLimit" value="10240" min="100">
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <label class="ds-label d-block mb-2">Enable Feature Modules</label>
-                                    <div class="row g-2">
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input wiz-module-chk" type="checkbox" value="7-qc-tools" id="wizModQc" checked>
-                                                <label class="form-check-label text-sm" for="wizModQc">7 QC Tools</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input wiz-module-chk" type="checkbox" value="spc-control-charts" id="wizModSpc" checked>
-                                                <label class="form-check-label text-sm" for="wizModSpc">SPC / Control Charts</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input wiz-module-chk" type="checkbox" value="capa-management" id="wizModCapa" checked>
-                                                <label class="form-check-label text-sm" for="wizModCapa">CAPA Management</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input wiz-module-chk" type="checkbox" value="document-control" id="wizModDoc" checked>
-                                                <label class="form-check-label text-sm" for="wizModDoc">Document Control</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input wiz-module-chk" type="checkbox" value="audit-management" id="wizModAudit">
-                                                <label class="form-check-label text-sm" for="wizModAudit">Audit Management</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3: Admin -->
-                        <div class="wizard-step" data-step="3">
                             <h6 class="fw-bold mb-3">Organization Administrator Credentials</h6>
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -4659,24 +4857,12 @@
                                         <input type="tel" class="ds-input" id="wizAdminPhone" placeholder="+91 99999 99999">
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="ds-field">
-                                        <label class="ds-label">Department</label>
-                                        <input type="text" class="ds-input" id="wizAdminDept" value="Operations">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="ds-field">
-                                        <label class="ds-label">Profile Photo URL</label>
-                                        <input type="text" class="ds-input" id="wizAdminPhoto" placeholder="https://cdn.com/photo.png">
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
-                        <!-- Step 4: Review -->
-                        <div class="wizard-step" data-step="4">
-                            <h6 class="fw-bold mb-3">Review & Confirm</h6>
+                        <!-- Step 3: Review & Confirm -->
+                        <div class="wizard-step" data-step="3">
+                            <h6 class="fw-bold mb-3">Review & Confirm Setup</h6>
                             <div class="p-3 rounded-3 mb-3 text-sm" style="background: rgba(255,255,255,0.02); border: 1px solid var(--ds-border-color);">
                                 <div class="row g-3">
                                     <div class="col-6">
@@ -4685,8 +4871,8 @@
                                         <div class="text-xs text-muted mt-1" id="revIndustryCode">—</div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="text-xs text-muted">SUBSCRIPTION & PLAN</div>
-                                        <div class="fw-bold"><span class="ds-badge blue" id="revPlan">—</span></div>
+                                        <div class="text-xs text-muted">TRIAL & PARAMETERS</div>
+                                        <div class="fw-bold"><span class="ds-badge blue" id="revPlan">Trial</span></div>
                                         <div class="text-xs text-muted mt-1" id="revLimits">—</div>
                                     </div>
                                     <hr class="my-2 opacity-10">
@@ -4696,19 +4882,19 @@
                                         <div class="text-xs text-muted mt-1" id="revAdminEmail">—</div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="text-xs text-muted">ENABLED MODULES</div>
-                                        <div class="d-flex gap-1 flex-wrap mt-1" id="revModules">—</div>
+                                        <div class="text-xs text-muted">STATUS</div>
+                                        <div class="d-flex gap-1 flex-wrap mt-1" id="revModules"><span class="ds-badge green">Initial Trial</span></div>
                                     </div>
                                 </div>
                             </div>
                             <div class="p-3 rounded-2" style="background: rgba(var(--ds-success-rgb), 0.08); border: 1px solid rgba(var(--ds-success-rgb), 0.15);">
-                                <div class="text-xs text-muted">Confirming this setup will automatically provision the tenant database entries, assign the subscription parameters, create default user roles, and send a welcome email containing password instructions.</div>
+                                <div class="text-xs text-muted">Confirming this setup will automatically provision the tenant database entries, assign the default trial duration, create default user roles, and send a welcome email containing password instructions.</div>
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer" style="border-top: 1px solid var(--ds-border-color);">
-                    <button class="ds-btn ds-btn-secondary" id="wizPrevBtn" type="button" style="display:none;">Back</button>
+                    <button class="ds-btn ds-btn-secondary" id="wizPrevBtn" type="button" style="display:none;" onclick="SuperAdmin.handleWizardPrev()">Back</button>
                     <button class="ds-btn ds-btn-primary" id="wizNextBtn" type="button">Next Step</button>
                 </div>
             </div>
@@ -4851,8 +5037,8 @@
                             <option value="Starter">Starter</option>
                             <option value="Professional">Professional</option>
                             <option value="Enterprise">Enterprise</option>
-                            <option value="Enterprise Test Matrix Plan">Enterprise Test Matrix Plan</option>
-                            <option value="test">test</option>
+                            <option value="Custom">Custom</option>
+                            <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                         </select>
                     </div>
                     <div class="p-3 rounded-3 border" style="background: rgba(37,99,235,0.04); border-color: rgba(37,99,235,0.15)!important;">
@@ -4889,8 +5075,8 @@
                             <option value="Starter">Starter</option>
                             <option value="Professional">Professional</option>
                             <option value="Enterprise">Enterprise</option>
-                            <option value="Enterprise Test Matrix Plan">Enterprise Test Matrix Plan</option>
-                            <option value="test">test</option>
+                            <option value="Custom">Custom</option>
+                            <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                         </select>
                     </div>
                     <div class="mt-3 p-3 rounded-2" style="background: rgba(var(--ds-orange-rgb), 0.08); border: 1px solid rgba(var(--ds-orange-rgb), 0.15);">
@@ -5240,7 +5426,8 @@
                         
                         <div class="mb-3">
                             <label class="text-xs fw-semibold text-secondary mb-1">Email Address (Login ID) <span class="text-danger">*</span></label>
-                            <input type="email" id="newAdminEmail" class="ds-input py-2 px-3 text-xs w-100" placeholder="admin2@qcms.com" required>
+                            <input type="email" id="newAdminEmail" class="ds-input py-2 px-3 text-xs w-100" placeholder="admin2@qcms.com" required oninput="PlatformSettings.validateEmailInput(this)">
+                            <div id="newAdminEmailError" class="text-xxs text-danger mt-1" style="display:none;">Please enter a valid email in format username@domain.extension (e.g. admin@qcms.com)</div>
                         </div>
                         
                         <div class="mb-3">
@@ -5300,7 +5487,8 @@
                         
                         <div class="mb-3">
                             <label class="text-xs fw-semibold text-secondary mb-1">Email Address (Login ID)</label>
-                            <input type="email" id="editAdminEmail" class="ds-input py-2 px-3 text-xs w-100" placeholder="admin@qcms.com" required>
+                            <input type="email" id="editAdminEmail" class="ds-input py-2 px-3 text-xs w-100" placeholder="admin@qcms.com" required oninput="PlatformSettings.validateEmailInput(this)">
+                            <div id="editAdminEmailError" class="text-xxs text-danger mt-1" style="display:none;">Please enter a valid email in format username@domain.extension (e.g. admin@qcms.com)</div>
                         </div>
                         
                         <div class="mb-3">
@@ -5345,8 +5533,257 @@
     <script>
     // Helper: get JWT token from sessionStorage (primary) or localStorage (fallback) — matches api.js
     function _diGetToken() {
-        return sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+        let t = sessionStorage.getItem('token') || 
+                sessionStorage.getItem('access_token') || 
+                localStorage.getItem('token') || 
+                localStorage.getItem('access_token') || '';
+        if (t && t.startsWith('Bearer ')) t = t.substring(7).trim();
+        return t;
     }
+
+    // Safe Notification Display
+    function _diShowNotify(msg, type = 'success') {
+        if (window.api && typeof window.api.showNotification === 'function') {
+            window.api.showNotification(msg, type);
+        } else if (typeof api !== 'undefined' && api && typeof api.showNotification === 'function') {
+            api.showNotification(msg, type);
+        } else {
+            alert(msg);
+        }
+    }
+
+    // Direct Standalone Save Functions — Guaranteed fail-safe execution
+    window.savePlatformIdentity = async function(btn) {
+        console.log('[savePlatformIdentity] Triggered button click', btn);
+        if (btn && btn.dataset && btn.dataset.saving === 'true') return;
+
+        let origText = 'Save Platform Identity';
+        if (btn && btn instanceof HTMLElement) {
+            if (!btn.dataset.origText || btn.dataset.origText.includes('Saving...')) {
+                btn.dataset.origText = 'Save Platform Identity';
+            }
+            origText = btn.dataset.origText;
+            btn.dataset.saving = 'true';
+            btn.style.pointerEvents = 'none';
+            btn.innerHTML = `<i data-lucide="loader" class="spin me-1" style="width:13px;height:13px;"></i> Saving...`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        const getV = (id) => (document.getElementById(id)?.value || '').trim();
+        const payload = {
+            software_name: getV('sa-di-software-name'),
+            software_short_name: getV('sa-di-software-short'),
+            software_display_name: getV('sa-di-software-display'),
+            platform_title: getV('sa-di-platform-title'),
+            platform_subtitle: getV('sa-di-platform-subtitle'),
+            footer_copyright: getV('sa-di-footer-copyright')
+        };
+
+        try {
+            const token = _diGetToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+
+            console.log('[savePlatformIdentity] Sending POST /api/document-identity/update with payload:', payload);
+
+            const res = await fetch('/api/document-identity/update', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ section: 'platform', payload: payload })
+            });
+
+            console.log('[savePlatformIdentity] Response HTTP Status:', res.status);
+            const data = await res.json();
+            console.log('[savePlatformIdentity] Response data:', data);
+
+            if (res.ok && data.status === 'success') {
+                _diShowNotify('Platform Identity saved successfully!', 'success');
+                if (data.branding_context && window.DocIdentityManagerSA && typeof window.DocIdentityManagerSA.applyBrandingToUI === 'function') {
+                    window.DocIdentityManagerSA.applyBrandingToUI(data.branding_context);
+                }
+                if (window.DocIdentityManagerSA && typeof window.DocIdentityManagerSA.init === 'function') {
+                    window.DocIdentityManagerSA.init();
+                }
+            } else {
+                const errMsg = data.message || data.error || ('Server returned HTTP ' + res.status);
+                _diShowNotify('Save failed: ' + errMsg, 'error');
+            }
+        } catch (err) {
+            console.error('[savePlatformIdentity] Error:', err);
+            _diShowNotify('Save error: ' + err.message, 'error');
+        } finally {
+            if (btn && btn instanceof HTMLElement) {
+                btn.style.pointerEvents = '';
+                if (btn.dataset) btn.dataset.saving = 'false';
+                btn.innerHTML = btn.dataset.origText || origText;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    };
+
+    window.saveCompanyInfo = async function(btn) {
+        console.log('[saveCompanyInfo] Triggered button click', btn);
+        if (btn && btn.dataset && btn.dataset.saving === 'true') return;
+
+        let origText = 'Save Company Info';
+        if (btn && btn instanceof HTMLElement) {
+            if (!btn.dataset.origText || btn.dataset.origText.includes('Saving...')) {
+                btn.dataset.origText = 'Save Company Info';
+            }
+            origText = btn.dataset.origText;
+            btn.dataset.saving = 'true';
+            btn.style.pointerEvents = 'none';
+            btn.innerHTML = `<i data-lucide="loader" class="spin me-1" style="width:13px;height:13px;"></i> Saving...`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        const getV = (id) => (document.getElementById(id)?.value || '').trim();
+        const payload = {
+            legal_company_name: getV('sa-di-legal-name'),
+            trading_name: getV('sa-di-trading-name'),
+            gstin: getV('sa-di-gstin'),
+            pan: getV('sa-di-pan'),
+            cin: getV('sa-di-cin')
+        };
+
+        try {
+            const token = _diGetToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            const res = await fetch('/api/document-identity/update', { method: 'POST', headers, body: JSON.stringify({ section: 'company', payload }) });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                _diShowNotify('Company Info saved successfully!', 'success');
+                if (data.branding_context && window.DocIdentityManagerSA) window.DocIdentityManagerSA.applyBrandingToUI(data.branding_context);
+                if (window.DocIdentityManagerSA) window.DocIdentityManagerSA.init();
+            } else { _diShowNotify('Save failed: ' + (data.message || data.error || res.status), 'error'); }
+        } catch (err) { _diShowNotify('Save error: ' + err.message, 'error'); }
+        finally {
+            if (btn && btn instanceof HTMLElement) {
+                btn.style.pointerEvents = '';
+                if (btn.dataset) btn.dataset.saving = 'false';
+                btn.innerHTML = btn.dataset.origText || origText;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    };
+
+    window.saveOfficeAddresses = async function(btn) {
+        if (btn && btn.dataset && btn.dataset.saving === 'true') return;
+        let origText = 'Save Office Addresses';
+        if (btn && btn instanceof HTMLElement) {
+            if (!btn.dataset.origText || btn.dataset.origText.includes('Saving...')) {
+                btn.dataset.origText = 'Save Office Addresses';
+            }
+            origText = btn.dataset.origText;
+            btn.dataset.saving = 'true';
+            btn.style.pointerEvents = 'none';
+            btn.innerHTML = `<i data-lucide="loader" class="spin me-1" style="width:13px;height:13px;"></i> Saving...`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        const getV = (id) => (document.getElementById(id)?.value || '').trim();
+        const payload = { registered_office: getV('sa-di-reg-office'), corporate_office: getV('sa-di-corp-office'), country: getV('sa-di-country'), state: getV('sa-di-state'), city_pin: getV('sa-di-city-pin') };
+
+        try {
+            const token = _diGetToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            const res = await fetch('/api/document-identity/update', { method: 'POST', headers, body: JSON.stringify({ section: 'addresses', payload }) });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                _diShowNotify('Office Addresses saved successfully!', 'success');
+                if (data.branding_context && window.DocIdentityManagerSA) window.DocIdentityManagerSA.applyBrandingToUI(data.branding_context);
+                if (window.DocIdentityManagerSA) window.DocIdentityManagerSA.init();
+            } else { _diShowNotify('Save failed: ' + (data.message || data.error || res.status), 'error'); }
+        } catch (err) { _diShowNotify('Save error: ' + err.message, 'error'); }
+        finally {
+            if (btn && btn instanceof HTMLElement) {
+                btn.style.pointerEvents = '';
+                if (btn.dataset) btn.dataset.saving = 'false';
+                btn.innerHTML = btn.dataset.origText || origText;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    };
+
+    window.saveContactDirectory = async function(btn) {
+        if (btn && btn.dataset && btn.dataset.saving === 'true') return;
+        let origText = 'Save Contact Directory';
+        if (btn && btn instanceof HTMLElement) {
+            if (!btn.dataset.origText || btn.dataset.origText.includes('Saving...')) {
+                btn.dataset.origText = 'Save Contact Directory';
+            }
+            origText = btn.dataset.origText;
+            btn.dataset.saving = 'true';
+            btn.style.pointerEvents = 'none';
+            btn.innerHTML = `<i data-lucide="loader" class="spin me-1" style="width:13px;height:13px;"></i> Saving...`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        const getV = (id) => (document.getElementById(id)?.value || '').trim();
+        const payload = { general_email: getV('sa-di-email-general'), support_email: getV('sa-di-email-support'), billing_email: getV('sa-di-email-billing'), general_phone: getV('sa-di-phone-general'), emergency_phone: getV('sa-di-phone-emergency') };
+
+        try {
+            const token = _diGetToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            const res = await fetch('/api/document-identity/update', { method: 'POST', headers, body: JSON.stringify({ section: 'contacts', payload }) });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                _diShowNotify('Contact Directory saved successfully!', 'success');
+                if (data.branding_context && window.DocIdentityManagerSA) window.DocIdentityManagerSA.applyBrandingToUI(data.branding_context);
+                if (window.DocIdentityManagerSA) window.DocIdentityManagerSA.init();
+            } else { _diShowNotify('Save failed: ' + (data.message || data.error || res.status), 'error'); }
+        } catch (err) { _diShowNotify('Save error: ' + err.message, 'error'); }
+        finally {
+            if (btn && btn instanceof HTMLElement) {
+                btn.style.pointerEvents = '';
+                if (btn.dataset) btn.dataset.saving = 'false';
+                btn.innerHTML = btn.dataset.origText || origText;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    };
+
+    window.saveTemplateSettings = async function(btn) {
+        if (btn && btn.dataset && btn.dataset.saving === 'true') return;
+        let origText = 'Save Template Settings';
+        if (btn && btn instanceof HTMLElement) {
+            if (!btn.dataset.origText || btn.dataset.origText.includes('Saving...')) {
+                btn.dataset.origText = 'Save Template Settings';
+            }
+            origText = btn.dataset.origText;
+            btn.dataset.saving = 'true';
+            btn.style.pointerEvents = 'none';
+            btn.innerHTML = `<i data-lucide="loader" class="spin me-1" style="width:13px;height:13px;"></i> Saving...`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        const getV = (id) => (document.getElementById(id)?.value || '').trim();
+        const template_key = document.getElementById('sa-di-template-selector')?.value || 'invoice';
+        const payload = { template_key, header_title: getV('sa-di-tmpl-title'), subtitle: getV('sa-di-tmpl-subtitle'), footer_text: getV('sa-di-tmpl-footer'), watermark_text: getV('sa-di-tmpl-watermark'), confidential_text: getV('sa-di-tmpl-confidential') };
+
+        try {
+            const token = _diGetToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            const res = await fetch('/api/document-identity/update', { method: 'POST', headers, body: JSON.stringify({ section: 'template', payload }) });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                _diShowNotify(`Template '${template_key}' saved successfully!`, 'success');
+                if (window.DocIdentityManagerSA) { window.DocIdentityManagerSA.data = null; window.DocIdentityManagerSA.init(); }
+            } else { _diShowNotify('Save failed: ' + (data.message || data.error || res.status), 'error'); }
+        } catch (err) { _diShowNotify('Save error: ' + err.message, 'error'); }
+        finally {
+            if (btn && btn instanceof HTMLElement) {
+                btn.style.pointerEvents = '';
+                if (btn.dataset) btn.dataset.saving = 'false';
+                btn.innerHTML = btn.dataset.origText || origText;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    };
 
     // Helper: authenticated fetch wrapper — uses same token source as api.js
     async function _diFetch(url, options = {}) {
@@ -5360,7 +5797,7 @@
     }
 
     // DocIdentityManagerSA — SA-scoped wrapper that targets sa-di-* field IDs
-    const DocIdentityManagerSA = {
+    window.DocIdentityManagerSA = {
         data: null,
         setValue(id, val) { const el = document.getElementById('sa-' + id); if (el) el.value = val || ''; },
         async init() {
@@ -5375,24 +5812,23 @@
                     this.setValue('di-software-display', ctx.software_display_name);
                     this.setValue('di-platform-title', ctx.platform_title);
                     this.setValue('di-platform-subtitle', ctx.platform_subtitle);
-                    this.setValue('di-version', ctx.version);
-                    this.setValue('di-edition', ctx.edition);
                     this.setValue('di-currency', ctx.default_currency);
-                    this.setValue('di-website', ctx.website);
-                    this.setValue('di-support-portal', ctx.support_portal);
                     this.setValue('di-footer-copyright', ctx.footer_copyright);
                     this.setValue('di-legal-name', ctx.legal_company_name);
                     this.setValue('di-trading-name', ctx.trading_name);
                     this.setValue('di-gstin', ctx.gstin);
                     this.setValue('di-pan', ctx.pan);
                     this.setValue('di-cin', ctx.cin);
-                    this.setValue('di-iso', ctx.iso_certifications);
                     this.setValue('di-reg-office', ctx.registered_office);
                     this.setValue('di-corp-office', ctx.corporate_office);
+                    this.setValue('di-country', ctx.country);
+                    this.setValue('di-state', ctx.state);
+                    this.setValue('di-city-pin', ctx.city_pin);
                     this.setValue('di-email-general', ctx.general_email);
                     this.setValue('di-email-support', ctx.support_email);
                     this.setValue('di-email-billing', ctx.billing_email);
                     this.setValue('di-phone-general', ctx.general_phone);
+                    this.setValue('di-phone-emergency', ctx.emergency_phone || ctx.emergency_contact);
 
                     // Logo preview & badge
                     const logoBadge = document.getElementById('sa-di-logo-status-badge');
@@ -5420,8 +5856,14 @@
         showLogoPlaceholder() {
             const logoPreview = document.getElementById('sa-di-logo-preview');
             const logoPlaceholder = document.getElementById('sa-di-logo-placeholder');
-            if (logoPreview) logoPreview.style.display = 'none';
-            if (logoPlaceholder) logoPlaceholder.style.display = 'flex';
+            if (logoPreview) {
+                logoPreview.style.setProperty('display', 'none', 'important');
+                logoPreview.classList.add('d-none');
+            }
+            if (logoPlaceholder) {
+                logoPlaceholder.style.setProperty('display', 'flex', 'important');
+                logoPlaceholder.classList.remove('d-none');
+            }
             if (window.lucide) lucide.createIcons();
         },
         showLogoImage(url) {
@@ -5429,18 +5871,31 @@
             const logoPlaceholder = document.getElementById('sa-di-logo-placeholder');
             if (logoPreview && url) {
                 logoPreview.src = url;
-                logoPreview.style.display = 'block';
+                logoPreview.style.setProperty('display', 'block', 'important');
+                logoPreview.classList.remove('d-none');
             }
-            if (logoPlaceholder) logoPlaceholder.style.display = 'none';
+            if (logoPlaceholder) {
+                logoPlaceholder.style.setProperty('display', 'none', 'important');
+                logoPlaceholder.classList.add('d-none');
+            }
         },
         getVal(id) { return document.getElementById('sa-' + id)?.value || ''; },
         applyBrandingToUI(ctx) {
             if (!ctx) return;
             const shortName = (ctx.software_short_name || 'QCMS').trim();
+            const softwareName = (ctx.software_name || 'QCMS Enterprise OS').trim();
+            const platformTitle = (ctx.platform_title || 'QCMS Quality Management System').trim();
+            const platformSub = (ctx.platform_subtitle || 'ENTERPRISE OS').trim();
+
+            if (softwareName) {
+                document.title = `${softwareName} - Super Admin`;
+            }
+
             if (window.QCMS && QCMS.user) {
-                QCMS.user.platform_software_name = ctx.software_name;
+                QCMS.user.platform_software_name = softwareName;
                 QCMS.user.platform_short_name = shortName;
-                QCMS.user.platform_title = ctx.platform_title;
+                QCMS.user.platform_title = platformTitle;
+                QCMS.user.platform_subtitle = platformSub;
                 QCMS.user.platform_logo_url = ctx.logo_url;
             }
 
@@ -5449,6 +5904,8 @@
                 if (uStr) {
                     const uObj = JSON.parse(uStr);
                     uObj.platform_short_name = shortName;
+                    uObj.platform_software_name = softwareName;
+                    uObj.platform_subtitle = platformSub;
                     const uJson = JSON.stringify(uObj);
                     if (sessionStorage.getItem('user')) sessionStorage.setItem('user', uJson);
                     if (localStorage.getItem('user')) localStorage.setItem('user', uJson);
@@ -5458,7 +5915,7 @@
             // Update DOM sidebar branding elements in real-time
             const sidebarBrand = document.querySelector('.sidebar-brand');
             if (sidebarBrand) {
-                const displaySub = ctx.platform_title ? ctx.platform_title.replace(shortName, '').trim() || 'Enterprise OS' : 'Enterprise OS';
+                const displaySub = platformSub || 'ENTERPRISE OS';
                 const logoUrl = ctx.logo_url;
 
                 let logoHtml = `<div class="brand-icon" style="background: var(--ds-accent);"><i data-lucide="shield-check" style="color:white;"></i></div>`;
@@ -5490,25 +5947,80 @@
             this.setValue('di-tmpl-watermark', tmpl.watermark_text || 'CONFIDENTIAL');
             this.setValue('di-tmpl-confidential', tmpl.confidential_text || 'STRICTLY CONFIDENTIAL');
         },
-        async saveSection(section) {
-            let payload = {};
-            if (section === 'platform') payload = { software_name: this.getVal('di-software-name'), software_short_name: this.getVal('di-software-short'), software_display_name: this.getVal('di-software-display'), platform_title: this.getVal('di-platform-title'), platform_subtitle: this.getVal('di-platform-subtitle'), version: this.getVal('di-version'), edition: this.getVal('di-edition'), default_currency: this.getVal('di-currency'), website: this.getVal('di-website'), support_portal: this.getVal('di-support-portal'), footer_copyright: this.getVal('di-footer-copyright') };
-            else if (section === 'company') payload = { legal_company_name: this.getVal('di-legal-name'), trading_name: this.getVal('di-trading-name'), gstin: this.getVal('di-gstin'), pan: this.getVal('di-pan'), cin: this.getVal('di-cin'), iso_certifications: this.getVal('di-iso') };
-            else if (section === 'addresses') payload = { registered_office: this.getVal('di-reg-office'), corporate_office: this.getVal('di-corp-office') };
-            else if (section === 'contacts') payload = { general_email: this.getVal('di-email-general'), support_email: this.getVal('di-email-support'), billing_email: this.getVal('di-email-billing'), general_phone: this.getVal('di-phone-general') };
+        async saveSection(section, btnEl) {
+            console.log('[DocIdentityManagerSA] saveSection triggered:', section, btnEl);
+            let origHtml = '';
+            if (btnEl && btnEl instanceof HTMLElement) {
+                btnEl.disabled = true;
+                origHtml = btnEl.innerHTML;
+                btnEl.innerHTML = `<i data-lucide="loader" class="spin me-1" style="width:13px;height:13px;"></i> Saving...`;
+                if (window.lucide) lucide.createIcons();
+            }
+
             try {
-                const res = await _diFetch('/api/document-identity/update', { method: 'POST', body: JSON.stringify({ section, payload }) });
-                const result = await res.json();
-                if (result.status === 'success') {
-                    api && api.showNotification ? api.showNotification(`Section '${section}' saved successfully!`, 'success') : alert('Saved!');
-                    if (result.branding_context) {
-                        this.applyBrandingToUI(result.branding_context);
-                    }
-                    this.init();
-                } else {
-                    api && api.showNotification ? api.showNotification('Save failed: ' + (result.message || 'Error'), 'error') : alert('Error: ' + result.message);
+                const getVal = (id) => window.DocIdentityManagerSA.getVal(id);
+                let payload = {};
+                if (section === 'platform') {
+                    payload = { 
+                        software_name: getVal('di-software-name'), 
+                        software_short_name: getVal('di-software-short'), 
+                        software_display_name: getVal('di-software-display'), 
+                        platform_title: getVal('di-platform-title'), 
+                        footer_copyright: getVal('di-footer-copyright') 
+                    };
+                } else if (section === 'company') {
+                    payload = { 
+                        legal_company_name: getVal('di-legal-name'), 
+                        trading_name: getVal('di-trading-name'), 
+                        gstin: getVal('di-gstin'), 
+                        pan: getVal('di-pan'), 
+                        cin: getVal('di-cin') 
+                    };
+                } else if (section === 'addresses') {
+                    payload = { 
+                        registered_office: getVal('di-reg-office'), 
+                        corporate_office: getVal('di-corp-office'), 
+                        country: getVal('di-country'), 
+                        state: getVal('di-state'), 
+                        city_pin: getVal('di-city-pin') 
+                    };
+                } else if (section === 'contacts') {
+                    payload = { 
+                        general_email: getVal('di-email-general'), 
+                        support_email: getVal('di-email-support'), 
+                        billing_email: getVal('di-email-billing'), 
+                        general_phone: getVal('di-phone-general'), 
+                        emergency_phone: getVal('di-phone-emergency') 
+                    };
                 }
-            } catch (err) { console.error('Save error:', err); }
+
+                console.log('[DocIdentityManagerSA] Sending POST /api/document-identity/update:', { section, payload });
+                const res = await _diFetch('/api/document-identity/update', { method: 'POST', body: JSON.stringify({ section, payload }) });
+                console.log('[DocIdentityManagerSA] Update HTTP Status:', res.status);
+                
+                const result = await res.json();
+                console.log('[DocIdentityManagerSA] Update Response:', result);
+
+                if (result.status === 'success') {
+                    const sectionTitles = { platform: 'Platform Identity', company: 'Company Information', addresses: 'Office Addresses', contacts: 'Contact Directory' };
+                    _diShowNotify(`${sectionTitles[section] || section} saved successfully!`, 'success');
+                    if (result.branding_context) {
+                        window.DocIdentityManagerSA.applyBrandingToUI(result.branding_context);
+                    }
+                    window.DocIdentityManagerSA.init();
+                } else {
+                    _diShowNotify('Save failed: ' + (result.message || result.error || 'Server error'), 'error');
+                }
+            } catch (err) {
+                console.error('[DocIdentityManagerSA] Save section error:', err);
+                _diShowNotify('Save failed: ' + (err.message || 'Network error.'), 'error');
+            } finally {
+                if (btnEl && btnEl instanceof HTMLElement) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = origHtml || 'Save';
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
         },
         async uploadPlatformLogo(inputEl) {
             if (!inputEl.files || !inputEl.files[0]) return;
@@ -5519,15 +6031,18 @@
                 const res = await _diFetch('/api/document-identity/upload-logo', { method: 'POST', body: formData });
                 const result = await res.json();
                 if (result.status === 'success') {
-                    api && api.showNotification ? api.showNotification(result.message, 'success') : alert('Uploaded!');
+                    _diShowNotify(result.message || 'Logo uploaded successfully!', 'success');
                     if (result.branding_context) {
-                        this.applyBrandingToUI(result.branding_context);
+                        window.DocIdentityManagerSA.applyBrandingToUI(result.branding_context);
                     }
-                    this.init();
+                    window.DocIdentityManagerSA.init();
                 } else {
-                    api && api.showNotification ? api.showNotification('Upload failed: ' + (result.message || 'Error'), 'error') : alert('Error: ' + result.message);
+                    _diShowNotify('Upload failed: ' + (result.message || result.error || 'Error'), 'error');
                 }
-            } catch (err) { console.error('Logo upload error:', err); }
+            } catch (err) {
+                console.error('[DocIdentityManagerSA] Logo upload error:', err);
+                _diShowNotify('Logo upload failed: Network or server error.', 'error');
+            }
         },
         async removePlatformLogo() {
             if (!confirm('Reset platform logo to default?')) return;
@@ -5535,31 +6050,68 @@
                 const res = await _diFetch('/api/document-identity/remove-logo', { method: 'POST' });
                 const result = await res.json();
                 if (result.status === 'success') {
-                    api && api.showNotification ? api.showNotification(result.message, 'success') : alert('Reset!');
+                    _diShowNotify(result.message || 'Logo reset to default!', 'success');
                     if (result.branding_context) {
-                        this.applyBrandingToUI(result.branding_context);
+                        window.DocIdentityManagerSA.applyBrandingToUI(result.branding_context);
                     }
-                    this.init();
+                    window.DocIdentityManagerSA.init();
                 } else {
-                    api && api.showNotification ? api.showNotification('Reset failed: ' + (result.message || 'Error'), 'error') : alert('Error: ' + result.message);
+                    _diShowNotify('Reset failed: ' + (result.message || result.error || 'Error'), 'error');
                 }
-            } catch (err) { console.error('Logo remove error:', err); }
+            } catch (err) {
+                console.error('[DocIdentityManagerSA] Logo remove error:', err);
+                _diShowNotify('Logo reset failed: Network or server error.', 'error');
+            }
         },
-        async saveTemplateForm() {
-            const template_key = document.getElementById('sa-di-template-selector')?.value;
-            if (!template_key) return;
-            const payload = { template_key, header_title: this.getVal('di-tmpl-title'), subtitle: this.getVal('di-tmpl-subtitle'), footer_text: this.getVal('di-tmpl-footer'), watermark_text: this.getVal('di-tmpl-watermark'), confidential_text: this.getVal('di-tmpl-confidential') };
+        async saveTemplateForm(btnEl) {
+            console.log('[DocIdentityManagerSA] saveTemplateForm triggered:', btnEl);
+            let origHtml = '';
+            if (btnEl && btnEl instanceof HTMLElement) {
+                btnEl.disabled = true;
+                origHtml = btnEl.innerHTML;
+                btnEl.innerHTML = `<i data-lucide="loader" class="spin me-1" style="width:13px;height:13px;"></i> Saving...`;
+                if (window.lucide) lucide.createIcons();
+            }
+
             try {
-                const res = await _diFetch('/api/document-identity/update', { method: 'POST', body: JSON.stringify({ section: 'template', payload }) });
-                const result = await res.json();
-                if (result.status === 'success') {
-                    api && api.showNotification ? api.showNotification(`Template '${template_key}' saved!`, 'success') : alert('Saved!');
-                    this.data = null; // force refresh on next loadTemplateForm
-                    this.init();
-                } else {
-                    api && api.showNotification ? api.showNotification('Save failed: ' + (result.message || 'Error'), 'error') : alert('Error: ' + result.message);
+                const getVal = (id) => window.DocIdentityManagerSA.getVal(id);
+                const template_key = document.getElementById('sa-di-template-selector')?.value;
+                if (!template_key) {
+                    _diShowNotify('Please select a valid document template.', 'error');
+                    return;
                 }
-            } catch (err) { console.error('Template save error:', err); }
+                const payload = { 
+                    template_key, 
+                    header_title: getVal('di-tmpl-title'), 
+                    subtitle: getVal('di-tmpl-subtitle'), 
+                    footer_text: getVal('di-tmpl-footer'), 
+                    watermark_text: getVal('di-tmpl-watermark'), 
+                    confidential_text: getVal('di-tmpl-confidential') 
+                };
+
+                console.log('[DocIdentityManagerSA] Sending POST /api/document-identity/update (template):', payload);
+                const res = await _diFetch('/api/document-identity/update', { method: 'POST', body: JSON.stringify({ section: 'template', payload }) });
+                console.log('[DocIdentityManagerSA] Template Update Status:', res.status);
+                const result = await res.json();
+                console.log('[DocIdentityManagerSA] Template Update Result:', result);
+
+                if (result.status === 'success') {
+                    _diShowNotify(`Template '${template_key}' saved successfully!`, 'success');
+                    window.DocIdentityManagerSA.data = null;
+                    window.DocIdentityManagerSA.init();
+                } else {
+                    _diShowNotify('Save failed: ' + (result.message || result.error || 'Error'), 'error');
+                }
+            } catch (err) {
+                console.error('[DocIdentityManagerSA] Template save error:', err);
+                _diShowNotify('Save failed: ' + (err.message || 'Network error.'), 'error');
+            } finally {
+                if (btnEl && btnEl instanceof HTMLElement) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = origHtml || 'Save Template Settings';
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
         },
         async openLivePreview(type) {
             // Auto-detect active section tab if type is not provided
@@ -5614,7 +6166,7 @@
     };
 
     // UsageExplorerSA — SA-scoped usage mapping table targeting sa-ue-* element IDs
-    const UsageExplorerSA = {
+    window.UsageExplorerSA = {
         records: [],
         async init() {
             try {
@@ -5668,6 +6220,17 @@
 
     // Auto-initialize when doc-identity view is navigated to
     document.addEventListener('DOMContentLoaded', () => {
+        if (window.SuperAdmin) {
+            window.SuperAdmin.DocIdentityManagerSA = window.DocIdentityManagerSA;
+            window.SuperAdmin.saveSection = (sec, btn) => {
+                if (sec === 'platform') return window.savePlatformIdentity(btn);
+                if (sec === 'company') return window.saveCompanyInfo(btn);
+                if (sec === 'addresses') return window.saveOfficeAddresses(btn);
+                if (sec === 'contacts') return window.saveContactDirectory(btn);
+                if (sec === 'template') return window.saveTemplateSettings(btn);
+            };
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('view') === 'doc-identity') {
             setTimeout(() => {

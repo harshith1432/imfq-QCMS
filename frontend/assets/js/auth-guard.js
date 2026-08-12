@@ -4,20 +4,41 @@
         || localStorage.getItem('access_token')
         || sessionStorage.getItem('access_token');
     const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+    function normalizeRole(role) {
+        if (!role) return null;
+        let roleStr = role;
+        if (typeof role === 'object') {
+            roleStr = role.name || role.role_name || role.role || '';
+        }
+        if (!roleStr || typeof roleStr !== 'string') return null;
+        const r = roleStr.trim().toLowerCase();
+        if (r === 'superadmin' || r === 'super admin' || r === 'super_admin') return 'SuperAdmin';
+        if (r === 'admin') return 'Admin';
+        if (r === 'team leader' || r === 'teamleader' || r === 'team_leader') return 'Team Leader';
+        if (r === 'team member' || r === 'teammember' || r === 'team_member') return 'Team Member';
+        if (r === 'facilitator') return 'Facilitator';
+        if (r === 'reviewer') return 'Reviewer';
+        if (r === 'ceo') return 'CEO';
+        return roleStr;
+    }
+
     let userRole = null;
 
     if (token) {
         try {
             if (userStr) {
                 const user = JSON.parse(userStr);
-                if (user && user.role) {
-                    userRole = user.role;
+                if (user) {
+                    const rawRole = user.role || user.role_name || (typeof user.role === 'object' ? (user.role.name || user.role.role_name) : null);
+                    if (rawRole) {
+                        userRole = normalizeRole(rawRole);
+                    }
                 }
             }
             if (!userRole && token.includes('.')) {
                 try {
                     const payload = JSON.parse(atob(token.split('.')[1]));
-                    if (payload.role) userRole = payload.role;
+                    if (payload.role) userRole = normalizeRole(payload.role);
                     else if (payload.sa_sub_role || window.location.pathname.includes('super-admin.html')) userRole = 'SuperAdmin';
                 } catch (_) {}
             }
@@ -41,8 +62,9 @@
                 if (data.maintenance_mode) {
                     let isSuperAdmin = false;
                     try {
-                        const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-                        if (user && user.role === 'SuperAdmin') {
+                        const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                        const role = normalizeRole(user?.role);
+                        if (role === 'SuperAdmin') {
                             isSuperAdmin = true;
                         }
                     } catch (e) {}
@@ -63,8 +85,9 @@
                     if (moduleCode && data.flags[moduleCode] === false) {
                         let isSuperAdmin = false;
                         try {
-                            const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-                            if (user && (user.role === 'SuperAdmin' || user.role === 'Admin')) isSuperAdmin = true;
+                            const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                            const role = normalizeRole(user?.role);
+                            if (role === 'SuperAdmin' || role === 'Admin') isSuperAdmin = true;
                         } catch (e) {}
 
                         if (!isSuperAdmin) {
@@ -317,12 +340,30 @@
     ];
 
     const isPublic = publicPages.includes(page) || path === '/' || path.endsWith('/');
-    const isAuthPage = ['login.html', 'index.html', 'dashboard.html'].includes(page) || path === '/' || path.endsWith('/');
+    const isAuthPage = page === 'login.html';
 
     if (!token && !isPublic) {
         console.log('Access denied. Redirecting to login...');
         window.location.replace('/auth/login.html');
         return;
+    }
+
+    // Check token expiration if JWT format
+    if (token && token.includes('.')) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.exp && payload.exp * 1000 < Date.now()) {
+                console.warn('[AuthGuard] Token expired. Clearing session and redirecting to login...');
+                sessionStorage.clear();
+                localStorage.removeItem('token');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user');
+                if (!isPublic) {
+                    window.location.replace('/auth/login.html');
+                    return;
+                }
+            }
+        } catch (e) {}
     }
 
     // ── Role-to-Dashboard mapping ──────────────────────────────────
@@ -349,6 +390,7 @@
         'users.html':              ['SuperAdmin', 'Admin', 'CEO'],
         'user-management.html':    ['SuperAdmin', 'Admin', 'CEO'],
         'departments.html':        ['SuperAdmin', 'Admin', 'CEO'],
+        'plants.html':             ['SuperAdmin', 'Admin', 'CEO'],
         'audit-logs.html':         ['SuperAdmin', 'Admin', 'CEO'],
         'audit-queue.html':        ['SuperAdmin', 'Admin', 'Reviewer', 'Facilitator', 'CEO'],
         'stage-template.html':     ['SuperAdmin', 'Admin', 'CEO'],
@@ -357,24 +399,37 @@
         'settings.html':           ['SuperAdmin', 'Admin', 'CEO', 'Team Leader', 'Team Member', 'Facilitator', 'Reviewer']
     };
 
-    if (token) {
-        if (isAuthPage) {
-            // Already logged in on a login/index page — redirect to role dashboard
-            console.log('Already logged in. Redirecting to role dashboard...');
+    if (isAuthPage) {
+        const urlParams = new URLSearchParams(window.location.search);
+        // Only auto-redirect if explicitly requested via ?auto=true
+        if (urlParams.get('auto') === 'true' && token) {
+            console.log('Auto-login requested. Redirecting to role dashboard...');
             redirectByRole(userRole);
-        } else if (userRole !== 'SuperAdmin' && restrictedPages[page]) {
-            // Page has explicit role restrictions — enforce them for non-SuperAdmins
-            const allowedRoles = restrictedPages[page];
-            if (!allowedRoles.includes(userRole)) {
-                console.warn(`[RBAC] Role "${userRole}" denied access to "${page}". Redirecting...`);
-                redirectByRole(userRole);
+        } else {
+            // When navigating to login.html directly or via Sign In link, clear any stale session so login form is displayed strictly
+            if (urlParams.get('logout') === 'true' || !urlParams.get('auto')) {
+                sessionStorage.clear();
+                localStorage.removeItem('token');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user');
             }
+        }
+    } else if (token && userRole !== 'SuperAdmin' && restrictedPages[page]) {
+        // Page has explicit role restrictions — enforce them for non-SuperAdmins
+        const allowedRoles = restrictedPages[page];
+        if (!userRole || !allowedRoles.includes(userRole)) {
+            console.warn(`[RBAC] Role "${userRole}" denied access to "${page}". Redirecting...`);
+            redirectByRole(userRole);
         }
     }
 
     function redirectByRole(role) {
-        const dashboard = dashboardMap[role] || '/dashboard/dashboard-team-member.html';
-        if (page !== dashboard.split('/').pop()) {
+        const normRole = normalizeRole(role);
+        const dashboard = dashboardMap[normRole] || dashboardMap[role] || '/dashboard/dashboard-team-member.html';
+        const targetPage = dashboard.split('/').pop().toLowerCase();
+        const currentPage = page.toLowerCase();
+        if (currentPage !== targetPage) {
+            console.warn(`[AuthGuard] Redirecting from "${currentPage}" to role dashboard "${targetPage}" for role:`, role);
             window.location.replace(dashboard);
         }
     }
@@ -384,20 +439,41 @@
         fetch('/api/auth/me', {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                console.warn('[Auth Check] Invalid or expired session. Clearing token and redirecting to login...');
+                sessionStorage.clear();
+                localStorage.removeItem('token');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user');
+                window.location.replace('/auth/login.html');
+                return null;
+            }
+            return res.json();
+        })
         .then(profile => {
             if (profile) {
-                if (profile.is_active === false) {
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', () => showDeactivatedAccountScreen(profile));
-                    } else {
-                        showDeactivatedAccountScreen(profile);
-                    }
-                } else if (profile.role_name !== 'SuperAdmin' && profile.subscription_status === 'Suspended') {
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', () => showSuspendedOrganizationScreen(profile));
-                    } else {
-                        showSuspendedOrganizationScreen(profile);
+                const normRole = normalizeRole(profile.role_name || profile.role || userRole);
+                const isSuperAdmin = normRole === 'SuperAdmin'
+                    || profile.role_name === 'SuperAdmin'
+                    || profile.role === 'SuperAdmin'
+                    || userRole === 'SuperAdmin'
+                    || page === 'super-admin.html'
+                    || window.location.pathname.includes('super-admin');
+
+                if (!isSuperAdmin) {
+                    if (profile.is_active === false) {
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', () => showDeactivatedAccountScreen(profile));
+                        } else {
+                            showDeactivatedAccountScreen(profile);
+                        }
+                    } else if (profile.subscription_status === 'Suspended') {
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', () => showSuspendedOrganizationScreen(profile));
+                        } else {
+                            showSuspendedOrganizationScreen(profile);
+                        }
                     }
                 }
             }
@@ -406,6 +482,10 @@
     }
 
     function showSuspendedOrganizationScreen(profile) {
+        const normRole = normalizeRole(profile?.role_name || profile?.role || userRole);
+        if (normRole === 'SuperAdmin' || profile?.role_name === 'SuperAdmin' || userRole === 'SuperAdmin' || page === 'super-admin.html' || window.location.pathname.includes('super-admin')) {
+            return;
+        }
         if (document.getElementById('q-suspended-wrapper')) return;
 
         // Freeze background body scrolling
@@ -680,6 +760,10 @@
     };
 
     function showDeactivatedAccountScreen(profile) {
+        const normRole = normalizeRole(profile?.role_name || profile?.role || userRole);
+        if (normRole === 'SuperAdmin' || profile?.role_name === 'SuperAdmin' || userRole === 'SuperAdmin' || page === 'super-admin.html' || window.location.pathname.includes('super-admin')) {
+            return;
+        }
         if (document.getElementById('q-deactivated-wrapper')) return;
 
         // Freeze background body scrolling & pointer events

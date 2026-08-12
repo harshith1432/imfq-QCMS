@@ -151,7 +151,22 @@
             <span></span>
         </div>
 
-        <div class="onboarding-card glass-card" style="padding: var(--ds-space-12); border-radius: var(--ds-radius-xl); border: 1px solid var(--ds-border-color); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px);">
+        <div id="disabledSignupBanner" class="onboarding-card glass-card text-center p-5 w-100" style="display: none; border-radius: var(--ds-radius-xl); border: 1px solid var(--ds-border-color); background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px);">
+            <div class="mb-4 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background: rgba(239, 68, 68, 0.1); color: #ef4444; margin: 0 auto;">
+                <i data-lucide="user-x" style="width: 36px; height: 36px;"></i>
+            </div>
+            <h2 class="fw-bold mb-3" style="color: var(--ds-text-main);">Self-Service Sign-Up Disabled</h2>
+            <p class="text-secondary mb-4 mx-auto" style="max-width: 520px; font-size: 1.05rem; line-height: 1.6;">
+                Self-service organization sign-up is currently disabled by the Super Admin. New organization accounts must be provisioned directly by system administration.
+            </p>
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="login.html" class="ds-btn ds-btn-primary px-4 py-2 text-decoration-none">
+                    <i data-lucide="arrow-left" class="me-2" style="width: 16px; height: 16px;"></i> Return to Sign In
+                </a>
+            </div>
+        </div>
+
+        <div class="onboarding-card glass-card" id="onboardingCard" style="padding: var(--ds-space-12); border-radius: var(--ds-radius-xl); border: 1px solid var(--ds-border-color); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px);">
             <form id="onboardingForm">
                 <!-- Step 1: Company Profile -->
                 <div class="form-step active" id="step1">
@@ -165,7 +180,7 @@
                         
                         <div class="col-md-6">
                             <label class="ds-label"><i data-lucide="factory" class="w-4 h-4 mr-2"></i> Industry</label>
-                            <select class="ds-input ds-select" id="industry">
+                            <select class="ds-input ds-select" id="industry" onchange="toggleOtherIndustry(this.value)">
                                 <option value="Manufacturing">Manufacturing</option>
                                 <option value="Healthcare">Healthcare</option>
                                 <option value="IT/Software">IT/Software</option>
@@ -174,6 +189,9 @@
                                 <option value="Education">Education</option>
                                 <option value="Other">Other</option>
                             </select>
+                            <div id="otherIndustryContainer" class="mt-2" style="display: none;">
+                                <input type="text" class="ds-input" id="other_industry" placeholder="Please specify your industry (e.g. Aerospace, Energy)...">
+                            </div>
                         </div>
                         
                         <div class="col-md-6">
@@ -205,7 +223,17 @@
                             </div>
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-md-6">
+                            <label class="ds-label"><i data-lucide="layers" class="w-4 h-4 mr-2"></i> Organization Scale</label>
+                            <select class="ds-input ds-select" id="org_scale">
+                                <option value="Micro">Micro Enterprise</option>
+                                <option value="Small" selected>Small Enterprise</option>
+                                <option value="Medium">Medium Enterprise</option>
+                                <option value="Large">Large Enterprise</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
                             <label class="ds-label"><i data-lucide="phone" class="w-4 h-4 mr-2"></i> Phone Number</label>
                             <input type="tel" class="ds-input" id="phone" placeholder="+91 00000 00000">
                         </div>
@@ -424,6 +452,35 @@
             }
         }
 
+        function toggleOtherIndustry(val) {
+            const container = document.getElementById('otherIndustryContainer');
+            if (container) {
+                container.style.display = val === 'Other' ? 'block' : 'none';
+                if (val === 'Other') {
+                    const otherInput = document.getElementById('other_industry');
+                    if (otherInput) otherInput.focus();
+                }
+            }
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                if (typeof api !== 'undefined') {
+                    const res = await api.get('/auth/registration-status');
+                    if (res && res.registration_open === false) {
+                        const card = document.getElementById('onboardingCard');
+                        const banner = document.getElementById('disabledSignupBanner');
+                        if (card) card.style.display = 'none';
+                        if (banner) banner.style.display = 'block';
+                        
+                        showError(res.message || "Self-service organization sign-up is currently disabled by the Super Admin.");
+                        document.querySelectorAll('#onboardingForm input, #onboardingForm select, #onboardingForm button').forEach(el => el.disabled = true);
+                        if (window.lucide) lucide.createIcons();
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not verify registration status:', e);
+            }
+        });
+
         document.getElementById('onboardingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -435,9 +492,14 @@
                 return;
             }
 
+            const selIndustry = document.getElementById('industry').value;
+            const customInd = document.getElementById('other_industry')?.value.trim();
+            const finalIndustry = (selIndustry === 'Other' && customInd) ? customInd : selIndustry;
+
             const payload = {
                 company_name: document.getElementById('company_name').value,
-                industry: document.getElementById('industry').value,
+                industry: finalIndustry,
+                org_scale: document.getElementById('org_scale')?.value || 'Small',
                 email: document.getElementById('email').value,
                 phone: document.getElementById('phone').value,
                 admin_name: document.getElementById('admin_name').value,
