@@ -141,11 +141,15 @@
     // When visiting register-org.html, immediately verify registration is open.
     // This fires from auth-guard.js (loaded in <head>) so it blocks before render.
     if (page === 'register-org.html') {
+        // Hide body until status is confirmed to prevent form flash
+        document.documentElement.style.visibility = 'hidden';
         fetch('/api/auth/registration-status')
             .then(r => r.json())
             .then(data => {
                 if (data && data.registration_open === false) {
-                    // Show disabled banner if registration is disabled by super admin
+                    // Permanently hide everything and show blocked message
+                    document.documentElement.style.visibility = 'visible';
+                    // Wait for DOM then show the disabled banner
                     const doBlock = () => {
                         const card   = document.getElementById('onboardingCard');
                         const banner = document.getElementById('disabledSignupBanner');
@@ -164,9 +168,31 @@
                     } else {
                         doBlock();
                     }
+                } else {
+                    document.documentElement.style.visibility = 'visible';
+                    const doUnblock = () => {
+                        const card   = document.getElementById('onboardingCard');
+                        const banner = document.getElementById('disabledSignupBanner');
+                        const footer = document.querySelector('.onboarding-footer');
+                        const errBanner = document.getElementById('errorMessage');
+                        if (card)   card.style.display   = 'block';
+                        if (footer) footer.style.display = 'block';
+                        if (banner) banner.style.display = 'none';
+                        if (errBanner) errBanner.style.display = 'none';
+                        const hdr = document.querySelector('.onboarding-header p');
+                        if (hdr) hdr.textContent = 'Create your organization account to get started.';
+                    };
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', doUnblock);
+                    } else {
+                        doUnblock();
+                    }
                 }
             })
-            .catch(() => {});
+            .catch(() => {
+                // On error, reveal page (backend will still enforce on submit)
+                document.documentElement.style.visibility = 'visible';
+            });
     }
 
     function showModuleDisabledScreen(moduleCode) {

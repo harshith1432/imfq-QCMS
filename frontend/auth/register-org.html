@@ -534,6 +534,17 @@
                             document.querySelectorAll('#onboardingForm input, #onboardingForm select, #onboardingForm button').forEach(el => el.disabled = true);
                             if (window.lucide) lucide.createIcons();
                             return;
+                        } else {
+                            const card = document.getElementById('onboardingCard');
+                            const banner = document.getElementById('disabledSignupBanner');
+                            const footer = document.querySelector('.onboarding-footer');
+                            const err = document.getElementById('errorMessage');
+                            if (card) card.style.display = 'block';
+                            if (footer) footer.style.display = 'block';
+                            if (banner) banner.style.display = 'none';
+                            if (err) err.style.display = 'none';
+                            const hdr = document.querySelector('.onboarding-header p');
+                            if (hdr) hdr.textContent = 'Create your organization account to get started.';
                         }
 
                         // Apply OTP verification flags dynamically
