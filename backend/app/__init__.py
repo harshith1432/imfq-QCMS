@@ -194,7 +194,7 @@ def create_app():
                     except Exception:
                         pass
                 from sqlalchemy import text
-            alter_statements = [
+                alter_statements = [
                 "ALTER TABLE company_information DROP COLUMN IF EXISTS iso_certifications;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS org_scale VARCHAR(50) DEFAULT 'Small';",
                 "CREATE TABLE IF NOT EXISTS plants (id SERIAL PRIMARY KEY, org_id INTEGER NOT NULL REFERENCES organizations(id), name VARCHAR(100) NOT NULL, code VARCHAR(50), location VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
@@ -320,454 +320,452 @@ def create_app():
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS require_email_otp BOOLEAN DEFAULT TRUE;",
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS require_phone_otp BOOLEAN DEFAULT FALSE;",
                 "CREATE TABLE IF NOT EXISTS phone_verifications (id SERIAL PRIMARY KEY, phone VARCHAR(50) UNIQUE NOT NULL, otp VARCHAR(6) NOT NULL, is_verified BOOLEAN DEFAULT FALSE, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS security_settings JSONB;"
-            ]
-            for statement in alter_statements:
-                try:
-                    db.session.execute(text(statement))
+                ]
+                for statement in alter_statements:
+                    try:
+                        db.session.execute(text(statement))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                        # Try fallback statement without IF NOT EXISTS if database is SQLite
+                        if "IF NOT EXISTS" in statement:
+                            fallback = statement.replace("IF NOT EXISTS ", "")
+                            if "JSONB" in fallback:
+                                fallback = fallback.replace("JSONB", "JSON")
+                            try:
+                                db.session.execute(text(fallback))
+                                db.session.commit()
+                            except Exception:
+                                db.session.rollback()
+            
+                from .infrastructure.database.models.models import (
+                    Role, PlatformSettings, User, Organization, UserCustomField,
+                    SaaSPlan, SaaSPlanPricing, SaaSPlanLimits, SaaSPlanModules, SaaSPlanAnalytics,
+                    EmployeePoints, EmployeeLeaderboard
+                )
+                orgs = Organization.query.all()
+                for org in orgs:
+                    system_fields = [
+                        ('username', 'User', True, True, 'both'),
+                        ('role', 'User Role', True, True, 'both'),
+                        ('department', 'Department', True, True, 'both'),
+                        ('email', 'Email Address', True, True, 'email')
+                    ]
+                    for key, name, req, sys, dtype in system_fields:
+                        if not UserCustomField.query.filter_by(org_id=org.id, field_key=key).first():
+                            db.session.add(UserCustomField(org_id=org.id, field_key=key, display_name=name, is_required=req, is_system=sys, data_type=dtype))
+                db.session.commit()
+                roles = ['SuperAdmin', 'Admin', 'Reviewer', 'Facilitator', 'Team Leader', 'Team Member', 'CEO']
+                for r_name in roles:
+                    if not Role.query.filter_by(name=r_name).first():
+                        db.session.add(Role(name=r_name))
+            
+                # Seed Platform Settings
+                ps = PlatformSettings.query.first()
+                if not ps:
+                    ps = PlatformSettings()
+                    db.session.add(ps)
                     db.session.commit()
-                except Exception:
-                    db.session.rollback()
-                    # Try fallback statement without IF NOT EXISTS if database is SQLite
-                    if "IF NOT EXISTS" in statement:
-                        fallback = statement.replace("IF NOT EXISTS ", "")
-                        if "JSONB" in fallback:
-                            fallback = fallback.replace("JSONB", "JSON")
-                        try:
-                            db.session.execute(text(fallback))
-                            db.session.commit()
-                        except Exception:
-                            db.session.rollback()
             
-            from .infrastructure.database.models.models import (
-                Role, PlatformSettings, User, Organization, UserCustomField,
-                SaaSPlan, SaaSPlanPricing, SaaSPlanLimits, SaaSPlanModules, SaaSPlanAnalytics,
-                EmployeePoints, EmployeeLeaderboard
-            )
-            orgs = Organization.query.all()
-            for org in orgs:
-                system_fields = [
-                    ('username', 'User', True, True, 'both'),
-                    ('role', 'User Role', True, True, 'both'),
-                    ('department', 'Department', True, True, 'both'),
-                    ('email', 'Email Address', True, True, 'email')
+                # Seed Default Feature Modules & Child Features Hierarchy
+                from .infrastructure.database.models.models import Module, FeatureCategory
+            
+                # 1. Categories
+                if not FeatureCategory.query.first():
+                    cats = [
+                        {"name": "Core", "code": "core", "icon": "folder", "order": 1},
+                        {"name": "Quality", "code": "quality", "icon": "wrench", "order": 2},
+                        {"name": "Reports", "code": "reports", "icon": "file-text", "order": 3},
+                        {"name": "Analytics", "code": "analytics", "icon": "bar-chart-3", "order": 4},
+                        {"name": "AI", "code": "ai", "icon": "bot", "order": 5},
+                        {"name": "Integration", "code": "integration", "icon": "code-2", "order": 6},
+                        {"name": "Support", "code": "support", "icon": "help-circle", "order": 7},
+                        {"name": "Governance", "code": "governance", "icon": "shield-check", "order": 8},
+                        {"name": "Communication", "code": "communication", "icon": "bell", "order": 9},
+                        {"name": "IAM", "code": "iam", "icon": "users", "order": 10},
+                        {"name": "Customization", "code": "customization", "icon": "palette", "order": 11},
+                    ]
+                    for c in cats:
+                        db.session.add(FeatureCategory(name=c['name'], code=c['code'], icon=c['icon'], display_order=c['order']))
+                    db.session.commit()
+
+                # 2. Parent & Child Modules Hierarchy
+                hierarchy_modules = [
+                    # PARENT: Projects
+                    {
+                        "name": "Projects", "code": "projects", "category": "Core", "icon": "folder-git2", "color": "#3b82f6", "display_order": 1, "navigation_route": "/projects", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Core project management workspace",
+                        "children": [
+                            {"name": "Projects Repository", "code": "projects.repository", "navigation_route": "/projects/repository"},
+                            {"name": "Create Project", "code": "projects.create"},
+                            {"name": "Edit Project", "code": "projects.edit"},
+                            {"name": "Delete Project", "code": "projects.delete"},
+                            {"name": "Archive Project", "code": "projects.archive"},
+                            {"name": "Team Members", "code": "projects.team_members"},
+                            {"name": "Meetings Log", "code": "projects.meetings"},
+                            {"name": "Stage Gate Reviews", "code": "projects.reviews"},
+                            {"name": "Project Attachments", "code": "projects.attachments"},
+                            {"name": "Timeline & Gantt", "code": "projects.timeline"},
+                            {"name": "Export Projects", "code": "projects.export"},
+                            {"name": "Import Projects", "code": "projects.import"}
+                        ]
+                    },
+                    # PARENT: QC Story Methodology
+                    {
+                        "name": "QC Story Methodology", "code": "qc_story", "category": "Quality", "icon": "award", "color": "#ec4899", "display_order": 2, "navigation_route": "/projects/workspace", "status": "Active", "version": "1.0.0", "system_module": True, "description": "8-Stage Quality Circle Improvement Methodology",
+                        "children": [
+                            {"name": "Stage 1: Problem Definition", "code": "qc_story.stage1"},
+                            {"name": "Stage 2: Observation & Data Collection", "code": "qc_story.stage2"},
+                            {"name": "Stage 3: Cause Analysis", "code": "qc_story.stage3"},
+                            {"name": "Stage 4: Root Cause Verification", "code": "qc_story.stage4"},
+                            {"name": "Stage 5: Countermeasure Planning", "code": "qc_story.stage5"},
+                            {"name": "Stage 6: Implementation & Change", "code": "qc_story.stage6"},
+                            {"name": "Stage 7: Performance Verification", "code": "qc_story.stage7"},
+                            {"name": "Stage 8: Standardization & Closure", "code": "qc_story.stage8"}
+                        ]
+                    },
+                    # PARENT: 7 QC Tools
+                    {
+                        "name": "7 QC Tools", "code": "qc_tools", "category": "Quality", "icon": "wrench", "color": "#f43f5e", "display_order": 3, "navigation_route": "/qc-tools", "status": "Active", "version": "1.1.0", "system_module": True, "description": "Interactive statistical 7 QC tools suite",
+                        "children": [
+                            {"name": "Check Sheet", "code": "qc_tools.checksheet"},
+                            {"name": "Pareto Chart (80/20)", "code": "qc_tools.pareto"},
+                            {"name": "Fishbone (Ishikawa 6M)", "code": "qc_tools.fishbone"},
+                            {"name": "Scatter Diagram & Correlation", "code": "qc_tools.scatter"},
+                            {"name": "Stratification Chart", "code": "qc_tools.stratification"},
+                            {"name": "Process Map & Flowchart", "code": "qc_tools.process_map"},
+                            {"name": "Control Chart (UCL/LCL)", "code": "qc_tools.control_chart"}
+                        ]
+                    },
+                    # PARENT: SOP Management
+                    {
+                        "name": "SOP Management", "code": "sop", "category": "Quality", "icon": "book-open", "color": "#f59e0b", "display_order": 4, "navigation_route": "/compliance/sop", "status": "Active", "version": "1.0.1", "system_module": False, "description": "Standard Operating Procedure lifecycle management",
+                        "children": [
+                            {"name": "SOP Repository", "code": "sop.repository"},
+                            {"name": "Create SOP", "code": "sop.create"},
+                            {"name": "Edit SOP", "code": "sop.edit"},
+                            {"name": "SOP Approvals", "code": "sop.approvals"},
+                            {"name": "SOP Version Control", "code": "sop.version_control"},
+                            {"name": "Archive SOP", "code": "sop.archive"},
+                            {"name": "SOP PDF Export", "code": "sop.pdf"},
+                            {"name": "SOP Comments", "code": "sop.comments"}
+                        ]
+                    },
+                    # PARENT: Training & Assessment
+                    {
+                        "name": "Employee Training", "code": "training", "category": "Quality", "icon": "graduation-cap", "color": "#8b5cf6", "display_order": 5, "navigation_route": "/training", "status": "Active", "version": "1.0.0", "system_module": False, "description": "SOP reading, assessment and certificate engine",
+                        "children": [
+                            {"name": "Assign Training", "code": "training.assign"},
+                            {"name": "Online Assessment", "code": "training.assessment"},
+                            {"name": "Reading Progress Tracker", "code": "training.reading_progress"},
+                            {"name": "Training Certificates", "code": "training.certificates"},
+                            {"name": "Training Audit Reports", "code": "training.reports"}
+                        ]
+                    },
+                    # PARENT: Reports Engine
+                    {
+                        "name": "Reports Engine", "code": "reports", "category": "Reports", "icon": "file-bar-chart", "color": "#10b981", "display_order": 6, "navigation_route": "/reports", "status": "Active", "version": "1.0.0", "system_module": True, "description": "PDF, Excel, CSV reports export engine",
+                        "children": [
+                            {"name": "PDF Export", "code": "reports.pdf"},
+                            {"name": "Excel Export", "code": "reports.excel"},
+                            {"name": "CSV Export", "code": "reports.csv"},
+                            {"name": "Print Support", "code": "reports.print"},
+                            {"name": "Custom Report Builder", "code": "reports.custom"},
+                            {"name": "Scheduled Reports", "code": "reports.scheduled"}
+                        ]
+                    },
+                    # PARENT: Analytics Platform
+                    {
+                        "name": "Analytics Platform", "code": "analytics", "category": "Analytics", "icon": "bar-chart-3", "color": "#6366f1", "display_order": 7, "navigation_route": "/analytics", "status": "Active", "version": "1.2.0", "system_module": False, "description": "Interactive KPI visualization and trends",
+                        "children": [
+                            {"name": "Analytics Dashboard", "code": "analytics.dashboard"},
+                            {"name": "Project Analytics", "code": "analytics.project"},
+                            {"name": "Department Analytics", "code": "analytics.department"},
+                            {"name": "Executive Dashboard", "code": "analytics.executive"},
+                            {"name": "KPI Tracker", "code": "analytics.kpi"},
+                            {"name": "Performance Trends", "code": "analytics.trends"}
+                        ]
+                    },
+                    # PARENT: Notifications & Communication
+                    {
+                        "name": "Notifications", "code": "notifications", "category": "Communication", "icon": "bell", "color": "#eab308", "display_order": 8, "navigation_route": "/announcements", "status": "Active", "version": "1.0.0", "system_module": False, "description": "Multi-channel notification broadcasts",
+                        "children": [
+                            {"name": "Announcements", "code": "notifications.announcements"},
+                            {"name": "Email Notifications", "code": "notifications.email"},
+                            {"name": "SMS Notifications", "code": "notifications.sms"},
+                            {"name": "In-App Alerts", "code": "notifications.in_app"},
+                            {"name": "Push Notifications", "code": "notifications.push"}
+                        ]
+                    },
+                    # PARENT: Support Desk
+                    {
+                        "name": "Support Desk", "code": "support", "category": "Support", "icon": "help-circle", "color": "#06b6d4", "display_order": 9, "navigation_route": "/support", "status": "Active", "version": "1.0.0", "system_module": False, "description": "Ticketing system and SLA tracking",
+                        "children": [
+                            {"name": "Support Tickets", "code": "support.tickets"},
+                            {"name": "SLA Management", "code": "support.sla"},
+                            {"name": "Knowledge Base", "code": "support.knowledge_base"},
+                            {"name": "Satisfaction Ratings", "code": "support.ratings"},
+                            {"name": "Ticket Comments", "code": "support.comments"}
+                        ]
+                    },
+                    # PARENT: Compliance Standards
+                    {
+                        "name": "Compliance Standards", "code": "compliance", "category": "Governance", "icon": "shield-check", "color": "#059669", "display_order": 10, "navigation_route": "/settings/compliance", "status": "Active", "version": "1.0.0", "system_module": False, "description": "ISO 9001, 14001, 45001 & IATF 16949 standards",
+                        "children": [
+                            {"name": "ISO 9001:2015", "code": "compliance.iso9001"},
+                            {"name": "ISO 14001:2015", "code": "compliance.iso14001"},
+                            {"name": "ISO 45001:2018", "code": "compliance.iso45001"},
+                            {"name": "IATF 16949:2016", "code": "compliance.iatf"}
+                        ]
+                    },
+                    # PARENT: AI Assistant
+                    {
+                        "name": "AI Assistant & RAG", "code": "ai", "category": "AI", "icon": "bot", "color": "#8b5cf6", "display_order": 11, "navigation_route": "/ai/assistant", "status": "Beta", "version": "0.9.0", "premium_feature": True, "ai_enabled": True, "beta_feature": True, "system_module": False, "description": "AI-powered RAG document search & root cause recommendations",
+                        "children": [
+                            {"name": "AI Assistant Chat", "code": "ai.chat"},
+                            {"name": "AI Suggestions", "code": "ai.suggestions"},
+                            {"name": "AI Reports Generator", "code": "ai.reports"},
+                            {"name": "AI Root Cause Predictor", "code": "ai.root_cause"},
+                            {"name": "AI Semantic Knowledge Search", "code": "ai.knowledge_search"}
+                        ]
+                    },
+                    # PARENT: Integration Hub
+                    {
+                        "name": "Integration Hub", "code": "integrations", "category": "Integration", "icon": "code-2", "color": "#14b8a6", "display_order": 12, "navigation_route": "/settings/api", "status": "Active", "version": "2.0.0", "premium_feature": True, "system_module": False, "description": "REST API Key management, Webhooks & Developer Portal",
+                        "children": [
+                            {"name": "API Keys Management", "code": "integrations.api_keys"},
+                            {"name": "Webhooks Subscriptions", "code": "integrations.webhooks"},
+                            {"name": "Inbound Idea Import API", "code": "integrations.idea_import"},
+                            {"name": "Developer Portal", "code": "integrations.developer_portal"},
+                            {"name": "SDK Code Generator", "code": "integrations.sdk"}
+                        ]
+                    },
+                    # PARENT: User Management
+                    {
+                        "name": "User Management", "code": "users", "category": "IAM", "icon": "users", "color": "#3b82f6", "display_order": 13, "navigation_route": "/admin/users", "status": "Active", "version": "1.0.0", "system_module": True, "description": "User CRUD, invitation & access control",
+                        "children": [
+                            {"name": "View Users", "code": "users.view"},
+                            {"name": "Create User", "code": "users.create"},
+                            {"name": "Edit User", "code": "users.edit"},
+                            {"name": "Delete User", "code": "users.delete"},
+                            {"name": "Invite User", "code": "users.invite"},
+                            {"name": "Suspend User", "code": "users.suspend"},
+                            {"name": "Import Users", "code": "users.import"},
+                            {"name": "Export Users", "code": "users.export"}
+                        ]
+                    },
+                    # PARENT: Departments
+                    {
+                        "name": "Departments", "code": "departments", "category": "IAM", "icon": "building", "color": "#64748b", "display_order": 14, "navigation_route": "/admin/departments", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Department organizational structure",
+                        "children": [
+                            {"name": "View Departments", "code": "departments.view"},
+                            {"name": "Create Department", "code": "departments.create"},
+                            {"name": "Edit Department", "code": "departments.edit"},
+                            {"name": "Delete Department", "code": "departments.delete"}
+                        ]
+                    },
+                    # PARENT: Roles & Permissions
+                    {
+                        "name": "Roles & Permissions", "code": "roles", "category": "IAM", "icon": "shield", "color": "#475569", "display_order": 15, "navigation_route": "/admin/roles", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Role definitions and action permissions",
+                        "children": [
+                            {"name": "View Roles", "code": "roles.view"},
+                            {"name": "Create Role", "code": "roles.create"},
+                            {"name": "Edit Role", "code": "roles.edit"},
+                            {"name": "Delete Role", "code": "roles.delete"},
+                            {"name": "Role Action Permissions", "code": "roles.permissions"}
+                        ]
+                    },
+                    # PARENT: Organization Management
+                    {
+                        "name": "Organization Management", "code": "organization", "category": "Core", "icon": "globe", "color": "#2563eb", "display_order": 16, "navigation_route": "/admin/organization", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Company profile, plants and business units",
+                        "children": [
+                            {"name": "Company Profile", "code": "organization.profile"},
+                            {"name": "Manufacturing Plants", "code": "organization.plants"},
+                            {"name": "Company Branches", "code": "organization.branches"},
+                            {"name": "Business Units", "code": "organization.business_units"}
+                        ]
+                    },
+                    # PARENT: Global Search
+                    {
+                        "name": "Global Search", "code": "search", "category": "Core", "icon": "search", "color": "#0284c7", "display_order": 17, "navigation_route": "/search", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Universal search across projects and SOPs",
+                        "children": [
+                            {"name": "Global Search Bar", "code": "search.global"},
+                            {"name": "Search Projects", "code": "search.projects"},
+                            {"name": "Search SOPs", "code": "search.sops"}
+                        ]
+                    },
+                    # PARENT: File Management
+                    {
+                        "name": "File Management", "code": "files", "category": "Core", "icon": "paperclip", "color": "#7c3aed", "display_order": 18, "navigation_route": "/files", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Document uploads and version history",
+                        "children": [
+                            {"name": "Upload Files", "code": "files.upload"},
+                            {"name": "Download Files", "code": "files.download"},
+                            {"name": "Delete Files", "code": "files.delete"},
+                            {"name": "File Version History", "code": "files.versions"}
+                        ]
+                    },
+                    # PARENT: Workflow Engine
+                    {
+                        "name": "Workflow Engine", "code": "workflow", "category": "Core", "icon": "git-branch", "color": "#d97706", "display_order": 19, "navigation_route": "/workflow", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Approval routing and escalation rules",
+                        "children": [
+                            {"name": "Approval Workflows", "code": "workflow.approvals"},
+                            {"name": "Review Workflows", "code": "workflow.reviews"},
+                            {"name": "Escalation Rules", "code": "workflow.escalation"},
+                            {"name": "Auto Approval Rules", "code": "workflow.auto_approval"}
+                        ]
+                    },
+                    # PARENT: Branding
+                    {
+                        "name": "White-Label Branding", "code": "branding", "category": "Customization", "icon": "palette", "color": "#06b6d4", "display_order": 20, "navigation_route": "/settings/branding", "status": "Active", "version": "1.0.0", "premium_feature": True, "system_module": False, "description": "Custom color branding, logo and domain routing",
+                        "children": [
+                            {"name": "Company Logo Upload", "code": "branding.logo"},
+                            {"name": "Color Theme Customizer", "code": "branding.theme"},
+                            {"name": "Branding Details", "code": "branding.company_details"}
+                        ]
+                    },
+                    # PARENT: Localization
+                    {
+                        "name": "Localization & i18n", "code": "localization", "category": "Customization", "icon": "languages", "color": "#14b8a6", "display_order": 21, "navigation_route": "/settings/localization", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Multi-language dictionary and timezone formatting",
+                        "children": [
+                            {"name": "Language Selection", "code": "localization.languages"},
+                            {"name": "Date Formatting", "code": "localization.date_format"},
+                            {"name": "Timezone Configuration", "code": "localization.timezone"}
+                        ]
+                    },
+                    # PARENT: Audit Logs
+                    {
+                        "name": "Audit Logging", "code": "audit_logs", "category": "Governance", "icon": "file-text", "color": "#475569", "display_order": 22, "navigation_route": "/admin/audit-logs", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Immutable security and activity audit trails",
+                        "children": [
+                            {"name": "User Activity Trail", "code": "audit_logs.user_activity"},
+                            {"name": "Security Audit Logs", "code": "audit_logs.security"},
+                            {"name": "Export Audit Logs", "code": "audit_logs.export"}
+                        ]
+                    }
                 ]
-                for key, name, req, sys, dtype in system_fields:
-                    if not UserCustomField.query.filter_by(org_id=org.id, field_key=key).first():
-                        db.session.add(UserCustomField(org_id=org.id, field_key=key, display_name=name, is_required=req, is_system=sys, data_type=dtype))
-            db.session.commit()
-            roles = ['SuperAdmin', 'Admin', 'Reviewer', 'Facilitator', 'Team Leader', 'Team Member', 'CEO']
-            for r_name in roles:
-                if not Role.query.filter_by(name=r_name).first():
-                    db.session.add(Role(name=r_name))
-            
-            # Seed Platform Settings
-            ps = PlatformSettings.query.first()
-            if not ps:
-                ps = PlatformSettings()
-                db.session.add(ps)
-                db.session.commit()
-            
-            # Seed Default Feature Modules & Child Features Hierarchy
-            from .infrastructure.database.models.models import Module, FeatureCategory
-            
-            # 1. Categories
-            if not FeatureCategory.query.first():
-                cats = [
-                    {"name": "Core", "code": "core", "icon": "folder", "order": 1},
-                    {"name": "Quality", "code": "quality", "icon": "wrench", "order": 2},
-                    {"name": "Reports", "code": "reports", "icon": "file-text", "order": 3},
-                    {"name": "Analytics", "code": "analytics", "icon": "bar-chart-3", "order": 4},
-                    {"name": "AI", "code": "ai", "icon": "bot", "order": 5},
-                    {"name": "Integration", "code": "integration", "icon": "code-2", "order": 6},
-                    {"name": "Support", "code": "support", "icon": "help-circle", "order": 7},
-                    {"name": "Governance", "code": "governance", "icon": "shield-check", "order": 8},
-                    {"name": "Communication", "code": "communication", "icon": "bell", "order": 9},
-                    {"name": "IAM", "code": "iam", "icon": "users", "order": 10},
-                    {"name": "Customization", "code": "customization", "icon": "palette", "order": 11},
-                ]
-                for c in cats:
-                    db.session.add(FeatureCategory(name=c['name'], code=c['code'], icon=c['icon'], display_order=c['order']))
-                db.session.commit()
 
-            # 2. Parent & Child Modules Hierarchy
-            hierarchy_modules = [
-                # PARENT: Projects
-                {
-                    "name": "Projects", "code": "projects", "category": "Core", "icon": "folder-git2", "color": "#3b82f6", "display_order": 1, "navigation_route": "/projects", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Core project management workspace",
-                    "children": [
-                        {"name": "Projects Repository", "code": "projects.repository", "navigation_route": "/projects/repository"},
-                        {"name": "Create Project", "code": "projects.create"},
-                        {"name": "Edit Project", "code": "projects.edit"},
-                        {"name": "Delete Project", "code": "projects.delete"},
-                        {"name": "Archive Project", "code": "projects.archive"},
-                        {"name": "Team Members", "code": "projects.team_members"},
-                        {"name": "Meetings Log", "code": "projects.meetings"},
-                        {"name": "Stage Gate Reviews", "code": "projects.reviews"},
-                        {"name": "Project Attachments", "code": "projects.attachments"},
-                        {"name": "Timeline & Gantt", "code": "projects.timeline"},
-                        {"name": "Export Projects", "code": "projects.export"},
-                        {"name": "Import Projects", "code": "projects.import"}
-                    ]
-                },
-                # PARENT: QC Story Methodology
-                {
-                    "name": "QC Story Methodology", "code": "qc_story", "category": "Quality", "icon": "award", "color": "#ec4899", "display_order": 2, "navigation_route": "/projects/workspace", "status": "Active", "version": "1.0.0", "system_module": True, "description": "8-Stage Quality Circle Improvement Methodology",
-                    "children": [
-                        {"name": "Stage 1: Problem Definition", "code": "qc_story.stage1"},
-                        {"name": "Stage 2: Observation & Data Collection", "code": "qc_story.stage2"},
-                        {"name": "Stage 3: Cause Analysis", "code": "qc_story.stage3"},
-                        {"name": "Stage 4: Root Cause Verification", "code": "qc_story.stage4"},
-                        {"name": "Stage 5: Countermeasure Planning", "code": "qc_story.stage5"},
-                        {"name": "Stage 6: Implementation & Change", "code": "qc_story.stage6"},
-                        {"name": "Stage 7: Performance Verification", "code": "qc_story.stage7"},
-                        {"name": "Stage 8: Standardization & Closure", "code": "qc_story.stage8"}
-                    ]
-                },
-                # PARENT: 7 QC Tools
-                {
-                    "name": "7 QC Tools", "code": "qc_tools", "category": "Quality", "icon": "wrench", "color": "#f43f5e", "display_order": 3, "navigation_route": "/qc-tools", "status": "Active", "version": "1.1.0", "system_module": True, "description": "Interactive statistical 7 QC tools suite",
-                    "children": [
-                        {"name": "Check Sheet", "code": "qc_tools.checksheet"},
-                        {"name": "Pareto Chart (80/20)", "code": "qc_tools.pareto"},
-                        {"name": "Fishbone (Ishikawa 6M)", "code": "qc_tools.fishbone"},
-                        {"name": "Scatter Diagram & Correlation", "code": "qc_tools.scatter"},
-                        {"name": "Stratification Chart", "code": "qc_tools.stratification"},
-                        {"name": "Process Map & Flowchart", "code": "qc_tools.process_map"},
-                        {"name": "Control Chart (UCL/LCL)", "code": "qc_tools.control_chart"}
-                    ]
-                },
-                # PARENT: SOP Management
-                {
-                    "name": "SOP Management", "code": "sop", "category": "Quality", "icon": "book-open", "color": "#f59e0b", "display_order": 4, "navigation_route": "/compliance/sop", "status": "Active", "version": "1.0.1", "system_module": False, "description": "Standard Operating Procedure lifecycle management",
-                    "children": [
-                        {"name": "SOP Repository", "code": "sop.repository"},
-                        {"name": "Create SOP", "code": "sop.create"},
-                        {"name": "Edit SOP", "code": "sop.edit"},
-                        {"name": "SOP Approvals", "code": "sop.approvals"},
-                        {"name": "SOP Version Control", "code": "sop.version_control"},
-                        {"name": "Archive SOP", "code": "sop.archive"},
-                        {"name": "SOP PDF Export", "code": "sop.pdf"},
-                        {"name": "SOP Comments", "code": "sop.comments"}
-                    ]
-                },
-                # PARENT: Training & Assessment
-                {
-                    "name": "Employee Training", "code": "training", "category": "Quality", "icon": "graduation-cap", "color": "#8b5cf6", "display_order": 5, "navigation_route": "/training", "status": "Active", "version": "1.0.0", "system_module": False, "description": "SOP reading, assessment and certificate engine",
-                    "children": [
-                        {"name": "Assign Training", "code": "training.assign"},
-                        {"name": "Online Assessment", "code": "training.assessment"},
-                        {"name": "Reading Progress Tracker", "code": "training.reading_progress"},
-                        {"name": "Training Certificates", "code": "training.certificates"},
-                        {"name": "Training Audit Reports", "code": "training.reports"}
-                    ]
-                },
-                # PARENT: Reports Engine
-                {
-                    "name": "Reports Engine", "code": "reports", "category": "Reports", "icon": "file-bar-chart", "color": "#10b981", "display_order": 6, "navigation_route": "/reports", "status": "Active", "version": "1.0.0", "system_module": True, "description": "PDF, Excel, CSV reports export engine",
-                    "children": [
-                        {"name": "PDF Export", "code": "reports.pdf"},
-                        {"name": "Excel Export", "code": "reports.excel"},
-                        {"name": "CSV Export", "code": "reports.csv"},
-                        {"name": "Print Support", "code": "reports.print"},
-                        {"name": "Custom Report Builder", "code": "reports.custom"},
-                        {"name": "Scheduled Reports", "code": "reports.scheduled"}
-                    ]
-                },
-                # PARENT: Analytics Platform
-                {
-                    "name": "Analytics Platform", "code": "analytics", "category": "Analytics", "icon": "bar-chart-3", "color": "#6366f1", "display_order": 7, "navigation_route": "/analytics", "status": "Active", "version": "1.2.0", "system_module": False, "description": "Interactive KPI visualization and trends",
-                    "children": [
-                        {"name": "Analytics Dashboard", "code": "analytics.dashboard"},
-                        {"name": "Project Analytics", "code": "analytics.project"},
-                        {"name": "Department Analytics", "code": "analytics.department"},
-                        {"name": "Executive Dashboard", "code": "analytics.executive"},
-                        {"name": "KPI Tracker", "code": "analytics.kpi"},
-                        {"name": "Performance Trends", "code": "analytics.trends"}
-                    ]
-                },
-                # PARENT: Notifications & Communication
-                {
-                    "name": "Notifications", "code": "notifications", "category": "Communication", "icon": "bell", "color": "#eab308", "display_order": 8, "navigation_route": "/announcements", "status": "Active", "version": "1.0.0", "system_module": False, "description": "Multi-channel notification broadcasts",
-                    "children": [
-                        {"name": "Announcements", "code": "notifications.announcements"},
-                        {"name": "Email Notifications", "code": "notifications.email"},
-                        {"name": "SMS Notifications", "code": "notifications.sms"},
-                        {"name": "In-App Alerts", "code": "notifications.in_app"},
-                        {"name": "Push Notifications", "code": "notifications.push"}
-                    ]
-                },
-                # PARENT: Support Desk
-                {
-                    "name": "Support Desk", "code": "support", "category": "Support", "icon": "help-circle", "color": "#06b6d4", "display_order": 9, "navigation_route": "/support", "status": "Active", "version": "1.0.0", "system_module": False, "description": "Ticketing system and SLA tracking",
-                    "children": [
-                        {"name": "Support Tickets", "code": "support.tickets"},
-                        {"name": "SLA Management", "code": "support.sla"},
-                        {"name": "Knowledge Base", "code": "support.knowledge_base"},
-                        {"name": "Satisfaction Ratings", "code": "support.ratings"},
-                        {"name": "Ticket Comments", "code": "support.comments"}
-                    ]
-                },
-                # PARENT: Compliance Standards
-                {
-                    "name": "Compliance Standards", "code": "compliance", "category": "Governance", "icon": "shield-check", "color": "#059669", "display_order": 10, "navigation_route": "/settings/compliance", "status": "Active", "version": "1.0.0", "system_module": False, "description": "ISO 9001, 14001, 45001 & IATF 16949 standards",
-                    "children": [
-                        {"name": "ISO 9001:2015", "code": "compliance.iso9001"},
-                        {"name": "ISO 14001:2015", "code": "compliance.iso14001"},
-                        {"name": "ISO 45001:2018", "code": "compliance.iso45001"},
-                        {"name": "IATF 16949:2016", "code": "compliance.iatf"}
-                    ]
-                },
-                # PARENT: AI Assistant
-                {
-                    "name": "AI Assistant & RAG", "code": "ai", "category": "AI", "icon": "bot", "color": "#8b5cf6", "display_order": 11, "navigation_route": "/ai/assistant", "status": "Beta", "version": "0.9.0", "premium_feature": True, "ai_enabled": True, "beta_feature": True, "system_module": False, "description": "AI-powered RAG document search & root cause recommendations",
-                    "children": [
-                        {"name": "AI Assistant Chat", "code": "ai.chat"},
-                        {"name": "AI Suggestions", "code": "ai.suggestions"},
-                        {"name": "AI Reports Generator", "code": "ai.reports"},
-                        {"name": "AI Root Cause Predictor", "code": "ai.root_cause"},
-                        {"name": "AI Semantic Knowledge Search", "code": "ai.knowledge_search"}
-                    ]
-                },
-                # PARENT: Integration Hub
-                {
-                    "name": "Integration Hub", "code": "integrations", "category": "Integration", "icon": "code-2", "color": "#14b8a6", "display_order": 12, "navigation_route": "/settings/api", "status": "Active", "version": "2.0.0", "premium_feature": True, "system_module": False, "description": "REST API Key management, Webhooks & Developer Portal",
-                    "children": [
-                        {"name": "API Keys Management", "code": "integrations.api_keys"},
-                        {"name": "Webhooks Subscriptions", "code": "integrations.webhooks"},
-                        {"name": "Inbound Idea Import API", "code": "integrations.idea_import"},
-                        {"name": "Developer Portal", "code": "integrations.developer_portal"},
-                        {"name": "SDK Code Generator", "code": "integrations.sdk"}
-                    ]
-                },
-                # PARENT: User Management
-                {
-                    "name": "User Management", "code": "users", "category": "IAM", "icon": "users", "color": "#3b82f6", "display_order": 13, "navigation_route": "/admin/users", "status": "Active", "version": "1.0.0", "system_module": True, "description": "User CRUD, invitation & access control",
-                    "children": [
-                        {"name": "View Users", "code": "users.view"},
-                        {"name": "Create User", "code": "users.create"},
-                        {"name": "Edit User", "code": "users.edit"},
-                        {"name": "Delete User", "code": "users.delete"},
-                        {"name": "Invite User", "code": "users.invite"},
-                        {"name": "Suspend User", "code": "users.suspend"},
-                        {"name": "Import Users", "code": "users.import"},
-                        {"name": "Export Users", "code": "users.export"}
-                    ]
-                },
-                # PARENT: Departments
-                {
-                    "name": "Departments", "code": "departments", "category": "IAM", "icon": "building", "color": "#64748b", "display_order": 14, "navigation_route": "/admin/departments", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Department organizational structure",
-                    "children": [
-                        {"name": "View Departments", "code": "departments.view"},
-                        {"name": "Create Department", "code": "departments.create"},
-                        {"name": "Edit Department", "code": "departments.edit"},
-                        {"name": "Delete Department", "code": "departments.delete"}
-                    ]
-                },
-                # PARENT: Roles & Permissions
-                {
-                    "name": "Roles & Permissions", "code": "roles", "category": "IAM", "icon": "shield", "color": "#475569", "display_order": 15, "navigation_route": "/admin/roles", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Role definitions and action permissions",
-                    "children": [
-                        {"name": "View Roles", "code": "roles.view"},
-                        {"name": "Create Role", "code": "roles.create"},
-                        {"name": "Edit Role", "code": "roles.edit"},
-                        {"name": "Delete Role", "code": "roles.delete"},
-                        {"name": "Role Action Permissions", "code": "roles.permissions"}
-                    ]
-                },
-                # PARENT: Organization Management
-                {
-                    "name": "Organization Management", "code": "organization", "category": "Core", "icon": "globe", "color": "#2563eb", "display_order": 16, "navigation_route": "/admin/organization", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Company profile, plants and business units",
-                    "children": [
-                        {"name": "Company Profile", "code": "organization.profile"},
-                        {"name": "Manufacturing Plants", "code": "organization.plants"},
-                        {"name": "Company Branches", "code": "organization.branches"},
-                        {"name": "Business Units", "code": "organization.business_units"}
-                    ]
-                },
-                # PARENT: Global Search
-                {
-                    "name": "Global Search", "code": "search", "category": "Core", "icon": "search", "color": "#0284c7", "display_order": 17, "navigation_route": "/search", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Universal search across projects and SOPs",
-                    "children": [
-                        {"name": "Global Search Bar", "code": "search.global"},
-                        {"name": "Search Projects", "code": "search.projects"},
-                        {"name": "Search SOPs", "code": "search.sops"}
-                    ]
-                },
-                # PARENT: File Management
-                {
-                    "name": "File Management", "code": "files", "category": "Core", "icon": "paperclip", "color": "#7c3aed", "display_order": 18, "navigation_route": "/files", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Document uploads and version history",
-                    "children": [
-                        {"name": "Upload Files", "code": "files.upload"},
-                        {"name": "Download Files", "code": "files.download"},
-                        {"name": "Delete Files", "code": "files.delete"},
-                        {"name": "File Version History", "code": "files.versions"}
-                    ]
-                },
-                # PARENT: Workflow Engine
-                {
-                    "name": "Workflow Engine", "code": "workflow", "category": "Core", "icon": "git-branch", "color": "#d97706", "display_order": 19, "navigation_route": "/workflow", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Approval routing and escalation rules",
-                    "children": [
-                        {"name": "Approval Workflows", "code": "workflow.approvals"},
-                        {"name": "Review Workflows", "code": "workflow.reviews"},
-                        {"name": "Escalation Rules", "code": "workflow.escalation"},
-                        {"name": "Auto Approval Rules", "code": "workflow.auto_approval"}
-                    ]
-                },
-                # PARENT: Branding
-                {
-                    "name": "White-Label Branding", "code": "branding", "category": "Customization", "icon": "palette", "color": "#06b6d4", "display_order": 20, "navigation_route": "/settings/branding", "status": "Active", "version": "1.0.0", "premium_feature": True, "system_module": False, "description": "Custom color branding, logo and domain routing",
-                    "children": [
-                        {"name": "Company Logo Upload", "code": "branding.logo"},
-                        {"name": "Color Theme Customizer", "code": "branding.theme"},
-                        {"name": "Branding Details", "code": "branding.company_details"}
-                    ]
-                },
-                # PARENT: Localization
-                {
-                    "name": "Localization & i18n", "code": "localization", "category": "Customization", "icon": "languages", "color": "#14b8a6", "display_order": 21, "navigation_route": "/settings/localization", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Multi-language dictionary and timezone formatting",
-                    "children": [
-                        {"name": "Language Selection", "code": "localization.languages"},
-                        {"name": "Date Formatting", "code": "localization.date_format"},
-                        {"name": "Timezone Configuration", "code": "localization.timezone"}
-                    ]
-                },
-                # PARENT: Audit Logs
-                {
-                    "name": "Audit Logging", "code": "audit_logs", "category": "Governance", "icon": "file-text", "color": "#475569", "display_order": 22, "navigation_route": "/admin/audit-logs", "status": "Active", "version": "1.0.0", "system_module": True, "description": "Immutable security and activity audit trails",
-                    "children": [
-                        {"name": "User Activity Trail", "code": "audit_logs.user_activity"},
-                        {"name": "Security Audit Logs", "code": "audit_logs.security"},
-                        {"name": "Export Audit Logs", "code": "audit_logs.export"}
-                    ]
-                }
-            ]
-
-            for item in hierarchy_modules:
-                parent_mod = Module.query.filter_by(code=item['code']).first()
-                if not parent_mod:
-                    parent_mod = Module(
-                        name=item['name'],
-                        code=item['code'],
-                        category=item['category'],
-                        icon=item['icon'],
-                        color=item.get('color', '#3b82f6'),
-                        display_order=item.get('display_order', 0),
-                        navigation_route=item.get('navigation_route'),
-                        status=item.get('status', 'Active'),
-                        development_stage='Released' if item.get('status') == 'Active' else 'Beta',
-                        version=item.get('version', '1.0.0'),
-                        enable_by_default=True,
-                        visible_in_sidebar=True,
-                        visible_in_dashboard=True,
-                        requires_subscription=True,
-                        premium_feature=item.get('premium_feature', False),
-                        ai_enabled=item.get('ai_enabled', False),
-                        beta_feature=item.get('beta_feature', False),
-                        system_module=item.get('system_module', False),
-                        description=item.get('description', '')
-                    )
-                    db.session.add(parent_mod)
-                    db.session.flush()
-
-                # Seed children
-                for idx, child in enumerate(item.get('children', [])):
-                    c_mod = Module.query.filter_by(code=child['code']).first()
-                    if not c_mod:
-                        c_mod = Module(
-                            parent_id=parent_mod.id,
-                            name=child['name'],
-                            code=child['code'],
+                for item in hierarchy_modules:
+                    parent_mod = Module.query.filter_by(code=item['code']).first()
+                    if not parent_mod:
+                        parent_mod = Module(
+                            name=item['name'],
+                            code=item['code'],
                             category=item['category'],
                             icon=item['icon'],
                             color=item.get('color', '#3b82f6'),
-                            display_order=idx + 1,
-                            navigation_route=child.get('navigation_route', item.get('navigation_route')),
-                            status='Active',
-                            development_stage='Released',
-                            version='1.0.0',
+                            display_order=item.get('display_order', 0),
+                            navigation_route=item.get('navigation_route'),
+                            status=item.get('status', 'Active'),
+                            development_stage='Released' if item.get('status') == 'Active' else 'Beta',
+                            version=item.get('version', '1.0.0'),
                             enable_by_default=True,
                             visible_in_sidebar=True,
                             visible_in_dashboard=True,
                             requires_subscription=True,
-                            system_module=parent_mod.system_module,
-                            description=f"Sub-feature: {child['name']}"
+                            premium_feature=item.get('premium_feature', False),
+                            ai_enabled=item.get('ai_enabled', False),
+                            beta_feature=item.get('beta_feature', False),
+                            system_module=item.get('system_module', False),
+                            description=item.get('description', '')
                         )
-                        db.session.add(c_mod)
+                        db.session.add(parent_mod)
+                        db.session.flush()
 
-            db.session.commit()
-            print("[QCMS] Seeded Enterprise Feature Hierarchy (Parents & Children) successfully.")
-            
-            # Seed Default Super Admin
-            sa_username = (os.getenv('SUPER_ADMIN_USERNAME') or getattr(Config, 'SUPER_ADMIN_USERNAME', '') or 'harshithkd6@gmail.com').strip().lower()
-            sa_password = os.getenv('SUPER_ADMIN_PASSWORD') or getattr(Config, 'SUPER_ADMIN_PASSWORD', '') or '123456'
-            if sa_username and sa_password:
-                sa_role = Role.query.filter_by(name='SuperAdmin').first()
-                if sa_role:
-                    hashed_pw = bcrypt.generate_password_hash(sa_password).decode('utf-8')
-                    existing_sa = User.query.filter_by(email=sa_username).first()
-                    if existing_sa:
-                        existing_sa.role_id = sa_role.id
-                        existing_sa.org_id = None
-                        existing_sa.is_verified = True
-                        existing_sa.status = 'Active'
-                        existing_sa.is_active = True
-                        existing_sa.hashed_password = hashed_pw
-                    else:
-                        new_sa = User(
-                            username=sa_username,
-                            email=sa_username,
-                            hashed_password=hashed_pw,
-                            role_id=sa_role.id,
-                            org_id=None,
-                            is_verified=True,
-                            status='Active',
-                            is_active=True
-                        )
-                        db.session.add(new_sa)
-                    db.session.commit()
-                    print(f"[QCMS] SuperAdmin '{sa_username}' synced with password from environment variables.")
+                    # Seed children
+                    for idx, child in enumerate(item.get('children', [])):
+                        c_mod = Module.query.filter_by(code=child['code']).first()
+                        if not c_mod:
+                            c_mod = Module(
+                                parent_id=parent_mod.id,
+                                name=child['name'],
+                                code=child['code'],
+                                category=item['category'],
+                                icon=item['icon'],
+                                color=item.get('color', '#3b82f6'),
+                                display_order=idx + 1,
+                                navigation_route=child.get('navigation_route', item.get('navigation_route')),
+                                status='Active',
+                                development_stage='Released',
+                                version='1.0.0',
+                                enable_by_default=True,
+                                visible_in_sidebar=True,
+                                visible_in_dashboard=True,
+                                requires_subscription=True,
+                                system_module=parent_mod.system_module,
+                                description=f"Sub-feature: {child['name']}"
+                            )
+                            db.session.add(c_mod)
 
-                    # Ensure all existing SuperAdmins have org_id = None
-                    sa_users = User.query.filter_by(role_id=sa_role.id).all()
-                    for sa_user in sa_users:
-                        sa_user.org_id = None
-                        sa_user.is_active = True
-                        sa_user.status = 'Active'
-
-            db.session.commit()
-            
-            # Seed Default Tax Rules & Billing Settings
-            from .infrastructure.database.models.models import TaxRule, BillingSettings, Organization
-            if not TaxRule.query.first():
-                default_taxes = [
-                    TaxRule(country='India', state=None, tax_type='GST', rate=18.0, is_exempt=False),
-                    TaxRule(country='India', state='CGST', tax_type='CGST', rate=9.0, is_exempt=False),
-                    TaxRule(country='India', state='SGST', tax_type='SGST', rate=9.0, is_exempt=False),
-                    TaxRule(country='India', state='IGST', tax_type='IGST', rate=18.0, is_exempt=False),
-                    TaxRule(country='United Kingdom', state=None, tax_type='VAT', rate=20.0, is_exempt=False),
-                    TaxRule(country='Germany', state=None, tax_type='VAT', rate=19.0, is_exempt=False),
-                    TaxRule(country='Canada', state=None, tax_type='GST', rate=5.0, is_exempt=False),
-                    TaxRule(country='United States', state=None, tax_type='Sales Tax', rate=0.0, is_exempt=True)
-                ]
-                db.session.bulk_save_objects(default_taxes)
                 db.session.commit()
-                print("[QCMS] Seeded default tax rules.")
+                print("[QCMS] Seeded Enterprise Feature Hierarchy (Parents & Children) successfully.")
+            
+                # Seed Default Super Admin
+                sa_username = (os.getenv('SUPER_ADMIN_USERNAME') or getattr(Config, 'SUPER_ADMIN_USERNAME', '') or 'harshithkd6@gmail.com').strip().lower()
+                sa_password = os.getenv('SUPER_ADMIN_PASSWORD') or getattr(Config, 'SUPER_ADMIN_PASSWORD', '') or '123456'
+                if sa_username and sa_password:
+                    sa_role = Role.query.filter_by(name='SuperAdmin').first()
+                    if sa_role:
+                        hashed_pw = bcrypt.generate_password_hash(sa_password).decode('utf-8')
+                        existing_sa = User.query.filter_by(email=sa_username).first()
+                        if existing_sa:
+                            existing_sa.role_id = sa_role.id
+                            existing_sa.org_id = None
+                            existing_sa.is_verified = True
+                            existing_sa.status = 'Active'
+                            existing_sa.is_active = True
+                            existing_sa.hashed_password = hashed_pw
+                        else:
+                            new_sa = User(
+                                username=sa_username,
+                                email=sa_username,
+                                hashed_password=hashed_pw,
+                                role_id=sa_role.id,
+                                org_id=None,
+                                is_verified=True,
+                                status='Active',
+                                is_active=True
+                            )
+                            db.session.add(new_sa)
+                        db.session.commit()
+                        print(f"[QCMS] SuperAdmin '{sa_username}' synced with password from environment variables.")
 
-            for org in Organization.query.all():
-                if not BillingSettings.query.filter_by(org_id=org.id).first():
-                    db.session.add(BillingSettings(org_id=org.id, auto_collection=True, reminder_schedule=[3, 1, 0, -3], grace_period_days=7, payment_retry_attempts=3))
-            db.session.commit()
+                        # Ensure all existing SuperAdmins have org_id = None
+                        sa_users = User.query.filter_by(role_id=sa_role.id).all()
+                        for sa_user in sa_users:
+                            sa_user.org_id = None
+                            sa_user.is_active = True
+                            sa_user.status = 'Active'
 
-            print("[QCMS] Database tables verified, roles, super admin, tax rules, and billing settings seeded successfully.")
-        except Exception as e:
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
-            print(f"[QCMS] Warning: Could not auto-initialize database: {e}")
-        finally:
-            _DB_AUTO_MIGRATED = True
+                db.session.commit()
+            
+                # Seed Default Tax Rules & Billing Settings
+                from .infrastructure.database.models.models import TaxRule, BillingSettings, Organization
+                if not TaxRule.query.first():
+                    default_taxes = [
+                        TaxRule(country='India', state=None, tax_type='GST', rate=18.0, is_exempt=False),
+                        TaxRule(country='India', state='CGST', tax_type='CGST', rate=9.0, is_exempt=False),
+                        TaxRule(country='India', state='SGST', tax_type='SGST', rate=9.0, is_exempt=False),
+                        TaxRule(country='India', state='IGST', tax_type='IGST', rate=18.0, is_exempt=False),
+                        TaxRule(country='United Kingdom', state=None, tax_type='VAT', rate=20.0, is_exempt=False),
+                        TaxRule(country='Germany', state=None, tax_type='VAT', rate=19.0, is_exempt=False),
+                        TaxRule(country='Canada', state=None, tax_type='GST', rate=5.0, is_exempt=False),
+                        TaxRule(country='United States', state=None, tax_type='Sales Tax', rate=0.0, is_exempt=True)
+                    ]
+                    db.session.bulk_save_objects(default_taxes)
+                    db.session.commit()
+                    print("[QCMS] Seeded default tax rules.")
+
+                for org in Organization.query.all():
+                    if not BillingSettings.query.filter_by(org_id=org.id).first():
+                        db.session.add(BillingSettings(org_id=org.id, auto_collection=True, reminder_schedule=[3, 1, 0, -3], grace_period_days=7, payment_retry_attempts=3))
+                db.session.commit()
+
+            except Exception as e:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                print(f"[QCMS] Warning: Could not auto-initialize database: {e}")
+            finally:
+                _DB_AUTO_MIGRATED = True
 
     # Helper to check if public landing page is enabled
     def is_landing_page_enabled():
