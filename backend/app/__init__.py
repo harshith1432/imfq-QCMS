@@ -39,6 +39,42 @@ def create_app():
     jwt.init_app(app)
     bcrypt.init_app(app)
     migrate.init_app(app, db)
+
+    # Configure JWT revocation / session termination verification
+    @jwt.token_in_blocklist_loader
+    def check_if_token_is_revoked(jwt_header, jwt_payload):
+        try:
+            session_id = jwt_payload.get("session_id")
+            user_id = jwt_payload.get("sub")
+            
+            from app.infrastructure.database.models.models import SaaSUserSession
+            
+            if session_id:
+                sess = SaaSUserSession.query.filter_by(session_id=session_id).first()
+                if sess and sess.status in ('Terminated', 'Revoked', 'LoggedOut'):
+                    return True # Token is revoked!
+            elif user_id:
+                try:
+                    uid = int(user_id)
+                    term_sess = SaaSUserSession.query.filter_by(user_id=uid, status='Terminated').order_by(SaaSUserSession.login_time.desc()).first()
+                    if term_sess:
+                        active_sess = SaaSUserSession.query.filter_by(user_id=uid, status='Active').order_by(SaaSUserSession.login_time.desc()).first()
+                        if not active_sess or (active_sess.login_time <= term_sess.login_time):
+                            return True
+                except (ValueError, TypeError):
+                    pass
+        except Exception as e:
+            print(f"[QCMS JWT Revocation Check Exception] {e}")
+        return False
+
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        from flask import jsonify
+        return jsonify({
+            "status": "error",
+            "message": "Your session has been terminated by an administrator. Please sign in again.",
+            "session_terminated": True
+        }), 401
     
     # Print masked connection URL for logs
     db_uri = app.config.get('SQLALCHEMY_DATABASE_URI')
@@ -713,6 +749,8 @@ def create_app():
             except Exception:
                 pass
             print(f"[QCMS] Warning: Could not auto-initialize database: {e}")
+        finally:
+            _DB_AUTO_MIGRATED = True
 
     # Helper to check if public landing page is enabled
     def is_landing_page_enabled():

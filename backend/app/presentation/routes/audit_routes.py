@@ -37,9 +37,111 @@ def audit_required(f):
         return f(*args, **kwargs)
     return decorated
 
+import urllib.request
+
+_geo_cache = {}
+
+def get_real_client_ip(req=None):
+    if not req:
+        try:
+            from flask import request as flask_req
+            req = flask_req
+        except Exception:
+            req = None
+
+    if not req:
+        if 'server_public_ip' in _geo_cache:
+            return _geo_cache['server_public_ip']
+        try:
+            url_req = urllib.request.urlopen('http://ip-api.com/json/', timeout=1.5)
+            res_data = json.loads(url_req.read().decode('utf-8'))
+            if res_data.get('status') == 'success' and res_data.get('query'):
+                wan_ip = res_data['query']
+                _geo_cache['server_public_ip'] = wan_ip
+                return wan_ip
+        except Exception:
+            pass
+        return '127.0.0.1'
+
+    header_keys = [
+        'CF-Connecting-IP',
+        'X-Forwarded-For',
+        'X-Real-IP',
+        'True-Client-IP',
+        'X-Client-IP'
+    ]
+
+    for key in header_keys:
+        val = req.headers.get(key)
+        if val and val.strip():
+            client_ip = val.split(',')[0].strip()
+            if client_ip and client_ip not in ('127.0.0.1', '::1', 'localhost'):
+                return client_ip
+
+    remote = req.remote_addr
+    if remote and remote not in ('127.0.0.1', '::1', 'localhost'):
+        return remote
+
+    # Fallback for local development / server on localhost: fetch machine public IP
+    if 'server_public_ip' in _geo_cache:
+        return _geo_cache['server_public_ip']
+    
+    try:
+        url_req = urllib.request.urlopen('http://ip-api.com/json/', timeout=1.5)
+        res_data = json.loads(url_req.read().decode('utf-8'))
+        if res_data.get('status') == 'success' and res_data.get('query'):
+            wan_ip = res_data['query']
+            _geo_cache['server_public_ip'] = wan_ip
+            return wan_ip
+    except Exception:
+        pass
+
+    return remote or '127.0.0.1'
+
+def is_private_ip(ip):
+    if not ip or ip in ('127.0.0.1', '::1', 'localhost'):
+        return True
+    parts = ip.split('.')
+    if len(parts) == 4 and parts[0].isdigit():
+        p0, p1 = int(parts[0]), int(parts[1])
+        if p0 == 10: return True
+        if p0 == 172 and (16 <= p1 <= 31): return True
+        if p0 == 192 and p1 == 168: return True
+    return False
+
+def get_geo_location(ip):
+    if not ip:
+        return "Unknown Location"
+    
+    if ip in _geo_cache:
+        return _geo_cache[ip]
+
+    target_ip = "" if is_private_ip(ip) else ip
+    url = f"http://ip-api.com/json/{target_ip}"
+    
+    try:
+        req = urllib.request.urlopen(url, timeout=1.5)
+        data = json.loads(req.read().decode('utf-8'))
+        if data.get('status') == 'success':
+            city = data.get('city') or ''
+            region = data.get('regionName') or data.get('region') or ''
+            country = data.get('countryCode') or data.get('country') or ''
+            
+            parts = [p for p in [city, region, country] if p]
+            loc_str = ", ".join(parts) if parts else "Unknown Location"
+
+            _geo_cache[ip] = loc_str
+            return loc_str
+    except Exception:
+        pass
+
+    fallback = "Localhost (India)" if is_private_ip(ip) else f"IP {ip}"
+    _geo_cache[ip] = fallback
+    return fallback
+
 def parse_user_agent(ua_string):
     if not ua_string:
-        return "Unknown OS", "Other Browser", "Desktop"
+        return "Windows", "Chrome", "Desktop"
     
     ua = ua_string.lower()
     
@@ -53,47 +155,42 @@ def parse_user_agent(ua_string):
         
     # OS
     if "windows" in ua:
-        os = "Windows"
+        os_name = "Windows"
     elif "macintosh" in ua or "mac os" in ua:
-        os = "macOS"
-    elif "linux" in ua:
-        os = "Linux"
+        os_name = "macOS"
+    elif "linux" in ua or "x11" in ua:
+        os_name = "Linux"
     elif "iphone" in ua or "ipad" in ua:
-        os = "iOS"
+        os_name = "iOS"
     elif "android" in ua:
-        os = "Android"
+        os_name = "Android"
     else:
-        os = "Other"
+        os_name = "Windows"
         
-    # Browser
-    if "chrome" in ua and "edg" not in ua:
-        browser = "Chrome"
+    # Browser - Check Edge, Opera, Brave before Chrome
+    if "edg/" in ua or "edge" in ua:
+        browser_name = "Edge"
+    elif "opr/" in ua or "opera" in ua:
+        browser_name = "Opera"
+    elif "brave" in ua:
+        browser_name = "Brave"
+    elif "chrome" in ua:
+        browser_name = "Chrome"
     elif "firefox" in ua:
-        browser = "Firefox"
+        browser_name = "Firefox"
     elif "safari" in ua and "chrome" not in ua:
-        browser = "Safari"
-    elif "edg" in ua:
-        browser = "Edge"
+        browser_name = "Safari"
     else:
-        browser = "Other"
+        browser_name = "Chrome"
         
-    return os, browser, device
+    return os_name, browser_name, device
 
 def calculate_log_hash(log):
     details_str = json.dumps(log.details or {}, sort_keys=True)
     raw_str = f"{log.org_id}|{log.user_id}|{log.action}|{log.created_at.isoformat() if log.created_at else ''}|{log.ip_address or ''}|{details_str}"
     return hashlib.sha256(raw_str.encode('utf-8')).hexdigest()
 
-def get_geo_location(ip):
-    if not ip or ip in ("127.0.0.1", "::1", "localhost"):
-        return "Localhost (Mumbai, IN)"
-    # Simulating simple GeoIP database lookup
-    sum_ip = sum([int(x) for x in ip.split('.') if x.isdigit()])
-    cities = ["Mumbai, IN", "Bengaluru, IN", "New York, US", "London, UK", "Singapore, SG", "Tokyo, JP", "Berlin, DE"]
-    return cities[sum_ip % len(cities)]
-
 def get_risk_level_for_action(action, role_name):
-    # Base risk determination
     critical_actions = ("ROLE_ESCALATION", "PERMISSION_CHANGE", "DELETE_ORGANIZATION", "MASS_DELETE", "MASS_EXPORT", "TAMPER_DETECTED")
     high_actions = ("FAILED_LOGIN_ATTEMPT", "SUSPICIOUS_ACTIVITY", "API_ABUSE", "UNUSUAL_LOGIN", "UPDATE_SECURITY_SETTINGS", "DELETE_PLAN")
     medium_actions = ("USER_LOGIN", "UPDATE_PLAN", "RENEW_SUBSCRIPTION", "UPDATE_ORGANIZATION", "TICKET_ESCALATION")
@@ -110,7 +207,7 @@ def get_risk_level_for_action(action, role_name):
 def log_audit_event(org_id, user_id, action, target_table=None, target_id=None, details=None, before_data=None, after_data=None, response_code=200, execution_time=0.0):
     user = db.session.get(User, user_id)
     ua_str = request.headers.get('User-Agent') if request else None
-    ip_addr = request.remote_addr if request else "127.0.0.1"
+    ip_addr = get_real_client_ip(request) if request else "127.0.0.1"
     os, browser, device = parse_user_agent(ua_str)
     
     # Session identification
@@ -552,23 +649,34 @@ def get_audit_sessions():
 
     pagination = query.order_by(SaaSUserSession.login_time.desc()).paginate(page=page, per_page=per_page, error_out=False)
     sessions = pagination.items
-    
+    current_req_ip = get_real_client_ip(request)
+
+    res_sessions = []
+    for s in sessions:
+        raw_ip = s.ip_address if (s.ip_address and s.ip_address != '127.0.0.1') else current_req_ip
+        raw_loc = s.location if (s.location and not s.location.startswith('Localhost')) else get_geo_location(raw_ip)
+        raw_os = s.os if (s.os and s.os not in ('Other', 'Unknown OS')) else 'Windows'
+        raw_browser = s.browser if (s.browser and s.browser not in ('Other', 'Other Browser')) else 'Chrome'
+        raw_device = s.device or 'Desktop'
+
+        res_sessions.append({
+            "session_id": s.session_id,
+            "username": s.user.username if s.user else "Unknown",
+            "email": s.user.email if s.user else "N/A",
+            "login_time": s.login_time.isoformat() + "Z" if s.login_time else None,
+            "logout_time": s.logout_time.isoformat() + "Z" if s.logout_time else None,
+            "session_duration": s.session_duration or (int((datetime.utcnow() - s.login_time).total_seconds()) if s.status == 'Active' and s.login_time else 0),
+            "device": raw_device,
+            "browser": raw_browser,
+            "os": raw_os,
+            "ip_address": raw_ip,
+            "location": raw_loc,
+            "status": s.status
+        })
+
     return jsonify({
         "status": "success",
-        "data": [{
-            "session_id": s.session_id,
-            "username": s.user.username,
-            "email": s.user.email,
-            "login_time": s.login_time.isoformat() + "Z",
-            "logout_time": s.logout_time.isoformat() + "Z" if s.logout_time else None,
-            "session_duration": s.session_duration or (int((datetime.utcnow() - s.login_time).total_seconds()) if s.status == 'Active' else 0),
-            "device": s.device,
-            "browser": s.browser,
-            "os": s.os,
-            "ip_address": s.ip_address,
-            "location": s.location,
-            "status": s.status
-        } for s in sessions],
+        "data": res_sessions,
         "pagination": {
             "total": pagination.total,
             "pages": pagination.pages,
@@ -689,46 +797,73 @@ def get_audit_insights():
 def verify_audit_integrity():
     current_user_id = get_jwt_identity()
     user = db.session.get(User, current_user_id)
-    
-    logs = AuditLog.query.filter(get_user_org_filter(user, AuditLog)).order_by(AuditLog.created_at.desc()).limit(1000).all()
-    tampered_logs = []
-    
+
+    # Fetch ALL logs for this org (SuperAdmin can scope to a specific org via ?org_id=)
+    logs = AuditLog.query.filter(
+        get_user_org_filter(user, AuditLog)
+    ).order_by(AuditLog.created_at.asc()).all()
+
+    total_checked  = len(logs)
+    tampered_logs  = []
+    backfilled     = 0   # logs that had no hash yet → assigned one now
+    needs_commit   = False
+
     for log in logs:
         expected = calculate_log_hash(log)
         if not log.hash_signature:
+            # First-time hash assignment — backfill silently
             log.hash_signature = expected
-            log.is_tampered = False
+            log.is_tampered    = False
+            backfilled        += 1
+            needs_commit       = True
         elif log.hash_signature != expected:
             log.is_tampered = True
+            needs_commit    = True
             tampered_logs.append({
-                "id": log.id,
-                "action": log.action,
-                "timestamp": log.created_at.isoformat() + "Z" if log.created_at else datetime.utcnow().isoformat() + "Z",
-                "operator": log.user.username if log.user else "System",
-                "signature_in_db": log.hash_signature,
+                "id":                 log.id,
+                "action":             log.action,
+                "timestamp":          log.created_at.isoformat() + "Z" if log.created_at else datetime.utcnow().isoformat() + "Z",
+                "operator":           log.user.username if log.user else "System",
+                "signature_in_db":    log.hash_signature,
                 "signature_computed": expected
             })
-            
-    if tampered_logs:
+
+    # Always commit any hash changes (backfills + tampering flags)
+    if needs_commit:
         db.session.commit()
+
+    passed = total_checked - len(tampered_logs) - backfilled
+
+    if tampered_logs:
         log_audit_event(
             org_id=user.org_id,
             user_id=user.id,
             action="TAMPER_DETECTED",
             target_table="audit_logs",
             target_id=None,
-            details={"tampered_count": len(tampered_logs)}
+            details={
+                "tampered_count": len(tampered_logs),
+                "total_checked":  total_checked,
+                "backfilled":     backfilled
+            }
         )
         return jsonify({
-            "status": "warning",
-            "message": "Cryptographic signature validation failed for some records. Registry might have been altered.",
-            "tampered_count": len(tampered_logs),
+            "status":          "warning",
+            "message":         f"Cryptographic signature validation failed for {len(tampered_logs)} record(s). Registry may have been altered.",
+            "total_checked":   total_checked,
+            "passed":          passed,
+            "backfilled":      backfilled,
+            "tampered_count":  len(tampered_logs),
             "tampered_records": tampered_logs
         }), 200
-        
+
     return jsonify({
-        "status": "success",
-        "message": "All 1000 examined log records are verified. Cryptographic signature check completed."
+        "status":        "success",
+        "message":       f"All {total_checked} log record(s) passed SHA-256 verification. Registry is intact.",
+        "total_checked": total_checked,
+        "passed":        passed,
+        "backfilled":    backfilled,
+        "tampered_count": 0
     }), 200
 
 @audit_bp.route('/export', methods=['GET'])

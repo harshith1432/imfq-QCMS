@@ -14,6 +14,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
+            --primary: #2563eb;
             --hero-bg: #f8fafc;
             --primary-900: #0f172a;
             --primary-50: #f0f9ff;
@@ -39,7 +40,7 @@
         }
 
         .hero-title {
-            font-size: 4rem;
+            font-size: clamp(2.2rem, 6vw, 4rem);
             font-weight: 800;
             line-height: 1.1;
             letter-spacing: -1.5px;
@@ -480,7 +481,7 @@
                 </div>
                 <div class="col-lg-4 position-relative">
                     <div class="position-absolute w-100 text-center" style="top: -15px; left: 0; z-index: 10;">
-                        <span class="ds-badge px-3 py-1" style="background: var(--primary); color: white; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">MOST POPULAR</span>
+                        <span class="ds-badge px-3 py-1" style="background: #2563eb !important; color: #ffffff !important; border-radius: 20px; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.05em; padding: 4px 14px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); border: 1px solid rgba(255,255,255,0.25); display: inline-block;">MOST POPULAR</span>
                     </div>
                     <div class="feature-card glass-card border-primary h-100" style="border-width: 2px;">
                         <div class="mb-4">
@@ -778,7 +779,9 @@
                         if(cms.hero_title) _html('lp-hero-title', cms.hero_title);
                         if(cms.hero_subtitle) _txt('lp-hero-subtitle', cms.hero_subtitle);
                         if(cms.cta_primary_text) _txt('lp-cta-primary', cms.cta_primary_text);
+                        if(cms.cta_primary_url) { const el = document.getElementById('lp-cta-primary'); if(el) el.href = cms.cta_primary_url; }
                         if(cms.cta_secondary_text) _txt('lp-cta-secondary', cms.cta_secondary_text);
+                        if(cms.cta_secondary_url) { const el = document.getElementById('lp-cta-secondary'); if(el) el.href = cms.cta_secondary_url; }
 
                         // Hero Stats
                         if(cms.hero_stat_1_val) _txt('lp-hero-stat1-val', cms.hero_stat_1_val);
@@ -852,7 +855,7 @@
                                 grid.innerHTML = cms.pricing_plans.map(p => `
                                 <div class="col-lg-4 position-relative">
                                     ${p.badge ? `<div class="position-absolute w-100 text-center" style="top: -15px; left: 0; z-index: 10;">
-                                        <span class="ds-badge px-3 py-1" style="background: var(--primary); color: white; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">${p.badge}</span>
+                                        <span class="ds-badge px-3 py-1" style="background: #2563eb !important; color: #ffffff !important; border-radius: 20px; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.05em; padding: 4px 14px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); border: 1px solid rgba(255,255,255,0.25); display: inline-block;">${p.badge}</span>
                                     </div>` : ''}
                                     <div class="feature-card glass-card ${p.badge ? 'border-primary' : ''} h-100" ${p.badge ? 'style="border-width: 2px;"' : ''}>
                                         <div class="mb-4">

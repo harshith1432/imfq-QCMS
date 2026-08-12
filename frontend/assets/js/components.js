@@ -401,7 +401,7 @@ const QCMS = {
         if (toggleBtn && sidebar && backdrop) {
             toggleBtn.onclick = (e) => {
                 e.stopPropagation();
-                if (window.innerWidth <= 768) {
+                if (window.innerWidth <= 1024) {
                     sidebar.classList.toggle('show');
                     backdrop.classList.toggle('show');
                 } else {
@@ -418,7 +418,7 @@ const QCMS = {
 
             sidebar.querySelectorAll('.sidebar-link').forEach(link => {
                 link.addEventListener('click', () => {
-                    if (window.innerWidth <= 768) {
+                    if (window.innerWidth <= 1024) {
                         sidebar.classList.remove('show');
                         backdrop.classList.remove('show');
                     }
@@ -428,7 +428,7 @@ const QCMS = {
     },
 
     toggleSidebar() {
-        if (window.innerWidth <= 768) {
+        if (window.innerWidth <= 1024) {
             const sidebar = document.getElementById('app-sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
             if (sidebar) sidebar.classList.toggle('show');

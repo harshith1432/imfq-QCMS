@@ -289,6 +289,12 @@
             } else if (urlParams.get('reset')) {
                 successMsgEl.querySelector('span').textContent = "✓ Password updated successfully! Please log in with your new password.";
                 successMsgEl.style.display = 'flex';
+            } else if (urlParams.get('reason') === 'session_terminated') {
+                const errEl = document.getElementById('errorMsg');
+                if (errEl) {
+                    errEl.querySelector('span').textContent = "Your session was terminated by an administrator. Please sign in again.";
+                    errEl.style.display = 'flex';
+                }
             }
 
             if (window.lucide) lucide.createIcons();

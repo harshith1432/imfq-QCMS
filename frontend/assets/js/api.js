@@ -174,6 +174,10 @@ const api = {
                 if (targetBtn && window.ActionLock) {
                     window.ActionLock.unlockButton(targetBtn);
                 }
+                const loginBtn = document.getElementById('loginBtn');
+                if (loginBtn && window.ActionLock && window.ActionLock.isLocked(loginBtn)) {
+                    window.ActionLock.unlockButton(loginBtn);
+                }
             }
         })();
 

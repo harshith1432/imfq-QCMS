@@ -1005,13 +1005,26 @@
                 try {
                     const res = await api.get('/admin/audit/integrity');
                     banner.classList.remove('alert-info');
+
+                    // Build stats pills for visual confirmation
+                    const total      = res.total_checked  ?? '?';
+                    const passed     = res.passed          ?? '?';
+                    const backfilled = res.backfilled      ?? 0;
+                    const tampered   = res.tampered_count  ?? 0;
+
+                    const statsHtml = `
+                        <span class="badge bg-secondary ms-2" title="Total logs scanned">${total} scanned</span>
+                        <span class="badge bg-success ms-1" title="Signature matched">${passed} passed</span>
+                        ${backfilled > 0 ? `<span class="badge bg-info ms-1" title="Logs without a prior hash — assigned now">${backfilled} backfilled</span>` : ''}
+                        ${tampered   > 0 ? `<span class="badge bg-danger ms-1">${tampered} tampered</span>` : ''}
+                    `;
                     
                     if (res.status === 'success') {
                         banner.classList.add('alert-success');
-                        banner.innerHTML = `<strong><i data-lucide="shield-check" class="me-1 d-inline-block" style="width:16px;"></i> Secure:</strong> ${res.message}`;
+                        banner.innerHTML = `<strong><i data-lucide="shield-check" class="me-1 d-inline-block" style="width:16px;"></i> Secure:</strong> ${res.message}${statsHtml}`;
                     } else {
                         banner.classList.add('alert-danger');
-                        banner.innerHTML = `<strong><i data-lucide="alert-triangle" class="me-1 d-inline-block" style="width:16px;"></i> Compromise Alert:</strong> ${res.message} Detected ${res.tampered_count} tampered events. Details saved for review.`;
+                        banner.innerHTML = `<strong><i data-lucide="alert-triangle" class="me-1 d-inline-block" style="width:16px;"></i> Compromise Alert:</strong> ${res.message}${statsHtml} — Details saved for review.`;
                         
                         // Reload stream logs to highlight tampered flags
                         await this.loadLogs();

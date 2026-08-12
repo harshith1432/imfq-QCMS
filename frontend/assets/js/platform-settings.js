@@ -537,7 +537,9 @@ const PlatformSettings = {
             this._val('ps-cms-hero-title', lCms.hero_title || 'Precision Quality <br><span class="text-primary">Management</span> at Scale.');
             this._val('ps-cms-hero-subtitle', lCms.hero_subtitle || 'Optimize your organizational efficiency with our structured 8-stage workflow engine. Built for enterprise excellence, designed for modern teams.');
             this._val('ps-cms-cta-primary', lCms.cta_primary_text || 'Start Free Trial');
+            this._val('ps-cms-cta-primary-url', lCms.cta_primary_url || '/auth/register-org.html');
             this._val('ps-cms-cta-secondary', lCms.cta_secondary_text || 'Watch Demo');
+            this._val('ps-cms-cta-secondary-url', lCms.cta_secondary_url || '#features');
             this._val('ps-cms-hero-stat1-val', lCms.hero_stat_1_val || '98.2%');
             this._val('ps-cms-hero-stat1-lbl', lCms.hero_stat_1_lbl || 'Quality Score');
             this._val('ps-cms-hero-stat2-val', lCms.hero_stat_2_val || 'A+');
@@ -844,7 +846,9 @@ const PlatformSettings = {
                     hero_title: this._getVal('ps-cms-hero-title'),
                     hero_subtitle: this._getVal('ps-cms-hero-subtitle'),
                     cta_primary_text: this._getVal('ps-cms-cta-primary'),
+                    cta_primary_url: this._getVal('ps-cms-cta-primary-url') || '/auth/register-org.html',
                     cta_secondary_text: this._getVal('ps-cms-cta-secondary'),
+                    cta_secondary_url: this._getVal('ps-cms-cta-secondary-url') || '#features',
                     hero_stat_1_val: this._getVal('ps-cms-hero-stat1-val'),
                     hero_stat_1_lbl: this._getVal('ps-cms-hero-stat1-lbl'),
                     hero_stat_2_val: this._getVal('ps-cms-hero-stat2-val'),
@@ -2612,45 +2616,48 @@ Object.assign(PlatformSettings, {
     },
 
     async updateOwnCredentials() {
+        const form = document.getElementById('ownCredentialsForm');
+        const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+
         const newEmail = document.getElementById('ownAdminNewEmail')?.value?.trim();
         const currentPassword = document.getElementById('ownAdminCurrentPassword')?.value?.trim();
         const newPassword = document.getElementById('ownAdminNewPassword')?.value?.trim();
         const confirmPassword = document.getElementById('ownAdminConfirmPassword')?.value?.trim();
 
-        if (!currentPassword) {
-            QCMS.toast('Current password is required to confirm changes.', 'warning');
-            return;
-        }
-
-        if (newEmail && !this.validateEmail(newEmail)) {
-            QCMS.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
-            const emailInput = document.getElementById('ownAdminNewEmail');
-            if (emailInput) {
-                emailInput.classList.add('is-invalid');
-                emailInput.focus();
-            }
-            return;
-        }
-
-        if (newPassword) {
-            if (newPassword.length < 6) {
-                QCMS.toast('New password must be at least 6 characters long.', 'warning');
-                return;
-            }
-            if (newPassword !== confirmPassword) {
-                QCMS.toast('New password and confirm password do not match.', 'error');
-                return;
-            }
-        }
-
         try {
+            if (!currentPassword) {
+                QCMS.toast('Current password is required to confirm changes.', 'warning');
+                return;
+            }
+
+            if (newEmail && !this.validateEmail(newEmail)) {
+                QCMS.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
+                const emailInput = document.getElementById('ownAdminNewEmail');
+                if (emailInput) {
+                    emailInput.classList.add('is-invalid');
+                    emailInput.focus();
+                }
+                return;
+            }
+
+            if (newPassword) {
+                if (newPassword.length < 6) {
+                    QCMS.toast('New password must be at least 6 characters long.', 'warning');
+                    return;
+                }
+                if (newPassword !== confirmPassword) {
+                    QCMS.toast('New password and confirm password do not match.', 'error');
+                    return;
+                }
+            }
+
             const res = await api.put('/super-admin/admin-logins/update-credentials', {
                 new_email: newEmail,
                 current_password: currentPassword,
                 new_password: newPassword || undefined
-            });
+            }, { button: submitBtn });
 
-            if (res.status === 'success') {
+            if (res && res.status === 'success') {
                 QCMS.toast(res.message || 'Super Admin credentials updated successfully!', 'success');
                 
                 // Update session memory
@@ -2667,6 +2674,10 @@ Object.assign(PlatformSettings, {
             }
         } catch (e) {
             QCMS.toast(e.message || 'Failed to update credentials.', 'error');
+        } finally {
+            if (submitBtn && window.ActionLock) {
+                window.ActionLock.unlockButton(submitBtn);
+            }
         }
     },
 

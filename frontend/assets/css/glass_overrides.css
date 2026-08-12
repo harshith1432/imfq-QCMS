@@ -92,28 +92,53 @@ body {
         display: inline-flex !important;
     }
     
+    .app-sidebar, .glass-sidebar {
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease !important;
+        box-shadow: none !important;
+        z-index: 1050 !important;
+    }
+    
+    .app-sidebar.show, .glass-sidebar.show {
+        transform: translateX(0) !important;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25) !important;
+    }
+    
     .glass-navbar {
         padding: 0 var(--ds-space-4) !important;
+        width: 100% !important;
     }
     
     .app-main {
         margin-left: 0 !important;
+        width: 100% !important;
+        min-width: 0 !important;
         padding-bottom: 5rem !important;
     }
     
-    .kpi-grid {
+    .workspace-layout {
         grid-template-columns: 1fr !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: var(--ds-space-4) !important;
+    }
+    
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: var(--ds-space-4) !important;
     }
     
     .corporate-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: var(--ds-space-4) !important;
     }
     
     .table-responsive {
         border-radius: var(--ds-radius-lg);
-        overflow-x: auto;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        display: block;
     }
 }
 
@@ -126,7 +151,7 @@ body {
     height: 100vh;
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
-    z-index: 1000;
+    z-index: 1040;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
@@ -137,10 +162,42 @@ body {
     pointer-events: auto;
 }
 
-/* Mobile Responsiveness down to 320px */
+/* Mobile & Small Screen Responsiveness */
+@media (max-width: 768px) {
+    .kpi-grid, .corporate-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .ds-header-layout,
+    .h-stack.justify-content-between,
+    .h-stack {
+        flex-wrap: wrap !important;
+        gap: var(--ds-space-3) !important;
+    }
+
+    .ds-header-layout .v-stack,
+    .ds-header-layout > div {
+        width: 100%;
+    }
+
+    .hero-title {
+        font-size: clamp(2.2rem, 8vw, 3.5rem) !important;
+        letter-spacing: -0.5px !important;
+    }
+
+    .hero-section {
+        padding: 70px 0 40px !important;
+    }
+}
+
 @media (max-width: 576px) {
     :root {
         --ds-sidebar-width: 0px;
+    }
+    
+    html, body, .app-layout {
+        overflow-x: hidden !important;
+        width: 100% !important;
     }
     
     .app-content-inner {
@@ -148,7 +205,8 @@ body {
     }
     
     .ds-title {
-        font-size: 1.5rem !important;
+        font-size: 1.35rem !important;
+        line-height: 1.25 !important;
     }
 }
 

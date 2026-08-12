@@ -96,7 +96,40 @@
                     }
                 }
             })
-            .catch(() => {});
+    }
+
+    // ── Active Session Termination Heartbeat ──────────────────────────────
+    // Periodically verify session validity so if a Super Admin terminates this user's
+    // active session, the user is immediately kicked back to the login page.
+    if (token && !isLandingPage && page !== 'login.html') {
+        let sessionCheckInProgress = false;
+        const verifySessionStatus = async () => {
+            if (sessionCheckInProgress) return;
+            sessionCheckInProgress = true;
+            try {
+                const res = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) {
+                    console.warn('[AuthGuard] Active session was terminated or invalidated — logging out user.');
+                    sessionStorage.clear();
+                    localStorage.clear();
+                    if (!window.location.pathname.includes('login.html')) {
+                        window.location.href = '/auth/login.html?reason=session_terminated';
+                    }
+                }
+            } catch (_) {
+            } finally {
+                sessionCheckInProgress = false;
+            }
+        };
+
+        // Run check initial delay after 2s, repeat every 10s & on tab focus
+        setTimeout(verifySessionStatus, 2000);
+        setInterval(verifySessionStatus, 10000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') verifySessionStatus();
+        });
     }
 
     // ── Self-Service Sign-Up Gate ───────────────────────────────────────────

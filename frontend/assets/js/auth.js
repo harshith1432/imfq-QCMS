@@ -6,7 +6,11 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     const errorMsg = document.getElementById('errorMsg');
 
     try {
-        const data = await api.post('/auth/login', { username, password });
+        const loginBtn = document.getElementById('loginBtn');
+        const data = await api.post('/auth/login', { username, password }, { button: loginBtn });
+        if (!data || !data.access_token) {
+            throw new Error(data?.msg || data?.message || "Invalid username or password");
+        }
         sessionStorage.setItem('token', data.access_token);
         localStorage.setItem('token', data.access_token);
 
@@ -51,8 +55,23 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
         else window.location.href = '/dashboard/dashboard-team-member.html';
     } catch (err) {
-        errorMsg.textContent = err.message;
-        errorMsg.style.display = 'block';
+        if (errorMsg) {
+            const span = errorMsg.querySelector('span');
+            if (span) span.textContent = err.message;
+            else errorMsg.textContent = err.message;
+            errorMsg.style.setProperty('display', 'flex', 'important');
+        }
+    } finally {
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            if (window.ActionLock) {
+                window.ActionLock.unlockButton(loginBtn);
+            }
+            loginBtn.disabled = false;
+            loginBtn.style.pointerEvents = '';
+            loginBtn.style.cursor = '';
+            loginBtn.innerHTML = 'Sign In';
+        }
     }
 });
 

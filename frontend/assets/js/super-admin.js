@@ -1576,8 +1576,8 @@ const SuperAdmin = {
         const kpis = [
             { label: 'Total Revenue', value: `₹${(data.total_revenue || 0).toLocaleString('en-IN')}`, icon: 'dollar-sign', color: '#10b981', accent: '#10b981' },
             { label: 'Monthly Rate (MRR)', value: `₹${(data.monthly_revenue || 0).toLocaleString('en-IN')}`, icon: 'trending-up', color: '#3b82f6', accent: '#3b82f6' },
-            { label: 'Overdue Invoices', value: data.overdue_invoices || 0, icon: 'alert-triangle', color: '#ef4444', accent: '#ef4444' },
-            { label: 'Outstanding Amount', value: `₹${(data.outstanding_amount || 0).toLocaleString('en-IN')}`, icon: 'clock', color: '#f59e0b', accent: '#f59e0b' },
+            { label: 'Unpaid Invoices', value: data.overdue_invoices || 0, icon: 'alert-triangle', color: '#ef4444', accent: '#ef4444' },
+            { label: 'Payment Due', value: `₹${(data.outstanding_amount || 0).toLocaleString('en-IN')}`, icon: 'clock', color: '#f59e0b', accent: '#f59e0b' },
             { label: 'Collection Rate', value: `${(data.collection_rate || 0).toFixed(1)}%`, icon: 'check-square', color: '#8b5cf6', accent: '#8b5cf6' }
         ];
 
@@ -3595,18 +3595,31 @@ const SuperAdmin = {
         banner.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
         banner.classList.add('alert-info');
         banner.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Running SHA-256 hash checks on log registry…`;
-        
+
         try {
             const orgParam = this.auditFilters.org_id ? `?org_id=${this.auditFilters.org_id}` : '';
             const res = await api.get(`/admin/audit/integrity${orgParam}`);
             banner.classList.remove('alert-info');
-            
+
+            // Build a stats pill row for real-time feedback
+            const total      = res.total_checked  ?? '?';
+            const passed     = res.passed          ?? '?';
+            const backfilled = res.backfilled      ?? 0;
+            const tampered   = res.tampered_count  ?? 0;
+
+            const statsHtml = `
+                <span class="badge bg-secondary ms-2" title="Total logs scanned">${total} scanned</span>
+                <span class="badge bg-success ms-1" title="Signature matched">${passed} passed</span>
+                ${backfilled > 0 ? `<span class="badge bg-info ms-1" title="Logs without a prior hash — assigned now">${backfilled} backfilled</span>` : ''}
+                ${tampered   > 0 ? `<span class="badge bg-danger ms-1">${tampered} tampered</span>` : ''}
+            `;
+
             if (res.status === 'success') {
                 banner.classList.add('alert-success');
-                banner.innerHTML = `<strong><i data-lucide="shield-check" class="me-1 d-inline-block" style="width:16px;"></i> Secure:</strong> ${res.message}`;
+                banner.innerHTML = `<strong><i data-lucide="shield-check" class="me-1 d-inline-block" style="width:16px;"></i> Secure:</strong> ${res.message}${statsHtml}`;
             } else {
                 banner.classList.add('alert-danger');
-                banner.innerHTML = `<strong><i data-lucide="alert-triangle" class="me-1 d-inline-block" style="width:16px;"></i> Compromise Alert:</strong> ${res.message} Detected ${res.tampered_count} tampered events. Details saved for review.`;
+                banner.innerHTML = `<strong><i data-lucide="alert-triangle" class="me-1 d-inline-block" style="width:16px;"></i> Compromise Alert:</strong> ${res.message}${statsHtml} — Details saved for review.`;
                 await this.loadLogs();
             }
             if (window.lucide) lucide.createIcons();
@@ -6942,31 +6955,23 @@ const SuperAdmin = {
     },
 
     syncTrialDaysInputs(val) {
-        const el1 = document.getElementById('pwTrialDays');
-        const el2 = document.getElementById('pwTrialDays2');
-        if (el1 && el1.value !== val) el1.value = val;
-        if (el2 && el2.value !== val) el2.value = val;
+        const el = document.getElementById('pwTrialDays');
+        if (el && el.value !== val) el.value = val;
     },
     syncTrialLimitInputs(val) {
-        const el1 = document.getElementById('pwTrialAutoApproveLimit');
-        const el2 = document.getElementById('pwTrialAutoApproveLimit2');
-        if (el1 && el1.value !== val) el1.value = val;
-        if (el2 && el2.value !== val) el2.value = val;
+        const el = document.getElementById('pwTrialAutoApproveLimit');
+        if (el && el.value !== val) el.value = val;
     },
     syncTrialDefaultInputs(checked) {
-        const el1 = document.getElementById('pwIsDefaultTrial');
-        const el2 = document.getElementById('pwIsDefaultTrial2');
-        if (el1 && el1.checked !== checked) el1.checked = checked;
-        if (el2 && el2.checked !== checked) el2.checked = checked;
+        const el = document.getElementById('pwIsDefaultTrial');
+        if (el && el.checked !== checked) el.checked = checked;
     },
 
     togglePlanWizardTrialConfig() {
         const tier = document.getElementById('pwTier')?.value || '';
-        const container1 = document.getElementById('pwTrialConfigContainer');
-        const container2 = document.getElementById('pwTrialConfigContainer2');
+        const container = document.getElementById('pwTrialConfigContainer');
         const isTrial = tier.toLowerCase().includes('trial');
-        if (container1) container1.style.display = isTrial ? 'block' : 'none';
-        if (container2) container2.style.display = isTrial ? 'block' : 'none';
+        if (container) container.style.display = isTrial ? 'block' : 'none';
         if (isTrial) {
             const priceInput = document.getElementById('pwPriceAmount');
             if (priceInput) priceInput.value = '0';

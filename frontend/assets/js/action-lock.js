@@ -55,6 +55,27 @@
                 const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
                 if (submitBtn) {
                     this.lockButton(submitBtn);
+
+                    const initialCount = (window.api && window.api.inFlightRequests) ? window.api.inFlightRequests.size : 0;
+
+                    // Check periodically and unlock submit button when request finishes or fails
+                    const checkInterval = setInterval(() => {
+                        const inFlight = (window.api && window.api.inFlightRequests) ? window.api.inFlightRequests.size : 0;
+                        if (inFlight === 0) {
+                            clearInterval(checkInterval);
+                            if (this.isLocked(submitBtn)) {
+                                this.unlockButton(submitBtn);
+                            }
+                        }
+                    }, 100);
+
+                    // Safety timeout after 1.5 seconds maximum
+                    setTimeout(() => {
+                        clearInterval(checkInterval);
+                        if (this.isLocked(submitBtn)) {
+                            this.unlockButton(submitBtn);
+                        }
+                    }, 1500);
                 }
             }, true);
 

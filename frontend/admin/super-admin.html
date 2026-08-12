@@ -2114,11 +2114,15 @@
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Primary CTA Button</label>
-                                                        <input type="text" class="form-control" id="ps-cms-cta-primary" placeholder="Start Free Trial">
+                                                        <input type="text" class="form-control mb-1" id="ps-cms-cta-primary" placeholder="Start Free Trial">
+                                                        <input type="text" class="form-control" id="ps-cms-cta-primary-url" placeholder="URL (e.g. /auth/register-org.html)">
+                                                        <div class="text-xxs text-muted mt-1">Text label &amp; destination URL for the primary button.</div>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Secondary CTA Button</label>
-                                                        <input type="text" class="form-control" id="ps-cms-cta-secondary" placeholder="Watch Demo">
+                                                        <input type="text" class="form-control mb-1" id="ps-cms-cta-secondary" placeholder="Watch Demo">
+                                                        <input type="text" class="form-control" id="ps-cms-cta-secondary-url" placeholder="URL (e.g. #features or https://...)">
+                                                        <div class="text-xxs text-muted mt-1">Text label &amp; destination URL for the secondary button.</div>
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Stat 1 (Value & Label)</label>
@@ -3435,38 +3439,6 @@
                                             </div>
                                         </div>
                                         
-                                        <!-- Dynamic Trial & Onboarding Configuration Panel (Step 1) -->
-                                        <div class="col-12" id="pwTrialConfigContainer" style="display: none;">
-                                            <div class="p-3 rounded-3 border" style="background: rgba(37,99,235,0.04); border-color: rgba(37,99,235,0.2) !important;">
-                                                <div class="fw-bold text-sm text-primary mb-2 d-flex align-items-center gap-1.5">
-                                                    <i data-lucide="gift" style="width:16px;height:16px;"></i> Free Onboarding Trial Configuration
-                                                </div>
-                                                <div class="row g-3">
-                                                    <div class="col-md-6">
-                                                        <div class="ds-field">
-                                                            <label class="ds-label">Default Onboarding Trial Period (Days) <span class="text-danger">*</span></label>
-                                                            <input type="number" class="ds-input" id="pwTrialDays" value="14" min="1" max="365" placeholder="e.g. 14" oninput="SuperAdmin.syncTrialDaysInputs(this.value)">
-                                                            <div class="text-xxs text-muted mt-1">Number of days new organizations get for their initial trial period.</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="ds-field">
-                                                            <label class="ds-label">Auto-Approve Trial Extensions Limit <span class="text-danger">*</span></label>
-                                                            <input type="number" class="ds-input" id="pwTrialAutoApproveLimit" value="2" min="0" max="10" placeholder="e.g. 2" oninput="SuperAdmin.syncTrialLimitInputs(this.value)">
-                                                            <div class="text-xxs text-muted mt-1">Auto-approves up to X extension requests. On request X+1, notifies Super Admin for approval.</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12">
-                                                        <div class="form-check m-0">
-                                                            <input class="form-check-input" type="checkbox" id="pwIsDefaultTrial" checked onchange="SuperAdmin.syncTrialDefaultInputs(this.checked)">
-                                                            <label class="form-check-label text-xs fw-semibold text-main" for="pwIsDefaultTrial">
-                                                                Set as Default Onboarding Trial Plan for all newly registered organizations
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
 
                                         <div class="col-12"><div class="ds-field"><label class="ds-label">Short Description <span class="text-danger">*</span></label><input type="text" class="ds-input" id="pwDesc" placeholder="e.g. Standard tools for small teams"></div></div>
                                         <div class="col-12"><div class="ds-field"><label class="ds-label">Long Description</label><textarea class="ds-input" id="pwLongDesc" rows="3" placeholder="Enter full details here..."></textarea></div></div>
@@ -3477,7 +3449,7 @@
                                 <div class="wiz-panel" id="pwp2">
                                     <div class="row g-3">
                                         <!-- Dynamic Trial & Onboarding Configuration Panel (Step 2) -->
-                                        <div class="col-12" id="pwTrialConfigContainer2" style="display: none;">
+                                        <div class="col-12" id="pwTrialConfigContainer" style="display: none;">
                                             <div class="p-3 rounded-3 border" style="background: rgba(37,99,235,0.06); border-color: rgba(37,99,235,0.25) !important;">
                                                 <div class="fw-bold text-sm text-primary mb-2 d-flex align-items-center gap-1.5">
                                                     <i data-lucide="gift" style="width:16px;height:16px;"></i> Free Onboarding Trial Configuration Parameters
@@ -3486,21 +3458,21 @@
                                                     <div class="col-md-6">
                                                         <div class="ds-field">
                                                             <label class="ds-label">Default Onboarding Trial Period (Days) <span class="text-danger">*</span></label>
-                                                            <input type="number" class="ds-input" id="pwTrialDays2" value="14" min="1" max="365" placeholder="e.g. 14" oninput="SuperAdmin.syncTrialDaysInputs(this.value)">
+                                                            <input type="number" class="ds-input" id="pwTrialDays" value="14" min="1" max="365" placeholder="e.g. 14">
                                                             <div class="text-xxs text-muted mt-1">Number of days new organizations get for their initial trial period.</div>
                                                         </div>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <div class="ds-field">
                                                             <label class="ds-label">Auto-Approve Trial Extensions Limit <span class="text-danger">*</span></label>
-                                                            <input type="number" class="ds-input" id="pwTrialAutoApproveLimit2" value="2" min="0" max="10" placeholder="e.g. 2" oninput="SuperAdmin.syncTrialLimitInputs(this.value)">
+                                                            <input type="number" class="ds-input" id="pwTrialAutoApproveLimit" value="2" min="0" max="10" placeholder="e.g. 2">
                                                             <div class="text-xxs text-muted mt-1">Auto-approves up to X extension requests. On request X+1, notifies Super Admin for manual approval.</div>
                                                         </div>
                                                     </div>
                                                     <div class="col-12">
                                                         <div class="form-check m-0">
-                                                            <input class="form-check-input" type="checkbox" id="pwIsDefaultTrial2" checked onchange="SuperAdmin.syncTrialDefaultInputs(this.checked)">
-                                                            <label class="form-check-label text-xs fw-semibold text-main" for="pwIsDefaultTrial2">
+                                                            <input class="form-check-input" type="checkbox" id="pwIsDefaultTrial" checked>
+                                                            <label class="form-check-label text-xs fw-semibold text-main" for="pwIsDefaultTrial">
                                                                 Set as Default Onboarding Trial Plan for all newly registered organizations
                                                             </label>
                                                         </div>

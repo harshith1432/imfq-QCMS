@@ -492,7 +492,7 @@ def login():
                 record_failed_login(client_ip)
         except Exception:
             pass
-        return jsonify({"msg": "Invalid credentials"}), 401
+        return jsonify({"msg": "Username or email not found"}), 401
 
     if not bcrypt.check_password_hash(user.hashed_password, password):
         # Record failed attempt (wrong password)
@@ -509,11 +509,18 @@ def login():
                 }), 429
         except Exception:
             pass
-        return jsonify({"msg": "Invalid credentials"}), 401
+        return jsonify({"msg": "Incorrect password"}), 401
 
     # Check email verification (skip for temp passwords)
     if not user.is_verified and not user.is_temp_password:
         return jsonify({"msg": "Please verify your email address before logging in"}), 403
+
+    # If the user's organization has been deleted (moved to Recycle Bin or permanently removed),
+    # return a generic invalid credentials message — do not reveal the org is deleted.
+    if user.organization and getattr(user.organization, 'is_deleted', False):
+        role_name_chk = user.role.name if user.role else ''
+        if role_name_chk != 'SuperAdmin':
+            return jsonify({"msg": "Invalid username or password"}), 401
 
     # If organization is suspended, restrict login to Admin, CEO, or SuperAdmin only
     if user.organization and user.organization.subscription_status == 'Suspended':
@@ -530,6 +537,9 @@ def login():
     except Exception:
         pass
 
+    # Generate session ID first so it can be bound to JWT claims
+    session_id = f"SESS-{int(datetime.utcnow().timestamp())}-{user.id}"
+
     # Scoped access token
     # Include sa_sub_role in claims so the frontend can enforce sub-role
     # restrictions immediately without an extra API call.
@@ -542,6 +552,7 @@ def login():
     access_token = create_access_token(
         identity=str(user.id),
         additional_claims={
+            "session_id": session_id,
             "org_id": user.org_id,
             "role": role_name,
             "dept_id": user.department_id,
@@ -553,20 +564,17 @@ def login():
     # Update last login time
     from datetime import datetime
     user.last_login = datetime.utcnow()
-
-    # Generate session ID
-    session_id = f"SESS-{int(datetime.utcnow().timestamp())}-{user.id}"
     
     # Track session in db safely
     try:
         from app.infrastructure.database.models.models import SaaSUserSession
-        from app.presentation.routes.audit_routes import parse_user_agent, get_geo_location, log_audit_event
+        from app.presentation.routes.audit_routes import parse_user_agent, get_geo_location, get_real_client_ip, log_audit_event
         
         # Mark old sessions as LoggedOut for security
         SaaSUserSession.query.filter_by(user_id=user.id, status='Active').update({"status": "LoggedOut", "logout_time": datetime.utcnow()})
         
         ua_str = request.headers.get('User-Agent')
-        ip_addr = request.remote_addr
+        ip_addr = get_real_client_ip(request)
         os_name, browser_name, device_name = parse_user_agent(ua_str)
         
         new_sess = SaaSUserSession(

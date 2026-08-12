@@ -39,7 +39,7 @@
         }
 
         .hero-title {
-            font-size: 4rem;
+            font-size: clamp(2.2rem, 6vw, 4rem);
             font-weight: 800;
             line-height: 1.1;
             letter-spacing: -1.5px;
@@ -253,7 +253,9 @@
                         if(cms.hero_title) document.getElementById('lp-hero-title').innerHTML = cms.hero_title;
                         if(cms.hero_subtitle) document.getElementById('lp-hero-subtitle').textContent = cms.hero_subtitle;
                         if(cms.cta_primary_text) document.getElementById('lp-cta-primary').textContent = cms.cta_primary_text;
+                        if(cms.cta_primary_url) { const el = document.getElementById('lp-cta-primary'); if(el) el.href = cms.cta_primary_url; }
                         if(cms.cta_secondary_text) document.getElementById('lp-cta-secondary').textContent = cms.cta_secondary_text;
+                        if(cms.cta_secondary_url) { const el = document.getElementById('lp-cta-secondary'); if(el) el.href = cms.cta_secondary_url; }
                         if(cms.faq_title) document.getElementById('lp-faq-title').textContent = cms.faq_title;
                         if(cms.faq_subtitle) document.getElementById('lp-faq-subtitle').textContent = cms.faq_subtitle;
                         if(cms.footer_description) document.getElementById('lp-footer-desc').textContent = cms.footer_description;
