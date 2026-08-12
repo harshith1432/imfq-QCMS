@@ -15,6 +15,8 @@ jwt = JWTManager()
 bcrypt = Bcrypt()
 migrate = Migrate()
 
+_DB_AUTO_MIGRATED = False
+
 def create_app():
     # Bootstrap database (create if missing)
     bootstrap_database()
@@ -182,14 +184,16 @@ def create_app():
         from .presentation.middleware.security import register_security_middleware
         register_security_middleware(app)
 
-        try:
-            is_serverless = bool(os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
-            if not is_serverless:
-                try:
-                    db.create_all()
-                except Exception:
-                    pass
-            from sqlalchemy import text
+        global _DB_AUTO_MIGRATED
+        if not _DB_AUTO_MIGRATED:
+            try:
+                is_serverless = bool(os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
+                if not is_serverless:
+                    try:
+                        db.create_all()
+                    except Exception:
+                        pass
+                from sqlalchemy import text
             alter_statements = [
                 "ALTER TABLE company_information DROP COLUMN IF EXISTS iso_certifications;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS org_scale VARCHAR(50) DEFAULT 'Small';",
