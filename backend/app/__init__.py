@@ -189,7 +189,7 @@ def create_app():
                     db.create_all()
                 except Exception:
                     pass
-                from sqlalchemy import text
+            from sqlalchemy import text
             alter_statements = [
                 "ALTER TABLE company_information DROP COLUMN IF EXISTS iso_certifications;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS org_scale VARCHAR(50) DEFAULT 'Small';",
