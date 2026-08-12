@@ -55,14 +55,16 @@ class SubscriptionManager:
         from app.infrastructure.database.models.models import SaaSPlan
         from sqlalchemy import func
         trial_plan = SaaSPlan.query.filter(
-            SaaSPlan.status == 'Active',
+            func.lower(SaaSPlan.status) == 'active',
             (SaaSPlan.is_default_trial == True) | 
             (func.lower(SaaSPlan.plan_type).like('%trial%')) | 
             (func.lower(SaaSPlan.name).like('%trial%'))
         ).order_by(SaaSPlan.is_default_trial.desc(), SaaSPlan.id.asc()).first()
         
         if not trial_plan:
-            trial_plan = SaaSPlan.query.filter_by(status='Active').order_by(SaaSPlan.id.asc()).first()
+            trial_plan = SaaSPlan.query.filter(func.lower(SaaSPlan.status) == 'active').order_by(SaaSPlan.id.asc()).first()
+            if not trial_plan:
+                trial_plan = SaaSPlan.query.order_by(SaaSPlan.id.asc()).first()
             if trial_plan and hasattr(trial_plan, 'is_default_trial') and not trial_plan.is_default_trial:
                 try:
                     from app import db
