@@ -141,15 +141,11 @@
     // When visiting register-org.html, immediately verify registration is open.
     // This fires from auth-guard.js (loaded in <head>) so it blocks before render.
     if (page === 'register-org.html') {
-        // Hide body until status is confirmed to prevent form flash
-        document.documentElement.style.visibility = 'hidden';
         fetch('/api/auth/registration-status')
             .then(r => r.json())
             .then(data => {
                 if (data && data.registration_open === false) {
-                    // Permanently hide everything and show blocked message
-                    document.documentElement.style.visibility = 'visible';
-                    // Wait for DOM then show the disabled banner
+                    // Show disabled banner if registration is disabled by super admin
                     const doBlock = () => {
                         const card   = document.getElementById('onboardingCard');
                         const banner = document.getElementById('disabledSignupBanner');
@@ -168,14 +164,9 @@
                     } else {
                         doBlock();
                     }
-                } else {
-                    document.documentElement.style.visibility = 'visible';
                 }
             })
-            .catch(() => {
-                // On error, reveal page (backend will still enforce on submit)
-                document.documentElement.style.visibility = 'visible';
-            });
+            .catch(() => {});
     }
 
     function showModuleDisabledScreen(moduleCode) {
