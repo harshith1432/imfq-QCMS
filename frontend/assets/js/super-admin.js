@@ -3841,12 +3841,17 @@ const SuperAdmin = {
 
     async handleSettingsUpdate(e) {
         e.preventDefault();
+        const regEl = document.getElementById('registration_open') || document.getElementById('ps-registration-open');
+        const maintEl = document.getElementById('maintenance_mode') || document.getElementById('ps-maintenance-mode');
+        const siteNameEl = document.getElementById('site_name') || document.getElementById('ps-site-name');
+        const supportEmailEl = document.getElementById('support_email') || document.getElementById('ps-support-email');
+        const notifEl = document.getElementById('global_notification') || document.getElementById('ps-global-notification');
         const data = {
-            site_name: document.getElementById('site_name').value,
-            support_email: document.getElementById('support_email').value,
-            global_notification: document.getElementById('global_notification').value,
-            registration_open: document.getElementById('registration_open').checked,
-            maintenance_mode: document.getElementById('maintenance_mode').checked
+            site_name: siteNameEl ? siteNameEl.value : 'QCMS Enterprise OS',
+            support_email: supportEmailEl ? supportEmailEl.value : 'support@qcms.com',
+            global_notification: notifEl ? notifEl.value : '',
+            registration_open: regEl ? regEl.checked : true,
+            maintenance_mode: maintEl ? maintEl.checked : false
         };
         
         if (document.getElementById('default_plan')) data.default_plan = document.getElementById('default_plan').value;
