@@ -366,8 +366,26 @@ def create_app():
                     ps = PlatformSettings()
                     db.session.add(ps)
                     db.session.commit()
-            
-                # Seed Default Feature Modules & Child Features Hierarchy
+
+                # Seed Default SaaS Plans if not present
+                if not SaaSPlan.query.first():
+                    default_plans = [
+                        SaaSPlan(name='Starter', plan_type='Trial', status='active', is_default_trial=True,
+                                 description='Free starter plan for new organizations',
+                                 monthly_price=0.0, annual_price=0.0, max_users=10, max_projects=5, storage_limit_gb=5.0),
+                        SaaSPlan(name='Professional', plan_type='Paid', status='active', is_default_trial=False,
+                                 description='Professional plan for growing organizations',
+                                 monthly_price=49.0, annual_price=490.0, max_users=50, max_projects=25, storage_limit_gb=50.0),
+                        SaaSPlan(name='Enterprise', plan_type='Paid', status='active', is_default_trial=False,
+                                 description='Enterprise plan for large organizations',
+                                 monthly_price=199.0, annual_price=1990.0, max_users=500, max_projects=200, storage_limit_gb=500.0),
+                    ]
+                    for plan in default_plans:
+                        db.session.add(plan)
+                    db.session.commit()
+                    print("[QCMS] Seeded default SaaS Plans (Starter/Professional/Enterprise) successfully.")
+
+
                 from .infrastructure.database.models.models import Module, FeatureCategory
             
                 # 1. Categories
