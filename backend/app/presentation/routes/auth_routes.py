@@ -20,10 +20,21 @@ def allowed_file(filename):
 
 auth_bp = Blueprint('auth', __name__)
 
+def get_platform_settings_safe():
+    try:
+        from app.infrastructure.database.models.models import PlatformSettings
+        return PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    except Exception as e:
+        print(f"[QCMS Warning] PlatformSettings query error: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return None
+
 @auth_bp.route('/registration-status', methods=['GET'])
 def get_registration_status():
-    from app.infrastructure.database.models.models import PlatformSettings
-    settings = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    settings = get_platform_settings_safe()
     is_open = bool(settings.registration_open) if (settings and settings.registration_open is not None) else True
     return jsonify({
         "status": "success",
@@ -33,9 +44,7 @@ def get_registration_status():
 
 @auth_bp.route('/register-org', methods=['POST'])
 def register_org():
-    # Check PlatformSettings to see if self-service registration is disabled
-    from app.infrastructure.database.models.models import PlatformSettings
-    settings = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    settings = get_platform_settings_safe()
     if settings:
         if not settings.registration_open:
             return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin.", "message": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
@@ -149,13 +158,12 @@ def register_org():
 
 @auth_bp.route('/request-registration-otp', methods=['POST'])
 def request_registration_otp():
-    from app.infrastructure.database.models.models import PlatformSettings
-    settings = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    settings = get_platform_settings_safe()
     if settings and not settings.registration_open:
         return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin.", "message": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
 
     data = request.get_json() or {}
-    email = data.get('email')
+    email = (data.get('email') or '').strip().lower()
     
     if not email:
         return jsonify({"msg": "Email is required"}), 400
@@ -189,14 +197,13 @@ def request_registration_otp():
 
 @auth_bp.route('/verify-registration-otp', methods=['POST'])
 def verify_registration_otp():
-    from app.infrastructure.database.models.models import PlatformSettings
-    settings = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+    settings = get_platform_settings_safe()
     if settings and not settings.registration_open:
         return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin.", "message": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
 
     data = request.get_json() or {}
-    email = data.get('email')
-    otp = data.get('otp')
+    email = (data.get('email') or '').strip().lower()
+    otp = str(data.get('otp') or '').strip()
     
     if not email or not otp:
         return jsonify({"msg": "Email and OTP are required"}), 400

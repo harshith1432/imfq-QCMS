@@ -871,6 +871,36 @@ def create_app():
         except Exception:
             pass
 
+    @app.before_request
+    def check_organization_deleted():
+        """Block all API requests from users whose organization is soft-deleted (in Recycle Bin).
+        This ensures existing valid JWT tokens stop working immediately after org deletion.
+        """
+        if not request.path.startswith('/api/'):
+            return
+        # Always allow login, logout, and super-admin routes
+        always_allowed = ('/api/auth/login', '/api/auth/logout', '/api/super-admin', '/api/v1/super-admin', '/api/auth/register-org')
+        if any(request.path.startswith(p) for p in always_allowed):
+            return
+
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        try:
+            verify_jwt_in_request(optional=True)
+            identity = get_jwt_identity()
+            if identity:
+                from app.infrastructure.database.models.models import User
+                user = db.session.get(User, int(identity))
+                if user and user.organization and getattr(user.organization, 'is_deleted', False):
+                    role_name = user.role.name if user.role else ''
+                    if role_name != 'SuperAdmin':
+                        return jsonify({
+                            "status": "error",
+                            "msg": "Access denied. This organization has been deleted and your session is no longer valid.",
+                            "error_code": "ORG_DELETED"
+                        }), 403
+        except Exception:
+            pass
+
     # ─── Global Error Handlers ───
     from sqlalchemy.exc import OperationalError
     from werkzeug.exceptions import HTTPException

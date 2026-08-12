@@ -99,6 +99,47 @@
             .catch(() => {});
     }
 
+    // ── Self-Service Sign-Up Gate ───────────────────────────────────────────
+    // When visiting register-org.html, immediately verify registration is open.
+    // This fires from auth-guard.js (loaded in <head>) so it blocks before render.
+    if (page === 'register-org.html') {
+        // Hide body until status is confirmed to prevent form flash
+        document.documentElement.style.visibility = 'hidden';
+        fetch('/api/auth/registration-status')
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.registration_open === false) {
+                    // Permanently hide everything and show blocked message
+                    document.documentElement.style.visibility = 'visible';
+                    // Wait for DOM then show the disabled banner
+                    const doBlock = () => {
+                        const card   = document.getElementById('onboardingCard');
+                        const banner = document.getElementById('disabledSignupBanner');
+                        const footer = document.querySelector('.onboarding-footer');
+                        if (card)   card.style.display   = 'none';
+                        if (footer) footer.style.display = 'none';
+                        if (banner) {
+                            banner.style.display = 'block';
+                            if (window.lucide) lucide.createIcons();
+                        }
+                        const hdr = document.querySelector('.onboarding-header p');
+                        if (hdr) hdr.textContent = 'Self-service registration is currently disabled.';
+                    };
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', doBlock);
+                    } else {
+                        doBlock();
+                    }
+                } else {
+                    document.documentElement.style.visibility = 'visible';
+                }
+            })
+            .catch(() => {
+                // On error, reveal page (backend will still enforce on submit)
+                document.documentElement.style.visibility = 'visible';
+            });
+    }
+
     function showModuleDisabledScreen(moduleCode) {
         document.addEventListener('DOMContentLoaded', () => {
             // 1. Show sleek top notification banner

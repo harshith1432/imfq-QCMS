@@ -948,14 +948,13 @@ def _hard_delete_organization(org):
         db.session.execute(text(f"DELETE FROM analytics_usage WHERE org_id = {org_id};"))
         db.session.execute(text(f"UPDATE module_analytics SET org_id = NULL WHERE org_id = {org_id};"))
 
-        # ── STEP 25: Users — reassign SuperAdmins, delete the rest ───────────
-        other_org = db.session.execute(text(
-            f"SELECT id FROM organizations WHERE is_deleted = False AND id != {org_id} ORDER BY id ASC LIMIT 1;"
-        )).fetchone()
-        if other_org and other_org[0]:
-            db.session.execute(text(f"UPDATE users SET org_id = {other_org[0]} WHERE org_id = {org_id};"))
-        else:
-            db.session.execute(text(f"DELETE FROM users WHERE org_id = {org_id};"))
+        # ── STEP 25: Delete all users belonging to this organization ──────────
+        # NOTE: We do NOT reassign users to another org — all org users are
+        # permanently removed. SuperAdmin users (org_id IS NULL) are unaffected.
+        # First null-out any FK refs in global tables pointing to these users.
+        if user_ids:
+            db.session.execute(text(f"DELETE FROM saas_user_sessions WHERE user_id IN {u_clause};"))
+        db.session.execute(text(f"DELETE FROM users WHERE org_id = {org_id};"))
 
         # ── STEP 26: Delete the organization itself ───────────────────────────
         db.session.execute(text(f"DELETE FROM organizations WHERE id = {org_id};"))
