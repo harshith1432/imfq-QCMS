@@ -1368,7 +1368,7 @@ const SuperAdmin = {
         if (grid) {
             grid.innerHTML = `
                 ${QCMS.kpiCardWithTooltip('Total Organisation', kpi.total, 'building-2', 'blue', 'Total count of non-deleted client tenants.', '', 'onclick="SuperAdmin.filterByKpi(\'all\')"')}
-                ${QCMS.kpiCardWithTooltip('Paid Organisation', kpi.active, 'check-circle', 'green', 'Tenants currently on a paid subscription plan.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Active\')')}
+                ${QCMS.kpiCardWithTooltip('Paid Organisation', kpi.active, 'check-circle', 'green', 'Tenants currently on a paid subscription plan.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Active\')"')}
                 ${QCMS.kpiCardWithTooltip('On Trial Organizations', kpi.trialing, 'clock', 'orange', 'Tenants currently under active trial period.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Trialing\')"')}
                 ${QCMS.kpiCardWithTooltip('Expiring Soon', kpi.expiring_soon || 0, 'alert-triangle', 'amber', 'Tenants with trials or licenses expiring within 7 days.', '', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Expiring Soon\')"')}
                 ${QCMS.kpiCardWithTooltip('Inactive (20d)', kpi.inactive_20d || 0, 'user-x', 'slate', 'Tenants registered over 20 days ago with no login activity in the last 20 days.', '', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Inactive 20d\')"')}
@@ -1376,10 +1376,10 @@ const SuperAdmin = {
                 ${QCMS.kpiCardWithTooltip('Enterprise', kpi.enterprise, 'crown', 'purple', 'Tenants using the Enterprise SaaS plan.', '', 'onclick="SuperAdmin.filterByKpi(\'plan\', \'Enterprise\')"')}
                 ${QCMS.kpiCardWithTooltip('Expired', kpi.expired, 'x-circle', 'gray', 'Tenants whose trial or subscription has expired.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Expired\')"')}
             `;
-            // Force all cards onto a grid with legible column spacing
-            grid.style.gridTemplateColumns = `repeat(${grid.children.length}, minmax(130px, 1fr))`;
-            grid.style.gap = '10px';
-            grid.style.overflowX = 'auto';
+            // Force all cards onto a responsive grid with clean spacing
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(130px, 1fr))';
+            grid.style.gap = '12px';
             grid.style.marginBottom = '1.75rem';
             grid.style.paddingBottom = '0.5rem';
         }
