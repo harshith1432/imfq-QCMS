@@ -351,30 +351,9 @@ class FeatureEngineClient {
      * Connects to SSE endpoint for instantaneous hot-reloading when Super Admin changes a module status.
      */
     startSSE() {
-        if (this.sse) return;
-        try {
-            this.sse = new EventSource('/api/feature-engine/stream');
-
-            this.sse.addEventListener('module_changed', (e) => {
-                try {
-                    const data = JSON.parse(e.data);
-                    if (data.code) {
-                        this.flags[data.code] = data.enabled;
-                        console.log(`[FeatureEngine] Hot reload event: '${data.code}' is now ${data.enabled ? 'ENABLED' : 'DISABLED'}`);
-                        this.applyAll();
-                        this.notifyListeners(data.code, data.enabled);
-                    }
-                } catch (err) {
-                    console.error('[FeatureEngine] SSE parse error:', err);
-                }
-            });
-
-            this.sse.onerror = () => {
-                // EventSource auto-reconnects
-            };
-        } catch (err) {
-            console.warn('[FeatureEngine] SSE initialization failed:', err);
-        }
+        // Disabled to prevent blocking synchronous Gunicorn workers on low-resource environments.
+        // Feature flags are updated on page load.
+        return;
     }
 
     /**
