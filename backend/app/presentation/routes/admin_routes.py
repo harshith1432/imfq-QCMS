@@ -1867,6 +1867,151 @@ def update_org_settings():
     log_action(current_user.id, "UPDATE_SECURITY_SETTINGS", current_user.org_id, "organizations", org.id, audit_delta)
     return jsonify({"message": "Security settings updated successfully", "settings": new_settings}), 200
 
+# ── Role Access Control (RBAC) Matrix Endpoints ──
+DEFAULT_ROLE_PERMISSIONS = {
+    "Team Member": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": False,
+        "user_management": False,
+        "plants": False,
+        "departments": False,
+        "audit_logs": False,
+        "stage_template": False,
+        "settings": True
+    },
+    "CEO": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": True,
+        "user_management": False,
+        "plants": False,
+        "departments": False,
+        "audit_logs": False,
+        "stage_template": False,
+        "settings": True
+    },
+    "Facilitator": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": True,
+        "user_management": False,
+        "plants": False,
+        "departments": False,
+        "audit_logs": False,
+        "stage_template": False,
+        "settings": True
+    },
+    "Reviewer": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": True,
+        "user_management": False,
+        "plants": False,
+        "departments": False,
+        "audit_logs": False,
+        "stage_template": False,
+        "settings": True
+    },
+    "Admin": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": True,
+        "user_management": True,
+        "plants": True,
+        "departments": True,
+        "audit_logs": True,
+        "stage_template": True,
+        "settings": True
+    }
+}
+
+@admin_bp.route('/role-permissions', methods=['GET'])
+@jwt_required()
+def get_role_permissions():
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+        
+    org_id = user.org_id or 1
+    org = db.session.get(Organization, org_id) if org_id else None
+    sec = getattr(org, 'security_settings', {}) or {} if org else {}
+    role_perms = sec.get('role_permissions') if isinstance(sec, dict) else None
+
+    # Merge with default structure to guarantee all roles and keys exist
+    merged_perms = {}
+    for role, def_keys in DEFAULT_ROLE_PERMISSIONS.items():
+        merged_perms[role] = dict(def_keys)
+        if role_perms and isinstance(role_perms, dict) and role in role_perms and isinstance(role_perms[role], dict):
+            merged_perms[role].update(role_perms[role])
+
+    return jsonify({
+        "status": "success",
+        "roles": ["Team Member", "CEO", "Facilitator", "Reviewer", "Admin"],
+        "modules": [
+            {"key": "overview", "label": "Dashboard / Overview", "icon": "layout-dashboard"},
+            {"key": "project_repo", "label": "Project Repository", "icon": "layers"},
+            {"key": "knowledge_base", "label": "Knowledge Base", "icon": "database"},
+            {"key": "leaderboard", "label": "Leaderboard & Rewards", "icon": "award"},
+            {"key": "additional_sources", "label": "Additional Sources", "icon": "sparkles"},
+            {"key": "analytics", "label": "Analytics & Insights", "icon": "bar-chart-3"},
+            {"key": "user_management", "label": "User Management", "icon": "users"},
+            {"key": "plants", "label": "Plant Locations", "icon": "building-2"},
+            {"key": "departments", "label": "Departments", "icon": "briefcase"},
+            {"key": "audit_logs", "label": "Audit Logs", "icon": "scroll-text"},
+            {"key": "stage_template", "label": "8 Stage Template", "icon": "layout-list"},
+            {"key": "settings", "label": "Settings", "icon": "settings"}
+        ],
+        "permissions": merged_perms
+    }), 200
+
+@admin_bp.route('/role-permissions', methods=['PUT'])
+@admin_required
+def update_role_permissions():
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+        
+    org_id = user.org_id or 1
+    org = db.session.get(Organization, org_id) if org_id else None
+    if not org:
+        return jsonify({"message": "Organization not found"}), 404
+        
+    data = request.get_json() or {}
+    new_perms = data.get('permissions')
+    if not isinstance(new_perms, dict):
+        return jsonify({"message": "Invalid permissions payload"}), 400
+
+    sec = dict(getattr(org, 'security_settings', {}) or {})
+    sec['role_permissions'] = new_perms
+    org.security_settings = sec
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Database commit failed: {str(e)}"}), 500
+
+    log_action(user.id, "UPDATE_ROLE_PERMISSIONS", user.org_id, "organizations", org.id, {"permissions": new_perms})
+    return jsonify({"status": "success", "message": "Role Access Control matrix updated successfully", "permissions": new_perms}), 200
+
 @admin_bp.route('/upgrade-plan', methods=['POST'])
 @admin_required
 def upgrade_plan():

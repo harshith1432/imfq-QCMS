@@ -136,9 +136,22 @@
                                     </tr>
                                 </thead>
                                 <tbody id="repoTableBody">
-                                    <script>
-                                        document.write(QCMS.tableSkeleton(8));
-                                    </script>
+                                    <tr>
+                                        <td><div class="skeleton-text skeleton" style="width:180px;"></div></td>
+                                        <td><div class="skeleton-text skeleton" style="width:120px;"></div></td>
+                                        <td><div class="skeleton-text skeleton" style="width:150px;"></div></td>
+                                        <td><div class="skeleton-text skeleton" style="width:100px;"></div></td>
+                                        <td><div class="skeleton-text skeleton" style="width:110px;"></div></td>
+                                        <td class="text-end"><div class="skeleton-badge skeleton ml-auto" style="width:60px;"></div></td>
+                                    </tr>
+                                    <tr>
+                                        <td><div class="skeleton-text skeleton" style="width:180px;"></div></td>
+                                        <td><div class="skeleton-text skeleton" style="width:120px;"></div></td>
+                                        <td><div class="skeleton-text skeleton" style="width:150px;"></div></td>
+                                        <td><div class="skeleton-text skeleton" style="width:100px;"></div></td>
+                                        <td><div class="skeleton-text skeleton" style="width:110px;"></div></td>
+                                        <td class="text-end"><div class="skeleton-badge skeleton ml-auto" style="width:60px;"></div></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1493,16 +1506,6 @@
             this.checkedMemberIds.clear();
             Object.keys(this.checkedMemberNames).forEach(k => delete this.checkedMemberNames[k]);
 
-            // ── Auto-add the current logged-in user as a project member ──
-            const currentUser = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
-            const currentUserId = currentUser.id;
-            if (currentUserId) {
-                this.currentUserId = currentUserId;
-                const displayName = currentUser.full_name || currentUser.username || 'You';
-                this.checkedMemberIds.add(currentUserId);
-                this.checkedMemberNames[currentUserId] = displayName;
-            }
-
             let currentUser = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
 
             // If user object has no location or department string, fetch fresh from /auth/me
@@ -1894,7 +1897,11 @@
         }
     };
 
-    document.addEventListener('DOMContentLoaded', () => repoUI.init());
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => repoUI.init());
+    } else {
+        repoUI.init();
+    }
     document.addEventListener('click', (e) => {
         const pInput = document.getElementById('projPlant');
         const pMenu = document.getElementById('plantDropdownMenu');

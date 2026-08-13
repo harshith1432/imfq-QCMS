@@ -831,10 +831,19 @@ def login():
         # Record failed attempt (wrong identifier)
         try:
             from app.presentation.middleware.security import record_failed_login
+            from app.presentation.routes.audit_routes import log_audit_event
             client_ip = (request.headers.get('X-Forwarded-For', '') or '').split(',')[0].strip() or request.remote_addr or ''
             record_failed_login(identifier)
             if client_ip:
                 record_failed_login(client_ip)
+            log_audit_event(
+                org_id=None,
+                user_id=None,
+                action="USER_LOGIN_FAILED",
+                target_table="users",
+                details={"identifier": identifier, "reason": "Username or email not found"},
+                response_code=401
+            )
         except Exception:
             pass
         return jsonify({"msg": "Username or email not found"}), 401
@@ -843,15 +852,36 @@ def login():
         # Record failed attempt (wrong password)
         try:
             from app.presentation.middleware.security import record_failed_login
+            from app.presentation.routes.audit_routes import log_audit_event
             client_ip = (request.headers.get('X-Forwarded-For', '') or '').split(',')[0].strip() or request.remote_addr or ''
             is_locked, attempts = record_failed_login(identifier)
             if client_ip:
                 record_failed_login(client_ip)
+            
             if is_locked:
+                log_audit_event(
+                    org_id=user.org_id,
+                    user_id=user.id,
+                    action="USER_LOGIN_LOCKED",
+                    target_table="users",
+                    target_id=user.id,
+                    details={"username": user.username, "reason": "Account locked due to excessive failed attempts"},
+                    response_code=429
+                )
                 return jsonify({
                     "msg": "Account locked due to too many failed attempts. Try again later.",
                     "error_code": "ACCOUNT_LOCKED"
                 }), 429
+
+            log_audit_event(
+                org_id=user.org_id,
+                user_id=user.id,
+                action="USER_LOGIN_FAILED",
+                target_table="users",
+                target_id=user.id,
+                details={"username": user.username, "reason": "Incorrect password"},
+                response_code=401
+            )
         except Exception:
             pass
         return jsonify({"msg": "Incorrect password"}), 401
@@ -1015,6 +1045,16 @@ def get_profile():
 
     p_id, p_name, d_id, d_name = resolve_user_plant_and_dept(user)
 
+    from app.presentation.routes.admin_routes import DEFAULT_ROLE_PERMISSIONS
+    org_obj = user.organization if not is_super_admin else None
+    sec = getattr(org_obj, 'security_settings', {}) or {} if org_obj else {}
+    role_perms = sec.get('role_permissions') if isinstance(sec, dict) else None
+    merged_perms = {}
+    for r_k, def_k in DEFAULT_ROLE_PERMISSIONS.items():
+        merged_perms[r_k] = dict(def_k)
+        if role_perms and isinstance(role_perms, dict) and r_k in role_perms and isinstance(role_perms[r_k], dict):
+            merged_perms[r_k].update(role_perms[r_k])
+
     return jsonify({
         "id": user.id,
         "username": user.username,
@@ -1022,6 +1062,7 @@ def get_profile():
         "email": user.email,
         "role": user.role.name if user.role else 'SuperAdmin',
         "role_name": user.role.name if user.role else 'SuperAdmin',
+        "role_permissions": merged_perms,
         "department": d_name,
         "department_name": d_name,
         "department_id": d_id,

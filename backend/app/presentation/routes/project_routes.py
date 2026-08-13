@@ -165,7 +165,8 @@ def list_org_members():
         "department_id": u.department_id
     } for u in members]), 200
 
-@project_bp.route('', methods=['GET'])
+@project_bp.route('', methods=['GET'], strict_slashes=False)
+@project_bp.route('/', methods=['GET'], strict_slashes=False)
 @jwt_required()
 @feature_module_required('projects.view')
 def get_projects():

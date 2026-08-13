@@ -26,50 +26,167 @@ const DynamicRenderer = {
         return html;
     },
 
+    getAllRenderableFields(sec) {
+        if (!sec) return [];
+        let list = [];
+        if (Array.isArray(sec.fields) && sec.fields.length > 0) {
+            sec.fields.forEach(f => list.push(f));
+        }
+        if (sec.predefined_fields && typeof sec.predefined_fields === 'object') {
+            Object.keys(sec.predefined_fields).forEach(pfId => {
+                const pf = sec.predefined_fields[pfId];
+                if (pf && pf.disabled !== true) {
+                    if (!list.some(item => item.id === pfId)) {
+                        list.push({
+                            id: pfId,
+                            label: pf.label || pfId,
+                            type: pf.type || 'text',
+                            placeholder: pf.placeholder || '',
+                            required: pf.required !== false,
+                            col_span: pf.col_span || 'col-md-6',
+                            options: pf.options || ''
+                        });
+                    }
+                }
+            });
+        }
+        return list;
+    },
+
     renderSectionCard(sec) {
+        if (!sec) return '';
+
+        const secType = (sec.type || '').toLowerCase();
+        const isHeaderType = secType === 'section_header' || secType === 'header' || secType === 'sub_section';
+        const fieldsToRender = this.getAllRenderableFields(sec);
+
+        if (isHeaderType || fieldsToRender.length > 0) {
+            let fieldsHtml = '';
+            if (fieldsToRender.length > 0) {
+                fieldsHtml = `<div class="row g-3">`;
+                fieldsToRender.forEach(f => {
+                    fieldsHtml += this.renderSingleFieldItem(f);
+                });
+                fieldsHtml += `</div>`;
+            } else {
+                fieldsHtml = `<div class="text-xs text-muted fst-italic py-2">Sub-section header (No custom elements added yet).</div>`;
+            }
+
+            const colWidth = 'col-12';
+            const orderLabel = (sec.order !== undefined && sec.order !== null && sec.order !== 'undefined') ? sec.order : '';
+            const orderCircle = orderLabel ? `<span class="ds-icon-circle bg-primary-soft text-primary" style="width:24px;height:24px;font-size:.65rem;font-weight:700;">${orderLabel}</span>` : '';
+
+            const naToggleHtml = sec.allow_na ? `
+                <div class="form-check form-switch mb-0 ms-auto sec-na-toggle-wrap" title="Toggle section applicability" onclick="event.stopPropagation();">
+                    <input class="form-check-input section-na-toggle" type="checkbox" role="switch" checked data-sec-id="${sec.id}">
+                    <label class="text-xs fw-semibold text-success ms-1 mb-0 sec-na-label">Applicable</label>
+                </div>
+            ` : '';
+
+            return `
+                <div class="${colWidth}">
+                    <div class="glass-card ds-card mb-3 p-3 border-start border-4 border-primary" id="card_${sec.id}" data-sec-id="${sec.id}">
+                        <div class="ds-card-header px-0 pt-0 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                            <h6 class="mb-0 fw-bold text-main d-flex align-items-center gap-2">
+                                ${orderCircle}
+                                ${this.escapeHtml(sec.label || 'Section')}
+                            </h6>
+                            ${naToggleHtml}
+                        </div>
+                        <div class="ds-card-body px-0 pt-2 pb-0">
+                            ${fieldsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Single standalone tool / input section
         return this.getFieldContentHtml(sec);
     },
 
-    getFieldContentHtml(sec) {
-        let contentHtml = '';
+    renderSingleFieldItem(field) {
+        if (!field) return '';
+        const fieldType = (field.type || 'text').toLowerCase();
         
-        switch (sec.type) {
+        let colWidth = field.col_span || field.col || 'col-md-6';
+        if (['textarea', 'multi_line_text', 'table', 'five_why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'multi_text', 'file_upload'].includes(fieldType)) {
+            if (!field.col_span || field.col_span === 'col-md-6') {
+                colWidth = 'col-12';
+            }
+        }
+
+        const innerContent = this.getFieldContentHtml(field, true);
+
+        return `
+            <div class="${colWidth}">
+                <div class="ds-field-block p-2.5 rounded border bg-white mb-2" id="field_wrap_${field.id}">
+                    <label class="ds-label text-xs fw-semibold mb-1 d-block text-main">
+                        ${this.escapeHtml(field.label || 'Field')}${field.required !== false ? ' <span class="text-danger">*</span>' : ''}
+                    </label>
+                    ${innerContent}
+                </div>
+            </div>
+        `;
+    },
+
+    getFieldContentHtml(sec, isSubItem = false) {
+        let contentHtml = '';
+        const type = (sec.type || 'text').toLowerCase();
+        
+        switch (type) {
             case 'text':
+            case 'single_line_text':
+            case 'input':
+            case 'number':
+            case 'numeric':
             case 'date':
+            case 'date_picker':
                 {
                     const ph = sec.placeholder || 'Enter details...';
+                    const isNum = type === 'number' || type === 'numeric' || sec.input_type === 'number';
+                    const isDate = type === 'date' || type === 'date_picker' || sec.input_type === 'date';
                     const validTypes = ['date', 'datetime-local', 'number', 'text', 'time', 'month'];
-                    const inputType = validTypes.includes(sec.input_type) ? sec.input_type : (sec.type === 'date' ? 'date' : (sec.input_type === 'number' ? 'number' : 'text'));
+                    const inputType = validTypes.includes(sec.input_type) ? sec.input_type : (isDate ? 'date' : (isNum ? 'number' : 'text'));
                     const clickAttr = (inputType === 'date' || inputType === 'datetime-local') ? 'onclick="if(this.showPicker) this.showPicker()"' : '';
-                    contentHtml = `
-                        <div class="ds-field">
-                            <input type="${inputType}" class="ds-input" id="${sec.id}" placeholder="${this.escapeHtml(ph)}" required ${clickAttr}>
-                        </div>
-                    `;
+                    const unitBadge = sec.unit ? `<span class="input-group-text bg-light text-muted text-xs">${this.escapeHtml(sec.unit)}</span>` : '';
+                    
+                    if (unitBadge) {
+                        contentHtml = `
+                            <div class="input-group input-group-sm">
+                                <input type="${inputType}" class="ds-input" id="${sec.id}" placeholder="${this.escapeHtml(ph)}" ${sec.required!==false?'required':''} ${clickAttr}>
+                                ${unitBadge}
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="ds-field">
+                                <input type="${inputType}" class="ds-input" id="${sec.id}" placeholder="${this.escapeHtml(ph)}" ${sec.required!==false?'required':''} ${clickAttr}>
+                            </div>
+                        `;
+                    }
                 }
                 break;
             case 'textarea':
+            case 'multi_line_text':
                 {
                     const ph = sec.placeholder || 'Enter detailed notes...';
                     contentHtml = `
                         <div class="ds-field">
-                            <textarea class="ds-input ds-textarea" id="${sec.id}" rows="3" placeholder="${this.escapeHtml(ph)}" required></textarea>
+                            <textarea class="ds-input ds-textarea" id="${sec.id}" rows="3" placeholder="${this.escapeHtml(ph)}" ${sec.required!==false?'required':''}></textarea>
                         </div>
                     `;
                 }
                 break;
-            case 'select': {
+            case 'select':
+            case 'dropdown': {
                 let optionsHtml = `<option value="">-- Select option --</option>`;
-                
-                // 1. Render custom static options if provided
                 if (sec.options) {
                     const list = Array.isArray(sec.options) ? sec.options : String(sec.options).split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
                     list.forEach(opt => {
                         optionsHtml += `<option value="${this.escapeHtml(opt)}">${this.escapeHtml(opt)}</option>`;
                     });
                 }
-                
-                // 2. Default fallback options if no options configured and no data_source
                 if (!sec.options && (!sec.data_source || sec.data_source === 'custom')) {
                     optionsHtml += `
                         <option value="Yes">Yes</option>
@@ -79,14 +196,29 @@ const DynamicRenderer = {
                         <option value="Normal">Normal</option>
                     `;
                 }
-
                 contentHtml = `
                     <div class="ds-field">
-                        <select class="ds-input ds-select" id="${sec.id}" data-source="${sec.data_source || 'custom'}" required>
+                        <select class="ds-input ds-select" id="${sec.id}" data-source="${sec.data_source || 'custom'}" ${sec.required!==false?'required':''}>
                             ${optionsHtml}
                         </select>
                     </div>
                 `;
+                break;
+            }
+            case 'checkbox':
+            case 'toggle': {
+                contentHtml = `
+                    <div class="form-check form-switch pt-1">
+                        <input class="form-check-input" type="checkbox" id="${sec.id}">
+                        <label class="form-check-label text-xs fw-semibold" for="${sec.id}">${this.escapeHtml(sec.placeholder || sec.label || 'Toggle option')}</label>
+                    </div>
+                `;
+                break;
+            }
+            case 'section_header':
+            case 'header':
+            case 'sub_section': {
+                contentHtml = `<div class="py-1"><hr class="my-2 border-secondary-subtle"></div>`;
                 break;
             }
             case 'multi_text':
@@ -171,32 +303,40 @@ const DynamicRenderer = {
                 break;
             case 'fishbone':
                 contentHtml = `
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <div class="border rounded p-3 bg-white mb-2 overflow-auto" style="min-height:300px;">
+                                <svg width="100%" height="320" viewBox="0 0 820 320" id="${sec.id}_svg" style="background:var(--ds-bg-card,#ffffff);">
+                                    <defs>
+                                        <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--ds-primary)" />
+                                        </marker>
+                                    </defs>
                                     <line x1="40" y1="170" x2="680" y2="170" stroke="var(--ds-primary)" stroke-width="4" marker-end="url(#arrow)" />
                                     <rect x="680" y="125" width="115" height="90" rx="8" fill="rgba(var(--ds-primary-rgb),0.05)" stroke="var(--ds-primary)" stroke-width="2" />
                                     <text x="737" y="150" text-anchor="middle" font-size="10" font-weight="bold" fill="var(--ds-primary)">EFFECT (PROBLEM)</text>
                                     <text x="737" y="175" text-anchor="middle" font-size="10" font-weight="bold" fill="var(--ds-text-main)" id="${sec.id}_effect">Problem Definition</text>
                                     
-                                    <!-- Category Spine lines -->
                                     <line x1="160" y1="60" x2="230" y2="170" stroke="#4b5563" stroke-width="2" />
-                                    <text x="160" y="52" font-size="11" font-weight="bold" fill="var(--ds-primary)">Man</text>
+                                    <text x="160" y="50" font-size="11" font-weight="bold" fill="var(--ds-primary)">Man (People)</text>
                                     <g id="${sec.id}_bone_Man"></g>
-                                    
+
                                     <line x1="330" y1="60" x2="400" y2="170" stroke="#4b5563" stroke-width="2" />
-                                    <text x="330" y="52" font-size="11" font-weight="bold" fill="var(--ds-primary)">Machine</text>
+                                    <text x="330" y="50" font-size="11" font-weight="bold" fill="var(--ds-primary)">Machine</text>
                                     <g id="${sec.id}_bone_Machine"></g>
-                                    
+
                                     <line x1="500" y1="60" x2="570" y2="170" stroke="#4b5563" stroke-width="2" />
-                                    <text x="500" y="52" font-size="11" font-weight="bold" fill="var(--ds-primary)">Material</text>
+                                    <text x="500" y="50" font-size="11" font-weight="bold" fill="var(--ds-primary)">Material</text>
                                     <g id="${sec.id}_bone_Material"></g>
-                                    
+
                                     <line x1="160" y1="280" x2="230" y2="170" stroke="#4b5563" stroke-width="2" />
                                     <text x="160" y="295" font-size="11" font-weight="bold" fill="var(--ds-primary)">Method</text>
                                     <g id="${sec.id}_bone_Method"></g>
-                                    
+
                                     <line x1="330" y1="280" x2="400" y2="170" stroke="#4b5563" stroke-width="2" />
                                     <text x="330" y="295" font-size="11" font-weight="bold" fill="var(--ds-primary)">Measurement</text>
                                     <g id="${sec.id}_bone_Measurement"></g>
-                                    
+
                                     <line x1="500" y1="280" x2="570" y2="170" stroke="#4b5563" stroke-width="2" />
                                     <text x="500" y="295" font-size="11" font-weight="bold" fill="var(--ds-primary)">Environment</text>
                                     <g id="${sec.id}_bone_Environment"></g>
@@ -410,12 +550,14 @@ const DynamicRenderer = {
                 `;
                 break;
             default:
-                contentHtml = `<p class="text-xs text-danger">Unsupported section type: ${sec.type}</p>`;
+                contentHtml = `<p class="text-xs text-danger mb-0 py-1">Unsupported field component type: ${this.escapeHtml(type)}</p>`;
         }
 
-        // Section header with custom card
-        const colWidth = (['textarea', 'table', 'five_why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'check_sheet'].includes(sec.type)) ? 'col-12' : 'col-md-6';
+        if (isSubItem) {
+            return contentHtml;
+        }
 
+        const colWidth = (['textarea', 'multi_line_text', 'table', 'five_why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'check_sheet'].includes(type)) ? 'col-12' : 'col-md-6';
         const orderLabel = (sec.order !== undefined && sec.order !== null && sec.order !== 'undefined') ? sec.order : '';
         const orderCircle = orderLabel ? `<span class="ds-icon-circle bg-primary-soft text-primary" style="width:24px;height:24px;font-size:.65rem;font-weight:700;">${orderLabel}</span>` : '';
 
@@ -432,7 +574,7 @@ const DynamicRenderer = {
                     <div class="ds-card-header p-3 border-bottom d-flex align-items-center justify-content-between">
                         <h6 class="mb-0 fw-bold d-flex align-items-center gap-2">
                             ${orderCircle}
-                            ${sec.label}${sec.required !== false ? ' <span class="text-danger">*</span>' : ''}
+                            ${this.escapeHtml(sec.label || 'Section')}${sec.required !== false ? ' <span class="text-danger">*</span>' : ''}
                         </h6>
                         ${naToggleHtml}
                     </div>
@@ -498,152 +640,166 @@ const DynamicRenderer = {
                     }
                 }
             }
-            
-            switch (sec.type) {
-                case 'text':
-                case 'textarea':
-                case 'select':
-                    const el = document.getElementById(sec.id);
-                    if (el) el.value = val || '';
-                    break;
-                case 'multi_text':
-                    const container = document.getElementById(`${sec.id}_container`);
-                    if (container) container.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(item => this.addMultiTextRow(sec.id, item));
-                    } else {
-                        // Pre-populate with one empty row
-                        this.addMultiTextRow(sec.id);
-                    }
-                    break;
-                case 'table':
-                    const tBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (tBody) tBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addGeneralTableRow(sec.id, row));
-                    } else {
-                        this.addGeneralTableRow(sec.id);
-                    }
-                    break;
-                case 'file_upload':
-                    const hiddenInput = document.getElementById(sec.id);
-                    const statusDiv = document.getElementById(`${sec.id}_status`);
-                    if (hiddenInput) hiddenInput.value = val || '';
-                    if (statusDiv) statusDiv.textContent = val ? `Uploaded: ${val.split('/').pop()}` : 'No file uploaded';
-                    break;
-                case 'signature':
-                    const sigCheck = document.getElementById(sec.id);
-                    if (sigCheck) {
-                        sigCheck.checked = !!(val && val.signed);
-                        this.updateSignatureUI(sec.id, val);
-                    }
-                    break;
-                case 'pareto':
-                    const pBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (pBody) pBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addParetoTableRow(sec.id, row));
-                    } else {
-                        // Add default items if empty
-                        const defaults = [{ category: 'Category A', count: 12 }, { category: 'Category B', count: 8 }, { category: 'Category C', count: 3 }];
-                        defaults.forEach(row => this.addParetoTableRow(sec.id, row));
-                    }
-                    this.updateParetoChart(sec.id);
-                    break;
-                case 'fishbone':
-                    // Update effect label with problem description or title
-                    const effectLabel = document.getElementById(`${sec.id}_effect`);
-                    if (effectLabel) effectLabel.textContent = projectData.title || 'Problem Definition';
 
-                    const fBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (fBody) fBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addFishboneTableRow(sec.id, row));
-                    } else {
-                        this.addFishboneTableRow(sec.id, { category: 'Man', cause: 'Lack of training', sub_cause: 'New operators' });
-                    }
-                    this.updateFishboneSVG(sec.id);
-                    break;
-                case 'five_why':
-                    const fwBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (fwBody) fwBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addFiveWhyTableRow(sec.id, row));
-                    } else {
-                        this.addFiveWhyTableRow(sec.id);
-                    }
-                    break;
-                case 'verification_table':
-                    const vBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (vBody) vBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addVerificationTableRow(sec.id, row));
-                    } else {
-                        this.addVerificationTableRow(sec.id);
-                    }
-                    break;
-                case 'check_sheet':
-                    const csBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (csBody) csBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addCheckSheetTableRow(sec.id, row));
-                    } else {
-                        this.addCheckSheetTableRow(sec.id);
-                    }
-                    break;
-                case 'histogram':
-                    const hBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (hBody) hBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addHistogramTableRow(sec.id, row));
-                    } else {
-                        const defaults = [{ interval: '10-20', freq_before: 5, freq_after: 1 }, { interval: '20-30', freq_before: 12, freq_after: 4 }, { interval: '30-40', freq_before: 7, freq_after: 15 }];
-                        defaults.forEach(row => this.addHistogramTableRow(sec.id, row));
-                    }
-                    this.updateHistogramChart(sec.id);
-                    break;
-                case 'control_chart':
-                    const ccBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (ccBody) ccBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addControlChartTableRow(sec.id, row));
-                    } else {
-                        const defaults = [
-                            { sample: 'Batch 1', val: 12.2, cl: 12.0, ucl: 12.5, lcl: 11.5 },
-                            { sample: 'Batch 2', val: 12.4, cl: 12.0, ucl: 12.5, lcl: 11.5 },
-                            { sample: 'Batch 3', val: 11.9, cl: 12.0, ucl: 12.5, lcl: 11.5 }
-                        ];
-                        defaults.forEach(row => this.addControlChartTableRow(sec.id, row));
-                    }
-                    this.updateControlChart(sec.id);
-                    break;
-                case 'scatter':
-                    const scBody = document.querySelector(`#${sec.id}_table tbody`);
-                    if (scBody) scBody.innerHTML = '';
-                    if (Array.isArray(val)) {
-                        val.forEach(row => this.addScatterTableRow(sec.id, row));
-                    } else {
-                        const defaults = [{ sample: '1', x: 2.5, y: 5.0 }, { sample: '2', x: 3.0, y: 5.8 }, { sample: '3', x: 4.1, y: 8.2 }];
-                        defaults.forEach(row => this.addScatterTableRow(sec.id, row));
-                    }
-                    this.updateScatterChart(sec.id);
-                    break;
-                case 'stratification':
-                    const saBody = document.querySelector(`#${sec.id}_table_a tbody`);
-                    const sbBody = document.querySelector(`#${sec.id}_table_b tbody`);
-                    if (saBody) saBody.innerHTML = '';
-                    if (sbBody) sbBody.innerHTML = '';
+            const allItems = this.getAllRenderableFields(sec);
+            const itemsToInit = allItems.length > 0 ? allItems : [sec];
 
-                    const valA = (val && val.table_a) || [];
-                    const valB = (val && val.table_b) || [];
+            itemsToInit.forEach(item => {
+                const itemVal = stageData[item.id] || (val && typeof val === 'object' ? val[item.id] : null);
+                const itemType = (item.type || 'text').toLowerCase();
 
-                    if (valA.length) valA.forEach(row => this.addStratRow(`${sec.id}_table_a`, row));
-                    else this.addStratRow(`${sec.id}_table_a`, { group: 'Shift A', count: 15 });
-
-                    if (valB.length) valB.forEach(row => this.addStratRow(`${sec.id}_table_b`, row));
-                    else this.addStratRow(`${sec.id}_table_b`, { group: 'Location X', count: 24 });
-                    break;
-            }
+                switch (itemType) {
+                    case 'text':
+                    case 'single_line_text':
+                    case 'input':
+                    case 'number':
+                    case 'numeric':
+                    case 'date':
+                    case 'date_picker':
+                    case 'textarea':
+                    case 'multi_line_text':
+                    case 'select':
+                    case 'dropdown':
+                        const el = document.getElementById(item.id);
+                        if (el) el.value = itemVal || '';
+                        break;
+                    case 'checkbox':
+                    case 'toggle':
+                        const chk = document.getElementById(item.id);
+                        if (chk) chk.checked = !!itemVal;
+                        break;
+                    case 'multi_text':
+                        const container = document.getElementById(`${item.id}_container`);
+                        if (container) container.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(it => this.addMultiTextRow(item.id, it));
+                        } else {
+                            this.addMultiTextRow(item.id);
+                        }
+                        break;
+                    case 'table':
+                        const tBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (tBody) tBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addGeneralTableRow(item.id, row));
+                        } else {
+                            this.addGeneralTableRow(item.id);
+                        }
+                        break;
+                    case 'file_upload':
+                        const hiddenInput = document.getElementById(item.id);
+                        const statusDiv = document.getElementById(`${item.id}_status`);
+                        if (hiddenInput) hiddenInput.value = itemVal || '';
+                        if (statusDiv) statusDiv.textContent = itemVal ? `Uploaded: ${itemVal.split('/').pop()}` : 'No file uploaded';
+                        break;
+                    case 'signature':
+                        const sigCheck = document.getElementById(item.id);
+                        if (sigCheck) {
+                            sigCheck.checked = !!(itemVal && itemVal.signed);
+                            this.updateSignatureUI(item.id, itemVal);
+                        }
+                        break;
+                    case 'pareto':
+                        const pBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (pBody) pBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addParetoTableRow(item.id, row));
+                        } else {
+                            const defaults = [{ category: 'Category A', count: 12 }, { category: 'Category B', count: 8 }, { category: 'Category C', count: 3 }];
+                            defaults.forEach(row => this.addParetoTableRow(item.id, row));
+                        }
+                        this.updateParetoChart(item.id);
+                        break;
+                    case 'fishbone':
+                        const effectLabel = document.getElementById(`${item.id}_effect`);
+                        if (effectLabel) effectLabel.textContent = projectData.title || 'Problem Definition';
+                        const fBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (fBody) fBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addFishboneTableRow(item.id, row));
+                        } else {
+                            this.addFishboneTableRow(item.id, { category: 'Man', cause: 'Lack of training', sub_cause: 'New operators' });
+                        }
+                        this.updateFishboneSVG(item.id);
+                        break;
+                    case 'five_why':
+                        const fwBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (fwBody) fwBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addFiveWhyTableRow(item.id, row));
+                        } else {
+                            this.addFiveWhyTableRow(item.id);
+                        }
+                        break;
+                    case 'verification_table':
+                        const vBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (vBody) vBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addVerificationTableRow(item.id, row));
+                        } else {
+                            this.addVerificationTableRow(item.id);
+                        }
+                        break;
+                    case 'check_sheet':
+                        const csBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (csBody) csBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addCheckSheetTableRow(item.id, row));
+                        } else {
+                            this.addCheckSheetTableRow(item.id);
+                        }
+                        break;
+                    case 'histogram':
+                        const hBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (hBody) hBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addHistogramTableRow(item.id, row));
+                        } else {
+                            const defaults = [{ interval: '10-20', freq_before: 5, freq_after: 1 }, { interval: '20-30', freq_before: 12, freq_after: 4 }, { interval: '30-40', freq_before: 7, freq_after: 15 }];
+                            defaults.forEach(row => this.addHistogramTableRow(item.id, row));
+                        }
+                        this.updateHistogramChart(item.id);
+                        break;
+                    case 'control_chart':
+                        const ccBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (ccBody) ccBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addControlChartTableRow(item.id, row));
+                        } else {
+                            const defaults = [
+                                { sample: 'Sample 1', val: 10.2, cl: 10.0, ucl: 10.5, lcl: 9.5 },
+                                { sample: 'Sample 2', val: 9.8, cl: 10.0, ucl: 10.5, lcl: 9.5 },
+                                { sample: 'Sample 3', val: 10.4, cl: 10.0, ucl: 10.5, lcl: 9.5 }
+                            ];
+                            defaults.forEach(row => this.addControlChartTableRow(item.id, row));
+                        }
+                        this.updateControlChart(item.id);
+                        break;
+                    case 'scatter':
+                        const scBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (scBody) scBody.innerHTML = '';
+                        if (Array.isArray(itemVal)) {
+                            itemVal.forEach(row => this.addScatterTableRow(item.id, row));
+                        } else {
+                            const defaults = [{ sample: 'Point 1', x: 2, y: 4 }, { sample: 'Point 2', x: 4, y: 8 }, { sample: 'Point 3', x: 6, y: 11 }];
+                            defaults.forEach(row => this.addScatterTableRow(item.id, row));
+                        }
+                        this.updateScatterChart(item.id);
+                        break;
+                    case 'stratification':
+                        const stBodyA = document.querySelector(`#${item.id}_table_a tbody`);
+                        const stBodyB = document.querySelector(`#${item.id}_table_b tbody`);
+                        if (stBodyA) stBodyA.innerHTML = '';
+                        if (stBodyB) stBodyB.innerHTML = '';
+                        const valA = (itemVal && itemVal.table_a) || [];
+                        const valB = (itemVal && itemVal.table_b) || [];
+                        if (valA.length) valA.forEach(row => this.addStratRow(`${item.id}_table_a`, row));
+                        else this.addStratRow(`${item.id}_table_a`, { group: 'Shift A', count: 15 });
+                        if (valB.length) valB.forEach(row => this.addStratRow(`${item.id}_table_b`, row));
+                        else this.addStratRow(`${item.id}_table_b`, { group: 'Location X', count: 24 });
+                        break;
+                }
+            });
         });
 
         if (window.lucide) lucide.createIcons();
@@ -654,111 +810,130 @@ const DynamicRenderer = {
         const data = {};
 
         this.sections.forEach(sec => {
-            switch (sec.type) {
-                case 'text':
-                case 'textarea':
-                case 'select':
-                    data[sec.id] = document.getElementById(sec.id)?.value || '';
-                    break;
-                case 'multi_text':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_container .multi-text-input`)].map(i => i.value).filter(v => v.trim());
-                    break;
-                case 'table':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        item: tr.querySelector('.cell-item')?.value || '',
-                        target: tr.querySelector('.cell-target')?.value || '',
-                        actual: tr.querySelector('.cell-actual')?.value || '',
-                        comments: tr.querySelector('.cell-comments')?.value || ''
-                    })).filter(r => r.item.trim());
-                    break;
-                case 'file_upload':
-                    data[sec.id] = document.getElementById(sec.id)?.value || '';
-                    break;
-                case 'signature':
-                    const sigCheck = document.getElementById(sec.id);
-                    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-                    data[sec.id] = {
-                        signed: !!(sigCheck && sigCheck.checked),
-                        signed_by: sigCheck && sigCheck.checked ? (user.full_name || user.username || 'Reviewer') : '',
-                        signed_at: sigCheck && sigCheck.checked ? new Date().toISOString() : ''
-                    };
-                    break;
-                case 'pareto':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        category: tr.querySelector('.cell-cat')?.value || '',
-                        count: parseInt(tr.querySelector('.cell-count')?.value || 0)
-                    })).filter(r => r.category.trim());
-                    break;
-                case 'fishbone':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        category: tr.querySelector('.cell-cat')?.value || 'Man',
-                        cause: tr.querySelector('.cell-cause')?.value || '',
-                        sub_cause: tr.querySelector('.cell-subcause')?.value || ''
-                    })).filter(r => r.cause.trim());
-                    break;
-                case 'five_why':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        cause: tr.querySelector('.cell-cause')?.value || '',
-                        why1: tr.querySelector('.cell-w1')?.value || '',
-                        why2: tr.querySelector('.cell-w2')?.value || '',
-                        why3: tr.querySelector('.cell-w3')?.value || '',
-                        why4: tr.querySelector('.cell-w4')?.value || '',
-                        why5: tr.querySelector('.cell-w5')?.value || '',
-                        root_cause: tr.querySelector('.cell-root')?.value || ''
-                    })).filter(r => r.cause.trim());
-                    break;
-                case 'verification_table':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        cause: tr.querySelector('.cell-cause')?.value || '',
-                        method: tr.querySelector('.cell-method')?.value || '',
-                        criteria: tr.querySelector('.cell-criteria')?.value || '',
-                        result: tr.querySelector('.cell-result')?.value || '',
-                        is_root: tr.querySelector('.cell-root')?.value || 'No'
-                    })).filter(r => r.cause.trim());
-                    break;
-                case 'check_sheet':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        item: tr.querySelector('.cell-item')?.value || '',
-                        checked: !!tr.querySelector('.cell-check')?.checked,
-                        count: parseInt(tr.querySelector('.cell-count')?.value || 0)
-                    })).filter(r => r.item.trim());
-                    break;
-                case 'histogram':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        interval: tr.querySelector('.cell-interval')?.value || '',
-                        freq_before: parseFloat(tr.querySelector('.cell-before')?.value || 0),
-                        freq_after: parseFloat(tr.querySelector('.cell-after')?.value || 0)
-                    })).filter(r => r.interval.trim());
-                    break;
-                case 'control_chart':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        sample: tr.querySelector('.cell-sample')?.value || '',
-                        val: parseFloat(tr.querySelector('.cell-val')?.value || 0),
-                        cl: parseFloat(tr.querySelector('.cell-cl')?.value || 0),
-                        ucl: parseFloat(tr.querySelector('.cell-ucl')?.value || 0),
-                        lcl: parseFloat(tr.querySelector('.cell-lcl')?.value || 0)
-                    })).filter(r => r.sample.trim());
-                    break;
-                case 'scatter':
-                    data[sec.id] = [...document.querySelectorAll(`#${sec.id}_table tbody tr`)].map(tr => ({
-                        sample: tr.querySelector('.cell-sample')?.value || '',
-                        x: parseFloat(tr.querySelector('.cell-x')?.value || 0),
-                        y: parseFloat(tr.querySelector('.cell-y')?.value || 0)
-                    })).filter(r => r.sample.trim());
-                    break;
-                case 'stratification':
-                    data[sec.id] = {
-                        table_a: [...document.querySelectorAll(`#${sec.id}_table_a tbody tr`)].map(tr => ({
-                            group: tr.querySelector('.cell-group')?.value || '',
+            const allItems = this.getAllRenderableFields(sec);
+            const itemsToCollect = allItems.length > 0 ? allItems : [sec];
+
+            itemsToCollect.forEach(item => {
+                const itemType = (item.type || 'text').toLowerCase();
+
+                switch (itemType) {
+                    case 'text':
+                    case 'single_line_text':
+                    case 'input':
+                    case 'number':
+                    case 'numeric':
+                    case 'date':
+                    case 'date_picker':
+                    case 'textarea':
+                    case 'multi_line_text':
+                    case 'select':
+                    case 'dropdown':
+                        data[item.id] = document.getElementById(item.id)?.value || '';
+                        break;
+                    case 'checkbox':
+                    case 'toggle':
+                        data[item.id] = !!document.getElementById(item.id)?.checked;
+                        break;
+                    case 'multi_text':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_container .multi-text-input`)].map(i => i.value).filter(v => v.trim());
+                        break;
+                    case 'table':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            item: tr.querySelector('.cell-item')?.value || '',
+                            target: tr.querySelector('.cell-target')?.value || '',
+                            actual: tr.querySelector('.cell-actual')?.value || '',
+                            comments: tr.querySelector('.cell-comments')?.value || ''
+                        })).filter(r => r.item.trim());
+                        break;
+                    case 'file_upload':
+                        data[item.id] = document.getElementById(item.id)?.value || '';
+                        break;
+                    case 'signature':
+                        const sigCheck = document.getElementById(item.id);
+                        const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+                        data[item.id] = {
+                            signed: !!(sigCheck && sigCheck.checked),
+                            signed_by: sigCheck && sigCheck.checked ? (user.full_name || user.username || 'Reviewer') : '',
+                            signed_at: sigCheck && sigCheck.checked ? new Date().toISOString() : ''
+                        };
+                        break;
+                    case 'pareto':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            category: tr.querySelector('.cell-cat')?.value || '',
                             count: parseInt(tr.querySelector('.cell-count')?.value || 0)
-                        })).filter(r => r.group.trim()),
-                        table_b: [...document.querySelectorAll(`#${sec.id}_table_b tbody tr`)].map(tr => ({
-                            group: tr.querySelector('.cell-group')?.value || '',
+                        })).filter(r => r.category.trim());
+                        break;
+                    case 'fishbone':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            category: tr.querySelector('.cell-cat')?.value || 'Man',
+                            cause: tr.querySelector('.cell-cause')?.value || '',
+                            sub_cause: tr.querySelector('.cell-subcause')?.value || ''
+                        })).filter(r => r.cause.trim());
+                        break;
+                    case 'five_why':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            cause: tr.querySelector('.cell-cause')?.value || '',
+                            why1: tr.querySelector('.cell-w1')?.value || '',
+                            why2: tr.querySelector('.cell-w2')?.value || '',
+                            why3: tr.querySelector('.cell-w3')?.value || '',
+                            why4: tr.querySelector('.cell-w4')?.value || '',
+                            why5: tr.querySelector('.cell-w5')?.value || '',
+                            root_cause: tr.querySelector('.cell-root')?.value || ''
+                        })).filter(r => r.cause.trim());
+                        break;
+                    case 'verification_table':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            cause: tr.querySelector('.cell-cause')?.value || '',
+                            method: tr.querySelector('.cell-method')?.value || '',
+                            criteria: tr.querySelector('.cell-criteria')?.value || '',
+                            result: tr.querySelector('.cell-result')?.value || '',
+                            is_root: tr.querySelector('.cell-root')?.value || 'No'
+                        })).filter(r => r.cause.trim());
+                        break;
+                    case 'check_sheet':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            item: tr.querySelector('.cell-item')?.value || '',
+                            checked: !!tr.querySelector('.cell-check')?.checked,
                             count: parseInt(tr.querySelector('.cell-count')?.value || 0)
-                        })).filter(r => r.group.trim())
-                    };
-                    break;
-            }
+                        })).filter(r => r.item.trim());
+                        break;
+                    case 'histogram':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            interval: tr.querySelector('.cell-interval')?.value || '',
+                            freq_before: parseFloat(tr.querySelector('.cell-before')?.value || 0),
+                            freq_after: parseFloat(tr.querySelector('.cell-after')?.value || 0)
+                        })).filter(r => r.interval.trim());
+                        break;
+                    case 'control_chart':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            sample: tr.querySelector('.cell-sample')?.value || '',
+                            val: parseFloat(tr.querySelector('.cell-val')?.value || 0),
+                            cl: parseFloat(tr.querySelector('.cell-cl')?.value || 0),
+                            ucl: parseFloat(tr.querySelector('.cell-ucl')?.value || 0),
+                            lcl: parseFloat(tr.querySelector('.cell-lcl')?.value || 0)
+                        })).filter(r => r.sample.trim());
+                        break;
+                    case 'scatter':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            sample: tr.querySelector('.cell-sample')?.value || '',
+                            x: parseFloat(tr.querySelector('.cell-x')?.value || 0),
+                            y: parseFloat(tr.querySelector('.cell-y')?.value || 0)
+                        })).filter(r => r.sample.trim());
+                        break;
+                    case 'stratification':
+                        data[item.id] = {
+                            table_a: [...document.querySelectorAll(`#${item.id}_table_a tbody tr`)].map(tr => ({
+                                group: tr.querySelector('.cell-group')?.value || '',
+                                count: parseInt(tr.querySelector('.cell-count')?.value || 0)
+                            })).filter(r => r.group.trim()),
+                            table_b: [...document.querySelectorAll(`#${item.id}_table_b tbody tr`)].map(tr => ({
+                                group: tr.querySelector('.cell-group')?.value || '',
+                                count: parseInt(tr.querySelector('.cell-count')?.value || 0)
+                            })).filter(r => r.group.trim())
+                        };
+                        break;
+                }
+            });
         });
 
         return data;

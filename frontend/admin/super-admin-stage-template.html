@@ -280,16 +280,17 @@
         }
         .element-hover-bar {
             position: absolute;
-            top: -12px;
-            right: 8px;
+            top: -14px;
+            right: 14px;
             display: none;
-            gap: 4px;
-            background: var(--ds-bg-card);
-            border: 1px solid var(--ds-border-color);
-            border-radius: 6px;
-            padding: 2px 4px;
-            box-shadow: var(--ds-shadow-sm);
-            z-index: 10;
+            align-items: center;
+            gap: 3px;
+            background: var(--ds-bg-card, #ffffff);
+            border: 1px solid var(--ds-border-color, #cbd5e1);
+            border-radius: 20px;
+            padding: 3px 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+            z-index: 25;
         }
         .poster-element-wrapper:hover .element-hover-bar,
         .poster-element-wrapper.active-editing .element-hover-bar {
@@ -298,18 +299,23 @@
         .hover-btn {
             background: transparent;
             border: none;
-            color: var(--ds-text-secondary);
+            color: var(--ds-text-secondary, #64748b);
             width: 22px;
             height: 22px;
-            border-radius: 4px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 0.7rem;
+            transition: all 0.15s ease;
+            padding: 0;
         }
-        .hover-btn:hover { background: var(--ds-input-bg); color: var(--ds-accent); }
-        .hover-btn.danger:hover { color: #dc2626; background: rgba(220,38,38,0.1); }
+        .hover-btn i[data-lucide] {
+            width: 12px !important;
+            height: 12px !important;
+        }
+        .hover-btn:hover { background: rgba(37, 99, 235, 0.12); color: var(--ds-accent, #2563eb); }
+        .hover-btn.danger:hover { color: #dc2626; background: rgba(220, 38, 38, 0.12); }
         
         .inspector-panel {
             position: sticky;
@@ -321,6 +327,17 @@
             box-shadow: var(--ds-shadow-md);
             max-height: calc(100vh - 120px);
             overflow-y: auto;
+        }
+
+        /* Modal backdrop and layer cleanup guarantee */
+        body:not(.modal-open) .modal-backdrop {
+            display: none !important;
+            pointer-events: none !important;
+        }
+
+        body:not(.modal-open) {
+            overflow: auto !important;
+            pointer-events: auto !important;
         }
     </style>
 </head>
@@ -878,27 +895,65 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
 
     if (typeVal === 'select' || isPredefined || typeVal === 'table' || typeVal === 'multi_text') {
         extraConfigHtml += `
-            <div class="mb-3 p-2.5 rounded border bg-light">
-                <label class="ds-label text-xs fw-semibold mb-1 text-primary">Data Source & Mapping</label>
-                <select class="ds-input ds-select text-xs mb-2" onchange="updateInspectorField('data_source', this.value)">
-                    <option value="custom" ${dataSourceVal==='custom'?'selected':''}>Static Custom Choices / Headers</option>
-                    <option value="stage1_team_members" ${dataSourceVal==='stage1_team_members'?'selected':''}>Stage 1: Team Members & Roles</option>
-                    <option value="stage1_problem_background" ${dataSourceVal==='stage1_problem_background'?'selected':''}>Stage 1: Problem Statement / Theme</option>
-                    <option value="stage2_observations" ${dataSourceVal==='stage2_observations'?'selected':''}>Stage 2: Gemba Observations</option>
-                    <option value="stage3_brainstormed_causes" ${dataSourceVal==='stage3_brainstormed_causes'?'selected':''}>Stage 3: Brainstormed Causes</option>
-                    <option value="stage4_verified_root_causes" ${dataSourceVal==='stage4_verified_root_causes'?'selected':''}>Stage 4: Verified 5-Why Root Causes</option>
-                    <option value="stage5_chosen_solutions" ${dataSourceVal==='stage5_chosen_solutions'?'selected':''}>Stage 5: Evaluated Solutions</option>
-                    <option value="stage6_countermeasures" ${dataSourceVal==='stage6_countermeasures'?'selected':''}>Stage 6: Implemented Countermeasures</option>
-                    <option value="stage7_kpi_metrics" ${dataSourceVal==='stage7_kpi_metrics'?'selected':''}>Stage 7: Verified KPI Metrics</option>
-                    <option value="stage8_standardized_sops" ${dataSourceVal==='stage8_standardized_sops'?'selected':''}>Stage 8: Standardized SOP Documents</option>
-                    <option value="org_departments" ${dataSourceVal==='org_departments'?'selected':''}>System: Organization Departments</option>
-                    <option value="org_users" ${dataSourceVal==='org_users'?'selected':''}>System: Organization Users</option>
-                </select>
+            <div class="mb-3 p-3 rounded-3 border bg-light shadow-sm">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <label class="ds-label text-xs fw-bold mb-0 text-primary d-flex align-items-center gap-1">
+                        <i data-lucide="list-filter" style="width:14px;height:14px;"></i>
+                        Dropdown Choices & Data Source
+                    </label>
+                </div>
+                
+                <div class="mb-2">
+                    <label class="ds-label text-xxs text-muted mb-1 d-block">Data Source Type</label>
+                    <select class="ds-input ds-select text-xs" onchange="updateInspectorField('data_source', this.value); const w=document.getElementById('inspectorOptionsWrap'); if(w) w.style.display=(this.value==='custom'?'block':'none');">
+                        <option value="custom" ${dataSourceVal==='custom'?'selected':''}>Static Custom Choices (Enter manually below)</option>
+                        <option value="stage1_team_members" ${dataSourceVal==='stage1_team_members'?'selected':''}>Dynamic: Stage 1 Team Members & Roles</option>
+                        <option value="stage1_problem_background" ${dataSourceVal==='stage1_problem_background'?'selected':''}>Dynamic: Stage 1 Problem / Theme</option>
+                        <option value="stage2_observations" ${dataSourceVal==='stage2_observations'?'selected':''}>Dynamic: Stage 2 Gemba Defect & Observations</option>
+                        <option value="stage3_brainstormed_causes" ${dataSourceVal==='stage3_brainstormed_causes'?'selected':''}>Dynamic: Stage 3 Brainstormed Causes</option>
+                        <option value="stage4_verified_root_causes" ${dataSourceVal==='stage4_verified_root_causes'?'selected':''}>Dynamic: Stage 4 Verified 5-Why Root Causes</option>
+                        <option value="stage5_chosen_solutions" ${dataSourceVal==='stage5_chosen_solutions'?'selected':''}>Dynamic: Stage 5 Evaluated Solutions</option>
+                        <option value="stage6_countermeasures" ${dataSourceVal==='stage6_countermeasures'?'selected':''}>Dynamic: Stage 6 Countermeasures</option>
+                        <option value="stage7_kpi_metrics" ${dataSourceVal==='stage7_kpi_metrics'?'selected':''}>Dynamic: Stage 7 Verified KPI Metrics</option>
+                        <option value="stage8_standardized_sops" ${dataSourceVal==='stage8_standardized_sops'?'selected':''}>Dynamic: Stage 8 Standardized SOPs</option>
+                        <option value="org_departments" ${dataSourceVal==='org_departments'?'selected':''}>System: Organization Departments</option>
+                        <option value="org_users" ${dataSourceVal==='org_users'?'selected':''}>System: Organization Users</option>
+                    </select>
+                </div>
 
                 <div id="inspectorOptionsWrap" style="${dataSourceVal!=='custom'?'display:none;':''}">
-                    <label class="ds-label text-xs fw-semibold mb-1">Items / Choices (Comma / Newline separated)</label>
-                    <textarea class="ds-input ds-textarea text-xs" rows="3" placeholder="e.g. Low, Medium, High, Critical" oninput="updateInspectorField('options', this.value)">${esc(optionsVal)}</textarea>
-                    <span class="text-xxs text-muted mt-1 d-block">Type choices or table headers separated by commas or line breaks.</span>
+                    <label class="ds-label text-xs fw-bold mb-1 text-main">Configure Dropdown Options</label>
+                    
+                    <!-- Single Choice Add Input -->
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" id="addChoiceInput" class="ds-input text-xs" placeholder="Type choice (e.g. Option 1)..." onkeydown="if(event.key==='Enter'){ event.preventDefault(); addInspectorChoiceItem(); }">
+                        <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="addInspectorChoiceItem()">
+                            <i data-lucide="plus" style="width:12px;height:12px;"></i> Add
+                        </button>
+                    </div>
+
+                    <!-- Choice Badges Container -->
+                    <div id="inspectorChoicesBadges" class="d-flex flex-wrap gap-1 mb-2 p-2 bg-white border rounded" style="min-height:36px; max-height:130px; overflow-y:auto;">
+                        ${renderChoiceBadgesHtml(optionsVal)}
+                    </div>
+
+                    <!-- Quick Presets -->
+                    <div class="mb-2">
+                        <span class="text-xxs text-muted d-block mb-1">Quick Presets:</span>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 text-xxs" onclick="applyInspectorChoicePreset(['Low', 'Medium', 'High', 'Critical'])">Severity</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 text-xxs" onclick="applyInspectorChoicePreset(['Pass', 'Fail'])">Pass/Fail</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 text-xxs" onclick="applyInspectorChoicePreset(['Yes', 'No'])">Yes/No</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 text-xxs" onclick="applyInspectorChoicePreset(['Open', 'In Progress', 'Completed'])">Status</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 text-xxs" onclick="applyInspectorChoicePreset(['High Impact', 'Medium Impact', 'Low Impact'])">Impact</button>
+                        </div>
+                    </div>
+
+                    <!-- Bulk Textarea Input -->
+                    <div>
+                        <label class="ds-label text-xxs text-muted mb-1">Raw Options List (Comma or Line separated)</label>
+                        <textarea class="ds-input ds-textarea text-xs" id="inspectorOptionsRawTextarea" rows="3" placeholder="Option 1, Option 2, Option 3" oninput="updateInspectorField('options', this.value); refreshInspectorChoiceBadges(this.value);">${esc(optionsVal)}</textarea>
+                    </div>
                 </div>
             </div>
         `;
@@ -993,6 +1048,76 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
     `;
 
     if (window.lucide) lucide.createIcons();
+}
+
+function renderChoiceBadgesHtml(optionsVal) {
+    const list = Array.isArray(optionsVal) ? optionsVal : String(optionsVal || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    if (!list.length) {
+        return `<span class="text-xxs text-muted fst-italic">No choices added yet. Type above or click a preset.</span>`;
+    }
+    return list.map((item, idx) => `
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 px-2 py-1 text-xs">
+            ${esc(item)}
+            <i data-lucide="x" style="width:11px;height:11px;cursor:pointer;" onclick="removeInspectorChoiceItem(${idx}); event.stopPropagation();"></i>
+        </span>
+    `).join('');
+}
+
+function addInspectorChoiceItem() {
+    const input = document.getElementById('addChoiceInput');
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) return;
+
+    if (!activeInspectorTarget) return;
+    const { stageIdx, secIdx, fieldId, isPredefined } = activeInspectorTarget;
+    const stage = stages[stageIdx];
+    if (!stage) return;
+    const sec = (stage.sections || [])[secIdx];
+    if (!sec) return;
+    const fields = getSectionFields(sec);
+    const f = isPredefined ? ((sec.predefined_fields || {})[fieldId]) : fields.find(item => item.id === fieldId);
+    if (!f) return;
+
+    let list = Array.isArray(f.options) ? [...f.options] : String(f.options || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    list.push(val);
+    input.value = '';
+    
+    updateInspectorField('options', list);
+    openInspector(stageIdx, secIdx, fieldId, isPredefined);
+}
+
+function removeInspectorChoiceItem(idx) {
+    if (!activeInspectorTarget) return;
+    const { stageIdx, secIdx, fieldId, isPredefined } = activeInspectorTarget;
+    const stage = stages[stageIdx];
+    if (!stage) return;
+    const sec = (stage.sections || [])[secIdx];
+    if (!sec) return;
+    const fields = getSectionFields(sec);
+    const f = isPredefined ? ((sec.predefined_fields || {})[fieldId]) : fields.find(item => item.id === fieldId);
+    if (!f) return;
+
+    let list = Array.isArray(f.options) ? [...f.options] : String(f.options || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    list.splice(idx, 1);
+
+    updateInspectorField('options', list);
+    openInspector(stageIdx, secIdx, fieldId, isPredefined);
+}
+
+function applyInspectorChoicePreset(presetArray) {
+    if (!activeInspectorTarget) return;
+    const { stageIdx, secIdx, fieldId, isPredefined } = activeInspectorTarget;
+    updateInspectorField('options', presetArray);
+    openInspector(stageIdx, secIdx, fieldId, isPredefined);
+}
+
+function refreshInspectorChoiceBadges(textVal) {
+    const wrap = document.getElementById('inspectorChoicesBadges');
+    if (wrap) {
+        wrap.innerHTML = renderChoiceBadgesHtml(textVal);
+        if (window.lucide) lucide.createIcons();
+    }
 }
 
 function closeInspector() {
@@ -1095,17 +1220,27 @@ function deleteInspectorField() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function showToast(msg, type = 'success') {
-    if (window.QCMS && QCMS.toast) { QCMS.toast(msg, type); return; }
+    if (window.QCMS && QCMS.toast) { QCMS.toast(msg, type, 3000); return; }
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
     const d = document.createElement('div');
-    const bgMap = { success:'#166534', error:'#7f1d1d', info:'#1e40af', warning:'#92400e' };
-    const bdMap = { success:'#22c55e', error:'#ef4444', info:'#60a5fa', warning:'#fbbf24' };
-    d.style.cssText = `position:fixed;top:24px;right:24px;z-index:99999999;padding:12px 20px;
-        border-radius:10px;font-weight:600;font-size:.875rem;color:#fff;
-        background:${bgMap[type]||bgMap.success};
-        border:1px solid ${bdMap[type]||bdMap.success};box-shadow:0 10px 30px rgba(0,0,0,0.3);`;
-    d.textContent = msg;
-    document.body.appendChild(d);
-    setTimeout(() => d.remove(), 3200);
+    d.className = `ds-toast ${type}`;
+    d.innerHTML = `
+        <i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info'}"></i>
+        <span style="flex-grow:1;">${esc(msg)}</span>
+        <button type="button" class="btn-close ms-2" style="font-size:0.65rem;opacity:0.6;cursor:pointer;" onclick="const t=this.closest('.ds-toast'); if(t){ t.classList.add('dismissing'); setTimeout(()=>t.remove(),300); }"></button>
+    `;
+    container.appendChild(d);
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => {
+        if (!d.parentNode) return;
+        d.classList.add('dismissing');
+        setTimeout(() => { if (d.parentNode) d.remove(); }, 300);
+    }, 3000);
 }
 
 function esc(s) {
@@ -2225,10 +2360,6 @@ function renderList() {
                                                        data-stage="${i}" data-sec="${sIdx}" data-fidx="${fIdx}">
                                                 <label class="text-xs ${field.required!==false?'text-danger fw-bold':'text-muted'} ms-1 mb-0">Req</label>
                                             </div>
-                                            <button class="row-btn danger" style="width:22px;height:22px;padding:0;border-radius:5px;" title="Delete field"
-                                                    onclick="deleteSubField(${i},${sIdx},${fIdx}); event.stopPropagation();">
-                                                <i data-lucide="trash-2" style="width:11px;height:11px;"></i>
-                                            </button>
                                         </div>
                                     </div>
                                     <div class="mockup-preview-area">${fieldMockup}</div>
@@ -2707,9 +2838,24 @@ document.getElementById('saveWarningAck').addEventListener('change', function ()
     confBtn.style.cursor  = this.checked ? 'pointer' : 'not-allowed';
 });
 
+function cleanupModalBackdrops() {
+    setTimeout(() => {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        document.body.style.pointerEvents = 'auto';
+    }, 100);
+}
+
+document.querySelectorAll('.modal').forEach(mEl => {
+    mEl.addEventListener('hidden.bs.modal', cleanupModalBackdrops);
+});
+
 // Actual API save triggered from inside warning modal
 document.getElementById('saveWarningConfirmBtn').addEventListener('click', async () => {
     bsSaveWarningModal.hide();
+    cleanupModalBackdrops();
     const btn = document.getElementById('saveBtn');
     btn.disabled = true;
     btn.innerHTML = '<i data-lucide="loader" class="spin" style="width:14px;height:14px;"></i> Publishing…';
@@ -2723,6 +2869,7 @@ document.getElementById('saveWarningConfirmBtn').addEventListener('click', async
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="save" style="width:14px;height:14px;"></i> Save Global Template';
         lucide.createIcons();
+        cleanupModalBackdrops();
     }
 });
 

@@ -194,6 +194,43 @@ const QCMS = {
         return roleStr;
     },
 
+    getDashboardUrl(role) {
+        const norm = this.normalizeRole(role || (this.user && this.user.role));
+        if (norm === 'SuperAdmin') return '/admin/super-admin.html';
+        if (norm === 'Admin' || norm === 'CEO') return '/dashboard/dashboard-admin.html';
+        if (norm === 'Facilitator') return '/dashboard/dashboard-facilitator.html';
+        if (norm === 'Reviewer') return '/dashboard/dashboard-reviewer.html';
+        if (norm === 'Team Leader') return '/dashboard/dashboard-team-member.html';
+        if (norm === 'Team Member') return '/dashboard/dashboard-team-member.html';
+        return '/dashboard/dashboard-team-member.html';
+    },
+
+    isModuleAllowed(roleName, moduleKey) {
+        try {
+            const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : {};
+            const perms = user.role_permissions || JSON.parse(sessionStorage.getItem('role_permissions') || localStorage.getItem('role_permissions') || 'null');
+            
+            if (!perms) return true;
+            
+            let normRole = roleName || user.role;
+            if (typeof normRole === 'object') normRole = normRole.name || '';
+            
+            normRole = (normRole === 'Team Leader' || normRole === 'teamleader') ? 'Team Leader' :
+                       (normRole === 'Facilitator' || normRole === 'facilitator') ? 'Facilitator' :
+                       (normRole === 'Reviewer' || normRole === 'reviewer') ? 'Reviewer' :
+                       (normRole === 'Admin' || normRole === 'admin' || normRole === 'SuperAdmin') ? 'Admin' :
+                       'Team Member';
+                       
+            if (perms[normRole] && typeof perms[normRole][moduleKey] === 'boolean') {
+                return perms[normRole][moduleKey];
+            }
+        } catch (e) {
+            console.warn('RBAC check error:', e);
+        }
+        return true;
+    },
+
     init() {
         const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
         if (userStr) {
@@ -688,12 +725,12 @@ const QCMS = {
             orange: '#f59e0b', purple: '#8b5cf6', cyan: '#06b6d4', gray: '#64748b'
         };
         const c = hexMap[color] || hexMap.blue;
-        return `<div class="glass-card" style="padding: var(--ds-space-5); text-align: center;">
-            <div style="width:40px;height:40px;border-radius:12px;background:${c}1f;display:flex;align-items:center;justify-content:center;margin:0 auto var(--ds-space-3);">
-                <i data-lucide="${icon || 'hash'}" style="width:20px;height:20px;color:${c};"></i>
+        return `<div class="glass-card kpi-card-item p-3" style="padding: 14px 16px !important; text-align: center; border-radius: 12px; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="width:34px;height:34px;border-radius:10px;background:${c}1f;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">
+                <i data-lucide="${icon || 'hash'}" style="width:16px;height:16px;color:${c};"></i>
             </div>
-            <div class="text-2xl fw-bold" style="color:var(--ds-text-main);">${value ?? '—'}</div>
-            <div class="text-xs text-muted mt-1">${label}</div>
+            <div class="text-xl fw-bold" style="color:var(--ds-text-main); font-size: 1.35rem; line-height: 1.1;">${value ?? '—'}</div>
+            <div class="text-xs text-muted mt-1" style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">${label}</div>
         </div>`;
     },
 
@@ -921,12 +958,12 @@ const QCMS = {
         }
 
         const brandHtml = `
-            <div class="sidebar-brand">
+            <a href="${this.getDashboardUrl(roleName)}" class="sidebar-brand" style="text-decoration: none; color: inherit; display: flex; align-items: center; cursor: pointer;">
                 ${logoIconHtml}
                 <div class="brand-text">
                     ${brandNameHtml}
                 </div>
-            </div>
+            </a>
         `;
 
         let sectionsHtml = '';
@@ -1007,72 +1044,54 @@ const QCMS = {
                 </div>
             `;
 
-        // â”€â”€ COMPANY ADMIN â€” Organization management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── COMPANY ADMIN ──────────────────────────
         } else if (roleName === 'Admin') {
+            const canOverview = this.isModuleAllowed('Admin', 'overview');
+            const canProjRepo = this.isModuleAllowed('Admin', 'project_repo');
+            const canUserMgmt = this.isModuleAllowed('Admin', 'user_management');
+            const canPlants = this.isModuleAllowed('Admin', 'plants');
+            const canDepts = this.isModuleAllowed('Admin', 'departments');
+            const canAudit = this.isModuleAllowed('Admin', 'audit_logs');
+            const canTemplate = this.isModuleAllowed('Admin', 'stage_template');
+            const canKB = this.isModuleAllowed('Admin', 'knowledge_base');
+            const canRewards = this.isModuleAllowed('Admin', 'leaderboard');
+            const canSources = this.isModuleAllowed('Admin', 'additional_sources');
+            const canSettings = this.isModuleAllowed('Admin', 'settings');
+
             sectionsHtml = `
+                ${(canOverview || canProjRepo) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
                     <nav class="sidebar-nav">
-                        <a href="/dashboard/dashboard-admin.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layout-dashboard"></i>
-                            <span data-i18n="sidebar.links.overview">Overview</span>
-                        </a>
-                        <a href="/projects/projects-repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layers"></i>
-                            <span data-i18n="sidebar.links.projects_repo">Project Repository</span>
-                        </a>
+                        ${canOverview ? `<a href="/dashboard/dashboard-admin.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
+                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
                     </nav>
-                </div>
+                </div>` : ''}
+                ${(canUserMgmt || canPlants || canDepts || canAudit || canTemplate) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.administration">Administration</div>
                     <nav class="sidebar-nav">
-                        <a href="/admin/users.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="users"></i>
-                            <span data-i18n="sidebar.links.user_management">User Management</span>
-                        </a>
-                        <a href="/admin/plants.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="factory"></i>
-                            <span>Plant Locations</span>
-                        </a>
-                        <a href="/admin/departments.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="building-2"></i>
-                            <span data-i18n="sidebar.links.departments">Departments</span>
-                        </a>
-                        <a href="/admin/audit-logs.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="scroll-text"></i>
-                            <span data-i18n="sidebar.links.audit_logs">Audit Logs</span>
-                        </a>
-                        <a href="/admin/stage-template.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layout-list"></i>
-                            <span>8 Stage Template</span>
-                        </a>
+                        ${canUserMgmt ? `<a href="/admin/users.html" class="sidebar-link"><i class="link-icon" data-lucide="users"></i><span data-i18n="sidebar.links.user_management">User Management</span></a>` : ''}
+                        ${canPlants ? `<a href="/admin/plants.html" class="sidebar-link"><i class="link-icon" data-lucide="factory"></i><span>Plant Locations</span></a>` : ''}
+                        ${canDepts ? `<a href="/admin/departments.html" class="sidebar-link"><i class="link-icon" data-lucide="building-2"></i><span data-i18n="sidebar.links.departments">Departments</span></a>` : ''}
+                        ${canAudit ? `<a href="/admin/audit-logs.html" class="sidebar-link"><i class="link-icon" data-lucide="scroll-text"></i><span data-i18n="sidebar.links.audit_logs">Audit Logs</span></a>` : ''}
+                        ${canTemplate ? `<a href="/admin/stage-template.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-list"></i><span>8 Stage Template</span></a>` : ''}
                     </nav>
-                </div>
+                </div>` : ''}
+                ${(canKB || canRewards || canSources) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
                     <nav class="sidebar-nav">
-                        <a href="/projects/repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="database"></i>
-                            <span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span>
-                        </a>
-                        <a href="/rewards/leaderboard.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="award"></i>
-                            <span>Leaderboard & Rewards</span>
-                        </a>
-                        <a href="/projects/additional-sources.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="sparkles"></i>
-                            <span>Additional Sources</span>
-                        </a>
+                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
+                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
+                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
                     </nav>
-                </div>
+                </div>` : ''}
             `;
             footerHtml = `
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
-                        <a href="/admin/settings.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="settings"></i>
-                            <span data-i18n="sidebar.links.settings">Settings</span>
-                        </a>
+                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
                         <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
                             <i class="link-icon" data-lucide="log-out"></i>
                             <span data-i18n="sidebar.links.logout">Logout</span>
@@ -1081,43 +1100,41 @@ const QCMS = {
                 </div>
             `;
 
-        // â”€â”€ TEAM LEADER â€” Project oversight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── TEAM LEADER ──────────────────────────
         } else if (roleName === 'Team Leader') {
+            const canOverview = this.isModuleAllowed('Team Leader', 'overview');
+            const canProjRepo = this.isModuleAllowed('Team Leader', 'project_repo');
+            const canAnalytics = this.isModuleAllowed('Team Leader', 'analytics');
+            const canKB = this.isModuleAllowed('Team Leader', 'knowledge_base');
+            const canRewards = this.isModuleAllowed('Team Leader', 'leaderboard');
+            const canSources = this.isModuleAllowed('Team Leader', 'additional_sources');
+            const canSettings = this.isModuleAllowed('Team Leader', 'settings');
+
             sectionsHtml = `
+                ${(canOverview || canProjRepo || canAnalytics) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
                     <nav class="sidebar-nav">
-                        <a href="/dashboard/dashboard-team-member.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layout-dashboard"></i>
-                            <span data-i18n="sidebar.links.overview">Overview</span>
-                        </a>
-                        <a href="/projects/projects-repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layers"></i>
-                            <span data-i18n="sidebar.links.projects_repo">Project Repository</span>
-                        </a>
-                        <a href="/analytics/analytics.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="bar-chart-3"></i>
-                            <span data-i18n="sidebar.links.analytics">Analytics</span>
-                        </a>
+                        ${canOverview ? `<a href="/dashboard/dashboard-team-member.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
+                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
+                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
                     </nav>
-                </div>
+                </div>` : ''}
+
+                ${(canKB || canRewards || canSources) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
                     <nav class="sidebar-nav">
-                        <a href="/projects/repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="database"></i>
-                            <span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span>
-                        </a>
+                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
+                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
+                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
                     </nav>
-                </div>
+                </div>` : ''}
             `;
             footerHtml = `
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
-                        <a href="/admin/settings.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="settings"></i>
-                            <span data-i18n="sidebar.links.settings">Settings</span>
-                        </a>
+                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
                         <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
                             <i class="link-icon" data-lucide="log-out"></i>
                             <span data-i18n="sidebar.links.logout">Logout</span>
@@ -1126,44 +1143,41 @@ const QCMS = {
                 </div>
             `;
 
-        // ─── FACILITATOR — Validation support ───────────────────────
+        // ─── FACILITATOR ───────────────────────────
         } else if (roleName === 'Facilitator') {
-            const isNA = user.department === 'N/A';
-            const resourcesSection = isNA ? '' : `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
-                    <nav class="sidebar-nav">
-                        <a href="/projects/repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="database"></i>
-                            <span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span>
-                        </a>
-                    </nav>
-                </div>
-            `;
+            const canOverview = this.isModuleAllowed('Facilitator', 'overview');
+            const canProjRepo = this.isModuleAllowed('Facilitator', 'project_repo');
+            const canAnalytics = this.isModuleAllowed('Facilitator', 'analytics');
+            const canKB = this.isModuleAllowed('Facilitator', 'knowledge_base');
+            const canRewards = this.isModuleAllowed('Facilitator', 'leaderboard');
+            const canSources = this.isModuleAllowed('Facilitator', 'additional_sources');
+            const canSettings = this.isModuleAllowed('Facilitator', 'settings');
 
             sectionsHtml = `
+                ${(canOverview || canProjRepo || canAnalytics) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
                     <nav class="sidebar-nav">
-                        <a href="/dashboard/dashboard-facilitator.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layout-dashboard"></i>
-                            <span data-i18n="sidebar.links.overview">Overview</span>
-                        </a>
-                        <a href="/analytics/analytics.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="bar-chart-3"></i>
-                            <span data-i18n="sidebar.links.analytics">Analytics</span>
-                        </a>
+                        ${canOverview ? `<a href="/dashboard/dashboard-facilitator.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
+                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
+                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
                     </nav>
-                </div>
-                ${resourcesSection}
+                </div>` : ''}
+
+                ${(canKB || canRewards || canSources) ? `
+                <div class="sidebar-section">
+                    <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
+                    <nav class="sidebar-nav">
+                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
+                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
+                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
+                    </nav>
+                </div>` : ''}
             `;
             footerHtml = `
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
-                        <a href="/admin/settings.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="settings"></i>
-                            <span data-i18n="sidebar.links.settings">Settings</span>
-                        </a>
+                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
                         <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
                             <i class="link-icon" data-lucide="log-out"></i>
                             <span data-i18n="sidebar.links.logout">Logout</span>
@@ -1172,44 +1186,41 @@ const QCMS = {
                 </div>
             `;
 
-        // ─── REVIEWER — Approval flow ──────────────────────────────
+        // ─── REVIEWER ──────────────────────────────
         } else if (roleName === 'Reviewer') {
-            const isNA = user.department === 'N/A';
-            const resourcesSection = isNA ? '' : `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
-                    <nav class="sidebar-nav">
-                        <a href="/projects/repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="database"></i>
-                            <span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span>
-                        </a>
-                    </nav>
-                </div>
-            `;
+            const canOverview = this.isModuleAllowed('Reviewer', 'overview');
+            const canProjRepo = this.isModuleAllowed('Reviewer', 'project_repo');
+            const canAnalytics = this.isModuleAllowed('Reviewer', 'analytics');
+            const canKB = this.isModuleAllowed('Reviewer', 'knowledge_base');
+            const canRewards = this.isModuleAllowed('Reviewer', 'leaderboard');
+            const canSources = this.isModuleAllowed('Reviewer', 'additional_sources');
+            const canSettings = this.isModuleAllowed('Reviewer', 'settings');
 
             sectionsHtml = `
+                ${(canOverview || canProjRepo || canAnalytics) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
                     <nav class="sidebar-nav">
-                        <a href="/dashboard/dashboard-reviewer.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layout-dashboard"></i>
-                            <span data-i18n="sidebar.links.overview">Overview</span>
-                        </a>
-                        <a href="/analytics/analytics.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="bar-chart-3"></i>
-                            <span data-i18n="sidebar.links.analytics">Analytics</span>
-                        </a>
+                        ${canOverview ? `<a href="/dashboard/dashboard-reviewer.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
+                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
+                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
                     </nav>
-                </div>
-                ${resourcesSection}
+                </div>` : ''}
+
+                ${(canKB || canRewards || canSources) ? `
+                <div class="sidebar-section">
+                    <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
+                    <nav class="sidebar-nav">
+                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
+                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
+                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
+                    </nav>
+                </div>` : ''}
             `;
             footerHtml = `
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
-                        <a href="/admin/settings.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="settings"></i>
-                            <span data-i18n="sidebar.links.settings">Settings</span>
-                        </a>
+                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
                         <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
                             <i class="link-icon" data-lucide="log-out"></i>
                             <span data-i18n="sidebar.links.logout">Logout</span>
@@ -1218,55 +1229,38 @@ const QCMS = {
                 </div>
             `;
         
-        // â”€â”€ CEO â€” Executive Strategic Oversight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── CEO ────────────────────────────────────
         } else if (roleName === 'CEO') {
+            const canOverview = this.isModuleAllowed('CEO', 'overview');
+            const canProjRepo = this.isModuleAllowed('CEO', 'project_repo');
+            const canAnalytics = this.isModuleAllowed('CEO', 'analytics');
+            const canKB = this.isModuleAllowed('CEO', 'knowledge_base');
+            const canRewards = this.isModuleAllowed('CEO', 'leaderboard');
+            const canSettings = this.isModuleAllowed('CEO', 'settings');
+
             sectionsHtml = `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.executive">Executive Oversight</div>
                     <nav class="sidebar-nav">
-                        <a href="/dashboard/dashboard-ceo.html?view=strategic-overview" class="sidebar-link">
-                            <i class="link-icon" data-lucide="line-chart"></i>
-                            <span data-i18n="sidebar.links.overview">Overview</span>
-                        </a>
-                        <a href="/dashboard/dashboard-ceo.html?view=org-health" class="sidebar-link">
-                            <i class="link-icon" data-lucide="activity"></i>
-                            <span data-i18n="sidebar.links.org_health">Organization Health</span>
-                        </a>
-                        <a href="/dashboard/dashboard-ceo.html?view=roi-analytics" class="sidebar-link">
-                            <i class="link-icon" data-lucide="trending-up"></i>
-                            <span data-i18n="sidebar.links.roi_analytics">ROI Analytics</span>
-                        </a>
-                        <a href="/analytics/analytics.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="bar-chart-2"></i>
-                            <span data-i18n="sidebar.links.analytics">Analytics</span>
-                        </a>
+                        ${canOverview ? `<a href="/dashboard/dashboard-ceo.html?view=strategic-overview" class="sidebar-link"><i class="link-icon" data-lucide="line-chart"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
+                        <a href="/dashboard/dashboard-ceo.html?view=org-health" class="sidebar-link"><i class="link-icon" data-lucide="activity"></i><span data-i18n="sidebar.links.org_health">Organization Health</span></a>
+                        <a href="/dashboard/dashboard-ceo.html?view=roi-analytics" class="sidebar-link"><i class="link-icon" data-lucide="trending-up"></i><span data-i18n="sidebar.links.roi_analytics">ROI Analytics</span></a>
+                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-2"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
                     </nav>
                 </div>
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.operations">Operational Intelligence</div>
                     <nav class="sidebar-nav">
-                        <a href="/projects/projects-repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layers"></i>
-                            <span data-i18n="sidebar.links.projects_repo">Project Repository</span>
-                        </a>
-                        <a href="/rewards/leaderboard.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="award"></i>
-                            <span>Leaderboard & Rewards</span>
-                        </a>
-                        <a href="/projects/repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="database"></i>
-                            <span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span>
-                        </a>
+                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
+                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
+                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
                     </nav>
                 </div>
             `;
             footerHtml = `
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
-                        <a href="/admin/settings.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="settings"></i>
-                            <span data-i18n="sidebar.links.settings">Settings</span>
-                        </a>
+                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
                         <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
                             <i class="link-icon" data-lucide="log-out"></i>
                             <span data-i18n="sidebar.links.logout">Logout</span>
@@ -1275,39 +1269,41 @@ const QCMS = {
                 </div>
             `;
 
-        // â”€â”€ TEAM MEMBER â€” Limited access â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── TEAM MEMBER ───────────────────────────
         } else {
+            const canOverview = this.isModuleAllowed('Team Member', 'overview');
+            const canProjRepo = this.isModuleAllowed('Team Member', 'project_repo');
+            const canAnalytics = this.isModuleAllowed('Team Member', 'analytics');
+            const canKB = this.isModuleAllowed('Team Member', 'knowledge_base');
+            const canRewards = this.isModuleAllowed('Team Member', 'leaderboard');
+            const canSources = this.isModuleAllowed('Team Member', 'additional_sources');
+            const canSettings = this.isModuleAllowed('Team Member', 'settings');
+
             sectionsHtml = `
+                ${(canOverview || canProjRepo || canAnalytics) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
                     <nav class="sidebar-nav">
-                        <a href="/dashboard/dashboard-team-member.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layout-dashboard"></i>
-                            <span data-i18n="sidebar.links.overview">Overview</span>
-                        </a>
-                        <a href="/projects/projects-repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="layers"></i>
-                            <span data-i18n="sidebar.links.projects_repo">Project Repository</span>
-                        </a>
+                        ${canOverview ? `<a href="/dashboard/dashboard-team-member.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
+                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
+                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
                     </nav>
-                </div>
+                </div>` : ''}
+
+                ${(canKB || canRewards || canSources) ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
                     <nav class="sidebar-nav">
-                        <a href="/projects/repository.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="database"></i>
-                            <span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span>
-                        </a>
+                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
+                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
+                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
                     </nav>
-                </div>
+                </div>` : ''}
             `;
             footerHtml = `
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
-                        <a href="/admin/settings.html" class="sidebar-link">
-                            <i class="link-icon" data-lucide="settings"></i>
-                            <span data-i18n="sidebar.links.settings">Settings</span>
-                        </a>
+                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
                         <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
                             <i class="link-icon" data-lucide="log-out"></i>
                             <span data-i18n="sidebar.links.logout">Logout</span>
@@ -1414,11 +1410,11 @@ const QCMS = {
         const rgbVar = `var(--ds-${color}-rgb, 37, 99, 235)`;
 
         const cardContent = `
-            <div class="glass-card fade-in h-100 ${link ? 'hover-shadow clickable' : ''}" style="${link ? 'transition: all 0.2s ease; cursor: pointer;' : ''}">
-                <div class="ds-card-body p-4" style="position: relative; z-index: 1;">
-                    <div class="kpi-icon-row mb-3" style="display:flex; align-items:center; justify-content:space-between;">
-                        <div class="kpi-icon-box" style="width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; background: rgba(${rgbVar}, 0.12); color: ${hexColor}; border: 1px solid rgba(${rgbVar}, 0.2)">
-                            <i data-lucide="${icon || 'hash'}" style="width:20px; height:20px;"></i>
+            <div class="glass-card fade-in h-100 ${link ? 'hover-shadow clickable' : ''}" style="${link ? 'transition: all 0.2s ease; cursor: pointer;' : ''}; border-radius: 12px;">
+                <div class="ds-card-body p-3" style="position: relative; z-index: 1; padding: 14px 16px !important;">
+                    <div class="kpi-icon-row mb-2" style="display:flex; align-items:center; justify-content:space-between;">
+                        <div class="kpi-icon-box" style="width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; background: rgba(${rgbVar}, 0.12); color: ${hexColor}; border: 1px solid rgba(${rgbVar}, 0.2)">
+                            <i data-lucide="${icon || 'hash'}" style="width:16px; height:16px;"></i>
                         </div>
                         ${trend !== null ? `
                             <div class="${trendClass}">
@@ -1427,11 +1423,11 @@ const QCMS = {
                             </div>
                         ` : ''}
                     </div>
-                    <div class="kpi-label mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-text-secondary);"
+                    <div class="kpi-label mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ds-text-secondary);"
                          ${labelKey ? `data-i18n="${labelKey}"` : ''}>
                         ${label}
                     </div>
-                    <div class="kpi-value fw-bold" style="font-size: 1.75rem; letter-spacing: -0.025em; color: var(--ds-text-main);"
+                    <div class="kpi-value fw-bold" style="font-size: 1.4rem; letter-spacing: -0.02em; color: var(--ds-text-main);"
                          ${valueKey ? `data-i18n-number="${valueKey}"` : (typeof value === 'number' ? `data-i18n-number="${value}"` : '')}>
                         ${value ?? '0'}
                     </div>
@@ -1559,11 +1555,33 @@ const QCMS = {
         `;
     },
 
-    emptyState(title = 'No Data Found', message = 'Try refining your search or adding new items.', icon = 'search') {
+    emptyState(param1 = 'No Data Found', param2 = 'Try refining your search or adding new items.', param3 = 'search') {
+        let icon = 'search';
+        let title = 'No Data Found';
+        let message = 'Try refining your search or adding new items.';
+
+        if (arguments.length >= 3) {
+            // Check if param1 is an icon name (e.g. 'inbox', 'alert-circle', 'users', 'folder-kanban')
+            if (typeof param1 === 'string' && !param1.includes(' ') && /^[a-z0-9-]+$/.test(param1)) {
+                icon = param1;
+                title = param2;
+                message = param3;
+            } else {
+                title = param1;
+                message = param2;
+                icon = param3;
+            }
+        } else if (arguments.length === 2) {
+            title = param1;
+            message = param2;
+        } else if (arguments.length === 1) {
+            title = param1;
+        }
+
         return `
             <div class="empty-state-container py-5 px-4 text-center fade-in bg-white/50 rounded-xl border border-dashed border-slate-200">
                 <div class="empty-state-icon-box mb-4 mx-auto glass-panel" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 20px;">
-                    <i data-lucide="${icon}" style="width: 32px; height: 32px; color: var(--ds-accent);"></i>
+                    <i data-lucide="${icon || 'search'}" style="width: 32px; height: 32px; color: var(--ds-accent);"></i>
                 </div>
                 <h3 class="ds-text-main fw-bold mb-2">${title}</h3>
                 <p class="ds-text-secondary mb-0 mx-auto" style="max-width: 400px;">${message}</p>
@@ -1584,7 +1602,7 @@ const QCMS = {
     },
 
 
-    toast(message, type = 'info') {
+    toast(message, type = 'info', duration = 3000) {
         let container = document.querySelector('.toast-container');
         if (!container) {
             container = document.createElement('div');
@@ -1595,15 +1613,21 @@ const QCMS = {
         toast.className = `ds-toast ${type}`;
         toast.innerHTML = `
             <i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info'}"></i>
-            <span>${message}</span>
+            <span style="flex-grow:1;">${message}</span>
+            <button type="button" class="btn-close ms-2" style="font-size:0.65rem;opacity:0.6;cursor:pointer;" onclick="const t=this.closest('.ds-toast'); if(t){ t.classList.add('dismissing'); setTimeout(()=>t.remove(),300); }"></button>
         `;
         container.appendChild(toast);
         if (window.lucide) lucide.createIcons();
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+
+        const dismiss = () => {
+            if (!toast || !toast.parentNode) return;
+            toast.classList.add('dismissing');
+            setTimeout(() => {
+                if (toast.parentNode) toast.remove();
+            }, 300);
+        };
+
+        setTimeout(dismiss, duration);
     },
 
     /**

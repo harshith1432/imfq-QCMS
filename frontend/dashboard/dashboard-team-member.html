@@ -687,23 +687,30 @@
             membersPerPage: 10,
             totalMembers: 0,
             totalMemberPages: 1,
+            allPlants: [],
+            allDepartments: [],
+            defaultDepartments: [],
 
             async init() {
                 if (typeof QCMS !== 'undefined' && QCMS.init) QCMS.init();
 
-                this.initModal = new bootstrap.Modal(document.getElementById('initModal'));
-                this.editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
-                this.deleteModal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
-                this.workloadModal = new bootstrap.Modal(document.getElementById('workloadModal'));
+                const getM = id => {
+                    const el = document.getElementById(id);
+                    return el ? new bootstrap.Modal(el) : null;
+                };
+                this.initModal = getM('initModal');
+                this.editModal = getM('editProjectModal');
+                this.deleteModal = getM('deleteProjectModal');
+                this.workloadModal = getM('workloadModal');
 
                 // Global search listener
                 window.addEventListener('qcms-global-search', (e) => {
                     this.handleGlobalSearch(e.detail.query);
                 });
 
-                // Load initial data
-                await this.loadWorkstationData();
-                await this.loadTeamPerformanceData();
+                // Load initial data in parallel
+                this.loadWorkstationData();
+                this.loadTeamPerformanceData();
             },
 
             switchTab(tab) {
@@ -726,14 +733,22 @@
 
             // ── WORKSTATION CONTROLLER LOGIC ──
             async loadWorkstationData() {
+                this.loadMeetings();
+                await this.loadWorkstationProjects();
+            },
+
+            async loadWorkstationProjects() {
                 try {
-                    this.projects = await api.get('/projects?scope=member');
+                    const res = await api.get('/projects?scope=member');
+                    this.projects = Array.isArray(res) ? res : (res?.items || []);
                     this.renderWorkstationKPIs();
                     this.renderWorkstationList();
-                    this.loadMeetings();
                 } catch (e) {
                     console.error('Workstation load failed', e);
-                    document.getElementById('projectsList').innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Could not load your projects.')}</div>`;
+                    const list = document.getElementById('projectsList');
+                    if (list) {
+                        list.innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Could not load your projects.')}</div>`;
+                    }
                 }
             },
 
@@ -774,8 +789,8 @@
                     return;
                 }
 
-                list.innerHTML = activeProjects.map(p => `
-                    <div class="project-item fade-in" onclick="tmDash.selectProject(${p.id}, this)">
+                list.innerHTML = activeProjects.map((p, idx) => `
+                    <div class="project-item fade-in ${idx === 0 ? 'active' : ''}" onclick="tmDash.selectProject(${p.id}, this)">
                         <div class="project-item-info">
                             <div class="project-name">${p.title}</div>
                             <div class="project-uid">${p.project_uid || 'UID-PENDING'} · ${QCMS.categoryBadge(p.category)}</div>
@@ -787,6 +802,12 @@
                     </div>
                 `).join('');
                 if (window.lucide) lucide.createIcons();
+
+                // Auto-select first active project immediately
+                if (activeProjects.length > 0) {
+                    const firstEl = list && typeof list.querySelector === 'function' ? list.querySelector('.project-item') : null;
+                    this.selectProject(activeProjects[0].id, firstEl);
+                }
             },
 
             selectProject(id, element) {
@@ -917,9 +938,11 @@
 
             // ── TEAM PERFORMANCE CONTROLLER LOGIC ──
             async loadTeamPerformanceData() {
-                await this.loadStats();
-                await this.loadTeamProjects();
-                await this.loadMembers();
+                await Promise.all([
+                    this.loadStats(),
+                    this.loadTeamProjects(),
+                    this.loadMembers()
+                ]);
             },
 
             async loadStats() {
@@ -1236,11 +1259,6 @@
                     console.error('Members load failed', e);
                 }
             },
-
-            async handleDepartmentChange(deptId) {
-            allPlants: [],
-            allDepartments: [],
-            defaultDepartments: [],
 
             async loadPlantsList() {
                 try {
@@ -2144,7 +2162,11 @@
             }
         };
 
-        document.addEventListener('DOMContentLoaded', () => tmDash.init());
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => tmDash.init());
+        } else {
+            tmDash.init();
+        }
         document.addEventListener('click', (e) => {
             const pInput = document.getElementById('projPlant');
             const pMenu = document.getElementById('plantDropdownMenu');

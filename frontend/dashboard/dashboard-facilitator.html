@@ -543,7 +543,11 @@
         }
     };
 
-    document.addEventListener('DOMContentLoaded', () => facDash.init());
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => facDash.init());
+    } else {
+        facDash.init();
+    }
     </script>
 
     <!-- ─── Assistance Reply Modal ─────────────────────────────── -->

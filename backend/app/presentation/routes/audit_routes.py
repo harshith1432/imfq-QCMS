@@ -549,7 +549,7 @@ def get_audit_logs():
             "device": log.device or "Desktop",
             "session_id": log.session_id or "—",
             "risk_level": log.risk_level or "Low",
-            "status": "Failed" if (log.response_code and log.response_code >= 400) else "Success",
+            "status": "Failed" if ((log.response_code and log.response_code >= 400) or any(k in (log.action or '').upper() for k in ('FAILED', 'DENIED', 'BLOCKED', 'LOCKED', 'ERROR', 'REVOKED', 'REJECTED'))) else ("Critical" if log.risk_level == 'Critical' else ("Warning" if log.risk_level == 'High' else "Success")),
             "response_code": log.response_code or 200
         } for log in logs],
         "pagination": {

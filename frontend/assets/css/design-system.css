@@ -1418,6 +1418,13 @@ input[type="number"].obs-val {
     display: none !important;
 }
 
+.ds-toast.dismissing {
+    opacity: 0 !important;
+    transform: translateX(120%) scale(0.9) !important;
+    pointer-events: none !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
 [data-theme="dark"] .ds-toast {
     background: #1e293b !important;
     color: #f8fafc !important;

@@ -510,11 +510,46 @@
                 localStorage.removeItem('user');
             }
         }
-    } else if (token && userRole !== 'SuperAdmin' && restrictedPages[page]) {
-        // Page has explicit role restrictions — enforce them for non-SuperAdmins
-        const allowedRoles = restrictedPages[page];
-        if (!userRole || !allowedRoles.includes(userRole)) {
-            console.warn(`[RBAC] Role "${userRole}" denied access to "${page}". Redirecting...`);
+    } else if (token && userRole !== 'SuperAdmin') {
+        let isDenied = false;
+        if (restrictedPages[page]) {
+            const allowedRoles = restrictedPages[page];
+            if (!userRole || !allowedRoles.includes(userRole)) {
+                isDenied = true;
+            }
+        }
+
+        // Check Organization Role Access Control (RBAC) permissions
+        const pageModuleMap = {
+            'repository.html': 'knowledge_base',
+            'projects-repository.html': 'project_repo',
+            'analytics.html': 'analytics',
+            'users.html': 'user_management',
+            'user-management.html': 'user_management',
+            'plants.html': 'plants',
+            'departments.html': 'departments',
+            'audit-logs.html': 'audit_logs',
+            'stage-template.html': 'stage_template',
+            'leaderboard.html': 'leaderboard',
+            'additional-sources.html': 'additional_sources'
+        };
+
+        const modKey = pageModuleMap[page];
+        if (modKey) {
+            try {
+                const userObj = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                const rolePerms = userObj.role_permissions || JSON.parse(sessionStorage.getItem('role_permissions') || localStorage.getItem('role_permissions') || 'null');
+                if (rolePerms && userRole && rolePerms[userRole] && rolePerms[userRole][modKey] === false) {
+                    console.warn(`[RBAC] Module "${modKey}" is disabled for role "${userRole}". Access denied to "${page}".`);
+                    isDenied = true;
+                }
+            } catch (e) {
+                console.warn('Error reading role_permissions in auth-guard:', e);
+            }
+        }
+
+        if (isDenied) {
+            console.warn(`[RBAC] Redirecting role "${userRole}" away from restricted page "${page}".`);
             redirectByRole(userRole);
         }
     }

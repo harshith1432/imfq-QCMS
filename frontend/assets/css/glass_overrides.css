@@ -933,3 +933,33 @@ html[data-theme="dark"] #footerPageModal .modal-content {
         right: 4px !important;
     }
 }
+
+/* --- Compact & Sleek KPI Grid Card Dimensions --- */
+@media (min-width: 992px) {
+    #workstationKpiGrid, #teamKpiGrid, .kpi-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 16px !important;
+        margin-bottom: 24px !important;
+    }
+}
+
+.kpi-card, .kpi-card-item {
+    min-height: 90px !important;
+    padding: 14px 16px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+}
+
+.kpi-card .text-2xl, .kpi-card .text-xl, .kpi-card-item .text-xl {
+    font-size: 1.35rem !important;
+    line-height: 1.2 !important;
+    font-weight: 700 !important;
+}
+
+.kpi-card .text-xs, .kpi-card-item .text-xs {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.03em !important;
+}
+

@@ -3133,7 +3133,11 @@
         }
     };
 
-    document.addEventListener('DOMContentLoaded', () => revDash.init());
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => revDash.init());
+    } else {
+        revDash.init();
+    }
     </script>
 </body>
 </html>

@@ -58,6 +58,35 @@ const Breadcrumbs = {
         return 'QCMS';
     },
 
+    getHomeUrl() {
+        try {
+            const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+            if (userStr) {
+                const u = JSON.parse(userStr);
+                const role = (u && (u.role || u.role_name)) || '';
+                const roleLower = String(role).toLowerCase();
+                if (roleLower.includes('super')) return '/admin/super-admin.html';
+                if (roleLower.includes('admin') || roleLower.includes('ceo')) return '/dashboard/dashboard-admin.html';
+                if (roleLower.includes('facilitator')) return '/dashboard/dashboard-facilitator.html';
+                if (roleLower.includes('reviewer')) return '/dashboard/dashboard-reviewer.html';
+                if (roleLower.includes('leader')) return '/dashboard/dashboard-team-member.html';
+                if (roleLower.includes('member')) return '/dashboard/dashboard-team-member.html';
+            }
+        } catch(e) {}
+        if (window.QCMS && window.QCMS.user) {
+            const u = window.QCMS.user;
+            const role = (u && (u.role || u.role_name)) || '';
+            const roleLower = String(role).toLowerCase();
+            if (roleLower.includes('super')) return '/admin/super-admin.html';
+            if (roleLower.includes('admin') || roleLower.includes('ceo')) return '/dashboard/dashboard-admin.html';
+            if (roleLower.includes('facilitator')) return '/dashboard/dashboard-facilitator.html';
+            if (roleLower.includes('reviewer')) return '/dashboard/dashboard-reviewer.html';
+            if (roleLower.includes('leader')) return '/dashboard/dashboard-team-member.html';
+            if (roleLower.includes('member')) return '/dashboard/dashboard-team-member.html';
+        }
+        return '/dashboard/dashboard-team-member.html';
+    },
+
     escapeHtml(str) {
         if (!str) return '';
         return String(str)
@@ -77,11 +106,12 @@ const Breadcrumbs = {
         const path = fullPath.split('?')[0].split('#')[0].replace(/%$/, '');
         const currentPageName = this.mapping[path] || 'Resource';
         const rootName = this.getOrgName();
+        const homeUrl = this.getHomeUrl();
         
         let html = `
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb glass-breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="index.html" class="org-breadcrumb-root">${this.escapeHtml(rootName)}</a></li>
+                    <li class="breadcrumb-item"><a href="${homeUrl}" class="org-breadcrumb-root">${this.escapeHtml(rootName)}</a></li>
         `;
 
         // Logic for nested levels could go here if URLs were nested, 
@@ -101,9 +131,11 @@ const Breadcrumbs = {
 
     updateOrgName(name) {
         const targetName = name || this.getOrgName();
+        const homeUrl = this.getHomeUrl();
         const elems = document.querySelectorAll('.org-breadcrumb-root, .glass-breadcrumb .breadcrumb-item:first-child a');
         elems.forEach(el => {
             el.textContent = targetName;
+            el.setAttribute('href', homeUrl);
         });
     },
 

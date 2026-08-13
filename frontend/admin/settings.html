@@ -79,6 +79,10 @@
                                         <i class="link-icon" data-lucide="palette"></i>
                                         <span data-i18n="settings.nav.branding">Branding & Style</span>
                                     </button>
+                                    <button type="button" class="sidebar-link" data-target="rbac" onclick="settingsManager.switchTab('rbac', this)">
+                                        <i class="link-icon" data-lucide="shield-check"></i>
+                                        <span>Role Access Control</span>
+                                    </button>
                                 </nav>
                             </div>
 
@@ -543,6 +547,72 @@
                                             <button class="ds-btn ds-btn-primary" type="button" onclick="settingsManager.saveAllSecuritySettings()">Save Security Settings</button>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Role Access Control (RBAC) Section -->
+                        <div class="settings-pane" id="pane-rbac">
+                            <div class="glass-card ds-card mb-4 p-4">
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom pb-3 mb-3">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <h5 class="mb-0 fw-bold text-main">Role Access Control & Module Permissions</h5>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Role-Based RBAC</span>
+                                        </div>
+                                        <p class="text-xs ds-text-secondary mb-0">Configure module visibility and navigation options for each role in your organization (Team Member, CEO, Facilitator, Reviewer, Admin).</p>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" onclick="settingsManager.resetRolePermissionsDefaults()">
+                                            <i data-lucide="rotate-ccw" style="width:14px;height:14px;" class="me-1"></i> Reset Defaults
+                                        </button>
+                                        <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="settingsManager.saveRolePermissions()">
+                                            <i data-lucide="save" style="width:14px;height:14px;" class="me-1"></i> Save Access Matrix
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info py-2 px-3 text-xs mb-3 d-flex align-items-center gap-2" style="background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--ds-primary, #2563eb);">
+                                    <i data-lucide="info" style="width:16px;height:16px;" class="flex-shrink-0"></i>
+                                    <span>Toggling a checkbox controls module visibility for <strong>ALL users assigned to that role</strong> across your organization. Unchecked modules will be hidden from their sidebar and restricted.</span>
+                                </div>
+
+                                <!-- Permission Matrix Table -->
+                                <div class="table-responsive border rounded-3 overflow-hidden">
+                                    <table class="table align-middle mb-0 text-xs" id="rbacMatrixTable">
+                                        <thead style="background: var(--ds-bg-subtle, #f8fafc);">
+                                            <tr>
+                                                <th class="py-3 px-3 fw-bold text-uppercase text-secondary" style="min-width: 220px;">Navigation / Module Option</th>
+                                                <th class="py-3 px-2 text-center text-main fw-bold" style="width: 130px;">
+                                                    <div>Team Member</div>
+                                                    <button type="button" class="btn btn-link p-0 text-xxs text-primary text-decoration-none" onclick="settingsManager.toggleColumnPermissions('Team Member')">Toggle All</button>
+                                                </th>
+                                                <th class="py-3 px-2 text-center text-main fw-bold" style="width: 130px;">
+                                                    <div>CEO</div>
+                                                    <button type="button" class="btn btn-link p-0 text-xxs text-primary text-decoration-none" onclick="settingsManager.toggleColumnPermissions('CEO')">Toggle All</button>
+                                                </th>
+                                                <th class="py-3 px-2 text-center text-main fw-bold" style="width: 130px;">
+                                                    <div>Facilitator</div>
+                                                    <button type="button" class="btn btn-link p-0 text-xxs text-primary text-decoration-none" onclick="settingsManager.toggleColumnPermissions('Facilitator')">Toggle All</button>
+                                                </th>
+                                                <th class="py-3 px-2 text-center text-main fw-bold" style="width: 130px;">
+                                                    <div>Reviewer</div>
+                                                    <button type="button" class="btn btn-link p-0 text-xxs text-primary text-decoration-none" onclick="settingsManager.toggleColumnPermissions('Reviewer')">Toggle All</button>
+                                                </th>
+                                                <th class="py-3 px-2 text-center text-main fw-bold" style="width: 130px;">
+                                                    <div>Admin</div>
+                                                    <button type="button" class="btn btn-link p-0 text-xxs text-primary text-decoration-none" onclick="settingsManager.toggleColumnPermissions('Admin')">Toggle All</button>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rbacMatrixBody">
+                                            <tr>
+                                                <td colspan="6" class="text-center py-4 text-muted">
+                                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div> Loading Role Access Control Matrix...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -4532,6 +4602,7 @@ console.log(data);
 
             // Specific tab handlers
             if (target === 'billing') this.loadBillingHistory();
+            if (target === 'rbac') this.loadRolePermissions();
             if (target === 'audit') { window.location.href = '/admin/audit-logs.html'; return; }
             if (target === 'compliance') {
                 setTimeout(() => {
@@ -4574,8 +4645,9 @@ console.log(data);
             }
         },
 
-        captureInitialValues() {
-            const inputs = document.querySelectorAll('.settings-pane .ds-input, .settings-pane .form-check-input');
+        captureInitialValues(paneId = null) {
+            const selector = paneId ? `#${paneId} .ds-input, #${paneId} .form-check-input` : '.settings-pane .ds-input, .settings-pane .form-check-input';
+            const inputs = document.querySelectorAll(selector);
             inputs.forEach(input => {
                 if (input.type === 'password') return;
                 if (input.type === 'checkbox') {
@@ -4585,7 +4657,8 @@ console.log(data);
                 }
             });
             this.isDirty = false;
-            document.getElementById('unsaved-badge').style.display = 'none';
+            const badge = document.getElementById('unsaved-badge');
+            if (badge) badge.style.display = 'none';
         },
 
         checkIfDirty() {
@@ -4593,12 +4666,13 @@ console.log(data);
             const inputs = document.querySelectorAll('.settings-pane .ds-input, .settings-pane .form-check-input');
             for (const input of inputs) {
                 if (input.type === 'password') continue;
-                const initialVal = input.getAttribute('data-initial-val') ?? '';
+                if (!input.hasAttribute('data-initial-val')) continue;
+                const initialVal = input.getAttribute('data-initial-val');
                 let currentVal = '';
                 if (input.type === 'checkbox') {
                     currentVal = input.checked ? 'true' : 'false';
                 } else {
-                    currentVal = input.value;
+                    currentVal = input.value || '';
                 }
                 if (currentVal !== initialVal) {
                     return true;
@@ -4615,7 +4689,8 @@ console.log(data);
                 
                 const handler = () => {
                     const dirty = this.checkIfDirty();
-                    document.getElementById('unsaved-badge').style.display = dirty ? 'block' : 'none';
+                    const badge = document.getElementById('unsaved-badge');
+                    if (badge) badge.style.display = dirty ? 'block' : 'none';
                 };
                 input.addEventListener('change', handler);
                 input.addEventListener('input', handler);
@@ -4826,6 +4901,8 @@ console.log(data);
                         if (ctrl) ctrl.style.display = e.target.checked ? 'block' : 'none';
                     });
                 }
+
+                this.captureInitialValues();
 
             } catch (e) {
                 console.warn('Settings load warning:', e);
@@ -5602,6 +5679,130 @@ ET`;
                 document.getElementById('unsaved-badge').style.display = 'block';
             } catch (e) {
                 QCMS.toast(e.message, 'error');
+            }
+        },
+
+        // ── Role Access Control (RBAC) Methods ──
+        async loadRolePermissions() {
+            try {
+                const res = await api.get('/admin/role-permissions');
+                if (res && res.status === 'success') {
+                    this.rolePermissionsData = res;
+                    this.renderRolePermissions();
+                }
+            } catch (e) {
+                console.error('Failed to load role permissions:', e);
+                const tbody = document.getElementById('rbacMatrixBody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Failed to load Role Access Control matrix.</td></tr>`;
+                }
+            }
+        },
+
+        renderRolePermissions() {
+            if (!this.rolePermissionsData) return;
+            const modules = this.rolePermissionsData.modules || [];
+            const roles = this.rolePermissionsData.roles || ["Team Member", "CEO", "Facilitator", "Reviewer", "Admin"];
+            const perms = this.rolePermissionsData.permissions || {};
+
+            let html = modules.map(m => {
+                let cells = roles.map(r => {
+                    const isChecked = perms[r] && perms[r][m.key] !== false;
+                    return `
+                        <td class="text-center py-2.5 px-2">
+                            <div class="form-check form-switch d-inline-block m-0">
+                                <input class="form-check-input rbac-toggle-input" 
+                                       type="checkbox" 
+                                       data-role="${r}" 
+                                       data-module="${m.key}" 
+                                       ${isChecked ? 'checked' : ''}
+                                       style="cursor:pointer; width:38px; height:20px;">
+                            </div>
+                        </td>
+                    `;
+                }).join('');
+
+                return `
+                    <tr>
+                        <td class="py-2.5 px-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i data-lucide="${m.icon || 'circle'}" class="text-primary" style="width:15px;height:15px;"></i>
+                                <span class="fw-semibold text-main">${m.label}</span>
+                            </div>
+                        </td>
+                        ${cells}
+                    </tr>
+                `;
+            }).join('');
+
+            const tbody = document.getElementById('rbacMatrixBody');
+            if (tbody) {
+                tbody.innerHTML = html;
+                if (window.lucide) lucide.createIcons();
+                this.captureInitialValues('pane-rbac');
+            }
+        },
+
+        async saveRolePermissions() {
+            const newPerms = {};
+            const roles = ["Team Member", "CEO", "Facilitator", "Reviewer", "Admin"];
+            roles.forEach(r => { newPerms[r] = {}; });
+
+            document.querySelectorAll('.rbac-toggle-input').forEach(input => {
+                const r = input.getAttribute('data-role');
+                const m = input.getAttribute('data-module');
+                if (r && m) {
+                    newPerms[r][m] = input.checked;
+                }
+            });
+
+            try {
+                const res = await api.put('/admin/role-permissions', { permissions: newPerms });
+                if (res && res.status === 'success') {
+                    const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                    user.role_permissions = newPerms;
+                    sessionStorage.setItem('user', JSON.stringify(user));
+                    localStorage.setItem('user', JSON.stringify(user));
+                    sessionStorage.setItem('role_permissions', JSON.stringify(newPerms));
+                    localStorage.setItem('role_permissions', JSON.stringify(newPerms));
+
+                    this.captureInitialValues('pane-rbac');
+
+                    if (window.QCMS && typeof QCMS.toast === 'function') {
+                        QCMS.toast('Role Access Control matrix saved successfully!', 'success');
+                    }
+                    if (window.QCMS && typeof QCMS.renderSidebar === 'function') {
+                        QCMS.renderSidebar();
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to save role permissions', e);
+                if (window.QCMS && typeof QCMS.toast === 'function') {
+                    QCMS.toast(e.message || 'Failed to save Role Access Control matrix', 'error');
+                }
+            }
+        },
+
+        toggleColumnPermissions(roleName) {
+            const inputs = document.querySelectorAll(`.rbac-toggle-input[data-role="${roleName}"]`);
+            if (!inputs.length) return;
+            const allChecked = Array.from(inputs).every(i => i.checked);
+            inputs.forEach(i => { i.checked = !allChecked; });
+        },
+
+        async resetRolePermissionsDefaults() {
+            if (!confirm('Are you sure you want to reset Role Access Control settings to platform defaults?')) return;
+            try {
+                const res = await api.get('/admin/role-permissions');
+                if (res && res.status === 'success') {
+                    this.rolePermissionsData = res;
+                    this.renderRolePermissions();
+                    if (window.QCMS && typeof QCMS.toast === 'function') {
+                        QCMS.toast('Role Access Control reset to defaults (click Save to apply)', 'info');
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to reset role permissions', e);
             }
         }
     };
