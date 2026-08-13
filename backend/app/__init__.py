@@ -444,17 +444,41 @@ def create_app():
                 # Seed Default SaaS Plans if not present
                 if not SaaSPlan.query.first():
                     default_plans = [
-                        SaaSPlan(name='Starter', code='starter', plan_type='Trial', status='active',
-                                 is_default_trial=True, description='Free starter plan for new organizations'),
-                        SaaSPlan(name='Professional', code='professional', plan_type='Paid', status='active',
+                        SaaSPlan(name='Default Trial Plan', code='t1', plan_type='Trial', status='Active',
+                                 is_default_trial=True, description='System default onboarding trial plan',
+                                 trial_duration_days=14, auto_approve_extensions_limit=2),
+                        SaaSPlan(name='Starter', code='starter', plan_type='Paid', status='Active',
+                                 is_default_trial=False, description='Free starter plan for new organizations'),
+                        SaaSPlan(name='Professional', code='professional', plan_type='Paid', status='Active',
                                  is_default_trial=False, description='Professional plan for growing organizations'),
-                        SaaSPlan(name='Enterprise', code='enterprise', plan_type='Paid', status='active',
+                        SaaSPlan(name='Enterprise', code='enterprise', plan_type='Paid', status='Active',
                                  is_default_trial=False, description='Enterprise plan for large organizations'),
                     ]
                     for plan in default_plans:
                         db.session.add(plan)
                     db.session.commit()
-                    print("[QCMS] Seeded default SaaS Plans (Starter/Professional/Enterprise) successfully.")
+                    print("[QCMS] Seeded default SaaS Plans (Trial/Starter/Professional/Enterprise) successfully.")
+                else:
+                    # Guarantee at least one system default trial plan exists
+                    trial_exists = SaaSPlan.query.filter(
+                        (SaaSPlan.is_default_trial == True) | 
+                        (func.lower(SaaSPlan.plan_type) == 'trial') |
+                        (func.lower(SaaSPlan.code) == 't1')
+                    ).first()
+                    if not trial_exists:
+                        def_trial = SaaSPlan(
+                            name='Default Trial Plan',
+                            code='t1',
+                            plan_type='Trial',
+                            status='Active',
+                            is_default_trial=True,
+                            description='System default onboarding trial plan',
+                            trial_duration_days=14,
+                            auto_approve_extensions_limit=2
+                        )
+                        db.session.add(def_trial)
+                        db.session.commit()
+                        print("[QCMS] Created System Default Trial Plan (t1).")
 
 
 

@@ -2396,18 +2396,39 @@ def update_plan(plan_id):
                 return jsonify({'error': 'Plan code already exists'}), 400
             plan.code = new_code
     
+    is_trial_plan = getattr(plan, 'is_default_trial', False) or (plan.plan_type and 'trial' in plan.plan_type.lower()) or (plan.code and plan.code.lower() in ['t1', 'trial', 'trial_default'])
+
+    if is_trial_plan:
+        if 'plan_type' in data and data['plan_type'] and _clean_plan_type(data['plan_type']).lower() != 'trial':
+            err_msg = "Trial plan cannot be converted to a normal/paid plan. It must always remain a Trial plan."
+            return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
+
+    new_status = data.get('status', plan.status)
+    if is_trial_plan and new_status in ['Inactive', 'Deprecated'] and plan.status == 'Active':
+        other_active_trials = SaaSPlan.query.filter(
+            SaaSPlan.id != plan.id,
+            SaaSPlan.status == 'Active',
+            (func.lower(SaaSPlan.plan_type) == 'trial') | (SaaSPlan.is_default_trial == True)
+        ).count()
+        if other_active_trials == 0:
+            err_msg = "Cannot disable the default trial plan. At least one active trial plan must exist in the system. Create or activate another trial plan before disabling this one."
+            return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
+
     plan.description = data.get('description', plan.description)
     plan.long_description = data.get('long_description', plan.long_description)
     plan.icon = data.get('icon', plan.icon)
     plan.color = data.get('color', plan.color)
-    plan.status = data.get('status', plan.status)
-    plan.plan_type = _clean_plan_type(data.get('plan_type', plan.plan_type))
-    plan.is_custom = data.get('is_custom', plan.is_custom)
-    
-    if 'is_default_trial' in data:
-        plan.is_default_trial = bool(data['is_default_trial'])
-    elif 'trial' in plan.plan_type.lower():
+    plan.status = new_status
+    if is_trial_plan:
+        plan.plan_type = 'Trial'
         plan.is_default_trial = True
+    else:
+        plan.plan_type = _clean_plan_type(data.get('plan_type', plan.plan_type))
+        if 'is_default_trial' in data:
+            plan.is_default_trial = bool(data['is_default_trial'])
+        elif 'trial' in plan.plan_type.lower():
+            plan.is_default_trial = True
+    plan.is_custom = data.get('is_custom', plan.is_custom)
 
     if 'trial_duration_days' in data:
         plan.trial_duration_days = int(data['trial_duration_days'])
@@ -2653,6 +2674,18 @@ def deactivate_plan(plan_id):
         return err
 
     plan = SaaSPlan.query.get_or_404(plan_id)
+
+    is_trial_plan = getattr(plan, 'is_default_trial', False) or (plan.plan_type and 'trial' in plan.plan_type.lower()) or (plan.code and plan.code.lower() in ['t1', 'trial', 'trial_default'])
+    if is_trial_plan:
+        other_active_trials = SaaSPlan.query.filter(
+            SaaSPlan.id != plan.id,
+            SaaSPlan.status == 'Active',
+            (func.lower(SaaSPlan.plan_type) == 'trial') | (SaaSPlan.is_default_trial == True)
+        ).count()
+        if other_active_trials == 0:
+            err_msg = "Cannot disable the default trial plan. At least one active trial plan must exist in the system. Create or activate another trial plan before disabling this one."
+            return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
+
     plan.status = 'Inactive'
     db.session.commit()
     _log(user, 'DEACTIVATE_PLAN', 'SaaSPlan', plan.id, None, {'status': 'Inactive'})
@@ -2668,6 +2701,11 @@ def delete_plan(plan_id):
         return err
 
     plan = SaaSPlan.query.get_or_404(plan_id)
+
+    is_trial_plan = getattr(plan, 'is_default_trial', False) or (plan.plan_type and 'trial' in plan.plan_type.lower()) or (plan.code and plan.code.lower() in ['t1', 'trial', 'trial_default'])
+    if is_trial_plan:
+        err_msg = "System default trial plan cannot be deleted."
+        return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
 
     # Prevent deleting plans with active subscribers
     org_subscribers = Organization.query.filter(

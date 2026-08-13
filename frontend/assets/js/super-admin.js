@@ -6457,6 +6457,7 @@ const SuperAdmin = {
         try {
             const res = await this._planGet(`/plans?${params}`);
             const data = res.data || [];
+            this._plan._cachedPlans = data;
             if (countEl) countEl.textContent = `${data.length} plans`;
 
             s.page = s.page || 1;
@@ -6515,7 +6516,11 @@ const SuperAdmin = {
             return;
         }
 
+        const allCached = this._plan._cachedPlans || plans;
+        const activeTrialCount = allCached.filter(pl => (pl.is_default_trial || (pl.plan_type && pl.plan_type.toLowerCase().includes('trial'))) && pl.status === 'Active').length;
+
         tbody.innerHTML = plans.map(p => {
+            const isTrial = p.is_default_trial || (p.plan_type && p.plan_type.toLowerCase().includes('trial')) || (p.code && p.code.toLowerCase() === 't1');
             const highlight = (txt) => {
                 if (!txt) return '—';
                 if (!this._plan.q) return txt;
@@ -6524,8 +6529,27 @@ const SuperAdmin = {
             };
             const colStyle = `border-left: 3px solid ${p.color || '#3b82f6'};`;
             const priceVal = p.price !== undefined ? p.price : (p.amount !== undefined ? p.amount : (p.base_price || 0));
+
+            let deactivateBtnHtml = '';
+            if (p.status === 'Active') {
+                if (isTrial && activeTrialCount <= 1) {
+                    deactivateBtnHtml = `<li><a class="dropdown-item text-muted" href="#" onclick="SuperAdmin._planNotify('Cannot disable default trial plan unless another active trial plan exists.', 'warning');return false;" style="opacity:0.6;"><i data-lucide="pause-circle" style="width:13px;height:13px;" class="me-2 text-warning"></i>Deactivate (Requires 2nd trial)</a></li>`;
+                } else {
+                    deactivateBtnHtml = `<li><a class="dropdown-item" href="#" onclick="SuperAdmin._planAction(${p.id}, 'deactivate');return false;"><i data-lucide="pause-circle" style="width:13px;height:13px;" class="me-2"></i>Deactivate</a></li>`;
+                }
+            } else if (p.status === 'Inactive') {
+                deactivateBtnHtml = `<li><a class="dropdown-item" href="#" onclick="SuperAdmin._planAction(${p.id}, 'activate');return false;"><i data-lucide="play-circle" style="width:13px;height:13px;" class="me-2"></i>Activate</a></li>`;
+            }
+
+            let deleteBtnHtml = '';
+            if (isTrial) {
+                deleteBtnHtml = `<li><a class="dropdown-item text-muted" href="#" onclick="SuperAdmin._planNotify('System default trial plan cannot be deleted.', 'warning');return false;" style="opacity:0.6;"><i data-lucide="shield-alert" style="width:13px;height:13px;" class="me-2 text-secondary"></i>Delete (Protected System Plan)</a></li>`;
+            } else {
+                deleteBtnHtml = `<li><a class="dropdown-item text-danger" href="#" onclick="SuperAdmin._planAction(${p.id}, 'delete');return false;"><i data-lucide="trash-2" style="width:13px;height:13px;" class="me-2"></i>Delete</a></li>`;
+            }
+
             return `<tr>
-                <td style="${colStyle}"><i data-lucide="${p.icon || 'layers'}" style="width:14px;height:14px;color:${p.color || '#3b82f6'};" class="me-2"></i><strong>${highlight(p.name)}</strong> ${p.plan_type === 'Trial' ? '<span class="badge bg-purple text-white ms-1" style="font-size:10px;">Default Trial Plan</span>' : ''}</td>
+                <td style="${colStyle}"><i data-lucide="${p.icon || 'layers'}" style="width:14px;height:14px;color:${p.color || '#3b82f6'};" class="me-2"></i><strong>${highlight(p.name)}</strong> ${isTrial ? '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 ms-1" style="font-size:10px;">System Default Trial</span>' : ''}</td>
                 <td><code class="text-xs font-monospace">${highlight(p.code)}</code></td>
                 <td class="text-xs text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${highlight(p.description)}</td>
                 <td><strong class="text-dark">${this._planFmt(priceVal)}</strong></td>
@@ -6543,10 +6567,9 @@ const SuperAdmin = {
                             <li><a class="dropdown-item" href="#" onclick="SuperAdmin.openPlanDetailDrawer(${p.id});return false;"><i data-lucide="eye" style="width:13px;height:13px;" class="me-2"></i>View details</a></li>
                             <li><a class="dropdown-item" href="#" onclick="SuperAdmin.openPlanCreateWizard(${p.id});return false;"><i data-lucide="edit" style="width:13px;height:13px;" class="me-2"></i>Edit plan</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            ${p.status==='Active'?`<li><a class="dropdown-item" href="#" onclick="SuperAdmin._planAction(${p.id}, 'deactivate');return false;"><i data-lucide="pause-circle" style="width:13px;height:13px;" class="me-2"></i>Deactivate</a></li>`:''}
-                            ${p.status==='Inactive'?`<li><a class="dropdown-item" href="#" onclick="SuperAdmin._planAction(${p.id}, 'activate');return false;"><i data-lucide="play-circle" style="width:13px;height:13px;" class="me-2"></i>Activate</a></li>`:''}
+                            ${deactivateBtnHtml}
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="SuperAdmin._planAction(${p.id}, 'delete');return false;"><i data-lucide="trash-2" style="width:13px;height:13px;" class="me-2"></i>Delete</a></li>
+                            ${deleteBtnHtml}
                         </ul>
                     </div>
                 </td>
@@ -7044,6 +7067,9 @@ const SuperAdmin = {
         if (document.getElementById('pwTaxInclusiveOpt')) document.getElementById('pwTaxInclusiveOpt').checked = false;
         this.updatePlanTaxCalculationPreview();
 
+        const pwTierEl = document.getElementById('pwTier');
+        if (pwTierEl) { pwTierEl.disabled = false; pwTierEl.title = ''; }
+
         let enabledMods = ['Dashboard', 'Ideas', 'Projects', 'Quality Circles', 'Meetings', 'Reports', 'Analytics', 'AI Features'];
         document.getElementById('planWizardTitle').textContent = editId ? 'Edit SaaS Plan Template' : 'New Plan Configurator';
         if (document.getElementById('pwSubmitBtn')) document.getElementById('pwSubmitBtn').innerHTML = editId ? '<i data-lucide="check" style="width:12px;height:12px;"></i> Save Plan Configuration' : '<i data-lucide="plus-circle" style="width:12px;height:12px;"></i> Create Software Plan';
@@ -7058,7 +7084,18 @@ const SuperAdmin = {
                 document.getElementById('pwLongDesc').value = p.long_description;
                 document.getElementById('pwIcon').value = p.icon;
                 document.getElementById('pwColor').value = p.color;
-                document.getElementById('pwTier').value = p.plan_type;
+
+                const isTrialPlan = p.is_default_trial || (p.plan_type && p.plan_type.toLowerCase().includes('trial')) || (p.code && p.code.toLowerCase() === 't1');
+                if (pwTierEl) {
+                    pwTierEl.value = isTrialPlan ? 'Trial Plan (Free Onboarding Trial)' : p.plan_type;
+                    if (isTrialPlan) {
+                        pwTierEl.disabled = true;
+                        pwTierEl.title = 'System default trial plan must always remain a Trial plan type.';
+                    } else {
+                        pwTierEl.disabled = false;
+                        pwTierEl.title = '';
+                    }
+                }
                 document.getElementById('pwIsCustom').checked = p.is_custom;
 
                 if (document.getElementById('pwTrialDays') && p.trial_duration_days) {
