@@ -106,28 +106,7 @@ def track_usage():
 
 @feature_engine_bp.route('/stream', methods=['GET'])
 def sse_stream():
-    """
-    Server-Sent Events (SSE) endpoint for real-time live hot-reload.
-    Pushes instantaneous module status changes to connected browsers.
-    """
-    q = FeatureEngine.subscribe_sse()
-
-    def generate():
-        import time
-        yield "retry: 5000\n\n"  # Auto-reconnect every 5 seconds if dropped
-        try:
-            while True:
-                try:
-                    # Non-blocking pop with timeout to send keep-alive heartbeats
-                    msg = q.get(timeout=25)
-                    yield f"event: module_changed\ndata: {msg}\n\n"
-                except Exception:
-                    # Send comment heartbeat every 25s to keep HTTP connection open
-                    yield ": heartbeat\n\n"
-        finally:
-            FeatureEngine.unsubscribe_sse(q)
-
-    return Response(generate(), mimetype='text/event-stream')
+    return jsonify({"status": "disabled", "message": "SSE stream is disabled to optimize performance."}), 501
 
 
 @feature_engine_bp.route('/coverage-report', methods=['GET'])
