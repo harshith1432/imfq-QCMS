@@ -133,11 +133,11 @@ def get_dashboard_stats():
         Organization.is_platform_org == False
     ).count()
     
-    # 2. Active Organizations (includes Trial orgs — they are actively using the platform)
+    # 2. Paid Organizations (orgs on a real paid subscription, not trial)
     active_orgs = Organization.query.filter(
         Organization.is_deleted == False,
         Organization.is_platform_org == False,
-        Organization.subscription_status.in_(['Active', 'ACTIVE', 'Trialing', 'Trial', 'TRIAL']),
+        Organization.subscription_status.in_(['Active', 'ACTIVE']),
         (Organization.license_expiry_date >= now) | (Organization.license_expiry_date.is_(None))
     ).count()
 

@@ -510,7 +510,7 @@ const SuperAdmin = {
             this.charts.orgStatus = new Chart(donutCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Active', 'On Trial', 'Expired', 'On Hold'],
+                    labels: ['Paid Subscription', 'On Trial', 'Expired', 'On Hold'],
                     datasets: [{
                         data: [active, trial, expired, suspended],
                         backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#64748b'],
@@ -537,7 +537,7 @@ const SuperAdmin = {
             const legendEl = document.getElementById('orgStatusDonutLegend');
             if (legendEl) {
                 const items = [
-                    { label: 'Active', val: active, color: '#22c55e' },
+                    { label: 'Paid Subscription', val: active, color: '#22c55e' },
                     { label: 'On Trial', val: trial, color: '#f59e0b' },
                     { label: 'Expired', val: expired, color: '#ef4444' },
                     { label: 'On Hold', val: suspended, color: '#64748b' }
@@ -939,13 +939,13 @@ const SuperAdmin = {
                     
                     <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Organizations with active and valid subscriptions."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Organizations on a paid subscription (not trial)."></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="check-circle" style="width:18px;height:18px;color:#22c55e;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.active_organizations || 0}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Active Organizations</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Paid Organizations</div>
                     </div>
 
                     <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')">
@@ -1368,7 +1368,7 @@ const SuperAdmin = {
         if (grid) {
             grid.innerHTML = `
                 ${QCMS.kpiCardWithTooltip('Total Organisation', kpi.total, 'building-2', 'blue', 'Total count of non-deleted client tenants.', '', 'onclick="SuperAdmin.filterByKpi(\'all\')"')}
-                ${QCMS.kpiCardWithTooltip('Active Organisation', kpi.active, 'check-circle', 'green', 'Tenants currently active on sub plans.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Active\')"')}
+                ${QCMS.kpiCardWithTooltip('Paid Organisation', kpi.active, 'check-circle', 'green', 'Tenants currently on a paid subscription plan.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Active\')')}
                 ${QCMS.kpiCardWithTooltip('On Trial Organizations', kpi.trialing, 'clock', 'orange', 'Tenants currently under active trial period.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Trialing\')"')}
                 ${QCMS.kpiCardWithTooltip('Expiring Soon', kpi.expiring_soon || 0, 'alert-triangle', 'amber', 'Tenants with trials or licenses expiring within 7 days.', '', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Expiring Soon\')"')}
                 ${QCMS.kpiCardWithTooltip('Inactive (20d)', kpi.inactive_20d || 0, 'user-x', 'slate', 'Tenants registered over 20 days ago with no login activity in the last 20 days.', '', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Inactive 20d\')"')}

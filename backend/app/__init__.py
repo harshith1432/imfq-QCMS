@@ -198,8 +198,38 @@ def create_app():
                         db.create_all()
                     except Exception:
                         pass
+
+                # ── DB-based migration version guard ──────────────────────────────────
+                # Increment CURRENT_MIGRATIONS_VERSION whenever new ALTER statements are added.
+                # On first run: migrations execute and version is saved to DB.
+                # On ALL subsequent deploys: single query detects current version → skips
+                # all 100+ ALTER statements → boot time drops from 30-60s to <2s.
+                CURRENT_MIGRATIONS_VERSION = 1
                 from sqlalchemy import text
-                alter_statements = [
+                migrations_needed = True
+                try:
+                    db.session.execute(text(
+                        "CREATE TABLE IF NOT EXISTS _qcms_schema_version "
+                        "(id INTEGER PRIMARY KEY DEFAULT 1, version INTEGER NOT NULL DEFAULT 0, "
+                        "applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+                    ))
+                    db.session.commit()
+                    result = db.session.execute(text(
+                        "SELECT version FROM _qcms_schema_version WHERE id = 1"
+                    ))
+                    row = result.fetchone()
+                    if row and row[0] >= CURRENT_MIGRATIONS_VERSION:
+                        migrations_needed = False
+                        print(f"[QCMS] Schema already at version {row[0]}, skipping migrations.")
+                except Exception as ve:
+                    print(f"[QCMS] Version check failed (will run migrations): {ve}")
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+
+                if migrations_needed:
+                    alter_statements = [
                 "ALTER TABLE company_information DROP COLUMN IF EXISTS iso_certifications;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS org_scale VARCHAR(50) DEFAULT 'Small';",
                 "CREATE TABLE IF NOT EXISTS plants (id SERIAL PRIMARY KEY, org_id INTEGER NOT NULL REFERENCES organizations(id), name VARCHAR(100) NOT NULL, code VARCHAR(50), location VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
@@ -346,23 +376,37 @@ def create_app():
                 "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS require_phone_otp BOOLEAN DEFAULT FALSE;",
                 "CREATE TABLE IF NOT EXISTS phone_verifications (id SERIAL PRIMARY KEY, phone VARCHAR(50) UNIQUE NOT NULL, otp VARCHAR(6) NOT NULL, is_verified BOOLEAN DEFAULT FALSE, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
                 ]
-                for statement in alter_statements:
+                    for statement in alter_statements:
+                        try:
+                            db.session.execute(text(statement))
+                            db.session.commit()
+                        except Exception:
+                            db.session.rollback()
+                            if "IF NOT EXISTS" in statement:
+                                fallback = statement.replace("IF NOT EXISTS ", "")
+                                if "JSONB" in fallback:
+                                    fallback = fallback.replace("JSONB", "JSON")
+                                try:
+                                    db.session.execute(text(fallback))
+                                    db.session.commit()
+                                except Exception:
+                                    db.session.rollback()
+
+                    # Save version to DB so future deploys skip all migrations
                     try:
-                        db.session.execute(text(statement))
+                        db.session.execute(text(
+                            "INSERT INTO _qcms_schema_version (id, version) VALUES (1, :v) "
+                            "ON CONFLICT (id) DO UPDATE SET version = :v, applied_at = CURRENT_TIMESTAMP"
+                        ), {"v": CURRENT_MIGRATIONS_VERSION})
                         db.session.commit()
-                    except Exception:
-                        db.session.rollback()
-                        # Try fallback statement without IF NOT EXISTS if database is SQLite
-                        if "IF NOT EXISTS" in statement:
-                            fallback = statement.replace("IF NOT EXISTS ", "")
-                            if "JSONB" in fallback:
-                                fallback = fallback.replace("JSONB", "JSON")
-                            try:
-                                db.session.execute(text(fallback))
-                                db.session.commit()
-                            except Exception:
-                                db.session.rollback()
-            
+                        print(f"[QCMS] Schema version saved: {CURRENT_MIGRATIONS_VERSION}.")
+                    except Exception as sve:
+                        print(f"[QCMS] Could not save schema version: {sve}")
+                        try:
+                            db.session.rollback()
+                        except Exception:
+                            pass
+
                 from .infrastructure.database.models.models import (
                     Role, PlatformSettings, User, Organization, UserCustomField,
                     SaaSPlan, SaaSPlanPricing, SaaSPlanLimits, SaaSPlanModules, SaaSPlanAnalytics,
