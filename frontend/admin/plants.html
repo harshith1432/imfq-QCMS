@@ -12,6 +12,49 @@
     <link rel="stylesheet" href="/assets/css/glass_overrides.css">
     <script src="/assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Radio-choice card styles for delete modal */
+        .del-choice-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1.5px solid var(--ds-border-color);
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+            user-select: none;
+            background: transparent;
+            width: 100%;
+        }
+        .del-choice-card:hover {
+            border-color: var(--ds-primary);
+            background: rgba(var(--ds-primary-rgb, 99,102,241), 0.04);
+        }
+        .del-choice-card.danger:hover {
+            border-color: #ef4444;
+            background: rgba(239,68,68,0.06);
+        }
+        .del-choice-card input[type=radio] {
+            accent-color: var(--ds-primary);
+            width: 16px;
+            height: 16px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .del-choice-card.danger input[type=radio] {
+            accent-color: #ef4444;
+        }
+        .del-choice-card.selected {
+            border-color: var(--ds-primary);
+            background: rgba(var(--ds-primary-rgb, 99,102,241), 0.06);
+        }
+        .del-choice-card.selected.danger {
+            border-color: #ef4444;
+            background: rgba(239,68,68,0.08);
+        }
+    </style>
 </head>
 <body>
     <div class="app-layout">
@@ -27,9 +70,6 @@
                         <h1 class="ds-title mb-0">Plant Locations</h1>
                         <p class="ds-text-secondary mb-0">Manage enterprise manufacturing plants, facilities, and regional operating locations.</p>
                     </div>
-                    <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="plantManager.openAddModal()">
-                        <i data-lucide="plus"></i> Add Plant Location
-                    </button>
                 </div>
             </header>
 
@@ -51,13 +91,16 @@
 
             <!-- Plants Table Card -->
             <div class="glass-card ds-card mb-4 fade-in">
-                <div class="ds-card-header h-stack justify-content-between p-4 border-bottom">
+                <div class="ds-card-header h-stack justify-content-between p-4 border-bottom flex-wrap gap-2">
                     <div class="v-stack">
                         <h5 class="mb-0 fw-bold">Active Plant Locations</h5>
                         <p class="text-xs ds-text-secondary mb-0">Organizational facilities and operational units</p>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex align-items-center gap-2">
                         <input type="text" class="ds-input ds-input-sm" id="plantSearch" placeholder="Search plants..." oninput="plantManager.filterTable()" style="width: 220px;">
+                        <button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap" onclick="plantManager.openAddModal()">
+                            <i data-lucide="plus"></i> Add Plant Location
+                        </button>
                     </div>
                 </div>
                 <div class="ds-card-body p-0">
@@ -104,7 +147,12 @@
                         <input type="hidden" id="plantId">
                         <div class="ds-field mb-3">
                             <label class="ds-label">PLANT LOCATION NAME <span class="text-danger">*</span></label>
-                            <input type="text" class="ds-input" id="plantName" placeholder="e.g. Pune Manufacturing Plant" required>
+                            <input type="text" class="ds-input" id="plantName" placeholder="e.g. Pune Manufacturing Plant" required
+                                oninput="plantManager.clearPlantNameError()">
+                            <div id="plantNameError" style="display:none; margin-top:6px; padding:8px 10px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:8px; color:#dc2626; font-size:0.78rem; line-height:1.4;">
+                                <i data-lucide="alert-circle" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>
+                                <span id="plantNameErrorText"></span>
+                            </div>
                         </div>
                         <div class="ds-field mb-3">
                             <label class="ds-label">PLANT CODE / IDENTIFIER</label>
@@ -119,6 +167,115 @@
                 <div class="modal-footer border-0 p-4 pt-0">
                     <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
                     <button class="ds-btn ds-btn-primary px-4" id="savePlantBtn" onclick="plantManager.save()">Save Plant Location</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Delete Plant Modal -->
+    <div class="modal fade" id="plantDeleteModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:500px;">
+            <div class="modal-content glass-card ds-card">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2">
+                        <i data-lucide="trash-2" style="width:18px;height:18px;"></i>
+                        <span id="delPlantTitle">Delete Plant Location</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 pb-0">
+
+                    <!-- Step 1: Stats + action choice -->
+                    <div id="delPlantStep1">
+                        <div class="rounded-3 p-3 mb-3" style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2);">
+                            <div class="text-sm fw-semibold text-danger mb-2">Impact Summary</div>
+                            <div class="d-flex gap-4">
+                                <div class="text-center">
+                                    <div class="fw-bold" id="delPlantDeptCount" style="font-size:1.4rem;">0</div>
+                                    <div class="text-xs text-secondary">Departments</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="fw-bold" id="delPlantUserCount" style="font-size:1.4rem;">0</div>
+                                    <div class="text-xs text-secondary">Users</div>
+                                </div>
+                            </div>
+                            <div class="text-xs text-secondary mt-2" id="delPlantImpactNote"></div>
+                        </div>
+                        <p class="text-sm text-secondary mb-3">What would you like to do with the departments and users in this plant?</p>
+                        <div class="d-flex flex-column gap-2" id="delPlantStep1Options">
+                            <label class="del-choice-card" id="delChoiceKeep">
+                                <input type="radio" name="delPlantChoice" value="keep"
+                                    onchange="plantManager.choosePlantAction('keep')">
+                                <i data-lucide="arrow-right-left" style="width:17px;height:17px;color:var(--ds-primary);margin-top:1px;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-semibold text-sm">Keep Departments &amp; Users</div>
+                                    <div class="text-xs text-secondary">Move everything to another plant or create a new plant</div>
+                                </div>
+                            </label>
+                            <label class="del-choice-card danger" id="delChoiceDeleteAll">
+                                <input type="radio" name="delPlantChoice" value="delete_all"
+                                    onchange="plantManager.choosePlantAction('delete_all')">
+                                <i data-lucide="trash" style="width:17px;height:17px;color:#ef4444;margin-top:1px;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-semibold text-sm text-danger">Delete Everything</div>
+                                    <div class="text-xs text-secondary">Permanently deletes this plant, all its departments, and all users</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Keep → sub-choice -->
+                    <div id="delPlantStep2" style="display:none;">
+                        <p class="text-sm text-secondary mb-3">Where would you like to move the departments and users?</p>
+                        <div class="d-flex flex-column gap-2">
+                            <label class="del-choice-card" id="delChoiceMove">
+                                <input type="radio" name="delPlantSubChoice" value="move"
+                                    onchange="plantManager.showPlantSub('move'); this.closest('.del-choice-card').classList.add('selected');">
+                                <i data-lucide="building-2" style="width:17px;height:17px;color:var(--ds-primary);margin-top:1px;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-semibold text-sm">Move to Existing Plant</div>
+                                    <div class="text-xs text-secondary">Select another plant to absorb all departments and users</div>
+                                </div>
+                            </label>
+                            <label class="del-choice-card" id="delChoiceNew">
+                                <input type="radio" name="delPlantSubChoice" value="new"
+                                    onchange="plantManager.showPlantSub('new'); this.closest('.del-choice-card').classList.add('selected');">
+                                <i data-lucide="plus-circle" style="width:17px;height:17px;color:var(--ds-primary);margin-top:1px;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-semibold text-sm">Create a New Plant</div>
+                                    <div class="text-xs text-secondary">All departments and users will be moved to the new plant automatically</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Step 3a: Move to existing plant -->
+                    <div id="delPlantStep3Move" style="display:none;">
+                        <label class="ds-label mb-1">SELECT TARGET PLANT LOCATION</label>
+                        <select class="ds-input ds-select mb-2" id="delPlantTargetId">
+                            <option value="">— choose plant —</option>
+                        </select>
+                        <p class="text-xs text-muted">All departments and users will be reassigned to the selected plant, then this plant will be deleted.</p>
+                    </div>
+
+                    <!-- Step 3b: Create new plant -->
+                    <div id="delPlantStep3New" style="display:none;">
+                        <label class="ds-label mb-1">NEW PLANT NAME <span class="text-danger">*</span></label>
+                        <input type="text" class="ds-input mb-2" id="delPlantNewName" placeholder="e.g. Hyderabad Plant">
+                        <label class="ds-label mb-1">PLANT CODE (optional)</label>
+                        <input type="text" class="ds-input mb-1" id="delPlantNewCode" placeholder="e.g. HYD-01">
+                        <p class="text-xs text-muted mt-1">A new plant will be created and all departments &amp; users moved there automatically.</p>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-2 d-flex justify-content-between align-items-center">
+                    <button class="ds-btn ds-btn-ghost" id="delPlantBackBtn" onclick="plantManager.plantDeleteBack()" style="display:none;">
+                        <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back
+                    </button>
+                    <div class="d-flex gap-2 ms-auto">
+                        <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                        <button class="ds-btn ds-btn-danger px-4" id="delPlantConfirmBtn" onclick="plantManager.confirmPlantDelete()" style="display:none;">Confirm Delete</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -257,6 +414,7 @@
         },
 
         openAddModal() {
+            this.clearPlantNameError();
             document.getElementById('modalTitle').textContent = 'Add Plant Location';
             document.getElementById('plantId').value = '';
             document.getElementById('plantName').value = '';
@@ -266,6 +424,7 @@
         },
 
         openEditModal(id) {
+            this.clearPlantNameError();
             const p = this.allPlants.find(x => x.id === id);
             if (!p) return;
             document.getElementById('modalTitle').textContent = 'Edit Plant Location';
@@ -276,14 +435,27 @@
             if (this.bsModal) this.bsModal.show();
         },
 
+        clearPlantNameError() {
+            const errDiv  = document.getElementById('plantNameError');
+            const nameInp = document.getElementById('plantName');
+            if (errDiv)  errDiv.style.display = 'none';
+            if (nameInp) nameInp.style.borderColor = '';
+        },
+
         async save() {
-            const id = document.getElementById('plantId').value;
-            const name = document.getElementById('plantName').value.trim();
-            const code = document.getElementById('plantCode').value.trim();
+            const id       = document.getElementById('plantId').value;
+            const nameInp  = document.getElementById('plantName');
+            const name     = nameInp.value.trim();
+            const code     = document.getElementById('plantCode').value.trim();
             const location = document.getElementById('plantLocation').value.trim();
 
+            // Clear any previous inline error
+            this.clearPlantNameError();
+
             if (!name) {
+                nameInp.style.borderColor = '#ef4444';
                 QCMS.toast('Plant Location Name is required', 'warning');
+                nameInp.focus();
                 return;
             }
 
@@ -299,18 +471,155 @@
                 if (this.bsModal) this.bsModal.hide();
                 await this.loadPlants();
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to save plant location', 'danger');
+                // Catch 409 duplicate error → show inline on the name field
+                const isDuplicate = e.status === 409 ||
+                    (e.message && (e.message.toLowerCase().includes('already exists') || e.message.toLowerCase().includes('unique')));
+                if (isDuplicate) {
+                    nameInp.style.borderColor = '#ef4444';
+                    const errDiv  = document.getElementById('plantNameError');
+                    const errText = document.getElementById('plantNameErrorText');
+                    if (errText) errText.textContent = e.message || `A plant location named "${name}" already exists. Plant names must be unique (case-insensitive).`;
+                    if (errDiv)  { errDiv.style.display = 'block'; if (window.lucide) lucide.createIcons(); }
+                    nameInp.focus();
+                    nameInp.select();
+                } else {
+                    QCMS.toast(e.message || 'Failed to save plant location', 'danger');
+                }
             }
         },
 
         async deletePlant(id, name) {
-            if (!confirm(`Are you sure you want to delete plant location "${name}"? Departments and users under this plant will be unassigned.`)) return;
+            this._delPlantId      = id;
+            this._delPlantAction  = null;
+            this._delPlantSub     = null;
+
+            // Fetch live stats
+            let deptCount = 0, userCount = 0;
             try {
-                await api.deletePlant(id);
-                QCMS.toast('Plant location deleted', 'info');
+                const stats = await api.get(`/admin/plants/${id}/stats`);
+                deptCount = stats.dept_count || 0;
+                userCount = stats.user_count || 0;
+                name = stats.plant_name || name;
+            } catch (_) {}
+
+            document.getElementById('delPlantTitle').textContent = `Delete "${name}"`;
+            document.getElementById('delPlantDeptCount').textContent = deptCount;
+            document.getElementById('delPlantUserCount').textContent = userCount;
+            document.getElementById('delPlantImpactNote').textContent =
+                (deptCount === 0 && userCount === 0)
+                    ? 'No departments or users are linked — this plant can be safely deleted.'
+                    : `Deleting will affect ${deptCount} department(s) and ${userCount} user(s).`;
+
+            // Populate existing plants dropdown (exclude self)
+            const sel = document.getElementById('delPlantTargetId');
+            sel.innerHTML = '<option value="">— choose plant —</option>';
+            this.allPlants.filter(p => p.id !== id).forEach(p => {
+                const o = document.createElement('option');
+                o.value = p.id;
+                o.textContent = p.name;
+                sel.appendChild(o);
+            });
+
+            this._showPlantStep(1);
+            // Reset radio selections
+            document.querySelectorAll('input[name="delPlantChoice"]').forEach(r => r.checked = false);
+            document.querySelectorAll('input[name="delPlantSubChoice"]').forEach(r => r.checked = false);
+            document.querySelectorAll('.del-choice-card').forEach(c => c.classList.remove('selected'));
+
+            // If nothing linked → pre-select "Delete Everything" and show confirm straight away
+            if (deptCount === 0 && userCount === 0) {
+                document.querySelector('#delPlantStep1Options').style.display = 'none';
+                document.querySelector('#delPlantStep1 p')?.style && (document.querySelector('#delPlantStep1 p').style.display = 'none');
+                document.getElementById('delPlantConfirmBtn').style.display = 'inline-flex';
+                this._delPlantAction = 'delete_all';
+            } else {
+                document.querySelector('#delPlantStep1Options').style.display = 'flex';
+            }
+
+            new bootstrap.Modal(document.getElementById('plantDeleteModal')).show();
+            if (window.lucide) lucide.createIcons();
+        },
+
+        _showPlantStep(step) {
+            ['delPlantStep1','delPlantStep2','delPlantStep3Move','delPlantStep3New'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById('delPlantBackBtn').style.display    = step > 1 ? 'inline-flex' : 'none';
+            document.getElementById('delPlantConfirmBtn').style.display = 'none';
+            if (step === 1)       document.getElementById('delPlantStep1').style.display     = 'block';
+            if (step === 2)       document.getElementById('delPlantStep2').style.display     = 'block';
+            if (step === '3move') { document.getElementById('delPlantStep3Move').style.display = 'block'; document.getElementById('delPlantConfirmBtn').style.display = 'inline-flex'; }
+            if (step === '3new')  { document.getElementById('delPlantStep3New').style.display  = 'block'; document.getElementById('delPlantConfirmBtn').style.display = 'inline-flex'; }
+        },
+
+        choosePlantAction(choice) {
+            // Highlight the selected card
+            document.querySelectorAll('#delPlantStep1Options .del-choice-card').forEach(c => c.classList.remove('selected'));
+            const selectedCard = choice === 'delete_all' ? document.getElementById('delChoiceDeleteAll') : document.getElementById('delChoiceKeep');
+            if (selectedCard) selectedCard.classList.add('selected');
+
+            if (choice === 'delete_all') {
+                this._delPlantAction = 'delete_all';
+                // Hide step2 in case it was visible
+                document.getElementById('delPlantStep2').style.display = 'none';
+                document.getElementById('delPlantConfirmBtn').style.display = 'inline-flex';
+                document.getElementById('delPlantBackBtn').style.display = 'none';
+            } else {
+                // Hide confirm (user must pick a sub-option)
+                document.getElementById('delPlantConfirmBtn').style.display = 'none';
+                // Reset sub-choices
+                document.querySelectorAll('input[name="delPlantSubChoice"]').forEach(r => r.checked = false);
+                document.querySelectorAll('#delPlantStep2 .del-choice-card').forEach(c => c.classList.remove('selected'));
+                this._showPlantStep(2);
+            }
+        },
+
+        showPlantSub(sub) {
+            this._delPlantSub = sub;
+            this._showPlantStep(sub === 'move' ? '3move' : '3new');
+        },
+
+        plantDeleteBack() {
+            if (['3move','3new'].includes(this._delPlantSub)) {
+                this._delPlantSub = null;
+                this._showPlantStep(2);
+            } else {
+                this._delPlantAction = null;
+                this._showPlantStep(1);
+            }
+        },
+
+        async confirmPlantDelete() {
+            const id = this._delPlantId;
+            let body = { action: this._delPlantAction || 'delete_all' };
+
+            if (this._delPlantSub === 'move') {
+                const tid = document.getElementById('delPlantTargetId').value;
+                if (!tid) { QCMS.toast('Please select a target plant.', 'warning'); return; }
+                body = { action: 'move_to_plant', target_plant_id: parseInt(tid) };
+            } else if (this._delPlantSub === 'new') {
+                const nn = document.getElementById('delPlantNewName').value.trim();
+                if (!nn) { QCMS.toast('Please enter a plant name.', 'warning'); return; }
+                body = {
+                    action: 'new_plant',
+                    new_plant_name: nn,
+                    new_plant_code: document.getElementById('delPlantNewCode').value.trim()
+                };
+            }
+
+            try {
+                const r = await fetch(api.baseUrl + `/admin/plants/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + api.token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.message || 'Delete failed');
+                bootstrap.Modal.getInstance(document.getElementById('plantDeleteModal')).hide();
+                QCMS.toast('Plant location deleted successfully.', 'success');
                 await this.loadPlants();
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to delete plant location', 'danger');
+                QCMS.toast(e.message || 'Failed to delete plant location', 'error');
             }
         }
     };

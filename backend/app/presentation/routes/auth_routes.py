@@ -328,6 +328,121 @@ def verify_registration_otp():
     return jsonify({"msg": "Email verified successfully. You can now proceed."}), 200
 
 
+def dispatch_phone_otp_sms(phone, otp):
+    """
+    Dispatch SMS OTP to mobile phone via active Jio DLT / Kaleyra SMS integration gateway.
+    """
+    try:
+        from app.infrastructure.database.models.models import IntegrationConfig
+        cfg = IntegrationConfig.query.filter_by(provider_id='jio_dlt').first()
+        if not cfg or cfg.status != 'Connected':
+            print(f"[QCMS Phone OTP] Jio DLT integration status is '{cfg.status if cfg else 'not found'}'. Simulating OTP {otp} for {phone}")
+            return False, "SMS gateway not connected"
+
+        settings = cfg.settings or {}
+        api_key = (settings.get('api_key') or '').strip()
+        entity_id = (settings.get('entity_id') or '').strip()
+        sender_id = (settings.get('sender_id') or '').strip()
+        template_id = (settings.get('template_id') or '').strip()
+        account_sid = (settings.get('account_sid') or '').strip()
+        api_url = (settings.get('api_url') or '').strip() or 'https://api.kaleyra.io/'
+
+        if not api_key:
+            print(f"[QCMS Phone OTP] Jio DLT API key is missing. Simulating OTP {otp} for {phone}")
+            return False, "SMS API key missing"
+
+        # Format phone number for SMS delivery (default country code +91 for 10-digit India numbers)
+        clean_phone = phone.replace(' ', '').replace('-', '').replace('+', '')
+        if len(clean_phone) == 10:
+            formatted_phone = '91' + clean_phone
+        else:
+            formatted_phone = clean_phone
+
+        sms_body = f"Dear Customer, use OTP {otp} to complete your activation on IFQM Skills. Do not share this OTP with anyone."
+
+        import urllib.request
+        import urllib.parse
+        import urllib.error
+        import json
+
+        url = api_url.rstrip('/')
+        if account_sid and 'kaleyra.io' in url and '/v1/' not in url:
+            url = f"https://api.kaleyra.io/v1/{account_sid}/messages"
+        elif not url.endswith('/messages') and not url.endswith('/send') and not url.endswith('.php'):
+            if 'kaleyra.io' in url and '/v1/' not in url:
+                print(f"[QCMS Phone OTP] Tip: Kaleyra requires your Account SID in the endpoint URL, e.g.: https://api.kaleyra.io/v1/<YOUR_ACCOUNT_SID>/messages")
+                url = f"{url}/v1/messages"
+
+        # Payload dictionary
+        param_dict = {
+            "to": "+" + formatted_phone,
+            "type": "OTP",
+            "sender": sender_id,
+            "body": sms_body,
+            "template_id": template_id,
+            "entity_id": entity_id,
+            "dlt_template_id": template_id,
+            "pe_id": entity_id
+        }
+
+        # Try JSON POST first
+        headers = {
+            'User-Agent': 'QCMS-Enterprise-OS/1.0',
+            'Content-Type': 'application/json',
+            'api-key': api_key,
+            'Authorization': f'Bearer {api_key}'
+        }
+        
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(param_dict).encode('utf-8'),
+                headers=headers,
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=12) as response:
+                res_body = response.read().decode('utf-8')
+                print(f"[QCMS Phone OTP] Jio DLT / Kaleyra API response HTTP {response.status}: {res_body}")
+                cfg.usage_count = (cfg.usage_count or 0) + 1
+                db.session.commit()
+                return True, "SMS sent"
+        except urllib.error.HTTPError as he:
+            err_body = he.read().decode('utf-8') if he.fp else str(he)
+            print(f"[QCMS Phone OTP] JSON request failed (HTTP {he.code}): {err_body}")
+
+            # Try form-urlencoded format fallback
+            form_headers = {
+                'User-Agent': 'QCMS-Enterprise-OS/1.0',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'api-key': api_key
+            }
+            form_data = urllib.parse.urlencode(param_dict).encode('utf-8')
+            req2 = urllib.request.Request(url, data=form_data, headers=form_headers, method='POST')
+            try:
+                with urllib.request.urlopen(req2, timeout=12) as response2:
+                    res_body2 = response2.read().decode('utf-8')
+                    print(f"[QCMS Phone OTP] Jio DLT Form API response HTTP {response2.status}: {res_body2}")
+                    cfg.usage_count = (cfg.usage_count or 0) + 1
+                    db.session.commit()
+                    return True, "SMS sent"
+            except urllib.error.HTTPError as he2:
+                err_body2 = he2.read().decode('utf-8') if he2.fp else str(he2)
+                print(f"[QCMS Phone OTP] Form request failed (HTTP {he2.code}): {err_body2}")
+                return False, f"SMS Gateway Error (HTTP {he2.code}): {err_body2}"
+
+    except Exception as e:
+        print(f"[QCMS Phone OTP] Error calling Jio DLT SMS gateway: {e}")
+        try:
+            from app.infrastructure.database.models.models import IntegrationConfig
+            cfg = IntegrationConfig.query.filter_by(provider_id='jio_dlt').first()
+            if cfg:
+                cfg.error_count = (cfg.error_count or 0) + 1
+                db.session.commit()
+        except Exception:
+            pass
+        return False, str(e)
+
+
 @auth_bp.route('/request-phone-otp', methods=['POST'])
 def request_phone_otp():
     settings = get_platform_settings_safe()
@@ -354,8 +469,13 @@ def request_phone_otp():
         db.session.add(verif)
 
     db.session.commit()
-    print(f"[QCMS Phone OTP] Sent OTP {otp} to phone {phone}")
-    return jsonify({"msg": f"Verification code sent to {phone}.", "otp_debug": otp}), 200
+
+    # Dispatch live SMS via Jio DLT / Kaleyra SMS Gateway
+    sms_sent, sms_status_msg = dispatch_phone_otp_sms(phone, otp)
+    if sms_sent:
+        return jsonify({"msg": f"Verification code sent to {phone}."}), 200
+    else:
+        return jsonify({"msg": f"Verification code sent to {phone}.", "otp_debug": otp}), 200
 
 
 @auth_bp.route('/verify-phone-otp', methods=['POST'])
@@ -728,12 +848,21 @@ def login():
         from app.presentation.routes.audit_routes import parse_user_agent, get_geo_location, get_real_client_ip, log_audit_event
         
         # Mark old sessions as LoggedOut for security
-        SaaSUserSession.query.filter_by(user_id=user.id, status='Active').update({"status": "LoggedOut", "logout_time": datetime.utcnow()})
-        
+        try:
+            SaaSUserSession.query.filter_by(user_id=user.id, status='Active').update({"status": "LoggedOut", "logout_time": datetime.utcnow()})
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
         ua_str = request.headers.get('User-Agent')
         ip_addr = get_real_client_ip(request)
         os_name, browser_name, device_name = parse_user_agent(ua_str)
-        
+        loc = None
+        try:
+            loc = get_geo_location(ip_addr)
+        except Exception:
+            pass
+
         new_sess = SaaSUserSession(
             session_id=session_id,
             user_id=user.id,
@@ -742,21 +871,25 @@ def login():
             browser=browser_name,
             os=os_name,
             ip_address=ip_addr,
-            location=get_geo_location(ip_addr),
-            status='Active'
+            location=loc,
+            status='Active',
+            login_time=datetime.utcnow()
         )
         db.session.add(new_sess)
         db.session.commit()
 
         # Log enriched login audit event
-        log_audit_event(
-            org_id=user.org_id,
-            user_id=user.id,
-            action="USER_LOGIN",
-            target_table="users",
-            target_id=user.id,
-            details={"username": user.username, "ip": ip_addr}
-        )
+        try:
+            log_audit_event(
+                org_id=user.org_id,
+                user_id=user.id,
+                action="USER_LOGIN",
+                target_table="users",
+                target_id=user.id,
+                details={"username": user.username, "ip": ip_addr}
+            )
+        except Exception:
+            pass
     except Exception as sess_err:
         db.session.rollback()
         print(f"[LOGIN SESSION WARNING] {sess_err}")
@@ -774,6 +907,11 @@ def login():
         "is_temp_password": user.is_temp_password,
         "language": user.language,
         "id": user.id,
+        "department_id": user.department_id,
+        "department": user.dept.name if user.dept else None,
+        "plant_id": user.plant_id,
+        "plant_name": user.plant.name if getattr(user, 'plant', None) else None,
+        "location": user.plant.name if getattr(user, 'plant', None) else None,
         "org_primary_color": user.organization.primary_color if user.organization else None,
         "org_logo_url": user.organization.logo_url if user.organization else None,
         "org_favicon_url": user.organization.favicon_url if user.organization else None,
@@ -787,7 +925,11 @@ def login():
 def get_profile():
     user_id = int(get_jwt_identity())
     user = db.session.get(User, user_id)
-    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+    if not user:
+        return jsonify({"status": "error", "message": "User account not found.", "session_terminated": True}), 401
+
+    role_name = user.role.name if user.role else 'Admin'
+    is_super_admin = role_name == 'SuperAdmin'
 
     if not is_super_admin and (not user.is_active or user.status == 'Inactive'):
         return jsonify({
@@ -798,7 +940,7 @@ def get_profile():
 
     try:
         from app.domain.services.document_branding_service import DocumentBrandingService
-        branding_ctx = DocumentBrandingService.get_branding_context(user.org_id if user.role.name != 'SuperAdmin' else None)
+        branding_ctx = DocumentBrandingService.get_branding_context(user.org_id if role_name != 'SuperAdmin' else None)
     except Exception as e:
         branding_ctx = {}
 
@@ -810,6 +952,10 @@ def get_profile():
         "role": user.role.name if user.role else 'SuperAdmin',
         "role_name": user.role.name if user.role else 'SuperAdmin',
         "department": user.dept.name if user.dept else None,
+        "department_id": user.department_id,
+        "plant_id": user.plant_id,
+        "plant_name": user.plant.name if getattr(user, 'plant', None) else None,
+        "location": user.plant.name if getattr(user, 'plant', None) else None,
         "org_id": None if is_super_admin else user.org_id,
         "org_name": None if is_super_admin else (user.organization.name if user.organization else None),
         "status": 'Active' if is_super_admin else user.status,

@@ -90,7 +90,6 @@ const EnterpriseAnalytics = {
                     <button class="ds-tab active" id="ea-tab-overview" onclick="EnterpriseAnalytics.switchTab('overview')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="layout" class="me-1" style="width:13px; height:13px;"></i> Overview</button>
                     <button class="ds-tab" id="ea-tab-revenue" onclick="EnterpriseAnalytics.switchTab('revenue')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="indian-rupee" class="me-1" style="width:13px; height:13px;"></i> Revenue</button>
                     ${this.isSuperAdmin ? `<button class="ds-tab" id="ea-tab-organizations" onclick="EnterpriseAnalytics.switchTab('organizations')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="building" class="me-1" style="width:13px; height:13px;"></i> Tenants</button>` : ''}
-                    <button class="ds-tab" id="ea-tab-subscriptions" onclick="EnterpriseAnalytics.switchTab('subscriptions')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="repeat" class="me-1" style="width:13px; height:13px;"></i> Subscriptions</button>
                     <button class="ds-tab" id="ea-tab-support" onclick="EnterpriseAnalytics.switchTab('support')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="life-buoy" class="me-1" style="width:13px; height:13px;"></i> Support</button>
                 </div>
 
@@ -398,34 +397,23 @@ const EnterpriseAnalytics = {
             if (this.currentTab === 'overview') {
                 content.innerHTML = `
                     <div class="row g-4 fade-in">
-                        <div class="col-lg-8">
+                        <div class="col-lg-12">
                             <div class="glass-card">
                                 <div class="ds-card-header"><h6 class="card-title">Executive Revenue Overview</h6></div>
                                 <div class="ds-card-body"><div style="height:320px;"><canvas id="revenueOverviewChart"></canvas></div></div>
                             </div>
                         </div>
-                        <div class="col-lg-4">
-                            <div class="glass-card h-100">
-                                <div class="ds-card-header"><h6 class="card-title">Active Plan Distribution</h6></div>
-                                <div class="ds-card-body d-flex flex-column align-items-center justify-content-center" style="height:320px; gap:12px;">
-                                    <div style="position:relative; width:200px; height:200px; flex-shrink:0;">
-                                        <canvas id="planDistChart"></canvas>
-                                        <div id="planDistCenter" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
-                                            <div style="font-size:26px;font-weight:700;line-height:1;color:var(--ds-text-main);" id="planDistTotal">0</div>
-                                            <div style="font-size:11px;color:var(--ds-text-muted);margin-top:3px;">Total Tenants</div>
-                                        </div>
-                                    </div>
-                                    <div id="planDistLegend" style="width:100%;padding:0 8px;"></div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 `;
                 
-                const revRes = await api.get(`/analytics/revenue?${query}`);
-                const orgRes = this.isSuperAdmin ? await api.get(`/analytics/organizations?${query}`) : null;
+                let revRes = { trends: { labels: [], values: [] } };
+                try {
+                    revRes = await api.get(`/analytics/revenue?${query}`);
+                } catch (e) {
+                    console.warn("Failed to load revenue analytics", e);
+                }
                 
-                // Plot overview charts
+                // Plot overview chart
                 const roCtx = document.getElementById('revenueOverviewChart')?.getContext('2d');
                 if (roCtx && revRes.trends) {
                     this.charts.revOver = new Chart(roCtx, {
@@ -470,74 +458,6 @@ const EnterpriseAnalytics = {
                                             return '₹' + Number(val).toLocaleString('en-IN');
                                         },
                                         font: { size: 11 }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                
-                const pdCtx = document.getElementById('planDistChart')?.getContext('2d');
-                if (pdCtx) {
-                    const PLAN_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4'];
-                    const rawPlans = (orgRes && orgRes.plans && Object.keys(orgRes.plans).length > 0) ? orgRes.plans : {};
-                    const planLabels = Object.keys(rawPlans).length > 0 ? Object.keys(rawPlans) : ['No Data'];
-                    const planVals   = Object.keys(rawPlans).length > 0 ? Object.values(rawPlans) : [1];
-                    const isNoData   = Object.keys(rawPlans).length === 0;
-                    const totalTenants = isNoData ? 0 : planVals.reduce((a, b) => a + b, 0);
-
-                    // Update center total
-                    const totalEl = document.getElementById('planDistTotal');
-                    if (totalEl) totalEl.textContent = totalTenants;
-
-                    // Build custom legend below the chart
-                    const legendEl = document.getElementById('planDistLegend');
-                    if (legendEl) {
-                        legendEl.innerHTML = planLabels.map((label, i) => {
-                            const color = isNoData ? '#d1d5db' : (PLAN_COLORS[i % PLAN_COLORS.length]);
-                            const count = isNoData ? 0 : planVals[i];
-                            const pct   = totalTenants > 0 ? Math.round(count / totalTenants * 100) : 0;
-                            return `
-                                <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--ds-border-color);">
-                                    <div style="display:flex;align-items:center;gap:6px;">
-                                        <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
-                                        <span style="font-size:12px;color:var(--ds-text-main);">${label}</span>
-                                    </div>
-                                    <div style="display:flex;align-items:center;gap:8px;">
-                                        <span style="font-size:12px;font-weight:600;color:var(--ds-text-main);">${count}</span>
-                                        <span style="font-size:11px;color:var(--ds-text-muted);min-width:34px;text-align:right;">${pct}%</span>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-                    }
-
-                    this.charts.planDist = new Chart(pdCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: planLabels,
-                            datasets: [{
-                                data: planVals,
-                                backgroundColor: isNoData ? ['#e5e7eb'] : PLAN_COLORS.slice(0, planLabels.length),
-                                borderWidth: 0,
-                                hoverOffset: 6
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            cutout: '72%',
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    enabled: !isNoData,
-                                    callbacks: {
-                                        label: function(ctx) {
-                                            const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                            const val   = ctx.parsed;
-                                            const pct   = total > 0 ? Math.round(val / total * 100) : 0;
-                                            return ` ${ctx.label}: ${val} tenants (${pct}%)`;
-                                        }
                                     }
                                 }
                             }
@@ -644,15 +564,21 @@ const EnterpriseAnalytics = {
                     </div>
                 `;
                 
-                const orgRes = await api.get(`/analytics/organizations?${query}`);
+                let orgRes = { industries: {} };
+                try {
+                    orgRes = await api.get(`/analytics/organizations?${query}`);
+                } catch (e) {
+                    console.warn("Failed to load organizations analytics", e);
+                }
                 
                 const indCtx = document.getElementById('orgIndustryChart')?.getContext('2d');
-                if (indCtx && orgRes.industries) {
+                if (indCtx) {
+                    const inds = (orgRes && orgRes.industries && Object.keys(orgRes.industries).length > 0) ? orgRes.industries : { 'Default Industry': 1 };
                     this.charts.orgInd = new Chart(indCtx, {
                         type: 'bar',
                         data: {
-                            labels: Object.keys(orgRes.industries),
-                            datasets: [{ label: 'Tenants', data: Object.values(orgRes.industries), backgroundColor: '#8b5cf6', borderRadius: 4 }]
+                            labels: Object.keys(inds),
+                            datasets: [{ label: 'Tenants', data: Object.values(inds), backgroundColor: '#8b5cf6', borderRadius: 4 }]
                         },
                         options: { responsive: true, maintainAspectRatio: false }
                     });
@@ -726,86 +652,6 @@ const EnterpriseAnalytics = {
                 document.getElementById('licActive').textContent = licRes.active;
                 document.getElementById('licExpired').textContent = licRes.expired;
                 document.getElementById('licForecast').textContent = licRes.expiry_forecast_30d;
-            }
-
-            else if (this.currentTab === 'subscriptions') {
-                content.innerHTML = `
-                    <div class="v-stack gap-4 fade-in">
-                        <div class="row g-4">
-                            <div class="col-md-3">
-                                <div class="glass-card p-4 text-center">
-                                    <h3 class="fw-bold text-primary mb-1" id="subActive">0</h3>
-                                    <div class="text-xs text-secondary uppercase font-semibold">Active Subscriptions</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="glass-card p-4 text-center">
-                                    <h3 class="fw-bold text-info mb-1" id="subTrials">0</h3>
-                                    <div class="text-xs text-secondary uppercase font-semibold">Trial Accounts</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="glass-card p-4 text-center">
-                                    <h3 class="fw-bold text-danger mb-1" id="subCancelled">0</h3>
-                                    <div class="text-xs text-secondary uppercase font-semibold">Cancelled / Expired</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="glass-card p-4 text-center">
-                                    <h3 class="fw-bold text-success mb-1" id="subConvRate">0%</h3>
-                                    <div class="text-xs text-secondary uppercase font-semibold">Trial Conversion Rate</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row g-4">
-                            <div class="col-lg-6">
-                                <div class="glass-card">
-                                    <div class="ds-card-header"><h6 class="card-title">Subscription Status Breakdown</h6></div>
-                                    <div class="ds-card-body"><div style="height:260px;"><canvas id="subStatusChart"></canvas></div></div>
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <div class="glass-card p-4 d-flex flex-column justify-content-center h-100">
-                                    <div class="row text-center">
-                                        <div class="col-6 border-end">
-                                            <h3 class="fw-bold text-success mb-1" id="subUpgradeRate">0%</h3>
-                                            <div class="text-xxs uppercase text-secondary font-semibold">Plan Upgrade Rate</div>
-                                        </div>
-                                        <div class="col-6">
-                                            <h3 class="fw-bold text-warning mb-1" id="subDowngradeRate">0%</h3>
-                                            <div class="text-xxs uppercase text-secondary font-semibold">Plan Downgrade Rate</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                const subRes = await api.get(`/analytics/subscriptions?${query}`);
-                if (document.getElementById('subActive')) document.getElementById('subActive').textContent = subRes.active || 0;
-                if (document.getElementById('subTrials')) document.getElementById('subTrials').textContent = subRes.trials || 0;
-                if (document.getElementById('subCancelled')) document.getElementById('subCancelled').textContent = subRes.cancelled || 0;
-                if (document.getElementById('subConvRate')) document.getElementById('subConvRate').textContent = `${subRes.conversion_rate !== undefined ? subRes.conversion_rate : 0}%`;
-                if (document.getElementById('subUpgradeRate')) document.getElementById('subUpgradeRate').textContent = `${subRes.upgrade_rate !== undefined ? subRes.upgrade_rate : 0}%`;
-                if (document.getElementById('subDowngradeRate')) document.getElementById('subDowngradeRate').textContent = `${subRes.downgrade_rate !== undefined ? subRes.downgrade_rate : 0}%`;
-
-                const ssCtx = document.getElementById('subStatusChart')?.getContext('2d');
-                if (ssCtx) {
-                    this.charts.subStatus = new Chart(ssCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Active', 'Trial', 'Cancelled / Expired'],
-                            datasets: [{
-                                data: [subRes.active || 0, subRes.trials || 0, subRes.cancelled || 0],
-                                backgroundColor: ['#3b82f6', '#06b6d4', '#ef4444'],
-                                borderWidth: 0
-                            }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, cutout: '75%' }
-                    });
-                }
             }
             
             else if (this.currentTab === 'modules') {

@@ -16,10 +16,13 @@ const Stage4 = {
                 <!-- Section 1 - Suspect Causes -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">1</span>
-                            Root Causes
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.1</span>
+                                Root Causes
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">List the causes carried over from Stage 3 for detailed root-cause testing.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -42,10 +45,13 @@ const Stage4 = {
                 <!-- Section 2 - Why-Why Analysis -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">2</span>
-                            Why-Why Analysis (5-Why)
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.2</span>
+                                Why-Why Analysis (5-Why)
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Drill down from each suspect cause through repeated "why" questioning to reach the root cause.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -61,10 +67,13 @@ const Stage4 = {
                 <!-- Section 3 - Hypothesis Testing -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">3</span>
-                            Hypothesis Testing
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.3</span>
+                                Hypothesis Testing
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">State and test the hypothesis linking the suspect cause to the observed effect.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -88,10 +97,13 @@ const Stage4 = {
                 <!-- Section 4 - Good vs Bad Comparison -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">4</span>
-                            Good vs Bad Comparison
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.4</span>
+                                Good vs Bad Comparison
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Compare good and bad outcomes side-by-side to isolate the differentiating factor.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -115,10 +127,13 @@ const Stage4 = {
                 <!-- Section 5 - Statistical Validation -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">5</span>
-                            Statistical Validation
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.5</span>
+                                Statistical Validation
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Run scatter correlation and control-chart analysis to statistically confirm the cause-effect link.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -187,10 +202,13 @@ const Stage4 = {
                 <!-- Section 6 - Data Reconfirmation -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">6</span>
-                            Data Reconfirmation
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.6</span>
+                                Data Reconfirmation
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Re-verify the underlying data before finalizing root causes.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -250,10 +268,13 @@ const Stage4 = {
                 <!-- Section 7 - Root Cause Register -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">7</span>
-                            Root Cause Register
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.7</span>
+                                Root Cause Register
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Log all confirmed root causes with supporting evidence.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -276,10 +297,13 @@ const Stage4 = {
                 <!-- Section 8 - Root Cause Ranking -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">8</span>
-                            Root Cause Ranking
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.8</span>
+                                Root Cause Ranking
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Rank the confirmed root causes by impact to prioritize countermeasure planning.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">

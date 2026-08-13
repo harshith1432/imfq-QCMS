@@ -44,6 +44,90 @@
             --docs-code-text: #f3f4f6;
         }
 
+        /* Dark Mode High-Contrast Overrides */
+        [data-theme="dark"] .bg-body-tertiary,
+        body.dark-mode .bg-body-tertiary {
+            background-color: var(--docs-card-bg) !important;
+            background: var(--docs-card-bg) !important;
+            border-color: var(--docs-border) !important;
+            color: var(--docs-text-main) !important;
+        }
+
+        [data-theme="dark"] .bg-body-tertiary .text-muted,
+        body.dark-mode .bg-body-tertiary .text-muted {
+            color: var(--docs-text-muted) !important;
+        }
+
+        [data-theme="dark"] .bg-body-tertiary h6,
+        [data-theme="dark"] .bg-body-tertiary strong,
+        [data-theme="dark"] .bg-body-tertiary div,
+        body.dark-mode .bg-body-tertiary h6,
+        body.dark-mode .bg-body-tertiary strong,
+        body.dark-mode .bg-body-tertiary div {
+            color: var(--docs-text-main) !important;
+        }
+
+        [data-theme="dark"] p.text-muted,
+        body.dark-mode p.text-muted {
+            color: var(--docs-text-muted) !important;
+        }
+
+        [data-theme="dark"] .sidebar-group-label,
+        body.dark-mode .sidebar-group-label {
+            color: #94a3b8 !important;
+        }
+
+        [data-theme="dark"] .sidebar-link,
+        body.dark-mode .sidebar-link {
+            color: #cbd5e1 !important;
+        }
+
+        [data-theme="dark"] .sidebar-link:hover,
+        [data-theme="dark"] .sidebar-link.active,
+        body.dark-mode .sidebar-link:hover,
+        body.dark-mode .sidebar-link.active {
+            background-color: rgba(56, 189, 248, 0.12) !important;
+            color: #38bdf8 !important;
+        }
+
+        [data-theme="dark"] .method-post,
+        body.dark-mode .method-post {
+            background-color: rgba(34, 197, 94, 0.2) !important;
+            color: #4ade80 !important;
+            border: 1px solid rgba(34, 197, 94, 0.3) !important;
+        }
+
+        [data-theme="dark"] .method-get,
+        body.dark-mode .method-get {
+            background-color: rgba(56, 189, 248, 0.2) !important;
+            color: #38bdf8 !important;
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        }
+
+        [data-theme="dark"] table.table,
+        [data-theme="dark"] .table,
+        body.dark-mode table.table,
+        body.dark-mode .table {
+            color: var(--docs-text-main) !important;
+            background-color: transparent !important;
+            border-color: var(--docs-border) !important;
+        }
+
+        [data-theme="dark"] .table th,
+        [data-theme="dark"] .table tr,
+        [data-theme="dark"] .table td,
+        [data-theme="dark"] .table-light,
+        [data-theme="dark"] .table-light th,
+        body.dark-mode .table th,
+        body.dark-mode .table tr,
+        body.dark-mode .table td,
+        body.dark-mode .table-light,
+        body.dark-mode .table-light th {
+            background-color: var(--docs-card-bg) !important;
+            color: var(--docs-text-main) !important;
+            border-color: var(--docs-border) !important;
+        }
+
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--docs-bg);
@@ -90,6 +174,28 @@
             padding: 20px 14px;
             flex-shrink: 0;
             box-sizing: border-box;
+        }
+
+        /* Custom Scrollbar for Sidebar and Code Panel */
+        .docs-sidebar::-webkit-scrollbar,
+        .docs-code-panel::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .docs-sidebar::-webkit-scrollbar-track,
+        .docs-code-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .docs-sidebar::-webkit-scrollbar-thumb,
+        .docs-code-panel::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.2);
+            border-radius: 4px;
+        }
+
+        .docs-sidebar::-webkit-scrollbar-thumb:hover,
+        .docs-code-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.4);
         }
 
         .sidebar-group-label {
@@ -1524,16 +1630,17 @@ export function ImportIdeaButton({ apiKey }) {
 
             if (!links.length || !sections.length) return;
 
-            function keepLinkInSidebarView(activeLink) {
-                if (!sidebar || !activeLink) return;
-                const linkRect = activeLink.getBoundingClientRect();
-                const sidebarRect = sidebar.getBoundingClientRect();
-                if (linkRect.top < sidebarRect.top + 20 || linkRect.bottom > sidebarRect.bottom - 20) {
-                    activeLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            function keepLinkInSidebarView(activeLink, isClick = false) {
+                if (!sidebar || !activeLink || isClick) return;
+                const linkTop = activeLink.offsetTop;
+                const sidebarScrollTop = sidebar.scrollTop;
+                const sidebarHeight = sidebar.clientHeight;
+                if (linkTop < sidebarScrollTop || linkTop > sidebarScrollTop + sidebarHeight - 50) {
+                    sidebar.scrollTo({ top: Math.max(0, linkTop - 50), behavior: 'smooth' });
                 }
             }
 
-            function updateActiveLink(targetId) {
+            function updateActiveLink(targetId, isClick = false) {
                 let matchedLink = null;
                 links.forEach(l => {
                     const href = l.getAttribute('href');
@@ -1545,7 +1652,7 @@ export function ImportIdeaButton({ apiKey }) {
                     }
                 });
                 if (matchedLink) {
-                    keepLinkInSidebarView(matchedLink);
+                    keepLinkInSidebarView(matchedLink, isClick);
                 }
             }
 
@@ -1558,7 +1665,7 @@ export function ImportIdeaButton({ apiKey }) {
                         if (targetEl) {
                             e.preventDefault();
                             isNavClicking = true;
-                            updateActiveLink(targetId);
+                            updateActiveLink(targetId, true);
 
                             const headerOffset = 80;
                             const elementPosition = targetEl.getBoundingClientRect().top;

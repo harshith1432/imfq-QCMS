@@ -450,16 +450,18 @@
                                 <div class="col-md-3">
                                     <div class="ds-field">
                                         <label class="ds-label"><i data-lucide="tag"></i> Project Type *</label>
-                                        <select class="ds-input ds-select" id="projType" required>
+                                        <select class="ds-input ds-select" id="projType" required onchange="tmDash?.handleProjectTypeChange ? tmDash.handleProjectTypeChange(this.value) : null">
                                             <option value="" disabled selected>Select Type</option>
                                             <option value="Quality">Quality</option>
-                                            <option value="Productivity">Productivity</option>
                                             <option value="Cost">Cost</option>
                                             <option value="Delivery">Delivery</option>
+                                            <option value="Productivity">Productivity</option>
                                             <option value="Safety">Safety</option>
-                                            <option value="Morale">Morale</option>
-                                            <option value="Environment">Environment</option>
+                                            <option value="Other">Other</option>
                                         </select>
+                                        <div class="mt-2" id="projTypeCustomContainer" style="display: none;">
+                                            <input type="text" class="ds-input text-sm py-1 px-2" id="projTypeCustom" placeholder="Enter custom project type...">
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-2">
@@ -481,22 +483,33 @@
                             <div class="row g-3">
                                 <div class="col-md-3">
                                     <div class="ds-field">
-                                        <label class="ds-label"><i data-lucide="map-pin"></i> Work Area *</label>
-                                        <input type="text" class="ds-input" id="projWorkArea" placeholder="e.g. Assembly Line 3" required>
+                                        <label class="ds-label"><i data-lucide="building-2"></i> Plant / Location *</label>
+                                        <div class="position-relative">
+                                            <input type="text" class="ds-input pe-4" id="projPlant" placeholder="Search or select plant..." autocomplete="off" required onfocus="tmDash?.showPlantDropdown ? tmDash.showPlantDropdown() : null" oninput="tmDash?.filterPlantDropdown ? tmDash.filterPlantDropdown(this.value) : null; tmDash?.onPlantInputChange ? tmDash.onPlantInputChange(this.value) : null">
+                                            <i data-lucide="lock" id="projPlantLockIcon" class="position-absolute text-muted" style="right:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; pointer-events:none; display:none;"></i>
+                                            <i data-lucide="chevron-down" id="projPlantChevron" class="position-absolute text-muted" style="right:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; pointer-events:none;"></i>
+                                            <ul class="dropdown-menu w-100 shadow-lg p-1" id="plantDropdownMenu" style="max-height: 185px; overflow-y: auto; display: none; position: absolute; top: 100% !important; left: 0 !important; margin-top: 4px !important; z-index: 1055;">
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="ds-field">
                                         <label class="ds-label"><i data-lucide="briefcase"></i> Department *</label>
-                                        <select class="ds-input ds-select" id="projDepartment" onchange="tmDash.handleDepartmentChange(this.value)" required>
-                                            <option value="" disabled selected>Loading...</option>
-                                        </select>
+                                        <div class="position-relative">
+                                            <input type="text" class="ds-input pe-4" id="projDepartment" placeholder="Search or select department..." autocomplete="off" required onfocus="tmDash?.showDeptDropdown ? tmDash.showDeptDropdown() : null" oninput="tmDash?.filterDeptDropdown ? tmDash.filterDeptDropdown(this.value) : null; tmDash?.onDeptInputChange ? tmDash.onDeptInputChange(this.value) : null">
+                                            <i data-lucide="lock" id="projDeptLockIcon" class="position-absolute text-muted" style="right:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; pointer-events:none; display:none;"></i>
+                                            <i data-lucide="chevron-down" id="projDeptChevron" class="position-absolute text-muted" style="right:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; pointer-events:none;"></i>
+                                            <ul class="dropdown-menu w-100 shadow-lg p-1" id="deptDropdownMenu" style="max-height: 185px; overflow-y: auto; display: none; position: absolute; top: 100% !important; left: 0 !important; margin-top: 4px !important; z-index: 1055;">
+                                            </ul>
+                                        </div>
+                                        <input type="hidden" id="projDepartmentId" value="">
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="ds-field">
-                                        <label class="ds-label"><i data-lucide="building-2"></i> Plant / Location *</label>
-                                        <input type="text" class="ds-input" id="projPlant" placeholder="e.g. Unit 1 – Pune" required>
+                                        <label class="ds-label"><i data-lucide="map-pin"></i> Work Area *</label>
+                                        <input type="text" class="ds-input" id="projWorkArea" placeholder="e.g. Assembly Line 3" required>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -989,11 +1002,7 @@
                                     <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="tmDash.loadTeamProjects(${page - 1})">
                                         <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                     </button>
-                                    ${Array.from({ length: totalPages }, (_, idx) => idx + 1).map(p => `
-                                        <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="tmDash.loadTeamProjects(${p})">
-                                            ${p}
-                                        </button>
-                                    `).join('')}
+                                    ${QCMS.renderPagination(page, totalPages, 'tmDash.loadTeamProjects')}
                                     <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="tmDash.loadTeamProjects(${page + 1})">
                                         <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                     </button>
@@ -1066,11 +1075,7 @@
                                     <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="tmDash.setPage(${page - 1})">
                                         <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                     </button>
-                                    ${Array.from({ length: totalPages }, (_, idx) => idx + 1).map(p => `
-                                        <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="tmDash.setPage(${p})">
-                                            ${p}
-                                        </button>
-                                    `).join('')}
+                                    ${QCMS.renderPagination(page, totalPages, 'tmDash.setPage')}
                                     <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="tmDash.setPage(${page + 1})">
                                         <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                     </button>
@@ -1233,30 +1238,273 @@
             },
 
             async handleDepartmentChange(deptId) {
-                if (!deptId) return;
+            allPlants: [],
+            allDepartments: [],
+            defaultDepartments: [],
+
+            async loadPlantsList() {
                 try {
+                    let plants = [];
+                    try {
+                        const res = await api.get('/projects/plants');
+                        plants = Array.isArray(res) ? res : (res && res.plants ? res.plants : []);
+                    } catch (e) {
+                        try {
+                            const res2 = await api.get('/admin/plants');
+                            plants = Array.isArray(res2) ? res2 : (res2 && res2.plants ? res2.plants : []);
+                        } catch (e2) {}
+                    }
+                    const defaultPlants = ["Unit 1 – Pune", "Unit 2 – Mumbai", "Main Plant – Bangalore", "Gujarat Facility", "Delhi Hub"];
+                    const fetchedNames = plants.map(p => p.name || p.location).filter(Boolean);
+                    const combined = Array.from(new Set([...fetchedNames, ...defaultPlants]));
+                    this.allPlants = combined;
+                } catch (e) {
+                    console.error('Failed to load plants', e);
+                    this.allPlants = ["Unit 1 – Pune", "Unit 2 – Mumbai", "Main Plant – Bangalore", "Gujarat Facility", "Delhi Hub"];
+                }
+            },
+
+            showPlantDropdown() {
+                const input = document.getElementById('projPlant');
+                if (input && (input.readOnly || input.disabled)) return;
+                const query = (input?.value || '').trim();
+                this.filterPlantDropdown(query);
+            },
+
+            filterPlantDropdown(query) {
+                const menu = document.getElementById('plantDropdownMenu');
+                if (!menu) return;
+
+                const q = (query || '').toLowerCase().trim();
+                let matches = this.allPlants || [];
+
+                if (q) {
+                    const qSynonyms = [q];
+                    if (q.includes('bengaluru')) qSynonyms.push(q.replace('bengaluru', 'bangalore'));
+                    if (q.includes('bangalore')) qSynonyms.push(q.replace('bangalore', 'bengaluru'));
+
+                    matches = matches
+                        .map(name => {
+                            const lname = name.toLowerCase();
+                            let bestScore = 99;
+                            for (const syn of qSynonyms) {
+                                let score = 99;
+                                if (lname === syn) score = 1;
+                                else if (lname.startsWith(syn)) score = 2;
+                                else if (lname.includes(syn)) score = 3;
+                                
+                                const words = lname.split(/[\s–—_-]+/);
+                                if (words.some(w => w === syn || w.startsWith(syn))) {
+                                    score = Math.min(score, 2);
+                                }
+                                if (score < bestScore) bestScore = score;
+                            }
+                            return { name, score: bestScore };
+                        })
+                        .filter(x => x.score < 99)
+                        .sort((a, b) => a.score - b.score)
+                        .map(x => x.name);
+                }
+
+                const esc = (str) => String(str || '').replace(/"/g, '&quot;');
+                if (!matches.length) {
+                    menu.innerHTML = `<li class="dropdown-item disabled text-muted text-xs p-2">No matching locations found</li>`;
+                } else {
+                    menu.innerHTML = matches.map(p => `
+                        <li>
+                            <button type="button" class="dropdown-item py-1.5 px-2 text-sm d-flex align-items-center justify-content-between text-wrap" onclick="tmDash.selectPlantOption('${esc(p)}')">
+                                <span><i data-lucide="building-2" class="me-2 text-muted" style="width:13px;height:13px;"></i>${esc(p)}</span>
+                            </button>
+                        </li>
+                    `).join('');
+                }
+
+                menu.style.display = 'block';
+                if (window.lucide) lucide.createIcons();
+            },
+
+            async selectPlantOption(val) {
+                const input = document.getElementById('projPlant');
+                if (input) input.value = val;
+                const menu = document.getElementById('plantDropdownMenu');
+                if (menu) menu.style.display = 'none';
+
+                const deptInput = document.getElementById('projDepartment');
+                const deptIdHidden = document.getElementById('projDepartmentId');
+                if (deptInput) {
+                    deptInput.value = '';
+                    deptInput.disabled = !val;
+                    deptInput.placeholder = val ? "Search or select department..." : "Select plant location first...";
+                }
+                if (deptIdHidden) deptIdHidden.value = '';
+
+                await this.handleDepartmentChange(null);
+
+                if (!val) {
+                    this.allDepartments = [];
+                    return;
+                }
+
+                try {
+                    const depts = await api.get('/projects/departments?plant_name=' + encodeURIComponent(val));
+                    if (Array.isArray(depts)) {
+                        this.allDepartments = depts;
+                    } else {
+                        this.allDepartments = [];
+                    }
+                } catch (e) {
+                    console.error('Failed to load departments for plant', e);
+                    this.allDepartments = [];
+                }
+            },
+
+            showDeptDropdown() {
+                const input = document.getElementById('projDepartment');
+                if (input && (input.readOnly || input.disabled)) return;
+                const plantName = (document.getElementById('projPlant')?.value || '').trim();
+                const menu = document.getElementById('deptDropdownMenu');
+                if (!plantName) {
+                    if (menu) {
+                        menu.innerHTML = `<li class="dropdown-item disabled text-muted text-xs p-2">Select a Plant / Location first</li>`;
+                        menu.style.display = 'block';
+                    }
+                    return;
+                }
+                const query = (input?.value || '').trim();
+                this.filterDeptDropdown(query);
+            },
+
+            filterDeptDropdown(query) {
+                const menu = document.getElementById('deptDropdownMenu');
+                if (!menu) return;
+
+                const q = (query || '').toLowerCase().trim();
+                let matches = this.allDepartments || [];
+
+                if (q) {
+                    matches = matches
+                        .map(d => {
+                            const lname = (d.name || '').toLowerCase();
+                            let score = 99;
+                            if (lname === q) score = 1;
+                            else if (lname.startsWith(q)) score = 2;
+                            else if (lname.includes(q)) score = 3;
+                            return { dept: d, score };
+                        })
+                        .filter(x => x.score < 99)
+                        .sort((a, b) => a.score - b.score)
+                        .map(x => x.dept);
+                }
+
+                const esc = (str) => String(str || '').replace(/"/g, '&quot;');
+                if (!matches.length) {
+                    menu.innerHTML = `<li class="dropdown-item disabled text-muted text-xs p-2">No matching departments found</li>`;
+                } else {
+                    menu.innerHTML = matches.map(d => `
+                        <li>
+                            <button type="button" class="dropdown-item py-1.5 px-2 text-sm d-flex align-items-center justify-content-between text-wrap" onclick="tmDash.selectDeptOption(${d.id}, '${esc(d.name)}')">
+                                <span><i data-lucide="briefcase" class="me-2 text-muted" style="width:13px;height:13px;"></i>${esc(d.name)}</span>
+                            </button>
+                        </li>
+                    `).join('');
+                }
+
+                menu.style.display = 'block';
+                if (window.lucide) lucide.createIcons();
+            },
+
+            selectDeptOption(id, name) {
+                const deptInput = document.getElementById('projDepartment');
+                const deptIdHidden = document.getElementById('projDepartmentId');
+                if (deptInput) deptInput.value = name;
+                if (deptIdHidden) deptIdHidden.value = id;
+
+                const menu = document.getElementById('deptDropdownMenu');
+                if (menu) menu.style.display = 'none';
+
+                this.handleDepartmentChange(id);
+            },
+
+            onPlantInputChange(val) {
+                // Only cascade departments in background; do NOT hide dropdown while user is typing
+                if (this._plantCascadeTimer) clearTimeout(this._plantCascadeTimer);
+                this._plantCascadeTimer = setTimeout(async () => {
+                    const trimmed = (val || '').trim();
+                    if (!trimmed) {
+                        this.allDepartments = [];
+                        const deptInput = document.getElementById('projDepartment');
+                        const deptIdHidden = document.getElementById('projDepartmentId');
+                        if (deptInput) { deptInput.value = ''; deptInput.disabled = true; deptInput.placeholder = 'Select plant location first...'; }
+                        if (deptIdHidden) deptIdHidden.value = '';
+                        await this.handleDepartmentChange(null);
+                        return;
+                    }
+                    try {
+                        const depts = await api.get('/projects/departments?plant_name=' + encodeURIComponent(trimmed));
+                        this.allDepartments = Array.isArray(depts) ? depts : [];
+                        const deptInput = document.getElementById('projDepartment');
+                        if (deptInput) { deptInput.disabled = false; deptInput.placeholder = 'Search or select department...'; }
+                        const deptId = document.getElementById('projDepartmentId')?.value;
+                        if (!deptId) await this.handleDepartmentChange(null);
+                    } catch(e) { console.error(e); }
+                }, 400);
+            },
+
+            onDeptInputChange(val) {
+                if (this._deptInputTimer) clearTimeout(this._deptInputTimer);
+                this._deptInputTimer = setTimeout(() => {
+                    const q = (val || '').toLowerCase().trim();
+                    const match = (this.allDepartments || []).find(d => (d.name || '').toLowerCase() === q);
+                    const deptId = match ? match.id : null;
+                    const deptIdHidden = document.getElementById('projDepartmentId');
+                    if (deptIdHidden) deptIdHidden.value = deptId || '';
+                    this.handleDepartmentChange(deptId);
+                }, 300);
+            },
+
+            async handleDepartmentChange(deptId) {
+                const facSel = document.getElementById('projFacilitator');
+                const tlSel = document.getElementById('projTeamLeader');
+                const revSel = document.getElementById('projReviewer');
+
+                if (!deptId) {
+                    if (facSel) facSel.innerHTML = '<option value="" disabled selected>Select department first</option>';
+                    if (tlSel) tlSel.innerHTML = '<option value="" disabled selected>Select department first</option>';
+                    if (revSel) revSel.innerHTML = '<option value="" disabled selected>Select department first</option>';
+                    return;
+                }
+
+                try {
+                    const plantName = (document.getElementById('projPlant')?.value || '').trim();
+                    let facUrl = `/projects/facilitators?dept_id=${deptId}&`;
+                    let revUrl = `/projects/potential-members?role=Reviewer&dept_id=${deptId}&`;
+                    let memUrl = `/projects/potential-members?role=Team Member&dept_id=${deptId}&`;
+
+                    if (plantName) {
+                        facUrl += `plant_name=${encodeURIComponent(plantName)}&`;
+                        revUrl += `plant_name=${encodeURIComponent(plantName)}&`;
+                        memUrl += `plant_name=${encodeURIComponent(plantName)}&`;
+                    }
+
                     const [facs, revs, members] = await Promise.all([
-                        api.get(`/projects/facilitators?dept_id=${deptId}`),
-                        api.get(`/projects/potential-members?role=Reviewer&dept_id=${deptId}`),
-                        api.get(`/projects/potential-members?dept_id=${deptId}`)
+                        api.get(facUrl),
+                        api.get(revUrl),
+                        api.get(memUrl)
                     ]);
 
-                    const facSel = document.getElementById('projFacilitator');
                     if (facSel) {
                         facSel.innerHTML = '<option value="" disabled selected>Select Facilitator</option>' +
-                            facs.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                            (facs || []).map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
                     }
 
-                    const tlSel = document.getElementById('projTeamLeader');
                     if (tlSel) {
                         tlSel.innerHTML = '<option value="" disabled selected>Select Team Leader</option>' +
-                            members.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                            (members || []).map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
                     }
 
-                    const revSel = document.getElementById('projReviewer');
                     if (revSel) {
                         revSel.innerHTML = '<option value="" disabled selected>Select Reviewer</option>' +
-                            revs.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                            (revs || []).map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
                     }
                 } catch (e) {
                     console.error('Failed to load department members', e);
@@ -1264,31 +1512,118 @@
             },
 
             async openInitModal() {
-                this.initModal.show();
-                try {
-                    const depts = await api.get('/projects/departments');
-                    const deptSel = document.getElementById('projDepartment');
-                    if (deptSel) {
-                        deptSel.innerHTML = '<option value="" disabled selected>Select Department</option>' +
-                            depts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                const projTypeCustomContainer = document.getElementById('projTypeCustomContainer');
+                if (projTypeCustomContainer) projTypeCustomContainer.style.display = 'none';
+                const projTypeCustom = document.getElementById('projTypeCustom');
+                if (projTypeCustom) projTypeCustom.value = '';
 
-                        const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
-                        if (user.department_id) {
-                            deptSel.value = user.department_id;
-                            deptSel.disabled = true; // Auto-lock to user's department
-                            this.handleDepartmentChange(user.department_id);
+                this.initModal.show();
+                await this.loadPlantsList();
+
+                const plantInput = document.getElementById('projPlant');
+                const deptInput = document.getElementById('projDepartment');
+                const deptIdHidden = document.getElementById('projDepartmentId');
+                const plantLock = document.getElementById('projPlantLockIcon');
+                const plantChevron = document.getElementById('projPlantChevron');
+                const deptLock = document.getElementById('projDeptLockIcon');
+                const deptChevron = document.getElementById('projDeptChevron');
+
+                let user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                if (!user.location && !user.plant_name && !user.department && window.api) {
+                    try {
+                        const freshUser = await api.get('/auth/me');
+                        if (freshUser) {
+                            user = { ...user, ...freshUser };
+                            sessionStorage.setItem('user', JSON.stringify(user));
                         }
+                    } catch (err) {
+                        console.warn('Could not fetch fresh user profile', err);
                     }
-                } catch (e) {
-                    console.error('Failed to load init modal dropdowns', e);
                 }
+
+                const userLocation = user.location || user.plant_name || user.plant || (user.custom_fields && user.custom_fields.location) || '';
+                const userDeptName = user.department || user.department_name || '';
+                const userDeptId = user.department_id || null;
+
+                if (userLocation && plantInput) {
+                    plantInput.value = userLocation;
+                    plantInput.readOnly = true;
+                    plantInput.style.backgroundColor = 'var(--ds-bg-subtle, rgba(241, 245, 249, 0.6))';
+                    plantInput.style.cursor = 'not-allowed';
+                    if (plantLock) plantLock.style.display = 'block';
+                    if (plantChevron) plantChevron.style.display = 'none';
+
+                    try {
+                        const depts = await api.get('/projects/departments?plant_name=' + encodeURIComponent(userLocation));
+                        this.allDepartments = Array.isArray(depts) ? depts : [];
+                        this.defaultDepartments = this.allDepartments;
+                    } catch (e) {
+                        console.error('Failed to load departments for plant', e);
+                        this.allDepartments = [];
+                    }
+                } else if (plantInput) {
+                    plantInput.value = '';
+                    plantInput.readOnly = false;
+                    plantInput.style.backgroundColor = '';
+                    plantInput.style.cursor = '';
+                    if (plantLock) plantLock.style.display = 'none';
+                    if (plantChevron) plantChevron.style.display = 'block';
+                }
+
+                let targetDeptId = userDeptId;
+                let matchedDept = null;
+
+                if (this.allDepartments.length) {
+                    if (userDeptId) {
+                        matchedDept = this.allDepartments.find(d => d.id === userDeptId);
+                    }
+                    if (!matchedDept && userDeptName) {
+                        matchedDept = this.allDepartments.find(d => (d.name || '').toLowerCase() === userDeptName.toLowerCase());
+                    }
+                }
+
+                if (matchedDept || userDeptName) {
+                    const finalDeptName = matchedDept ? matchedDept.name : userDeptName;
+                    const finalDeptId = matchedDept ? matchedDept.id : userDeptId;
+                    targetDeptId = finalDeptId;
+
+                    if (deptInput) {
+                        deptInput.value = finalDeptName;
+                        deptInput.readOnly = true;
+                        deptInput.style.backgroundColor = 'var(--ds-bg-subtle, rgba(241, 245, 249, 0.6))';
+                        deptInput.style.cursor = 'not-allowed';
+                    }
+                    if (deptIdHidden) deptIdHidden.value = finalDeptId || '';
+                    if (deptLock) deptLock.style.display = 'block';
+                    if (deptChevron) deptChevron.style.display = 'none';
+                } else if (deptInput) {
+                    deptInput.value = '';
+                    deptInput.readOnly = false;
+                    deptInput.style.backgroundColor = '';
+                    deptInput.style.cursor = '';
+                    if (deptLock) deptLock.style.display = 'none';
+                    if (deptChevron) deptChevron.style.display = 'block';
+                }
+
+                if (targetDeptId) {
+                    await this.handleDepartmentChange(targetDeptId);
+                } else {
+                    await this.handleDepartmentChange(null);
+                }
+                if (window.lucide) lucide.createIcons();
             },
 
             async initProject() {
                 const title = document.getElementById('projTitle').value.trim();
-                const type = document.getElementById('projType').value;
+                let type = document.getElementById('projType').value;
+                if (type === 'Other') {
+                    type = (document.getElementById('projTypeCustom')?.value || '').trim();
+                    if (!type) {
+                        return QCMS.toast('Please enter custom Project Type.', 'warning');
+                    }
+                }
                 const workArea = document.getElementById('projWorkArea').value.trim();
-                const deptId = document.getElementById('projDepartment').value;
+                const deptId = document.getElementById('projDepartmentId')?.value || document.getElementById('projDepartment')?.value;
                 const plant = document.getElementById('projPlant').value.trim();
                 const source = document.getElementById('projSource').value;
                 const facilitatorId = document.getElementById('projFacilitator').value;
@@ -1839,6 +2174,19 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => tmDash.init());
+        document.addEventListener('click', (e) => {
+            const pInput = document.getElementById('projPlant');
+            const pMenu = document.getElementById('plantDropdownMenu');
+            if (pMenu && pInput && !pInput.contains(e.target) && !pMenu.contains(e.target)) {
+                pMenu.style.display = 'none';
+            }
+
+            const dInput = document.getElementById('projDepartment');
+            const dMenu = document.getElementById('deptDropdownMenu');
+            if (dMenu && dInput && !dInput.contains(e.target) && !dMenu.contains(e.target)) {
+                dMenu.style.display = 'none';
+            }
+        });
     </script>
 </body>
 

@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import re
 from app.infrastructure.database.models.models import (
     db, User, Organization, Role, SupportTicket, SupportComment,
     SupportAttachment, SupportSLA, SupportEscalation, SupportRating,
@@ -936,5 +937,84 @@ def delete_enquiry(enquiry_id):
         "status": "success",
         "message": f"Enquiry #{enquiry_id} removed successfully."
     }), 200
+
+
+@support_bp.route('/enquiries/<int:enquiry_id>/send-email', methods=['POST'])
+@jwt_required()
+def send_enquiry_email(enquiry_id):
+    user, err = get_current_user_and_check_rbac()
+    if err:
+        return jsonify({"status": "error", "message": err}), 403
+
+    enquiry = SalesEnquiry.query.get_or_404(enquiry_id)
+    data = request.get_json() or {}
+
+    recipient_email = (data.get('to_email') or enquiry.email or '').strip()
+    subject = (data.get('subject') or f"Response to Inquiry - {enquiry.company_name or 'QCMS'}").strip()
+    message_content = (data.get('message') or '').strip()
+
+    if not recipient_email or not message_content:
+        return jsonify({"status": "error", "message": "Recipient email and message content are required."}), 400
+
+    try:
+        from app.infrastructure.mailer.email_service import EmailUtils
+        from app.domain.services.document_branding_service import DocumentBrandingService
+
+        user_org_id = getattr(user, 'org_id', None)
+
+        msg_str = message_content.strip()
+        # Avoid duplicate greeting if message content already includes "Dear ...", "Hi ...", or "Hello ..."
+        if re.match(r'^(dear|hi|hello|greetings)\b', msg_str, re.IGNORECASE):
+            greeting_hdr = ""
+        else:
+            greeting_hdr = f"<p style=\"margin-bottom: 12px;\">Dear {enquiry.name or 'Valued Prospect'},</p>"
+
+        body_html = f"""
+        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1e293b; line-height: 1.6;">
+            {greeting_hdr}
+            <div style="margin: 8px 0; white-space: pre-wrap;">{msg_str}</div>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #64748b;">
+                This communication is sent regarding your sales inquiry with <strong>{enquiry.company_name or 'QCMS Enterprise'}</strong>.
+            </p>
+        </div>
+        """
+        html_wrapped = DocumentBrandingService.wrap_email_html(body_html, title=subject, org_id=user_org_id)
+
+        # Dispatch email using 'support' email_type (dynamically fetches configured Support Email from Contact Directory / Integration Hub)
+        EmailUtils.send_email(
+            to_email=recipient_email,
+            subject=subject,
+            html_content=html_wrapped,
+            email_type='support',
+            org_id=user_org_id
+        )
+
+        # Log email dispatch in enquiry notes and update status to Contacted if New
+        now_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+        log_note = f"[{now_str}] Email sent to {recipient_email} by {getattr(user, 'username', 'Admin')}:\nSubject: {subject}\nMessage: {message_content[:200]}..."
+        if enquiry.notes:
+            enquiry.notes = log_note + "\n\n" + enquiry.notes
+        else:
+            enquiry.notes = log_note
+
+        if enquiry.status == 'New':
+            enquiry.status = 'Contacted'
+
+        enquiry.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": f"Email successfully sent to {recipient_email} using Support Email.",
+            "data": {
+                "enquiry_id": enquiry.id,
+                "status": enquiry.status,
+                "notes": enquiry.notes
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Failed to send email: {str(e)}"}), 500
 
 

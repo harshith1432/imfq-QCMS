@@ -400,9 +400,9 @@
                                 <p class="text-secondary text-sm mb-4">
                                     External systems and tools (such as Ideation Apps, ERP, or CRM) can submit approved ideas directly to your organization using your Organization API Key.
                                 </p>
-                                <div class="p-3 bg-light rounded-3 border text-start mb-4">
+                                <div class="p-3 rounded-3 border text-start mb-4" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important;">
                                     <div class="text-xs text-secondary text-uppercase fw-bold mb-1">API Integration Endpoint</div>
-                                    <code class="text-primary font-mono text-sm fw-bold">POST ${window.location.origin}/api/v1/integrations/ideas</code>
+                                    <code class="text-primary font-mono text-sm fw-bold" style="color: var(--ds-primary, #38bdf8) !important;">POST ${window.location.origin}/api/v1/integrations/ideas</code>
                                 </div>
                                 <a href="/admin/settings.html" class="ds-btn ds-btn-primary gap-2">
                                     <i data-lucide="shield-check" style="width:16px;height:16px;"></i>
@@ -529,42 +529,42 @@
                     <div class="row g-4 mb-4">
                         <div class="col-md-6">
                             <div class="text-xs text-secondary text-uppercase fw-bold mb-1">Problem Statement</div>
-                            <div class="p-3 rounded-3 border bg-light text-sm" style="line-height:1.6; overflow-wrap:anywhere; word-break:break-word;">${idea.problem_statement || 'N/A'}</div>
+                            <div class="p-3 rounded-3 border text-sm" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important; line-height:1.6; overflow-wrap:anywhere; word-break:break-word;">${idea.problem_statement || 'N/A'}</div>
                         </div>
                         <div class="col-md-6">
                             <div class="text-xs text-secondary text-uppercase fw-bold mb-1">Proposed Solution</div>
-                            <div class="p-3 rounded-3 border bg-light text-sm" style="line-height:1.6;">${idea.proposed_solution || 'N/A'}</div>
+                            <div class="p-3 rounded-3 border text-sm" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important; line-height:1.6;">${idea.proposed_solution || 'N/A'}</div>
                         </div>
                     </div>
 
                     <div class="row g-3 mb-4">
                         <div class="col-md-3 col-6">
-                            <div class="p-3 rounded-3 border">
+                            <div class="p-3 rounded-3 border" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important;">
                                 <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Tangible Benefit</div>
                                 <div class="fw-bold text-success text-base">${idea.tangible_benefit ? QCMS.formatINR(idea.tangible_benefit) : 'N/A'}</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <div class="p-3 rounded-3 border">
+                            <div class="p-3 rounded-3 border" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important;">
                                 <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Required Investment</div>
                                 <div class="fw-bold text-main text-base">${idea.investment_required ? QCMS.formatINR(idea.investment_required) : 'N/A'}</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <div class="p-3 rounded-3 border">
+                            <div class="p-3 rounded-3 border" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important;">
                                 <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Impact Level</div>
                                 <div class="fw-bold text-primary text-base">${idea.impact_level || 'High'}</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <div class="p-3 rounded-3 border">
+                            <div class="p-3 rounded-3 border" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important;">
                                 <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Est. Timeframe</div>
                                 <div class="fw-bold text-main text-base">${idea.implementation_time || '2 Weeks'}</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="p-3 rounded-3 border bg-light">
+                    <div class="p-3 rounded-3 border" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important;">
                         <div class="row g-2 text-xs">
                             <div class="col-md-6"><strong>Submitted By:</strong> ${idea.submitted_by}</div>
                             <div class="col-md-6"><strong>Co-Suggesters:</strong> ${coSuggesters}</div>

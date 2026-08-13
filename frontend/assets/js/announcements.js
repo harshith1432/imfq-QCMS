@@ -141,9 +141,14 @@ const AnnouncementsModule = {
                             <!-- Injected dynamically -->
                         </div>
 
-                        <div class="modal-footer" style="border-top:1px solid var(--ds-border-color); background:rgba(0,0,0,0.1);">
-                            <button class="ds-btn ds-btn-outline ds-btn-sm px-3" id="wizPrevBtn" onclick="AnnouncementsModule.prevStep()">Back</button>
-                            <button class="ds-btn ds-btn-primary ds-btn-sm px-4" id="wizNextBtn" onclick="AnnouncementsModule.nextStep()">Next</button>
+                        <div class="modal-footer d-flex justify-content-between align-items-center px-4 py-3" style="border-top:1px solid var(--ds-border-color); background:rgba(0,0,0,0.1);">
+                            <div class="text-xs text-secondary fw-semibold" id="wizStepIndicatorText">Step 1 of 5</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm px-3" id="wizPrevBtn" onclick="AnnouncementsModule.prevStep()" style="display:none !important;">
+                                    <i data-lucide="arrow-left" style="width:14px;height:14px;" class="me-1"></i> Back
+                                </button>
+                                <button class="ds-btn ds-btn-primary ds-btn-sm px-4" id="wizNextBtn" onclick="AnnouncementsModule.nextStep()">Next</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -227,7 +232,11 @@ const AnnouncementsModule = {
         if (!items || !items.length) {
             return '<div class="text-center py-4 text-secondary text-xs">No active broadcasts.</div>';
         }
-        return items.map(a => `
+        return items.map(a => {
+            const delivered = Math.max(a.total_delivered || 0, a.total_read || 0);
+            const read = Math.min(a.total_read || 0, delivered);
+            const pct = delivered > 0 ? Math.min(100, Math.round((read / delivered) * 1000) / 10).toFixed(1) : '0.0';
+            return `
             <div class="p-3 rounded-3 border d-flex justify-content-between align-items-start" style="border-color:var(--ds-border-color)!important; background:rgba(255,255,255,0.01); transition: all 0.2s ease-in-out;" onmouseover="this.style.background='rgba(255,255,255,0.03)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.01)'; this.style.transform='none';">
                 <div class="d-flex flex-column gap-1">
                     <div class="d-flex align-items-center gap-2">
@@ -239,10 +248,11 @@ const AnnouncementsModule = {
                 </div>
                 <div class="text-end text-xxs text-secondary">
                     <div class="fw-semibold">${a.ann_number}</div>
-                    <div>Read: ${a.total_read} / ${a.total_delivered} (${a.read_pct}%)</div>
+                    <div>Read: ${read} / ${delivered} (${pct}%)</div>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     },
 
     async fetchActiveBroadcastsPage(page) {
@@ -760,17 +770,26 @@ const AnnouncementsModule = {
         const body = document.getElementById('wizardBodyContent');
         const nextBtn = document.getElementById('wizNextBtn');
         const prevBtn = document.getElementById('wizPrevBtn');
+        const stepText = document.getElementById('wizStepIndicatorText');
         const progressBar = document.getElementById('wizardProgressBar');
         if (!body) return;
 
         // Progress bar percentage calculation
         const progressPct = this.wizardStep * 20;
-        progressBar.style.width = `${progressPct}%`;
+        if (progressBar) progressBar.style.width = `${progressPct}%`;
+        if (stepText) stepText.textContent = `Step ${this.wizardStep} of 5`;
 
         // Update indicator labels
         for (let i = 1; i <= 5; i++) {
             const lbl = document.querySelector(`.step-lbl-${i}`);
             if (lbl) {
+                lbl.style.cursor = 'pointer';
+                lbl.onclick = () => {
+                    if (i < this.wizardStep) {
+                        this.wizardStep = i;
+                        this.renderWizardStep();
+                    }
+                };
                 if (i === this.wizardStep) {
                     lbl.className = `step-lbl-${i} fw-bold text-primary`;
                 } else if (i < this.wizardStep) {
@@ -781,8 +800,20 @@ const AnnouncementsModule = {
             }
         }
 
-        prevBtn.style.display = this.wizardStep === 1 ? 'none' : 'inline-block';
-        nextBtn.textContent = this.wizardStep === 5 ? 'Finish & Create' : 'Next';
+        if (this.wizardStep === 1) {
+            if (prevBtn) {
+                prevBtn.style.setProperty('display', 'none', 'important');
+                prevBtn.classList.add('d-none');
+            }
+        } else {
+            if (prevBtn) {
+                prevBtn.style.setProperty('display', 'inline-flex', 'important');
+                prevBtn.classList.remove('d-none');
+            }
+        }
+        if (nextBtn) {
+            nextBtn.textContent = this.wizardStep === 5 ? 'Finish & Create' : 'Next';
+        }
 
         if (this.wizardStep === 1) {
             body.innerHTML = `

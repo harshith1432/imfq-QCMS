@@ -294,7 +294,7 @@ const SupportDesk = {
             </div>
 
             <!-- Sales Enquiry Detail Modal -->
-            <div class="modal fade" id="sdEnquiryDetailModal" tabindex="-1">
+            <div class="modal fade" id="sdEnquiryDetailModal" tabindex="-1" style="z-index: 1070;">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content glass-card p-3" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #e2e8f0); color: var(--ds-text-main, #0f172a); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);">
                         <div class="modal-header border-0 pb-2">
@@ -320,14 +320,8 @@ const SupportDesk = {
                                             <span id="enqModalPhone">-</span>
                                         </div>
                                         <div class="mt-3 pt-2.5 border-top d-flex gap-2 flex-wrap" style="border-color: var(--ds-border-color, #e2e8f0)!important;">
-                                            <a href="#" id="enqModalEmailBtn" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#2563eb; border-color:rgba(37,99,235,0.4);">
-                                                <i data-lucide="mail" style="width:12px;height:12px;"></i> Contact Email
-                                            </a>
-                                            <a href="#" id="enqModalPhoneBtn" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#059669; border-color:rgba(16,185,129,0.4);">
-                                                <i data-lucide="phone-call" style="width:12px;height:12px;"></i> Call Phone
-                                            </a>
-                                            <a href="#" id="enqModalWhatsappBtn" target="_blank" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#16a34a; border-color:rgba(34,197,94,0.4);">
-                                                <i data-lucide="message-square" style="width:12px;height:12px;"></i> WhatsApp
+                                            <a href="#" id="enqModalEmailBtn" class="ds-btn ds-btn-primary ds-btn-sm py-1 px-3 text-xs d-inline-flex align-items-center gap-1.5" style="border-radius: 6px;">
+                                                <i data-lucide="mail" style="width:13px;height:13px;"></i> Contact Email
                                             </a>
                                         </div>
                                     </div>
@@ -373,6 +367,54 @@ const SupportDesk = {
                                 <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>
                                 <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="SupportDesk.saveEnquiryNotes()">Save Notes</button>
                             </div>
+            <!-- In-App Compose Email Modal for Sales Enquiries -->
+            <div class="modal fade" id="sdComposeEmailModal" tabindex="-1" style="z-index: 1080;">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content glass-card ds-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+                        <div class="modal-header border-bottom p-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="p-2 rounded-3" style="background: rgba(99, 102, 241, 0.12); color: var(--ds-primary, #6366f1);">
+                                    <i data-lucide="send" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title fw-bold text-main mb-0" style="color:var(--ds-text-main);">Compose In-App Email</h5>
+                                    <div class="text-xs text-secondary">Dispatched via configured Enterprise Support Email</div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <form id="sdComposeEmailForm" onsubmit="event.preventDefault();">
+                                <input type="hidden" id="sdComposeEnquiryId">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="ds-label">RECIPIENT EMAIL</label>
+                                        <input type="email" class="ds-input" id="sdComposeToEmail" required placeholder="recipient@company.com">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="ds-label">PROSPECT NAME / COMPANY</label>
+                                        <input type="text" class="ds-input" id="sdComposeProspectName" readonly style="opacity: 0.8;">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="ds-label">EMAIL SUBJECT</label>
+                                    <input type="text" class="ds-input" id="sdComposeSubject" required placeholder="Re: Inquiry Response - QCMS Enterprise">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="ds-label">MESSAGE CONTENT</label>
+                                    <textarea class="ds-input" id="sdComposeMessage" rows="6" required placeholder="Type your email response here..."></textarea>
+                                </div>
+                                <div class="p-3 rounded-3 d-flex align-items-center gap-2" style="background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.15);">
+                                    <i data-lucide="shield-check" class="text-primary" style="width: 16px; height: 16px;"></i>
+                                    <span class="text-xs text-secondary">This email will be sent directly through your software mail server using the **Support Email** identity.</span>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer border-top p-4">
+                            <button class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button class="ds-btn ds-btn-primary px-4" id="btnSendComposeEmail" onclick="SupportDesk.submitComposeEmail()">
+                                <i data-lucide="send" style="width: 14px; height: 14px;" class="me-1"></i> Send Email Now
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -551,11 +593,29 @@ const SupportDesk = {
                 // Render pagination footer
                 const footer = document.getElementById('sdPaginationFooter');
                 if (footer) {
+                    const startItem = meta.total_items > 0 ? (meta.page - 1) * meta.per_page + 1 : 0;
+                    const endItem = Math.min(meta.page * meta.per_page, meta.total_items);
+                    let pageBtns = '';
+                    for (let p = 1; p <= meta.total_pages; p++) {
+                        pageBtns += `<button class="ds-btn ${p === meta.page ? 'ds-btn-primary' : 'ds-btn-outline'} ds-btn-sm py-1 px-3 fw-bold" onclick="SupportDesk.setPage(${p})">${p}</button>`;
+                    }
                     footer.innerHTML = `
-                        <div class="text-xs text-secondary">Showing page ${meta.page} of ${meta.total_pages} (${meta.total_items} items)</div>
-                        <div class="h-stack gap-2">
-                            <button class="ds-btn ds-btn-outline ds-btn-sm" ${meta.page === 1 ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page - 1})">Prev</button>
-                            <button class="ds-btn ds-btn-outline ds-btn-sm" ${meta.page === meta.total_pages ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page + 1})">Next</button>
+                        <div class="text-xs text-secondary">
+                            ${meta.total_items > 0 ? `Showing <strong>${startItem}–${endItem}</strong> of <strong>${meta.total_items}</strong> items` : 'Showing 0 of 0'}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <select class="ds-input text-xs py-1 px-2" style="width: auto; height: 32px;" onchange="SupportDesk.setPerPage(this.value)">
+                                <option value="10" ${meta.per_page == 10 ? 'selected' : ''}>10 per page</option>
+                                <option value="20" ${meta.per_page == 20 ? 'selected' : ''}>20 per page</option>
+                                <option value="50" ${meta.per_page == 50 ? 'selected' : ''}>50 per page</option>
+                            </select>
+                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5" ${meta.page <= 1 ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page - 1})">
+                                <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                            </button>
+                            ${pageBtns}
+                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5" ${meta.page >= meta.total_pages ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page + 1})">
+                                <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                            </button>
                         </div>
                     `;
                 }
@@ -566,7 +626,14 @@ const SupportDesk = {
     },
 
     setPage(page) {
+        if (page < 1) return;
         this.currentPage = page;
+        this.loadTickets();
+    },
+
+    setPerPage(perPage) {
+        this.perPage = parseInt(perPage, 10) || 10;
+        this.currentPage = 1;
         this.loadTickets();
     },
 
@@ -640,21 +707,23 @@ const SupportDesk = {
                             <input type="text" 
                                    class="ds-input w-100 pe-5" 
                                    id="wizOrgInput" 
+                                   name="no_autofill_org_name"
                                    placeholder="Type or select Tenant Organization..." 
-                                   autocomplete="off"
+                                   autocomplete="one-time-code"
+                                   spellcheck="false"
                                    value="${selectedOrgName}" 
                                    onfocus="SupportDesk.openOrgDropdown()"
                                    oninput="SupportDesk.handleOrgSearch(this.value)">
                             <i data-lucide="chevron-down" class="position-absolute end-0 top-50 translate-middle-y me-3 text-secondary pointer-events-none" style="width:16px;height:16px;"></i>
                         </div>
                         
-                        <div class="dropdown-menu w-100 p-1.5 shadow-lg glass-dropdown custom-scroll mt-1" 
+                        <div class="dropdown-menu w-100 p-1.5 shadow-lg glass-dropdown custom-scroll" 
                              id="wizOrgMenu" 
-                             style="max-height: 230px; overflow-y: auto; display: none; position: absolute; z-index: 1050; background: rgba(22, 27, 38, 0.98); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; backdrop-filter: blur(12px);"
+                             style="max-height: 230px; overflow-y: auto; display: none; position: absolute; top: 100%; left: 0; right: 0; width: 100%; margin-top: 4px; z-index: 1050; background: rgba(22, 27, 38, 0.98); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; backdrop-filter: blur(12px);"
                              onscroll="SupportDesk.handleOrgMenuScroll(this)">
                             <div id="wizOrgList" class="v-stack gap-1"></div>
                             <div id="wizOrgLoader" class="text-center p-2 text-xs text-muted" style="display:none;">
-                                <span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;"></span> Loading next 20 organizations...
+                                <span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;"></span> Loading matching organizations...
                             </div>
                             <div id="wizOrgEmpty" class="text-center p-3 text-xs text-muted" style="display:none;">
                                 No matching tenant organizations found.
@@ -893,12 +962,38 @@ const SupportDesk = {
         const emptyEl = document.getElementById('wizOrgEmpty');
         if (!listEl) return;
 
-        const items = this.orgSelectorState.items;
+        let items = [...(this.orgSelectorState.items || [])];
+        const searchTerm = (this.orgSelectorState.search || '').toLowerCase().trim();
         const selectedId = this.wizards.data.organization_id;
+
+        // Perform instant client-side matching if user has typed something
+        if (searchTerm) {
+            items = items.filter(o => {
+                const name = (o.name || '').toLowerCase();
+                const email = (o.email || '').toLowerCase();
+                const admin = (o.admin_name || '').toLowerCase();
+                const code = (o.code || '').toLowerCase();
+                return name.includes(searchTerm) || email.includes(searchTerm) || admin.includes(searchTerm) || code.includes(searchTerm);
+            });
+
+            // Sort items so exact prefix matches appear at top
+            items.sort((a, b) => {
+                const aName = (a.name || '').toLowerCase();
+                const bName = (b.name || '').toLowerCase();
+                const aStarts = aName.startsWith(searchTerm);
+                const bStarts = bName.startsWith(searchTerm);
+                if (aStarts && !bStarts) return -1;
+                if (!aStarts && bStarts) return 1;
+                return aName.localeCompare(bName);
+            });
+        }
 
         if (items.length === 0 && !this.orgSelectorState.isLoading) {
             listEl.innerHTML = '';
-            if (emptyEl) emptyEl.style.display = 'block';
+            if (emptyEl) {
+                emptyEl.textContent = searchTerm ? `No tenant matching "${this.orgSelectorState.search}" found.` : 'No matching tenant organizations found.';
+                emptyEl.style.display = 'block';
+            }
             return;
         }
 
@@ -909,6 +1004,13 @@ const SupportDesk = {
             const safeName = (o.name || '').replace(/'/g, "\\'");
             const safeEmail = (o.email || '').replace(/'/g, "\\'");
             const safeAdmin = (o.admin_name || '').replace(/'/g, "\\'");
+
+            let displayName = (o.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (searchTerm && displayName.toLowerCase().includes(searchTerm)) {
+                const idx = displayName.toLowerCase().indexOf(searchTerm);
+                const matchPart = displayName.substring(idx, idx + searchTerm.length);
+                displayName = displayName.substring(0, idx) + `<strong class="text-primary">${matchPart}</strong>` + displayName.substring(idx + searchTerm.length);
+            }
             
             return `
                 <div class="org-item-option p-2 rounded text-xs d-flex align-items-center justify-content-between text-main hover-highlight"
@@ -917,7 +1019,7 @@ const SupportDesk = {
                      onmouseout="this.style.background='${isSelected ? 'rgba(37, 99, 235, 0.18)' : 'transparent'}'"
                      onclick="SupportDesk.selectOrg(${o.id}, '${safeName}', '${safeEmail}', '${safeAdmin}')">
                     <div>
-                        <div class="fw-semibold ${isSelected ? 'text-primary' : 'text-main'}">${o.name}</div>
+                        <div class="fw-semibold ${isSelected ? 'text-primary' : 'text-main'}">${displayName}</div>
                         ${o.email ? `<div class="text-xxs text-secondary">${o.email}</div>` : ''}
                     </div>
                     ${isSelected ? '<i data-lucide="check" class="text-primary" style="width:14px;height:14px;"></i>' : ''}
@@ -935,12 +1037,12 @@ const SupportDesk = {
         const inputEl = document.getElementById('wizOrgInput');
         if (inputEl) inputEl.value = name;
 
-        if (email && !this.wizards.data.requester_email) {
+        if (email) {
             this.wizards.data.requester_email = email;
             const emailEl = document.getElementById('wizReqEmail');
             if (emailEl) emailEl.value = email;
         }
-        if (adminName && !this.wizards.data.requester_name) {
+        if (adminName) {
             this.wizards.data.requester_name = adminName;
             const nameEl = document.getElementById('wizReqName');
             if (nameEl) nameEl.value = adminName;
@@ -1080,9 +1182,9 @@ const SupportDesk = {
         if (contentEl) contentEl.value = '';
         if (internalEl) internalEl.checked = false;
 
-        const modalEl = document.getElementById('sdCreateKbModal');
+        const modalEl = this.ensureModalInBody('sdCreateKbModal');
         if (modalEl) {
-            const modal = new bootstrap.Modal(modalEl);
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         }
     },
@@ -1158,7 +1260,8 @@ const SupportDesk = {
                 }
 
                 // Show modal
-                const modal = new bootstrap.Modal(document.getElementById('sdTicketDetailModal'));
+                const modalEl = this.ensureModalInBody('sdTicketDetailModal');
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 modal.show();
             }
         } catch (e) {
@@ -1258,7 +1361,8 @@ const SupportDesk = {
     },
 
     showCSATModal() {
-        const modal = new bootstrap.Modal(document.getElementById('sdCSATModal'));
+        const modalEl = this.ensureModalInBody('sdCSATModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
     },
 
@@ -1312,7 +1416,8 @@ const SupportDesk = {
                     </div>
                 `).join('') || '<div class="text-center text-muted text-xs">No audit logs for this ticket.</div>';
 
-                const modal = new bootstrap.Modal(document.getElementById('sdAuditModal'));
+                const modalEl = this.ensureModalInBody('sdAuditModal');
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 modal.show();
             }
         } catch (e) {
@@ -1343,6 +1448,7 @@ const SupportDesk = {
 
     // --- 5. SALES ENQUIRIES MODULE ---
     enquiryPage: 1,
+    enquiryPerPage: 10,
     enquiryFilters: {
         q: '',
         status: 'All'
@@ -1362,7 +1468,8 @@ const SupportDesk = {
         try {
             const q = encodeURIComponent(this.enquiryFilters.q || '');
             const status = encodeURIComponent(this.enquiryFilters.status || 'All');
-            const res = await api.get(`/support/enquiries?page=${this.enquiryPage}&per_page=10&status=${status}&q=${q}`);
+            const perPage = this.enquiryPerPage || 10;
+            const res = await api.get(`/support/enquiries?page=${this.enquiryPage}&per_page=${perPage}&status=${status}&q=${q}`);
             
             if (!res || res.status !== 'success') {
                 view.innerHTML = `<div class="alert alert-danger">Failed to load sales enquiries.</div>`;
@@ -1370,8 +1477,12 @@ const SupportDesk = {
             }
 
             const items = res.data || [];
+            this.enquiriesList = items;
             const m = res.metrics || { total: 0, new: 0, contacted: 0, converted: 0 };
-            const pag = res.pagination || { page: 1, pages: 1, total: 0 };
+            const pag = res.pagination || { page: 1, pages: 1, total: items.length, per_page: perPage };
+
+            const startItem = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
+            const endItem = Math.min(pag.page * pag.per_page, pag.total);
 
             view.innerHTML = `
                 <div class="v-stack gap-4 fade-in">
@@ -1450,65 +1561,68 @@ const SupportDesk = {
                         </div>
                     </div>
 
-                    <!-- Enquiries Table -->
-                    <div class="glass-card p-0 overflow-hidden">
+                    <!-- Enquiries Table Card -->
+                    <div class="glass-card ds-card p-0 overflow-hidden" style="border-radius: var(--ds-radius-lg, 12px);">
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0 align-middle text-xs">
-                                <thead class="table-light">
-                                    <tr class="text-secondary uppercase border-bottom">
-                                        <th>Submitted Date</th>
-                                        <th>Prospect Name</th>
-                                        <th>Work Email</th>
-                                        <th>Phone Number</th>
-                                        <th>Company Name</th>
-                                        <th>Source</th>
-                                        <th>Status</th>
-                                        <th class="text-end">Actions</th>
+                            <table class="ds-table ds-table-hover align-middle mb-0 text-xs">
+                                <thead>
+                                    <tr style="background: var(--ds-surface-secondary, rgba(248, 250, 252, 0.6)); border-bottom: 1.5px solid var(--ds-border-color, #e2e8f0); color: var(--ds-text-tertiary, #64748b);">
+                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">SUBMITTED DATE</th>
+                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">PROSPECT NAME</th>
+                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">WORK EMAIL</th>
+                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">PHONE NUMBER</th>
+                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">COMPANY NAME</th>
+                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">SOURCE</th>
+                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">STATUS</th>
+                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider text-end">ACTIONS</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${items.length === 0 ? `
                                         <tr><td colspan="8" class="text-center p-5 text-muted">No sales enquiries found matching filter criteria.</td></tr>
                                     ` : items.map(item => {
-                                        let badgeClass = 'blue';
-                                        if (item.status === 'New') badgeClass = 'red';
-                                        else if (item.status === 'Contacted') badgeClass = 'yellow';
-                                        else if (item.status === 'In Progress') badgeClass = 'cyan';
-                                        else if (item.status === 'Converted') badgeClass = 'green';
-                                        else if (item.status === 'Closed') badgeClass = 'gray';
+                                        let statusMarkup = '';
+                                        if (item.status === 'New') {
+                                            statusMarkup = `<span class="badge rounded-pill text-xs px-2.5 py-1 fw-bold" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);">NEW</span>`;
+                                        } else if (item.status === 'Contacted') {
+                                            statusMarkup = `<span class="badge rounded-pill text-xs px-2.5 py-1 fw-bold" style="background: rgba(245, 158, 11, 0.12); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.25);">CONTACTED</span>`;
+                                        } else if (item.status === 'In Progress') {
+                                            statusMarkup = `<span class="badge rounded-pill text-xs px-2.5 py-1 fw-bold" style="background: rgba(6, 182, 212, 0.12); color: #0891b2; border: 1px solid rgba(6, 182, 212, 0.25);">IN PROGRESS</span>`;
+                                        } else if (item.status === 'Converted') {
+                                            statusMarkup = `<span class="badge rounded-pill text-xs px-2.5 py-1 fw-bold" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25);">CONVERTED</span>`;
+                                        } else {
+                                            statusMarkup = `<span class="badge rounded-pill text-xs px-2.5 py-1 fw-bold" style="background: rgba(100, 116, 139, 0.12); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.25);">${(item.status || 'CLOSED').toUpperCase()}</span>`;
+                                        }
 
                                         const dateStr = item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A';
 
                                         return `
-                                            <tr>
-                                                <td><span class="text-secondary font-mono">${dateStr}</span></td>
-                                                <td><strong class="text-main">${item.name}</strong></td>
-                                                <td>
-                                                    <a href="mailto:${item.email}?subject=QCMS%20Enterprise%20Inquiry" class="text-primary text-decoration-none d-inline-flex align-items-center gap-1" title="Send Email">
-                                                        <i data-lucide="mail" style="width:12px;height:12px;"></i> ${item.email}
+                                            <tr class="fade-in">
+                                                <td class="py-2.5 px-3"><span class="text-secondary font-mono text-xs">${dateStr}</span></td>
+                                                <td class="py-2.5 px-3"><strong class="text-main fw-semibold" style="color: var(--ds-text-main, #0f172a);">${item.name}</strong></td>
+                                                <td class="py-2.5 px-3">
+                                                    <a href="javascript:void(0);" onclick="SupportDesk.openComposeEmailModal(${item.id})" class="text-decoration-none font-medium d-inline-flex align-items-center gap-1.5" style="color: var(--ds-primary, #6366f1);" title="Send In-App Email">
+                                                        <i data-lucide="mail" style="width:13px;height:13px;"></i> ${item.email}
                                                     </a>
                                                 </td>
-                                                <td>
-                                                    <a href="tel:${item.phone}" class="text-secondary text-decoration-none font-mono d-inline-flex align-items-center gap-1" title="Call Phone">
-                                                        <i data-lucide="phone" style="width:12px;height:12px;"></i> ${item.phone}
+                                                <td class="py-2.5 px-3">
+                                                    <a href="tel:${item.phone}" class="text-decoration-none font-mono text-xs d-inline-flex align-items-center gap-1.5" style="color: var(--ds-text-secondary, #64748b);" title="Call Phone">
+                                                        <i data-lucide="phone" style="width:13px;height:13px;"></i> ${item.phone}
                                                     </a>
                                                 </td>
-                                                <td><span class="fw-semibold">${item.company_name}</span></td>
-                                                <td><span class="ds-badge gray">${item.source}</span></td>
-                                                <td><span class="ds-badge ${badgeClass}">${item.status}</span></td>
-                                                <td class="text-end">
-                                                    <div class="h-stack gap-1 justify-content-end">
-                                                        <a href="mailto:${item.email}?subject=QCMS%20Enterprise%20Inquiry" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#818cf8; border-color:rgba(99,102,241,0.4);" title="Contact via Email">
-                                                            <i data-lucide="mail" style="width:12px;height:12px;"></i> Email
-                                                        </a>
-                                                        <a href="tel:${item.phone}" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="color:#34d399; border-color:rgba(16,185,129,0.4);" title="Contact via Phone">
-                                                            <i data-lucide="phone" style="width:12px;height:12px;"></i> Call
-                                                        </a>
-                                                        <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="SupportDesk.openEnquiryDetailModal(${item.id})">
-                                                            <i data-lucide="eye" style="width:12px;height:12px;"></i> View & Action
+                                                <td class="py-2.5 px-3"><span class="fw-semibold text-main">${item.company_name}</span></td>
+                                                <td class="py-2.5 px-3"><span class="badge rounded-pill fw-medium text-xs px-2.5 py-1" style="background: rgba(99, 102, 241, 0.08); color: var(--ds-primary, #6366f1); border: 1px solid rgba(99, 102, 241, 0.2);">${item.source || 'Talk to Sales'}</span></td>
+                                                <td class="py-2.5 px-3">${statusMarkup}</td>
+                                                <td class="py-2.5 px-3 text-end">
+                                                    <div class="d-flex align-items-center gap-1.5 justify-content-end">
+                                                        <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" style="border-radius:6px;" onclick="SupportDesk.openComposeEmailModal(${item.id})" title="Send In-App Email">
+                                                            <i data-lucide="mail" style="width:12px;height:12px;" class="text-primary"></i> Email
                                                         </button>
-                                                        <button class="ds-btn ds-btn-outline-danger ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="SupportDesk.deleteEnquiryRecord(${item.id})">
-                                                            <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                                                        <button class="ds-btn ds-btn-primary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" style="border-radius:6px;" onclick="SupportDesk.openEnquiryDetailModal(${item.id})">
+                                                            <i data-lucide="eye" style="width:12px;height:12px;"></i> View &amp; Action
+                                                        </button>
+                                                        <button class="ds-btn ds-btn-ghost ds-btn-sm py-1 px-2 text-xs text-danger" style="border-radius:6px;" title="Delete Enquiry" onclick="SupportDesk.deleteEnquiryRecord(${item.id})">
+                                                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
                                                         </button>
                                                     </div>
                                                 </td>
@@ -1518,6 +1632,33 @@ const SupportDesk = {
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Pagination Footer Bar -->
+                        <div class="d-flex align-items-center justify-content-between p-3 border-top" style="border-color: var(--ds-border-color, #e2e8f0)!important; background: var(--ds-surface-secondary, rgba(248, 250, 252, 0.5)); border-bottom-left-radius: var(--ds-radius-lg, 12px); border-bottom-right-radius: var(--ds-radius-lg, 12px);">
+                            <div class="text-xs text-secondary fw-medium">
+                                ${pag.total > 0 ? `Showing <strong style="color:var(--ds-text-main);">${startItem}–${endItem}</strong> of <strong style="color:var(--ds-text-main);">${pag.total}</strong> enquiries` : 'Showing 0 of 0'}
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-1 me-2">
+                                    <select class="ds-input ds-input-sm text-xs py-1 px-2" style="width: 125px; height: 32px; border-radius: 8px;" onchange="SupportDesk.setEnquiryPerPage(this.value)">
+                                        <option value="10" ${pag.per_page == 10 ? 'selected' : ''}>10 per page</option>
+                                        <option value="20" ${pag.per_page == 20 ? 'selected' : ''}>20 per page</option>
+                                        <option value="50" ${pag.per_page == 50 ? 'selected' : ''}>50 per page</option>
+                                    </select>
+                                </div>
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2.5" style="border-radius: 8px;" ${pag.page <= 1 ? 'disabled' : ''} onclick="SupportDesk.setEnquiryPage(${pag.page - 1})">
+                                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                                </button>
+                                ${Array.from({ length: pag.pages || 1 }, (_, i) => i + 1).map(p => `
+                                    <button class="ds-btn ${p === pag.page ? 'ds-btn-primary' : 'ds-btn-secondary'} ds-btn-sm py-1 px-3 fw-bold" style="border-radius: 8px; ${p === pag.page ? 'box-shadow: 0 3px 10px rgba(99,102,241,0.3);' : ''}" onclick="SupportDesk.setEnquiryPage(${p})">
+                                        ${p}
+                                    </button>
+                                `).join('')}
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2.5" style="border-radius: 8px;" ${pag.page >= pag.pages ? 'disabled' : ''} onclick="SupportDesk.setEnquiryPage(${pag.page + 1})">
+                                    <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1525,6 +1666,128 @@ const SupportDesk = {
         } catch (e) {
             view.innerHTML = `<div class="alert alert-danger">Error loading sales enquiries: ${e.message}</div>`;
         }
+    },
+
+    ensureModalInBody(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.parentElement !== document.body) {
+                document.body.appendChild(el);
+            }
+            el.style.zIndex = '1085';
+        }
+        return el;
+    },
+
+    openComposeEmailModal(id) {
+        this.currentEnquiryId = id;
+        const cachedItem = (this.enquiriesList || []).find(x => x.id === id);
+        
+        const populateAndShow = (item) => {
+            if (!item) return QCMS.toast('Enquiry not found', 'error');
+            this.currentEnquiryData = item;
+
+            const elId = document.getElementById('sdComposeEnquiryId');
+            const elEmail = document.getElementById('sdComposeToEmail');
+            const elName = document.getElementById('sdComposeProspectName');
+            const elSub = document.getElementById('sdComposeSubject');
+            const elMsg = document.getElementById('sdComposeMessage');
+
+            if (elId) elId.value = item.id;
+            if (elEmail) elEmail.value = item.email || '';
+            if (elName) elName.value = `${item.name} (${item.company_name || 'Prospect'})`;
+            if (elSub) elSub.value = `Response regarding your inquiry - ${item.company_name || 'QCMS'}`;
+            if (elMsg) elMsg.value = `Dear ${item.name},\n\nThank you for reaching out to us regarding ${item.company_name}.\n\n`;
+
+            const modalEl = this.ensureModalInBody('sdComposeEmailModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+            if (window.lucide) lucide.createIcons();
+        };
+
+        if (cachedItem) {
+            populateAndShow(cachedItem);
+        } else {
+            api.get('/support/enquiries?page=1&per_page=100').then(res => {
+                const items = res?.data || [];
+                const item = items.find(x => x.id === id);
+                populateAndShow(item);
+            }).catch(err => {
+                console.error('Failed to load enquiry details for compose email:', err);
+                QCMS.toast('Failed to load enquiry details', 'error');
+            });
+        }
+    },
+
+    openComposeEmailFromDetailModal() {
+        if (!this.currentEnquiryId || !this.currentEnquiryData) return;
+        const detailModalEl = document.getElementById('sdEnquiryDetailModal');
+        if (detailModalEl) {
+            const modalInstance = bootstrap.Modal.getInstance(detailModalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+        this.openComposeEmailModal(this.currentEnquiryId);
+    },
+
+    async submitComposeEmail() {
+        const id = document.getElementById('sdComposeEnquiryId').value;
+        const toEmail = document.getElementById('sdComposeToEmail').value.trim();
+        const subject = document.getElementById('sdComposeSubject').value.trim();
+        const message = document.getElementById('sdComposeMessage').value.trim();
+
+        if (!toEmail || !subject || !message) {
+            return QCMS.toast('Please fill in all required fields (Recipient, Subject, Message).', 'warning');
+        }
+
+        const btn = document.getElementById('btnSendComposeEmail');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader" class="spin me-1" style="width:14px;height:14px;"></i> Sending...`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        try {
+            const res = await api.post(`/support/enquiries/${id}/send-email`, {
+                to_email: toEmail,
+                subject: subject,
+                message: message
+            });
+
+            if (res && res.status === 'success') {
+                QCMS.toast(res.message || 'Email successfully sent using Support Email!', 'success');
+                const composeModalEl = document.getElementById('sdComposeEmailModal');
+                if (composeModalEl) {
+                    const modalInstance = bootstrap.Modal.getInstance(composeModalEl);
+                    if (modalInstance) modalInstance.hide();
+                }
+                this.loadEnquiriesList();
+            } else {
+                QCMS.toast(res?.message || 'Failed to send email.', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to send enquiry email:', err);
+            QCMS.toast(err.message || 'Failed to send email.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="send" style="width:14px;height:14px;" class="me-1"></i> Send Email Now`;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    },
+
+    setEnquiryPage(page) {
+        if (page < 1) return;
+        this.enquiryPage = page;
+        this.loadEnquiriesList();
+    },
+
+    setEnquiryPerPage(perPage) {
+        this.enquiryPerPage = parseInt(perPage, 10) || 10;
+        this.enquiryPage = 1;
+        this.loadEnquiriesList();
     },
 
     filterEnquiriesQuery(q) {
@@ -1563,10 +1826,8 @@ const SupportDesk = {
             document.getElementById('enqModalStatusSelect').value = item.status || 'New';
             document.getElementById('enqModalNotes').value = item.notes || '';
 
-            const rawPhone = (item.phone || '').replace(/[^0-9]/g, '');
-            document.getElementById('enqModalEmailBtn').href = `mailto:${item.email}?subject=QCMS%20Enterprise%20Inquiry%20Follow-up`;
-            document.getElementById('enqModalPhoneBtn').href = `tel:${item.phone}`;
-            document.getElementById('enqModalWhatsappBtn').href = `https://wa.me/${rawPhone}`;
+            const emailBtn = document.getElementById('enqModalEmailBtn');
+            if (emailBtn) emailBtn.href = `mailto:${item.email}?subject=QCMS%20Enterprise%20Inquiry%20Follow-up`;
 
             let badgeClass = 'blue';
             if (item.status === 'New') badgeClass = 'red';
@@ -1577,7 +1838,8 @@ const SupportDesk = {
 
             document.getElementById('enqModalStatusBadge').innerHTML = `<span class="ds-badge ${badgeClass}">${item.status}</span>`;
 
-            const modal = new bootstrap.Modal(document.getElementById('sdEnquiryDetailModal'));
+            const modalEl = this.ensureModalInBody('sdEnquiryDetailModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         } catch (e) {
             QCMS.toast('Failed to load enquiry details', 'error');

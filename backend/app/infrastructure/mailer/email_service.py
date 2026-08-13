@@ -16,27 +16,131 @@ class EmailUtils:
         return url.rstrip("/")
 
     @staticmethod
-    def send_email(to_email, subject, html_content):
+    def construct_sender_email(base_sender, email_type='general', org_id=None):
+        """
+        Dynamically fetch the sender email address directly from the Contact Directory field.
+        No email address or domain is hardcoded — it reads whatever value the user types into the UI fields.
+        """
+        try:
+            from app.domain.services.document_branding_service import DocumentBrandingService
+            ctx = DocumentBrandingService.get_branding_context(org_id)
+        except Exception:
+            ctx = {}
+
+        type_key_map = {
+            'otp': 'otp_email',
+            'security': 'otp_email',
+            'auth': 'otp_email',
+            'contact': 'contact_email',
+            'alerts': 'alerts_email',
+            'feedback': 'feedback_email',
+            'onboarding': 'onboarding_email',
+            'welcome': 'onboarding_email',
+            'support': 'support_email',
+            'billing': 'billing_email',
+            'general': 'general_email',
+            'announcement': 'general_email'
+        }
+        
+        contact_field = type_key_map.get(email_type, 'general_email')
+        val_from_field = (ctx.get(contact_field) or '').strip()
+
+        # Extract local prefix from Contact Directory field (e.g. 'onboarding' from 'onboarding@' or 'onboarding@qcms.com')
+        if val_from_field and '@' in val_from_field:
+            prefix = val_from_field.split('@')[0].strip()
+        elif val_from_field:
+            prefix = val_from_field.strip()
+        else:
+            prefix = 'onboarding' if email_type in ['onboarding', 'welcome'] else 'noreplay'
+
+        # Extract verified domain from Integration Hub base_sender (e.g. 'ifqm.org.in' from 'noreplay@ifqm.org.in')
+        clean_base = (base_sender or '').strip()
+        if "<" in clean_base and ">" in clean_base:
+            clean_base = clean_base.split("<")[1].split(">")[0].strip()
+
+        if '@' in clean_base:
+            domain = clean_base.split("@")[-1].strip()
+        else:
+            domain = clean_base
+
+        if not prefix:
+            prefix = 'onboarding' if email_type in ['onboarding', 'welcome'] else 'noreplay'
+
+        if domain:
+            return f"{prefix}@{domain}"
+        return val_from_field or clean_base
+
+    @staticmethod
+    def construct_sender_name(base_sender_name, email_type='general', org_id=None):
+        """
+        Dynamically fetch the Sender Display Label directly from the Contact Directory field for this email_type.
+        If the user typed a Sender Display Label in Contact Directory (e.g. 'IFQM OTP Verification' for otp_email),
+        use that display label as the email header sender name!
+        """
+        try:
+            from app.domain.services.document_branding_service import DocumentBrandingService
+            ctx = DocumentBrandingService.get_branding_context(org_id)
+        except Exception:
+            ctx = {}
+
+        type_sender_name_map = {
+            'otp': 'otp_sender_name',
+            'security': 'otp_sender_name',
+            'auth': 'otp_sender_name',
+            'contact': 'contact_sender_name',
+            'alerts': 'alerts_sender_name',
+            'feedback': 'feedback_sender_name',
+            'onboarding': 'onboarding_sender_name',
+            'welcome': 'onboarding_sender_name',
+            'support': 'support_sender_name',
+            'billing': 'billing_sender_name',
+            'general': 'general_sender_name',
+            'announcement': 'general_sender_name'
+        }
+
+        sender_field = type_sender_name_map.get(email_type, 'general_sender_name')
+        val_from_field = (ctx.get(sender_field) or '').strip()
+
+        if val_from_field:
+            return val_from_field
+
+        # Fallback to Integration Hub sender_name or software display name
+        if base_sender_name and base_sender_name.strip():
+            return base_sender_name.strip()
+
+        return ctx.get('software_display_name') or ctx.get('software_name') or 'QCMS Notifications'
+
+    @staticmethod
+    def send_email(to_email, subject, html_content, provider_override=None, email_type='general', org_id=None):
         """Sends an email using the active connected integration provider (ZeptoMail or Resend) from the database."""
         import requests
         from app.infrastructure.database.models.models import IntegrationConfig
 
         provider_type, settings = None, {}
         try:
-            configs = IntegrationConfig.query.filter(
+            query = IntegrationConfig.query.filter(
                 IntegrationConfig.category == 'Communication',
                 IntegrationConfig.status == 'Connected',
                 IntegrationConfig.provider_id.in_(['zeptomail', 'resend'])
-            ).all()
+            )
+            if provider_override:
+                override_cfg = query.filter(IntegrationConfig.provider_id == provider_override).first()
+                if not override_cfg:
+                    override_cfg = IntegrationConfig.query.filter_by(provider_id=provider_override).first()
+                if override_cfg and override_cfg.settings:
+                    provider_type = override_cfg.provider_id
+                    settings = override_cfg.settings
 
-            for cfg in configs:
-                s = cfg.settings or {}
-                if cfg.provider_id == 'zeptomail' and s.get('api_key') and s.get('sender_email'):
-                    provider_type, settings = 'zeptomail', s
-                    break
-                elif cfg.provider_id == 'resend' and s.get('api_key'):
-                    provider_type, settings = 'resend', s
-                    break
+            if not provider_type:
+                configs = query.all()
+                for cfg in configs:
+                    s = cfg.settings or {}
+                    if cfg.provider_id == 'zeptomail' and (s.get('api_key') or s.get('sender_email')):
+                        provider_type, settings = 'zeptomail', s
+                        break
+                    elif cfg.provider_id == 'resend' and (s.get('api_key') or s.get('sender_email')):
+                        provider_type, settings = 'resend', s
+                        break
         except Exception as e:
             if current_app:
                 current_app.logger.warning(f"Could not query integration config: {e}")
@@ -51,14 +155,22 @@ class EmailUtils:
                     'sender_email': os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev"),
                     'sender_name': "QCMS Notifications"
                 }
+            elif provider_override:
+                provider_type = provider_override
+                settings = {
+                    'sender_email': os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev"),
+                    'sender_name': 'QCMS Enterprise Broadcast'
+                }
 
         if not provider_type:
             print("[QCMS] Error: No active connected email integration provider (ZeptoMail/Resend) found.")
             return None
 
-        # Determine sender email and name
-        sender_email = settings.get('sender_email') or 'noreply@ifqm.org.in'
-        sender_name = settings.get('sender_name') or 'QCMS Notifications'
+        # Determine dynamic sender email & sender display name directly from Contact Directory field & Integration Hub
+        raw_sender = settings.get('sender_email') or ''
+        raw_sender_name = settings.get('sender_name') or ''
+        sender_email = EmailUtils.construct_sender_email(raw_sender, email_type=email_type, org_id=org_id)
+        sender_name = EmailUtils.construct_sender_name(raw_sender_name, email_type=email_type, org_id=org_id)
         clean_from = sender_email
         if "<" in sender_email and ">" in sender_email:
             clean_from = sender_email.split("<")[1].split(">")[0]
@@ -132,6 +244,8 @@ class EmailUtils:
                     error_msg = f"ZeptoMail API Error ({resp.status_code}): {resp.text}"
                     if current_app: current_app.logger.error(error_msg)
                     else: print(error_msg)
+                    if is_dev:
+                        return {"id": "dev_mode_dummy_id", "status": "simulated"}
                     return None
 
             elif provider_type == 'resend':
@@ -178,7 +292,7 @@ class EmailUtils:
             <p style="font-size:13px; color:#64748b;">This link will expire in 24 hours.</p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Account Verification", org_id=user.org_id)
-        return EmailUtils.send_email(user.email, subject, html)
+        return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=user.org_id)
 
     @staticmethod
     def send_temp_password_email(user, temp_password):
@@ -190,7 +304,7 @@ class EmailUtils:
             <p>Hello {user.username or user.email},</p>
             <p>An account has been created for you at {ctx['software_name']} for <strong>{user.organization.name if user.organization else ctx['organization_name']}</strong>.</p>
             <div style="background-color: #f8fafc; border:1px solid #e2e8f0; padding: 16px; border-radius: 6px; margin: 20px 0;">
-                <p style="margin: 0;"><strong>Username:</strong> {user.username}</p>
+                <p style="margin: 0;"><strong>Username:</strong> {user.email or user.username}</p>
                 <p style="margin: 10px 0 0 0;"><strong>Temporary Password:</strong> <code style="background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family:monospace;">{temp_password}</code></p>
             </div>
             <p>Please log in and change your password immediately upon your first sign-in.</p>
@@ -199,7 +313,7 @@ class EmailUtils:
             </div>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Account Credentials", org_id=user.org_id)
-        return EmailUtils.send_email(user.email, subject, html)
+        return EmailUtils.send_email(user.email, subject, html, email_type='onboarding', org_id=user.org_id)
 
     @staticmethod
     def send_password_change_notification(user):
@@ -213,7 +327,7 @@ class EmailUtils:
             <p><strong>If you did not perform this action, please contact your organization administrator or <a href="mailto:{ctx['support_email']}">{ctx['support_email']}</a> immediately to secure your account.</strong></p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Security Alert", org_id=user.org_id)
-        return EmailUtils.send_email(user.email, subject, html)
+        return EmailUtils.send_email(user.email, subject, html, email_type='security', org_id=user.org_id)
 
     @staticmethod
     def send_reset_password_email(user):
@@ -237,7 +351,7 @@ class EmailUtils:
             <p style="font-size:13px; color:#64748b;">This link will expire in 1 hour.</p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Password Reset", org_id=user.org_id)
-        return EmailUtils.send_email(user.email, subject, html)
+        return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=user.org_id)
 
     @staticmethod
     def send_registration_otp(email, otp):
@@ -253,7 +367,7 @@ class EmailUtils:
             <p style="color: #64748b; font-size: 13px; text-align: center;">This code will expire in <strong>10 minutes</strong> for security reasons.</p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Email Verification", org_id=None)
-        return EmailUtils.send_email(email, subject, html)
+        return EmailUtils.send_email(email, subject, html, email_type='otp')
 
     @staticmethod
     def send_otp_email(user, otp):
@@ -268,7 +382,7 @@ class EmailUtils:
             <div style="background: #f8fafc; border: 2px dashed #cbd5e1; padding: 20px; text-align: center; margin: 25px 0; border-radius: 12px;">
                 <span style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #1e40af; font-family: monospace;">{otp}</span>
             </div>
-            <p style="color: #64748b; font-size: 13px; text-align: center;">This code will expire in <strong>10 minutes</strong>.</p>
+            <p style="color: #64748b; font-size: 13px; text-align: center;">This code will expire in <strong>10 minutes</strong>. If you did not request this code, please contact <a href="mailto:{ctx.get('otp_email', 'otp-auth@qcms.com')}">{ctx.get('otp_email', 'otp-auth@qcms.com')}</a> immediately.</p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Security OTP", org_id=org_id)
-        return EmailUtils.send_email(user.email, subject, html)
+        return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=org_id)

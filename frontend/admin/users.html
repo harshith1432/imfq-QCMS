@@ -77,12 +77,39 @@
                             <button class="ds-btn-tab" onclick="Users.filter('active')">Active</button>
                         </div>
                     </div>
+                <!-- 3. Bulk Actions Toolbar -->
+                <div id="bulkActionsBar" class="p-3 px-4 d-none align-items-center justify-content-between flex-wrap gap-3" style="background: rgba(99, 102, 241, 0.08); border-bottom: 1.5px solid var(--ds-primary, #6366f1); transition: all 0.2s ease;">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-primary text-white px-3 py-1.5 rounded-pill text-xs fw-bold" id="selectedCountBadge">0 selected</span>
+                        <span class="text-xs ds-text-secondary fw-medium">Execute bulk operations on selected members:</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.bulkAction('activate')">
+                            <i data-lucide="check-circle" style="width:14px;height:14px;" class="text-success"></i> Activate Selected
+                        </button>
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.bulkAction('deactivate')">
+                            <i data-lucide="pause-circle" style="width:14px;height:14px;" class="text-warning"></i> Deactivate Selected
+                        </button>
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.bulkAction('resend_credentials')">
+                            <i data-lucide="key" style="width:14px;height:14px;" class="text-info"></i> Resend Credentials
+                        </button>
+                        <button class="ds-btn ds-btn-danger ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.bulkAction('delete')">
+                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete Selected
+                        </button>
+                        <button class="ds-btn ds-btn-ghost ds-btn-sm text-xs" onclick="Users.clearSelection()">
+                            Clear Selection
+                        </button>
+                    </div>
                 </div>
+
                 <div class="ds-card-body p-0">
                     <div class="table-responsive">
                         <table class="ds-table ds-table-hover">
                             <thead>
                                 <tr id="usersTheadRow">
+                                    <th style="width: 44px;" class="text-center">
+                                        <input type="checkbox" class="form-check-input" id="selectAllUsersCheckbox" onchange="Users.toggleSelectAll(this)" style="cursor: pointer;">
+                                    </th>
                                     <th data-i18n="dashboards.admin.stakeholder">Identity</th>
                                     <th data-i18n="dashboards.admin.corporate_role">Role</th>
                                     <th>Plant Location</th>
@@ -95,7 +122,7 @@
                             </thead>
                             <tbody id="usersBody">
                                 <!-- Loaded via script -->
-                                <tr><td colspan="7" class="p-5 text-center text-muted" data-i18n="dashboards.admin.sync_directory">Synchronizing directory...</td></tr>
+                                <tr><td colspan="8" class="p-5 text-center text-muted" data-i18n="dashboards.admin.sync_directory">Synchronizing directory...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -153,6 +180,7 @@
                                     <select class="ds-input ds-select" id="department" required style="appearance: auto;">
                                         <!-- Options populated dynamically -->
                                     </select>
+                                    <div id="deptSetupWarning"></div>
                                 </div>
                             </div>
                         </div>
@@ -215,9 +243,43 @@
                         <div id="bulkStatusText" class="text-xs fw-medium text-center">Preparing upload...</div>
                     </div>
 
-                    <div id="bulkErrorsContainer" class="mt-3 text-xs text-danger" style="max-height: 150px; overflow-y: auto; display: none;">
-                        <div class="fw-bold mb-1">Import Logs / Validation Errors:</div>
-                        <ul id="bulkErrorsList" class="ps-3 mb-0"></ul>
+                    <div id="bulkErrorsContainer" class="mt-3" style="display: none;">
+                        <!-- Summary counts -->
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--ds-border-color);">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold" style="background:rgba(59,130,246,0.12); color:#3b82f6; font-size:0.75rem;">
+                                    Processed: <strong id="bulkTotalCount">0</strong>
+                                </span>
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold" style="background:rgba(22,163,74,0.12); color:#16a34a; font-size:0.75rem;">
+                                    ✓ Imported: <strong id="bulkAcceptedCount">0</strong>
+                                </span>
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold" style="background:rgba(220,38,38,0.12); color:#dc2626; font-size:0.75rem;">
+                                    ✕ Rejected: <strong id="bulkRejectedCount">0</strong>
+                                </span>
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold" style="background:rgba(245,158,11,0.12); color:#f59e0b; font-size:0.75rem;">
+                                    Pending: <strong id="bulkPendingCount">0</strong>
+                                </span>
+                            </div>
+                            <button type="button" class="btn btn-outline-danger btn-sm text-xs font-semibold px-2.5 py-1" id="btnDownloadRejectedCsv" onclick="Users.downloadRejectedCsv()" style="display: none;">
+                                <i data-lucide="download" style="width:12px;height:12px;" class="me-1"></i> Download Rejected Data (.CSV)
+                            </button>
+                        </div>
+                        <!-- Rejected rows table -->
+                        <div id="bulkRejectedTableWrapper" style="max-height:220px; overflow-y:auto; display:none;">
+                            <div class="fw-semibold text-xs text-danger mb-1"><i data-lucide="alert-circle" style="width:12px;height:12px;" class="me-1"></i> Rejected Rows — Edit & Re-upload Summary:</div>
+                            <table class="w-100 text-xs" style="border-collapse:collapse;">
+                                <thead>
+                                    <tr style="background:rgba(220,38,38,0.07); text-align:left;">
+                                        <th class="px-2 py-1" style="border-bottom:1px solid rgba(220,38,38,0.2);">Row</th>
+                                        <th class="px-2 py-1" style="border-bottom:1px solid rgba(220,38,38,0.2);">Username</th>
+                                        <th class="px-2 py-1" style="border-bottom:1px solid rgba(220,38,38,0.2);">Plant Location</th>
+                                        <th class="px-2 py-1" style="border-bottom:1px solid rgba(220,38,38,0.2);">Department</th>
+                                        <th class="px-2 py-1" style="border-bottom:1px solid rgba(220,38,38,0.2);">Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bulkRejectedTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
@@ -325,10 +387,10 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-3 col-12 d-flex flex-column justify-content-end" style="height: 56px; padding-bottom: 8px;">
-                                <div class="form-check form-switch mb-0 ps-4">
-                                    <input class="form-check-input" type="checkbox" id="newFieldRequired" style="cursor: pointer; width: 1.8em; height: 0.9em; margin-top: 0.35em;">
-                                    <label class="form-check-label" for="newFieldRequired" style="font-size: 0.72rem; color: var(--ds-text-secondary); cursor: pointer; user-select: none;">Compulsory</label>
+                            <div class="col-md-3 col-12 d-flex align-items-center" style="height: 38px; margin-top: 18px;">
+                                <div class="form-check form-switch mb-0 p-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input m-0" type="checkbox" id="newFieldRequired" style="cursor: pointer; width: 2.2em; height: 1.1em; float: none;">
+                                    <label class="form-check-label text-nowrap" for="newFieldRequired" style="font-size: 0.75rem; font-weight: 500; color: var(--ds-text-primary); cursor: pointer; user-select: none; margin: 0;">Compulsory</label>
                                 </div>
                             </div>
                             <div class="col-12 mt-2">
@@ -376,6 +438,161 @@
             currentFilter: 'all',
             editingUserId: null,
             modalMode: 'ADD', // ADD, EDIT, REASSIGN
+            selectedUserIds: new Set(),
+
+            toggleSelectAll(masterCb) {
+                const checkboxes = document.querySelectorAll('.user-select-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = masterCb.checked;
+                    const uid = parseInt(cb.value, 10);
+                    if (masterCb.checked) {
+                        this.selectedUserIds.add(uid);
+                    } else {
+                        this.selectedUserIds.delete(uid);
+                    }
+                });
+                this.updateBulkBar();
+            },
+
+            onCheckboxChange(cb, uid) {
+                if (cb.checked) {
+                    this.selectedUserIds.add(uid);
+                } else {
+                    this.selectedUserIds.delete(uid);
+                }
+                this.updateBulkBar();
+            },
+
+            updateBulkBar() {
+                const bar = document.getElementById('bulkActionsBar');
+                const countBadge = document.getElementById('selectedCountBadge');
+                const masterCb = document.getElementById('selectAllUsersCheckbox');
+                
+                const count = this.selectedUserIds.size;
+                if (countBadge) countBadge.textContent = `${count} selected`;
+                
+                if (bar) {
+                    if (count > 0) {
+                        bar.classList.remove('d-none');
+                        bar.classList.add('d-flex');
+                    } else {
+                        bar.classList.add('d-none');
+                        bar.classList.remove('d-flex');
+                    }
+                }
+
+                if (masterCb) {
+                    const allBoxes = document.querySelectorAll('.user-select-checkbox');
+                    if (allBoxes.length > 0) {
+                        masterCb.checked = Array.from(allBoxes).every(cb => cb.checked);
+                    }
+                }
+            },
+
+            clearSelection() {
+                this.selectedUserIds.clear();
+                const masterCb = document.getElementById('selectAllUsersCheckbox');
+                if (masterCb) masterCb.checked = false;
+                document.querySelectorAll('.user-select-checkbox').forEach(cb => cb.checked = false);
+                this.updateBulkBar();
+            },
+
+            async bulkAction(actionType) {
+                const ids = Array.from(this.selectedUserIds);
+                if (ids.length === 0) {
+                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                        QCMS.toast('No users selected.', 'warning');
+                    } else {
+                        alert('No users selected.');
+                    }
+                    return;
+                }
+
+                const actionTitles = {
+                    'activate': `Activate ${ids.length} selected member(s)?`,
+                    'deactivate': `Deactivate ${ids.length} selected member(s)?`,
+                    'resend_credentials': `Generate and email new temporary credentials to ${ids.length} selected member(s)?`,
+                    'delete': `PERMANENTLY DELETE ${ids.length} selected member(s)?`
+                };
+
+                if (!confirm(actionTitles[actionType] || `Proceed with bulk action for ${ids.length} member(s)?`)) {
+                    return;
+                }
+
+                try {
+                    const res = await api.post('/admin/users/bulk-action', {
+                        user_ids: ids,
+                        action: actionType
+                    });
+
+                    if (res && (res.status === 'success' || res.message)) {
+                        if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                            QCMS.toast(res.message || 'Bulk operation completed successfully.', 'success');
+                        } else {
+                            alert(res.message || 'Bulk operation completed.');
+                        }
+                        this.clearSelection();
+                        this.loadUsers(this.currentPage);
+                    } else {
+                        if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                            QCMS.toast(res?.message || 'Bulk operation failed.', 'error');
+                        } else {
+                            alert(res?.message || 'Bulk operation failed.');
+                        }
+                    }
+                } catch (err) {
+                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                        QCMS.toast(err.message || 'Failed to execute bulk action.', 'error');
+                    } else {
+                        alert(err.message || 'Failed to execute bulk action.');
+                    }
+                }
+            },
+
+            renderPaginationButtons(page, totalPages) {
+                if (totalPages <= 1) return '';
+                let pages = [];
+                if (totalPages <= 5) {
+                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                    pages.push(1);
+                    let start = Math.max(2, page - 1);
+                    let end = Math.min(totalPages - 1, page + 1);
+
+                    if (page <= 3) {
+                        start = 2;
+                        end = 4;
+                    } else if (page >= totalPages - 2) {
+                        start = totalPages - 3;
+                        end = totalPages - 1;
+                    }
+
+                    if (start > 2) {
+                        pages.push('...');
+                    }
+
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+
+                    if (end < totalPages - 1) {
+                        pages.push('...');
+                    }
+
+                    pages.push(totalPages);
+                }
+
+                return pages.map(p => {
+                    if (p === '...') {
+                        return `<span class="px-1 text-xs text-muted fw-bold d-inline-flex align-items-center" style="user-select: none;">...</span>`;
+                    }
+                    return `
+                        <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="Users.loadUsers(${p})">
+                            ${p}
+                        </button>
+                    `;
+                }).join('');
+            },
 
             async init() {
                 try {
@@ -654,20 +871,38 @@
                     }
                 } catch (e) {
                     console.error('Failed to load plants:', e);
+                    this.allPlants = [];
                 }
             },
 
             onPlantChange(plantId, selectedDeptName = null) {
                 const deptSelect = document.getElementById('department');
+                const deptWarning = document.getElementById('deptSetupWarning');
                 if (!deptSelect) return;
 
                 let availableDepts = this.departments || [];
                 if (plantId && String(plantId) !== "") {
-                    // Filter departments mapped to this plant_id OR organization-wide departments (null/empty plant_id)
-                    availableDepts = availableDepts.filter(d => !d.plant_id || String(d.plant_id) === String(plantId));
+                    // Strictly filter: only departments for this exact plant
+                    availableDepts = availableDepts.filter(d => d.plant_id && String(d.plant_id) === String(plantId));
                 }
 
                 const filteredDepts = availableDepts.filter(d => d.name !== 'N/A' && d.name !== 'All');
+
+                // Show warning if plant selected but no departments exist under it
+                if (plantId && String(plantId) !== '' && filteredDepts.length === 0) {
+                    deptSelect.innerHTML = `<option value="">-- No departments found --</option>`;
+                    if (deptWarning) {
+                        deptWarning.innerHTML = `<div class="alert alert-warning py-2 px-3 mt-2 mb-0" style="font-size:0.8rem; border-radius:8px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#b45309;">
+                            <i data-lucide="triangle-alert" style="width:13px;height:13px;" class="me-1"></i>
+                            No departments found under this plant. <a href="/admin/departments.html" class="fw-bold" style="color:#b45309;">Create a Department first &rarr;</a>
+                        </div>`;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                    return;
+                }
+
+                if (deptWarning) deptWarning.innerHTML = '';
+
                 let selectHtml = `<option value="N/A">N/A</option>`;
                 selectHtml += filteredDepts.map(d => `
                     <option value="${QCMS.escapeHtml(d.name)}">${QCMS.escapeHtml(d.name)}${d.plant_name ? ' (' + QCMS.escapeHtml(d.plant_name) + ')' : ''}</option>
@@ -738,7 +973,7 @@
                     if (theadRow) {
                         theadRow.querySelectorAll('.custom-field-th').forEach(el => el.remove());
                         const staticThs = theadRow.querySelectorAll('th:not(.custom-field-th)');
-                        const insertBeforeTh = staticThs[3];
+                        const insertBeforeTh = staticThs[4]; // Department is index 4 (0: checkbox, 1: Identity, 2: Role, 3: Plant Location, 4: Department)
                         const visibleCustomFields = (this.customFields || []).filter(f => !f.is_system);
                         visibleCustomFields.forEach(f => {
                             const th = document.createElement('th');
@@ -752,7 +987,10 @@
                     const visibleCustomFields = (this.customFields || []).filter(f => !f.is_system);
 
                     tbody.innerHTML = users.map(u => `
-                        <tr class="fade-in">
+                        <tr class="fade-in ${this.selectedUserIds.has(u.id) ? 'table-active' : ''}">
+                            <td class="text-center align-middle" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="form-check-input user-select-checkbox" value="${u.id}" ${this.selectedUserIds.has(u.id) ? 'checked' : ''} onchange="Users.onCheckboxChange(this, ${u.id})" style="cursor: pointer;">
+                            </td>
                             <td>
                                 <div class="h-stack gap-3">
                                     <div class="ds-avatar" style="background: ${u.profile_picture ? 'transparent' : this.getAvatarColor(u.username)}">
@@ -817,11 +1055,7 @@
                                         <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="Users.loadUsers(${page - 1})">
                                             <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                         </button>
-                                        ${Array.from({ length: totalPages }, (_, idx) => idx + 1).map(p => `
-                                            <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="Users.loadUsers(${p})">
-                                                ${p}
-                                            </button>
-                                        `).join('')}
+                                        ${this.renderPaginationButtons(page, totalPages)}
                                         <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="Users.loadUsers(${page + 1})">
                                             <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                         </button>
@@ -839,6 +1073,7 @@
                         }
                     }
 
+                    this.updateBulkBar();
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error('Failed to load users:', e);
@@ -884,24 +1119,120 @@
             },
 
             openAddModal() {
+                // ── Pre-flight check: Plants must exist first ──────────────────────
+                if (!this.allPlants || this.allPlants.length === 0) {
+                    // Show the modal but with a setup-required banner instead of the form
+                    const modalBody = document.querySelector('#userModal .modal-body');
+                    const modalFooter = document.querySelector('#userModal .modal-footer');
+                    if (modalBody) {
+                        modalBody.innerHTML = `
+                            <div class="text-center py-4 px-2">
+                                <div class="mb-3" style="font-size:2.5rem;">🏭</div>
+                                <h6 class="fw-bold mb-2" style="color:var(--ds-text-main);">Setup Required Before Adding Users</h6>
+                                <p class="text-sm text-muted mb-4">Your organisation doesn't have any Plant Locations or Departments set up yet. You need to create them first so users can be assigned correctly.</p>
+                                <div class="d-flex flex-column gap-2">
+                                    <a href="/admin/plants.htm" class="ds-btn ds-btn-primary w-100">
+                                        <i data-lucide="building-2" style="width:15px;height:15px;"></i>
+                                        Step 1 &mdash; Create a Plant Location
+                                    </a>
+                                    <a href="/admin/departments.html" class="ds-btn ds-btn-outline w-100">
+                                        <i data-lucide="briefcase" style="width:15px;height:15px;"></i>
+                                        Step 2 &mdash; Create a Department
+                                    </a>
+                                </div>
+                                <p class="text-xs text-muted mt-4 mb-0">After creating a plant and at least one department, come back here to add users.</p>
+                            </div>`;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                    if (modalFooter) modalFooter.style.display = 'none';
+                    document.querySelector('#userModal .modal-title').textContent = 'Setup Required';
+                    new bootstrap.Modal(document.getElementById('userModal')).show();
+                    return;
+                }
+
+                // ── Normal flow ────────────────────────────────────────────────────
                 this.editingUserId = null;
                 this.modalMode = 'ADD';
+
+                // Restore modal body/footer in case they were replaced by setup warning
+                const modalFooter = document.querySelector('#userModal .modal-footer');
+                if (modalFooter) modalFooter.style.display = '';
+                // Re-inject form if it was replaced
+                const modalBody = document.querySelector('#userModal .modal-body');
+                if (modalBody && !document.getElementById('userForm')) {
+                    modalBody.innerHTML = `<form id="userForm">
+                        <div class="ds-field">
+                            <label class="ds-label">DISPLAY NAME / IDENTITY <span class="text-danger">*</span></label>
+                            <input type="text" class="ds-input" id="username" placeholder="e.g. John Doe" required>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label">ENTERPRISE EMAIL <span class="text-danger">*</span></label>
+                            <input type="email" class="ds-input" id="email" placeholder="john@company.com" required>
+                        </div>
+                        <div class="ds-field mb-3">
+                            <label class="ds-label">PLANT LOCATION <span class="text-danger">*</span></label>
+                            <select class="ds-input ds-select" id="userPlantSelect" onchange="Users.onPlantChange(this.value)" style="appearance: auto;">
+                                <option value="">Select Plant Location</option>
+                            </select>
+                            <p class="text-xs text-muted mt-1">Selecting a plant location dynamically filters the available departments.</p>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label">SYSTEM ROLE <span class="text-danger">*</span></label>
+                                    <select class="ds-input ds-select" id="role" required style="appearance: auto;">
+                                        <option value="Team Member">Team Member</option>
+                                        <option value="Facilitator">Facilitator</option>
+                                        <option value="Reviewer">Reviewer</option>
+                                        <option value="Admin">Admin</option>
+                                        <option value="CEO">CEO</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ds-field">
+                                    <label class="ds-label">DEPARTMENT <span class="text-danger">*</span></label>
+                                    <select class="ds-input ds-select" id="department" required style="appearance: auto;"></select>
+                                    <div id="deptSetupWarning"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="dynamicCustomFieldsContainer"></div>
+                        <div class="ds-field" id="passwordFieldContainer">
+                            <label class="ds-label">Temporary Access Credentials <span class="text-danger">*</span></label>
+                            <div class="h-stack gap-2">
+                                <input type="text" class="ds-input flex-grow-1" id="password" placeholder="Initial access code" value="Welcome@123" style="letter-spacing:0.1em;font-family:monospace;font-weight:700;" autocomplete="new-password">
+                                <button type="button" class="ds-btn ds-btn-secondary ds-btn-icon" onclick="Users.generatePassword()" title="Regenerate Password" style="border:1px solid var(--ds-border-color);">
+                                    <i data-lucide="refresh-cw" style="width:18px;height:18px;"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-muted mt-2">The user will be prompted to change their password upon first login.</p>
+                        </div>
+                    </form>`;
+                }
+
                 document.getElementById('userForm').reset();
                 document.getElementById('password').value = 'Welcome@123';
                 document.getElementById('passwordFieldContainer').style.display = 'block';
                 document.querySelector('#userModal .modal-title').textContent = 'Provision Access';
                 document.querySelector('#userModal .ds-btn-primary').textContent = 'Confirm Provisioning';
-                
+
+                // Reload plant select options
+                const modalSel = document.getElementById('userPlantSelect');
+                if (modalSel) {
+                    modalSel.innerHTML = '<option value="">Select Plant Location</option>' +
+                        this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                }
+
                 const plantFilterVal = document.getElementById('userPlantFilter')?.value || '';
-                const plantSel = document.getElementById('userPlantSelect');
-                if (plantSel) plantSel.value = plantFilterVal;
+                if (modalSel && plantFilterVal) modalSel.value = plantFilterVal;
                 this.onPlantChange(plantFilterVal);
 
-                // Enable all fields
                 document.getElementById('username').disabled = false;
                 document.getElementById('email').disabled = false;
-                
+
                 this.renderDynamicFields({});
+                if (window.lucide) lucide.createIcons();
                 new bootstrap.Modal(document.getElementById('userModal')).show();
             },
 
@@ -1021,7 +1352,7 @@
                                 validationError = `Field '${name}' must be a valid 10-digit phone number (e.g. 9876543210 or +919876543210).`;
                             }
                         } else if (dataType === 'email') {
-                            if (!/^[\w.+\-]+@[\w\-]+\.[a-zA-Z]{2,}$/.test(val)) {
+                            if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val)) {
                                 validationError = `Field '${name}' must be a valid email address.`;
                             }
                         } else if (dataType === 'date') {
@@ -1044,7 +1375,10 @@
 
                 try {
                     const payload = { role, department };
-                    if (plant_id) payload.plant_id = parseInt(plant_id);
+                    if (plant_id) {
+                        payload.plant_id = isNaN(parseInt(plant_id)) ? plant_id : parseInt(plant_id);
+                        payload.plant_location = plant_id;
+                    }
                     if (this.modalMode !== 'REASSIGN') {
                         payload.username = username;
                         payload.email = email;
@@ -1122,12 +1456,30 @@
             },
 
             openBulkModal() {
-                document.getElementById('bulkForm').reset();
-                document.getElementById('bulkDropzoneText').textContent = 'Click to browse or drag your file here';
-                document.getElementById('bulkStatusContainer').style.display = 'none';
-                document.getElementById('bulkErrorsContainer').style.display = 'none';
-                document.getElementById('bulkErrorsList').innerHTML = '';
-                new bootstrap.Modal(document.getElementById('bulkModal')).show();
+                const bulkForm = document.getElementById('bulkForm');
+                if (bulkForm) bulkForm.reset();
+
+                const dropzoneText = document.getElementById('bulkDropzoneText');
+                if (dropzoneText) dropzoneText.textContent = 'Click to browse or drag your file here';
+
+                const statusContainer = document.getElementById('bulkStatusContainer');
+                if (statusContainer) statusContainer.style.display = 'none';
+
+                const errorsContainer = document.getElementById('bulkErrorsContainer');
+                if (errorsContainer) errorsContainer.style.display = 'none';
+
+                const rejectedWrapper = document.getElementById('bulkRejectedTableWrapper');
+                if (rejectedWrapper) rejectedWrapper.style.display = 'none';
+
+                const rejectedTable = document.getElementById('bulkRejectedTableBody');
+                if (rejectedTable) rejectedTable.innerHTML = '';
+
+                const modalEl = document.getElementById('bulkModal');
+                if (modalEl) {
+                    let modal = bootstrap.Modal.getInstance(modalEl);
+                    if (!modal) modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
                 if (window.lucide) lucide.createIcons();
             },
 
@@ -1159,7 +1511,7 @@
 
             async processBulkUpload() {
                 const fileInput = document.getElementById('bulkFile');
-                if (!fileInput.files || fileInput.files.length === 0) {
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
                     return QCMS.toast('Please select a CSV file first.', 'warning');
                 }
 
@@ -1167,10 +1519,17 @@
                 const formData = new FormData();
                 formData.append('file', file);
 
-                document.getElementById('bulkStatusContainer').style.display = 'block';
-                document.getElementById('bulkProgressBar').style.width = '50%';
-                document.getElementById('bulkStatusText').textContent = 'Uploading and processing file...';
-                document.getElementById('btnConfirmBulk').disabled = true;
+                const statusContainer = document.getElementById('bulkStatusContainer');
+                if (statusContainer) statusContainer.style.display = 'block';
+
+                const progressBar = document.getElementById('bulkProgressBar');
+                if (progressBar) progressBar.style.width = '50%';
+
+                const statusText = document.getElementById('bulkStatusText');
+                if (statusText) statusText.textContent = 'Uploading and processing file...';
+
+                const confirmBtn = document.getElementById('btnConfirmBulk');
+                if (confirmBtn) confirmBtn.disabled = true;
 
                 try {
                     const response = await fetch(api.baseUrl + '/admin/users/bulk-upload', {
@@ -1182,25 +1541,68 @@
                     });
 
                     const resData = await response.json();
-                    document.getElementById('bulkProgressBar').style.width = '100%';
+                    if (progressBar) progressBar.style.width = '100%';
 
                     if (response.ok) {
-                        const added = resData.added_count || 0;
-                        const errors = resData.errors || [];
-                        
-                        QCMS.toast(`Successfully imported ${added} users!`, 'success');
-                        
-                        if (errors.length > 0) {
-                            document.getElementById('bulkStatusText').textContent = `Import complete: ${added} added, ${errors.length} failed.`;
-                            document.getElementById('bulkErrorsContainer').style.display = 'block';
-                            const list = document.getElementById('bulkErrorsList');
-                            list.innerHTML = errors.map(e => `
-                                <li>Row ${e.row}: <strong>${e.username || e.email || 'Unknown'}</strong> - ${e.error}</li>
-                            `).join('');
-                        } else {
-                            bootstrap.Modal.getInstance(document.getElementById('bulkModal')).hide();
+                        const totalProcessed = resData.total_processed ?? ((resData.accepted_count ?? 0) + (resData.rejected_count ?? 0));
+                        const accepted = resData.accepted_count ?? resData.added_count ?? 0;
+                        const rejected = resData.rejected_count ?? 0;
+                        const pending = resData.pending_count ?? 0;
+                        const rejectedRows = resData.rejected_rows || resData.errors || [];
+                        this.lastRejectedRows = rejectedRows;
+
+                        if (statusText) {
+                            statusText.textContent = `Import complete: ${accepted} accepted, ${rejected} rejected out of ${totalProcessed} total rows.`;
                         }
-                        
+
+                        const errorsContainer = document.getElementById('bulkErrorsContainer');
+                        if (errorsContainer) errorsContainer.style.display = 'block';
+
+                        const totalCountEl = document.getElementById('bulkTotalCount');
+                        if (totalCountEl) totalCountEl.textContent = totalProcessed;
+
+                        const acceptedCountEl = document.getElementById('bulkAcceptedCount');
+                        if (acceptedCountEl) acceptedCountEl.textContent = accepted;
+
+                        const rejectedCountEl = document.getElementById('bulkRejectedCount');
+                        if (rejectedCountEl) rejectedCountEl.textContent = rejected;
+
+                        const pendingCountEl = document.getElementById('bulkPendingCount');
+                        if (pendingCountEl) pendingCountEl.textContent = pending;
+
+                        const downloadBtn = document.getElementById('btnDownloadRejectedCsv');
+                        if (downloadBtn) {
+                            downloadBtn.style.display = rejectedRows.length > 0 ? 'inline-flex' : 'none';
+                        }
+
+                        if (rejectedRows.length > 0) {
+                            const wrapper = document.getElementById('bulkRejectedTableWrapper');
+                            if (wrapper) wrapper.style.display = 'block';
+
+                            const tbody = document.getElementById('bulkRejectedTableBody');
+                            if (tbody) {
+                                tbody.innerHTML = rejectedRows.map(r => `
+                                    <tr style="border-bottom:1px solid rgba(220,38,38,0.1);">
+                                        <td class="px-2 py-1">${r.row}</td>
+                                        <td class="px-2 py-1 fw-semibold">${QCMS.escapeHtml(r.username || '—')}</td>
+                                        <td class="px-2 py-1">${QCMS.escapeHtml(r.plant_location || '—')}</td>
+                                        <td class="px-2 py-1">${QCMS.escapeHtml(r.department || r.dept || '—')}</td>
+                                        <td class="px-2 py-1 text-danger">${QCMS.escapeHtml(r.reason || r.error || '—')}</td>
+                                    </tr>
+                                `).join('');
+                            }
+                        } else {
+                            const wrapper = document.getElementById('bulkRejectedTableWrapper');
+                            if (wrapper) wrapper.style.display = 'none';
+                        }
+
+                        if (accepted > 0) {
+                            QCMS.toast(`${accepted} user${accepted > 1 ? 's' : ''} imported successfully!`, 'success');
+                        }
+                        if (rejected > 0) {
+                            QCMS.toast(`${rejected} row${rejected > 1 ? 's' : ''} were rejected. Download the rejected CSV to fix and re-upload.`, 'warning');
+                        }
+
                         this.loadUsers();
                     } else {
                         throw new Error(resData.message || 'Bulk upload failed.');
@@ -1208,10 +1610,42 @@
                 } catch (e) {
                     console.error('Bulk upload error:', e);
                     QCMS.toast(e.message || 'Failed to process bulk upload.', 'error');
-                    document.getElementById('bulkStatusText').textContent = 'Upload failed.';
+                    if (statusText) statusText.textContent = 'Upload failed.';
                 } finally {
-                    document.getElementById('btnConfirmBulk').disabled = false;
+                    if (confirmBtn) confirmBtn.disabled = false;
+                    if (window.lucide) lucide.createIcons();
                 }
+            },
+
+            downloadRejectedCsv() {
+                if (!this.lastRejectedRows || this.lastRejectedRows.length === 0) {
+                    return QCMS.toast('No rejected rows available for download.', 'info');
+                }
+                const headers = ['username', 'email', 'role', 'plant_location', 'department', 'full_name', 'password', 'rejection_reason'];
+                const csvLines = [headers.join(',')];
+
+                for (const r of this.lastRejectedRows) {
+                    const rowArr = [
+                        `"${(r.username || '').replace(/"/g, '""')}"`,
+                        `"${(r.email || '').replace(/"/g, '""')}"`,
+                        `"${(r.role || '').replace(/"/g, '""')}"`,
+                        `"${(r.plant_location || '').replace(/"/g, '""')}"`,
+                        `"${(r.department || '').replace(/"/g, '""')}"`,
+                        `"${(r.full_name || '').replace(/"/g, '""')}"`,
+                        `"${(r.password || 'Welcome@123').replace(/"/g, '""')}"`,
+                        `"${(r.reason || '').replace(/"/g, '""')}"`
+                    ];
+                    csvLines.push(rowArr.join(','));
+                }
+
+                const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.setAttribute('download', 'qcms_rejected_users_for_edit.csv');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             }
 
         };

@@ -96,30 +96,30 @@
         },
 
         async loadData() {
-            try {
-                // Fetch configs
-                const cfgRes = await api.get('/super-admin/integrations');
-                this.integrations = cfgRes || [];
-                
-                // Fetch stats
-                const dashRes = await api.get('/super-admin/integrations/dashboard');
-                this.dashboardData = dashRes || {};
+            const safeGet = async (url, fallback) => {
+                try {
+                    const res = await api.get(url);
+                    return res ?? fallback;
+                } catch (e) {
+                    console.warn(`[IntegrationsModule] Failed to load ${url}:`, e.message || e);
+                    return fallback;
+                }
+            };
 
-                // Fetch API keys & webhooks
-                const keysRes = await api.get('/super-admin/integrations/apikeys');
-                this.apiKeys = keysRes || [];
-                
-                const whRes = await api.get('/super-admin/integrations/webhooks');
-                this.webhooks = whRes || [];
+            // Fetch all data sources in parallel with individual fallbacks
+            const [cfgRes, dashRes, keysRes, whRes, logsRes] = await Promise.all([
+                safeGet('/super-admin/integrations',           []),
+                safeGet('/super-admin/integrations/dashboard', {}),
+                safeGet('/super-admin/integrations/apikeys',   []),
+                safeGet('/super-admin/integrations/webhooks',  []),
+                safeGet('/super-admin/integrations/logs',      { audit_logs: [], webhook_deliveries: [], request_logs: [] }),
+            ]);
 
-                // Fetch logs
-                const logsRes = await api.get('/super-admin/integrations/logs');
-                this.logsData = logsRes || { audit_logs: [], webhook_deliveries: [], request_logs: [] };
-
-            } catch (e) {
-                console.error("Failed to load integrations database logs", e);
-                QCMS.toast('Error syncing integration registers', 'error');
-            }
+            this.integrations  = Array.isArray(cfgRes)  ? cfgRes  : [];
+            this.dashboardData = dashRes || {};
+            this.apiKeys       = Array.isArray(keysRes) ? keysRes : [];
+            this.webhooks      = Array.isArray(whRes)   ? whRes   : [];
+            this.logsData      = logsRes || { audit_logs: [], webhook_deliveries: [], request_logs: [] };
         },
 
         render() {
@@ -184,16 +184,28 @@
         },
 
         renderDashboardMarkup() {
-            const stats = this.dashboardData;
+            const list = this.integrations || [];
+            const totalCount = list.length;
+            const activeCount = list.filter(i => i.status === 'Connected').length;
+            const failedCount = list.filter(i => i.status === 'Error' || i.status === 'Failed').length;
+
+            const stats = this.dashboardData || {};
+            const apiCallsToday = stats.api_requests_today || 0;
+            const webhookDeliveriesToday = stats.webhook_deliveries_today !== undefined ? stats.webhook_deliveries_today : (this.logsData?.webhook_deliveries?.length || 0);
+            const activeDevKeys = (this.apiKeys || []).filter(k => k.status === 'Active' || k.status === 'active').length;
+            const activeApiKeys = (stats.active_api_keys !== undefined && stats.active_api_keys > 0)
+                ? stats.active_api_keys
+                : (activeCount + activeDevKeys);
+
             return `
                 <!-- EXECUTIVE DASHBOARD KPI METRICS -->
-                <div class="anc-kpi-grid">
+                <div class="anc-kpi-grid" style="grid-template-columns: repeat(2, 1fr) !important;">
                     <div class="anc-kpi-card">
                         <div class="kpi-icon" style="background: rgba(var(--ds-primary-rgb), 0.08);">
                             <i data-lucide="blocks" style="width:11px; height:11px; color:var(--ds-primary);"></i>
                         </div>
                         <div class="kpi-label">Total Integrations</div>
-                        <div class="kpi-value">${stats.total_integrations || 0}</div>
+                        <div class="kpi-value">${totalCount}</div>
                         <div class="kpi-accent" style="background:var(--ds-primary);"></div>
                     </div>
                     <div class="anc-kpi-card">
@@ -201,40 +213,8 @@
                             <i data-lucide="check-circle" style="width:11px; height:11px; color:#10b981;"></i>
                         </div>
                         <div class="kpi-label">Active Connections</div>
-                        <div class="kpi-value">${stats.active_integrations || 0}</div>
+                        <div class="kpi-value">${activeCount}</div>
                         <div class="kpi-accent" style="background:#10b981;"></div>
-                    </div>
-                    <div class="anc-kpi-card">
-                        <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.08);">
-                            <i data-lucide="alert-octagon" style="width:11px; height:11px; color:#ef4444;"></i>
-                        </div>
-                        <div class="kpi-label">Failed/Error States</div>
-                        <div class="kpi-value">${stats.failed_integrations || 0}</div>
-                        <div class="kpi-accent" style="background:#ef4444;"></div>
-                    </div>
-                    <div class="anc-kpi-card">
-                        <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.08);">
-                            <i data-lucide="activity" style="width:11px; height:11px; color:#3b82f6;"></i>
-                        </div>
-                        <div class="kpi-label">API Calls Today</div>
-                        <div class="kpi-value">${(stats.api_requests_today || 0).toLocaleString()}</div>
-                        <div class="kpi-accent" style="background:#3b82f6;"></div>
-                    </div>
-                    <div class="anc-kpi-card">
-                        <div class="kpi-icon" style="background: rgba(245, 158, 11, 0.08);">
-                            <i data-lucide="webhook" style="width:11px; height:11px; color:#f59e0b;"></i>
-                        </div>
-                        <div class="kpi-label">Webhook Deliveries</div>
-                        <div class="kpi-value">${(stats.webhook_deliveries_today || 0).toLocaleString()}</div>
-                        <div class="kpi-accent" style="background:#f59e0b;"></div>
-                    </div>
-                    <div class="anc-kpi-card">
-                        <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.08);">
-                            <i data-lucide="key" style="width:11px; height:11px; color:#8b5cf6;"></i>
-                        </div>
-                        <div class="kpi-label">Active API Keys</div>
-                        <div class="kpi-value">${stats.active_api_keys || 0}</div>
-                        <div class="kpi-accent" style="background:#8b5cf6;"></div>
                     </div>
                 </div>
             `;
@@ -287,12 +267,17 @@
                                             </div>
                                             <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
                                                 <span class="ds-badge ${statusBadgeClass}" style="font-size:9.5px; padding:2px 6px;">${i.status}</span>
-                                                <div class="form-check form-switch m-0 p-0 d-flex align-items-center" title="Toggle integration status">
-                                                    <input class="form-check-input ms-0" type="checkbox" role="switch" 
-                                                           style="width:34px; height:18px; cursor:pointer;" 
+                                                <label class="integration-toggle-switch m-0 position-relative d-inline-block" style="width:44px; height:24px; flex-shrink:0; cursor:pointer;" title="Toggle integration status">
+                                                    <input type="checkbox" 
+                                                           style="opacity:0; width:0; height:0; position:absolute;" 
                                                            ${isConnected ? 'checked' : ''} 
                                                            onchange="event.stopPropagation(); window.IntegrationsModule.toggleIntegrationStatus('${i.provider_id}', this.checked)">
-                                                </div>
+                                                    <span class="position-absolute top-0 start-0 end-0 bottom-0 rounded-pill transition" 
+                                                          style="background:${isConnected ? 'var(--ds-primary, #2563eb)' : 'rgba(148, 163, 184, 0.4)'}; transition: 0.25s ease;">
+                                                        <span class="position-absolute rounded-circle bg-white shadow-sm transition" 
+                                                              style="width:18px; height:18px; top:3px; left:${isConnected ? '23px' : '3px'}; transition: 0.25s ease;"></span>
+                                                    </span>
+                                                </label>
                                             </div>
                                         </div>
 
@@ -342,7 +327,7 @@
         },
 
         async toggleIntegrationStatus(providerId, isConnected) {
-            const newStatus = isConnected ? 'Connected' : 'Disabled';
+            const newStatus = isConnected ? 'Connected' : 'Disconnected';
             const item = this.integrations.find(i => i.provider_id === providerId);
             const providerName = item ? item.provider_name : providerId;
 
@@ -586,11 +571,12 @@
                 ];
             } else if (item.provider_id === 'jio_dlt') {
                 schemaFields = [
-                    { key: 'entity_id', label: 'Jio DLT Principal Entity ID (PE ID)', type: 'text', placeholder: 'e.g. 1101234567890123456' },
-                    { key: 'sender_id', label: 'Approved Header / Sender ID (6 Chars)', type: 'text', placeholder: 'e.g. QCMOTP' },
-                    { key: 'template_id', label: 'DLT Content Template ID for OTP', type: 'text', placeholder: 'e.g. 1107161234567890123' },
-                    { key: 'api_key', label: 'Jio DLT Gateway Auth / API Key', type: 'password', placeholder: 'Enter Jio DLT API Auth Key' },
-                    { key: 'api_url', label: 'SMS API Gateway Endpoint URL', type: 'text', placeholder: 'https://api.jiodlt.com/sms/v1/send' }
+                    { key: 'entity_id', label: 'Jio DLT Principal Entity ID (PE ID)', type: 'text', placeholder: 'e.g. 1201174858303838784' },
+                    { key: 'sender_id', label: 'Approved Header / Sender ID (6 Chars)', type: 'text', placeholder: 'e.g. IFQMSK' },
+                    { key: 'template_id', label: 'DLT Content Template ID for OTP', type: 'text', placeholder: 'e.g. 1207177450026368470' },
+                    { key: 'account_sid', label: 'Kaleyra Account SID (Optional for Kaleyra)', type: 'text', placeholder: 'e.g. HXIN17xxxxxxxxIN' },
+                    { key: 'api_key', label: 'Jio DLT / Kaleyra API Auth Key', type: 'password', placeholder: 'Enter API Key' },
+                    { key: 'api_url', label: 'SMS API Gateway Endpoint URL', type: 'text', placeholder: 'https://api.kaleyra.io/' }
                 ];
             } else if (item.provider_id === 'zeptomail') {
                 schemaFields = [
@@ -662,17 +648,6 @@
 
             return `
                 <form id="integrationConfigForm" class="p-1">
-                    <div class="d-flex align-items-center justify-content-between p-3.5 rounded-4 mb-4 border" 
-                         style="background: rgba(255,255,255,0.01); border-color: var(--ds-border-color);">
-                        <div>
-                            <span class="text-sm fw-bold text-main d-block">Enable Integration Connector</span>
-                            <span class="text-xxs text-secondary">Active connectors route API requests through safe proxy endpoints.</span>
-                        </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" id="cfg_status_toggle" style="width:42px; height:22px; cursor:pointer;" ${statusToggleChecked}>
-                        </div>
-                    </div>
-                    
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <i data-lucide="sliders" class="text-primary" style="width:16px; height:16px;"></i>
                         <h6 class="fw-bold text-main mb-0">Configuration Parameters</h6>
@@ -806,8 +781,8 @@
             const form = document.getElementById('integrationConfigForm');
             if (!form) return;
 
-            const isChecked = document.getElementById('cfg_status_toggle')?.checked;
-            const status = isChecked ? 'Connected' : 'Disconnected';
+            const toggleEl = document.getElementById('cfg_status_toggle');
+            const status = toggleEl ? (toggleEl.checked ? 'Connected' : 'Disconnected') : 'Connected';
             
             const settings = {};
             // Scrapes all input, textarea, and select elements

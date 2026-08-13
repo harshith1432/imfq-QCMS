@@ -56,22 +56,27 @@ def create_app():
                 try:
                     uid = int(user_id)
                     user = User.query.get(uid)
-                    if not user or user.is_deleted or not user.is_active or user.status == 'Inactive':
+                    if not user or getattr(user, 'is_deleted', False) or not user.is_active or user.status == 'Inactive':
                         return True # Account deactivated/deleted by admin
                 except Exception:
                     pass
 
             if session_id:
                 sess = SaaSUserSession.query.filter_by(session_id=session_id).first()
-                if sess and sess.status in ('Terminated', 'Revoked'):
-                    return True # Token was explicitly terminated/revoked by admin!
+                if sess:
+                    if sess.status in ('Terminated', 'Revoked'):
+                        return True # Token was explicitly terminated/revoked by admin!
+                    return False # Explicit active session is valid
+                # If token has a session_id claim but record isn't in DB yet, do NOT falsely revoke it
+                return False
+
             elif user_id:
                 try:
                     uid = int(user_id)
                     term_sess = SaaSUserSession.query.filter_by(user_id=uid, status='Terminated').order_by(SaaSUserSession.login_time.desc()).first()
                     if term_sess:
                         active_sess = SaaSUserSession.query.filter_by(user_id=uid, status='Active').order_by(SaaSUserSession.login_time.desc()).first()
-                        if not active_sess or (active_sess.login_time < term_sess.login_time):
+                        if not active_sess or (active_sess.login_time and term_sess.login_time and active_sess.login_time < term_sess.login_time):
                             return True
                 except (ValueError, TypeError):
                     pass
@@ -251,6 +256,8 @@ def create_app():
                 "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_notes TEXT;",
                 "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS subscription_id INTEGER REFERENCES subscriptions(id);",
                 "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS invoice_id INTEGER REFERENCES subscription_invoices(id);",
+                "ALTER TABLE subscription_payments DROP CONSTRAINT IF EXISTS subscription_payments_invoice_id_fkey;",
+                "ALTER TABLE subscription_payments ADD CONSTRAINT subscription_payments_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES subscription_invoices(id) ON DELETE SET NULL;",
                 "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(20);",
                 "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50);",
                 "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS gateway_reference VARCHAR(255);",
@@ -268,6 +275,24 @@ def create_app():
                 "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS sla_status VARCHAR(50) DEFAULT 'Within SLA';",
                 "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS escalation_level INTEGER DEFAULT 0;",
                 "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS tags JSONB;",
+                # ── Company Contacts additions ──────────────────────
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS otp_email VARCHAR(255) DEFAULT 'otp-auth@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255) DEFAULT 'contact@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS alerts_email VARCHAR(255) DEFAULT 'alerts@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS feedback_email VARCHAR(255) DEFAULT 'feedback@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS onboarding_email VARCHAR(255) DEFAULT 'onboarding@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS sales_email VARCHAR(255) DEFAULT 'sales@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS legal_email VARCHAR(255) DEFAULT 'legal@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS compliance_email VARCHAR(255) DEFAULT 'compliance@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS privacy_email VARCHAR(255) DEFAULT 'privacy@qcms.com';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS general_sender_name VARCHAR(255) DEFAULT 'QCMS General Info';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS support_sender_name VARCHAR(255) DEFAULT 'QCMS Customer Support';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS billing_sender_name VARCHAR(255) DEFAULT 'QCMS Accounts & Billing';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS otp_sender_name VARCHAR(255) DEFAULT 'QCMS OTP Verification';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS contact_sender_name VARCHAR(255) DEFAULT 'QCMS Business Inquiries';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS alerts_sender_name VARCHAR(255) DEFAULT 'QCMS System Alerts';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS feedback_sender_name VARCHAR(255) DEFAULT 'QCMS Product Feedback';",
+                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS onboarding_sender_name VARCHAR(255) DEFAULT 'QCMS User Onboarding';",
                 # ── Audit Logs enterprise extensions ──────────────────────
                 "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS session_id VARCHAR(100);",
                 "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS request_id VARCHAR(100);",
@@ -349,11 +374,16 @@ def create_app():
                         ('username', 'User', True, True, 'both'),
                         ('role', 'User Role', True, True, 'both'),
                         ('department', 'Department', True, True, 'both'),
+                        ('plant_location', 'Plant Location', True, True, 'both'),
                         ('email', 'Email Address', True, True, 'email')
                     ]
                     for key, name, req, sys, dtype in system_fields:
-                        if not UserCustomField.query.filter_by(org_id=org.id, field_key=key).first():
+                        existing_f = UserCustomField.query.filter_by(org_id=org.id, field_key=key).first()
+                        if not existing_f:
                             db.session.add(UserCustomField(org_id=org.id, field_key=key, display_name=name, is_required=req, is_system=sys, data_type=dtype))
+                        elif sys and not existing_f.is_system:
+                            existing_f.is_system = True
+                            existing_f.is_required = req
                 db.session.commit()
                 roles = ['SuperAdmin', 'Admin', 'Reviewer', 'Facilitator', 'Team Leader', 'Team Member', 'CEO']
                 for r_name in roles:

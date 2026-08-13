@@ -13,6 +13,23 @@ class DocumentBrandingService:
 
     _cache = {}
 
+    @staticmethod
+    def _normalize_email(val, default_prefix, fallback_domain="qcms.com"):
+        """Ensures email is a valid full email address with local part and domain."""
+        v = (val or '').strip()
+        if not v:
+            return f"{default_prefix}@{fallback_domain}"
+        if v.endswith('@'):
+            return f"{v}{fallback_domain}"
+        if '@' not in v:
+            return f"{v}@{fallback_domain}"
+        
+        # If connected integration domain is set (e.g. ifqm.org.in), merge local prefix with active verified domain
+        if fallback_domain and fallback_domain.lower() != 'qcms.com':
+            prefix = v.split('@')[0].strip()
+            return f"{prefix}@{fallback_domain}"
+        return v
+
     @classmethod
     def invalidate_cache(cls):
         """Invalidate in-memory branding cache so changes immediately take effect across all generators."""
@@ -55,6 +72,28 @@ class DocumentBrandingService:
 
         org_name = (company.legal_company_name if company and company.legal_company_name else (company.trading_name if company and company.trading_name else (org_obj.name if org_obj else "QCMS Technologies Pvt Ltd")))
 
+        # Determine dynamic active email domain fallback from connected integrations
+        fallback_domain = "qcms.com"
+        try:
+            from app.infrastructure.database.models.models import IntegrationConfig
+            cfg = IntegrationConfig.query.filter(
+                IntegrationConfig.category == 'Communication',
+                IntegrationConfig.status == 'Connected',
+                IntegrationConfig.provider_id.in_(['zeptomail', 'resend'])
+            ).first()
+            if cfg and cfg.settings and cfg.settings.get('sender_email'):
+                se = cfg.settings.get('sender_email').strip()
+                if '<' in se and '>' in se:
+                    se = se.split('<')[1].split('>')[0].strip()
+                if '@' in se:
+                    fallback_domain = se.split('@')[-1].strip()
+                elif '.' in se:
+                    fallback_domain = se.strip()
+        except Exception:
+            pass
+
+        norm = lambda raw, prefix: DocumentBrandingService._normalize_email(raw, prefix, fallback_domain)
+
         res = {
             "software_name": (platform.software_name if platform and platform.software_name else "QCMS Enterprise OS"),
             "software_short_name": (platform.software_short_name if platform and platform.software_short_name else "QCMS"),
@@ -79,12 +118,25 @@ class DocumentBrandingService:
             "official_seal_url": (company.official_seal_url if company and company.official_seal_url else "/assets/img/official_seal.png"),
             "digital_signature_url": (company.digital_signature_url if company and company.digital_signature_url else "/assets/img/digital_signature.png"),
 
-            # Contacts
-            "general_email": (contacts.general_email if contacts and contacts.general_email else "info@qcms.com"),
-            "support_email": (contacts.support_email if contacts and contacts.support_email else "support@qcms.com"),
-            "billing_email": (contacts.billing_email if contacts and contacts.billing_email else "billing@qcms.com"),
-            "sales_email": (contacts.sales_email if contacts and contacts.sales_email else "sales@qcms.com"),
-            "legal_email": (contacts.legal_email if contacts and contacts.legal_email else "legal@qcms.com"),
+            # Contacts & Sender Display Labels
+            "general_email": norm(contacts.general_email if contacts else None, "info"),
+            "general_sender_name": (getattr(contacts, 'general_sender_name', None) or "QCMS General Info"),
+            "support_email": norm(contacts.support_email if contacts else None, "support"),
+            "support_sender_name": (getattr(contacts, 'support_sender_name', None) or "QCMS Customer Support"),
+            "billing_email": norm(contacts.billing_email if contacts else None, "billing"),
+            "billing_sender_name": (getattr(contacts, 'billing_sender_name', None) or "QCMS Accounts & Billing"),
+            "otp_email": norm(getattr(contacts, 'otp_email', None) if contacts else None, "otp-auth"),
+            "otp_sender_name": (getattr(contacts, 'otp_sender_name', None) or "QCMS OTP Verification"),
+            "contact_email": norm(getattr(contacts, 'contact_email', None) if contacts else None, "contact"),
+            "contact_sender_name": (getattr(contacts, 'contact_sender_name', None) or "QCMS Business Inquiries"),
+            "alerts_email": norm(getattr(contacts, 'alerts_email', None) if contacts else None, "alerts"),
+            "alerts_sender_name": (getattr(contacts, 'alerts_sender_name', None) or "QCMS System Alerts"),
+            "feedback_email": norm(getattr(contacts, 'feedback_email', None) if contacts else None, "feedback"),
+            "feedback_sender_name": (getattr(contacts, 'feedback_sender_name', None) or "QCMS Product Feedback"),
+            "onboarding_email": norm(getattr(contacts, 'onboarding_email', None) if contacts else None, "onboarding"),
+            "onboarding_sender_name": (getattr(contacts, 'onboarding_sender_name', None) or "QCMS User Onboarding"),
+            "sales_email": norm(contacts.sales_email if contacts else None, "sales"),
+            "legal_email": norm(contacts.legal_email if contacts else None, "legal"),
             "general_phone": (contacts.general_phone if contacts and contacts.general_phone else "+1 (800) 555-0199"),
             "support_phone": (contacts.support_phone if contacts and contacts.support_phone else "+1 (800) 555-0100"),
             "emergency_phone": (contacts.emergency_contact if contacts and contacts.emergency_contact else "+91 98765 43210"),
@@ -193,6 +245,13 @@ class DocumentBrandingService:
     def wrap_email_html(body_html, title="QCMS Notification", org_id=None):
         """Wrap email content with centralized corporate email branding header/footer."""
         ctx = DocumentBrandingService.get_branding_context(org_id)
+        legal = (ctx.get('legal_company_name') or '').strip()
+        org_name = (ctx.get('organization_name') or '').strip()
+        if legal and org_name and legal.lower() != org_name.lower():
+            company_footer_hdr = f"{legal} | {org_name}"
+        else:
+            company_footer_hdr = legal or org_name or 'QCMS Solutions'
+
         return f"""
         <!DOCTYPE html>
         <html>
@@ -219,7 +278,7 @@ class DocumentBrandingService:
                     {body_html}
                 </div>
                 <div class="email-footer">
-                    <p style="margin:0 0 6px 0; font-weight:600;">{ctx['legal_company_name']} | {ctx['organization_name']}</p>
+                    <p style="margin:0 0 6px 0; font-weight:600;">{company_footer_hdr}</p>
                     <p style="margin:0 0 6px 0;">{ctx['registered_office']}</p>
                     <p style="margin:0;">Support: <a href="mailto:{ctx['support_email']}">{ctx['support_email']}</a> | <a href="{ctx['website']}">{ctx['website']}</a></p>
                     <p style="margin:10px 0 0 0; font-size:11px; color:#94a3b8;">{ctx['copyright_text']}</p>

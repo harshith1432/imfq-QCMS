@@ -315,9 +315,9 @@
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="ds-label mb-1">Search Event Logs</label>
-                            <div class="ds-search-inline w-100">
-                                <i data-lucide="search" class="text-muted"></i>
-                                <input type="text" class="ds-input" id="searchQ" placeholder="Search actor, ID, IP, location, device..." oninput="Audit.debounceSearch(this.value)">
+                            <div class="position-relative w-100" style="height: 38px;">
+                                <i data-lucide="search" class="text-muted" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; pointer-events: none; opacity: 0.6;"></i>
+                                <input type="text" class="ds-input w-100" id="searchQ" style="height: 38px; padding-left: 34px !important; background: transparent !important; border: 1px solid var(--ds-border-color) !important; border-radius: var(--ds-radius-md, 8px) !important;" placeholder="Search actor, ID, IP, location, device..." oninput="Audit.debounceSearch(this.value)" autocomplete="off">
                             </div>
                         </div>
                         <div class="col-md-2">

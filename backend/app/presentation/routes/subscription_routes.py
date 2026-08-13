@@ -218,6 +218,35 @@ def _compute_renewal_date(start_date, billing_cycle):
 
 def _serialize_subscription(sub):
     org = sub.organization
+
+    # Resolve proper human-readable plan name
+    raw_plan_name = sub.plan_name or '—'
+    display_plan_name = raw_plan_name
+    from app.infrastructure.database.models.models import SaaSPlan
+    db_plan = None
+    if getattr(sub, 'plan_id', None):
+        db_plan = db.session.get(SaaSPlan, sub.plan_id)
+    if not db_plan and raw_plan_name and raw_plan_name != '—':
+        db_plan = SaaSPlan.query.filter(
+            (func.lower(func.trim(SaaSPlan.code)) == raw_plan_name.strip().lower()) |
+            (func.lower(func.trim(SaaSPlan.name)) == raw_plan_name.strip().lower())
+        ).first()
+    if db_plan and db_plan.name:
+        display_plan_name = db_plan.name
+
+    # Resolve proper human-readable billing cycle
+    raw_cycle = sub.billing_cycle or '—'
+    display_cycle = raw_cycle
+    if sub.subscription_status in ('Trial', 'trialing') or (raw_cycle and raw_cycle.lower() in ('trial', 'trial duration')):
+        if getattr(sub, 'trial_end_date', None) and getattr(sub, 'trial_start_date', None):
+            days = max(1, (sub.trial_end_date - sub.trial_start_date).days)
+            display_cycle = f"Trial ({days} Days)"
+        elif getattr(sub, 'trial_end_date', None):
+            days = max(1, (sub.trial_end_date - datetime.utcnow()).days)
+            display_cycle = f"Trial ({days} Days)"
+        else:
+            display_cycle = "Trial Duration"
+
     return {
         'id': sub.id,
         'subscription_uid': sub.subscription_uid,
@@ -225,8 +254,8 @@ def _serialize_subscription(sub):
         'organization_name': org.name if org else '—',
         'admin_email': org.email if org else '—',
         'admin_name': org.admin_name if org else '—',
-        'plan_name': sub.plan_name,
-        'billing_cycle': sub.billing_cycle,
+        'plan_name': display_plan_name,
+        'billing_cycle': display_cycle,
         'subscription_status': sub.subscription_status,
         'payment_status': sub.payment_status,
         'start_date': sub.start_date.isoformat() if sub.start_date else None,
@@ -569,10 +598,14 @@ def get_subscription_dashboard():
         total_subs = sub_query.count()
 
         # Renewals due this month or within next 30 days
+        thirty_days_later = now + timedelta(days=30)
+        start_window = now - timedelta(days=1)
         renewal_due = sub_query.filter(
             or_(
-                Subscription.renewal_date.between(now - timedelta(days=1), thirty_days_later),
-                Subscription.end_date.between(now - timedelta(days=1), thirty_days_later)
+                Subscription.renewal_date.between(start_window, thirty_days_later),
+                Subscription.end_date.between(start_window, thirty_days_later),
+                Subscription.trial_end_date.between(start_window, thirty_days_later),
+                (Subscription.renewal_date.is_(None)) & (Subscription.end_date.is_(None)) & (Subscription.trial_end_date.is_(None))
             ),
             func.lower(Subscription.subscription_status).in_(['active', 'trial', 'trialing'])
         ).count()
@@ -632,18 +665,32 @@ def get_subscription_dashboard():
         ).count() + converted, 1)
         conversion_rate = round(converted / total_trials_started * 100, 1)
 
-        # Plan distribution
-        active_plans_catalog = [p.name for p in SaaSPlan.query.filter_by(status='Active').all()]
+        # Plan distribution — map plan codes and plan names to human-readable plan names
+        all_plans = SaaSPlan.query.all()
         plan_dist = {}
-        for plan in active_plans_catalog:
-            plan_dist[plan] = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
+        for p in all_plans:
+            label_name = p.name or p.code or 'Standard'
+            cnt = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
                 Organization.is_platform_org == False,
                 Organization.is_deleted == False,
-                Subscription.plan_name == plan,
-                func.lower(Subscription.subscription_status) == 'active'
+                db.or_(
+                    Subscription.plan_name == p.name,
+                    Subscription.plan_name == p.code
+                )
             ).count()
+            if cnt > 0:
+                plan_dist[label_name] = plan_dist.get(label_name, 0) + cnt
 
-        # Active plans count (unique plan names with active subs)
+        # Fallback if no specific SaaSPlan matched directly
+        if not plan_dist:
+            raw_subs = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
+                Organization.is_platform_org == False,
+                Organization.is_deleted == False
+            ).all()
+            for s in raw_subs:
+                lbl = s.plan_name or 'Default'
+                plan_dist[lbl] = plan_dist.get(lbl, 0) + 1
+
         active_plans = len([k for k, v in plan_dist.items() if v > 0])
 
         return jsonify({
@@ -776,14 +823,35 @@ def list_subscriptions():
             query = query.filter(Subscription.payment_status.in_(pstatus))
 
         now = datetime.utcnow()
+        start_window = now - timedelta(days=1)
         if renewal_window == '7d':
-            query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=7)))
-        elif renewal_window == '30d':
-            query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=30)))
+            end_window = now + timedelta(days=7)
+            query = query.filter(or_(
+                Subscription.renewal_date.between(start_window, end_window),
+                Subscription.end_date.between(start_window, end_window),
+                Subscription.trial_end_date.between(start_window, end_window)
+            ))
+        elif renewal_window in ('30d', 'this_month', 'due_this_month'):
+            end_window = now + timedelta(days=30)
+            query = query.filter(or_(
+                Subscription.renewal_date.between(start_window, end_window),
+                Subscription.end_date.between(start_window, end_window),
+                Subscription.trial_end_date.between(start_window, end_window),
+                (Subscription.renewal_date.is_(None)) & (Subscription.end_date.is_(None)) & (Subscription.trial_end_date.is_(None))
+            ))
         elif renewal_window == '90d':
-            query = query.filter(Subscription.renewal_date.between(now, now + timedelta(days=90)))
+            end_window = now + timedelta(days=90)
+            query = query.filter(or_(
+                Subscription.renewal_date.between(start_window, end_window),
+                Subscription.end_date.between(start_window, end_window),
+                Subscription.trial_end_date.between(start_window, end_window)
+            ))
         elif renewal_window == 'expired':
-            query = query.filter(Subscription.renewal_date < now)
+            query = query.filter(or_(
+                Subscription.renewal_date < now,
+                Subscription.end_date < now,
+                Subscription.trial_end_date < now
+            ))
 
         # ── Sorting ──
         allowed_sorts = {
@@ -1969,7 +2037,8 @@ def export_subscriptions():
 @jwt_required()
 def get_plan_catalogue():
     user = _get_current_user()
-    is_super_admin = user and (getattr(user, 'role', '') == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False))
+    role_name = user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))
+    is_super_admin = user and (role_name == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False) or getattr(user, 'is_platform_super_admin', False))
 
     billing_cycle = request.args.get('billing_cycle', '')
     status_filter = request.args.get('status', '') # Active, Inactive, Deprecated, Coming Soon
@@ -2313,11 +2382,19 @@ def update_plan(plan_id):
     }
 
     # Update metadata
-    if 'name' in data and data['name'] != plan.name:
-        # Check unique
-        if SaaSPlan.query.filter(SaaSPlan.name == data['name']).first():
-            return jsonify({'error': 'Plan name already exists'}), 400
-        plan.name = data['name']
+    if 'name' in data:
+        new_name = (data['name'] or '').strip()
+        if new_name and new_name.lower() != (plan.name or '').strip().lower():
+            if SaaSPlan.query.filter(SaaSPlan.id != plan.id, SaaSPlan.name.ilike(new_name)).first():
+                return jsonify({'error': 'Plan name already exists'}), 400
+            plan.name = new_name
+
+    if 'code' in data:
+        new_code = (data['code'] or '').strip()
+        if new_code and new_code.lower() != (plan.code or '').strip().lower():
+            if SaaSPlan.query.filter(SaaSPlan.id != plan.id, SaaSPlan.code.ilike(new_code)).first():
+                return jsonify({'error': 'Plan code already exists'}), 400
+            plan.code = new_code
     
     plan.description = data.get('description', plan.description)
     plan.long_description = data.get('long_description', plan.long_description)

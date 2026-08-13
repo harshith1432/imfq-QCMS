@@ -12,22 +12,74 @@ from sqlalchemy.orm.attributes import flag_modified
 project_bp = Blueprint('projects', __name__)
 
 # ── Shared utility: departments list (accessible by all authenticated users) ──
+def get_plant_ids_by_name(org_id, name_str):
+    if not name_str:
+        return []
+    from app.infrastructure.database.models.models import Plant
+    s = name_str.strip().lower()
+    terms = [s]
+    if 'bengaluru' in s:
+        terms.append(s.replace('bengaluru', 'bangalore'))
+    if 'bangalore' in s:
+        terms.append(s.replace('bangalore', 'bengaluru'))
+    
+    conds = []
+    for t in terms:
+        p_like = f"%{t}%"
+        conds.append(Plant.name.ilike(p_like))
+        conds.append(Plant.location.ilike(p_like))
+        
+    plants = Plant.query.filter(Plant.org_id == org_id, db.or_(*conds)).all()
+    return [p.id for p in plants]
+
 @project_bp.route('/departments', methods=['GET'])
 @jwt_required()
 def list_departments():
-    """Return all departments for the current user's organisation."""
+    """Return all departments for the current user's organisation, filtered by plant if provided."""
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
-    depts = Department.query.filter_by(org_id=user.org_id).order_by(Department.name).all()
+        
+    plant_id = request.args.get('plant_id')
+    plant_name = request.args.get('plant_name')
+    
+    q = Department.query.filter_by(org_id=user.org_id)
+    
+    if plant_id:
+        try:
+            p_int = int(plant_id)
+            q = q.filter(db.or_(Department.plant_id == p_int, Department.plant_id.is_(None)))
+        except ValueError:
+            pass
+    elif plant_name:
+        p_ids = get_plant_ids_by_name(user.org_id, plant_name)
+        if p_ids:
+            q = q.filter(db.or_(Department.plant_id.in_(p_ids), Department.plant_id.is_(None)))
+
+    depts = q.order_by(Department.name).all()
+    if not depts:
+        depts = Department.query.filter_by(org_id=user.org_id).order_by(Department.name).all()
     return jsonify([{"id": d.id, "name": d.name} for d in depts]), 200
+
+# ── Shared utility: plants list (accessible by all authenticated users) ──
+@project_bp.route('/plants', methods=['GET'])
+@jwt_required()
+def list_plants():
+    """Return all plants/locations for the current user's organisation."""
+    from app.infrastructure.database.models.models import Plant
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    plants = Plant.query.filter_by(org_id=user.org_id).order_by(Plant.name).all()
+    return jsonify([{"id": p.id, "name": p.name, "code": p.code or "", "location": p.location or ""} for p in plants]), 200
 
 # ── Shared utility: facilitators list (accessible by all authenticated users) ──
 @project_bp.route('/facilitators', methods=['GET'])
 @jwt_required()
 def list_facilitators():
-    """Return all Facilitators (and Admins) in the current user's organisation."""
+    """Return Facilitators/users under the selected plant and department."""
     from app.infrastructure.database.models.models import Role, Department
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
@@ -35,11 +87,23 @@ def list_facilitators():
         return jsonify({"msg": "User not found"}), 404
         
     dept_id = request.args.get('dept_id')
-    q = User.query.join(Role).filter(
+    plant_id = request.args.get('plant_id')
+    plant_name = request.args.get('plant_name')
+
+    q = User.query.filter(
         User.org_id == user.org_id,
-        User.is_active == True,
-        Role.name == 'Facilitator'
+        User.is_active == True
     )
+
+    if plant_id:
+        try:
+            q = q.filter(db.or_(User.plant_id == int(plant_id), User.plant_id.is_(None)))
+        except ValueError:
+            pass
+    elif plant_name:
+        p_ids = get_plant_ids_by_name(user.org_id, plant_name)
+        if p_ids:
+            q = q.filter(db.or_(User.plant_id.in_(p_ids), User.plant_id.is_(None)))
     
     target_dept_id = None
     if dept_id:
@@ -47,34 +111,35 @@ def list_facilitators():
             target_dept_id = int(dept_id)
         except ValueError:
             pass
-    elif user.role.name == 'Team Leader':
+    elif user.role and user.role.name in ('Team Leader', 'Team Member'):
         target_dept_id = user.department_id
 
     if target_dept_id:
-        all_dept = Department.query.filter(
-            Department.org_id == user.org_id,
-            db.func.lower(Department.name) == 'all'
-        ).first()
-        all_dept_id = all_dept.id if all_dept else None
-        
-        if all_dept_id:
-            q = q.filter(db.or_(
-                User.department_id == target_dept_id,
-                User.department_id == all_dept_id,
-                User.department_id.is_(None)
-            ))
-        else:
-            q = q.filter(db.or_(
-                User.department_id == target_dept_id,
-                User.department_id.is_(None)
-            ))
+        q_dept = q.filter(db.or_(
+            User.department_id == target_dept_id,
+            User.department_id.is_(None)
+        ))
+        if q_dept.count() > 0:
+            q = q_dept
+
+    # Filter strictly for users with Facilitator role
+    q = q.join(Role).filter(db.func.lower(Role.name) == 'facilitator')
 
     facilitators = q.order_by(User.full_name).all()
+
+    # Org-wide fallback for Facilitators if none in specified department
+    if not facilitators:
+        facilitators = User.query.join(Role).filter(
+            User.org_id == user.org_id,
+            User.is_active == True,
+            db.func.lower(Role.name) == 'facilitator'
+        ).order_by(User.full_name).all()
+
     return jsonify([{
         "id": u.id,
         "full_name": u.full_name or u.username,
         "username": u.username,
-        "role": u.role.name
+        "role": u.role.name if u.role else "Facilitator"
     } for u in facilitators]), 200
 
 # ── Shared utility: all org members (accessible by all authenticated users) ──
@@ -171,21 +236,30 @@ def get_potential_members():
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     org_id = user.org_id
-    role = user.role.name
+    role = user.role.name if user.role else 'User'
     
     from app.infrastructure.database.models.models import Role, Department, UserCustomField
     
     target_role_name = request.args.get('role')
     dept_id = request.args.get('dept_id')
+    plant_id = request.args.get('plant_id')
+    plant_name = request.args.get('plant_name')
     ignore_dept = request.args.get('ignore_dept', 'false').lower() == 'true'
     
-    # Base query: users in the same organization
-    q = User.query.filter_by(org_id=org_id)
+    # Base query: active users in the same organization
+    q = User.query.filter(User.org_id == org_id, User.is_active == True)
+
+    if plant_id:
+        try:
+            q = q.filter(db.or_(User.plant_id == int(plant_id), User.plant_id.is_(None)))
+        except ValueError:
+            pass
+    elif plant_name:
+        p_ids = get_plant_ids_by_name(org_id, plant_name)
+        if p_ids:
+            q = q.filter(db.or_(User.plant_id.in_(p_ids), User.plant_id.is_(None)))
     
-    # Filter by department:
-    # 1. If dept_id is provided, filter by it (or 'All' / None)
-    # 2. If no dept_id is provided, but current user is TL, fallback to TL's department (or 'All' / None) unless ignore_dept is set
-    # 3. Otherwise (Admin with no dept_id), do not filter by department
+    # Filter by department
     target_dept_id = None
     if dept_id:
         try:
@@ -195,69 +269,40 @@ def get_potential_members():
     elif role in ('Team Leader', 'Team Member') and not ignore_dept:
         target_dept_id = user.department_id
 
-    if target_dept_id:
-        all_dept = Department.query.filter(
-            Department.org_id == org_id,
-            db.func.lower(Department.name) == 'all'
-        ).first()
-        all_dept_id = all_dept.id if all_dept else None
-        
-        if all_dept_id:
-            q = q.filter(db.or_(
-                User.department_id == target_dept_id,
-                User.department_id == all_dept_id,
-                User.department_id.is_(None)
-            ))
-        else:
-            q = q.filter(db.or_(
-                User.department_id == target_dept_id,
-                User.department_id.is_(None)
-            ))
-    
-    # If a specific role is requested, filter by it
+    if target_dept_id and not ignore_dept:
+        q_dept = q.filter(db.or_(User.department_id == target_dept_id, User.department_id.is_(None)))
+        if q_dept.count() > 0:
+            q = q_dept
+
+    # Strictly enforce role matching when role parameter is provided:
     if target_role_name:
-        tr_role = Role.query.filter_by(name=target_role_name).first()
-        if not tr_role:
-            return jsonify({"msg": "Invalid target role"}), 400
-        q = q.filter_by(role_id=tr_role.id)
+        req_role_lower = target_role_name.strip().lower()
+        if req_role_lower == 'reviewer':
+            q_rev = q.join(Role).filter(db.func.lower(Role.name) == 'reviewer')
+            users = q_rev.order_by(User.full_name).all()
+            if not users:
+                users = User.query.join(Role).filter(
+                    User.org_id == org_id,
+                    User.is_active == True,
+                    db.func.lower(Role.name) == 'reviewer'
+                ).order_by(User.full_name).all()
+        elif req_role_lower in ('team member', 'teammember'):
+            q_tm = q.join(Role).filter(db.func.lower(Role.name).in_(['team member', 'team leader', 'teammember', 'teamleader']))
+            users = q_tm.order_by(User.full_name).all()
+        elif req_role_lower == 'facilitator':
+            q_fa = q.join(Role).filter(db.func.lower(Role.name) == 'facilitator')
+            users = q_fa.order_by(User.full_name).all()
+            if not users:
+                users = User.query.join(Role).filter(
+                    User.org_id == org_id,
+                    User.is_active == True,
+                    db.func.lower(Role.name) == 'facilitator'
+                ).order_by(User.full_name).all()
+        else:
+            q_other = q.join(Role).filter(db.func.lower(Role.name) == req_role_lower)
+            users = q_other.order_by(User.full_name).all()
     else:
-        # Default behavior:
-        # Admin gets all TLs and TMs if no role specified (Unified pool)
-        # TL gets only TMs by default
-        if role == 'Admin':
-            tl_role = Role.query.filter_by(name='Team Leader').first()
-            tm_role = Role.query.filter_by(name='Team Member').first()
-            fa_role = Role.query.filter_by(name='Facilitator').first()
-            rv_role = Role.query.filter_by(name='Reviewer').first()
-            
-            # Combine roles for unified selection pool (Admin can assign anyone)
-            allowed_role_ids = [r.id for r in [tl_role, tm_role, fa_role, rv_role] if r]
-            q = q.filter(User.role_id.in_(allowed_role_ids))
-        elif role in ('Team Leader', 'Team Member'):
-            tl_role = Role.query.filter_by(name='Team Leader').first()
-            tm_role = Role.query.filter_by(name='Team Member').first()
-            allowed_role_ids = [r.id for r in [tl_role, tm_role] if r]
-            q = q.filter(User.role_id.in_(allowed_role_ids))
-            
-    search_term = request.args.get('q') or request.args.get('search')
-    if search_term:
-        sq = f"%{search_term.strip()}%"
-        q = q.filter(db.or_(
-            User.full_name.ilike(sq),
-            User.username.ilike(sq),
-            User.email.ilike(sq)
-        ))
-
-    page_param = request.args.get('page', type=int)
-    per_page_param = request.args.get('per_page', type=int)
-
-    total_count = q.count()
-
-    if page_param and per_page_param:
-        users = q.offset((page_param - 1) * per_page_param).limit(per_page_param).all()
-        total_pages = (total_count + per_page_param - 1) // per_page_param if per_page_param > 0 else 1
-    else:
-        users = q.all()
+        users = q.order_by(User.full_name).all()
         page_param = 1
         per_page_param = total_count
         total_pages = 1

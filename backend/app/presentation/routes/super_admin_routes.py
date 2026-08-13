@@ -381,6 +381,10 @@ def list_companies():
                 admin_disp_name = 'Org Admin'
 
         p_type = _resolve_org_plan_type(org, plan_type_map)
+        from app.domain.services.subscription_service import SubscriptionManager
+        plan_limits = SubscriptionManager.get_organization_plan_limits(org.id)
+        actual_plan = org.subscription_plan or plan_limits.get('plan_name') or p_type
+        resolved_max_users = plan_limits.get('max_users') if plan_limits.get('max_users') is not None else (org.max_users or 50)
 
         output.append({
             "id": org.id,
@@ -390,18 +394,19 @@ def list_companies():
             "admin_name": admin_disp_name,
             "email": org.email,
             "phone": org.phone or '—',
-            "plan": p_type,
-            "plan_type": p_type,
-            "plan_name": org.subscription_plan or p_type,
+            "plan": actual_plan,
+            "plan_type": actual_plan,
+            "plan_name": actual_plan,
+            "plan_category": p_type,
             "status": org.subscription_status,
             "user_count": user_count,
-            "max_users": org.max_users,
+            "max_users": resolved_max_users,
             "dept_count": dept_count,
             "project_count": project_count,
             "is_white_label": org.is_white_label,
             "api_access": org.api_access,
             "multi_plant": org.multi_plant,
-            "trial_ends_at": org.trial_ends_at.isoformat() if org.trial_ends_at else None,
+            "trial_ends_at": expiry_dt.isoformat() if expiry_dt else (org.trial_ends_at.isoformat() if org.trial_ends_at else None),
             "trial_days_left": trial_days,
             "created_at": org.created_at.isoformat() if org.created_at else datetime.utcnow().isoformat(),
             "city": org.city or '—',
@@ -1271,9 +1276,17 @@ def bulk_action_companies():
             User.query.filter_by(org_id=org.id).update({'is_active': False, 'deactivated_at': datetime.utcnow()})
             count += 1
         elif action == 'assign_plan':
-            plan = data.get('plan')
-            if plan in ['Starter', 'Professional', 'Enterprise']:
-                org.subscription_plan = plan
+            plan_input = data.get('plan')
+            if plan_input:
+                sp = SaaSPlan.query.filter(db.or_(SaaSPlan.name == plan_input, SaaSPlan.code == plan_input)).first()
+                cycle = (sp.billing_cycle if sp else 'Monthly') or 'Monthly'
+                c_lower = cycle.lower()
+                dur = getattr(sp, 'duration_days', None) or getattr(sp, 'trial_days', None)
+                if not dur or dur <= 0:
+                    dur = 365 if c_lower in ('yearly', 'annual') else (90 if c_lower in ('quarterly', 'quarter') else 30)
+                org.subscription_plan = sp.name if sp else plan_input
+                org.license_start_date = datetime.utcnow()
+                org.license_expiry_date = datetime.utcnow() + timedelta(days=dur)
                 count += 1
         elif action == 'assign_modules':
             modules = data.get('modules') or data.get('enabled_modules') or []

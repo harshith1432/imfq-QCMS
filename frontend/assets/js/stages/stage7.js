@@ -8,10 +8,13 @@ const Stage7 = {
                 <!-- Section 1 - KPI Verification -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">1</span>
-                            KPI Verification
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.1</span>
+                                KPI Verification
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Check the project's measurable KPI against the target set in Stage 1.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <!-- Premium Benefits Realization Dashboard -->
@@ -68,10 +71,13 @@ const Stage7 = {
                 <!-- Section 2 - Before vs After Analysis -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">2</span>
-                            Before vs After Analysis
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.2</span>
+                                Before vs After Analysis
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Compare before and after data using histogram and control-chart views to confirm improvement.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -163,10 +169,13 @@ const Stage7 = {
                 <!-- Section 3 - Statistical Validation -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">3</span>
-                            Statistical Validation
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.3</span>
+                                Statistical Validation
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Statistically confirm the improvement is real and not due to chance.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -189,10 +198,13 @@ const Stage7 = {
                 <!-- Section 4 - Benefit Realization & Savings -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">4</span>
-                            Benefit Realization & Savings
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.4</span>
+                                Benefit Realization &amp; Savings
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Quantify the actual annual savings and quality improvement achieved.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -216,10 +228,13 @@ const Stage7 = {
                 <!-- Section 5 - ROI Validation -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">5</span>
-                            ROI Validation
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.5</span>
+                                ROI Validation
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Validate the return on investment against the cost-benefit projection from Stage 5.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <h6 class="fw-bold mb-3 text-primary">Section 5 - ROI Validation</h6>
@@ -247,10 +262,13 @@ const Stage7 = {
                 <!-- Section 6 - Sustainability Check -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">6</span>
-                            Sustainability Check
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.6</span>
+                                Sustainability Check
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Confirm the improved performance is holding steady over time, not reverting.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -274,10 +292,13 @@ const Stage7 = {
                 <!-- Section 7 - Side Effect Verification -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">7</span>
-                            Side Effect Verification
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.7</span>
+                                Side Effect Verification
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Check whether any negative side effects flagged in Stage 5 actually materialized.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -300,10 +321,13 @@ const Stage7 = {
                 <!-- Section 8 - Lessons Implementation -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">8</span>
-                            Lessons Implementation
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.8</span>
+                                Lessons Implementation
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Record what worked and what didn't during implementation for future reference.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">

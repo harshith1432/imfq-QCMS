@@ -51,10 +51,23 @@ const DocIdentityManager = {
 
         // Contacts
         this.setValue('di-email-general', ctx.general_email);
+        this.setValue('di-sender-general', ctx.general_sender_name || 'QCMS General Info');
         this.setValue('di-email-support', ctx.support_email);
+        this.setValue('di-sender-support', ctx.support_sender_name || 'QCMS Customer Support');
         this.setValue('di-email-billing', ctx.billing_email);
+        this.setValue('di-sender-billing', ctx.billing_sender_name || 'QCMS Accounts & Billing');
+        this.setValue('di-email-otp', ctx.otp_email || 'otp-auth@qcms.com');
+        this.setValue('di-sender-otp', ctx.otp_sender_name || 'QCMS OTP Verification');
+        this.setValue('di-email-contact', ctx.contact_email || 'contact@qcms.com');
+        this.setValue('di-sender-contact', ctx.contact_sender_name || 'QCMS Business Inquiries');
+        this.setValue('di-email-alerts', ctx.alerts_email || 'alerts@qcms.com');
+        this.setValue('di-sender-alerts', ctx.alerts_sender_name || 'QCMS System Alerts');
+        this.setValue('di-email-feedback', ctx.feedback_email || 'feedback@qcms.com');
+        this.setValue('di-sender-feedback', ctx.feedback_sender_name || 'QCMS Product Feedback');
+        this.setValue('di-email-onboarding', ctx.onboarding_email || 'onboarding@qcms.com');
+        this.setValue('di-sender-onboarding', ctx.onboarding_sender_name || 'QCMS User Onboarding');
         this.setValue('di-phone-general', ctx.general_phone);
-        this.setValue('di-phone-emergency', '+91 98765 43210');
+        this.setValue('di-phone-emergency', ctx.emergency_phone || '+91 98765 43210');
     },
 
     setValue(id, val) {
@@ -104,9 +117,23 @@ const DocIdentityManager = {
         } else if (section === 'contacts') {
             payload = {
                 general_email: document.getElementById('di-email-general')?.value,
+                general_sender_name: document.getElementById('di-sender-general')?.value,
                 support_email: document.getElementById('di-email-support')?.value,
+                support_sender_name: document.getElementById('di-sender-support')?.value,
                 billing_email: document.getElementById('di-email-billing')?.value,
-                general_phone: document.getElementById('di-phone-general')?.value
+                billing_sender_name: document.getElementById('di-sender-billing')?.value,
+                otp_email: document.getElementById('di-email-otp')?.value,
+                otp_sender_name: document.getElementById('di-sender-otp')?.value,
+                contact_email: document.getElementById('di-email-contact')?.value,
+                contact_sender_name: document.getElementById('di-sender-contact')?.value,
+                alerts_email: document.getElementById('di-email-alerts')?.value,
+                alerts_sender_name: document.getElementById('di-sender-alerts')?.value,
+                feedback_email: document.getElementById('di-email-feedback')?.value,
+                feedback_sender_name: document.getElementById('di-sender-feedback')?.value,
+                onboarding_email: document.getElementById('di-email-onboarding')?.value,
+                onboarding_sender_name: document.getElementById('di-sender-onboarding')?.value,
+                general_phone: document.getElementById('di-phone-general')?.value,
+                emergency_phone: document.getElementById('di-phone-emergency')?.value
             };
         }
 

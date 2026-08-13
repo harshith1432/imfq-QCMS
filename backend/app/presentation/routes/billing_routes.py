@@ -2,15 +2,15 @@ import uuid
 import secrets
 import shutil
 from datetime import datetime, timedelta
-from flask import Blueprint, jsonify, request, send_from_directory, abort
+from flask import Blueprint, jsonify, request, send_from_directory, abort, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func, or_, and_
+from sqlalchemy import func, or_, and_, text
 import os
 from werkzeug.utils import secure_filename
 from app.infrastructure.database.models.models import (
     db, User, Organization, Subscription, SubscriptionInvoice, SubscriptionPayment,
     InvoiceItem, SubscriptionRefund, SubscriptionCreditNote, BillingSettings, TaxRule, BillingAudit,
-    OfflinePaymentProof, IntegrationConfig, Notification
+    OfflinePaymentProof, IntegrationConfig, Notification, SaaSPlan, SaaSPlanPricing
 )
 from app.presentation.middleware.middleware import super_admin_required
 
@@ -481,14 +481,29 @@ def refund_invoice(inv_id):
 @jwt_required()
 @super_admin_required()
 def delete_invoice(inv_id):
-    # Destructive action: Paid invoices cannot be deleted
     inv = SubscriptionInvoice.query.get_or_404(inv_id)
-    if inv.invoice_status == 'Paid':
-        return jsonify({"status": "error", "message": "Paid invoices cannot be deleted"}), 422
-
     org_id = inv.org_id
-    db.session.delete(inv)
-    db.session.commit()
+
+    try:
+        # Nullify/delete dependent records referencing this invoice_id
+        db.session.query(SubscriptionPayment).filter_by(invoice_id=inv_id).update({SubscriptionPayment.invoice_id: None}, synchronize_session=False)
+        db.session.query(SubscriptionCreditNote).filter_by(invoice_id=inv_id).update({SubscriptionCreditNote.invoice_id: None}, synchronize_session=False)
+        db.session.query(BillingAudit).filter_by(invoice_id=inv_id).update({BillingAudit.invoice_id: None}, synchronize_session=False)
+        db.session.query(SubscriptionRefund).filter_by(invoice_id=inv_id).delete(synchronize_session=False)
+        db.session.query(InvoiceItem).filter_by(invoice_id=inv_id).delete(synchronize_session=False)
+
+        db.session.delete(inv)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # Fallback: Direct SQL execution to ensure complete cleanup
+        db.session.execute(text("UPDATE subscription_payments SET invoice_id = NULL WHERE invoice_id = :id"), {"id": inv_id})
+        db.session.execute(text("UPDATE subscription_credit_notes SET invoice_id = NULL WHERE invoice_id = :id"), {"id": inv_id})
+        db.session.execute(text("UPDATE billing_audits SET invoice_id = NULL WHERE invoice_id = :id"), {"id": inv_id})
+        db.session.execute(text("DELETE FROM subscription_refunds WHERE invoice_id = :id"), {"id": inv_id})
+        db.session.execute(text("DELETE FROM invoice_items WHERE invoice_id = :id"), {"id": inv_id})
+        db.session.execute(text("DELETE FROM subscription_invoices WHERE id = :id"), {"id": inv_id})
+        db.session.commit()
 
     _audit_log(org_id, None, "Invoice Deleted", {"invoice_id": inv_id})
 
@@ -616,6 +631,46 @@ PLAN_SPECS = {
     "Enterprise": {"price": 49999.0, "max_users": 1000000, "max_projects": 99999, "features": ["Unlimited Users", "Unlimited Projects", "Dedicated Support", "API & Webhook Integrations", "Custom SLA"]}
 }
 
+def _get_plan_details(plan_name):
+    """
+    Dynamically look up plan specifications from SaaSPlan DB model or fall back to PLAN_SPECS dictionary.
+    Returns (is_valid, resolved_name, base_price, total_price_incl_tax, max_users, max_projects, billing_cycle)
+    """
+    if not plan_name or not str(plan_name).strip():
+        return False, None, 0.0, 0.0, 50, 10, 'Monthly'
+
+    pname = str(plan_name).strip()
+
+    # 1. Direct DB lookup by name or code
+    sp = SaaSPlan.query.filter(or_(SaaSPlan.name == pname, SaaSPlan.code == pname)).first()
+    if not sp:
+        # Case-insensitive DB lookup
+        all_plans = SaaSPlan.query.all()
+        for p in all_plans:
+            if (p.name and p.name.lower() == pname.lower()) or (p.code and p.code.lower() == pname.lower()):
+                sp = p
+                break
+
+    if sp:
+        pricing = SaaSPlanPricing.query.filter_by(plan_id=sp.id, is_active=True).first()
+        base_price = pricing.price if pricing else 0.0
+        tax = pricing.tax if pricing else 18.0
+        total_price = base_price * (1.0 + tax / 100.0) if (pricing and not pricing.is_tax_inclusive) else base_price
+        cycle = pricing.billing_cycle if pricing else ('Trial Duration' if (getattr(sp, 'plan_type', '') == 'Trial' or getattr(sp, 'is_default_trial', False)) else 'Monthly')
+        limits = sp.limits
+        max_users = limits.max_users if limits else 500
+        max_projects = limits.max_projects if limits else 50
+        return True, sp.name, base_price, total_price, max_users, max_projects, cycle
+
+    # 2. Hardcoded PLAN_SPECS fallback
+    if pname in PLAN_SPECS:
+        spec = PLAN_SPECS[pname]
+        base_price = spec['price']
+        total_price = base_price * 1.18
+        return True, pname, base_price, total_price, spec['max_users'], spec['max_projects'], 'Monthly'
+
+    return False, None, 0.0, 0.0, 50, 10, 'Monthly'
+
 @billing_bp.route('/payment-gateways', methods=['GET'])
 @jwt_required()
 def get_public_payment_gateways():
@@ -652,22 +707,20 @@ def create_razorpay_order():
     """Create Razorpay order for plan upgrade"""
     data = request.json or {}
     plan_name = data.get('plan_name')
-    if plan_name not in PLAN_SPECS:
+    is_valid, resolved_name, base_price, total_price, max_users, max_projects, cycle = _get_plan_details(plan_name)
+    if not is_valid:
         return jsonify({"message": "Invalid plan name"}), 400
 
-    spec = PLAN_SPECS[plan_name]
-    amount = spec['price']
-    gst = amount * 0.18
-    total_amount = amount + gst
+    gst = total_price - base_price
 
     order_id = f"order_{secrets.token_hex(8)}"
     return jsonify({
         "status": "success",
         "order_id": order_id,
-        "plan_name": plan_name,
-        "amount": amount,
+        "plan_name": resolved_name,
+        "amount": base_price,
         "gst_amount": gst,
-        "total_amount": total_amount,
+        "total_amount": total_price,
         "currency": "INR"
     }), 200
 
@@ -685,40 +738,36 @@ def verify_razorpay_payment():
     razorpay_payment_id = data.get('razorpay_payment_id') or f"pay_{secrets.token_hex(8)}"
     razorpay_order_id = data.get('razorpay_order_id') or f"order_{secrets.token_hex(8)}"
 
-    if plan_name not in PLAN_SPECS:
+    is_valid, resolved_name, base_price, total_price, max_users, max_projects, cycle = _get_plan_details(plan_name)
+    if not is_valid:
         return jsonify({"message": "Invalid plan name"}), 400
 
     org = Organization.query.get(user.org_id)
     if not org:
         return jsonify({"message": "Organization not found"}), 404
 
-    spec = PLAN_SPECS[plan_name]
-    amount = spec['price']
-    gst = amount * 0.18
-    final_amount = amount + gst
+    gst = total_price - base_price
 
-    # Update Organization Plan
-    org.subscription_plan = plan_name
-    org.subscription_status = 'Active'
-    org.trial_ends_at = datetime.utcnow() + timedelta(days=365)
-    User.query.filter_by(org_id=org.id).update({'is_active': True, 'deactivated_at': None})
+    # Update Organization Plan and sync limits & subscription record
+    from app.domain.services.subscription_service import apply_new_plan_to_organization
+    apply_new_plan_to_organization(org, resolved_name, cycle)
 
     # Record SubscriptionPayment
     payment = SubscriptionPayment(
         org_id=org.id,
-        amount=amount,
+        amount=base_price,
         currency='INR',
-        plan_name=plan_name,
-        billing_cycle='Monthly',
+        plan_name=resolved_name,
+        billing_cycle=cycle,
         payment_status='Completed',
         transaction_id=razorpay_payment_id,
         payment_gateway='Razorpay',
         gateway_reference=razorpay_order_id,
         gst_percent=18.0,
         gst_amount=gst,
-        final_amount=final_amount,
+        final_amount=total_price,
         billing_period_start=datetime.utcnow(),
-        billing_period_end=datetime.utcnow() + timedelta(days=30)
+        billing_period_end=datetime.utcnow() + timedelta(days=365 if cycle in ('Yearly', 'Annual') else 30)
     )
     db.session.add(payment)
 
@@ -727,15 +776,15 @@ def verify_razorpay_payment():
         org_id=user.org_id,
         user_id=user.id,
         title="Subscription Plan Upgraded",
-        message=f"Your subscription plan has been successfully upgraded to {plan_name} via Razorpay."
+        message=f"Your subscription plan has been successfully upgraded to {resolved_name} via Razorpay."
     )
     db.session.add(notif)
     db.session.commit()
 
     return jsonify({
         "status": "success",
-        "message": f"Payment verified! Your subscription plan has been upgraded to {plan_name}.",
-        "plan_name": plan_name
+        "message": f"Payment verified! Your subscription plan has been upgraded to {resolved_name}.",
+        "plan_name": resolved_name
     }), 200
 
 
@@ -751,7 +800,8 @@ def submit_offline_payment_proof():
     transaction_id = request.form.get('transaction_id')
     notes = request.form.get('notes', '')
 
-    if not plan_name or plan_name not in PLAN_SPECS:
+    is_valid, resolved_plan_name, base_price, total_price, max_users, max_projects, cycle = _get_plan_details(plan_name)
+    if not is_valid:
         return jsonify({"message": "Invalid or missing plan_name"}), 400
 
     if not transaction_id or not transaction_id.strip():
@@ -770,7 +820,6 @@ def submit_offline_payment_proof():
             save_path = os.path.join(primary_dir, saved_name)
             file.save(save_path)
 
-            # Copy to frontend/uploads as secondary backup
             try:
                 frontend_dir = os.path.abspath(os.path.join(current_app.root_path, '..', '..', 'frontend', 'uploads'))
                 os.makedirs(frontend_dir, exist_ok=True)
@@ -780,15 +829,12 @@ def submit_offline_payment_proof():
 
             screenshot_url = f"/uploads/{saved_name}"
 
-    spec = PLAN_SPECS[plan_name]
-    amount = spec['price'] * 1.18  # Incl. GST
-
     proof = OfflinePaymentProof(
         org_id=user.org_id,
         user_id=user.id,
-        plan_name=plan_name,
-        billing_cycle='Monthly',
-        amount=amount,
+        plan_name=resolved_plan_name,
+        billing_cycle=cycle,
+        amount=total_price,
         currency='INR',
         transaction_id=transaction_id.strip(),
         screenshot_url=screenshot_url,
@@ -804,7 +850,7 @@ def submit_offline_payment_proof():
             org_id=sa.org_id or user.org_id,
             user_id=sa.id,
             title="New Offline Payment Submitted",
-            message=f"Org ID {user.org_id} submitted payment proof for {plan_name} (UTR: {transaction_id}). Please verify in SuperAdmin portal."
+            message=f"Org ID {user.org_id} submitted payment proof for {resolved_plan_name} (UTR: {transaction_id}). Please verify in SuperAdmin portal."
         ))
 
     db.session.commit()
@@ -902,38 +948,40 @@ def approve_offline_payment(proof_id):
     if not org:
         return jsonify({"message": "Organization not found"}), 404
 
-    spec = PLAN_SPECS.get(proof.plan_name, PLAN_SPECS["Professional"])
-    amount = spec['price']
-    gst = amount * 0.18
-    final_amount = amount + gst
+    is_valid, resolved_name, base_price, total_price, max_users, max_projects, cycle = _get_plan_details(proof.plan_name)
+    if not is_valid:
+        resolved_name = proof.plan_name
+        total_price = proof.amount or 0.0
+        base_price = total_price / 1.18
+        cycle = proof.billing_cycle or 'Monthly'
+
+    gst = total_price - base_price
 
     # Approve proof record
     proof.status = 'Approved'
     proof.verified_by_id = int(sa_user_id)
     proof.verified_at = datetime.utcnow()
 
-    # Update Organization Plan
-    org.subscription_plan = proof.plan_name
-    org.subscription_status = 'Active'
-    org.trial_ends_at = datetime.utcnow() + timedelta(days=365)
-    User.query.filter_by(org_id=org.id).update({'is_active': True, 'deactivated_at': None})
+    # Update Organization Plan and sync limits & subscription record
+    from app.domain.services.subscription_service import apply_new_plan_to_organization
+    apply_new_plan_to_organization(org, resolved_name, proof.billing_cycle or cycle, approved_by_id=sa_user_id)
 
     # Record SubscriptionPayment
     payment = SubscriptionPayment(
         org_id=org.id,
-        amount=amount,
+        amount=base_price,
         currency=proof.currency,
-        plan_name=proof.plan_name,
-        billing_cycle=proof.billing_cycle,
+        plan_name=resolved_name,
+        billing_cycle=proof.billing_cycle or cycle,
         payment_status='Completed',
         transaction_id=proof.transaction_id,
         payment_gateway='Dynamic QR',
         gateway_reference=f"PROOF-{proof.id}",
         gst_percent=18.0,
         gst_amount=gst,
-        final_amount=final_amount,
+        final_amount=total_price,
         billing_period_start=datetime.utcnow(),
-        billing_period_end=datetime.utcnow() + timedelta(days=30)
+        billing_period_end=datetime.utcnow() + timedelta(days=365 if cycle in ('Yearly', 'Annual') else 30)
     )
     db.session.add(payment)
 

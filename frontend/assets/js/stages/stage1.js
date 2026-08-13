@@ -6,10 +6,13 @@ const Stage1 = {
                 <!-- ─── SECTION 1: PROJECT TEAM ─── -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">1</span>
-                            Project Team
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">1.1</span>
+                                Project Team
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Register the QC Circle members, their roles, and department for this project.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-3">
@@ -66,10 +69,13 @@ const Stage1 = {
                 <!-- ─── SECTION 2: PROBLEM BACKGROUND (5W2H) ─── -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">2</span>
-                            Problem Background (5W2H)
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">1.2</span>
+                                Problem Background (5W2H)
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Define the problem using What, Why, When, Where, Who, and How Much before analysis begins.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-3">
@@ -128,10 +134,13 @@ const Stage1 = {
                 <!-- ─── SECTION 3: CURRENT PERFORMANCE ─── -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">3</span>
-                            Current Performance
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">1.3</span>
+                                Current Performance
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Record the baseline metric and current performance level the project aims to improve.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-3">
@@ -157,10 +166,13 @@ const Stage1 = {
                 <!-- ─── SECTION 4: JUSTIFICATION ─── -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">4</span>
-                            Justification
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">1.4</span>
+                                Justification
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">State the business case for why this problem was selected over other opportunities.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-3">
@@ -177,7 +189,15 @@ const Stage1 = {
 
                 <!-- ─── SECTION 5: EMERGENCY RESPONSE ─── -->
                 <div class="glass-card ds-card mb-4">
-                    <div class="ds-card-header p-4 border-bottom"><h5 class="mb-0 fw-bold d-flex align-items-center gap-2"><span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">5</span> Emergency Response</h5></div>
+                    <div class="ds-card-header p-4 border-bottom">
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">1.5</span>
+                                Emergency Response
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Log any immediate containment action taken before formal countermeasures are in place.</p>
+                        </div>
+                    </div>
                     <div class="ds-card-body p-4">
                         <div class="ds-field mb-3">
                             <label class="ds-label">Is Emergency Response Required? *</label>
@@ -200,7 +220,15 @@ const Stage1 = {
 
                 <!-- ─── SECTION 6: THEME, TARGET & SCHEDULE ─── -->
                 <div class="glass-card ds-card mb-4">
-                    <div class="ds-card-header p-4 border-bottom"><h5 class="mb-0 fw-bold d-flex align-items-center gap-2"><span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">6</span> Theme, Target & Schedule</h5></div>
+                    <div class="ds-card-header p-4 border-bottom">
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">1.6</span>
+                                Theme, Target & Schedule
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Set the project theme, the measurable target, and the stage-wise timeline/milestones.</p>
+                        </div>
+                    </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-3 mb-4">
                             <div class="col-md-12"><div class="ds-field"><label class="ds-label">Improvement Theme *</label><input type="text" class="ds-input" id="s1_tts_theme" placeholder="e.g. Reduction of Defect Rate on Line A from 4.2% to below 1%" required></div></div>

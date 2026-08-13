@@ -21,10 +21,13 @@ const Stage5 = {
                 <!-- Section 1 - Root Cause Mapping -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">1</span>
-                            Root Cause Mapping
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.1</span>
+                                Root Cause Mapping
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Carry the verified root causes from Stage 4 forward as the basis for solution development.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -46,10 +49,13 @@ const Stage5 = {
                 <!-- Section 2 - Solution Brainstorming -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">2</span>
-                            Solution Brainstorming
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.2</span>
+                                Solution Brainstorming
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Generate candidate solutions against each verified root cause.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -72,10 +78,13 @@ const Stage5 = {
                 <!-- Section 3 - Solution Evaluation Matrix -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">3</span>
-                            Solution Evaluation Matrix
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.3</span>
+                                Solution Evaluation Matrix
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Score candidate solutions on feasibility, cost, and impact to select the best fit.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -103,10 +112,13 @@ const Stage5 = {
                 <!-- Section 4 - Cost Benefit Analysis -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">4</span>
-                            Cost Benefit Analysis
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.4</span>
+                                Cost Benefit Analysis
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Weigh implementation cost against expected savings for the selected solution.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -132,10 +144,13 @@ const Stage5 = {
                 <!-- Section 5 - Side Effect Analysis -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">5</span>
-                            Side Effect Analysis
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.5</span>
+                                Side Effect Analysis
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Analyze potential negative side effects of the proposed solution before piloting.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -160,10 +175,13 @@ const Stage5 = {
                 <!-- Section 6 - Pilot Solution Verification -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">6</span>
-                            Pilot Solution Verification
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.6</span>
+                                Pilot Solution Verification
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Trial the solution on a limited scale and confirm it delivers the intended result.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -188,10 +206,13 @@ const Stage5 = {
                 <!-- Section 7 - Action Plan (3W1H) -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">7</span>
-                            Action Plan (3W1H)
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.7</span>
+                                Action Plan (3W1H)
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Define What will be done, Who is responsible, When it's due, and How it will be executed.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -215,10 +236,13 @@ const Stage5 = {
                 <!-- Section 8 - Resource Planning -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">8</span>
-                            Resource Planning
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.8</span>
+                                Resource Planning
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Identify the budget, manpower, and materials needed to implement the solution.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">

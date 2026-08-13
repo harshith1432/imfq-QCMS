@@ -114,18 +114,29 @@
         .badge-Silver { background: rgba(148, 163, 184, 0.15); color: #64748b; border: 1px solid rgba(148, 163, 184, 0.3); }
         .badge-Bronze { background: rgba(180, 83, 9, 0.15); color: #b45309; border: 1px solid rgba(180, 83, 9, 0.3); }
         .badge-Beginner { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); }
-        .badge-Newbie { background: rgba(100, 116, 139, 0.1); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.2); }
+        .badge-Newbie { background: rgba(100, 116, 139, 0.1); color: #475569; border: 1px solid rgba(100, 116, 139, 0.2); }
 
-        [data-theme="dark"] .badge-Diamond { color: #38bdf8; }
-        [data-theme="dark"] .badge-Platinum { color: #cbd5e1; }
-        [data-theme="dark"] .badge-Gold { color: #fbbf24; }
-        [data-theme="dark"] .badge-Silver { color: #cbd5e1; }
+        [data-theme="dark"] .badge-Diamond, body.dark-mode .badge-Diamond { color: #38bdf8 !important; }
+        [data-theme="dark"] .badge-Platinum, body.dark-mode .badge-Platinum { color: #cbd5e1 !important; }
+        [data-theme="dark"] .badge-Gold, body.dark-mode .badge-Gold { color: #fbbf24 !important; }
+        [data-theme="dark"] .badge-Silver, body.dark-mode .badge-Silver { color: #cbd5e1 !important; }
+        [data-theme="dark"] .badge-Newbie, body.dark-mode .badge-Newbie { color: #f1f5f9 !important; background: rgba(241, 245, 249, 0.15) !important; border-color: rgba(241, 245, 249, 0.3) !important; }
 
         .point-counter {
             font-size: 1.5rem;
             font-weight: 800;
-            color: var(--ds-primary);
+            color: #2563eb !important;
             font-family: var(--ds-font-heading);
+        }
+
+        [data-theme="dark"] .point-counter,
+        body.dark-mode .point-counter {
+            color: #60a5fa !important;
+        }
+
+        [data-theme="dark"] .point-counter span,
+        body.dark-mode .point-counter span {
+            color: #cbd5e1 !important;
         }
     </style>
 </head>

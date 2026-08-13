@@ -169,6 +169,43 @@
             padding: 0.65rem 0.65rem !important;
             font-size: 0.78rem !important;
         }
+
+        /* Dark Theme Table Background & Contrast Overrides */
+        [data-theme="dark"] .table,
+        [data-theme="dark"] .ds-table,
+        html[data-theme="dark"] .table,
+        html[data-theme="dark"] .ds-table {
+            --bs-table-bg: transparent !important;
+            --bs-table-accent-bg: transparent !important;
+            --bs-table-striped-bg: transparent !important;
+            --bs-table-hover-bg: rgba(255, 255, 255, 0.04) !important;
+            --bs-table-color: #f1f5f9 !important;
+            --bs-table-border-color: rgba(255, 255, 255, 0.08) !important;
+            background-color: transparent !important;
+            color: #f1f5f9 !important;
+        }
+
+        [data-theme="dark"] .table > :not(caption) > * > *,
+        [data-theme="dark"] .ds-table > :not(caption) > * > *,
+        [data-theme="dark"] table td,
+        [data-theme="dark"] .table td,
+        [data-theme="dark"] .ds-table td,
+        [data-theme="dark"] table tr,
+        [data-theme="dark"] .table tr,
+        [data-theme="dark"] .ds-table tr {
+            background-color: transparent !important;
+            background: transparent !important;
+            color: #f1f5f9 !important;
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        [data-theme="dark"] table tr:hover td,
+        [data-theme="dark"] .table tr:hover td,
+        [data-theme="dark"] .ds-table tr:hover td {
+            background: rgba(255, 255, 255, 0.04) !important;
+            background-color: rgba(255, 255, 255, 0.04) !important;
+        }
+
         /* Tighten plan chips and status badges size */
         .plan-chip, .sub-badge, .pay-badge, .lic-badge, .mod-badge {
             font-size: 10px !important;
@@ -1208,17 +1245,6 @@
                                 <button class="ds-btn ds-btn-sm ds-btn-secondary" onclick="SuperAdmin.triggerBulkAction('activate')">Activate</button>
                                 <button class="ds-btn ds-btn-sm ds-btn-secondary" onclick="SuperAdmin.triggerBulkAction('suspend')">Pause</button>
                                 <button class="ds-btn ds-btn-sm" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);" onclick="SuperAdmin.triggerBulkAction('delete')">Delete</button>
-                                
-                                <div class="dropdown" style="overflow: visible !important;">
-                                    <button class="ds-btn ds-btn-sm ds-btn-secondary dropdown-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}'>Assign Plan</button>
-                                    <ul class="dropdown-menu" id="bulkAssignPlanDropdown">
-                                        <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Starter');return false;">Starter</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Professional');return false;">Professional</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Enterprise');return false;">Enterprise</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Custom');return false;">Custom</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('Trial Plan (Free Onboarding Trial)');return false;">Trial Plan (Free Onboarding Trial)</a></li>
-                                    </ul>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1661,7 +1687,7 @@
                         <div class="ps-sidebar-card glass-card p-3" style="border-radius: 16px;">
                             <div class="px-2 py-2 mb-2 border-bottom d-flex align-items-center justify-content-between" style="border-color: var(--ds-border-color)!important;">
                                 <span class="text-xs fw-bold text-uppercase text-secondary" style="letter-spacing: 0.06em;">SETTINGS MATRIX</span>
-                                <span class="badge bg-secondary-subtle text-secondary" style="font-size: 10px;">4 Modules</span>
+                                <span class="badge bg-secondary-subtle text-secondary fw-bold" style="font-size: 10px;">4 Modules</span>
                             </div>
                             <div class="ps-nav-list" id="ps-settings-nav">
                                 <button type="button" class="ps-nav-item active" data-tab="general" onclick="PlatformSettings.switchTab('general', this)">
@@ -2568,9 +2594,9 @@
                             </div>
                             <div style="flex: 2 1 240px; min-width: 200px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Search Event Logs</label>
-                                <div class="ds-search-inline w-100" style="border: 1px solid var(--ds-border-color, #cbd5e1); border-radius: 20px; padding: 0 14px; background: var(--ds-bg-surface, #ffffff); display: flex; align-items: center; height: 38px;">
-                                    <i data-lucide="search" class="text-muted me-2" style="width:14px;height:14px;flex-shrink:0;"></i>
-                                    <input type="text" class="ds-input text-xs" id="superAuditSearchQ" style="height:100%; border:none !important; background:transparent !important; padding:0 !important; box-shadow:none !important; outline:none !important; width:100%;" placeholder="Search actor, ID, IP, location..." oninput="SuperAdmin.debounceAuditSearch(this.value)">
+                                <div class="position-relative w-100" style="height: 38px;">
+                                    <i data-lucide="search" class="text-muted" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; pointer-events: none; opacity: 0.6;"></i>
+                                    <input type="text" class="ds-input text-xs w-100" id="superAuditSearchQ" style="height: 38px; padding-left: 34px !important; background: transparent !important; border: 1px solid var(--ds-border-color) !important; border-radius: var(--ds-radius-md, 8px) !important;" placeholder="Search actor, ID, IP, location..." oninput="SuperAdmin.debounceAuditSearch(this.value)" autocomplete="off">
                                 </div>
                             </div>
                             <div style="flex: 1 1 140px; min-width: 130px;">
@@ -2706,231 +2732,7 @@
 
                 </div>
 
-                <!-- 7. Subscriptions — Enterprise Subscription Management -->
-                <div id="subscriptionsView" class="view-section">
 
-                    <!-- Inline styles scoped to this view -->
-                    <style>
-                    #subscriptionsView .sub-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.85rem;margin-bottom:1.2rem}
-                    #subscriptionsView .sub-kpi-card{background:var(--ds-surface);border:1px solid var(--ds-border-color);border-radius:12px;padding:1rem 1.1rem;position:relative;overflow:hidden;cursor:pointer;transition:transform .18s,box-shadow .18s}
-                    #subscriptionsView .sub-kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.09)}
-                    #subscriptionsView .kpi-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:.5rem}
-                    #subscriptionsView .kpi-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ds-text-secondary);margin-bottom:.15rem}
-                    #subscriptionsView .kpi-value{font-size:1.45rem;font-weight:700;color:var(--ds-text-main);line-height:1}
-                    #subscriptionsView .kpi-accent{position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 12px 12px}
-                    #subscriptionsView .sub-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
-                    #subscriptionsView .sub-badge::before{content:'';width:6px;height:6px;border-radius:50%}
-                    #subscriptionsView .sub-badge.active{background:rgba(16,185,129,.12);color:#10b981}
-                    #subscriptionsView .sub-badge.active::before{background:#10b981}
-                    #subscriptionsView .sub-badge.trial{background:rgba(245,158,11,.12);color:#f59e0b}
-                    #subscriptionsView .sub-badge.trial::before{background:#f59e0b}
-                    #subscriptionsView .sub-badge.expired{background:rgba(239,68,68,.12);color:#ef4444}
-                    #subscriptionsView .sub-badge.expired::before{background:#ef4444}
-                    #subscriptionsView .sub-badge.cancelled{background:rgba(107,114,128,.12);color:#6b7280}
-                    #subscriptionsView .sub-badge.cancelled::before{background:#6b7280}
-                    #subscriptionsView .sub-badge.suspended{background:rgba(139,92,246,.12);color:#8b5cf6}
-                    #subscriptionsView .sub-badge.suspended::before{background:#8b5cf6}
-                    #subscriptionsView .sub-badge.pending{background:rgba(59,130,246,.12);color:#3b82f6}
-                    #subscriptionsView .sub-badge.pending::before{background:#3b82f6}
-                    #subscriptionsView .plan-chip{display:inline-flex;align-items:center;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-                    #subscriptionsView .plan-chip.starter{background:rgba(99,102,241,.1);color:#6366f1}
-                    #subscriptionsView .plan-chip.professional{background:rgba(59,130,246,.1);color:#3b82f6}
-                    #subscriptionsView .plan-chip.enterprise{background:rgba(16,185,129,.1);color:#059669}
-                    #subscriptionsView .plan-chip.custom{background:rgba(245,158,11,.1);color:#d97706}
-                    #subscriptionsView .pay-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
-                    #subscriptionsView .pay-badge.paid{background:rgba(16,185,129,.1);color:#10b981}
-                    #subscriptionsView .pay-badge.pending{background:rgba(59,130,246,.1);color:#3b82f6}
-                    #subscriptionsView .pay-badge.failed{background:rgba(239,68,68,.1);color:#ef4444}
-                    #subscriptionsView .pay-badge.overdue{background:rgba(249,115,22,.1);color:#f97316}
-                    #subscriptionsView .sub-filter-bar{position:relative;z-index:2 !important;overflow:visible !important;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.8rem 1rem;background:var(--ds-surface);border:1px solid var(--ds-border-color);border-radius:10px;margin-bottom:.85rem}
-                    #subscriptionsView .filter-chip-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;background:var(--ds-surface);border:1px solid var(--ds-border-color);cursor:pointer;color:var(--ds-text-main);transition:all .15s}
-                    #subscriptionsView .filter-chip-btn:hover,#subscriptionsView .filter-chip-btn.active{background:var(--ds-primary);color:#fff;border-color:var(--ds-primary)}
-                    #subscriptionsView .filter-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ds-text-secondary)}
-                    #subscriptionsView .bulk-bar{position:relative;z-index:3 !important;overflow:visible !important;display:none;align-items:center;gap:.65rem;padding:.55rem .9rem;background:var(--ds-primary);border-radius:9px;margin-bottom:.75rem;color:#fff;font-size:13px}
-                    #subscriptionsView .bulk-bar.show{display:flex}
-                    #subscriptionsView .bulk-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:3px 10px;border-radius:6px;font-size:12px;cursor:pointer;transition:background .15s}
-                    #subscriptionsView .bulk-btn:hover{background:rgba(255,255,255,.35)}
-                    #subscriptionsView .usage-bar{height:5px;border-radius:3px;background:var(--ds-border-color);overflow:hidden;width:56px}
-                    #subscriptionsView .usage-fill{height:100%;border-radius:3px;transition:width .4s}
-                    /* Drawer */
-                    #subDetailOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100040 !important;display:none;opacity:0;transition:opacity .2s}
-                    #subDetailOverlay.open{display:block;opacity:1}
-                    #subDetailDrawer{position:fixed;right:0;top:0;bottom:0;width:min(660px,100vw);background:var(--ds-bg-card) !important;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-left:1px solid var(--ds-border-color);z-index:100050 !important;box-shadow:none;transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
-                    #subDetailDrawer.open{transform:translateX(0);box-shadow:-4px 0 28px rgba(0,0,0,.16)}
-                    .sdd-header{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;border-bottom:1px solid var(--ds-border-color);position:sticky;top:0;background:var(--ds-surface);z-index:2}
-                    .sdd-body{padding:1.3rem 1.4rem;flex:1}
-                    .sdd-section{margin-bottom:1.4rem}
-                    .sdd-section-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ds-text-secondary);margin-bottom:.6rem}
-                    .sdd-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .8rem}
-                    .sdd-item .di-l{font-size:10.5px;color:var(--ds-text-secondary);margin-bottom:1px}
-                    .sdd-item .di-v{font-size:13px;font-weight:500;color:var(--ds-text-main)}
-                    /* Plan compare */
-                    .pc-card{border:2px solid var(--ds-border-color);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:all .15s}
-                    .pc-card:hover,.pc-card.sel{border-color:var(--ds-primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-                    .pc-card .pc-name{font-size:13px;font-weight:700;margin-bottom:.3rem}
-                    .pc-card .pc-price{font-size:1.3rem;font-weight:700}
-                    .pc-card .pc-feat{font-size:11px;color:var(--ds-text-secondary);line-height:1.7}
-                    /* Invoice */
-                    .inv-doc{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:1.5rem;background:#fff;color:#1a1a2e}
-                    .inv-doc .inv-hdr{display:flex;justify-content:space-between;margin-bottom:1.5rem}
-                    .inv-doc table{width:100%;border-collapse:collapse;margin-top:1rem}
-                    .inv-doc th{background:#f0f4f8;padding:7px 10px;font-size:11px;text-align:left}
-                    .inv-doc td{border-bottom:1px solid #e5e7eb;padding:7px 10px;font-size:12px}
-                    /* Wizard steps */
-                    .wiz-steps{display:flex;border-bottom:1px solid var(--ds-border-color);margin-bottom:1.2rem}
-                    .wiz-step{flex:1;text-align:center;padding:.5rem .2rem .8rem;font-size:11.5px;color:var(--ds-text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
-                    .wiz-step.active{color:var(--ds-primary);border-color:var(--ds-primary);font-weight:600}
-                    .wiz-step.done{color:#10b981;border-color:#10b981}
-                    .wiz-step-num{width:20px;height:20px;border-radius:50%;background:var(--ds-border-color);color:var(--ds-text-secondary);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-bottom:3px}
-                    .wiz-step.active .wiz-step-num{background:var(--ds-primary);color:#fff}
-                    .wiz-step.done .wiz-step-num{background:#10b981;color:#fff}
-                    .wiz-panel{display:none}.wiz-panel.active{display:block}
-                    </style>
-
-                    <div class="view-header-actions" style="display:none;">
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.loadSubscriptions()">
-                                <i data-lucide="refresh-cw" style="width:13px;height:13px;" id="subRefreshIcon"></i> Refresh
-                            </button>
-                            <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.subExportCSV()">
-                                <i data-lucide="download" style="width:13px;height:13px;"></i> Export CSV
-                            </button>
-                            <button class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.openSubCreateWizard()">
-                                <i data-lucide="plus" style="width:13px;height:13px;"></i> New Subscription
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- ── KPI CARDS ── -->
-                    <div class="sub-kpi-grid" id="subKpiGrid">
-                        <!-- JS injected -->
-                    </div>
-
-                    <!-- ── FILTER BAR ── -->
-                    <div class="sub-filter-bar">
-                        <!-- Search -->
-                        <div style="position:relative;flex:1 1 220px;max-width:300px;">
-                            <i data-lucide="search" style="width:13px;height:13px;position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:.45;"></i>
-                            <input type="search" id="subSearchInput" class="ds-input" placeholder="Search org, ID, email, plan…" style="padding-left:30px;height:34px;font-size:12.5px;" oninput="SuperAdmin.subDebounceSearch(this.value)" autocomplete="new-password" data-lpignore="true" spellcheck="false">
-                        </div>
-                        <div style="height:22px;width:1px;background:var(--ds-border-color);margin:0 4px;"></div>
-                        <select class="ds-input" id="subStatusFilter" style="height:34px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 135px; width:auto;" onchange="SuperAdmin.setSubFilter('status',this.value)">
-                            <option value="">All Status</option>
-                            <option value="Active">Active</option>
-                            <option value="Trial">Trial</option>
-                            <option value="Expired">Expired</option>
-                            <option value="Cancelled">Cancelled</option>
-                            <option value="Suspended">On Hold</option>
-                        </select>
-                        <div style="height:22px;width:1px;background:var(--ds-border-color);margin:0 4px;"></div>
-                        <select class="ds-input" id="subPlanFilter" style="height:34px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 120px; width:auto;" onchange="SuperAdmin.setSubFilter('plan',this.value)">
-                            <option value="">All Plans</option>
-                            <option value="Starter">Starter</option>
-                            <option value="Professional">Professional</option>
-                            <option value="Enterprise">Enterprise</option>
-                            <option value="Custom">Custom</option>
-                            <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
-                        </select>
-                        <select class="ds-input" id="subCycleFilter" style="height:34px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 125px; width:auto;" onchange="SuperAdmin.setSubFilter('billing_cycle',this.value)">
-                            <option value="">All Cycles</option>
-                            <option value="Monthly">Monthly</option>
-                            <option value="Quarterly">Quarterly</option>
-                            <option value="Yearly">Yearly</option>
-                            <option value="Lifetime">Lifetime</option>
-                        </select>
-                        <select class="ds-input" id="subPayFilter" style="height:34px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 145px; width:auto;" onchange="SuperAdmin.setSubFilter('payment_status',this.value)">
-                            <option value="">All Payments</option>
-                            <option value="Paid">Paid</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Failed">Failed</option>
-                            <option value="Overdue">Overdue</option>
-                        </select>
-                        <select class="ds-input" id="subRenewalFilter" style="height:34px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 145px; width:auto;" onchange="SuperAdmin.setSubFilter('renewal_window',this.value)">
-                            <option value="">All Renewals</option>
-                            <option value="7d">Next 7 Days</option>
-                            <option value="30d">Next 30 Days</option>
-                            <option value="90d">Next 90 Days</option>
-                            <option value="expired">Expired</option>
-                        </select>
-                    </div>
-
-                    <!-- ── BULK TOOLBAR ── -->
-                    <div class="bulk-bar" id="subBulkBar">
-                        <i data-lucide="check-square" style="width:15px;height:15px;"></i>
-                        <span id="subBulkCount">0</span> selected
-                        <button class="bulk-btn" onclick="SuperAdmin.subBulkAction('renew')"><i data-lucide="refresh-cw" style="width:11px;height:11px;"></i> Renew</button>
-                        <button class="bulk-btn" onclick="SuperAdmin.subBulkAction('reminder')"><i data-lucide="bell" style="width:11px;height:11px;"></i> Reminder</button>
-                        <button class="bulk-btn" onclick="SuperAdmin.subBulkAction('assign-plan')"><i data-lucide="layers" style="width:11px;height:11px;"></i> Assign Plan</button>
-
-                        <span style="margin-left:auto;cursor:pointer;opacity:.7;" onclick="SuperAdmin.clearSubSelection()"><i data-lucide="x" style="width:13px;height:13px;"></i></span>
-                    </div>
-
-                    <!-- ── TABLE CARD ── -->
-                    <div class="ds-card fade-in" style="position: relative; z-index: 20 !important;">
-                        <div class="ds-card-header d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center gap-3">
-                                <h5 class="card-title mb-0">Subscriptions</h5>
-                                <span class="text-xs text-muted" id="subscriptionsCount">Loading…</span>
-                            </div>
-                        </div>
-                        <div class="ds-card-body p-0">
-                            <div class="table-responsive" style="max-height:560px;overflow-y:auto;">
-                                <table class="ds-table" id="subscriptionsTable" style="min-width:900px;">
-                                    <thead>
-                                        <tr>
-                                            <th style="width:34px;"><input type="checkbox" id="subSelectAll" onchange="SuperAdmin.subToggleAll(this)"></th>
-                                            <th onclick="SuperAdmin.subSort('subscription_uid')" style="cursor:pointer;">Sub ID <span id="ssort_subscription_uid" style="opacity:.4;font-size:10px;">↕</span></th>
-                                            <th>Organization</th>
-                                            <th>Plan</th>
-                                            <th>Cycle</th>
-                                            <th onclick="SuperAdmin.subSort('end_date')" style="cursor:pointer;">Expiry <span id="ssort_end_date" style="opacity:.4;font-size:10px;">↕</span></th>
-                                            <th onclick="SuperAdmin.subSort('renewal_date')" style="cursor:pointer;">Renewal <span id="ssort_renewal_date" style="opacity:.4;font-size:10px;">↕</span></th>
-                                            <th>Sub Status</th>
-                                            <th>Pay Status</th>
-                                            <th onclick="SuperAdmin.subSort('final_amount')" style="cursor:pointer;">Amount <span id="ssort_final_amount" style="opacity:.4;font-size:10px;">↕</span></th>
-                                            <th class="text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="subscriptionsBody">
-                                        <tr><td colspan="11" class="text-center py-5 text-muted text-xs"><span class="spinner-border spinner-border-sm me-2"></span>Loading…</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <!-- Pagination -->
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3" style="border-top:1px solid var(--ds-border-color);">
-                                <div class="text-xs text-muted" id="subPagInfo">—</div>
-                                <div class="d-flex gap-1 align-items-center">
-                                    <select class="ds-input" id="subPerPage" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SuperAdmin.subSetPerPage(this.value)">
-                                        <option value="5">5</option>
-                                        <option value="10">10</option>
-                                        <option value="20" selected>20</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-                                    <span class="text-xs text-muted ms-1">per page</span>
-                                    <div id="subPagBtns" class="ms-2 d-flex gap-1"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div><!-- /subscriptionsView -->
-
-                <!-- ── SUBSCRIPTION DETAIL DRAWER (DOM-level, outside view-section) ── -->
-                <div id="subDetailOverlay" onclick="SuperAdmin.closeSubDrawer()"></div>
-                <div id="subDetailDrawer" role="dialog" aria-modal="true">
-                    <div class="sdd-header">
-                        <div>
-                            <div class="fw-bold" id="sddTitle">Subscription Detail</div>
-                            <div class="text-xs text-muted" id="sddSub">—</div>
-                        </div>
-                        <div class="d-flex gap-2 align-items-center">
-                            <span id="sddStatusBadge"></span>
-                            <button class="ds-btn ds-btn-secondary btn-sm" onclick="SuperAdmin.closeSubDrawer()"><i data-lucide="x" style="width:13px;height:13px;"></i></button>
-                        </div>
-                    </div>
-                    <div class="sdd-body" id="sddBody"><!-- JS injected --></div>
-                </div>
 
                 <!-- ── AUDIT LOG DETAIL DRAWER (DOM-level, outside view-section) ── -->
                 <div class="audit-drawer-overlay" id="superAuditDrawerOverlay" onclick="SuperAdmin.closeAuditDrawer()"></div>
@@ -3311,7 +3113,6 @@
                                     <option value="">All Status</option>
                                     <option value="Active">Active</option>
                                     <option value="Inactive">Inactive</option>
-                                    <option value="Coming Soon">Coming Soon</option>
                                 </select>
                                 <select class="ds-input" id="filterPlanType" style="height:36px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 110px; width:auto;" onchange="SuperAdmin.setPlanFilter('plan_type',this.value)">
                                     <option value="">All Types</option>
@@ -4326,30 +4127,147 @@
                                 <!-- 4. Contact Directory -->
                                 <div class="tab-pane fade" id="doc-sa-contacts">
                                     <div class="row g-3">
-                                        <div class="col-md-4">
-                                            <label class="ds-label">General Info Email</label>
-                                            <input type="email" class="ds-input" id="sa-di-email-general" placeholder="e.g. info@qcms.com">
-                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Public landing page contact links & general email footers. <b>What to type:</b> Main public email address.</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="ds-label">Support Email</label>
-                                            <input type="email" class="ds-input" id="sa-di-email-support" placeholder="e.g. support@qcms.com">
-                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Support ticket emails, user help drawer, & SLA guides. <b>What to type:</b> Customer support desk email.</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="ds-label">Billing &amp; Accounts Email</label>
-                                            <input type="email" class="ds-input" id="sa-di-email-billing" placeholder="e.g. billing@qcms.com">
-                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Subscription receipts, tax invoices, & billing alerts. <b>What to type:</b> Accounts and billing department email.</div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">General Info Email &amp; Sender Display Name</label>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <input type="email" class="ds-input" id="sa-di-email-general" placeholder="e.g. info@qcms.com">
+                                                        <span class="text-xxs text-secondary">Email Address</span>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="ds-input" id="sa-di-sender-general" placeholder="e.g. IFQM General Info">
+                                                        <span class="text-xxs text-secondary">Sender Display Label / App Name</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Public landing page contact links &amp; general email headers.</div>
+                                            </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="ds-label">General Support Hotline</label>
-                                            <input type="text" class="ds-input" id="sa-di-phone-general" placeholder="e.g. +1 (800) 555-0199">
-                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Standard inspection report headers & help contact cards. <b>What to type:</b> Customer service phone number.</div>
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">Support Email &amp; Sender Display Name</label>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <input type="email" class="ds-input" id="sa-di-email-support" placeholder="e.g. support@qcms.com">
+                                                        <span class="text-xxs text-secondary">Email Address</span>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="ds-input" id="sa-di-sender-support" placeholder="e.g. IFQM Support Desk">
+                                                        <span class="text-xxs text-secondary">Sender Display Label / App Name</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Support ticket responses, help drawer, &amp; SLA guides.</div>
+                                            </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="ds-label">24/7 Emergency Technical Support</label>
-                                            <input type="text" class="ds-input" id="sa-di-phone-emergency" placeholder="e.g. +1 (800) 555-0100">
-                                            <div class="text-xxs text-secondary mt-1"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Priority SLA support drawer & critical incident notifications. <b>What to type:</b> 24/7 technical hotline number.</div>
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">Billing &amp; Accounts Email &amp; Sender Display Name</label>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <input type="email" class="ds-input" id="sa-di-email-billing" placeholder="e.g. billing@qcms.com">
+                                                        <span class="text-xxs text-secondary">Email Address</span>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="ds-input" id="sa-di-sender-billing" placeholder="e.g. IFQM Accounts &amp; Billing">
+                                                        <span class="text-xxs text-secondary">Sender Display Label / App Name</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Subscription receipts, tax invoices, &amp; billing alerts.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">Security &amp; OTP Email &amp; Sender Display Name</label>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <input type="email" class="ds-input" id="sa-di-email-otp" placeholder="e.g. otp-auth@qcms.com">
+                                                        <span class="text-xxs text-secondary">Email Address</span>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="ds-input" id="sa-di-sender-otp" placeholder="e.g. IFQM OTP Verification">
+                                                        <span class="text-xxs text-secondary">Sender Display Label / App Name</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> 2FA login verification, password reset, &amp; registration OTP dispatches.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">Contact / Inquiry Email &amp; Sender Display Name</label>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <input type="email" class="ds-input" id="sa-di-email-contact" placeholder="e.g. contact@qcms.com">
+                                                        <span class="text-xxs text-secondary">Email Address</span>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="ds-input" id="sa-di-sender-contact" placeholder="e.g. IFQM Business Inquiries">
+                                                        <span class="text-xxs text-secondary">Sender Display Label / App Name</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Public contact forms, inquiry routers, &amp; partner communications.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">System Alerts Email &amp; Sender Display Name</label>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <input type="email" class="ds-input" id="sa-di-email-alerts" placeholder="e.g. alerts@qcms.com">
+                                                        <span class="text-xxs text-secondary">Email Address</span>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="ds-input" id="sa-di-sender-alerts" placeholder="e.g. IFQM System Alerts">
+                                                        <span class="text-xxs text-secondary">Sender Display Label / App Name</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> System health alerts, security monitoring warnings, &amp; operational notifications.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">Feedback &amp; Suggestions Email &amp; Sender Display Name</label>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <input type="email" class="ds-input" id="sa-di-email-feedback" placeholder="e.g. feedback@qcms.com">
+                                                        <span class="text-xxs text-secondary">Email Address</span>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="ds-input" id="sa-di-sender-feedback" placeholder="e.g. IFQM Product Feedback">
+                                                        <span class="text-xxs text-secondary">Sender Display Label / App Name</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Product feedback popups, CSAT surveys, &amp; user suggestion drawers.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">User Onboarding &amp; Welcome Email &amp; Sender Display Name</label>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <input type="email" class="ds-input" id="sa-di-email-onboarding" placeholder="e.g. onboarding@qcms.com">
+                                                        <span class="text-xxs text-secondary">Email Address</span>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="ds-input" id="sa-di-sender-onboarding" placeholder="e.g. IFQM User Onboarding">
+                                                        <span class="text-xxs text-secondary">Sender Display Label / App Name</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> New user credential emails, welcome dispatches, &amp; team invites.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">General Support Hotline</label>
+                                                <input type="text" class="ds-input" id="sa-di-phone-general" placeholder="e.g. +1 (800) 555-0199">
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Standard inspection report headers &amp; help contact cards.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02); border:1px solid var(--ds-border-color);">
+                                                <label class="ds-label fw-bold text-main">24/7 Emergency Technical Support</label>
+                                                <input type="text" class="ds-input" id="sa-di-phone-emergency" placeholder="e.g. +1 (800) 555-0100">
+                                                <div class="text-xxs text-secondary mt-1.5"><i data-lucide="info" style="width:11px;height:11px;" class="me-1"></i> <b>Where it shows:</b> Priority SLA support drawer &amp; critical incident notifications.</div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="mt-4"><button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="btnSaveContactDirectory" onclick="saveContactDirectory(this)">Save Contact Directory</button></div>
@@ -5741,7 +5659,26 @@
         }
 
         const getV = (id) => (document.getElementById(id)?.value || '').trim();
-        const payload = { general_email: getV('sa-di-email-general'), support_email: getV('sa-di-email-support'), billing_email: getV('sa-di-email-billing'), general_phone: getV('sa-di-phone-general'), emergency_phone: getV('sa-di-phone-emergency') };
+        const payload = { 
+            general_email: getV('sa-di-email-general'), 
+            general_sender_name: getV('sa-di-sender-general'),
+            support_email: getV('sa-di-email-support'), 
+            support_sender_name: getV('sa-di-sender-support'),
+            billing_email: getV('sa-di-email-billing'), 
+            billing_sender_name: getV('sa-di-sender-billing'),
+            otp_email: getV('sa-di-email-otp'), 
+            otp_sender_name: getV('sa-di-sender-otp'),
+            contact_email: getV('sa-di-email-contact'), 
+            contact_sender_name: getV('sa-di-sender-contact'),
+            alerts_email: getV('sa-di-email-alerts'), 
+            alerts_sender_name: getV('sa-di-sender-alerts'),
+            feedback_email: getV('sa-di-email-feedback'), 
+            feedback_sender_name: getV('sa-di-sender-feedback'),
+            onboarding_email: getV('sa-di-email-onboarding'), 
+            onboarding_sender_name: getV('sa-di-sender-onboarding'),
+            general_phone: getV('sa-di-phone-general'), 
+            emergency_phone: getV('sa-di-phone-emergency') 
+        };
 
         try {
             const token = _diGetToken();
@@ -5818,7 +5755,15 @@
     // DocIdentityManagerSA — SA-scoped wrapper that targets sa-di-* field IDs
     window.DocIdentityManagerSA = {
         data: null,
-        setValue(id, val) { const el = document.getElementById('sa-' + id); if (el) el.value = val || ''; },
+        setValue(id, val) { 
+            const targetId = id.startsWith('sa-') ? id : 'sa-' + id;
+            const el = document.getElementById(targetId); 
+            if (el) el.value = val || ''; 
+        },
+        getVal(id) { 
+            const targetId = id.startsWith('sa-') ? id : 'sa-' + id;
+            return document.getElementById(targetId)?.value || ''; 
+        },
         async init() {
             try {
                 const res = await _diFetch('/api/document-identity/all');
@@ -5843,11 +5788,24 @@
                     this.setValue('di-country', ctx.country);
                     this.setValue('di-state', ctx.state);
                     this.setValue('di-city-pin', ctx.city_pin);
-                    this.setValue('di-email-general', ctx.general_email);
-                    this.setValue('di-email-support', ctx.support_email);
-                    this.setValue('di-email-billing', ctx.billing_email);
-                    this.setValue('di-phone-general', ctx.general_phone);
-                    this.setValue('di-phone-emergency', ctx.emergency_phone || ctx.emergency_contact);
+                    this.setValue('sa-di-email-general', ctx.general_email);
+                    this.setValue('sa-di-sender-general', ctx.general_sender_name || 'QCMS General Info');
+                    this.setValue('sa-di-email-support', ctx.support_email);
+                    this.setValue('sa-di-sender-support', ctx.support_sender_name || 'QCMS Customer Support');
+                    this.setValue('sa-di-email-billing', ctx.billing_email);
+                    this.setValue('sa-di-sender-billing', ctx.billing_sender_name || 'QCMS Accounts & Billing');
+                    this.setValue('sa-di-email-otp', ctx.otp_email || 'otp-auth@qcms.com');
+                    this.setValue('sa-di-sender-otp', ctx.otp_sender_name || 'QCMS OTP Verification');
+                    this.setValue('sa-di-email-contact', ctx.contact_email || 'contact@qcms.com');
+                    this.setValue('sa-di-sender-contact', ctx.contact_sender_name || 'QCMS Business Inquiries');
+                    this.setValue('sa-di-email-alerts', ctx.alerts_email || 'alerts@qcms.com');
+                    this.setValue('sa-di-sender-alerts', ctx.alerts_sender_name || 'QCMS System Alerts');
+                    this.setValue('sa-di-email-feedback', ctx.feedback_email || 'feedback@qcms.com');
+                    this.setValue('sa-di-sender-feedback', ctx.feedback_sender_name || 'QCMS Product Feedback');
+                    this.setValue('sa-di-email-onboarding', ctx.onboarding_email || 'onboarding@qcms.com');
+                    this.setValue('sa-di-sender-onboarding', ctx.onboarding_sender_name || 'QCMS User Onboarding');
+                    this.setValue('sa-di-phone-general', ctx.general_phone);
+                    this.setValue('sa-di-phone-emergency', ctx.emergency_phone || ctx.emergency_contact);
 
                     // Logo preview & badge
                     const logoBadge = document.getElementById('sa-di-logo-status-badge');
@@ -5898,7 +5856,6 @@
                 logoPlaceholder.classList.add('d-none');
             }
         },
-        getVal(id) { return document.getElementById('sa-' + id)?.value || ''; },
         applyBrandingToUI(ctx) {
             if (!ctx) return;
             const shortName = (ctx.software_short_name || 'QCMS').trim();
@@ -6005,11 +5962,24 @@
                     };
                 } else if (section === 'contacts') {
                     payload = { 
-                        general_email: getVal('di-email-general'), 
-                        support_email: getVal('di-email-support'), 
-                        billing_email: getVal('di-email-billing'), 
-                        general_phone: getVal('di-phone-general'), 
-                        emergency_phone: getVal('di-phone-emergency') 
+                        general_email: getVal('di-email-general') || getVal('sa-di-email-general'), 
+                        general_sender_name: getVal('di-sender-general') || getVal('sa-di-sender-general'),
+                        support_email: getVal('di-email-support') || getVal('sa-di-email-support'), 
+                        support_sender_name: getVal('di-sender-support') || getVal('sa-di-sender-support'),
+                        billing_email: getVal('di-email-billing') || getVal('sa-di-email-billing'), 
+                        billing_sender_name: getVal('di-sender-billing') || getVal('sa-di-sender-billing'),
+                        otp_email: getVal('di-email-otp') || getVal('sa-di-email-otp'), 
+                        otp_sender_name: getVal('di-sender-otp') || getVal('sa-di-sender-otp'),
+                        contact_email: getVal('di-email-contact') || getVal('sa-di-email-contact'), 
+                        contact_sender_name: getVal('di-sender-contact') || getVal('sa-di-sender-contact'),
+                        alerts_email: getVal('di-email-alerts') || getVal('sa-di-email-alerts'), 
+                        alerts_sender_name: getVal('di-sender-alerts') || getVal('sa-di-sender-alerts'),
+                        feedback_email: getVal('di-email-feedback') || getVal('sa-di-email-feedback'), 
+                        feedback_sender_name: getVal('di-sender-feedback') || getVal('sa-di-sender-feedback'),
+                        onboarding_email: getVal('di-email-onboarding') || getVal('sa-di-email-onboarding'), 
+                        onboarding_sender_name: getVal('di-sender-onboarding') || getVal('sa-di-sender-onboarding'),
+                        general_phone: getVal('di-phone-general') || getVal('sa-di-phone-general'), 
+                        emergency_phone: getVal('di-phone-emergency') || getVal('sa-di-phone-emergency') 
                     };
                 }
 
@@ -6366,51 +6336,126 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Document Identity & Branding Dark Mode Contrast Fixes */
+/* Document Identity & Branding Tab Styling (Light Mode Default) */
 #doc-identity-tabs-sa {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(10px);
+    background: var(--ds-surface-secondary, #f8fafc) !important;
+    border: 1px solid var(--ds-border-color, #e2e8f0) !important;
 }
 
 #doc-identity-tabs-sa .nav-link {
-    color: rgba(255, 255, 255, 0.75) !important;
+    color: var(--ds-text-secondary, #475569) !important;
     font-weight: 600;
     transition: all 0.2s ease;
     border: 1px solid transparent;
 }
 
 #doc-identity-tabs-sa .nav-link:hover {
-    color: #ffffff !important;
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: var(--ds-text-primary, #0f172a) !important;
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
 #doc-identity-tabs-sa .nav-link.active {
     color: #ffffff !important;
     background: var(--ds-primary, #2563eb) !important;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-#doc-identityView .text-secondary,
-#doc-identityView .text-muted,
-#doc-identityView .text-xxs {
-    color: rgba(255, 255, 255, 0.7) !important;
+/* Document Identity & Branding Dark Mode Contrast Overrides */
+[data-theme="dark"] #doc-identity-tabs-sa,
+html[data-theme="dark"] #doc-identity-tabs-sa,
+[data-bs-theme="dark"] #doc-identity-tabs-sa,
+body.dark-mode #doc-identity-tabs-sa,
+.dark-mode #doc-identity-tabs-sa {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(10px);
 }
 
-#doc-identityView .text-secondary b,
-#doc-identityView .text-muted b,
-#doc-identityView .text-secondary strong,
-#doc-identityView .text-muted strong {
+[data-theme="dark"] #doc-identity-tabs-sa .nav-link,
+html[data-theme="dark"] #doc-identity-tabs-sa .nav-link,
+[data-bs-theme="dark"] #doc-identity-tabs-sa .nav-link,
+body.dark-mode #doc-identity-tabs-sa .nav-link,
+.dark-mode #doc-identity-tabs-sa .nav-link {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+[data-theme="dark"] #doc-identity-tabs-sa .nav-link:hover,
+html[data-theme="dark"] #doc-identity-tabs-sa .nav-link:hover,
+[data-bs-theme="dark"] #doc-identity-tabs-sa .nav-link:hover,
+body.dark-mode #doc-identity-tabs-sa .nav-link:hover,
+.dark-mode #doc-identity-tabs-sa .nav-link:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-theme="dark"] #doc-identity-tabs-sa .nav-link.active,
+html[data-theme="dark"] #doc-identity-tabs-sa .nav-link.active,
+[data-bs-theme="dark"] #doc-identity-tabs-sa .nav-link.active,
+body.dark-mode #doc-identity-tabs-sa .nav-link.active,
+.dark-mode #doc-identity-tabs-sa .nav-link.active {
+    color: #ffffff !important;
+    background: #0284c7 !important;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-theme="dark"] #doc-identityView .text-secondary,
+[data-theme="dark"] #doc-identityView .text-muted,
+[data-theme="dark"] #doc-identityView .text-xxs,
+html[data-theme="dark"] #doc-identityView .text-secondary,
+html[data-theme="dark"] #doc-identityView .text-muted,
+html[data-theme="dark"] #doc-identityView .text-xxs,
+[data-bs-theme="dark"] #doc-identityView .text-secondary,
+[data-bs-theme="dark"] #doc-identityView .text-muted,
+[data-bs-theme="dark"] #doc-identityView .text-xxs,
+body.dark-mode #doc-identityView .text-secondary,
+body.dark-mode #doc-identityView .text-muted,
+body.dark-mode #doc-identityView .text-xxs,
+.dark-mode #doc-identityView .text-secondary,
+.dark-mode #doc-identityView .text-muted,
+.dark-mode #doc-identityView .text-xxs {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+[data-theme="dark"] #doc-identityView .text-secondary b,
+[data-theme="dark"] #doc-identityView .text-muted b,
+[data-theme="dark"] #doc-identityView .text-secondary strong,
+[data-theme="dark"] #doc-identityView .text-muted strong,
+html[data-theme="dark"] #doc-identityView .text-secondary b,
+html[data-theme="dark"] #doc-identityView .text-muted b,
+html[data-theme="dark"] #doc-identityView .text-secondary strong,
+html[data-theme="dark"] #doc-identityView .text-muted strong,
+[data-bs-theme="dark"] #doc-identityView .text-secondary b,
+[data-bs-theme="dark"] #doc-identityView .text-muted b,
+[data-bs-theme="dark"] #doc-identityView .text-secondary strong,
+[data-bs-theme="dark"] #doc-identityView .text-muted strong,
+body.dark-mode #doc-identityView .text-secondary b,
+body.dark-mode #doc-identityView .text-muted b,
+body.dark-mode #doc-identityView .text-secondary strong,
+body.dark-mode #doc-identityView .text-muted strong,
+.dark-mode #doc-identityView .text-secondary b,
+.dark-mode #doc-identityView .text-muted b,
+.dark-mode #doc-identityView .text-secondary strong,
+.dark-mode #doc-identityView .text-muted strong {
     color: #ffffff !important;
 }
 
-#doc-identityView .bg-light-subtle {
-    background: rgba(255, 255, 255, 0.04) !important;
+[data-theme="dark"] #doc-identityView .bg-light-subtle,
+html[data-theme="dark"] #doc-identityView .bg-light-subtle,
+[data-bs-theme="dark"] #doc-identityView .bg-light-subtle,
+body.dark-mode #doc-identityView .bg-light-subtle,
+.dark-mode #doc-identityView .bg-light-subtle {
+    background: rgba(15, 23, 42, 0.6) !important;
 }
 
-#doc-identityView .bg-light {
+[data-theme="dark"] #doc-identityView .bg-light,
+html[data-theme="dark"] #doc-identityView .bg-light,
+[data-bs-theme="dark"] #doc-identityView .bg-light,
+body.dark-mode #doc-identityView .bg-light,
+.dark-mode #doc-identityView .bg-light {
     background: rgba(255, 255, 255, 0.08) !important;
     color: var(--ds-primary, #60a5fa) !important;
 }
@@ -6422,24 +6467,30 @@
 }
 
 #sa-doc-preview-modal .modal-content {
-    background: #0f172a !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+    background: var(--ds-bg-card, #ffffff) !important;
+    color: var(--ds-text-main, #0f172a) !important;
+    border: 1px solid var(--ds-border-color, rgba(0, 0, 0, 0.12)) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25) !important;
 }
 
 #sa-doc-preview-modal .modal-header {
-    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+    border-bottom-color: var(--ds-border-color, rgba(0, 0, 0, 0.08)) !important;
+}
+
+#sa-doc-preview-title {
+    color: var(--ds-text-main, #0f172a) !important;
 }
 
 #sa-preview-modal-tabs button.ds-btn-outline {
-    background: rgba(255, 255, 255, 0.05) !important;
-    color: rgba(255, 255, 255, 0.8) !important;
-    border-color: rgba(255, 255, 255, 0.15) !important;
+    background: var(--ds-bg-secondary, rgba(0, 0, 0, 0.04)) !important;
+    color: var(--ds-text-main, #334155) !important;
+    border-color: var(--ds-border-color, rgba(0, 0, 0, 0.15)) !important;
 }
 
 #sa-preview-modal-tabs button.ds-btn-outline:hover {
-    background: rgba(255, 255, 255, 0.15) !important;
-    color: #ffffff !important;
+    background: var(--ds-primary-light, rgba(37, 99, 235, 0.1)) !important;
+    color: var(--ds-primary, #2563eb) !important;
+    border-color: var(--ds-primary, #2563eb) !important;
 }
 
 #sa-preview-modal-tabs button.ds-btn-primary {
@@ -6450,11 +6501,53 @@
 }
 
 #sa-doc-preview-body {
-    background: rgba(15, 23, 42, 0.8) !important;
+    background: var(--ds-bg-secondary, #f8fafc) !important;
     border-radius: 0 0 16px 16px;
 }
 
 #sa-doc-preview-body > div {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Dark theme overrides for Live Preview Modal */
+html[data-bs-theme="dark"] #sa-doc-preview-modal .modal-content,
+body.dark-mode #sa-doc-preview-modal .modal-content {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-bs-theme="dark"] #sa-doc-preview-modal .modal-header,
+body.dark-mode #sa-doc-preview-modal .modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-bs-theme="dark"] #sa-doc-preview-title,
+body.dark-mode #sa-doc-preview-title {
+    color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] #sa-preview-modal-tabs button.ds-btn-outline,
+body.dark-mode #sa-preview-modal-tabs button.ds-btn-outline {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+html[data-bs-theme="dark"] #sa-preview-modal-tabs button.ds-btn-outline:hover,
+body.dark-mode #sa-preview-modal-tabs button.ds-btn-outline:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] #sa-doc-preview-body,
+body.dark-mode #sa-doc-preview-body {
+    background: rgba(15, 23, 42, 0.8) !important;
+}
+
+html[data-bs-theme="dark"] #sa-doc-preview-body > div,
+body.dark-mode #sa-doc-preview-body > div {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 

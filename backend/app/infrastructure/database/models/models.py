@@ -891,7 +891,7 @@ class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     action = db.Column(db.String(255), nullable=False)
     details = db.Column(db.JSON)
     ip_address = db.Column(db.String(45))
@@ -1027,7 +1027,7 @@ class EmployeePoints(db.Model):
         db.UniqueConstraint('employee_id', 'activity_type', 'activity_reference_id', name='uq_employee_activity_ref'),
     )
 
-    employee = db.relationship('User', foreign_keys=[employee_id], backref='points_entries')
+    employee = db.relationship('User', foreign_keys=[employee_id], backref=db.backref('points_entries', cascade='all, delete-orphan'))
     organization = db.relationship('Organization', backref='points_entries')
     project = db.relationship('Project', backref='points_entries')
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -1036,7 +1036,7 @@ class EmployeePoints(db.Model):
 class EmployeeLeaderboard(db.Model):
     __tablename__ = 'employee_leaderboard'
     id = db.Column(db.Integer, primary_key=True)
-    employee_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True, index=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False, index=True)
     total_points = db.Column(db.Integer, default=0, index=True)
     projects_completed = db.Column(db.Integer, default=0)
@@ -1049,7 +1049,7 @@ class EmployeeLeaderboard(db.Model):
     rank = db.Column(db.Integer, default=0)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    employee = db.relationship('User', backref=db.backref('leaderboard_entry', uselist=False))
+    employee = db.relationship('User', backref=db.backref('leaderboard_entry', uselist=False, cascade='all, delete-orphan'))
     organization = db.relationship('Organization', backref='leaderboard_entries')
 
 
@@ -1329,7 +1329,7 @@ class SubscriptionPayment(db.Model):
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     # FK to new Subscription model (nullable for legacy records)
     subscription_id = db.Column(db.Integer, db.ForeignKey('subscriptions.id'), nullable=True)
-    invoice_id = db.Column(db.Integer, db.ForeignKey('subscription_invoices.id'), nullable=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('subscription_invoices.id', ondelete='SET NULL'), nullable=True)
     amount = db.Column(db.Float, nullable=False)  # base amount (preserved)
     currency = db.Column(db.String(10), default='INR')
     plan_name = db.Column(db.String(50))
@@ -2180,7 +2180,7 @@ class SubscriptionRefund(db.Model):
     status = db.Column(db.String(20), default='Approved')  # Pending, Approved, Rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    invoice = db.relationship('SubscriptionInvoice', backref=db.backref('refund_records', lazy=True))
+    invoice = db.relationship('SubscriptionInvoice', backref=db.backref('refund_records', lazy=True, cascade='all, delete-orphan'))
     payment = db.relationship('SubscriptionPayment', backref=db.backref('refund_records', lazy=True))
 
 class SubscriptionCreditNote(db.Model):
@@ -2639,8 +2639,21 @@ class CompanyContactsConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id', ondelete='CASCADE'), nullable=True)
     general_email = db.Column(db.String(255), default="info@qcms.com")
+    general_sender_name = db.Column(db.String(255), default="QCMS General Info")
     support_email = db.Column(db.String(255), default="support@qcms.com")
+    support_sender_name = db.Column(db.String(255), default="QCMS Customer Support")
     billing_email = db.Column(db.String(255), default="billing@qcms.com")
+    billing_sender_name = db.Column(db.String(255), default="QCMS Accounts & Billing")
+    otp_email = db.Column(db.String(255), default="otp-auth@qcms.com")
+    otp_sender_name = db.Column(db.String(255), default="QCMS OTP Verification")
+    contact_email = db.Column(db.String(255), default="contact@qcms.com")
+    contact_sender_name = db.Column(db.String(255), default="QCMS Business Inquiries")
+    alerts_email = db.Column(db.String(255), default="alerts@qcms.com")
+    alerts_sender_name = db.Column(db.String(255), default="QCMS System Alerts")
+    feedback_email = db.Column(db.String(255), default="feedback@qcms.com")
+    feedback_sender_name = db.Column(db.String(255), default="QCMS Product Feedback")
+    onboarding_email = db.Column(db.String(255), default="onboarding@qcms.com")
+    onboarding_sender_name = db.Column(db.String(255), default="QCMS User Onboarding")
     sales_email = db.Column(db.String(255), default="sales@qcms.com")
     legal_email = db.Column(db.String(255), default="legal@qcms.com")
     compliance_email = db.Column(db.String(255), default="compliance@qcms.com")

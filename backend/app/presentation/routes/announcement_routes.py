@@ -9,6 +9,8 @@ from app.infrastructure.database.models.models import (
     AnnouncementDelivery, AnnouncementRead, AnnouncementAttachment,
     AnnouncementAudit, Notification
 )
+from app.infrastructure.mailer.email_service import EmailUtils
+from app.domain.services.document_branding_service import DocumentBrandingService
 
 announcement_bp = Blueprint('announcements', __name__, url_prefix='/api/announcements')
 
@@ -41,6 +43,31 @@ def log_ann_event(announcement_id, user_id, action, details=None):
     db.session.add(audit)
 
 def ann_to_dict(a, include_body=False):
+    real_read_count = AnnouncementRead.query.filter(
+        AnnouncementRead.announcement_id == a.id,
+        AnnouncementRead.read_at.isnot(None)
+    ).count()
+    if real_read_count == 0 and a.total_read > 0:
+        real_read_count = a.total_read
+
+    real_delivered_count = AnnouncementDelivery.query.filter_by(
+        announcement_id=a.id
+    ).count()
+
+    effective_delivered = max(a.total_delivered or 0, real_delivered_count, real_read_count)
+    if effective_delivered < real_read_count:
+        effective_delivered = real_read_count
+
+    if (a.total_delivered or 0) < effective_delivered or (a.total_read or 0) != real_read_count:
+        a.total_delivered = effective_delivered
+        a.total_read = real_read_count
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    read_pct = min(100.0, round((real_read_count / effective_delivered) * 100, 1)) if effective_delivered > 0 else 0.0
+
     d = {
         "id": a.id,
         "ann_number": a.ann_number,
@@ -57,11 +84,11 @@ def ann_to_dict(a, include_body=False):
         "published_at": a.published_at.isoformat() + "Z" if a.published_at else None,
         "expires_at": a.expires_at.isoformat() + "Z" if a.expires_at else None,
         "timezone": a.timezone,
-        "total_delivered": a.total_delivered,
-        "total_viewed": a.total_viewed,
-        "total_read": a.total_read,
-        "total_clicked": a.total_clicked,
-        "read_pct": round(a.total_read / a.total_delivered * 100, 1) if a.total_delivered > 0 else 0,
+        "total_delivered": effective_delivered,
+        "total_viewed": max(a.total_viewed or 0, real_read_count),
+        "total_read": real_read_count,
+        "total_clicked": a.total_clicked or 0,
+        "read_pct": read_pct,
         "created_by": a.author.username if a.author else "System",
         "created_by_email": a.author.email if a.author else "",
         "created_at": a.created_at.isoformat() + "Z",
@@ -97,9 +124,59 @@ def deliver_in_app(announcement, user_ids):
             sent_at=datetime.utcnow()
         )
         db.session.add(delivery)
-    announcement.total_delivered = AnnouncementDelivery.query.filter_by(
-        announcement_id=announcement.id, channel='in_app', status='Sent'
-    ).count() + len(user_ids)
+
+
+def deliver_email(announcement, user_ids):
+    """Deliver announcement via email channel to target users."""
+    if not user_ids:
+        return 0
+
+    email_provider = None
+    if isinstance(announcement.channels, dict):
+        email_provider = announcement.channels.get('email_provider')
+
+    success_count = 0
+    for uid in user_ids:
+        user = db.session.get(User, uid)
+        if not user or not user.email:
+            continue
+
+        try:
+            subject = f"📢 [{announcement.category or 'Announcement'}] {announcement.title}"
+            body_html = f"""
+                <h2 style="color: #2563eb; margin-top:0;">{announcement.title}</h2>
+                {f'<p style="font-size:15px; color:#475569; font-weight:500;">{announcement.summary}</p>' if announcement.summary else ''}
+                <div style="margin: 20px 0; line-height: 1.6; color: #1e293b;">
+                    {announcement.body}
+                </div>
+                <div style="margin: 25px 0;">
+                    <a href="{EmailUtils._get_app_url()}/admin/super-admin.html?view=announcements&ann={announcement.id}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display:inline-block;">View Announcement</a>
+                </div>
+            """
+            html = DocumentBrandingService.wrap_email_html(body_html, title=announcement.title, org_id=user.org_id)
+            res = EmailUtils.send_email(user.email, subject, html, provider_override=email_provider)
+            
+            status = 'Sent' if res else 'Failed'
+            err_msg = None if res else f"Email provider ({email_provider or 'default'}) failed to deliver."
+            if res:
+                success_count += 1
+        except Exception as e:
+            status = 'Failed'
+            err_msg = str(e)
+
+        delivery = AnnouncementDelivery(
+            announcement_id=announcement.id,
+            org_id=user.org_id,
+            user_id=uid,
+            channel='email',
+            status=status,
+            error_message=err_msg,
+            sent_at=datetime.utcnow()
+        )
+        db.session.add(delivery)
+
+    return success_count
+
 
 def resolve_audience(ann):
     """Return list of user_ids who should receive this announcement."""
@@ -144,6 +221,13 @@ def resolve_audience(ann):
             orgs = Organization.query.filter(Organization.status.ilike(f"%{v}%")).all()
             for org in orgs:
                 us = User.query.filter_by(org_id=org.id).all()
+                user_ids.update(u.id for u in us)
+        elif t == 'user':
+            if v.isdigit():
+                us = User.query.filter_by(id=int(v)).all()
+                user_ids.update(u.id for u in us)
+            else:
+                us = User.query.filter(db.or_(User.username.ilike(f"%{v}%"), User.email.ilike(f"%{v}%"))).all()
                 user_ids.update(u.id for u in us)
     return list(user_ids)
 
@@ -430,10 +514,17 @@ def create_announcement():
 
     log_ann_event(ann.id, user.id, 'CREATED', {"title": title, "status": status})
 
-    # If publishing immediately, deliver in-app
-    if status == 'Published' and ann.channels.get('in_app'):
+    # If publishing immediately, deliver enabled channels
+    if status == 'Published':
         user_ids = resolve_audience(ann)
-        deliver_in_app(ann, user_ids)
+        if ann.channels and ann.channels.get('in_app'):
+            deliver_in_app(ann, user_ids)
+        if ann.channels and ann.channels.get('email'):
+            deliver_email(ann, user_ids)
+        db.session.flush()
+        ann.total_delivered = AnnouncementDelivery.query.filter_by(
+            announcement_id=ann.id, status='Sent'
+        ).count()
 
     db.session.commit()
     return jsonify({"status": "success", "data": ann_to_dict(ann), "message": f"Announcement {ann.ann_number} created."}), 201
@@ -499,9 +590,15 @@ def publish_announcement(ann_id):
     ann.published_at = datetime.utcnow()
     log_ann_event(ann.id, user.id, 'PUBLISHED')
 
+    user_ids = resolve_audience(ann)
     if ann.channels and ann.channels.get('in_app'):
-        user_ids = resolve_audience(ann)
         deliver_in_app(ann, user_ids)
+    if ann.channels and ann.channels.get('email'):
+        deliver_email(ann, user_ids)
+    db.session.flush()
+    ann.total_delivered = AnnouncementDelivery.query.filter_by(
+        announcement_id=ann.id, status='Sent'
+    ).count()
 
     db.session.commit()
     return jsonify({"status": "success", "message": f"{ann.ann_number} published to all targets.", "total_delivered": ann.total_delivered}), 200

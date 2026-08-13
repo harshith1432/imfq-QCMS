@@ -128,7 +128,9 @@ def get_dashboard_stats():
     active_int = IntegrationConfig.query.filter_by(status='Connected').count()
     failed_int = IntegrationConfig.query.filter_by(status='Error').count()
     
-    active_keys = IntegrationApiKey.query.filter_by(status='Active').count()
+    connected_connector_keys = active_int
+    active_dev_keys = IntegrationApiKey.query.filter_by(status='Active').count()
+    active_keys = connected_connector_keys + active_dev_keys
     expired_keys = IntegrationApiKey.query.filter_by(status='Disabled').count()
     
     # Real-time counts computed from database logs for today

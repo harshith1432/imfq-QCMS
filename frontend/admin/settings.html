@@ -79,10 +79,6 @@
                                         <i class="link-icon" data-lucide="palette"></i>
                                         <span data-i18n="settings.nav.branding">Branding & Style</span>
                                     </button>
-                                    <button type="button" class="sidebar-link" data-target="localization" onclick="settingsManager.switchTab('localization', this)">
-                                        <i class="link-icon" data-lucide="languages"></i>
-                                        <span data-i18n="settings.nav.localization">Localization & UX</span>
-                                    </button>
                                 </nav>
                             </div>
 
@@ -105,16 +101,7 @@
                                 </nav>
                             </div>
 
-                            <!-- Governance Group -->
-                            <div class="sidebar-section pb-3" id="gov-group">
-                                <div class="sidebar-section-label" data-i18n="settings.nav.governance">Governance</div>
-                                <nav class="sidebar-nav">
-                                    <a href="/admin/audit-logs.html" class="sidebar-link">
-                                        <i class="link-icon" data-lucide="history"></i>
-                                        <span data-i18n="settings.nav.audit_logs">Audit Logs</span>
-                                    </a>
-                                </nav>
-                            </div>
+
 
                             <!-- Platform Admin Group (Super Admin only) -->
                             <div class="sidebar-section pb-3" id="platform-admin-group" style="display:none;">
@@ -439,64 +426,6 @@
                             </div>
                         </div>
 
-                        <!-- Localization Section -->
-                        <div class="settings-pane" id="pane-localization">
-                            <div class="glass-card ds-card mb-4">
-                                <div class="ds-card-header p-4 border-bottom">
-                                    <h5 class="mb-0 fw-bold" data-i18n="settings.nav.localization">Localization & UX</h5>
-                                </div>
-                                <div class="ds-card-body p-4">
-                                    <div class="row g-4">
-                                        <div class="col-md-6">
-                                            <div class="ds-field">
-                                                <label class="ds-label" data-i18n="settings.localization.timezone">SYSTEM TIMEZONE</label>
-                                                <select class="ds-input ds-select" id="org_timezone">
-                                                    <option value="UTC">UTC (Universal Time)</option>
-                                                    <option value="Asia/Kolkata">IST (India Standard Time)</option>
-                                                    <option value="America/New_York">EST (Eastern Time)</option>
-                                                    <option value="Europe/London">GMT (Greenwich Mean Time)</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="ds-field">
-                                                <label class="ds-label" data-i18n="settings.localization.date_format">DATE FORMAT</label>
-                                                <select class="ds-input ds-select" id="date_format">
-                                                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                                                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                                                    <option value="YYYY-MM-DD">YYYY-MM-DD (ISO)</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="ds-field">
-                                                <label class="ds-label" data-i18n="settings.localization.currency">BASE CURRENCY</label>
-                                                <select class="ds-input ds-select" id="org_currency">
-                                                    <option value="INR" data-i18n="settings.localization.currency_inr">INR (₹)</option>
-                                                    <option value="USD" data-i18n="settings.localization.currency_usd">USD ($)</option>
-                                                    <option value="EUR" data-i18n="settings.localization.currency_eur">EUR (€)</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="ds-field">
-                                                <label class="ds-label" data-i18n="settings.localization.language">DEFAULT LANGUAGE</label>
-                                                <select class="ds-input ds-select" id="org_language" onchange="window.i18n.setLanguage(this.value)">
-                                                    <option value="en" data-i18n="common.languages.en">English</option>
-                                                    <option value="hi" data-i18n="common.languages.hi">Hindi (हिन्दी)</option>
-                                                    <option value="mr" data-i18n="common.languages.mr">Marathi (मराठी)</option>
-                                                    <option value="kn" data-i18n="common.languages.kn">Kannada (ಕನ್ನಡ)</option>
-                                                    <option value="te" data-i18n="common.languages.te">Telugu (తెలుగు)</option>
-                                                    <option value="ta" data-i18n="common.languages.ta">Tamil (தமிழ்)</option>
-                                                    <option value="ml" data-i18n="common.languages.ml">Malayalam (മലയാളം)</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Billing Section -->
                         <div class="settings-pane" id="pane-billing">
                             <div id="offlinePaymentStatusAlert"></div>
@@ -649,10 +578,10 @@
                                 <!-- 4 KPI Metadata Cards Grid -->
                                 <div class="row g-3">
                                     <div class="col-6 col-md-3">
-                                        <div class="p-3 rounded-3 border bg-body-tertiary">
-                                            <div class="text-xxs text-uppercase fw-bold text-muted mb-1">Key Status</div>
+                                        <div class="p-3 rounded-3 border bg-body-tertiary" style="border-color: var(--ds-border-color)!important;">
+                                            <div class="text-xxs text-uppercase fw-bold ds-text-secondary mb-1">Key Status</div>
                                             <div class="d-flex align-items-center justify-content-between">
-                                                <span class="fs-6 fw-bold" id="kpiApiKeyStatus">Active</span>
+                                                <span class="fs-6 fw-bold ds-text-main" id="kpiApiKeyStatus">Active</span>
                                                 <div class="form-check form-switch m-0">
                                                     <input class="form-check-input" type="checkbox" id="orgApiKeyToggleSwitch" onchange="settingsManager.toggleOrgApiKeyStatus()">
                                                 </div>
@@ -660,20 +589,20 @@
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <div class="p-3 rounded-3 border bg-body-tertiary">
-                                            <div class="text-xxs text-uppercase fw-bold text-muted mb-1">Created Date</div>
+                                        <div class="p-3 rounded-3 border bg-body-tertiary" style="border-color: var(--ds-border-color)!important;">
+                                            <div class="text-xxs text-uppercase fw-bold ds-text-secondary mb-1">Created Date</div>
                                             <div class="fs-6 fw-bold ds-text-main" id="kpiApiKeyCreated">Never</div>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <div class="p-3 rounded-3 border bg-body-tertiary">
-                                            <div class="text-xxs text-uppercase fw-bold text-muted mb-1">Last Used Date</div>
+                                        <div class="p-3 rounded-3 border bg-body-tertiary" style="border-color: var(--ds-border-color)!important;">
+                                            <div class="text-xxs text-uppercase fw-bold ds-text-secondary mb-1">Last Used Date</div>
                                             <div class="fs-6 fw-bold ds-text-main" id="kpiApiKeyLastUsed">Never</div>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <div class="p-3 rounded-3 border bg-body-tertiary">
-                                            <div class="text-xxs text-uppercase fw-bold text-muted mb-1">API Usage Count</div>
+                                        <div class="p-3 rounded-3 border bg-body-tertiary" style="border-color: var(--ds-border-color)!important;">
+                                            <div class="text-xxs text-uppercase fw-bold ds-text-secondary mb-1">API Usage Count</div>
                                             <div class="fs-6 fw-bold text-primary" id="kpiApiKeyUsage">0 Requests</div>
                                         </div>
                                     </div>
@@ -4290,8 +4219,12 @@ console.log(data);
                                                 <div class="col-md-4"><label class="ds-label">General Info Email</label><input type="email" class="ds-input" id="di-email-general"></div>
                                                 <div class="col-md-4"><label class="ds-label">Support Email</label><input type="email" class="ds-input" id="di-email-support"></div>
                                                 <div class="col-md-4"><label class="ds-label">Billing & Accounts Email</label><input type="email" class="ds-input" id="di-email-billing"></div>
-                                                <div class="col-md-6"><label class="ds-label">General Support Hotline</label><input type="text" class="ds-input" id="di-phone-general"></div>
-                                                <div class="col-md-6"><label class="ds-label">Emergency Hotline</label><input type="text" class="ds-input" id="di-phone-emergency"></div>
+                                                <div class="col-md-4"><label class="ds-label">Security & OTP Email</label><input type="email" class="ds-input" id="di-email-otp"></div>
+                                                <div class="col-md-4"><label class="ds-label">Contact / Inquiry Email</label><input type="email" class="ds-input" id="di-email-contact"></div>
+                                                <div class="col-md-4"><label class="ds-label">System Alerts Email</label><input type="email" class="ds-input" id="di-email-alerts"></div>
+                                                <div class="col-md-4"><label class="ds-label">Feedback & Suggestions Email</label><input type="email" class="ds-input" id="di-email-feedback"></div>
+                                                <div class="col-md-4"><label class="ds-label">General Support Hotline</label><input type="text" class="ds-input" id="di-phone-general"></div>
+                                                <div class="col-md-4"><label class="ds-label">Emergency Hotline</label><input type="text" class="ds-input" id="di-phone-emergency"></div>
                                             </div>
                                             <div class="mt-4"><button class="ds-btn ds-btn-primary ds-btn-sm" onclick="DocIdentityManager.saveSection('contacts')">Save Contact Directory</button></div>
                                         </div>
@@ -4584,6 +4517,18 @@ console.log(data);
             
             targetPane.classList.add('active');
             targetPane.style.setProperty('display', 'block', 'important');
+
+            // On mobile viewports, automatically retreat mobile sidebar and scroll directly to the selected screen pane
+            const appSidebar = document.getElementById('app-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (appSidebar) appSidebar.classList.remove('show');
+            if (backdrop) backdrop.classList.remove('show');
+
+            if (window.innerWidth < 992) {
+                setTimeout(() => {
+                    targetPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 50);
+            }
 
             // Specific tab handlers
             if (target === 'billing') this.loadBillingHistory();
@@ -6322,12 +6267,17 @@ ET`;
         }
 
         async function submitOfflineProof() {
-            const txnId = document.getElementById('proofTxnId').value;
+            const txnId = document.getElementById('proofTxnId')?.value || '';
             const fileInput = document.getElementById('proofFile');
-            const notes = document.getElementById('proofNotes').value;
-            const plan = document.querySelector('input[name="planSelect"]:checked').value;
+            const notes = document.getElementById('proofNotes')?.value || '';
+            const planRadio = document.querySelector('input[name="planSelect"]:checked');
+            const plan = (planRadio && planRadio.value) ? planRadio.value : (selectedPlanObj ? (selectedPlanObj.name || selectedPlanObj.plan_name) : '');
 
-            if (!txnId || !txnId.strip?.() && !txnId.trim()) {
+            if (!plan) {
+                alert('Please select a plan before submitting payment proof.');
+                return;
+            }
+            if (!txnId || (!txnId.strip?.() && !txnId.trim())) {
                 alert('Please enter your Transaction ID / UTR Number.');
                 return;
             }

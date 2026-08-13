@@ -8,14 +8,17 @@ const Stage8 = {
                 <!-- Section 1 - Standardization & SOP -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">1</span>
-                            Standardization & SOP
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.1</span>
+                                Standardization &amp; SOP
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Update the SOP and procedure steps to lock in the new standard.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 1 - Standardization & SOP</h6>
+                            <h6 class="fw-bold mb-0 text-primary">Section 1 - Standardization &amp; SOP</h6>
                             <button type="button" class="ds-btn ds-btn-primary" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[8].previewSop()">
                                 <i data-lucide="eye" style="width:12px;height:12px;color:white;"></i> Preview Formatted SOP
                             </button>
@@ -92,7 +95,7 @@ const Stage8 = {
 
                         <!-- Standardization Drawing / Document Reference Links List -->
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-muted small">Standardization Reference Documents & Drawings</h6>
+                            <h6 class="fw-bold mb-0 text-muted small">Standardization Reference Documents &amp; Drawings</h6>
                             <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[8].addStdRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Document Link
                             </button>
@@ -113,14 +116,17 @@ const Stage8 = {
                 <!-- Section 2 - Training & Adoption -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">2</span>
-                            Training & Adoption
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.2</span>
+                                Training &amp; Adoption
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Roll out training so the new standard is adopted across the affected team.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 2 - Training & Adoption</h6>
+                            <h6 class="fw-bold mb-0 text-primary">Section 2 - Training &amp; Adoption</h6>
                             <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[8].addTrainingRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Training
                             </button>
@@ -140,10 +146,13 @@ const Stage8 = {
                 <!-- Section 3 - Horizontal Deployment -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">3</span>
-                            Horizontal Deployment
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.3</span>
+                                Horizontal Deployment
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Identify other lines or areas where this solution could be replicated.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -167,10 +176,13 @@ const Stage8 = {
                 <!-- Section 4 - Lessons Learned -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">4</span>
-                            Lessons Learned
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.4</span>
+                                Lessons Learned
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Document key learnings from the full project for the knowledge repository.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -193,10 +205,13 @@ const Stage8 = {
                 <!-- Section 5 - Benefits Summary -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">5</span>
-                            Benefits Summary
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.5</span>
+                                Benefits Summary
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Summarize the overall quantified benefits achieved by the project.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -220,10 +235,13 @@ const Stage8 = {
                 <!-- Section 6 - Remaining Opportunities -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">6</span>
-                            Remaining Opportunities
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.6</span>
+                                Remaining Opportunities
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Note any residual gaps or follow-up opportunities not addressed by this project.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -246,10 +264,13 @@ const Stage8 = {
                 <!-- Section 7 - Knowledge Repository -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">7</span>
-                            Knowledge Repository
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.7</span>
+                                Knowledge Repository
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">File the completed project into the searchable knowledge base for future reference.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -272,10 +293,13 @@ const Stage8 = {
                 <!-- Section 8 - Team Recognition -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">8</span>
-                            Team Recognition
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.8</span>
+                                Team Recognition
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Record recognition given to the QC Circle team for their contribution.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -298,10 +322,13 @@ const Stage8 = {
                 <!-- Section 9 - Project Closure & Sign-Off -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">9</span>
-                            Closure Approval & Quality Gate Sign-Off
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.9</span>
+                                Closure Approval &amp; Quality Gate Sign-Off
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Get final reviewer sign-off to formally close the project.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <h6 class="fw-bold mb-3 text-primary">Section 9 - Project Closure</h6>

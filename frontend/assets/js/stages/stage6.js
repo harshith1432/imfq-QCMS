@@ -6,10 +6,13 @@ const Stage6 = {
                 <!-- Section 1 - Countermeasure Task Assignments -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.1</span>
-                            Countermeasure Task Assignments
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.1</span>
+                                Countermeasure Task Assignments
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Team members can view and update completion.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -33,17 +36,20 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 3 - Resource Deployment -->
+                <!-- Section 2 - Resource Deployment -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.3</span>
-                            Resource Deployment
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.2</span>
+                                Resource Deployment
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Track the actual deployment of the budget, manpower, and materials planned in Stage 5.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6.3 - Resource Deployment</h6>
+                            <h6 class="fw-bold mb-0 text-primary">Section 6.2 - Resource Deployment</h6>
                             <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addResourceRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Resource
                             </button>
@@ -60,18 +66,21 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 4 - Change Management -->
+                <!-- Section 3 - Change Management -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.4</span>
-                            Change Management
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.3</span>
+                                Change Management
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Executed once all countermeasures are completed. Used for implementing approved changes.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <h6 class="fw-bold mb-0 text-primary">Section 6.4 - Change Management</h6>
+                                <h6 class="fw-bold mb-0 text-primary">Section 6.3 - Change Management</h6>
                                 <small class="text-muted">Executed once all countermeasures are completed. Used for implementing approved changes.</small>
                             </div>
                             <button type="button" id="s6_addChangeBtn" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addChangeRow()">
@@ -90,17 +99,20 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 5 - Risk & Resistance Management -->
+                <!-- Section 4 - Risk & Resistance Management -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.5</span>
-                            Risk & Resistance Management
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.4</span>
+                                Risk &amp; Resistance Management
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Identify implementation risks and organizational resistance, and how each was addressed.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6.5 - Risk & Resistance Management</h6>
+                            <h6 class="fw-bold mb-0 text-primary">Section 6.4 - Risk &amp; Resistance Management</h6>
                             <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addRiskRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Risk
                             </button>
@@ -116,18 +128,21 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 6 - Side Effect Analysis -->
+                <!-- Section 5 - Side Effect Analysis -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.6</span>
-                            Side Effect Analysis
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.5</span>
+                                Side Effect Analysis
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Analyze potential negative side effects of the solutions. Modifications to the plan may be needed.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <h6 class="fw-bold mb-0 text-primary">Section 6.6 - Side Effect Analysis</h6>
+                                <h6 class="fw-bold mb-0 text-primary">Section 6.5 - Side Effect Analysis</h6>
                                 <small class="text-muted">Analyze potential negative side effects of the solutions. Modifications to the plan may be needed.</small>
                             </div>
                             <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addSideEffectRow()">
@@ -155,17 +170,20 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 7 - Implementation Evidence -->
+                <!-- Section 6 - Implementation Evidence -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.7</span>
-                            Implementation Evidence
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.6</span>
+                                Implementation Evidence
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Attach photos, logs, or documents proving the countermeasure was actually implemented.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6.7 - Implementation Evidence</h6>
+                            <h6 class="fw-bold mb-0 text-primary">Section 6.6 - Implementation Evidence</h6>
                             <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addEvidenceRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Evidence
                             </button>
@@ -182,13 +200,16 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 8 - Communication Log -->
+                <!-- Section 7 - Communication Log -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.8</span>
-                            Communication Log
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.7</span>
+                                Communication Log
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Record how and when the change was communicated to affected stakeholders.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-end mb-3">
@@ -208,13 +229,16 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 9 - Training & Awareness -->
+                <!-- Section 8 - Training & Awareness -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.9</span>
-                            Training &amp; Awareness
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.8</span>
+                                Training &amp; Awareness
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Log training sessions conducted so staff are aware of the new standard.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-end mb-3">
@@ -235,13 +259,16 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 10 - Readiness Verification -->
+                <!-- Section 9 - Readiness Verification -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="min-width:28px;width:auto;padding:0 6px;border-radius:50px;font-size:.7rem;">6.10</span>
-                            Readiness Verification
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.9</span>
+                                Readiness Verification
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Confirm the process and people are ready before the change goes fully live.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">

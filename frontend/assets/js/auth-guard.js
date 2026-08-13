@@ -536,13 +536,17 @@
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => {
-            if (!res.ok) {
-                console.warn('[Auth Check] Invalid or expired session. Clearing token and redirecting to login...');
+            if (res.status === 401) {
+                console.warn('[Auth Check] 401 Unauthorized session. Clearing token and redirecting to login...');
                 sessionStorage.clear();
                 localStorage.removeItem('token');
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('user');
                 window.location.replace('/auth/login.html');
+                return null;
+            }
+            if (!res.ok) {
+                console.warn('[Auth Check] Server responded with status:', res.status);
                 return null;
             }
             return res.json();

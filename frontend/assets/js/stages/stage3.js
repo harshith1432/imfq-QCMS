@@ -16,10 +16,13 @@ const Stage3 = {
                 <!-- Section 1 - Brainstorming -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">1</span>
-                            Brainstorming Session
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.1</span>
+                                Brainstorming Session
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Capture every potential cause the team raises before narrowing the list.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-3 mb-4">
@@ -168,13 +171,16 @@ const Stage3 = {
                     </div>
                 </div>
 
-                <!-- Section 4 - Cause Register -->
+                <!-- Section 2 - Cause Register -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">2</span>
-                            Cause Register
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.2</span>
+                                Cause Register
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Consolidate the brainstormed causes into a single tracked list.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -195,13 +201,16 @@ const Stage3 = {
                     </div>
                 </div>
 
-                <!-- Section 5 - Cause Prioritization -->
+                <!-- Section 3 - Cause Prioritization -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">3</span>
-                            Cause Prioritization Matrix
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.3</span>
+                                Cause Prioritization Matrix
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Score and rank the registered causes to decide which to verify first.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -223,13 +232,16 @@ const Stage3 = {
                     </div>
                 </div>
 
-                <!-- Section 6 - Cause Verification -->
+                <!-- Section 4 - Cause Verification -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">4</span>
-                            Cause Verification
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.4</span>
+                                Cause Verification
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Test the top-ranked causes against actual data to confirm which are real.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -251,13 +263,16 @@ const Stage3 = {
                     </div>
                 </div>
 
-                <!-- Section 6.5 - Ishikawa (Fishbone) Diagram (Post-Verification) -->
+                <!-- Section 5 - Ishikawa (Fishbone) Diagram (Post-Verification) -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2 text-primary">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">5</span>
-                            Ishikawa (Fishbone) Diagram (Post-Verification)
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2 text-primary">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.5</span>
+                                Ishikawa (Fishbone) Diagram (Post-Verification)
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Map the verified causes onto a Fishbone diagram grouped by category (Man, Machine, Method, Material).</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <label class="ds-label mb-3">Interactive Fishbone Visualization (Verified Causes)</label>
@@ -340,13 +355,16 @@ const Stage3 = {
                     </div>
                 </div>
 
-                <!-- Section 7 - Fishbone Level 3 Summary -->
+                <!-- Section 6 - Fishbone Level 3 Summary -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">6</span>
-                            Final Causes Summary (Level 3 Output)
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.6</span>
+                                Final Causes Summary (Level 3 Output)
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Summarize the verified causes carried forward into Root Cause Analysis.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="mb-0">

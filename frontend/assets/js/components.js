@@ -131,6 +131,51 @@ const QCMS = {
         'CEO': { canCreate: false, canValidate: false, canApprove: false, isAdmin: false, isCEO: true }
     },
 
+    renderPagination(page, totalPages, onClickFnName = 'Users.loadUsers') {
+        if (totalPages <= 1) return '';
+        let pages = [];
+        if (totalPages <= 5) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            let start = Math.max(2, page - 1);
+            let end = Math.min(totalPages - 1, page + 1);
+
+            if (page <= 3) {
+                start = 2;
+                end = 4;
+            } else if (page >= totalPages - 2) {
+                start = totalPages - 3;
+                end = totalPages - 1;
+            }
+
+            if (start > 2) {
+                pages.push('...');
+            }
+
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+
+            if (end < totalPages - 1) {
+                pages.push('...');
+            }
+
+            pages.push(totalPages);
+        }
+
+        return pages.map(p => {
+            if (p === '...') {
+                return `<span class="px-1 text-xs text-muted fw-bold d-inline-flex align-items-center" style="user-select: none;">...</span>`;
+            }
+            return `
+                <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="${onClickFnName}(${p})">
+                    ${p}
+                </button>
+            `;
+        }).join('');
+    },
+
     normalizeRole(role) {
         if (!role) return 'Team Member';
         let roleStr = role;
@@ -418,6 +463,16 @@ const QCMS = {
                     e.stopPropagation();
                     e.preventDefault();
                     this.toggleSidebar(e);
+                }
+            });
+            // Auto-retreat mobile sidebar when choosing any navigation option
+            document.addEventListener('click', (e) => {
+                const sidebarLink = e.target.closest('#app-sidebar a, #app-sidebar .sidebar-link, #app-sidebar button');
+                if (sidebarLink && window.innerWidth <= 1024) {
+                    const sidebar = document.getElementById('app-sidebar');
+                    const bd = document.getElementById('sidebar-backdrop');
+                    if (sidebar) sidebar.classList.remove('show');
+                    if (bd) bd.classList.remove('show');
                 }
             });
         }
@@ -783,7 +838,7 @@ const QCMS = {
                     <!-- User Badge -->
                     <div class="user-pill d-flex align-items-center gap-2 ps-1 pe-3 py-1 clickable glass-panel hover-shadow" 
                          style="border-radius: 14px; background: rgba(var(--ds-primary-rgb), 0.04); border: 1px solid var(--ds-border-color); transition: all 0.2s;" 
-                         onclick="window.location.href='${user.role === 'SuperAdmin' ? '/admin/super-admin.html?view=settings' : '/admin/settings.html'}'">
+                         onclick="if (window.SuperAdmin && typeof SuperAdmin.switchView === 'function') { SuperAdmin.switchView('settings'); setTimeout(() => window.PlatformSettings && PlatformSettings.switchTab('admin-logins'), 50); } else { window.location.href='${(user.role === 'SuperAdmin' || user.role === 'Super Admin') ? '/admin/super-admin.html?view=settings&tab=admin-logins' : '/admin/settings.html?tab=personal'}'; }">
                         <div class="user-avatar-sm d-flex align-items-center justify-content-center text-white" 
                              style="width:38px; height:38px; border-radius:12px; font-weight:700; font-size:15px; background: var(--ds-accent); overflow: hidden; border: 1px solid rgba(255,255,255,0.1);"
                              id="nav-user-avatar">
@@ -889,10 +944,6 @@ const QCMS = {
                         <a href="/admin/super-admin.html?view=organizations" class="sidebar-link sa-compact-link" title="Organizations">
                             <i class="link-icon" data-lucide="building-2"></i>
                             <span>Organizations</span>
-                        </a>
-                        <a href="/admin/super-admin.html?view=subscriptions" class="sidebar-link sa-compact-link" title="Subscriptions">
-                            <i class="link-icon" data-lucide="repeat"></i>
-                            <span>Subscriptions</span>
                         </a>
                         <a href="/admin/super-admin.html?view=plans" class="sidebar-link sa-compact-link" title="Plans">
                             <i class="link-icon" data-lucide="layers"></i>

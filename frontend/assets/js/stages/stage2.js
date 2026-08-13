@@ -41,10 +41,13 @@ const Stage2 = {
                 <!-- ─── SECTION 1: PROCESS OBSERVATION ─── -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">1</span>
-                            Process Observation
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.1</span>
+                                Process Observation
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Walk the actual process, upload the flow diagram, and log on-site findings before touching the data.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <h6 class="fw-bold mb-3 text-primary">Process Flow Diagram</h6>
@@ -91,10 +94,13 @@ const Stage2 = {
                 <!-- ─── SECTION 2: STANDARD VERIFICATION ─── -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">2</span>
-                            Standard Verification
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.2</span>
+                                Standard Verification
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Confirm whether the current SOP/work standard is actually being followed.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="table-responsive">
@@ -172,10 +178,13 @@ const Stage2 = {
                 <!-- ─── SECTION 3: DATA COLLECTION & QC TOOLS ─── -->
                 <div class="glass-card ds-card mb-4" id="s2_section_3" style="transition: opacity 0.3s ease;">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">3</span>
-                            Data Collection & QC Tools
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.3</span>
+                                Data Collection &amp; QC Tools
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Upload the raw observation log; the system auto-generates Trend, Check Sheet, Pareto, Stratification, and Histogram views from it.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-3 mb-4">
@@ -357,10 +366,13 @@ const Stage2 = {
                 <!-- ─── SECTION 4: STRATIFICATION ANALYSIS ─── -->
                 <div class="glass-card ds-card mb-4" id="s2_section_4" style="transition: opacity 0.3s ease;">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">4</span>
-                            Stratification Analysis
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.4</span>
+                                Stratification Analysis
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Break the raw data down by shift, machine, or operator to isolate where the problem concentrates.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -383,10 +395,13 @@ const Stage2 = {
                 <!-- ─── SECTION 5: PARETO PRIORITIZATION ─── -->
                 <div class="glass-card ds-card mb-4" id="s2_section_5" style="transition: opacity 0.3s ease;">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">5</span>
-                            Pareto Prioritization (80/20)
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.5</span>
+                                Pareto Prioritization (80/20)
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Rank the stratified factors by frequency to identify the vital few driving most of the problem.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-4">
@@ -416,10 +431,13 @@ const Stage2 = {
                 <!-- ─── SECTION 6: 5G VERIFICATION ─── -->
                 <div class="glass-card ds-card mb-4" id="s2_section_6" style="transition: opacity 0.3s ease;">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">6</span>
-                            5G Verification
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.6</span>
+                                5G Verification
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Verify findings on-site using actual data, actual part, actual place, actual time, and actual condition.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-4">
@@ -455,10 +473,13 @@ const Stage2 = {
                 <!-- ─── SECTION 7: CURRENT STATE EVIDENCE ─── -->
                 <div class="glass-card ds-card mb-4" id="s2_section_7" style="transition: opacity 0.3s ease;">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                            <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">7</span>
-                            Current State Evidence
-                        </h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.7</span>
+                                Current State Evidence
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Attach supporting photos, charts, or logs documenting the current (before) state.</p>
+                        </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="row g-3">

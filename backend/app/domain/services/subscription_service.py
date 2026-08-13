@@ -1,6 +1,6 @@
 from app.infrastructure.database.models.models import Organization, Project, User
 from app import db
-from datetime import datetime
+from datetime import datetime, timedelta
 
 PLAN_LIMITS = {
     'Trial': {
@@ -108,7 +108,9 @@ class SubscriptionManager:
 
         # 1. Check active subscription record
         sub = Subscription.query.filter_by(org_id=org_id).order_by(Subscription.id.desc()).first()
-        if sub:
+        if org.subscription_plan:
+            plan_name = org.subscription_plan
+        elif sub:
             if hasattr(sub, 'plan_id') and sub.plan_id:
                 plan_obj = SaaSPlan.query.get(sub.plan_id)
             if not plan_obj and getattr(sub, 'plan_name', None):
@@ -268,34 +270,53 @@ import math
 
 def get_org_effective_expiry_and_start(org):
     """
-    Returns (expiry_date, start_date) for an organization based on its active or trial state.
-    For Active/Paid orgs: uses license_expiry_date first, then active Subscription.end_date, then trial_ends_at.
-    For Trial/Trialing orgs: uses trial_ends_at first, then active Subscription.trial_end_date, then license_expiry_date.
+    Returns (expiry_date, start_date) for an organization based on its assigned plan cycle.
+    Supports Monthly (30d), Quarterly (90d), Yearly (365d), Trial (trial_days), or Custom duration.
+    Calculates dynamic countdown days remaining.
     """
     if not org:
         return None, None
 
+    now = datetime.utcnow()
     status = (getattr(org, 'subscription_status', '') or '').strip().lower()
-    
-    expiry_date = None
-    start_date = None
 
-    if status in ('active', 'paid'):
-        expiry_date = getattr(org, 'license_expiry_date', None) or getattr(org, 'trial_ends_at', None)
-        start_date = getattr(org, 'license_start_date', None) or getattr(org, 'created_at', None)
-    else:
-        expiry_date = getattr(org, 'trial_ends_at', None) or getattr(org, 'license_expiry_date', None)
-        start_date = getattr(org, 'trial_start_date', None) or getattr(org, 'created_at', None)
+    from app.infrastructure.database.models.models import Subscription, SaaSPlan
+    sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
+
+    start_date = getattr(org, 'license_start_date', None) or (sub.start_date if sub else None) or getattr(org, 'created_at', None) or now
+    expiry_date = getattr(org, 'license_expiry_date', None) or (sub.end_date if sub else None) or getattr(org, 'trial_ends_at', None) or (sub.trial_end_date if sub else None)
+
+    plan_name = getattr(org, 'subscription_plan', None) or (sub.plan_name if sub else None)
+    if plan_name:
+        sp = SaaSPlan.query.filter(
+            db.or_(SaaSPlan.name == plan_name, SaaSPlan.code == plan_name)
+        ).first()
+        if sp:
+            from app.infrastructure.database.models.models import SaaSPlanPricing
+            pricing = SaaSPlanPricing.query.filter_by(plan_id=sp.id, is_active=True).first()
+            cycle = (pricing.billing_cycle if pricing else (getattr(sp, 'billing_cycle', None) or (sub.billing_cycle if sub else None) or 'Monthly')).strip().title()
+            
+            if cycle in ('Yearly', 'Annual'):
+                duration_days = 365
+            elif cycle in ('Quarterly', 'Quarter'):
+                duration_days = 90
+            elif cycle in ('Monthly', 'Month'):
+                duration_days = 30
+            elif getattr(sp, 'duration_days', None) and sp.duration_days > 0:
+                duration_days = sp.duration_days
+            elif cycle in ('Trial', 'Trialing', 'Trial Duration'):
+                duration_days = getattr(sp, 'trial_days', None) or getattr(sp, 'trial_duration_days', 30) or 30
+            else:
+                duration_days = 30  # Monthly default
+
+            calc_expiry = start_date + timedelta(days=duration_days)
+
+            # If no expiry date set or if existing expiry date exceeds plan cycle bounds (e.g. 365 for Quarterly)
+            if not expiry_date or abs((expiry_date - calc_expiry).days) > 3 or (cycle in ('Quarterly', 'Quarter') and (expiry_date - start_date).days > 100):
+                expiry_date = calc_expiry
 
     if not expiry_date:
-        try:
-            from app.infrastructure.database.models.models import Subscription
-            sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
-            if sub:
-                expiry_date = sub.end_date or sub.trial_end_date
-                start_date = start_date or sub.start_date or sub.trial_start_date
-        except Exception:
-            pass
+        expiry_date = start_date + timedelta(days=30)
 
     return expiry_date, start_date
 
@@ -347,3 +368,105 @@ def is_org_expiring_soon(org):
     threshold_days = max(7, math.ceil(total_days * 0.20))
 
     return remaining_days <= threshold_days
+
+
+def apply_new_plan_to_organization(org, plan_name, billing_cycle=None, approved_by_id=None):
+    """
+    Updates an Organization and its active Subscription record when a new plan is assigned or payment is approved.
+    Synchronizes:
+      - org.subscription_plan
+      - org.subscription_status ('Active' or 'Trialing')
+      - org.max_users (from new plan limits)
+      - org.storage_limit_mb (from new plan limits)
+      - org.license_start_date & org.license_expiry_date & org.trial_ends_at (calculated from plan cycle duration)
+      - Active Subscription record (created or updated)
+    """
+    if not org or not plan_name:
+        return org
+
+    import secrets
+    import math
+    now = datetime.utcnow()
+    pname = str(plan_name).strip()
+
+    from app.infrastructure.database.models.models import db, SaaSPlan, SaaSPlanPricing, Subscription, User
+    from sqlalchemy import func, or_
+
+    sp = SaaSPlan.query.filter(
+        or_(func.lower(SaaSPlan.name) == pname.lower(), func.lower(SaaSPlan.code) == pname.lower())
+    ).first()
+
+    # Determine limits
+    max_users = 50
+    max_projects = 10
+    storage_mb = 10240.0
+    cycle = billing_cycle
+
+    if sp:
+        pname = sp.name
+        if sp.limits:
+            max_users = sp.limits.max_users if sp.limits.max_users is not None else 500
+            max_projects = sp.limits.max_projects if sp.limits.max_projects is not None else 50
+            if getattr(sp.limits, 'storage_limit_gb', None):
+                storage_mb = float(sp.limits.storage_limit_gb) * 1024.0
+
+        pricing = SaaSPlanPricing.query.filter_by(plan_id=sp.id, is_active=True).first()
+        if pricing and not cycle:
+            cycle = pricing.billing_cycle
+
+    if not cycle:
+        cycle = 'Quarterly' if 'quarter' in pname.lower() else ('Yearly' if 'year' in pname.lower() else 'Monthly')
+
+    cycle_title = cycle.strip().title()
+
+    # Calculate duration
+    if cycle_title in ('Yearly', 'Annual'):
+        duration_days = 365
+    elif cycle_title in ('Quarterly', 'Quarter'):
+        duration_days = 90
+    elif cycle_title in ('Trial', 'Trialing', 'Trial Duration'):
+        duration_days = getattr(sp, 'trial_duration_days', None) or getattr(sp, 'trial_days', None) or 30
+    else:
+        duration_days = 30
+
+    start_dt = now
+    expiry_dt = start_dt + timedelta(days=duration_days)
+
+    # 1. Update Organization attributes
+    org.subscription_plan = pname
+    org.subscription_status = 'Active' if cycle_title not in ('Trial', 'Trialing') else 'Trialing'
+    org.max_users = max_users
+    org.storage_limit_mb = storage_mb
+    org.license_start_date = start_dt
+    org.license_expiry_date = expiry_dt
+    org.trial_ends_at = expiry_dt
+
+    # Ensure org users are active
+    User.query.filter_by(org_id=org.id).update({'is_active': True, 'deactivated_at': None})
+
+    # 2. Update or Create Subscription record
+    sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
+    if not sub:
+        sub = Subscription(
+            org_id=org.id,
+            subscription_uid=f"SUB-{now.year}-{org.id}-{secrets.token_hex(4).upper()}",
+            plan_name=pname,
+            billing_cycle=cycle_title,
+            subscription_status=org.subscription_status,
+            start_date=start_dt,
+            end_date=expiry_dt,
+            max_users=max_users,
+            storage_limit_gb=storage_mb / 1024.0
+        )
+        db.session.add(sub)
+    else:
+        sub.plan_name = pname
+        sub.billing_cycle = cycle_title
+        sub.subscription_status = org.subscription_status
+        sub.start_date = start_dt
+        sub.end_date = expiry_dt
+        sub.max_users = max_users
+        sub.storage_limit_gb = storage_mb / 1024.0
+
+    db.session.commit()
+    return org

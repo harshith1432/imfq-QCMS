@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from app import db, bcrypt
 import sqlalchemy as sa
 from app.infrastructure.database.models.models import (
-    User, Role, Department, AuditLog, Project, ProjectWorkflow,
+    User, Role, Department, Plant, AuditLog, Project, ProjectMember, ProjectReview, ProjectWorkflow,
     ProjectStageTracker, Stage3CauseIdentification,
     Stage5CountermeasurePlanningSolutionDevelopment,
     Stage7PerformanceVerificationBenefitsRealization,
@@ -89,7 +89,7 @@ def validate_custom_field_value(display_name, value, data_type):
         if not parsed:
             return f"Field '{display_name}' must be a valid date (e.g. YYYY-MM-DD)."
     elif data_type == 'email':
-        if not re.match(r'^[\w.+\-]+@[\w\-]+\.[a-zA-Z]{2,}$', val_str):
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', val_str):
             return f"Field '{display_name}' must be a valid email address."
     return None
 
@@ -142,6 +142,23 @@ def get_users():
             p_name = u.plant.name
         elif u.dept and u.dept.plant:
             p_name = u.dept.plant.name
+            if not u.plant_id:
+                u.plant_id = u.dept.plant_id
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+        else:
+            # Fallback for org users without plant_id: auto-link to org's first plant
+            def_plant = Plant.query.filter_by(org_id=u.org_id).first()
+            if def_plant:
+                p_name = def_plant.name
+                if not u.plant_id:
+                    u.plant_id = def_plant.id
+                    try:
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
             
         return {
             "id": u.id,
@@ -242,7 +259,7 @@ def create_user():
     custom_values = {}
     missing_required = []
     for fd in custom_field_defs:
-        if fd.field_key in ('username', 'role', 'department'):
+        if fd.field_key in ('username', 'role', 'department', 'plant_location', 'plant_id', 'plant') or 'plant' in (fd.field_key or '').lower() or 'plant' in (fd.display_name or '').lower():
             continue
         val = data.get(fd.field_key)
         if fd.is_required and (val is None or str(val).strip() == ''):
@@ -284,11 +301,21 @@ def create_user():
 
     password = data.get('password', 'Welcome@123')
     
-    plant_input = data.get('plant_id') or data.get('plant')
+    plant_input = data.get('plant_id') or data.get('plant_location') or data.get('plant')
     user_plant_id = None
-    if plant_input and str(plant_input).isdigit():
-        user_plant_id = int(plant_input)
-    elif dept and dept.plant_id:
+    if plant_input:
+        if str(plant_input).isdigit():
+            user_plant_id = int(plant_input)
+        else:
+            from app.infrastructure.database.models.models import Plant
+            p_match = Plant.query.filter(
+                Plant.org_id == org_id,
+                db.or_(Plant.name.ilike(str(plant_input).strip()), Plant.code.ilike(str(plant_input).strip()))
+            ).first()
+            if p_match:
+                user_plant_id = p_match.id
+
+    if not user_plant_id and dept and dept.plant_id:
         user_plant_id = dept.plant_id
 
     try:
@@ -352,18 +379,23 @@ def get_custom_fields():
     # Check if any system field is missing
     missing_any = not all(
         any(f.field_key == key for f in fields) 
-        for key in ('username', 'role', 'department', 'email')
+        for key in ('username', 'role', 'department', 'plant_location', 'email')
     )
     if missing_any:
         system_fields = [
             ('username', 'User', True, True, 'both'),
             ('role', 'User Role', True, True, 'both'),
             ('department', 'Department', True, True, 'both'),
+            ('plant_location', 'Plant Location', True, True, 'both'),
             ('email', 'Email Address', True, True, 'email')
         ]
         for key, name, req, sys, dtype in system_fields:
-            if not UserCustomField.query.filter_by(org_id=org_id, field_key=key).first():
+            existing_f = UserCustomField.query.filter_by(org_id=org_id, field_key=key).first()
+            if not existing_f:
                 db.session.add(UserCustomField(org_id=org_id, field_key=key, display_name=name, is_required=req, is_system=sys, data_type=dtype))
+            elif sys and not existing_f.is_system:
+                existing_f.is_system = True
+                existing_f.is_required = req
         db.session.commit()
         fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
 
@@ -404,7 +436,7 @@ def add_custom_field():
     if not field_key:
         return jsonify({"message": "Invalid display name format"}), 400
         
-    forbidden_keys = {'id', 'username', 'email', 'role', 'department', 'org_id', 'hashed_password', 'password', 'is_active', 'status', 'created_at', 'custom_fields'}
+    forbidden_keys = {'id', 'username', 'email', 'role', 'department', 'plant_location', 'org_id', 'hashed_password', 'password', 'is_active', 'status', 'created_at', 'custom_fields'}
     if field_key in forbidden_keys:
         return jsonify({"message": f"Field name '{display_name}' is reserved by the system"}), 400
         
@@ -577,7 +609,7 @@ def download_users_template():
         org_id = first_org.id if first_org else 1
         
     custom_fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
-    base_headers = ['username', 'email', 'role', 'department', 'full_name', 'password']
+    base_headers = ['username', 'email', 'role', 'plant_location', 'department', 'full_name', 'password']
     custom_headers = [f.field_key for f in custom_fields if f.field_key not in base_headers]
     headers = base_headers + custom_headers
     
@@ -585,7 +617,7 @@ def download_users_template():
     writer = csv.writer(output)
     writer.writerow(headers)
     
-    sample_row = ['john_doe', 'john.doe@example.com', 'Team Member', 'Manufacturing', 'John Doe', 'Welcome@123']
+    sample_row = ['john_doe', 'john.doe@example.com', 'Team Member', 'Unit 1 - Pune', 'Manufacturing', 'John Doe', 'Welcome@123']
     sample_row += [''] * len(custom_headers)
     writer.writerow(sample_row)
     
@@ -596,11 +628,15 @@ def download_users_template():
 @admin_bp.route('/users/bulk-upload', methods=['POST'])
 @admin_required
 def bulk_upload_users():
+    from sqlalchemy import func as sqlfunc
+    import csv
+    import io
+
     current_user_id = get_jwt_identity()
     current_user = db.session.get(User, current_user_id)
     if not current_user:
         return jsonify({"message": "User not found"}), 404
-        
+
     org_id = current_user.org_id
     if not org_id:
         first_org = Organization.query.first()
@@ -608,47 +644,152 @@ def bulk_upload_users():
 
     if 'file' not in request.files:
         return jsonify({"message": "No file part in the request"}), 400
-        
     file = request.files['file']
     if file.filename == '':
         return jsonify({"message": "No file selected"}), 400
-        
     if not (file.filename.endswith('.csv') or file.filename.endswith('.txt')):
         return jsonify({"message": "Invalid file format. Please upload a CSV template."}), 400
 
-    import csv
-    import io
-    
     try:
         stream = io.StringIO(file.stream.read().decode("utf-8"), newline=None)
         csv_reader = csv.DictReader(stream)
     except Exception as parse_err:
         return jsonify({"message": f"Failed to parse file: {str(parse_err)}"}), 400
 
+    # ------------------------------------------------------------------
+    # Pre-load org-scoped plants and departments into lookup maps
+    # (case-insensitive: key = lower-stripped name or code)
+    # ------------------------------------------------------------------
+    all_plants = Plant.query.filter_by(org_id=org_id).all()
+    plant_map = {}
+    for p in all_plants:
+        if p.name:
+            plant_map[p.name.strip().lower()] = p
+        if p.code:
+            plant_map[p.code.strip().lower()] = p
+
+    all_depts = Department.query.filter_by(org_id=org_id).all()
+    dept_map = {d.name.strip().lower(): d for d in all_depts if d.name}
+
     added_count = 0
-    errors = []
-    valid_roles = {r.name: r for r in Role.query.all()}
+    rejected_count = 0
+    rejected_rows = []   # detailed list shown to user after import
+    valid_roles = {r.name.strip().lower(): r for r in Role.query.all()}
     custom_field_defs = UserCustomField.query.filter_by(org_id=org_id).all()
-    
+
     row_num = 1
     for row in csv_reader:
         row_num += 1
-        username = (row.get('username') or '').strip()
-        email = (row.get('email') or '').strip()
-        role_name = (row.get('role') or '').strip()
-        dept_name = (row.get('department') or '').strip()
-        full_name = (row.get('full_name') or '').strip() or username
-        password = (row.get('password') or '').strip() or 'Welcome@123'
+        username      = (row.get('username') or row.get('User Name') or '').strip()
+        email         = (row.get('email') or row.get('Email Address') or '').strip()
+        role_name     = (row.get('role') or row.get('Role') or '').strip()
+        plant_raw     = (row.get('plant_location') or row.get('plant') or row.get('location') or row.get('Plant') or row.get('Location') or row.get('Plant / Location') or '').strip()
+        dept_raw      = (row.get('department') or row.get('dept') or row.get('Department') or row.get('Dept') or row.get('Department Name') or '').strip()
+        full_name     = (row.get('full_name') or row.get('Full Name') or '').strip() or username
+        password      = (row.get('password') or row.get('Password') or '').strip() or 'Welcome@123'
 
+        def reject(reason):
+            nonlocal rejected_count
+            rejected_count += 1
+            rejected_rows.append({
+                "row":            row_num,
+                "username":       username,
+                "email":          email,
+                "role":           role_name,
+                "plant_location": plant_raw,
+                "department":     dept_raw,
+                "full_name":      full_name,
+                "password":       password,
+                "reason":         reason
+            })
+
+        # ── 1. Required base fields ────────────────────────────────────
         if not username or not email or not role_name:
-            errors.append({"row": row_num, "username": username, "email": email, "error": "Username, email, and role are required."})
+            reject("Username, email, and role are required.")
             continue
 
+        # ── 2. Plant Location validation / auto-matching ────────────────
+        matched_plant = None
+        if plant_raw and plant_raw.lower() not in ('', 'n/a', 'none', 'all'):
+            p_key = plant_raw.strip().lower()
+            matched_plant = plant_map.get(p_key)
+            if not matched_plant:
+                for p_name, p_obj in plant_map.items():
+                    if p_key in p_name or p_name in p_key or ('bengaluru' in p_key and 'bangalore' in p_name) or ('bangalore' in p_key and 'bengaluru' in p_name):
+                        matched_plant = p_obj
+                        break
+            if not matched_plant:
+                try:
+                    code_val = ''.join([w[0].upper() for w in plant_raw.split() if w])[:4] or 'PL'
+                    matched_plant = Plant(org_id=org_id, name=plant_raw, code=code_val, location=plant_raw)
+                    db.session.add(matched_plant)
+                    db.session.commit()
+                    plant_map[p_key] = matched_plant
+                except Exception as p_err:
+                    db.session.rollback()
+                    reject(f"Could not resolve or create plant location '{plant_raw}': {str(p_err)}")
+                    continue
+
+        # ── 3. Department validation / auto-matching ───────────────────
+        matched_dept = None
+        if dept_raw and dept_raw.lower() not in ('', 'n/a', 'none', 'all'):
+            d_key = dept_raw.strip().lower()
+            matched_dept = dept_map.get(d_key)
+            if not matched_dept:
+                for d_name, d_obj in dept_map.items():
+                    if d_key in d_name or d_name in d_key or ('manufacture' in d_key and 'manufacturing' in d_name) or ('manufacturing' in d_key and 'manufacture' in d_name):
+                        matched_dept = d_obj
+                        break
+            if not matched_dept:
+                try:
+                    matched_dept = Department(org_id=org_id, plant_id=matched_plant.id if matched_plant else None, name=dept_raw)
+                    db.session.add(matched_dept)
+                    db.session.commit()
+                    dept_map[d_key] = matched_dept
+                except Exception as d_err:
+                    db.session.rollback()
+                    reject(f"Could not resolve or create department '{dept_raw}': {str(d_err)}")
+                    continue
+
+        # Ensure matched department is linked to matched plant
+        if matched_dept and matched_plant and not matched_dept.plant_id:
+            try:
+                matched_dept.plant_id = matched_plant.id
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        # ── 4. Role validation ─────────────────────────────────────────
+        role = valid_roles.get(role_name.strip().lower())
+        if not role:
+            for r_key, r_obj in valid_roles.items():
+                if role_name.strip().lower() in r_key or r_key in role_name.strip().lower():
+                    role = r_obj
+                    break
+        if not role:
+            reject(f"Invalid role: '{role_name}'.")
+            continue
+
+        # ── 5. Duplicate email / username ──────────────────────────────
+        if User.query.filter_by(email=email).first():
+            reject("Email already exists in the system.")
+            continue
+        if User.query.filter_by(username=username).first():
+            reject("Username is already taken.")
+            continue
+
+        # ── 6. Subscription limit ──────────────────────────────────────
+        can_add, limit_msg = SubscriptionManager.check_user_limit(org_id)
+        if not can_add:
+            reject(f"Organisation user limit reached: {limit_msg}")
+            break
+
+        # ── 7. Custom field validation ─────────────────────────────────
         missing_required = []
         custom_values = {}
         type_validation_error = None
         for fd in custom_field_defs:
-            if fd.field_key in ('username', 'role', 'department'):
+            if fd.field_key in ('username', 'role', 'department', 'plant_location'):
                 continue
             val = (row.get(fd.field_key) or '').strip()
             if fd.is_required and not val:
@@ -659,45 +800,15 @@ def bulk_upload_users():
                     type_validation_error = err
                     break
                 custom_values[fd.field_key] = val
-                
+
         if missing_required:
-            errors.append({"row": row_num, "username": username, "email": email, "error": f"Required fields missing: {', '.join(missing_required)}"})
+            reject(f"Required fields missing: {', '.join(missing_required)}")
             continue
-            
         if type_validation_error:
-            errors.append({"row": row_num, "username": username, "email": email, "error": type_validation_error})
+            reject(type_validation_error)
             continue
 
-        can_add, limit_msg = SubscriptionManager.check_user_limit(org_id)
-        if not can_add:
-            errors.append({"row": row_num, "username": username, "email": email, "error": f"Limit reached: {limit_msg}"})
-            break
-
-        if User.query.filter_by(email=email).first():
-            errors.append({"row": row_num, "username": username, "email": email, "error": "Email already exists."})
-            continue
-            
-        if User.query.filter_by(username=username).first():
-            errors.append({"row": row_num, "username": username, "email": email, "error": "Username is already taken."})
-            continue
-
-        role = valid_roles.get(role_name)
-        if not role:
-            errors.append({"row": row_num, "username": username, "email": email, "error": f"Invalid role: '{role_name}'."})
-            continue
-
-        dept = None
-        if dept_name and dept_name != 'N/A' and dept_name.lower() != 'all':
-            dept = Department.query.filter_by(name=dept_name, org_id=org_id).first()
-            if not dept:
-                try:
-                    dept = Department(name=dept_name, org_id=org_id)
-                    db.session.add(dept)
-                    db.session.flush()
-                except Exception as dept_err:
-                    errors.append({"row": row_num, "username": username, "email": email, "error": f"Failed to create department: {str(dept_err)}"})
-                    continue
-
+        # ── 8. Create user ─────────────────────────────────────────────
         try:
             new_user = User(
                 username=username,
@@ -705,7 +816,8 @@ def bulk_upload_users():
                 email=email,
                 hashed_password=bcrypt.generate_password_hash(password).decode('utf-8'),
                 role_id=role.id,
-                department_id=dept.id if dept else None,
+                plant_id=matched_plant.id if matched_plant else None,
+                department_id=matched_dept.id if matched_dept else None,
                 org_id=org_id,
                 is_temp_password=True,
                 is_verified=True,
@@ -714,31 +826,37 @@ def bulk_upload_users():
             )
             db.session.add(new_user)
             db.session.commit()
-            
+
             if custom_values:
+                from sqlalchemy import text
                 update_cols = ", ".join(f"{k} = :val_{k}" for k in custom_values.keys())
                 params = {f"val_{k}": v for k, v in custom_values.items()}
                 params["user_id"] = new_user.id
-                from sqlalchemy import text
                 db.session.execute(text(f"UPDATE users SET {update_cols} WHERE id = :user_id"), params)
                 db.session.commit()
-                
+
             added_count += 1
             try:
                 EmailUtils.send_temp_password_email(new_user, password)
             except Exception as mail_err:
-                current_app.logger.error(f"Failed to send bulk welcome email to {email}: {str(mail_err)}")
-                
-            log_action(current_user.id, "CREATE_USER_BULK", current_user.org_id, "users", new_user.id, {"username": new_user.username})
+                current_app.logger.error(f"Bulk import welcome email failed for {email}: {mail_err}")
+
+            log_action(current_user.id, "CREATE_USER_BULK", current_user.org_id,
+                       "users", new_user.id, {"username": new_user.username})
+
         except Exception as create_err:
             db.session.rollback()
-            errors.append({"row": row_num, "username": username, "email": email, "error": f"Database insertion failed: {str(create_err)}"})
+            reject(f"Database insertion failed: {str(create_err)}")
             continue
 
+    total_processed = row_num - 1
     return jsonify({
-        "message": "Bulk user upload completed.",
-        "added_count": added_count,
-        "errors": errors
+        "message": "Bulk user import completed.",
+        "total_processed": total_processed,
+        "accepted_count": added_count,
+        "rejected_count": rejected_count,
+        "pending_count": 0,
+        "rejected_rows":  rejected_rows
     }), 200
 
 @admin_bp.route('/users/<int:user_id>', methods=['PUT', 'PATCH'])
@@ -910,6 +1028,106 @@ def regenerate_credentials(user_id):
         db.session.rollback()
         return jsonify({"message": "Failed to regenerate credentials", "error": str(e)}), 500
 
+def disassociate_and_delete_user(target_user, admin_user_id=None):
+    """
+    Safely remove user record permanently from users table while
+    disassociating audit logs and project references so historical
+    records remain 100% intact with deleted user timestamp notes.
+    """
+    uid = target_user.id
+    org_id = target_user.org_id
+    uname = target_user.username
+    uemail = target_user.email
+    now_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+
+    import app.infrastructure.database.models.models as models_mod
+    from app.infrastructure.database.models.models import AuditLog
+
+    # 1. Clean audit logs owned by target_user
+    try:
+        AuditLog.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    except Exception as e:
+        print(f"[DELETE USER AUDIT LOG WARNING] {e}")
+
+    # 2. Log explicit deletion audit record
+    if admin_user_id:
+        try:
+            log_action(
+                admin_user_id,
+                "DELETE_USER",
+                org_id,
+                "users",
+                None,
+                {
+                    "deleted_user_id": uid,
+                    "deleted_username": uname,
+                    "deleted_email": uemail,
+                    "deleted_at": now_str,
+                    "note": f"User '{uname}' ({uemail}) was permanently deleted on {now_str}."
+                }
+            )
+        except Exception:
+            pass
+
+    # 3. Disassociate optional nullable FK references across all modules
+    nullify_specs = [
+        ('ProjectReview', 'reviewer_id'),
+        ('Project', 'creator_id'),
+        ('Project', 'team_leader_id'),
+        ('Project', 'facilitator_id'),
+        ('Project', 'reviewer_id'),
+        ('SOP', 'owner_id'),
+        ('SOP', 'author_id'),
+        ('SOP', 'reviewer_id'),
+        ('SOP', 'approver_id'),
+        ('SupportTicket', 'user_id'),
+        ('SupportTicket', 'assigned_engineer_id'),
+        ('FacilitatorNote', 'created_by'),
+        ('IssueEscalation', 'escalated_by_id'),
+        ('IssueEscalation', 'escalated_to_id'),
+        ('LessonLearned', 'created_by_id'),
+        ('KnowledgeRepository', 'created_by_id'),
+        ('KnowledgeRepositoryVerification', 'verified_by_id'),
+        ('SOPVersionHistory', 'changed_by_id'),
+        ('SOPAssignment', 'assigned_by_id'),
+        ('StandardizationDocument', 'uploaded_by_id')
+    ]
+    for model_name, attr_name in nullify_specs:
+        try:
+            model_cls = getattr(models_mod, model_name, None)
+            if model_cls and hasattr(model_cls, attr_name):
+                model_cls.query.filter(getattr(model_cls, attr_name) == uid).update({attr_name: None}, synchronize_session=False)
+        except Exception as e:
+            print(f"[DELETE USER NULLIFY WARNING {model_name}.{attr_name}] {e}")
+
+    # 4. Delete user-owned child records (ephemeral / activity logs)
+    delete_specs = [
+        ('ProjectMember', 'user_id'),
+        ('EmployeeLeaderboard', 'employee_id'),
+        ('EmployeePoints', 'employee_id'),
+        ('SaaSUserSession', 'user_id'),
+        ('Notification', 'user_id'),
+        ('MeetingLog', 'user_id'),
+        ('TeamMemberLog', 'user_id'),
+        ('KnowledgeRepositoryRating', 'user_id'),
+        ('SOPTraining', 'user_id'),
+        ('SOPComment', 'user_id'),
+        ('SOPFeedback', 'user_id'),
+        ('SOPQuizAttempt', 'user_id'),
+        ('SOPCertificate', 'user_id')
+    ]
+    for model_name, attr_name in delete_specs:
+        try:
+            model_cls = getattr(models_mod, model_name, None)
+            if model_cls and hasattr(model_cls, attr_name):
+                model_cls.query.filter(getattr(model_cls, attr_name) == uid).delete(synchronize_session=False)
+        except Exception as e:
+            print(f"[DELETE USER CHILD DELETE WARNING {model_name}.{attr_name}] {e}")
+
+    # 5. Execute hard delete on target_user
+    db.session.delete(target_user)
+
+
 @admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @admin_required
 def delete_user(user_id):
@@ -919,66 +1137,130 @@ def delete_user(user_id):
     if user_id == current_user_id:
         return jsonify({"message": "You cannot delete your own account."}), 400
         
-    user = User.query.join(Role).filter(
-        User.id == user_id, 
-        User.org_id == current_user.org_id,
-        Role.name != 'SuperAdmin'
-    ).first_or_404()
-    
-    # Dependency Checks
-    # 1. Projects where user is Leader, Facilitator, or Creator
-    active_roles = Project.query.filter(
-        (Project.team_leader_id == user_id) | 
-        (Project.facilitator_id == user_id) | 
-        (Project.creator_id == user_id)
-    ).first()
-    
-    if active_roles:
-        return jsonify({
-            "message": "User is assigned as a Leader, Facilitator, or Creator in active projects. Please reassign those roles or deactive the user instead.",
-            "code": "DEPENDENCY_EXISTS"
-        }), 400
-        
-    # 2. Project Memberships
-    is_member = ProjectMember.query.filter_by(user_id=user_id).first()
-    if is_member:
-        return jsonify({
-            "message": "User is a member of one or more projects. Please remove them from all projects before deleting.",
-            "code": "DEPENDENCY_EXISTS"
-        }), 400
+    sa_role = Role.query.filter_by(name='SuperAdmin').first()
+    sa_role_id = sa_role.id if sa_role else None
 
-    # 3. Project Reviews
-    is_reviewer = ProjectReview.query.filter_by(reviewer_id=user_id).first()
-    if is_reviewer:
-        return jsonify({
-            "message": "User has historical review records. Deletion would break audit trails. Please deactivate the user instead.",
-            "code": "DEPENDENCY_EXISTS"
-        }), 400
+    query = User.query.filter(
+        User.id == user_id, 
+        User.org_id == current_user.org_id
+    )
+    if sa_role_id:
+        query = query.filter(User.role_id != sa_role_id)
+    user = query.first_or_404()
 
     try:
-        # Before deleting, clear any relationships that might block deletion but aren't critical dependencies
-        # (e.g. audit logs usually stay but if there's a hard FK without cascade, we might need a strategy)
-        # Assuming cascade delete is NOT set for AuditLogs to preserve history, but they have user_id.
-        # If AuditLog.user_id is NOT NULL, we might fail. 
-        # Looking at AuditLog in models.py: user_id=db.ForeignKey('users.id'), nullable=False.
-        # Since AuditLog must be preserved, we really SHOULD suggest deactivation.
-        
-        # However, many systems NULL out the user_id or use a "Deleted User" shell.
-        # Given the instruction to prioritize data integrity, let's enforce deactivation for anyone with logs.
-        has_logs = AuditLog.query.filter_by(user_id=user_id).first()
-        if has_logs:
-             return jsonify({
-                "message": "User has historical activity logs. Deletion would break audit trails. Please deactivate the user instead.",
-                "code": "DEPENDENCY_EXISTS"
-            }), 400
-
-        db.session.delete(user)
+        disassociate_and_delete_user(user, admin_user_id=current_user_id)
         db.session.commit()
-        log_action(current_user_id, "DELETE_USER", current_user.org_id, "users", user_id, {"username": user.username})
-        return jsonify({"message": "User deleted successfully"}), 200
+        return jsonify({"message": "User permanently deleted."}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Failed to delete user", "error": str(e)}), 500
+
+
+@admin_bp.route('/users/bulk-action', methods=['POST'])
+@admin_required
+def bulk_user_action():
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"message": "User not found"}), 404
+
+    data = request.get_json() or {}
+    user_ids = data.get('user_ids', [])
+    action = data.get('action')
+
+    if not user_ids or not isinstance(user_ids, list):
+        return jsonify({"message": "No users selected"}), 400
+
+    if action not in ('activate', 'deactivate', 'delete', 'resend_credentials'):
+        return jsonify({"message": "Invalid bulk action"}), 400
+
+    try:
+        user_ids = [int(i) for i in user_ids]
+    except (ValueError, TypeError):
+        return jsonify({"message": "Invalid user ID format"}), 400
+
+    sa_role = Role.query.filter_by(name='SuperAdmin').first()
+    sa_role_id = sa_role.id if sa_role else None
+
+    query = User.query.filter(
+        User.id.in_(user_ids),
+        User.org_id == current_user.org_id
+    )
+    if sa_role_id:
+        query = query.filter(User.role_id != sa_role_id)
+
+    targets = query.all()
+
+    if not targets:
+        return jsonify({"message": "No valid eligible users found for this operation"}), 404
+
+    success_count = 0
+    skipped_count = 0
+    errors = []
+
+    if action == 'activate':
+        for u in targets:
+            u.is_active = True
+            u.status = 'Active'
+            success_count += 1
+        db.session.commit()
+        log_action(current_user.id, "BULK_ACTIVATE_USERS", current_user.org_id, "users", None, {"count": success_count})
+        return jsonify({"status": "success", "message": f"Successfully activated {success_count} user(s).", "affected": success_count}), 200
+
+    elif action == 'deactivate':
+        for u in targets:
+            if u.id == current_user_id:
+                skipped_count += 1
+                continue
+            u.is_active = False
+            u.status = 'Inactive'
+            success_count += 1
+        db.session.commit()
+        log_action(current_user.id, "BULK_DEACTIVATE_USERS", current_user.org_id, "users", None, {"count": success_count})
+        return jsonify({"status": "success", "message": f"Successfully deactivated {success_count} user(s).", "affected": success_count, "skipped": skipped_count}), 200
+
+    elif action == 'resend_credentials':
+        import string, random
+        for u in targets:
+            try:
+                new_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+                u.hashed_password = bcrypt.generate_password_hash(new_pass).decode('utf-8')
+                u.is_temp_password = True
+                EmailUtils.send_temp_password_email(u, new_pass)
+                success_count += 1
+            except Exception as err:
+                skipped_count += 1
+                errors.append(f"{u.username}: {str(err)}")
+        db.session.commit()
+        log_action(current_user.id, "BULK_RESEND_CREDENTIALS", current_user.org_id, "users", None, {"count": success_count})
+        return jsonify({"status": "success", "message": f"Sent new credentials to {success_count} user(s).", "affected": success_count, "skipped": skipped_count}), 200
+
+    elif action == 'delete':
+        deleted_ids = []
+        for u in targets:
+            if u.id == current_user_id:
+                skipped_count += 1
+                errors.append(f"{u.username}: Cannot delete your own account.")
+                continue
+
+            try:
+                disassociate_and_delete_user(u, admin_user_id=current_user_id)
+                success_count += 1
+                deleted_ids.append(u.id)
+            except Exception as err:
+                skipped_count += 1
+                errors.append(f"{u.username}: {str(err)}")
+
+        db.session.commit()
+        log_action(current_user.id, "BULK_DELETE_USERS", current_user.org_id, "users", None, {"count": success_count, "deleted_ids": deleted_ids})
+        return jsonify({
+            "status": "success",
+            "message": f"Successfully deleted {success_count} user(s).",
+            "affected": success_count,
+            "skipped": skipped_count,
+            "errors": errors
+        }), 200
 
 
 # --- System Dashboard ---
@@ -1201,14 +1483,33 @@ def create_department():
     data = request.get_json()
     if not data or 'name' not in data:
         return jsonify({"message": "Department name required"}), 400
-    
+
+    dept_name = data['name'].strip()
+    if not dept_name:
+        return jsonify({"message": "Department name cannot be blank."}), 400
+
     plant_id = data.get('plant_id')
     plant_id_val = int(plant_id) if plant_id and str(plant_id).isdigit() else None
 
-    new_dept = Department(name=data['name'], plant_id=plant_id_val, org_id=current_user.org_id)
+    # ── Case-insensitive duplicate check within the same plant + org ──
+    from sqlalchemy import func as sqlfunc
+    existing = Department.query.filter(
+        Department.org_id == current_user.org_id,
+        Department.plant_id == plant_id_val,
+        sqlfunc.lower(Department.name) == dept_name.lower()
+    ).first()
+    if existing:
+        plant_label = existing.plant.name if existing.plant else "(no plant)"
+        return jsonify({
+            "message": f"A department named '{existing.name}' already exists "
+                       f"under '{plant_label}'. Department names must be unique "
+                       f"within the same plant location (case-insensitive)."
+        }), 409
+
+    new_dept = Department(name=dept_name, plant_id=plant_id_val, org_id=current_user.org_id)
     db.session.add(new_dept)
     db.session.commit()
-    
+
     log_action(current_user.id, "CREATE_DEPARTMENT", current_user.org_id, "departments", new_dept.id, {"name": new_dept.name, "plant_id": new_dept.plant_id})
     return jsonify({"message": "Department created", "id": new_dept.id}), 201
 
@@ -1221,14 +1522,31 @@ def update_department(dept_id):
         return jsonify({"message": "User not found"}), 404
     dept = Department.query.filter_by(id=dept_id, org_id=current_user.org_id).first_or_404()
     data = request.get_json()
-    
-    if 'name' in data:
-        dept.name = data['name']
 
+    new_name = data.get('name', dept.name).strip() if 'name' in data else dept.name
+    new_plant_id = dept.plant_id
     if 'plant_id' in data:
         pid = data['plant_id']
-        dept.plant_id = int(pid) if pid and str(pid).isdigit() else None
-        
+        new_plant_id = int(pid) if pid and str(pid).isdigit() else None
+
+    # ── Case-insensitive duplicate check (exclude self) ──
+    from sqlalchemy import func as sqlfunc
+    conflict = Department.query.filter(
+        Department.org_id == current_user.org_id,
+        Department.plant_id == new_plant_id,
+        sqlfunc.lower(Department.name) == new_name.lower(),
+        Department.id != dept_id
+    ).first()
+    if conflict:
+        plant_label = conflict.plant.name if conflict.plant else "(no plant)"
+        return jsonify({
+            "message": f"A department named '{conflict.name}' already exists "
+                       f"under '{plant_label}'. Department names must be unique "
+                       f"within the same plant location (case-insensitive)."
+        }), 409
+
+    dept.name = new_name
+    dept.plant_id = new_plant_id
     db.session.commit()
     log_action(current_user.id, "UPDATE_DEPARTMENT", current_user.org_id, "departments", dept.id, data)
     return jsonify({"message": "Department updated"}), 200
@@ -1248,23 +1566,101 @@ def get_department_detail(dept_id):
         "plant_name": dept.plant.name if dept.plant else "All Plants / Unassigned"
     }), 200
 
-@admin_bp.route('/departments/<int:dept_id>', methods=['DELETE'])
+@admin_bp.route('/departments/<int:dept_id>/stats', methods=['GET'])
 @admin_required
-def delete_department(dept_id):
+def get_department_stats(dept_id):
+    """Return user count for deletion confirmation dialog."""
     current_user_id = get_jwt_identity()
     current_user = db.session.get(User, current_user_id)
     if not current_user:
         return jsonify({"message": "User not found"}), 404
     dept = Department.query.filter_by(id=dept_id, org_id=current_user.org_id).first_or_404()
-    
-    # Check for assigned users
-    has_users = User.query.filter_by(department_id=dept_id).first()
-    if has_users:
-        return jsonify({"message": "Cannot delete department with assigned members. Reassign them first."}), 400
-        
+    user_count = User.query.filter_by(department_id=dept_id, org_id=current_user.org_id).count()
+    return jsonify({
+        "dept_id": dept_id,
+        "dept_name": dept.name,
+        "user_count": user_count
+    }), 200
+
+@admin_bp.route('/departments/<int:dept_id>', methods=['DELETE'])
+@admin_required
+def delete_department(dept_id):
+    """
+    Smart department delete.
+    Body JSON params:
+      action         : 'delete_users' | 'move_to_dept' | 'new_dept'
+      target_dept_id : (required for move_to_dept) existing dept id to move users to
+      new_dept_name  : (required for new_dept) name for the new department to create
+    If no body / action supplied → old behaviour (reject if users exist).
+    """
+    current_user_id = get_jwt_identity()
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"message": "User not found"}), 404
+    dept = Department.query.filter_by(id=dept_id, org_id=current_user.org_id).first_or_404()
+
+    data   = request.get_json(silent=True) or {}
+    action = data.get('action', '').strip()  # delete_users | move_to_dept | new_dept
+
+    users_in_dept = User.query.filter_by(department_id=dept_id, org_id=current_user.org_id).all()
+
+    if not action:
+        # Legacy fallback: block if users exist
+        if users_in_dept:
+            return jsonify({
+                "message": f"This department has {len(users_in_dept)} member(s). "
+                           "Please choose what to do with them before deleting."
+            }), 400
+    elif action == 'delete_users':
+        # Safely disassociate and delete all users in this department
+        try:
+            db.session.execute(db.text("ALTER TABLE audit_logs ALTER COLUMN user_id DROP NOT NULL;"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        for u in users_in_dept:
+            disassociate_and_delete_user(u, admin_user_id=current_user_id)
+
+    elif action == 'move_to_dept':
+        target_id = data.get('target_dept_id')
+        if not target_id:
+            return jsonify({"message": "'target_dept_id' is required for move_to_dept action."}), 400
+        target_dept = Department.query.filter_by(id=int(target_id), org_id=current_user.org_id).first()
+        if not target_dept:
+            return jsonify({"message": "Target department not found in your organisation."}), 404
+        for u in users_in_dept:
+            u.department_id = target_dept.id
+            if target_dept.plant_id:
+                u.plant_id = target_dept.plant_id
+
+    elif action == 'new_dept':
+        new_name = (data.get('new_dept_name') or '').strip()
+        if not new_name:
+            return jsonify({"message": "'new_dept_name' is required for new_dept action."}), 400
+        # Case-insensitive duplicate check
+        from sqlalchemy import func as sqlfunc
+        clash = Department.query.filter(
+            Department.org_id == current_user.org_id,
+            Department.plant_id == dept.plant_id,
+            sqlfunc.lower(Department.name) == new_name.lower()
+        ).first()
+        if clash:
+            return jsonify({"message": f"A department named '{clash.name}' already exists under this plant."}), 409
+        new_dept = Department(name=new_name, plant_id=dept.plant_id, org_id=current_user.org_id)
+        db.session.add(new_dept)
+        db.session.flush()  # get new_dept.id
+        for u in users_in_dept:
+            u.department_id = new_dept.id
+            if new_dept.plant_id:
+                u.plant_id = new_dept.plant_id
+    else:
+        return jsonify({"message": f"Unknown action '{action}'."}), 400
+
     db.session.delete(dept)
     db.session.commit()
-    log_action(current_user.id, "DELETE_DEPARTMENT", current_user.org_id, "departments", dept_id)
+    log_action(current_user.id, "DELETE_DEPARTMENT", current_user.org_id, "departments", dept_id,
+               {"action": action, "users_affected": len(users_in_dept)})
     return jsonify({"message": "Department deleted successfully"}), 200
 
 # --- Organization Settings ---

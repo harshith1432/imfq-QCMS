@@ -12,6 +12,49 @@
     <link rel="stylesheet" href="/assets/css/glass_overrides.css">
     <script src="/assets/js/ux/breadcrumbs.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Radio-choice card styles for delete modal */
+        .del-choice-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1.5px solid var(--ds-border-color);
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+            user-select: none;
+            background: transparent;
+            width: 100%;
+        }
+        .del-choice-card:hover {
+            border-color: var(--ds-primary);
+            background: rgba(var(--ds-primary-rgb, 99,102,241), 0.04);
+        }
+        .del-choice-card.danger:hover {
+            border-color: #ef4444;
+            background: rgba(239,68,68,0.06);
+        }
+        .del-choice-card input[type=radio] {
+            accent-color: var(--ds-primary);
+            width: 16px;
+            height: 16px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .del-choice-card.danger input[type=radio] {
+            accent-color: #ef4444;
+        }
+        .del-choice-card.selected {
+            border-color: var(--ds-primary);
+            background: rgba(var(--ds-primary-rgb, 99,102,241), 0.06);
+        }
+        .del-choice-card.selected.danger {
+            border-color: #ef4444;
+            background: rgba(239,68,68,0.08);
+        }
+    </style>
 </head>
 <body>
     <div class="app-layout">
@@ -87,7 +130,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <form id="deptForm">
+                    <form id="deptForm" onsubmit="event.preventDefault(); deptManager.save();">
                         <input type="hidden" id="deptId">
                         <div class="ds-field mb-3">
                             <label class="ds-label">PLANT LOCATION <span class="text-danger">*</span></label>
@@ -98,18 +141,121 @@
                         </div>
                         <div class="ds-field">
                             <label class="ds-label">DEPARTMENT NAME <span class="text-danger">*</span></label>
-                            <input type="text" class="ds-input" id="deptName" placeholder="e.g. Quality Assurance" required>
-                            <p class="text-xs text-muted mt-2">Enter the formal name of the operational department.</p>
+                            <input type="text" class="ds-input" id="deptName" placeholder="e.g. Quality Assurance" required
+                                   oninput="document.getElementById('deptNameError').style.setProperty('display', 'none', 'important'); this.classList.remove('border-danger');">
+                            <div id="deptNameError" class="text-xs text-danger mt-1 d-flex align-items-start gap-1" style="display:none !important;">
+                                <i data-lucide="alert-circle" style="width:12px;height:12px;min-width:12px;margin-top:2px;"></i>
+                                <span id="deptNameErrorMsg"></span>
+                            </div>
+                            <p class="text-xs text-muted mt-1" id="deptNameHint">Enter the formal name of the operational department.</p>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
-                    <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button class="ds-btn ds-btn-primary px-4" onclick="deptManager.save()">Save Department</button>
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary px-4" onclick="deptManager.save()">Save Department</button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Smart Delete Department Modal -->
+    <div class="modal fade" id="deptDeleteModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+            <div class="modal-content glass-card ds-card">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2">
+                        <i data-lucide="trash-2" style="width:18px;height:18px;"></i>
+                        <span id="delDeptTitle">Delete Department</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 pb-0">
+
+                    <!-- Step 1: Stats + action choice -->
+                    <div id="delDeptStep1">
+                        <div class="rounded-3 p-3 mb-3" style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2);">
+                            <div class="text-sm fw-semibold text-danger mb-1">Impact Summary</div>
+                            <div class="text-xs text-secondary" id="delDeptImpact">Loading...</div>
+                        </div>
+                        <p class="text-sm text-secondary mb-3">What would you like to do with the <strong id="delDeptUserCount">0</strong> user(s) in this department?</p>
+                        <div class="d-flex flex-column gap-2" id="delDeptStep1Options">
+                            <label class="del-choice-card" id="delDeptChoiceKeep">
+                                <input type="radio" name="delDeptChoice" value="keep"
+                                    onchange="deptManager.chooseAction('keep')">
+                                <i data-lucide="arrow-right-left" style="width:17px;height:17px;color:var(--ds-primary);margin-top:1px;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-semibold text-sm">Keep Users</div>
+                                    <div class="text-xs text-secondary">Move users to another department or create a new one</div>
+                                </div>
+                            </label>
+                            <label class="del-choice-card danger" id="delDeptChoiceDeleteAll">
+                                <input type="radio" name="delDeptChoice" value="delete_users"
+                                    onchange="deptManager.chooseAction('delete_users')">
+                                <i data-lucide="user-x" style="width:17px;height:17px;color:#ef4444;margin-top:1px;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-semibold text-sm text-danger">Delete Users Too</div>
+                                    <div class="text-xs text-secondary">Permanently deletes the department and all its members</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Keep users → sub-choice -->
+                    <div id="delDeptStep2" style="display:none;">
+                        <p class="text-sm text-secondary mb-3">Choose where to move the <strong id="delDeptUserCount2">0</strong> user(s):</p>
+                        <div class="d-flex flex-column gap-2">
+                            <label class="del-choice-card" id="delDeptChoiceMove">
+                                <input type="radio" name="delDeptSubChoice" value="move"
+                                    onchange="deptManager.showSubAction('move'); this.closest('.del-choice-card').classList.add('selected');">
+                                <i data-lucide="folders" style="width:17px;height:17px;color:var(--ds-primary);margin-top:1px;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-semibold text-sm">Move to Existing Department</div>
+                                    <div class="text-xs text-secondary">Select another department to absorb these users</div>
+                                </div>
+                            </label>
+                            <label class="del-choice-card" id="delDeptChoiceNew">
+                                <input type="radio" name="delDeptSubChoice" value="new"
+                                    onchange="deptManager.showSubAction('new'); this.closest('.del-choice-card').classList.add('selected');">
+                                <i data-lucide="folder-plus" style="width:17px;height:17px;color:var(--ds-primary);margin-top:1px;flex-shrink:0;"></i>
+                                <div>
+                                    <div class="fw-semibold text-sm">Create a New Department</div>
+                                    <div class="text-xs text-secondary">Users will be automatically moved to the new department</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Step 3a: Move to existing dept -->
+                    <div id="delDeptStep3Move" style="display:none;">
+                        <label class="ds-label mb-1">SELECT TARGET DEPARTMENT</label>
+                        <select class="ds-input ds-select mb-2" id="delDeptTargetId">
+                            <option value="">— choose department —</option>
+                        </select>
+                        <p class="text-xs text-muted">All users will be moved to the selected department, then this department will be deleted.</p>
+                    </div>
+
+                    <!-- Step 3b: Create new dept -->
+                    <div id="delDeptStep3New" style="display:none;">
+                        <label class="ds-label mb-1">NEW DEPARTMENT NAME <span class="text-danger">*</span></label>
+                        <input type="text" class="ds-input mb-1" id="delDeptNewName" placeholder="e.g. Operations">
+                        <p class="text-xs text-muted">A new department will be created and all users moved there automatically.</p>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-2 d-flex justify-content-between align-items-center">
+                    <button class="ds-btn ds-btn-ghost" id="delDeptBackBtn" onclick="deptManager.deleteBack()" style="display:none;">
+                        <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back
+                    </button>
+                    <div class="d-flex gap-2 ms-auto">
+                        <button class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                        <button class="ds-btn ds-btn-danger px-4" id="delDeptConfirmBtn" onclick="deptManager.confirmDelete()" style="display:none;">Confirm Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/api.js"></script>
@@ -263,12 +409,18 @@
         },
 
         openAddModal() {
+            // Clear any previous inline name error
+            const errDiv = document.getElementById('deptNameError');
+            const nameInp = document.getElementById('deptName');
+            if (errDiv)  errDiv.style.setProperty('display', 'none', 'important');
+            if (nameInp) { nameInp.value = ''; nameInp.classList.remove('border-danger'); }
+
             document.getElementById('modalTitle').textContent = 'Add Department';
             document.getElementById('deptId').value = '';
-            document.getElementById('deptName').value = '';
             const plantFilterVal = document.getElementById('plantFilter')?.value || '';
             document.getElementById('deptPlantId').value = plantFilterVal;
-            new bootstrap.Modal(document.getElementById('deptModal')).show();
+            // Use getOrCreateInstance to avoid duplicate-instance errors
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('deptModal')).show();
         },
 
         closeAllDropdowns() {
@@ -283,19 +435,38 @@
 
         openEditModal(id, name, plantId) {
             this.closeAllDropdowns();
+            // Clear any previous inline name error
+            const errDiv = document.getElementById('deptNameError');
+            const nameInp = document.getElementById('deptName');
+            if (errDiv)  errDiv.style.setProperty('display', 'none', 'important');
+            if (nameInp) nameInp.classList.remove('border-danger');
+
             document.getElementById('modalTitle').textContent = 'Edit Department & Plant';
             document.getElementById('deptId').value = id;
             document.getElementById('deptName').value = name;
             document.getElementById('deptPlantId').value = plantId ? String(plantId) : '';
-            new bootstrap.Modal(document.getElementById('deptModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('deptModal')).show();
         },
 
         async save() {
             const id = document.getElementById('deptId').value;
             const name = document.getElementById('deptName').value.trim();
             const plant_id = document.getElementById('deptPlantId').value;
+            const nameInput = document.getElementById('deptName');
+            const nameError = document.getElementById('deptNameError');
+            const nameErrorMsg = document.getElementById('deptNameErrorMsg');
 
-            if (!name) return QCMS.toast('Name is required', 'warning');
+            // Clear any previous inline error
+            nameInput.classList.remove('border-danger');
+            nameError.style.setProperty('display', 'none', 'important');
+
+            if (!name) {
+                nameInput.classList.add('border-danger');
+                nameErrorMsg.textContent = 'Department name is required.';
+                nameError.style.setProperty('display', 'flex', 'important');
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
 
             const payload = { name, plant_id: plant_id ? parseInt(plant_id) : null };
 
@@ -307,19 +478,160 @@
                     await api.post('/admin/departments', payload);
                     QCMS.toast('Department created successfully.', 'success');
                 }
-                bootstrap.Modal.getInstance(document.getElementById('deptModal')).hide();
-                this.loadDepartments();
+                const modalInst = bootstrap.Modal.getOrCreateInstance(document.getElementById('deptModal'));
+                if (modalInst) modalInst.hide();
+                await this.loadDepartments();
             } catch (e) {
-                QCMS.toast(e.message, 'error');
+                // Show duplicate / conflict errors inline on the name field
+                const msg = e.message || 'An error occurred.';
+                const isDuplicate = msg.toLowerCase().includes('already exists') || (e.status === 409);
+                if (isDuplicate) {
+                    nameInput.classList.add('border-danger');
+                    nameErrorMsg.textContent = msg;
+                    nameError.style.setProperty('display', 'flex', 'important');
+                    if (window.lucide) lucide.createIcons();
+                    QCMS.toast('Duplicate department name detected.', 'warning');
+                } else {
+                    QCMS.toast(msg, 'error');
+                }
             }
         },
 
         async delete(id) {
             this.closeAllDropdowns();
-            if (!confirm('Are you sure you want to remove this department? This cannot be undone.')) return;
+            this._deleteId = id;
+            this._deleteAction = null;
+            this._deleteSubAction = null;
+
+            // Fetch stats
             try {
-                await api.delete(`/admin/departments/${id}`);
-                QCMS.toast('Department removed successfully.', 'success');
+                const stats = await api.get(`/admin/departments/${id}/stats`);
+                this._deleteUserCount = stats.user_count || 0;
+                this._deleteDeptName  = stats.dept_name  || 'Department';
+            } catch (e) {
+                this._deleteUserCount = 0;
+                this._deleteDeptName  = 'Department';
+            }
+
+            // Populate modal
+            document.getElementById('delDeptTitle').textContent = `Delete "${this._deleteDeptName}"`;
+            const impact = this._deleteUserCount > 0
+                ? `This department has <strong>${this._deleteUserCount} user(s)</strong> assigned to it.`
+                : 'This department has <strong>no users</strong> — it can be safely deleted.';
+            document.getElementById('delDeptImpact').innerHTML = impact;
+            document.getElementById('delDeptUserCount').textContent  = this._deleteUserCount;
+            document.getElementById('delDeptUserCount2').textContent = this._deleteUserCount;
+
+            // Reset to step 1
+            this._showDelStep(1);
+
+            // Reset radio selections
+            document.querySelectorAll('input[name="delDeptChoice"]').forEach(r => r.checked = false);
+            document.querySelectorAll('input[name="delDeptSubChoice"]').forEach(r => r.checked = false);
+            document.querySelectorAll('.del-choice-card').forEach(c => c.classList.remove('selected'));
+
+            // If no users → skip straight to confirm
+            if (this._deleteUserCount === 0) {
+                document.querySelector('#delDeptStep1Options').style.display = 'none';
+                if (document.querySelector('#delDeptStep1 p')) document.querySelector('#delDeptStep1 p').style.display = 'none';
+                document.getElementById('delDeptConfirmBtn').style.display = 'inline-flex';
+                this._deleteAction = 'delete_users';
+            } else {
+                document.querySelector('#delDeptStep1Options').style.display = 'flex';
+                if (document.querySelector('#delDeptStep1 p')) document.querySelector('#delDeptStep1 p').style.display = 'block';
+            }
+
+            // Populate other-dept dropdown (exclude self)
+            const select = document.getElementById('delDeptTargetId');
+            select.innerHTML = '<option value="">— choose department —</option>';
+            this.allDepts.filter(d => d.id !== id).forEach(d => {
+                const o = document.createElement('option');
+                o.value = d.id;
+                o.textContent = d.name + (d.plant_name ? ` (${d.plant_name})` : '');
+                select.appendChild(o);
+            });
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('deptDeleteModal')).show();
+            if (window.lucide) lucide.createIcons();
+        },
+
+        _showDelStep(step) {
+            ['delDeptStep1','delDeptStep2','delDeptStep3Move','delDeptStep3New'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById('delDeptBackBtn').style.display    = step > 1 ? 'inline-flex' : 'none';
+            document.getElementById('delDeptConfirmBtn').style.display = 'none';
+            if (step === 1) document.getElementById('delDeptStep1').style.display = 'block';
+            if (step === 2) document.getElementById('delDeptStep2').style.display = 'block';
+            if (step === '3move') {
+                document.getElementById('delDeptStep3Move').style.display = 'block';
+                document.getElementById('delDeptConfirmBtn').style.display = 'inline-flex';
+            }
+            if (step === '3new') {
+                document.getElementById('delDeptStep3New').style.display = 'block';
+                document.getElementById('delDeptConfirmBtn').style.display = 'inline-flex';
+            }
+        },
+
+        chooseAction(choice) {
+            document.querySelectorAll('#delDeptStep1Options .del-choice-card').forEach(c => c.classList.remove('selected'));
+            const selectedCard = choice === 'delete_users' ? document.getElementById('delDeptChoiceDeleteAll') : document.getElementById('delDeptChoiceKeep');
+            if (selectedCard) selectedCard.classList.add('selected');
+
+            if (choice === 'delete_users') {
+                this._deleteAction = 'delete_users';
+                document.getElementById('delDeptStep2').style.display = 'none';
+                document.getElementById('delDeptConfirmBtn').style.display = 'inline-flex';
+                document.getElementById('delDeptBackBtn').style.display = 'none';
+            } else {
+                document.getElementById('delDeptConfirmBtn').style.display = 'none';
+                document.querySelectorAll('input[name="delDeptSubChoice"]').forEach(r => r.checked = false);
+                document.querySelectorAll('#delDeptStep2 .del-choice-card').forEach(c => c.classList.remove('selected'));
+                this._showDelStep(2);
+            }
+        },
+
+        showSubAction(sub) {
+            this._deleteSubAction = sub;
+            this._showDelStep(sub === 'move' ? '3move' : '3new');
+        },
+
+        deleteBack() {
+            if (['3move','3new'].includes(this._deleteSubAction)) {
+                this._deleteSubAction = null;
+                this._showDelStep(2);
+            } else {
+                this._deleteAction = null;
+                this._showDelStep(1);
+            }
+        },
+
+        async confirmDelete() {
+            const id = this._deleteId;
+            let body = { action: this._deleteAction || 'delete_users' };
+
+            if (this._deleteSubAction === 'move') {
+                const tid = document.getElementById('delDeptTargetId').value;
+                if (!tid) { QCMS.toast('Please select a target department.', 'warning'); return; }
+                body = { action: 'move_to_dept', target_dept_id: parseInt(tid) };
+            } else if (this._deleteSubAction === 'new') {
+                const nn = document.getElementById('delDeptNewName').value.trim();
+                if (!nn) { QCMS.toast('Please enter a department name.', 'warning'); return; }
+                body = { action: 'new_dept', new_dept_name: nn };
+            }
+
+            try {
+                await fetch(api.baseUrl + `/admin/departments/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + api.token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }).then(async r => {
+                    const d = await r.json();
+                    if (!r.ok) throw new Error(d.message || 'Delete failed');
+                });
+                const modalInst = bootstrap.Modal.getOrCreateInstance(document.getElementById('deptDeleteModal'));
+                if (modalInst) modalInst.hide();
+                QCMS.toast('Department deleted successfully.', 'success');
                 this.loadDepartments();
             } catch (e) {
                 QCMS.toast(e.message, 'error');

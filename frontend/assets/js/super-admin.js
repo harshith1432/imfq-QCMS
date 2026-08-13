@@ -194,6 +194,7 @@ const SuperAdmin = {
         if (viewId === 'revenue') viewId = 'billing';
         // Alias 'recycle-bin' URL param to 'recycleBin' so getElementById('recycleBinView') resolves
         if (viewId === 'recycle-bin') viewId = 'recycleBin';
+        if (viewId === 'subscriptions') viewId = 'overview';
 
         // ── RBAC: block navigation to forbidden sections ──────────────────
         if (this._permissions && this.saSubRole !== 'Owner') {
@@ -211,6 +212,16 @@ const SuperAdmin = {
 
         this.activeView = viewId;
         
+        // Retreat mobile sidebar overlay on screen switch
+        const sidebar = document.getElementById('app-sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (sidebar) sidebar.classList.remove('show');
+        if (backdrop) backdrop.classList.remove('show');
+
+        if (window.innerWidth <= 1024) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         // Update UI Tabs/Sections
         document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
         const targetView = document.getElementById(`${viewId}View`);
@@ -1419,8 +1430,8 @@ const SuperAdmin = {
         const search = document.getElementById('companySearch')?.value || '';
 
         tbody.innerHTML = companies.map(org => {
-            const displayPlan = org.plan_type || org.plan;
-            const planColor = planColors[displayPlan] || 'gray';
+            const displayPlan = org.plan_name || org.plan || org.plan_type;
+            const planColor = planColors[org.plan_category] || planColors[displayPlan] || 'blue';
             const statColor = statusColors[org.status] || 'gray';
             const trialInfo = org.trial_days_left !== null && org.trial_days_left !== undefined
                 ? `<div class="fw-bold" style="font-size: 13px; line-height: 1.4; color: ${org.trial_days_left <= 7 ? '#dc2626' : '#334155'};">${org.trial_days_left}d left</div>`
@@ -1444,7 +1455,7 @@ const SuperAdmin = {
                 </td>
                 <td class="col-plan"><span class="ds-badge ${planColor}">${displayPlan}</span></td>
                 <td class="col-users">
-                    <div class="fw-bold" style="font-size:13px;">${org.user_count}<span class="fw-normal" style="color:#64748b;">/${org.max_users === 99999 ? '∞' : org.max_users}</span></div>
+                    <div class="fw-bold" style="font-size:13px;">${org.user_count}<span class="fw-normal" style="color:#64748b;">/${(!org.max_users || org.max_users >= 99999) ? '∞' : org.max_users}</span></div>
                 </td>
                 <td class="col-status"><span class="ds-badge ${statColor}">${org.status === 'Trialing' || org.status === 'Trial' ? 'On Trial' : (org.status === 'Suspended' ? 'On Hold' : org.status)}</span></td>
                 <td class="col-trial">${trialInfo}</td>
@@ -1456,14 +1467,11 @@ const SuperAdmin = {
                         <ul class="dropdown-menu dropdown-menu-end" style="min-width:190px;max-height:320px;overflow-y:auto;border:1px solid var(--ds-border-color);border-radius:var(--ds-radius-md);background:var(--ds-bg-card);box-shadow:var(--ds-shadow-lg);z-index:100050 !important;">
                             <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.viewCompanyDetails(${org.id});return false;"><i data-lucide="eye" style="width:14px;height:14px;"></i> View Details</a></li>
                             <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.openEditOrg(${org.id});return false;"><i data-lucide="edit-3" style="width:14px;height:14px;"></i> Edit Profile</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.openChangePlan(${org.id},'${org.name}','${org.plan_name || org.plan}');return false;"><i data-lucide="arrow-up-circle" style="width:14px;height:14px;"></i> Change Plan</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.openExtendTrial(${org.id},'${org.name}');return false;"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Extend Trial</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2 text-warning" href="#" onclick="SuperAdmin.resetAdminPassword(${org.id});return false;"><i data-lucide="key" style="width:14px;height:14px;"></i> Reset Password</a></li>
-
-                            ${org.status === 'Trialing' || org.status === 'Expired'
-                                ? `<li><a class="dropdown-item d-flex align-items-center gap-2 py-2 text-primary" href="#" onclick="SuperAdmin.activateSubscription(${org.id},'${org.name}');return false;"><i data-lucide="credit-card" style="width:14px;height:14px;"></i> Turn on Subscription</a></li>`
+                            ${(org.status === 'Trialing' || org.status === 'Trial' || org.status === 'On Trial')
+                                ? `<li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="SuperAdmin.openExtendTrial(${org.id},'${org.name}');return false;"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Extend Trial</a></li>`
                                 : ''
                             }
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2 text-warning" href="#" onclick="SuperAdmin.resetAdminPassword(${org.id});return false;"><i data-lucide="key" style="width:14px;height:14px;"></i> Reset Password</a></li>
                             <li><hr class="dropdown-divider" style="border-color:var(--ds-border-color);"></li>
                             ${org.status === 'Suspended'
                                 ? `<li><a class="dropdown-item d-flex align-items-center gap-2 py-2 text-success" href="#" onclick="SuperAdmin.confirmStatusChange(${org.id},'${org.name}','Active');return false;"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> Unpause / Reactivate</a></li>`
@@ -3297,49 +3305,27 @@ const SuperAdmin = {
             const orgParam = this.auditFilters.org_id ? `?org_id=${this.auditFilters.org_id}` : '';
             const res = await api.get(`/admin/audit/dashboard${orgParam}`);
             const d = res.data || {};
-            
-            const labels = {
-                total_events: "Total Logged Actions",
-                today_events: "Today's Events",
-                failed_actions: "Failed Actions",
-                success_actions: "Successful Actions",
-                security_events: "Security Warnings",
-                login_events: "Access Sessions",
-                data_changes: "Data Modifications",
-                critical_events: "Critical Incidents",
-                deleted_records: "Deleted Records",
-                export_activities: "Compliance Exports",
-                active_sessions: "Active Sessions",
-                failed_logins: "Failed Login Attempts"
-            };
-            
-            grid.innerHTML = Object.keys(d).map(key => {
-                const kpi = d[key];
-                const growthSign = kpi.growth > 0 ? '+' : '';
-                const growthClass = kpi.growth > 0 ? 'up' : (kpi.growth < 0 ? 'down' : 'neutral');
-                const icon = kpi.icon || 'activity';
-                
-                let cardColor = 'rgba(99, 102, 241, 0.12)';
-                let textColor = '#6366f1';
-                if (key.includes('fail') || key.includes('critical') || key.includes('deleted')) {
-                    cardColor = 'rgba(239, 68, 68, 0.12)';
-                    textColor = '#ef4444';
-                } else if (key.includes('success')) {
-                    cardColor = 'rgba(16, 185, 129, 0.12)';
-                    textColor = '#10b981';
-                } else if (key.includes('security')) {
-                    cardColor = 'rgba(245, 158, 11, 0.12)';
-                    textColor = '#f59e0b';
-                }
-                
+
+            // Retain 6 essential, high-value, non-redundant audit KPI metrics
+            const essentialKpis = [
+                { key: 'total_events',       label: 'Total Audit Events',        icon: 'activity',      bg: 'rgba(99, 102, 241, 0.12)', color: '#6366f1' },
+                { key: 'data_changes',       label: 'Data Modifications',        icon: 'database',      bg: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' },
+                { key: 'active_sessions',    label: 'Active User Sessions',      icon: 'users',         bg: 'rgba(16, 185, 129, 0.12)', color: '#10b981' },
+                { key: 'security_events',    label: 'Security Alerts & Warnings',icon: 'shield-alert',  bg: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' },
+                { key: 'critical_events',    label: 'Critical Incidents',        icon: 'alert-triangle',bg: 'rgba(239, 68, 68, 0.12)',  color: '#ef4444' },
+                { key: 'export_activities',  label: 'Compliance Exports',        icon: 'file-text',     bg: 'rgba(14, 165, 233, 0.12)', color: '#0ea5e9' }
+            ];
+
+            grid.innerHTML = essentialKpis.map(item => {
+                const kpi = d[item.key] || { value: 0 };
                 return `
-                <div class="audit-kpi-card" onclick="SuperAdmin.filterAuditByKpi('${key}')" title="${kpi.tooltip || ''}">
-                    <div class="audit-kpi-icon" style="background:${cardColor};">
-                        <i data-lucide="${icon}" style="width:16px;height:16px;color:${textColor};"></i>
+                <div class="audit-kpi-card" onclick="SuperAdmin.filterAuditByKpi('${item.key}')" title="${kpi.tooltip || item.label}">
+                    <div class="audit-kpi-icon" style="background:${item.bg};">
+                        <i data-lucide="${item.icon}" style="width:16px;height:16px;color:${item.color};"></i>
                     </div>
-                    <div class="audit-kpi-value">${kpi.value}</div>
-                    <div class="audit-kpi-label">${labels[key] || key}</div>
-                    <div class="audit-kpi-accent" style="background:${textColor}"></div>
+                    <div class="audit-kpi-value">${kpi.value !== undefined ? kpi.value : 0}</div>
+                    <div class="audit-kpi-label">${item.label}</div>
+                    <div class="audit-kpi-accent" style="background:${item.color}"></div>
                 </div>`;
             }).join('');
             if (window.lucide) lucide.createIcons();
@@ -4302,10 +4288,17 @@ const SuperAdmin = {
     },
 
     async openChangePlan(id, name, currentPlan) {
-        await this.populateAllPlanDropdowns();
+        await this.populateAllPlanDropdowns(true);
         document.getElementById('changePlanOrgId').value = id;
         document.getElementById('changePlanOrgName').textContent = name;
-        document.getElementById('changePlanSelect').value = currentPlan;
+        const select = document.getElementById('changePlanSelect');
+        if (select && currentPlan) {
+            const options = Array.from(select.options).map(o => o.value);
+            const match = options.find(o => o.toLowerCase() === currentPlan.toLowerCase() || (o.toLowerCase().includes('trial') && currentPlan.toLowerCase().includes('trial')));
+            if (match) {
+                select.value = match;
+            }
+        }
         const modal = new bootstrap.Modal(document.getElementById('changePlanModal'));
         modal.show();
     },
@@ -4459,7 +4452,7 @@ const SuperAdmin = {
         }
 
         try {
-            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const token = (window.api && window.api.token) || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch('/api/v1/storage/breakdown', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -4942,10 +4935,12 @@ const SuperAdmin = {
     },
     setSubFilter(key, val, btn) {
         if (val === '30d' || key === 'renewal_window') {
-            this._sub.filters.renewal_window = val || '30d';
+            this._sub.filters.renewal_window = val || '';
             this._sub.filters.status = '';
             const statusSel = document.getElementById('subStatusFilter');
             if (statusSel) statusSel.value = '';
+            const renSel = document.getElementById('subRenewalFilter');
+            if (renSel) renSel.value = val || '';
         } else if (key === 'status') {
             this._sub.filters.status = val;
             this._sub.filters.renewal_window = '';
@@ -4953,6 +4948,8 @@ const SuperAdmin = {
             if (btn) btn.classList.add('active');
             const statusSel = document.getElementById('subStatusFilter');
             if (statusSel) statusSel.value = val;
+            const renSel = document.getElementById('subRenewalFilter');
+            if (renSel) renSel.value = '';
         } else {
             this._sub.filters[key] = val;
         }
@@ -6545,7 +6542,6 @@ const SuperAdmin = {
                         <ul class="dropdown-menu dropdown-menu-end" style="min-width:180px;font-size:12.5px;z-index:100050 !important;">
                             <li><a class="dropdown-item" href="#" onclick="SuperAdmin.openPlanDetailDrawer(${p.id});return false;"><i data-lucide="eye" style="width:13px;height:13px;" class="me-2"></i>View details</a></li>
                             <li><a class="dropdown-item" href="#" onclick="SuperAdmin.openPlanCreateWizard(${p.id});return false;"><i data-lucide="edit" style="width:13px;height:13px;" class="me-2"></i>Edit plan</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="SuperAdmin.duplicatePlan(${p.id});return false;"><i data-lucide="copy" style="width:13px;height:13px;" class="me-2"></i>Duplicate</a></li>
                             <li><hr class="dropdown-divider"></li>
                             ${p.status==='Active'?`<li><a class="dropdown-item" href="#" onclick="SuperAdmin._planAction(${p.id}, 'deactivate');return false;"><i data-lucide="pause-circle" style="width:13px;height:13px;" class="me-2"></i>Deactivate</a></li>`:''}
                             ${p.status==='Inactive'?`<li><a class="dropdown-item" href="#" onclick="SuperAdmin._planAction(${p.id}, 'activate');return false;"><i data-lucide="play-circle" style="width:13px;height:13px;" class="me-2"></i>Activate</a></li>`:''}
@@ -8706,10 +8702,10 @@ const SuperAdmin = {
         }, 1500);
     },
 
-    async populateAllPlanDropdowns() {
+    async populateAllPlanDropdowns(forceRefresh = false) {
         try {
             let plans = [];
-            if (this._allFetchedPlans && this._allFetchedPlans.length) {
+            if (!forceRefresh && this._allFetchedPlans && this._allFetchedPlans.length) {
                 plans = this._allFetchedPlans;
             } else {
                 const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -8718,62 +8714,92 @@ const SuperAdmin = {
                 });
                 if (res.ok) {
                     const body = await res.json();
-                    plans = body.data || [];
+                    plans = body.data || body.plans || [];
                     this._allFetchedPlans = plans;
                 }
             }
 
-            // Standard Plan Type Tiers (Starter, Professional, Enterprise, Custom, Trial Plan (Free Onboarding Trial))
+            // Standard Plan Types / Tiers for Type Tier dropdowns only
             const standardTiers = ['Starter', 'Professional', 'Enterprise', 'Custom', 'Trial Plan (Free Onboarding Trial)'];
-            const allOptionNames = [...standardTiers];
 
-            // Single plan select fields
-            const formSelectIds = ['editPlan', 'assignPlanSelect', 'changePlanSelect', 'wizPlan', 'ps-default-plan', 'pwTier'];
-            formSelectIds.forEach(id => {
+            // Extract ONLY the names of created plans from the database
+            let createdPlanNames = [];
+            if (Array.isArray(plans) && plans.length > 0) {
+                createdPlanNames = Array.from(new Set(
+                    plans.map(p => (p.name || p.title || p.plan_name || '').trim()).filter(Boolean)
+                ));
+            }
+
+            // Fallback only if no custom plans exist in database
+            if (!createdPlanNames.length) {
+                createdPlanNames = [...standardTiers];
+            }
+
+            // 1. Populate Plan Type Tier fields (pwTier & filterPlanType) with ONLY standard Plan Types
+            const tierSelects = ['pwTier', 'filterPlanType'];
+            tierSelects.forEach(id => {
                 const select = document.getElementById(id);
                 if (select) {
                     const currentVal = select.value;
-                    const options = allOptionNames.map(name => {
+                    const isFilter = (id === 'filterPlanType');
+                    const options = (isFilter ? '<option value="">All Types</option>' : '') + standardTiers.map(name => {
                         const escaped = this._escapeHTML(name);
                         return `<option value="${escaped}">${escaped}</option>`;
                     }).join('');
                     select.innerHTML = options;
                     if (currentVal) {
-                        const match = allOptionNames.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
+                        const match = standardTiers.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
                         if (match) select.value = match;
                     }
                 }
             });
 
-            // Filter select fields (with "All Plans" top option)
+            // 2. Single plan select fields (changePlanSelect, editPlan, assignPlanSelect, etc.) with ONLY Created Plan Names
+            const formSelectIds = ['editPlan', 'assignPlanSelect', 'changePlanSelect', 'wizPlan', 'ps-default-plan'];
+            formSelectIds.forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    const currentVal = select.value;
+                    const options = createdPlanNames.map(name => {
+                        const escaped = this._escapeHTML(name);
+                        return `<option value="${escaped}">${escaped}</option>`;
+                    }).join('');
+                    select.innerHTML = options;
+                    if (currentVal) {
+                        const match = createdPlanNames.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
+                        if (match) select.value = match;
+                    }
+                }
+            });
+
+            // 3. Filter select fields with ONLY Created Plan Names
             const filterSelects = [
                 { id: 'filterPlan', label: 'All Plans' },
                 { id: 'billPlanFilter', label: 'All Plans' },
                 { id: 'subPlanFilter', label: 'All Plans' },
                 { id: 'licPlanFilter', label: 'All Plans' },
-                { id: 'modPlanFilter', label: 'All Plans' },
-                { id: 'filterPlanType', label: 'All Types' }
+                { id: 'modPlanFilter', label: 'All Plans' }
             ];
             filterSelects.forEach(({ id, label }) => {
                 const select = document.getElementById(id);
                 if (select) {
                     const currentVal = select.value;
-                    const options = `<option value="">${label}</option>` + allOptionNames.map(name => {
+                    const options = `<option value="">${label}</option>` + createdPlanNames.map(name => {
                         const escaped = this._escapeHTML(name);
                         return `<option value="${escaped}">${escaped}</option>`;
                     }).join('');
                     select.innerHTML = options;
                     if (currentVal) {
-                        const match = allOptionNames.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
+                        const match = createdPlanNames.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
                         if (match) select.value = match;
                     }
                 }
             });
 
-            // Bulk dropdown menus (UL dropdowns)
+            // 4. Bulk dropdown menus with ONLY Created Plan Names
             const bulkPlanUl = document.getElementById('bulkAssignPlanDropdown');
             if (bulkPlanUl) {
-                bulkPlanUl.innerHTML = allOptionNames.map(name => {
+                bulkPlanUl.innerHTML = createdPlanNames.map(name => {
                     const escapedName = this._escapeHTML(name);
                     return `<li><a class="dropdown-item" href="#" onclick="SuperAdmin.triggerBulkAssignPlan('${escapedName.replace(/'/g, "\\'")}');return false;">${escapedName}</a></li>`;
                 }).join('');
