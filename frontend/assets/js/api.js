@@ -92,9 +92,9 @@ const api = {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            // Support AbortController and default timeout of 60 seconds (60000ms) for cloud serverless cold-starts
+            // Support AbortController and default timeout of 120 seconds for Render free-tier cold-starts
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), options.timeout || 60000);
+            const timeoutId = setTimeout(() => controller.abort(), options.timeout || 120000);
 
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -160,7 +160,11 @@ const api = {
             } catch (err) {
                 clearTimeout(timeoutId);
                 if (err.name === 'AbortError') {
-                    const timeoutErr = new Error('Request timeout. Please check your connection.');
+                    const isLogin = endpoint.includes('/auth/login');
+                    const msg = isLogin
+                        ? 'Server is warming up, please wait a moment and try again.'
+                        : 'Request timeout. Please check your connection.';
+                    const timeoutErr = new Error(msg);
                     timeoutErr.isTimeout = true;
                     throw timeoutErr;
                 }

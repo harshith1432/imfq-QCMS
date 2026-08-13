@@ -5,76 +5,105 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     const password = document.getElementById('password')?.value || '';
     const errorMsg = document.getElementById('errorMsg');
 
-    try {
-        const loginBtn = document.getElementById('loginBtn');
-        const data = await api.post('/auth/login', { username, password }, { button: loginBtn });
-        if (!data || !data.access_token) {
-            throw new Error(data?.msg || data?.message || "Invalid username or password");
-        }
-        sessionStorage.setItem('token', data.access_token);
-        localStorage.setItem('token', data.access_token);
-
-        const userPayload = JSON.stringify({
-            username: data.username,
-            email: data.email,
-            role: data.role,
-            org_id: data.org_id,
-            org_name: data.org_name,
-            dept_id: data.dept_id,
-            subscription_plan: data.subscription_plan,
-            subscription_status: data.subscription_status,
-            is_temp_password: data.is_temp_password,
-            id: data.id,
-            language: data.language,
-            org_timezone: data.org_timezone,
-            org_primary_color: data.org_primary_color || null,
-            org_logo_url: data.org_logo_url || null,
-            org_favicon_url: data.org_favicon_url || null
-        });
-
-        sessionStorage.setItem('user', userPayload);
-        localStorage.setItem('user', userPayload);
-        
-        // Sync global language
-        if (data.language) {
-            localStorage.setItem('qcms-language', data.language);
-            if (window.i18n) window.i18n.setLanguage(data.language);
-        }
-
-        if (data.is_temp_password) {
-            window.location.href = '/auth/reset-password.html';
-            return;
-        }
-
-        // Role-based redirection
-        const role = data.role;
-        if (role === 'SuperAdmin') window.location.href = '/admin/super-admin.html';
-        else if (role === 'Admin') window.location.href = '/dashboard/dashboard-admin.html';
-        else if (role === 'Reviewer') window.location.href = '/dashboard/dashboard-reviewer.html';
-        else if (role === 'Facilitator') window.location.href = '/dashboard/dashboard-facilitator.html';
-        else if (role === 'Team Leader') window.location.href = '/dashboard/dashboard-team-member.html';
-        else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
-        else window.location.href = '/dashboard/dashboard-team-member.html';
-    } catch (err) {
-        if (errorMsg) {
-            const span = errorMsg.querySelector('span');
-            if (span) span.textContent = err.message;
-            else errorMsg.textContent = err.message;
-            errorMsg.style.setProperty('display', 'flex', 'important');
-        }
-    } finally {
-        const loginBtn = document.getElementById('loginBtn');
-        if (loginBtn) {
-            if (window.ActionLock) {
-                window.ActionLock.unlockButton(loginBtn);
+    const attemptLogin = async (isRetry = false) => {
+        try {
+            const loginBtn = document.getElementById('loginBtn');
+            if (isRetry) {
+                if (loginBtn) loginBtn.innerHTML = '<span style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Retrying...</span>';
+                if (errorMsg) {
+                    const span = errorMsg.querySelector('span');
+                    const msg = 'Server is warming up, retrying now...';
+                    if (span) span.textContent = msg;
+                    else errorMsg.textContent = msg;
+                    errorMsg.style.setProperty('display', 'flex', 'important');
+                }
             }
-            loginBtn.disabled = false;
-            loginBtn.style.pointerEvents = '';
-            loginBtn.style.cursor = '';
-            loginBtn.innerHTML = 'Sign In';
+            const data = await api.post('/auth/login', { username, password }, { button: isRetry ? null : loginBtn });
+            if (!data || !data.access_token) {
+                throw new Error(data?.msg || data?.message || "Invalid username or password");
+            }
+            sessionStorage.setItem('token', data.access_token);
+            localStorage.setItem('token', data.access_token);
+
+            const userPayload = JSON.stringify({
+                username: data.username,
+                email: data.email,
+                role: data.role,
+                org_id: data.org_id,
+                org_name: data.org_name,
+                dept_id: data.dept_id,
+                subscription_plan: data.subscription_plan,
+                subscription_status: data.subscription_status,
+                is_temp_password: data.is_temp_password,
+                id: data.id,
+                language: data.language,
+                org_timezone: data.org_timezone,
+                org_primary_color: data.org_primary_color || null,
+                org_logo_url: data.org_logo_url || null,
+                org_favicon_url: data.org_favicon_url || null
+            });
+
+            sessionStorage.setItem('user', userPayload);
+            localStorage.setItem('user', userPayload);
+            
+            // Sync global language
+            if (data.language) {
+                localStorage.setItem('qcms-language', data.language);
+                if (window.i18n) window.i18n.setLanguage(data.language);
+            }
+
+            if (data.is_temp_password) {
+                window.location.href = '/auth/reset-password.html';
+                return;
+            }
+
+            // Role-based redirection
+            const role = data.role;
+            if (role === 'SuperAdmin') window.location.href = '/admin/super-admin.html';
+            else if (role === 'Admin') window.location.href = '/dashboard/dashboard-admin.html';
+            else if (role === 'Reviewer') window.location.href = '/dashboard/dashboard-reviewer.html';
+            else if (role === 'Facilitator') window.location.href = '/dashboard/dashboard-facilitator.html';
+            else if (role === 'Team Leader') window.location.href = '/dashboard/dashboard-team-member.html';
+            else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
+            else window.location.href = '/dashboard/dashboard-team-member.html';
+        } catch (err) {
+            // On first timeout, auto-retry once after 15 seconds
+            if (err.isTimeout && !isRetry) {
+                if (errorMsg) {
+                    const span = errorMsg.querySelector('span');
+                    const msg = '⏳ Server is warming up. Auto-retrying in 15 seconds...';
+                    if (span) span.textContent = msg;
+                    else errorMsg.textContent = msg;
+                    errorMsg.style.setProperty('display', 'flex', 'important');
+                }
+                const loginBtn = document.getElementById('loginBtn');
+                if (loginBtn) loginBtn.innerHTML = '<span style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Warming up...</span>';
+                setTimeout(() => attemptLogin(true), 15000);
+                return;
+            }
+            if (errorMsg) {
+                const span = errorMsg.querySelector('span');
+                if (span) span.textContent = err.message;
+                else errorMsg.textContent = err.message;
+                errorMsg.style.setProperty('display', 'flex', 'important');
+            }
+        } finally {
+            if (!err?.isTimeout || isRetry) {
+                const loginBtn = document.getElementById('loginBtn');
+                if (loginBtn) {
+                    if (window.ActionLock) window.ActionLock.unlockButton(loginBtn);
+                    loginBtn.disabled = false;
+                    loginBtn.style.pointerEvents = '';
+                    loginBtn.style.cursor = '';
+                    loginBtn.innerHTML = 'Sign In';
+                }
+            }
         }
-    }
+    };
+
+    await attemptLogin();
 });
+
 
 // Registration Logic
 document.getElementById('registerForm')?.addEventListener('submit', async (e) => {

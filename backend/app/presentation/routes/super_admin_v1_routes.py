@@ -133,11 +133,11 @@ def get_dashboard_stats():
         Organization.is_platform_org == False
     ).count()
     
-    # 2. Active Organizations
+    # 2. Active Organizations (includes Trial orgs — they are actively using the platform)
     active_orgs = Organization.query.filter(
         Organization.is_deleted == False,
         Organization.is_platform_org == False,
-        Organization.subscription_status.in_(['Active', 'ACTIVE']),
+        Organization.subscription_status.in_(['Active', 'ACTIVE', 'Trialing', 'Trial', 'TRIAL']),
         (Organization.license_expiry_date >= now) | (Organization.license_expiry_date.is_(None))
     ).count()
 
@@ -244,7 +244,13 @@ def get_dashboard_stats():
         active_paid_amount += p_price
 
     arr_val = mrr_val * 12
-    paid_orgs_count = len(set(s.org_id for s in active_subs if s.org_id))
+    # Paid orgs: only count subscriptions that are truly paid (exclude free trials)
+    paid_orgs_count = len(set(
+        s.org_id for s in active_subs
+        if s.org_id
+        and s.subscription_status not in ['Trialing', 'Trial', 'TRIAL']
+        and float(s.final_amount or s.base_price or 0.0) > 0
+    ))
 
     if revenue_in_period == 0.0 and active_paid_amount > 0.0:
         revenue_in_period = active_paid_amount
