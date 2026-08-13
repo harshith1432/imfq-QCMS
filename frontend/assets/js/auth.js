@@ -6,6 +6,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     const errorMsg = document.getElementById('errorMsg');
 
     const attemptLogin = async (isRetry = false) => {
+        let isTimeout = false;
         try {
             const loginBtn = document.getElementById('loginBtn');
             if (isRetry) {
@@ -67,6 +68,9 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
             else window.location.href = '/dashboard/dashboard-team-member.html';
         } catch (err) {
+            if (err.isTimeout) {
+                isTimeout = true;
+            }
             // On first timeout, auto-retry once after 15 seconds
             if (err.isTimeout && !isRetry) {
                 if (errorMsg) {
@@ -88,7 +92,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 errorMsg.style.setProperty('display', 'flex', 'important');
             }
         } finally {
-            if (!err?.isTimeout || isRetry) {
+            if (!isTimeout || isRetry) {
                 const loginBtn = document.getElementById('loginBtn');
                 if (loginBtn) {
                     if (window.ActionLock) window.ActionLock.unlockButton(loginBtn);
