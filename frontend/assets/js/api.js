@@ -1,11 +1,47 @@
-const API_BASE = '/api';
+// Auto-detect Browser GPS Location
+(function initBrowserGeolocation() {
+    if (typeof window === 'undefined' || !navigator || !navigator.geolocation) return;
+    const cached = sessionStorage.getItem('browser_geo_location');
+    if (cached) {
+        window._cachedBrowserLocation = cached;
+        return;
+    }
+    try {
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                // Check if coordinates are in/near Bengaluru / Karnataka (lat ~12.5-13.5, lon ~77.0-78.2)
+                if (lat >= 12.5 && lat <= 13.5 && lon >= 77.0 && lon <= 78.2) {
+                    const loc = 'Bengaluru, Karnataka, IN';
+                    window._cachedBrowserLocation = loc;
+                    sessionStorage.setItem('browser_geo_location', loc);
+                    return;
+                }
+                try {
+                    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const city = data.city || data.locality || data.principalSubdivision || '';
+                        const state = data.principalSubdivision || '';
+                        const country = data.countryCode || 'IN';
+                        if (city) {
+                            const formatted = `${city}${state ? ', ' + state : ''}, ${country}`;
+                            window._cachedBrowserLocation = formatted;
+                            sessionStorage.setItem('browser_geo_location', formatted);
+                        }
+                    }
+                } catch (e) {}
+            },
+            (err) => {
+                console.log('[GeoLocation] GPS permission not granted or timeout; falling back to Plant/IP location.');
+            },
+            { timeout: 5000, maximumAge: 600000 }
+        );
+    } catch (e) {}
+})();
 
-// Auto-load action locking engine if not present
-if (typeof window !== 'undefined' && !window.ActionLock && typeof document !== 'undefined') {
-    const s = document.createElement('script');
-    s.src = '/assets/js/action-lock.js';
-    document.head.appendChild(s);
-}
+const API_BASE = '/api';
 
 const api = {
     baseUrl: API_BASE,
@@ -88,8 +124,21 @@ const api = {
                 headers['Content-Type'] = 'application/json';
             }
 
-            if (token) {
+            const isPublicAuthEndpoint = endpoint.includes('/auth/login') ||
+                endpoint.includes('/auth/register') ||
+                endpoint.includes('/auth/login-config') ||
+                endpoint.includes('/auth/forgot-password') ||
+                endpoint.includes('/auth/reset-password') ||
+                endpoint.includes('/auth/sso/');
+
+            if (token && !isPublicAuthEndpoint) {
                 headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            // Attach Browser GPS Geo-Location if available
+            const browserGeo = typeof window !== 'undefined' ? (window._cachedBrowserLocation || sessionStorage.getItem('browser_geo_location')) : '';
+            if (browserGeo && !headers['X-Browser-Location']) {
+                headers['X-Browser-Location'] = browserGeo;
             }
 
             // Support AbortController and default timeout of 120 seconds for Render free-tier cold-starts
@@ -104,8 +153,19 @@ const api = {
                 });
                 clearTimeout(timeoutId);
 
+                if (endpoint.includes('/auth/login')) {
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        const errMsg = data.msg || data.message || data.error || data.detail || 'Invalid username or password';
+                        const error = new Error(errMsg);
+                        error.status = response.status;
+                        throw error;
+                    }
+                    return data;
+                }
+
                 if (response.status === 401) {
-                    const isLogin = endpoint.includes('/auth/login') || window.location.pathname.includes('login.html');
+                    const isLogin = window.location.pathname.includes('login.html');
                     // Match only super-admin.html portal page (not standard org admin pages under /admin/)
                     const isSuperAdminPortal = window.location.pathname.includes('super-admin.html');
                     const isInsideSuperAdminIframe = (() => {
@@ -127,10 +187,6 @@ const api = {
                         }
                         return null;
                     }
-                    if (isLogin) {
-                        const data = await response.json().catch(() => ({}));
-                        throw new Error(data.msg || data.message || 'Invalid credentials');
-                    }
                 }
 
                 const data = await response.json().catch(() => ({}));
@@ -150,7 +206,8 @@ const api = {
                 }
 
                 if (!response.ok) {
-                    const error = new Error(data.message || data.msg || data.error || 'API Error');
+                    const fallbackMsg = (response.status === 401 || response.status === 400 || response.status === 403) ? 'Invalid username or password' : 'Request failed. Please try again.';
+                    const error = new Error(data.message || data.msg || data.error || data.detail || fallbackMsg);
                     error.errors = data.errors || [];
                     error.status = response.status;
                     error.error_code = data.error_code;

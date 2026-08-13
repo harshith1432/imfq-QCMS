@@ -15,20 +15,12 @@ class DocumentBrandingService:
 
     @staticmethod
     def _normalize_email(val, default_prefix, fallback_domain="qcms.com"):
-        """Ensures email is a valid full email address with local part and domain."""
+        """Returns the email address as entered by the user, or a fallback default if empty."""
         v = (val or '').strip()
         if not v:
             return f"{default_prefix}@{fallback_domain}"
-        if v.endswith('@'):
-            return f"{v}{fallback_domain}"
-        if '@' not in v:
-            return f"{v}@{fallback_domain}"
-        
-        # If connected integration domain is set (e.g. ifqm.org.in), merge local prefix with active verified domain
-        if fallback_domain and fallback_domain.lower() != 'qcms.com':
-            prefix = v.split('@')[0].strip()
-            return f"{prefix}@{fallback_domain}"
         return v
+
 
     @classmethod
     def invalidate_cache(cls):

@@ -280,6 +280,14 @@
     <script>
         // Check for URL parameters to show messages
         window.addEventListener('DOMContentLoaded', () => {
+            // Clear any stale tokens so fresh authentication can proceed cleanly
+            sessionStorage.removeItem('token');
+            localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
+            sessionStorage.removeItem('access_token');
+            sessionStorage.removeItem('user');
+            localStorage.removeItem('user');
+
             const urlParams    = new URLSearchParams(window.location.search);
             const successMsgEl = document.getElementById('successMsg');
 

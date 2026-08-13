@@ -32,7 +32,14 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 role: data.role,
                 org_id: data.org_id,
                 org_name: data.org_name,
-                dept_id: data.dept_id,
+                dept_id: data.department_id || data.dept_id,
+                department_id: data.department_id || data.dept_id,
+                department: data.department || data.department_name,
+                department_name: data.department_name || data.department,
+                plant_id: data.plant_id,
+                plant_name: data.plant_name || data.location,
+                location: data.location || data.plant_name,
+                custom_fields: data.custom_fields || {},
                 subscription_plan: data.subscription_plan,
                 subscription_status: data.subscription_status,
                 is_temp_password: data.is_temp_password,
@@ -87,8 +94,9 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             }
             if (errorMsg) {
                 const span = errorMsg.querySelector('span');
-                if (span) span.textContent = err.message;
-                else errorMsg.textContent = err.message;
+                const displayTxt = (err.message && err.message !== 'API Error' && err.message !== 'Request failed. Please try again.') ? err.message : 'Invalid username or password';
+                if (span) span.textContent = displayTxt;
+                else errorMsg.textContent = displayTxt;
                 errorMsg.style.setProperty('display', 'flex', 'important');
             }
         } finally {

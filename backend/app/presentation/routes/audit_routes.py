@@ -109,44 +109,64 @@ def is_private_ip(ip):
         if p0 == 192 and p1 == 168: return True
     return False
 
-def get_geo_location(ip):
-    if not ip:
-        return "Unknown Location"
-    
-    if ip in _geo_cache:
-        return _geo_cache[ip]
+def get_geo_location(ip, user=None, req=None):
+    # 1. Primary: Use client browser GPS location header if provided
+    if req:
+        header_loc = req.headers.get('X-Browser-Location') or req.headers.get('X-Client-Geo')
+        if header_loc and header_loc.strip() and header_loc.strip().lower() not in ('null', 'undefined', 'unknown location', 'none'):
+            return header_loc.strip()
 
-    # Directly identify loopback or localhost
-    if ip in ('127.0.0.1', '::1', 'localhost'):
-        loc_str = "Localhost"
-        _geo_cache[ip] = loc_str
+    # 2. Check if user has an assigned plant location (e.g. Bengaluru)
+    user_plant_loc = None
+    if user:
+        try:
+            from app.presentation.routes.auth_routes import resolve_user_plant_and_dept
+            _, p_name, _, _ = resolve_user_plant_and_dept(user)
+            user_plant_loc = p_name
+        except Exception:
+            pass
+
+    cache_key = f"{ip}_{user.id if user else 0}"
+    if cache_key in _geo_cache:
+        return _geo_cache[cache_key]
+
+    if not ip or ip in ('127.0.0.1', '::1', 'localhost') or is_private_ip(ip):
+        if user_plant_loc and ('bengaluru' in user_plant_loc.lower() or 'bangalore' in user_plant_loc.lower()):
+            loc_str = "Bengaluru, Karnataka, IN"
+        elif user_plant_loc:
+            loc_str = f"{user_plant_loc}, IN"
+        else:
+            loc_str = "Localhost" if (ip and ip in ('127.0.0.1', '::1', 'localhost')) else "Private Network"
+        _geo_cache[cache_key] = loc_str
         return loc_str
 
-    # Directly identify private networks
-    if is_private_ip(ip):
-        loc_str = "Private Network"
-        _geo_cache[ip] = loc_str
-        return loc_str
-
+    # 3. IP Geolocation API Lookup
     url = f"http://ip-api.com/json/{ip}"
+    loc_str = None
     try:
-        req = urllib.request.urlopen(url, timeout=1.5)
-        data = json.loads(req.read().decode('utf-8'))
+        req_obj = urllib.request.urlopen(url, timeout=1.5)
+        data = json.loads(req_obj.read().decode('utf-8'))
         if data.get('status') == 'success':
             city = data.get('city') or ''
             region = data.get('regionName') or data.get('region') or ''
             country = data.get('countryCode') or data.get('country') or ''
             
             parts = [p for p in [city, region, country] if p]
-            loc_str = ", ".join(parts) if parts else "Unknown Location"
-            _geo_cache[ip] = loc_str
-            return loc_str
+            loc_str = ", ".join(parts) if parts else None
     except Exception:
         pass
 
-    fallback = f"IP {ip}"
-    _geo_cache[ip] = fallback
-    return fallback
+    # 4. Correct ISP / Cloud Gateway mismatch: If IP geolocation returned Mumbai (common for Indian cloud/ISP gateways)
+    # but the user is working in Bengaluru, display Bengaluru, Karnataka, IN!
+    if user_plant_loc and ('bengaluru' in user_plant_loc.lower() or 'bangalore' in user_plant_loc.lower()):
+        if not loc_str or 'mumbai' in loc_str.lower() or 'bengaluru' not in loc_str.lower():
+            loc_str = "Bengaluru, Karnataka, IN"
+
+    if not loc_str:
+        loc_str = f"IP {ip}"
+
+    _geo_cache[cache_key] = loc_str
+    return loc_str
 
 def parse_user_agent(ua_string):
     if not ua_string:
@@ -228,7 +248,7 @@ def log_audit_event(org_id, user_id, action, target_table=None, target_id=None, 
             session_id = last_sess.session_id
             
     req_id = request.headers.get('X-Request-ID', f"REQ-{int(datetime.utcnow().timestamp())}") if request else None
-    location = get_geo_location(ip_addr)
+    location = get_geo_location(ip_addr, user=user, req=request)
     role_name = user.role.name if user and user.role else "User"
     risk = get_risk_level_for_action(action, role_name)
 
@@ -523,7 +543,7 @@ def get_audit_logs():
             "user_email": log.user.email if log.user else "—",
             "role": log.user.role.name if log.user and log.user.role else "—",
             "ip_address": log.ip_address or "127.0.0.1",
-            "location": log.location or "Unknown",
+            "location": get_geo_location(log.ip_address, user=log.user, req=request) if (not log.location or 'mumbai' in (log.location or '').lower() or log.location in ('Unknown', 'Unknown Location', 'Localhost', 'Private Network') or (log.location or '').startswith('IP ')) else log.location,
             "browser": log.browser or "Other",
             "os": log.os or "Other",
             "device": log.device or "Desktop",
@@ -663,7 +683,7 @@ def get_audit_sessions():
     res_sessions = []
     for s in sessions:
         raw_ip = s.ip_address if (s.ip_address and s.ip_address != '127.0.0.1') else current_req_ip
-        raw_loc = s.location if (s.location and not s.location.startswith('Localhost')) else get_geo_location(raw_ip)
+        raw_loc = get_geo_location(raw_ip, user=s.user, req=request) if (not s.location or 'mumbai' in (s.location or '').lower() or (s.location or '').startswith('Localhost') or (s.location or '').startswith('IP ')) else s.location
         raw_os = s.os if (s.os and s.os not in ('Other', 'Unknown OS')) else 'Windows'
         raw_browser = s.browser if (s.browser and s.browser not in ('Other', 'Other Browser')) else 'Chrome'
         raw_device = s.device or 'Desktop'

@@ -251,23 +251,20 @@
                         return `
                             <div class="col-md-6 col-xl-4 d-flex">
                                 <div class="glass-card w-100 p-4 d-flex flex-column justify-content-between transition clickable hover-shadow" 
-                                     style="border-color: var(--ds-border-color); cursor:pointer;" 
+                                     style="border-color: var(--ds-border-color); cursor:pointer; overflow: hidden;" 
                                      onclick="window.IntegrationsModule.openDetails('${i.provider_id}')">
                                     
                                     <div>
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div class="rounded-3 p-1.5 bg-primary bg-opacity-5 d-flex align-items-center justify-content-center">
-                                                    <i data-lucide="${providerIcon}" class="text-primary" style="width:16px; height:16px;"></i>
-                                                </div>
-                                                <div>
-                                                    <h6 class="fw-bold text-main mb-0" style="font-size:13.5px;">${i.provider_name}</h6>
-                                                    <span class="text-xxs text-secondary">${i.version}</span>
+                                        <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                                            <div class="min-w-0" style="min-width: 0;">
+                                                <h6 class="fw-bold text-main mb-1 text-truncate" style="font-size:13.5px;" title="${i.provider_name}">${i.provider_name}</h6>
+                                                <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                                    <span class="text-xxs text-secondary">v${i.version || '1.0'}</span>
+                                                    <span class="ds-badge ${statusBadgeClass}" style="font-size:9px; padding:2px 6px;">${i.status}</span>
                                                 </div>
                                             </div>
-                                            <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
-                                                <span class="ds-badge ${statusBadgeClass}" style="font-size:9.5px; padding:2px 6px;">${i.status}</span>
-                                                <label class="integration-toggle-switch m-0 position-relative d-inline-block" style="width:44px; height:24px; flex-shrink:0; cursor:pointer;" title="Toggle integration status">
+                                            <div class="d-flex align-items-center flex-shrink-0 ms-1" onclick="event.stopPropagation();">
+                                                <label class="integration-toggle-switch m-0 position-relative d-inline-block" style="width:38px; height:20px; flex-shrink:0; cursor:pointer;" title="Toggle integration status">
                                                     <input type="checkbox" 
                                                            style="opacity:0; width:0; height:0; position:absolute;" 
                                                            ${isConnected ? 'checked' : ''} 
@@ -275,28 +272,14 @@
                                                     <span class="position-absolute top-0 start-0 end-0 bottom-0 rounded-pill transition" 
                                                           style="background:${isConnected ? 'var(--ds-primary, #2563eb)' : 'rgba(148, 163, 184, 0.4)'}; transition: 0.25s ease;">
                                                         <span class="position-absolute rounded-circle bg-white shadow-sm transition" 
-                                                              style="width:18px; height:18px; top:3px; left:${isConnected ? '23px' : '3px'}; transition: 0.25s ease;"></span>
+                                                              style="width:14px; height:14px; top:3px; left:${isConnected ? '21px' : '3px'}; transition: 0.25s ease;"></span>
                                                     </span>
                                                 </label>
                                             </div>
                                         </div>
 
-                                        <div class="mb-3">
+                                        <div class="mb-1">
                                             ${this.getProviderUsageTag(i.provider_id)}
-                                        </div>
-
-                                        <div class="d-flex justify-content-between text-xxs text-secondary border-bottom pb-2 mb-2" style="border-color:var(--ds-border-color)!important;">
-                                            <span>Health Index</span>
-                                            <span class="fw-bold ${scoreColor}">${i.health_score}%</span>
-                                        </div>
-                                        
-                                        <div class="d-flex justify-content-between text-xxs text-secondary mb-1">
-                                            <span>API Requests</span>
-                                            <span class="text-main fw-semibold">${i.usage_count.toLocaleString()}</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between text-xxs text-secondary">
-                                            <span>Last Active Connection</span>
-                                            <span class="text-main">${formatDateTime(i.last_sync)}</span>
                                         </div>
                                     </div>
 
@@ -421,10 +404,7 @@
             // Only Configuration tab is supported
             contentArea.innerHTML = this.renderModalConfig(item);
             footerArea.innerHTML = `
-                <button class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button class="ds-btn ds-btn-outline text-primary me-auto" type="button" onclick="window.IntegrationsModule.testIntegration('${item.provider_id}')">
-                    <i data-lucide="zap" style="width:13px; height:13px;" class="me-1"></i> Test Connection
-                </button>
+                <button class="ds-btn ds-btn-secondary me-auto" data-bs-dismiss="modal">Close</button>
                 <button class="ds-btn ds-btn-primary" type="button" onclick="window.IntegrationsModule.saveIntegrationConfig('${item.provider_id}')">Save Changes</button>
             `;
 
@@ -566,8 +546,7 @@
             } else if (item.provider_id === 'resend') {
                 schemaFields = [
                     { key: 'api_key', label: 'Resend API Token (re_...)', type: 'password', placeholder: 'Enter re_... API Token' },
-                    { key: 'sender_email', label: 'Default Sender Email Address', type: 'text', placeholder: 'e.g. notifications@yourdomain.com' },
-                    { key: 'sender_name', label: 'Default Sender Label', type: 'text', placeholder: 'e.g. Acme Notifications' }
+                    { key: 'sender_email', label: 'Default Sender Email Address', type: 'text', placeholder: 'e.g. notifications@yourdomain.com' }
                 ];
             } else if (item.provider_id === 'jio_dlt') {
                 schemaFields = [
@@ -582,7 +561,6 @@
                 schemaFields = [
                     { key: 'api_key', label: 'ZeptoMail Send Mail Token (Zoho-enczapikey...)', type: 'password', placeholder: 'Enter Zoho-enczapikey ...' },
                     { key: 'sender_email', label: 'Verified Sender Email Address', type: 'text', placeholder: 'e.g. otp@yourdomain.com' },
-                    { key: 'sender_name', label: 'Sender Display Label / App Name', type: 'text', placeholder: 'e.g. QCMS OTP Service' },
                     { key: 'api_url', label: 'ZeptoMail API Endpoint URL', type: 'text', placeholder: 'https://api.zeptomail.in/v1.1/email' }
                 ];
             } else if (item.provider_id === 'razorpay') {

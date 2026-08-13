@@ -35,16 +35,20 @@
         
         .audit-kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
         }
-        
+        @media (max-width: 1200px) {
+            .audit-kpi-grid {
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            }
+        }
         .audit-kpi-card {
             background: var(--audit-card-bg);
             border: 1px solid var(--audit-card-border);
-            border-radius: 16px;
-            padding: 16px;
+            border-radius: 12px;
+            padding: 10px 12px;
             position: relative;
             overflow: hidden;
             cursor: pointer;
@@ -53,35 +57,35 @@
             backdrop-filter: blur(10px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
         }
-        
         .audit-kpi-card:hover {
-            transform: translateY(-4px);
+            transform: translateY(-3px);
             border-color: rgba(99, 102, 241, 0.4);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
         }
-        
         .audit-kpi-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
         }
-        
         .audit-kpi-value {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
             color: var(--audit-text-main);
-            line-height: 1.2;
-            margin-bottom: 4px;
+            line-height: 1.1;
+            margin-bottom: 2px;
         }
-        
         .audit-kpi-label {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--audit-text-secondary);
             font-weight: 600;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .audit-kpi-growth {

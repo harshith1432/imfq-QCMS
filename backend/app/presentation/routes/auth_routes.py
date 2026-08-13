@@ -686,6 +686,73 @@ def get_login_config():
     }), 200
 
 
+def resolve_user_plant_and_dept(user):
+    try:
+        from app.infrastructure.database.models.models import Plant, Department
+        
+        cf = user.custom_fields or {}
+        cf_loc = cf.get('location') or cf.get('plant_location') or cf.get('plant')
+        cf_dept = cf.get('department') or cf.get('department_name')
+
+        dept_obj = getattr(user, 'dept', None)
+        if not dept_obj and user.department_id:
+            dept_obj = db.session.get(Department, user.department_id)
+
+        plant_obj = getattr(user, 'plant', None)
+        if not plant_obj and user.plant_id:
+            plant_obj = db.session.get(Plant, user.plant_id)
+
+        if not plant_obj and dept_obj and dept_obj.plant_id:
+            plant_obj = db.session.get(Plant, dept_obj.plant_id)
+
+        if not plant_obj and cf_loc and user.org_id:
+            plant_obj = Plant.query.filter(
+                Plant.org_id == user.org_id,
+                db.or_(Plant.name.ilike(cf_loc), Plant.location.ilike(cf_loc))
+            ).first()
+
+        if not dept_obj and cf_dept and user.org_id:
+            dept_obj = Department.query.filter(
+                Department.org_id == user.org_id,
+                Department.name.ilike(cf_dept)
+            ).first()
+
+        p_name = None
+        p_id = user.plant_id
+        if plant_obj:
+            p_name = plant_obj.name or plant_obj.location
+            p_id = plant_obj.id
+        elif cf_loc:
+            p_name = cf_loc
+
+        d_name = None
+        d_id = user.department_id
+        if dept_obj:
+            d_name = dept_obj.name
+            d_id = dept_obj.id
+        elif cf_dept:
+            d_name = cf_dept
+
+        if not p_name and user.org_id and not user.plant_id and not cf_loc:
+            def_plant = Plant.query.filter_by(org_id=user.org_id).first()
+            if def_plant:
+                p_name = def_plant.name
+                p_id = def_plant.id
+
+        if not d_name and user.org_id and not user.department_id and not cf_dept and p_id:
+            def_dept = Department.query.filter_by(plant_id=p_id).first()
+            if not def_dept:
+                def_dept = Department.query.filter_by(org_id=user.org_id).first()
+            if def_dept:
+                d_name = def_dept.name
+                d_id = def_dept.id
+
+        return p_id, p_name, d_id, d_name
+    except Exception as e:
+        print(f"[PLANT/DEPT RESOLVE WARNING] {e}")
+        return user.plant_id, None, user.department_id, None
+
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
@@ -859,7 +926,7 @@ def login():
         os_name, browser_name, device_name = parse_user_agent(ua_str)
         loc = None
         try:
-            loc = get_geo_location(ip_addr)
+            loc = get_geo_location(ip_addr, user=user, req=request)
         except Exception:
             pass
 
@@ -894,6 +961,82 @@ def login():
         db.session.rollback()
         print(f"[LOGIN SESSION WARNING] {sess_err}")
 
+def resolve_user_plant_and_dept(user):
+    try:
+        from app.infrastructure.database.models.models import Plant, Department
+        
+        cf = user.custom_fields or {}
+        cf_loc = cf.get('location') or cf.get('plant_location') or cf.get('plant')
+        cf_dept = cf.get('department') or cf.get('department_name')
+
+        dept_obj = getattr(user, 'dept', None)
+        if not dept_obj and user.department_id:
+            dept_obj = db.session.get(Department, user.department_id)
+
+        plant_obj = getattr(user, 'plant', None)
+        if not plant_obj and user.plant_id:
+            plant_obj = db.session.get(Plant, user.plant_id)
+
+        # Step 1: Check plant from user.plant / user.plant_id
+        # Step 2: Check plant from dept_obj.plant_id
+        if not plant_obj and dept_obj and dept_obj.plant_id:
+            plant_obj = db.session.get(Plant, dept_obj.plant_id)
+
+        # Step 3: Match custom_fields location with Plant model in same org
+        if not plant_obj and cf_loc and user.org_id:
+            plant_obj = Plant.query.filter(
+                Plant.org_id == user.org_id,
+                db.or_(Plant.name.ilike(cf_loc), Plant.location.ilike(cf_loc))
+            ).first()
+
+        # Step 4: Match custom_fields department with Department model in same org
+        if not dept_obj and cf_dept and user.org_id:
+            dept_obj = Department.query.filter(
+                Department.org_id == user.org_id,
+                Department.name.ilike(cf_dept)
+            ).first()
+
+        # Extract plant name and ID
+        p_name = None
+        p_id = user.plant_id
+        if plant_obj:
+            p_name = plant_obj.name or plant_obj.location
+            p_id = plant_obj.id
+        elif cf_loc:
+            p_name = cf_loc
+
+        # Extract department name and ID
+        d_name = None
+        d_id = user.department_id
+        if dept_obj:
+            d_name = dept_obj.name
+            d_id = dept_obj.id
+        elif cf_dept:
+            d_name = cf_dept
+
+        # Fallback ONLY if user has no assigned plant in DB AND no custom_fields location
+        if not p_name and user.org_id and not user.plant_id and not cf_loc:
+            def_plant = Plant.query.filter_by(org_id=user.org_id).first()
+            if def_plant:
+                p_name = def_plant.name
+                p_id = def_plant.id
+
+        # Fallback ONLY if user has no assigned department in DB AND no custom_fields department
+        if not d_name and user.org_id and not user.department_id and not cf_dept and p_id:
+            def_dept = Department.query.filter_by(plant_id=p_id).first()
+            if not def_dept:
+                def_dept = Department.query.filter_by(org_id=user.org_id).first()
+            if def_dept:
+                d_name = def_dept.name
+                d_id = def_dept.id
+
+        return p_id, p_name, d_id, d_name
+    except Exception as e:
+        print(f"[PLANT/DEPT RESOLVE WARNING] {e}")
+        return user.plant_id, None, user.department_id, None
+
+    p_id, p_name, d_id, d_name = resolve_user_plant_and_dept(user)
+
     return jsonify({
         "access_token": access_token,
         "session_id": session_id,
@@ -907,11 +1050,12 @@ def login():
         "is_temp_password": user.is_temp_password,
         "language": user.language,
         "id": user.id,
-        "department_id": user.department_id,
-        "department": user.dept.name if user.dept else None,
-        "plant_id": user.plant_id,
-        "plant_name": user.plant.name if getattr(user, 'plant', None) else None,
-        "location": user.plant.name if getattr(user, 'plant', None) else None,
+        "department_id": d_id,
+        "department": d_name,
+        "department_name": d_name,
+        "plant_id": p_id,
+        "plant_name": p_name,
+        "location": p_name,
         "org_primary_color": user.organization.primary_color if user.organization else None,
         "org_logo_url": user.organization.logo_url if user.organization else None,
         "org_favicon_url": user.organization.favicon_url if user.organization else None,
@@ -944,6 +1088,8 @@ def get_profile():
     except Exception as e:
         branding_ctx = {}
 
+    p_id, p_name, d_id, d_name = resolve_user_plant_and_dept(user)
+
     return jsonify({
         "id": user.id,
         "username": user.username,
@@ -951,11 +1097,12 @@ def get_profile():
         "email": user.email,
         "role": user.role.name if user.role else 'SuperAdmin',
         "role_name": user.role.name if user.role else 'SuperAdmin',
-        "department": user.dept.name if user.dept else None,
-        "department_id": user.department_id,
-        "plant_id": user.plant_id,
-        "plant_name": user.plant.name if getattr(user, 'plant', None) else None,
-        "location": user.plant.name if getattr(user, 'plant', None) else None,
+        "department": d_name,
+        "department_name": d_name,
+        "department_id": d_id,
+        "plant_id": p_id,
+        "plant_name": p_name,
+        "location": p_name,
         "org_id": None if is_super_admin else user.org_id,
         "org_name": None if is_super_admin else (user.organization.name if user.organization else None),
         "status": 'Active' if is_super_admin else user.status,

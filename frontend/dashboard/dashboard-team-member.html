@@ -1517,8 +1517,31 @@
                 const projTypeCustom = document.getElementById('projTypeCustom');
                 if (projTypeCustom) projTypeCustom.value = '';
 
-                this.initModal.show();
-                await this.loadPlantsList();
+                let currentUser = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+
+                if (window.api && (!currentUser.location && !currentUser.plant_name && !currentUser.department && !currentUser.department_name)) {
+                    try {
+                        const freshUser = await api.get('/auth/me');
+                        if (freshUser && freshUser.id) {
+                            currentUser = { ...currentUser, ...freshUser };
+                            sessionStorage.setItem('user', JSON.stringify(currentUser));
+                            localStorage.setItem('user', JSON.stringify(currentUser));
+                        }
+                    } catch (err) {
+                        console.warn('Could not fetch fresh user profile', err);
+                    }
+                }
+
+                const userLocation = (typeof currentUser.location === 'string' ? currentUser.location : (currentUser.location?.name || '')) ||
+                                     (typeof currentUser.plant_name === 'string' ? currentUser.plant_name : '') ||
+                                     (typeof currentUser.plant === 'string' ? currentUser.plant : (currentUser.plant?.name || '')) ||
+                                     (currentUser.custom_fields && (currentUser.custom_fields.location || currentUser.custom_fields.plant_location || currentUser.custom_fields.plant)) || '';
+
+                const userDeptName = (typeof currentUser.department === 'string' ? currentUser.department : (currentUser.department?.name || '')) ||
+                                     (typeof currentUser.department_name === 'string' ? currentUser.department_name : '') ||
+                                     (currentUser.dept && currentUser.dept.name) ||
+                                     (currentUser.custom_fields && (currentUser.custom_fields.department || currentUser.custom_fields.department_name)) || '';
+                const userDeptId = currentUser.department_id || (currentUser.dept && currentUser.dept.id) || null;
 
                 const plantInput = document.getElementById('projPlant');
                 const deptInput = document.getElementById('projDepartment');
@@ -1528,82 +1551,30 @@
                 const deptLock = document.getElementById('projDeptLockIcon');
                 const deptChevron = document.getElementById('projDeptChevron');
 
-                let user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
-                if (!user.location && !user.plant_name && !user.department && window.api) {
-                    try {
-                        const freshUser = await api.get('/auth/me');
-                        if (freshUser) {
-                            user = { ...user, ...freshUser };
-                            sessionStorage.setItem('user', JSON.stringify(user));
-                        }
-                    } catch (err) {
-                        console.warn('Could not fetch fresh user profile', err);
-                    }
-                }
-
-                const userLocation = user.location || user.plant_name || user.plant || (user.custom_fields && user.custom_fields.location) || '';
-                const userDeptName = user.department || user.department_name || '';
-                const userDeptId = user.department_id || null;
-
                 if (userLocation && plantInput) {
                     plantInput.value = userLocation;
                     plantInput.readOnly = true;
+                    plantInput.disabled = false;
                     plantInput.style.backgroundColor = 'var(--ds-bg-subtle, rgba(241, 245, 249, 0.6))';
                     plantInput.style.cursor = 'not-allowed';
+                    plantInput.style.pointerEvents = 'none';
                     if (plantLock) plantLock.style.display = 'block';
                     if (plantChevron) plantChevron.style.display = 'none';
-
-                    try {
-                        const depts = await api.get('/projects/departments?plant_name=' + encodeURIComponent(userLocation));
-                        this.allDepartments = Array.isArray(depts) ? depts : [];
-                        this.defaultDepartments = this.allDepartments;
-                    } catch (e) {
-                        console.error('Failed to load departments for plant', e);
-                        this.allDepartments = [];
-                    }
-                } else if (plantInput) {
-                    plantInput.value = '';
-                    plantInput.readOnly = false;
-                    plantInput.style.backgroundColor = '';
-                    plantInput.style.cursor = '';
-                    if (plantLock) plantLock.style.display = 'none';
-                    if (plantChevron) plantChevron.style.display = 'block';
                 }
-
-                let targetDeptId = userDeptId;
-                let matchedDept = null;
-
-                if (this.allDepartments.length) {
-                    if (userDeptId) {
-                        matchedDept = this.allDepartments.find(d => d.id === userDeptId);
-                    }
-                    if (!matchedDept && userDeptName) {
-                        matchedDept = this.allDepartments.find(d => (d.name || '').toLowerCase() === userDeptName.toLowerCase());
-                    }
-                }
-
-                if (matchedDept || userDeptName) {
-                    const finalDeptName = matchedDept ? matchedDept.name : userDeptName;
-                    const finalDeptId = matchedDept ? matchedDept.id : userDeptId;
-                    targetDeptId = finalDeptId;
-
-                    if (deptInput) {
-                        deptInput.value = finalDeptName;
-                        deptInput.readOnly = true;
-                        deptInput.style.backgroundColor = 'var(--ds-bg-subtle, rgba(241, 245, 249, 0.6))';
-                        deptInput.style.cursor = 'not-allowed';
-                    }
-                    if (deptIdHidden) deptIdHidden.value = finalDeptId || '';
+                if (userDeptName && deptInput) {
+                    deptInput.value = userDeptName;
+                    deptInput.readOnly = true;
+                    deptInput.disabled = false;
+                    deptInput.style.backgroundColor = 'var(--ds-bg-subtle, rgba(241, 245, 249, 0.6))';
+                    deptInput.style.cursor = 'not-allowed';
+                    deptInput.style.pointerEvents = 'none';
+                    if (deptIdHidden && userDeptId) deptIdHidden.value = userDeptId;
                     if (deptLock) deptLock.style.display = 'block';
                     if (deptChevron) deptChevron.style.display = 'none';
-                } else if (deptInput) {
-                    deptInput.value = '';
-                    deptInput.readOnly = false;
-                    deptInput.style.backgroundColor = '';
-                    deptInput.style.cursor = '';
-                    if (deptLock) deptLock.style.display = 'none';
-                    if (deptChevron) deptChevron.style.display = 'block';
                 }
+
+                this.initModal.show();
+                await this.loadPlantsList();
 
                 if (targetDeptId) {
                     await this.handleDepartmentChange(targetDeptId);

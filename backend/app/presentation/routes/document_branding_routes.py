@@ -102,9 +102,6 @@ def update_document_identity():
                     cfg.emergency_contact = v
                 elif hasattr(cfg, k):
                     val_str = (v or '').strip()
-                    if k.endswith('_email') and val_str:
-                        prefix = k.replace('_email', '')
-                        val_str = DocumentBrandingService._normalize_email(val_str, prefix)
                     setattr(cfg, k, val_str)
 
         elif section == 'addresses':
