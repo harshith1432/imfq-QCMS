@@ -510,7 +510,7 @@ const SuperAdmin = {
             this.charts.orgStatus = new Chart(donutCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Paid Subscription', 'On Trial', 'Expired', 'On Hold'],
+                    labels: ['Paid', 'On Trial', 'Expired', 'On Hold'],
                     datasets: [{
                         data: [active, trial, expired, suspended],
                         backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#64748b'],
@@ -537,7 +537,7 @@ const SuperAdmin = {
             const legendEl = document.getElementById('orgStatusDonutLegend');
             if (legendEl) {
                 const items = [
-                    { label: 'Paid Subscription', val: active, color: '#22c55e' },
+                    { label: 'Paid', val: active, color: '#22c55e' },
                     { label: 'On Trial', val: trial, color: '#f59e0b' },
                     { label: 'Expired', val: expired, color: '#ef4444' },
                     { label: 'On Hold', val: suspended, color: '#64748b' }
