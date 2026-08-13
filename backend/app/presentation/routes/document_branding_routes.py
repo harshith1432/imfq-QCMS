@@ -114,13 +114,20 @@ def update_document_identity():
                 db.session.add(cfg)
 
             for k, v in payload.items():
-                if k == 'city_pin' and v:
-                    if '-' in v:
-                        parts = v.split('-', 1)
+                if k == 'city_pin':
+                    v_str = (v or '').strip()
+                    import re
+                    match = re.search(r'(\b\d{6}\b)', v_str)
+                    if match:
+                        cfg.pin = match.group(1)
+                        cfg.city = v_str
+                    elif '-' in v_str:
+                        parts = v_str.split('-', 1)
                         cfg.city = parts[0].strip()
                         cfg.pin = parts[1].strip()
                     else:
-                        cfg.city = v.strip()
+                        cfg.city = v_str
+                        cfg.pin = ''
                 elif hasattr(cfg, k):
                     setattr(cfg, k, v)
 

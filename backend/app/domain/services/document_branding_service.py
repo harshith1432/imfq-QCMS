@@ -146,9 +146,13 @@ class DocumentBrandingService:
             "corporate_office": (addresses.corporate_office if addresses and addresses.corporate_office else "Tech Park Phase 2, Whitefield, Bengaluru, KA 560066, India"),
             "country": (addresses.country if addresses and addresses.country else "India"),
             "state": (addresses.state if addresses and addresses.state else "Maharashtra"),
-            "city": (addresses.city if addresses and addresses.city else "Mumbai"),
-            "pin": (addresses.pin if addresses and addresses.pin else "400051"),
-            "city_pin": f"{addresses.city} - {addresses.pin}" if (addresses and addresses.city and addresses.pin) else "Mumbai - 400051",
+            "city": (addresses.city if (addresses and addresses.city) else ""),
+            "pin": (addresses.pin if (addresses and addresses.pin) else ""),
+            "city_pin": (
+                addresses.city if (addresses and addresses.city and (not addresses.pin or addresses.pin in addresses.city))
+                else (f"{addresses.city} - {addresses.pin}" if (addresses and addresses.city and addresses.pin)
+                else (addresses.city if (addresses and addresses.city) else (addresses.pin if (addresses and addresses.pin) else "")))
+            ),
 
             # Assets
             "logo_url": (assets.logo_url if assets and assets.logo_url else "/assets/img/logo.png"),
