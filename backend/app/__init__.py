@@ -872,10 +872,15 @@ def create_app():
             pass
         return True
 
-    # ─── Frontend Serving ───
+    # Check if frontend files are present locally (otherwise redirect to Vercel)
+    has_local_frontend = os.path.isdir(frontend_dir) and os.path.exists(os.path.join(frontend_dir, 'index.html'))
+    vercel_url = 'https://imfq-qcms.vercel.app'
+
     # Serve index.html at root (or redirect to login if landing page disabled)
     @app.route('/')
     def serve_index():
+        if not has_local_frontend:
+            return redirect(vercel_url)
         if not is_landing_page_enabled():
             return redirect('/auth/login.html')
         return send_from_directory(frontend_dir, 'index.html')
@@ -883,6 +888,11 @@ def create_app():
     # Serve any frontend HTML page (e.g., /login.html, /dashboard-admin.html)
     @app.route('/<path:filename>')
     def serve_frontend(filename):
+        if not has_local_frontend:
+            if filename.endswith('.html') or '.' not in filename:
+                return redirect(f"{vercel_url}/{filename}")
+            return jsonify({"code": 404, "message": "File not found", "status": "error"}), 404
+
         if (filename == 'index.html' or filename == 'index' or filename == '') and not is_landing_page_enabled():
             return redirect('/auth/login.html')
 

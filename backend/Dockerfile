@@ -9,5 +9,5 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "gunicorn -w 2 -b 0.0.0.0:${PORT:-5000} run:app"]
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "run:app"]
 
