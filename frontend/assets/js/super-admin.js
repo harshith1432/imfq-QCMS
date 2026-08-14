@@ -4077,6 +4077,30 @@ const SuperAdmin = {
                         <div class="col-6"><div class="detail-label">Subscription / Trial Expiry</div><div class="text-sm fw-bold text-primary">${(d.subscription_expiry || d.trial_ends_at) ? QCMS.formatDate(d.subscription_expiry || d.trial_ends_at) : '—'}</div></div>
                         <div class="col-6"><div class="detail-label">Remaining Trial</div><div class="text-sm">${d.trial_days_left !== null ? d.trial_days_left + ' days left' : '—'}</div></div>
                     </div>
+
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="fw-bold text-xs text-uppercase text-muted mb-3">Trial Extension Metrics</h6>
+                        <div class="row g-3">
+                            <div class="col-4">
+                                <div class="p-3 rounded-3 border bg-light text-center">
+                                    <div class="text-xxs text-uppercase fw-bold text-secondary mb-1">Total Extension Requests</div>
+                                    <div class="fs-4 fw-bold text-primary">${d.total_trial_requests || 0}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 rounded-3 border bg-light text-center">
+                                    <div class="text-xxs text-uppercase fw-bold text-success mb-1">Auto-Approved Extensions</div>
+                                    <div class="fs-4 fw-bold text-success">${d.auto_approved_trial_extensions || 0}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 rounded-3 border bg-light text-center">
+                                    <div class="text-xxs text-uppercase fw-bold text-info mb-1">Manually Approved Extensions</div>
+                                    <div class="fs-4 fw-bold text-info">${d.manual_approved_trial_extensions || 0}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
         } else if (tabName === 'users') {

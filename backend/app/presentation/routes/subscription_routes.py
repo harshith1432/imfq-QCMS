@@ -19,6 +19,9 @@ from app.infrastructure.database.models.models import (
     SaaSPlan, SaaSPlanPricing, SaaSPlanLimits, SaaSPlanModules, SaaSPlanVersion, SaaSPlanAnalytics, PlatformSettings
 )
 
+import threading
+from sqlalchemy.orm.attributes import flag_modified
+
 subscription_bp = Blueprint('subscriptions', __name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1732,6 +1735,94 @@ def extend_trial(sub_id):
     })
 
 
+def auto_approve_trial_extension_task(app_obj, org_id):
+    """Background task running after 5 minutes (300 seconds) to auto-approve trial extension"""
+    try:
+        with app_obj.app_context():
+            org = db.session.get(Organization, org_id)
+            if not org:
+                return
+            sec_settings = dict(getattr(org, 'security_settings', {}) or {})
+            pending = sec_settings.get('pending_trial_extension')
+            if not pending or pending.get('status') != 'Pending':
+                return
+            if not pending.get('is_auto_eligible', True):
+                return
+
+            days = pending.get('days', 14)
+            current_count = getattr(org, 'trial_extension_count', 0) or 0
+            org.trial_extension_count = current_count + 1
+            org.trial_ends_at = datetime.utcnow() + timedelta(days=days)
+            org.subscription_status = 'Trialing'
+
+            auto_count = sec_settings.get('auto_approved_trial_extensions', 0) + 1
+            sec_settings['auto_approved_trial_extensions'] = auto_count
+
+            sub = Subscription.query.filter_by(org_id=org.id).first()
+            if not sub:
+                sub = Subscription.query.filter_by(organization_id=org.id).first()
+            if sub:
+                sub.trial_end_date = org.trial_ends_at
+                sub.end_date = org.trial_ends_at
+                sub.subscription_status = 'Trial'
+
+            pending['status'] = 'Approved'
+            pending['approved_at'] = datetime.utcnow().isoformat()
+            pending['approval_type'] = 'Auto-Approved'
+            sec_settings['pending_trial_extension'] = pending
+            org.security_settings = sec_settings
+            flag_modified(org, 'security_settings')
+            db.session.commit()
+            print(f"[QCMS 5-MIN AUTO-APPROVAL] Trial extension (+{days} days) automatically approved for Org ID {org_id}.")
+    except Exception as e:
+        print(f"[QCMS 5-MIN AUTO-APPROVAL ERROR] {e}")
+
+
+def check_and_apply_pending_trial_extensions(org):
+    """Helper to check if a pending trial extension has exceeded 5 minutes (300s) and auto-approve it"""
+    if not org:
+        return
+    try:
+        sec_settings = dict(getattr(org, 'security_settings', {}) or {})
+        pending = sec_settings.get('pending_trial_extension')
+        if not pending or pending.get('status') != 'Pending':
+            return
+        if not pending.get('is_auto_eligible', True):
+            return
+
+        req_at_str = pending.get('requested_at')
+        if not req_at_str:
+            return
+        req_at = datetime.fromisoformat(req_at_str)
+        if (datetime.utcnow() - req_at).total_seconds() >= 300: # 5 minutes = 300 seconds
+            days = pending.get('days', 14)
+            current_count = getattr(org, 'trial_extension_count', 0) or 0
+            org.trial_extension_count = current_count + 1
+            org.trial_ends_at = datetime.utcnow() + timedelta(days=days)
+            org.subscription_status = 'Trialing'
+
+            auto_count = sec_settings.get('auto_approved_trial_extensions', 0) + 1
+            sec_settings['auto_approved_trial_extensions'] = auto_count
+
+            sub = Subscription.query.filter_by(org_id=org.id).first()
+            if not sub:
+                sub = Subscription.query.filter_by(organization_id=org.id).first()
+            if sub:
+                sub.trial_end_date = org.trial_ends_at
+                sub.end_date = org.trial_ends_at
+                sub.subscription_status = 'Trial'
+
+            pending['status'] = 'Approved'
+            pending['approved_at'] = datetime.utcnow().isoformat()
+            pending['approval_type'] = 'Auto-Approved'
+            sec_settings['pending_trial_extension'] = pending
+            org.security_settings = sec_settings
+            flag_modified(org, 'security_settings')
+            db.session.commit()
+    except Exception as e:
+        print(f"[QCMS CHECK PENDING ERROR] {e}")
+
+
 @subscription_bp.route('/request-trial-extension', methods=['POST'])
 @jwt_required()
 def request_trial_extension():
@@ -1754,93 +1845,51 @@ def request_trial_extension():
     data = request.get_json(silent=True) or {}
     reason = (data.get('reason') or data.get('notes') or '').strip()
 
-    trial_plan = SubscriptionManager.get_default_trial_plan()
     ps = PlatformSettings.query.first()
-    max_auto = (getattr(trial_plan, 'auto_approve_extensions_limit', None) if trial_plan else None)
-    if max_auto is None:
-        max_auto = (ps.max_auto_trial_extensions if ps and hasattr(ps, 'max_auto_trial_extensions') and ps.max_auto_trial_extensions is not None else 2)
-        
-    default_days = (getattr(trial_plan, 'trial_duration_days', None) if trial_plan else None)
-    if not default_days:
-        default_days = (ps.trial_period_days if ps and ps.trial_period_days else 14)
+    max_auto = (ps.max_auto_trial_extensions if ps and hasattr(ps, 'max_auto_trial_extensions') and ps.max_auto_trial_extensions is not None else 2)
+    default_days = (ps.trial_period_days if ps and hasattr(ps, 'trial_period_days') and ps.trial_period_days else 14)
 
     days = int(data.get('days', default_days))
-    
+    now = datetime.utcnow()
     current_count = getattr(org, 'trial_extension_count', 0) or 0
-    
-    if current_count < max_auto:
-        # Auto-Approved!
-        org.trial_extension_count = current_count + 1
-        base = org.trial_ends_at or datetime.utcnow()
-        if base < datetime.utcnow():
-            base = datetime.utcnow()
-        org.trial_ends_at = base + timedelta(days=days)
-        org.subscription_status = 'Trialing'
-        
-        # Also sync subscription record if present
-        sub = Subscription.query.filter_by(org_id=org.id).first()
-        if not sub:
-            sub = Subscription.query.filter_by(organization_id=org.id).first()
-        if sub:
-            sub.trial_end_date = org.trial_ends_at
-            sub.end_date = org.trial_ends_at
-            sub.subscription_status = 'Trial'
-            
-        db.session.commit()
-        
-        _log(user, 'TRIAL_AUTO_EXTENDED', 'Organization', org.id,
-             None, {'days': days, 'extension_count': org.trial_extension_count, 'max_auto': max_auto, 'reason': reason})
-             
-        return jsonify({
-            'status': 'success',
-            'auto_approved': True,
-            'extension_count': org.trial_extension_count,
-            'max_auto_allowed': max_auto,
-            'message': f'Trial extension auto-approved! Applied +{days} days. ({org.trial_extension_count}/{max_auto} auto-approvals used)',
-            'trial_ends_at': org.trial_ends_at.isoformat()
-        })
-    else:
-        # Requires Super Admin approval
-        reason_str = f"\nReason: {reason}" if reason else ""
-        ticket = SupportTicket(
-            org_id=org.id,
-            user_id=user.id,
-            subject=f"Trial Extension Approval Request: {org.name}",
-            description=f"Organization '{org.name}' (Admin: {user.email}) requested a +{days}-day trial extension.{reason_str}\nThis organization has reached the auto-approval limit ({current_count}/{max_auto} used). Super Admin approval is required.",
-            status="Open",
-            priority="High",
-            category="Billing & Subscription"
-        )
-        db.session.add(ticket)
+    is_auto_eligible = bool(current_count < max_auto)
 
-        # Notify Super Admins
-        super_admins = User.query.filter(
-            (User.role == 'SuperAdmin') | (User.system_role == 'SuperAdmin')
-        ).all()
-        for sa in super_admins:
-            notif = Notification(
-                user_id=sa.id,
-                title=f"Trial Extension Request: {org.name}",
-                message=f"Organization '{org.name}' requested trial extension (+{days} days). Auto-approval limit reached ({current_count}/{max_auto} used). Super Admin review required.",
-                notification_type="TrialExtensionRequest",
-                priority="High",
-                is_read=False,
-                link_url=f"/admin/super-admin.html?view=organizations&search={org.name}"
-            )
-            db.session.add(notif)
-        db.session.commit()
-        
-        _log(user, 'TRIAL_EXTENSION_REQUESTED', 'Organization', org.id,
-             None, {'days': days, 'extension_count': current_count, 'max_auto': max_auto, 'ticket_id': ticket.id, 'reason': reason})
-             
-        return jsonify({
-            'status': 'pending_approval',
-            'auto_approved': False,
-            'extension_count': current_count,
-            'max_auto_allowed': max_auto,
-            'message': f'Auto-extension limit reached ({current_count}/{max_auto} used). Your trial extension request has been submitted to Super Admin for manual verification and approval.',
-            'ticket_id': ticket.id
-        })
+    # Save pending trial extension request
+    sec_settings = dict(getattr(org, 'security_settings', {}) or {})
+    total_reqs = sec_settings.get('total_trial_requests', 0) + 1
+    sec_settings['total_trial_requests'] = total_reqs
+
+    sec_settings['pending_trial_extension'] = {
+        'requested_at': now.isoformat(),
+        'days': days,
+        'reason': reason,
+        'status': 'Pending',
+        'is_auto_eligible': is_auto_eligible,
+        'max_auto_allowed': max_auto,
+        'user_id': user.id
+    }
+    org.security_settings = sec_settings
+    flag_modified(org, 'security_settings')
+    db.session.commit()
+
+    if is_auto_eligible:
+        # Schedule background auto-approval after 5 minutes (300 seconds)
+        from flask import current_app
+        app_obj = current_app._get_current_object()
+        timer = threading.Timer(300.0, auto_approve_trial_extension_task, args=[app_obj, org.id])
+        timer.daemon = True
+        timer.start()
+
+    _log(user, 'TRIAL_EXTENSION_REQUESTED', 'Organization', org.id,
+         None, {'days': days, 'reason': reason, 'is_auto_eligible': is_auto_eligible})
+
+    return jsonify({
+        'status': 'success',
+        'auto_approved': False,
+        'is_auto_eligible': is_auto_eligible,
+        'message': 'Your request has been submitted! It will take up to 24 hours for review.',
+        'trial_ends_at': org.trial_ends_at.isoformat() if org.trial_ends_at else None
+    }), 200
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2091,17 +2140,33 @@ def get_plan_catalogue():
 
     current_storage_gb = 0.0
     if target_org:
-        from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
-        calc = calculate_org_storage_realtime(target_org.id)
-        if calc and len(calc) > 0:
-            current_storage_gb = float(calc[0].get('storage_used_gb', 0.0))
-        else:
+        try:
+            from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
+            calc = calculate_org_storage_realtime(target_org.id)
+            if isinstance(calc, dict):
+                current_storage_gb = float(calc.get('storage_used_gb', 0.0))
+            elif isinstance(calc, list) and len(calc) > 0 and isinstance(calc[0], dict):
+                current_storage_gb = float(calc[0].get('storage_used_gb', 0.0))
+            else:
+                current_storage_gb = float((target_org.storage_used_mb or 0.0) / 1024.0)
+        except Exception:
             current_storage_gb = float((target_org.storage_used_mb or 0.0) / 1024.0)
 
     try:
         plans_query = SaaSPlan.query
-        if not is_super_admin and not status_filter:
-            plans_query = plans_query.filter(SaaSPlan.status == 'Active')
+        if not is_super_admin or request.args.get('exclude_trial') == 'true':
+            # Regular users/org admins only get Active non-trial subscription plans
+            plans_query = plans_query.filter(
+                (SaaSPlan.is_default_trial == False) | (SaaSPlan.is_default_trial == None),
+                func.lower(func.coalesce(SaaSPlan.plan_type, '')) != 'trial',
+                ~func.lower(func.coalesce(SaaSPlan.name, '')).like('%trial%'),
+                ~func.lower(func.coalesce(SaaSPlan.code, '')).like('%trial%'),
+                func.lower(func.coalesce(SaaSPlan.code, '')) != 't1'
+            )
+            if not status_filter:
+                plans_query = plans_query.filter(SaaSPlan.status == 'Active')
+            else:
+                plans_query = plans_query.filter(SaaSPlan.status == status_filter)
         elif status_filter:
             plans_query = plans_query.filter(SaaSPlan.status == status_filter)
         if type_filter:
@@ -2118,6 +2183,14 @@ def get_plan_catalogue():
 
         result = []
         for plan in db_plans:
+            # Secondary safeguard: exclude any trial plans for non-superadmin
+            if not is_super_admin or request.args.get('exclude_trial') == 'true':
+                p_type = (plan.plan_type or '').lower()
+                p_name = (plan.name or '').lower()
+                p_code = (plan.code or '').lower()
+                if plan.is_default_trial or p_type == 'trial' or 'trial' in p_name or 'trial' in p_code or p_code == 't1':
+                    continue
+
             plan_storage_gb = float(plan.limits.storage_limit_gb if (plan.limits and plan.limits.storage_limit_gb is not None) else 10.0)
 
             # STORAGE CAPACITY FILTER:

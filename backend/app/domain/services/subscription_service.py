@@ -97,46 +97,52 @@ class SubscriptionManager:
         org = Organization.query.get(org_id)
         if not org:
             return {
-                'plan_name': 'Unknown',
+                'plan_name': 'Trial',
                 'max_users': 50,
-                'max_projects': 1,
+                'max_projects': 25,
                 'storage_limit_gb': 10.0
             }
 
-        plan_name = org.subscription_plan or 'Starter'
+        raw_plan_name = (org.subscription_plan or '').strip()
         plan_obj = None
+        is_trial_status = org.subscription_status in ['Trialing', 'Trial'] or raw_plan_name.lower() in ['trial', 't1']
 
         # 1. Check active subscription record
         sub = Subscription.query.filter_by(org_id=org_id).order_by(Subscription.id.desc()).first()
-        if org.subscription_plan:
-            plan_name = org.subscription_plan
-        elif sub:
-            if hasattr(sub, 'plan_id') and sub.plan_id:
-                plan_obj = SaaSPlan.query.get(sub.plan_id)
-            if not plan_obj and getattr(sub, 'plan_name', None):
-                plan_name = sub.plan_name
+        if sub and hasattr(sub, 'plan_id') and sub.plan_id:
+            plan_obj = SaaSPlan.query.get(sub.plan_id)
 
-        # 2. Query SaaSPlan by name / code / plan_type
-        if not plan_obj and plan_name:
+        # 2. Prioritize default trial plan if organization is on trial
+        if not plan_obj and is_trial_status:
             plan_obj = SaaSPlan.query.filter(
-                (func.lower(SaaSPlan.name) == plan_name.lower()) |
-                (func.lower(SaaSPlan.plan_type) == plan_name.lower()) |
-                (func.lower(SaaSPlan.code) == plan_name.lower())
+                (SaaSPlan.is_default_trial == True) |
+                (func.lower(func.trim(SaaSPlan.plan_type)) == 'trial') |
+                (func.lower(func.trim(SaaSPlan.name)) == 'trial')
+            ).first()
+
+        # 3. Query SaaSPlan by stripped name / code / plan_type
+        if not plan_obj and raw_plan_name:
+            plan_obj = SaaSPlan.query.filter(
+                (func.lower(func.trim(SaaSPlan.name)) == raw_plan_name.lower()) |
+                (func.lower(func.trim(SaaSPlan.plan_type)) == raw_plan_name.lower()) |
+                (func.lower(func.trim(SaaSPlan.code)) == raw_plan_name.lower())
             ).first()
 
         max_projects = None
         max_users = None
         storage_gb = 10.0
+        plan_name = raw_plan_name or 'Trial'
 
         if plan_obj and plan_obj.limits:
             limits = plan_obj.limits
             max_projects = limits.max_projects
             max_users = limits.max_users
             storage_gb = getattr(limits, 'storage_limit_gb', 10.0)
-            plan_name = plan_obj.name
+            plan_name = plan_obj.name.strip()
 
-        # 3. Fallback to PLAN_LIMITS dictionary if DB limit is not set
-        fallback = PLAN_LIMITS.get(plan_name, PLAN_LIMITS.get(plan_obj.plan_type if plan_obj else 'Starter', PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])))
+        # 4. Fallback to PLAN_LIMITS dictionary
+        fallback_key = 'Trial' if is_trial_status else 'Starter'
+        fallback = PLAN_LIMITS.get(plan_name, PLAN_LIMITS.get(plan_obj.plan_type if plan_obj else fallback_key, PLAN_LIMITS.get(fallback_key, PLAN_LIMITS['Trial'])))
 
         final_max_projects = max_projects if max_projects is not None else fallback.get('max_active_projects', 25)
         final_max_users = max_users if max_users is not None else fallback.get('max_users', 50)
@@ -152,18 +158,22 @@ class SubscriptionManager:
     def get_plan_config(plan_name, org_id=None):
         if org_id:
             limits = SubscriptionManager.get_organization_plan_limits(org_id)
-            base = PLAN_LIMITS.get(limits['plan_name'], PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
+            org = db.session.get(Organization, org_id) if isinstance(org_id, int) else org_id
+            is_trial = org and org.subscription_status in ['Trialing', 'Trial']
+            fallback_key = 'Trial' if is_trial else 'Starter'
+            base = PLAN_LIMITS.get(limits['plan_name'], PLAN_LIMITS.get(fallback_key, PLAN_LIMITS['Trial'])).copy()
             base['max_active_projects'] = limits['max_projects']
             base['max_users'] = limits['max_users']
             return base
 
-        if plan_name:
+        clean_name = (plan_name or '').strip()
+        if clean_name:
             from app.infrastructure.database.models.models import SaaSPlan
             from sqlalchemy import func
             db_plan = SaaSPlan.query.filter(
-                (func.lower(SaaSPlan.name) == plan_name.lower()) |
-                (func.lower(SaaSPlan.plan_type) == plan_name.lower()) |
-                (func.lower(SaaSPlan.code) == plan_name.lower())
+                (func.lower(func.trim(SaaSPlan.name)) == clean_name.lower()) |
+                (func.lower(func.trim(SaaSPlan.plan_type)) == clean_name.lower()) |
+                (func.lower(func.trim(SaaSPlan.code)) == clean_name.lower())
             ).first()
             if db_plan and db_plan.limits:
                 base = PLAN_LIMITS.get(db_plan.plan_type, PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
@@ -172,7 +182,8 @@ class SubscriptionManager:
                 base['storage_limit_gb'] = db_plan.limits.storage_limit_gb
                 return base
 
-        base = PLAN_LIMITS.get(plan_name, PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
+        base = PLAN_LIMITS.get(clean_name, PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
+        return base
         return base
 
     @staticmethod

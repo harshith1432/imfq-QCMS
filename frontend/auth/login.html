@@ -201,20 +201,20 @@
         <!-- Left: Branding -->
         <div class="login-branding">
             <div style="margin-bottom: auto;">
-                <div class="brand-text"
+                <div class="brand-text" id="loginBrandHeader"
                     style="font-size: 1.1rem; opacity: 0.8; font-weight: 700; display:flex; align-items:center; gap:8px;">
-                    <i data-lucide="shield-check" style="width:20px; height:20px;"></i>
-                    QCMS <small style="font-size: 0.75rem; opacity: 0.6; font-weight: 500;">ENTERPRISE</small>
+                    <span id="loginBrandLogoSlot" style="display:flex;align-items:center;"><i data-lucide="shield-check" style="width:20px; height:20px;"></i></span>
+                    <span id="loginBrandShortName">QCMS</span> <small id="loginBrandTagline" style="font-size: 0.75rem; opacity: 0.6; font-weight: 500;">ENTERPRISE</small>
                 </div>
             </div>
-            <h1>Quality Management System</h1>
+            <h1 id="loginPlatformTitle">Quality Management System</h1>
             <div style="margin-top: auto;"></div>
         </div>
 
         <!-- Right: Form -->
         <div class="login-form-section">
             <h2>Welcome back</h2>
-            <p class="subtitle">Sign in to your QCMS account</p>
+            <p class="subtitle" id="loginFormSubtitle">Sign in to your <span id="loginAccountShortName">QCMS</span> account</p>
 
             <div id="errorMsg" class="ds-toast error mb-4"
                 style="display:none !important; width: 100%; min-width: auto; animation: none;">
@@ -436,6 +436,56 @@
                         }
                     }
 
+                    // Dynamic Document Identity & Platform Branding
+                    const b = data.branding || {};
+                    const shortName = b.software_short_name || 'QCMS';
+                    const softName  = b.software_name || 'QCMS Enterprise';
+                    const platTitle = b.platform_title || 'Quality Management System';
+                    const tagline   = b.platform_subtitle || b.tagline || 'ENTERPRISE';
+
+                    const brandShortEl = document.getElementById('loginBrandShortName');
+                    if (brandShortEl) brandShortEl.textContent = shortName;
+
+                    const accountShortEl = document.getElementById('loginAccountShortName');
+                    if (accountShortEl) accountShortEl.textContent = shortName;
+
+                    const brandTaglineEl = document.getElementById('loginBrandTagline');
+                    if (brandTaglineEl) brandTaglineEl.textContent = tagline.toUpperCase();
+
+                    const platTitleEl = document.getElementById('loginPlatformTitle');
+                    if (platTitleEl) platTitleEl.textContent = platTitle;
+
+                    document.title = `Login | ${softName}`;
+
+                    // Dynamic Logo Image or Fallback Shield
+                    const logoSlot = document.getElementById('loginBrandLogoSlot');
+                    if (logoSlot) {
+                        const logoSrc = b.platform_logo_url || b.logo_url;
+                        if (logoSrc && !logoSrc.includes('/assets/img/logo.png')) {
+                            logoSlot.innerHTML = `<img src="${logoSrc}" alt="${shortName} Logo" style="height:22px; max-width:120px; object-fit:contain;" onerror="this.outerHTML='<i data-lucide=\\'shield-check\\' style=\\'width:20px;height:20px;\\'></i>'; if(window.lucide) lucide.createIcons();">`;
+                        } else {
+                            logoSlot.innerHTML = `<i data-lucide="shield-check" style="width:20px; height:20px;"></i>`;
+                        }
+                    }
+
+                    // Favicon
+                    if (b.favicon_url || b.platform_logo_url || b.logo_url) {
+                        let favEl = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
+                        if (!favEl) {
+                            favEl = document.createElement('link');
+                            favEl.rel = 'icon';
+                            document.head.appendChild(favEl);
+                        }
+                        favEl.href = b.favicon_url || b.platform_logo_url || b.logo_url;
+                    }
+
+                    // Theme Primary Color
+                    if (b.primary_color) {
+                        document.documentElement.style.setProperty('--ds-accent', b.primary_color);
+                        document.documentElement.style.setProperty('--ds-primary', b.primary_color);
+                    }
+
+                    if (window.lucide) lucide.createIcons();
                 } catch (_) {
                     // Silently ignore — login still works with any enabled field
                 }

@@ -18,13 +18,127 @@ from app.domain.services.subscription_service import SubscriptionManager
 from app.infrastructure.mailer.email_service import EmailUtils
 from datetime import datetime, timedelta
 import secrets
+import copy
+from sqlalchemy.orm.attributes import flag_modified
 from app.utils.avatar_utils import get_profile_picture_url
 from app.domain.services.feature_engine import feature_module_required
 from functools import wraps
 
 admin_bp = Blueprint('admin', __name__)
 
-# Middleware for Admin-only access (SuperAdmin also has full Admin privileges)
+# ── Role Access Control (RBAC) Matrix Defaults ──
+DEFAULT_ROLE_PERMISSIONS = {
+    "Team Member": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": False,
+        "user_management": False,
+        "plants": False,
+        "departments": False,
+        "audit_logs": False,
+        "stage_template": False,
+        "settings": True
+    },
+    "CEO": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": True,
+        "user_management": False,
+        "plants": False,
+        "departments": False,
+        "audit_logs": False,
+        "stage_template": False,
+        "settings": True
+    },
+    "Facilitator": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": True,
+        "user_management": False,
+        "plants": False,
+        "departments": False,
+        "audit_logs": False,
+        "stage_template": False,
+        "settings": True
+    },
+    "Reviewer": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": True,
+        "user_management": False,
+        "plants": False,
+        "departments": False,
+        "audit_logs": False,
+        "stage_template": False,
+        "settings": True
+    },
+    "Admin": {
+        "overview": True,
+        "project_repo": True,
+        "knowledge_base": True,
+        "leaderboard": True,
+        "additional_sources": True,
+        "analytics": True,
+        "user_management": True,
+        "plants": True,
+        "departments": True,
+        "audit_logs": True,
+        "stage_template": True,
+        "settings": True
+    }
+}
+
+def check_user_module_permission(user, module_key=None):
+    """
+    Checks if a user has permission to access a module based on organization's role_permissions matrix.
+    Admin, SuperAdmin, CEO always have full admin privileges.
+    For other roles, checks org.security_settings['role_permissions'][role_name][module_key].
+    """
+    if not user:
+        return False
+    role_name = user.role.name if user.role else ''
+    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
+    if role_name in ('Admin', 'SuperAdmin', 'CEO') or is_sa_custom:
+        return True
+    
+    org_id = user.org_id
+    if not org_id:
+        return False
+    
+    org = db.session.get(Organization, org_id)
+    sec = getattr(org, 'security_settings', {}) or {} if org else {}
+    role_perms = sec.get('role_permissions') if isinstance(sec, dict) else None
+    
+    target_role = role_name
+    if target_role == 'Team Leader':
+        target_role = 'Team Member'
+        
+    perms = {}
+    if role_perms and isinstance(role_perms, dict) and target_role in role_perms and isinstance(role_perms[target_role], dict):
+        perms = role_perms[target_role]
+    elif target_role in DEFAULT_ROLE_PERMISSIONS:
+        perms = DEFAULT_ROLE_PERMISSIONS[target_role]
+        
+    if module_key:
+        return bool(perms.get(module_key, False))
+        
+    # If no specific module is passed, check if any administration module is enabled for this role
+    admin_modules = ['user_management', 'plants', 'departments', 'audit_logs', 'stage_template', 'settings']
+    return any(bool(perms.get(m, False)) for m in admin_modules)
+
+# Middleware for Admin/Module access (SuperAdmin & Admin have full privileges, other roles checked against org RBAC matrix)
 def admin_required(f):
     @wraps(f)
     @jwt_required()
@@ -44,7 +158,26 @@ def admin_required(f):
         if role_name in ('Admin', 'SuperAdmin', 'CEO') or is_sa_custom:
             return f(*args, **kwargs)
             
-        return jsonify({"message": "Admin access required"}), 403
+        # Determine module based on request endpoint/path
+        path = request.path.lower()
+        mod_key = None
+        if '/users' in path or '/user-custom-fields' in path or '/import-users' in path or '/bulk-users' in path:
+            mod_key = 'user_management'
+        elif '/plants' in path:
+            mod_key = 'plants'
+        elif '/departments' in path:
+            mod_key = 'departments'
+        elif '/audit' in path or '/logs' in path:
+            mod_key = 'audit_logs'
+        elif '/stage-template' in path or '/stage-templates' in path:
+            mod_key = 'stage_template'
+        elif '/settings' in path or '/branding' in path or '/security' in path or '/subscription' in path or '/compliance' in path:
+            mod_key = 'settings'
+            
+        if check_user_module_permission(user, mod_key):
+            return f(*args, **kwargs)
+            
+        return jsonify({"message": "Access denied: insufficient module permissions"}), 403
     return decorated_function
 
 def log_action(user_id, action, org_id, target_table=None, target_id=None, details=None):
@@ -1838,7 +1971,46 @@ def get_org_settings():
     org = db.session.get(Organization, org_id)
     if not org:
         print(f"[QCMS ADMIN] ERROR: Organization with ID {org_id} not found in database.")
-        return jsonify({"message": "Organization not found"}), 404
+    # Auto-approve any pending trial extensions if 5 minutes passed
+    try:
+        from app.presentation.routes.subscription_routes import check_and_apply_pending_trial_extensions
+        check_and_apply_pending_trial_extensions(org)
+    except Exception:
+        pass
+
+    # Calculate Corporate Profile completion metrics
+    fields_to_check = [
+        ('name', org.name, 'Legal Entity Name'),
+        ('org_code', org.org_code, 'Organization Code'),
+        ('industry', org.industry, 'Industry Sector'),
+        ('admin_name', org.admin_name, 'Primary Admin Name'),
+        ('website', org.website, 'Website URL'),
+        ('email', org.email, 'Business Email'),
+        ('phone', org.phone, 'Phone Number'),
+        ('gst_number', org.gst_number, 'GST Number'),
+        ('pan_number', org.pan_number, 'PAN Number'),
+        ('address', org.address, 'HQ Address'),
+        ('city', org.city, 'City'),
+        ('state', org.state, 'State / Province'),
+        ('country', org.country, 'Country'),
+        ('zip_code', org.zip_code, 'ZIP Code')
+    ]
+
+    filled_count = sum(1 for _, v, _ in fields_to_check if v and str(v).strip())
+    total_count = len(fields_to_check)
+    completed_pct = int(round((filled_count / total_count) * 100))
+    pending_pct = 100 - completed_pct
+    is_complete = (completed_pct == 100)
+
+    profile_completion = {
+        "completed_pct": completed_pct,
+        "pending_pct": pending_pct,
+        "filled_count": filled_count,
+        "total_count": total_count,
+        "is_complete": is_complete,
+        "missing_fields": [label for _, v, label in fields_to_check if not (v and str(v).strip())]
+    }
+
     return jsonify({
         "id": org.id,
         "name": org.name,
@@ -1876,7 +2048,8 @@ def get_org_settings():
         "is_white_label": org.is_white_label,
         "multi_plant": org.multi_plant,
         "api_access": org.api_access,
-        "api_key": org.api_key if org.api_access else None
+        "api_key": org.api_key if org.api_access else None,
+        "profile_completion": profile_completion
     }), 200
 
 
@@ -2108,12 +2281,16 @@ def get_role_permissions():
     sec = getattr(org, 'security_settings', {}) or {} if org else {}
     role_perms = sec.get('role_permissions') if isinstance(sec, dict) else None
 
-    # Merge with default structure to guarantee all roles and keys exist
-    merged_perms = {}
-    for role, def_keys in DEFAULT_ROLE_PERMISSIONS.items():
-        merged_perms[role] = dict(def_keys)
-        if role_perms and isinstance(role_perms, dict) and role in role_perms and isinstance(role_perms[role], dict):
-            merged_perms[role].update(role_perms[role])
+    # Check if request explicitly asks for platform defaults
+    if request.args.get('defaults') == 'true' or request.args.get('reset') == 'true':
+        perms_to_return = copy.deepcopy(DEFAULT_ROLE_PERMISSIONS)
+    else:
+        # Merge with default structure to guarantee all roles and keys exist
+        perms_to_return = {}
+        for role, def_keys in DEFAULT_ROLE_PERMISSIONS.items():
+            perms_to_return[role] = dict(def_keys)
+            if role_perms and isinstance(role_perms, dict) and role in role_perms and isinstance(role_perms[role], dict):
+                perms_to_return[role].update(role_perms[role])
 
     return jsonify({
         "status": "success",
@@ -2132,7 +2309,47 @@ def get_role_permissions():
             {"key": "stage_template", "label": "8 Stage Template", "icon": "layout-list"},
             {"key": "settings", "label": "Settings", "icon": "settings"}
         ],
-        "permissions": merged_perms
+        "permissions": perms_to_return
+    }), 200
+
+@admin_bp.route('/role-permissions/reset', methods=['POST'])
+@admin_required
+def reset_role_permissions_defaults():
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+        
+    org_id = user.org_id or 1
+    org = db.session.get(Organization, org_id) if org_id else None
+    if not org:
+        return jsonify({"message": "Organization not found"}), 404
+
+    sec = dict(getattr(org, 'security_settings', {}) or {})
+    sec['role_permissions'] = copy.deepcopy(DEFAULT_ROLE_PERMISSIONS)
+    org.security_settings = sec
+    flag_modified(org, 'security_settings')
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": "Role Access Control reset to platform defaults successfully.",
+        "roles": ["Team Member", "CEO", "Facilitator", "Reviewer", "Admin"],
+        "modules": [
+            {"key": "overview", "label": "Dashboard / Overview", "icon": "layout-dashboard"},
+            {"key": "project_repo", "label": "Project Repository", "icon": "layers"},
+            {"key": "knowledge_base", "label": "Knowledge Base", "icon": "database"},
+            {"key": "leaderboard", "label": "Leaderboard & Rewards", "icon": "award"},
+            {"key": "additional_sources", "label": "Additional Sources", "icon": "sparkles"},
+            {"key": "analytics", "label": "Analytics & Insights", "icon": "bar-chart-3"},
+            {"key": "user_management", "label": "User Management", "icon": "users"},
+            {"key": "plants", "label": "Plant Locations", "icon": "building-2"},
+            {"key": "departments", "label": "Departments", "icon": "briefcase"},
+            {"key": "audit_logs", "label": "Audit Logs", "icon": "scroll-text"},
+            {"key": "stage_template", "label": "8 Stage Template", "icon": "layout-list"},
+            {"key": "settings", "label": "Settings", "icon": "settings"}
+        ],
+        "permissions": copy.deepcopy(DEFAULT_ROLE_PERMISSIONS)
     }), 200
 
 @admin_bp.route('/role-permissions', methods=['PUT'])
@@ -2262,10 +2479,19 @@ def get_usage_stats():
     current_user_id = get_jwt_identity()
     current_user = db.session.get(User, current_user_id)
     
-    stats = SubscriptionManager.get_usage_stats(current_user.org_id)
-    if not stats:
-        return jsonify({"message": "Stats not found"}), 404
-        
+    stats = SubscriptionManager.get_usage_stats(current_user.org_id) or {}
+    org = db.session.get(Organization, current_user.org_id)
+    if org:
+        sec = getattr(org, 'security_settings', {}) or {}
+        auto_count = sec.get('auto_approved_trial_extensions', org.trial_extension_count or 0)
+        manual_count = sec.get('manual_approved_trial_extensions', 0)
+        total_reqs = sec.get('total_trial_requests', auto_count + manual_count)
+
+        stats['total_trial_requests'] = total_reqs
+        stats['auto_approved_trial_extensions'] = auto_count
+        stats['manual_approved_trial_extensions'] = manual_count
+        stats['trial_extension_count'] = org.trial_extension_count or 0
+
     return jsonify(stats), 200
 
 # --- File Uploads ---

@@ -591,10 +591,12 @@ def get_login_config():
     """
     Public endpoint — no JWT required.
     Given ?identifier=xxx, finds the user's org and returns
-    the allowed login options + human-readable field labels.
-    Used by the login page to dynamically update its input label/placeholder.
+    the allowed login options + human-readable field labels, SSO config,
+    and the dynamic document/platform branding identity.
     """
-    from app.infrastructure.database.models.models import PlatformSettings
+    from app.infrastructure.database.models.models import PlatformSettings, Organization
+    from app.domain.services.document_branding_service import DocumentBrandingService
+
     settings = PlatformSettings.query.first()
     auth_settings = (settings.authentication_settings or {}) if settings else {}
     
@@ -608,10 +610,12 @@ def get_login_config():
         "native_enabled": auth_settings.get('native_email_enabled', True)
     }
 
+    # Global platform branding
+    branding = DocumentBrandingService.get_branding_context(org_id=None)
+
     identifier = request.args.get('identifier', request.args.get('email', '')).strip().lower()
     if not identifier:
         # Fallback to general system settings: return union of all login options active in the system
-        from app.infrastructure.database.models.models import Organization
         all_orgs = Organization.query.filter(Organization.login_options.isnot(None)).all()
         options = ["email"]
         for o in all_orgs:
@@ -630,7 +634,8 @@ def get_login_config():
         return jsonify({
             "login_options": options,
             "field_labels": field_labels,
-            "sso_config": sso_config
+            "sso_config": sso_config,
+            "branding": branding
         }), 200
 
     from sqlalchemy import or_
@@ -644,8 +649,6 @@ def get_login_config():
 
     # If not found, search custom columns that are login options
     if not user:
-        from app.infrastructure.database.models.models import Organization
-        from sqlalchemy import text
         all_orgs_with_custom_login = Organization.query.filter(
             Organization.login_options.isnot(None)
         ).all()
@@ -657,6 +660,7 @@ def get_login_config():
                     continue
                 checked_keys.add(key)
                 try:
+                    from sqlalchemy import text
                     result = db.session.execute(
                         text(f"SELECT id FROM users WHERE LOWER({key}::text) = LOWER(:val) LIMIT 1"),
                         {"val": identifier}
@@ -669,11 +673,18 @@ def get_login_config():
             if user:
                 break
 
+    if user and user.org_id:
+        try:
+            branding = DocumentBrandingService.get_branding_context(org_id=user.org_id)
+        except Exception:
+            pass
+
     if not user or not user.organization:
         return jsonify({
             "login_options": ["email"], 
             "field_labels": {"email": "Email ID"},
-            "sso_config": sso_config
+            "sso_config": sso_config,
+            "branding": branding
         }), 200
 
     org = user.organization
@@ -699,7 +710,8 @@ def get_login_config():
     return jsonify({
         "login_options": options,
         "field_labels": field_labels,
-        "sso_config": sso_config
+        "sso_config": sso_config,
+        "branding": branding
     }), 200
 
 
@@ -1012,14 +1024,24 @@ def login():
     except Exception as sess_err:
         db.session.rollback()
         print(f"[LOGIN SESSION WARNING] {sess_err}")
-    p_id, p_name, d_id, d_name = resolve_user_plant_and_dept(user)
+    from app.presentation.routes.admin_routes import DEFAULT_ROLE_PERMISSIONS
+    org_obj = user.organization if role_name != 'SuperAdmin' else None
+    sec = getattr(org_obj, 'security_settings', {}) or {} if org_obj else {}
+    role_perms = sec.get('role_permissions') if isinstance(sec, dict) else None
+    merged_perms = {}
+    for r_k, def_k in DEFAULT_ROLE_PERMISSIONS.items():
+        merged_perms[r_k] = dict(def_k)
+        if role_perms and isinstance(role_perms, dict) and r_k in role_perms and isinstance(role_perms[r_k], dict):
+            merged_perms[r_k].update(role_perms[r_k])
 
     return jsonify({
         "access_token": access_token,
         "session_id": session_id,
         "org_id": user.org_id,
         "org_name": user.organization.name if user.organization else None,
-        "role": user.role.name,
+        "role": user.role.name if user.role else 'SuperAdmin',
+        "role_name": user.role.name if user.role else 'SuperAdmin',
+        "role_permissions": merged_perms,
         "subscription_plan": user.organization.subscription_plan if user.organization else 'Starter',
         "subscription_status": user.organization.subscription_status if user.organization else 'Active',
         "username": user.username,
@@ -1406,32 +1428,54 @@ def validate_password_complexity(password):
     return True, None
 
 @auth_bp.route('/reset-password', methods=['POST'])
-@jwt_required()
+@jwt_required(optional=True)
 def reset_password():
-    user_id = int(get_jwt_identity())
-    print(f"[AUTH] Resetting password for user_id: {user_id}")
-    user = db.session.get(User, user_id)
-    data = request.get_json()
+    identity = get_jwt_identity()
+    user = None
+    if identity:
+        try:
+            user_id = int(identity) if not isinstance(identity, dict) else int(identity.get('id') or identity.get('user_id'))
+            user = db.session.get(User, user_id)
+        except Exception:
+            user = None
+
+    data = request.get_json() or {}
+    password = data.get('password') or data.get('new_password')
     
-    if not data or 'password' not in data:
+    # Fallback to finding user via identifier if JWT was expired/optional
+    if not user:
+        identifier = (data.get('email') or data.get('username') or data.get('identifier') or '').strip()
+        if identifier:
+            from sqlalchemy import or_
+            user = User.query.filter(
+                or_(
+                    User.email.ilike(identifier),
+                    User.username.ilike(identifier)
+                )
+            ).first()
+            
+    if not user:
+        return jsonify({"msg": "User session expired or user not found. Please log in again."}), 401
+        
+    if not password:
         return jsonify({"msg": "Password required"}), 400
         
-    is_valid, error_msg = validate_password_complexity(data['password'])
+    is_valid, error_msg = validate_password_complexity(password)
     if not is_valid:
         return jsonify({"msg": error_msg}), 400
 
-    # Use direct hashed_password assignment to be absolutely sure
-    user.hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    # Direct bcrypt hash assignment
+    user.hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     user.is_temp_password = False
     user.is_verified = True
     db.session.add(user)
     
     try:
         db.session.commit()
-        print(f"[AUTH] Password successfully updated and saved for user_id: {user_id}")
+        print(f"[AUTH] Password successfully updated and saved for user_id: {user.id} ({user.email})")
     except Exception as e:
         db.session.rollback()
-        print(f"[AUTH] Error saving password for user_id: {user_id}: {e}")
+        print(f"[AUTH] Error saving password for user_id: {user.id}: {e}")
         return jsonify({"msg": "Internal database error while saving password"}), 500
     
     return jsonify({"msg": "Password updated successfully"}), 200

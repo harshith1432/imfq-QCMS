@@ -264,10 +264,12 @@
                         <!-- Profile Section -->
                         <div class="settings-pane" id="pane-profile">
                             <div class="glass-card ds-card mb-4">
-                                <div class="ds-card-header p-4 border-bottom">
+                                <div class="ds-card-header p-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <h5 class="mb-0 fw-bold" data-i18n="settings.nav.org_profile">Organization Profile</h5>
+                                    <div id="corporate-profile-completion-badge"></div>
                                 </div>
                                 <div class="ds-card-body p-4">
+                                    <div id="corporate-profile-completion-bar" class="mb-4"></div>
                                     <div class="row g-4">
                                         <div class="col-md-4">
                                             <div class="ds-field">
@@ -459,7 +461,7 @@
                                             <div class="usage-stats v-stack gap-4">
                                                 <div class="v-stack gap-2">
                                                     <div class="h-stack justify-content-between text-xs">
-                                                        <span class="ds-text-secondary" data-i18n="settings.billing.user_licenses">USER LICENSES</span>
+                                                        <span class="ds-text-secondary" data-i18n="settings.billing.user_licenses">NUMBER OF USERS</span>
                                                         <span class="fw-bold ds-text-main" id="user-usage-text">0 / 0</span>
                                                     </div>
                                                     <div class="progress" style="height: 8px;">
@@ -563,7 +565,6 @@
                                     <div>
                                         <div class="d-flex align-items-center gap-2 mb-1">
                                             <h5 class="mb-0 fw-bold text-main">Role Access Control & Module Permissions</h5>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Role-Based RBAC</span>
                                         </div>
                                         <p class="text-xs ds-text-secondary mb-0">Configure module visibility and navigation options for each role in your organization (Team Member, CEO, Facilitator, Reviewer, Admin).</p>
                                     </div>
@@ -4675,7 +4676,8 @@ console.log(data);
 
             // Check for initial URL tab parameter or hash navigation
             const urlParams = new URLSearchParams(window.location.search);
-            const initialTab = urlParams.get('tab') || window.location.hash.replace('#', '');
+            let initialTab = urlParams.get('tab') || window.location.hash.replace('#', '');
+            if (initialTab === 'corporate' || initialTab === 'org' || initialTab === 'corporate-profile') initialTab = 'profile';
             if (initialTab) {
                 this.switchTab(initialTab);
             } else {
@@ -4878,6 +4880,9 @@ console.log(data);
                     const orgCountry = document.getElementById('org_country'); if (orgCountry) orgCountry.value = settings.country || '';
                     const orgZip = document.getElementById('org_zip'); if (orgZip) orgZip.value = settings.zip_code || '';
                     
+                    // Render Corporate Profile Progress Bar & Badge
+                    this.renderCorporateProfileProgress(settings);
+                    
                     // Branding
                     const primCol = document.getElementById('primary_color'); if (primCol) primCol.value = settings.primary_color || '#2563EB';
                     const colHex = document.getElementById('color_hex'); if (colHex) colHex.innerText = (settings.primary_color || '#2563EB').toUpperCase();
@@ -4985,6 +4990,15 @@ console.log(data);
                     const projBar = document.getElementById('project-usage-bar');
                     if (projBar) projBar.style.width = projLimit === 1000000 || projLimit === 'Unlimited' ? '100%' : `${projPct}%`;
                 }
+
+                // Trial extension usage metric
+                const reqCount = stats.total_trial_requests || stats.trial_extension_count || 0;
+                const autoCount = stats.auto_approved_trial_extensions || 0;
+                const manualCount = stats.manual_approved_trial_extensions || 0;
+                const trialExtTxt = document.getElementById('trial-extension-usage-text');
+                if (trialExtTxt) {
+                    trialExtTxt.innerText = `${reqCount} Request${reqCount === 1 ? '' : 's'}${reqCount > 0 ? ` (${autoCount} Auto / ${manualCount} Manual)` : ''}`;
+                }
                 
             } catch (e) {
                 console.warn('Failed to load usage stats', e);
@@ -5033,95 +5047,80 @@ console.log(data);
             const orgEmail = safe(this.initialData?.email || document.getElementById('org_email')?.value || 'admin@qcms.com');
             const invNo    = `INV-2026-${tx.length > 8 ? tx.slice(-8) : tx}`;
 
-            const pdfStream = `% Top Header Bar (Dark Navy Fill)
+            const pdfStream = `% Invoice Meta Header (Clean Top Layout without Dark Navy Bar)
 0.07 0.13 0.24 rg
-0 710 612 82 re f
-
-% Top Header Text (White)
-1 1 1 rg
 BT
 /F1 18 Tf
-1 0 0 1 40 752 Tm
-(${swDisplay}) Tj
-/F2 9.5 Tf
-1 0 0 1 40 732 Tm
-(${invSub}) Tj
-ET
-
-% Invoice Meta Header
-0.07 0.13 0.24 rg
-BT
-/F1 16 Tf
-1 0 0 1 40 675 Tm
+1 0 0 1 40 735 Tm
 (${invHeader}) Tj
 /F1 9.5 Tf
-1 0 0 1 350 678 Tm
+1 0 0 1 350 738 Tm
 (Invoice No: ${invNo}) Tj
 /F2 9 Tf
-1 0 0 1 350 664 Tm
+1 0 0 1 350 724 Tm
 (Invoice Date: ${dt}) Tj
-1 0 0 1 350 650 Tm
+1 0 0 1 350 710 Tm
 (Transaction Ref: ${tx}) Tj
 0.05 0.59 0.40 rg
 /F1 9 Tf
-1 0 0 1 350 636 Tm
+1 0 0 1 350 696 Tm
 (Status: COMPLETED AND VERIFIED) Tj
 ET
 
 % Divider Line 1
 0.82 0.86 0.90 RG
 1 w
-40 625 m 572 625 l S
+40 682 m 572 682 l S
 
 % Billed From & Billed To Section
 0.06 0.09 0.16 rg
 BT
 /F1 10 Tf
-1 0 0 1 40 605 Tm
+1 0 0 1 40 662 Tm
 (ISSUED BY:) Tj
 /F1 9.5 Tf
-1 0 0 1 40 590 Tm
+1 0 0 1 40 647 Tm
 (${compLegal}) Tj
 /F2 8.5 Tf
-1 0 0 1 40 577 Tm
+1 0 0 1 40 634 Tm
 (${compTrading}) Tj
-1 0 0 1 40 564 Tm
+1 0 0 1 40 621 Tm
 (${compTax}) Tj
-1 0 0 1 40 551 Tm
+1 0 0 1 40 608 Tm
 (${compEmail}) Tj
 
 /F1 10 Tf
-1 0 0 1 330 605 Tm
+1 0 0 1 330 662 Tm
 (BILLED TO:) Tj
 /F1 9.5 Tf
-1 0 0 1 330 590 Tm
+1 0 0 1 330 647 Tm
 (${orgName}) Tj
 /F2 8.5 Tf
-1 0 0 1 330 577 Tm
+1 0 0 1 330 634 Tm
 (Attn: ${adminName}) Tj
-1 0 0 1 330 564 Tm
+1 0 0 1 330 621 Tm
 (Email: ${orgEmail}) Tj
-1 0 0 1 330 551 Tm
+1 0 0 1 330 608 Tm
 (Billing Region: India GST Inclusive) Tj
 ET
 
 % Table Header Background Fill
 0.93 0.95 0.98 rg
-40 495 532 26 re f
+40 555 532 26 re f
 0.82 0.86 0.90 RG
-40 495 532 26 re S
+40 555 532 26 re S
 
 % Table Header Text
 0.07 0.13 0.24 rg
 BT
 /F1 9 Tf
-1 0 0 1 52 504 Tm
+1 0 0 1 52 564 Tm
 (DESCRIPTION) Tj
-1 0 0 1 280 504 Tm
+1 0 0 1 300 564 Tm
 (QTY / DURATION) Tj
-1 0 0 1 390 504 Tm
+1 0 0 1 400 564 Tm
 (NET RATE) Tj
-1 0 0 1 480 504 Tm
+1 0 0 1 480 564 Tm
 (AMOUNT ${curr}) Tj
 ET
 
@@ -5129,72 +5128,72 @@ ET
 0.06 0.09 0.16 rg
 BT
 /F1 9.5 Tf
-1 0 0 1 52 472 Tm
-(${swDisplay} ${pl} Plan Subscription) Tj
+1 0 0 1 52 532 Tm
+(${pl} Plan Subscription) Tj
 /F2 8.5 Tf
 0.4 0.4 0.4 rg
-1 0 0 1 52 458 Tm
+1 0 0 1 52 518 Tm
 (Annual Enterprise Access & Platform Features) Tj
 0.06 0.09 0.16 rg
 /F2 9 Tf
-1 0 0 1 280 466 Tm
+1 0 0 1 300 526 Tm
 (1 Year 365 Days) Tj
-1 0 0 1 390 466 Tm
+1 0 0 1 400 526 Tm
 (${curr} ${subtotal}) Tj
 /F1 9.5 Tf
-1 0 0 1 480 466 Tm
+1 0 0 1 480 526 Tm
 (${curr} ${subtotal}) Tj
 ET
 
 % Table Row Line
 0.88 0.90 0.93 RG
 0.5 w
-40 442 m 572 442 l S
+40 502 m 572 502 l S
 
 % Summary Box Background Fill
 0.96 0.98 1.00 rg
-330 310 242 110 re f
+330 370 242 110 re f
 0.82 0.86 0.90 RG
-330 310 242 110 re S
+330 370 242 110 re S
 
 % Summary Text
 0.06 0.09 0.16 rg
 BT
 /F2 9 Tf
-1 0 0 1 345 395 Tm
+1 0 0 1 345 455 Tm
 (Subtotal Excl. Tax:) Tj
-1 0 0 1 465 395 Tm
+1 0 0 1 465 455 Tm
 (${curr} ${subtotal}) Tj
 
-1 0 0 1 345 375 Tm
+1 0 0 1 345 435 Tm
 (GST / IGST 18%:) Tj
-1 0 0 1 465 375 Tm
+1 0 0 1 465 435 Tm
 (${curr} ${gstVal}) Tj
 
 /F1 11 Tf
 0.07 0.13 0.24 rg
-1 0 0 1 345 332 Tm
+1 0 0 1 345 392 Tm
 (Total Amount Paid:) Tj
-1 0 0 1 455 332 Tm
+1 0 0 1 455 392 Tm
 (${curr} ${amtStr}) Tj
 ET
 
 % Summary Box Divider Line
 0.82 0.86 0.90 RG
 0.5 w
-340 356 m 560 356 l S
+340 416 m 560 416 l S
 
 % Paid Stamp Box
 0.05 0.59 0.40 RG
 0.05 0.59 0.40 rg
 1.5 w
-40 330 220 48 re S
+40 390 220 48 re S
 BT
 /F1 10.5 Tf
-1 0 0 1 55 358 Tm
+1 0 0 1 55 418 Tm
 (STATUS: PAID AND VERIFIED) Tj
 /F2 8.5 Tf
-1 0 0 1 55 344 Tm
+1 0 0 1 55 404 Tm
 (Payment Ref: ${tx}) Tj
 ET
 
@@ -5435,8 +5434,90 @@ ET`;
                     if (typeof QCMS.applyBranding === 'function') QCMS.applyBranding();
                     if (typeof QCMS.renderSidebar === 'function') QCMS.renderSidebar();
                 }
+
+                // Refresh Corporate Profile Progress & Notification Banner
+                this.renderCorporateProfileProgress(payload);
             } catch (e) {
                 QCMS.toast(e.message || 'Failed to save organization settings.', 'error');
+            }
+        },
+
+        renderCorporateProfileProgress(settings) {
+            if (!settings) return;
+            const fields = [
+                { k: 'name', l: 'Legal Entity Name' },
+                { k: 'org_code', l: 'Organization Code' },
+                { k: 'industry', l: 'Industry Sector' },
+                { k: 'admin_name', l: 'Primary Admin Name' },
+                { k: 'website', l: 'Website URL' },
+                { k: 'email', l: 'Business Email' },
+                { k: 'phone', l: 'Phone Number' },
+                { k: 'gst_number', l: 'GST Number' },
+                { k: 'pan_number', l: 'PAN Number' },
+                { k: 'address', l: 'HQ Address' },
+                { k: 'city', l: 'City' },
+                { k: 'state', l: 'State / Province' },
+                { k: 'country', l: 'Country' },
+                { k: 'zip_code', l: 'ZIP Code' }
+            ];
+
+            let filled = 0;
+            let missing = [];
+            fields.forEach(f => {
+                const v = settings[f.k];
+                if (v && String(v).trim() !== '' && String(v).trim() !== 'None' && String(v).trim() !== 'null') {
+                    filled++;
+                } else {
+                    missing.push(f.l);
+                }
+            });
+            const total = fields.length;
+            const compPct = Math.round((filled / total) * 100);
+            const pendPct = 100 - compPct;
+            const isComplete = compPct === 100;
+
+            const badgeEl = document.getElementById('corporate-profile-completion-badge');
+            if (badgeEl) {
+                if (isComplete) {
+                    badgeEl.innerHTML = `<span class="badge py-1.5 px-3 text-xs" style="background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); border-radius: 20px; font-weight: 600;"><i data-lucide="check-circle" style="width:12px;height:12px;" class="me-1"></i> Profile 100% Complete</span>`;
+                } else {
+                    badgeEl.innerHTML = `<span class="badge py-1.5 px-3 text-xs" style="background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); border-radius: 20px; font-weight: 600;">Profile ${compPct}% Complete (${pendPct}% Pending)</span>`;
+                }
+            }
+
+            const barEl = document.getElementById('corporate-profile-completion-bar');
+            if (barEl) {
+                if (isComplete) {
+                    barEl.innerHTML = `
+                        <div class="alert alert-success d-flex align-items-center justify-content-between p-3 mb-0" style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); border-radius: 10px; color:#22c55e;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i data-lucide="check-circle" style="width:18px;height:18px;"></i>
+                                <span class="text-xs fw-semibold">All corporate profile fields are fully completed. Organization configuration is 100% active.</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    barEl.innerHTML = `
+                        <div class="glass-panel p-3" style="background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px;">
+                            <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                                <span class="text-xs fw-bold text-main">Corporate Profile Completion (${filled}/${total} Filled)</span>
+                                <span class="text-xs fw-bold text-warning">${compPct}% Completed &bull; ${pendPct}% Pending</span>
+                            </div>
+                            <div class="progress" style="height: 8px; background: rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden;">
+                                <div class="progress-bar" style="width: ${compPct}%; background: linear-gradient(90deg, #6366f1, #3b82f6); border-radius: 6px;"></div>
+                            </div>
+                            <div class="text-xxs text-secondary mt-2">
+                                Missing fields: <strong style="color:var(--ds-text-main,#f1f5f9);">${missing.join(', ')}</strong>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            if (window.lucide) lucide.createIcons();
+
+            // Trigger global banner re-evaluation
+            if (window.QCMS && typeof QCMS.checkProfileCompletion === 'function') {
+                QCMS.checkProfileCompletion();
             }
         },
 
@@ -5840,16 +5921,22 @@ ET`;
         async resetRolePermissionsDefaults() {
             if (!confirm('Are you sure you want to reset Role Access Control settings to platform defaults?')) return;
             try {
-                const res = await api.get('/admin/role-permissions');
+                const res = await api.post('/admin/role-permissions/reset', {});
                 if (res && res.status === 'success') {
                     this.rolePermissionsData = res;
                     this.renderRolePermissions();
                     if (window.QCMS && typeof QCMS.toast === 'function') {
-                        QCMS.toast('Role Access Control reset to defaults (click Save to apply)', 'info');
+                        QCMS.toast('Role Access Control matrix reset to platform defaults successfully!', 'success');
+                    }
+                    if (window.initAppNavigation) {
+                        try { initAppNavigation(); } catch (err) {}
                     }
                 }
             } catch (e) {
                 console.error('Failed to reset role permissions', e);
+                if (window.QCMS && typeof QCMS.toast === 'function') {
+                    QCMS.toast(e.message || 'Failed to reset role permissions', 'error');
+                }
             }
         }
     };
@@ -6207,12 +6294,22 @@ ET`;
             container.innerHTML = '<div class="text-muted text-sm py-4 text-center"><i data-lucide="loader-2" class="me-2 spinner"></i>Loading subscription plans...</div>';
 
             try {
-                const res = await api.get('/subscriptions/plans');
-                const plans = res?.data || (Array.isArray(res) ? res : []);
-                if (Array.isArray(plans) && plans.length > 0) {
-                    loadedCheckoutPlans = plans;
-                    renderCheckoutPlanCards(plans, res?.current_storage_used_gb);
-                    return;
+                const res = await api.get('/subscriptions/plans?exclude_trial=true');
+                let plans = res?.data || (Array.isArray(res) ? res : []);
+                if (Array.isArray(plans)) {
+                    // Strictly exclude all trial plans from checkout catalog
+                    plans = plans.filter(p => {
+                        const pType = (p.plan_type || '').toLowerCase();
+                        const pName = (p.name || p.plan_name || '').toLowerCase();
+                        const pCode = (p.code || '').toLowerCase();
+                        const bCycle = (p.billing_cycle || '').toLowerCase();
+                        return pType !== 'trial' && !p.is_default_trial && !pName.includes('trial') && !pCode.includes('trial') && bCycle !== 'trial' && pCode !== 't1';
+                    });
+                    if (plans.length > 0) {
+                        loadedCheckoutPlans = plans;
+                        renderCheckoutPlanCards(plans, res?.current_storage_used_gb);
+                        return;
+                    }
                 }
             } catch (e) {
                 console.warn('Could not fetch dynamic plans from backend:', e);
@@ -6471,10 +6568,25 @@ ET`;
         function _checkGstPanBeforeCheckout() {
             return new Promise(async (resolve) => {
                 try {
-                    const profile = await api.get('/admin/company-profile');
+                    let gstVal = document.getElementById('org_gst')?.value?.trim();
+                    let panVal = document.getElementById('org_pan')?.value?.trim();
+
+                    if (!gstVal || !panVal) {
+                        try {
+                            const profile = await api.get('/admin/org-settings');
+                            if (profile) {
+                                if (!gstVal && profile.gst_number) gstVal = String(profile.gst_number).trim();
+                                if (!panVal && profile.pan_number) panVal = String(profile.pan_number).trim();
+                            }
+                        } catch (e) {
+                            console.warn('Could not fetch org settings for GST/PAN check:', e);
+                        }
+                    }
+
                     const missing = [];
-                    if (!profile.gst_number || !String(profile.gst_number).trim()) missing.push({ label: 'GST Number (GSTIN)', icon: 'hash' });
-                    if (!profile.pan_number  || !String(profile.pan_number).trim())  missing.push({ label: 'PAN Number',          icon: 'credit-card' });
+                    const isValidVal = (v) => v && v !== 'None' && v !== 'null';
+                    if (!isValidVal(gstVal)) missing.push({ label: 'GST Number (GSTIN)', icon: 'hash' });
+                    if (!isValidVal(panVal)) missing.push({ label: 'PAN Number', icon: 'credit-card' });
 
                     if (!missing.length) { resolve(true); return; }
 
@@ -6812,15 +6924,6 @@ ET`;
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3 p-3 rounded-3 bg-light border">
-                        <div class="d-flex align-items-center justify-content-between mb-1 text-xs text-muted">
-                            <span>EXTENSION POLICY</span>
-                            <span id="trialAutoExtBadge" class="badge bg-info-subtle text-info fw-semibold">Auto-Approved (Up to 2 Times)</span>
-                        </div>
-                        <div class="text-xs text-secondary">
-                            Organizations can auto-extend their trial <strong>2 times</strong> instantly. On the 3rd attempt, your request is submitted to Super Admin for manual review and approval.
-                        </div>
-                    </div>
                     <form id="extendTrialForm" onsubmit="event.preventDefault(); submitTrialExtension();">
                         <div class="mb-3">
                             <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Reason for Extension <span class="text-danger">*</span></label>
@@ -6842,26 +6945,8 @@ ET`;
         async function openExtendTrialModal() {
             if (!await _checkGstPanBeforeCheckout()) return;
             try {
-                const stats = await api.get('/admin/stats/usage');
-                const count = stats.trial_extension_count || 0;
                 const subtext = document.getElementById('extendTrialSubtext');
-                const badge = document.getElementById('trialAutoExtBadge');
-                if (subtext) {
-                    if (count < 2) {
-                        subtext.innerText = `Auto-extension ${count + 1} of 2 available. Instant activation.`;
-                    } else {
-                        subtext.innerText = `Auto-extensions limit reached (${count}/2 used). Requires Super Admin review.`;
-                    }
-                }
-                if (badge) {
-                    if (count < 2) {
-                        badge.className = 'badge bg-success-subtle text-success fw-semibold';
-                        badge.innerText = `Instant Auto-Approval (${count}/2 Used)`;
-                    } else {
-                        badge.className = 'badge bg-warning-subtle text-warning fw-semibold';
-                        badge.innerText = `Super Admin Review Required (${count}/2 Used)`;
-                    }
-                }
+                if (subtext) subtext.innerText = 'Request additional trial time for your organization';
                 const reasonInput = document.getElementById('extendTrialReason');
                 if (reasonInput) reasonInput.value = '';
                 const modalEl = document.getElementById('extendTrialModal');
@@ -6885,9 +6970,9 @@ ET`;
             if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...'; }
 
             try {
-                const res = await api.post('/subscription/request-trial-extension', { reason });
+                const res = await api.post('/subscriptions/request-trial-extension', { reason });
                 if (window.QCMS && QCMS.toast) {
-                    QCMS.toast(res.message || 'Trial extension processed', res.auto_approved ? 'success' : 'info');
+                    QCMS.toast(res.message || 'Your trial extension request has been submitted! It will take up to 24 hours for review.', 'info');
                 }
                 const modalEl = document.getElementById('extendTrialModal');
                 if (modalEl) {

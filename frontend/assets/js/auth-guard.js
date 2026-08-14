@@ -500,27 +500,24 @@
         'CEO': '/dashboard/dashboard-ceo.html'
     };
 
-    // ── Page-level RBAC: which roles can access which pages ────────
-    // Pages NOT listed here are accessible to all authenticated users
-    const restrictedPages = {
-        'super-admin.html':         ['SuperAdmin'],
-        'dashboard-admin.html':     ['SuperAdmin', 'Admin', 'CEO'],
-        'dashboard-team-leader.html': ['SuperAdmin', 'Team Leader', 'Team Member', 'Admin', 'CEO'],
-        'dashboard-team-member.html': ['SuperAdmin', 'Team Member', 'Team Leader', 'Admin', 'CEO'],
-        'dashboard-facilitator.html': ['SuperAdmin', 'Facilitator', 'Admin', 'CEO'],
-        'dashboard-reviewer.html':  ['SuperAdmin', 'Reviewer', 'Admin', 'CEO'],
-        'dashboard-ceo.html':       ['SuperAdmin', 'CEO', 'Admin'],
-        'users.html':              ['SuperAdmin', 'Admin', 'CEO'],
-        'user-management.html':    ['SuperAdmin', 'Admin', 'CEO'],
-        'departments.html':        ['SuperAdmin', 'Admin', 'CEO'],
-        'plants.html':             ['SuperAdmin', 'Admin', 'CEO'],
-        'audit-logs.html':         ['SuperAdmin', 'Admin', 'CEO'],
-        'audit-queue.html':        ['SuperAdmin', 'Admin', 'Reviewer', 'Facilitator', 'CEO'],
-        'stage-template.html':     ['SuperAdmin', 'Admin', 'CEO'],
-        'projects-repository.html': ['SuperAdmin', 'Admin', 'Team Leader', 'Team Member', 'CEO'],
-        'additional-sources.html':  ['SuperAdmin', 'Admin'],
-        'settings.html':           ['SuperAdmin', 'Admin', 'CEO', 'Team Leader', 'Team Member', 'Facilitator', 'Reviewer']
+    // ── Module mapping for Organization pages ────────
+    const pageModuleMap = {
+        'repository.html': 'knowledge_base',
+        'projects-repository.html': 'project_repo',
+        'analytics.html': 'analytics',
+        'users.html': 'user_management',
+        'user-management.html': 'user_management',
+        'plants.html': 'plants',
+        'departments.html': 'departments',
+        'audit-logs.html': 'audit_logs',
+        'audit-queue.html': 'audit_logs',
+        'stage-template.html': 'stage_template',
+        'leaderboard.html': 'leaderboard',
+        'additional-sources.html': 'additional_sources',
+        'settings.html': 'settings'
     };
+
+    const isSuperAdminUser = (userRole === 'SuperAdmin' || userRole === 'Super Admin');
 
     if (isAuthPage) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -539,38 +536,28 @@
             redirectByRole(userRole);
             return;
         }
-    } else if (token && userRole !== 'SuperAdmin') {
+    } else if (token && !isSuperAdminUser) {
         let isDenied = false;
-        if (restrictedPages[page]) {
-            const allowedRoles = restrictedPages[page];
-            if (!userRole || !allowedRoles.includes(userRole)) {
-                isDenied = true;
-            }
+
+        // Block non-SuperAdmin from super-admin portal pages
+        if (page === 'super-admin.html' || window.location.pathname.includes('super-admin')) {
+            isDenied = true;
         }
 
-        // Check Organization Role Access Control (RBAC) permissions
-        const pageModuleMap = {
-            'repository.html': 'knowledge_base',
-            'projects-repository.html': 'project_repo',
-            'analytics.html': 'analytics',
-            'users.html': 'user_management',
-            'user-management.html': 'user_management',
-            'plants.html': 'plants',
-            'departments.html': 'departments',
-            'audit-logs.html': 'audit_logs',
-            'stage-template.html': 'stage_template',
-            'leaderboard.html': 'leaderboard',
-            'additional-sources.html': 'additional_sources'
-        };
-
+        // Check Organization Role Access Control (RBAC) permissions dynamically
         const modKey = pageModuleMap[page];
         if (modKey) {
             try {
                 const userObj = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
                 const rolePerms = userObj.role_permissions || JSON.parse(sessionStorage.getItem('role_permissions') || localStorage.getItem('role_permissions') || 'null');
-                if (rolePerms && userRole && rolePerms[userRole] && rolePerms[userRole][modKey] === false) {
-                    console.warn(`[RBAC] Module "${modKey}" is disabled for role "${userRole}". Access denied to "${page}".`);
-                    isDenied = true;
+                let targetRole = userRole || userObj.role || 'Team Member';
+                if (targetRole === 'Team Leader' || targetRole === 'teamleader' || targetRole === 'team_leader') targetRole = 'Team Member';
+                
+                if (rolePerms && rolePerms[targetRole] && typeof rolePerms[targetRole][modKey] === 'boolean') {
+                    if (rolePerms[targetRole][modKey] === false) {
+                        console.warn(`[RBAC] Module "${modKey}" is disabled for role "${targetRole}". Access denied to "${page}".`);
+                        isDenied = true;
+                    }
                 }
             } catch (e) {
                 console.warn('Error reading role_permissions in auth-guard:', e);
@@ -617,6 +604,17 @@
         })
         .then(profile => {
             if (profile) {
+                if (profile.role_permissions) {
+                    sessionStorage.setItem('role_permissions', JSON.stringify(profile.role_permissions));
+                    localStorage.setItem('role_permissions', JSON.stringify(profile.role_permissions));
+                    try {
+                        const cachedUser = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                        cachedUser.role_permissions = profile.role_permissions;
+                        sessionStorage.setItem('user', JSON.stringify(cachedUser));
+                        localStorage.setItem('user', JSON.stringify(cachedUser));
+                    } catch (_) {}
+                }
+
                 const normRole = normalizeRole(profile.role_name || profile.role || userRole);
                 const isSuperAdmin = normRole === 'SuperAdmin'
                     || profile.role_name === 'SuperAdmin'

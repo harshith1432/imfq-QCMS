@@ -216,9 +216,10 @@ const QCMS = {
             let normRole = roleName || user.role;
             if (typeof normRole === 'object') normRole = normRole.name || '';
             
-            normRole = (normRole === 'Team Leader' || normRole === 'teamleader') ? 'Team Leader' :
+            normRole = (normRole === 'Team Leader' || normRole === 'teamleader' || normRole === 'team_leader') ? 'Team Member' :
                        (normRole === 'Facilitator' || normRole === 'facilitator') ? 'Facilitator' :
                        (normRole === 'Reviewer' || normRole === 'reviewer') ? 'Reviewer' :
+                       (normRole === 'CEO' || normRole === 'ceo') ? 'CEO' :
                        (normRole === 'Admin' || normRole === 'admin' || normRole === 'SuperAdmin') ? 'Admin' :
                        'Team Member';
                        
@@ -276,6 +277,9 @@ const QCMS = {
                 window.GlobalAnnouncementBanner.init();
             }
  
+            // Check Corporate Profile completion for Organisation Admins
+            this.checkProfileCompletion();
+
             // Async: Fetch fresh branding from server to keep org theme in sync
             // This ensures all org users always see the latest admin-configured colors/logos
             this.syncBrandingFromServer();
@@ -338,6 +342,131 @@ const QCMS = {
             sessionStorage.removeItem('user');
             window.location.href = '/admin/super-admin.html';
         }
+    },
+
+    async checkProfileCompletion() {
+        try {
+            if (!this.user) return;
+            const roleName = (this.user.role && this.user.role.name) ? this.user.role.name : (this.user.role || '');
+            const isOrgAdmin = ['Admin', 'CEO', 'SuperAdmin', 'Owner', 'Organization Admin'].includes(roleName) || this.user.is_super_admin;
+            if (!isOrgAdmin) return;
+
+            // Skip on login page or super-admin portal
+            if (window.location.pathname.includes('login.html') || window.location.pathname.includes('super-admin.html')) return;
+
+            const res = await api.get('/admin/org-settings');
+            if (!res) return;
+
+            let comp = res.profile_completion;
+            if (!comp) {
+                const fields = [
+                    { k: 'name', l: 'Legal Entity Name' },
+                    { k: 'org_code', l: 'Organization Code' },
+                    { k: 'industry', l: 'Industry Sector' },
+                    { k: 'admin_name', l: 'Primary Admin Name' },
+                    { k: 'website', l: 'Website URL' },
+                    { k: 'email', l: 'Business Email' },
+                    { k: 'phone', l: 'Phone Number' },
+                    { k: 'gst_number', l: 'GST Number' },
+                    { k: 'pan_number', l: 'PAN Number' },
+                    { k: 'address', l: 'HQ Address' },
+                    { k: 'city', l: 'City' },
+                    { k: 'state', l: 'State / Province' },
+                    { k: 'country', l: 'Country' },
+                    { k: 'zip_code', l: 'ZIP Code' }
+                ];
+                let filled = 0;
+                let missing = [];
+                fields.forEach(f => {
+                    const v = res[f.k];
+                    if (v && String(v).trim() !== '' && String(v).trim() !== 'None' && String(v).trim() !== 'null') {
+                        filled++;
+                    } else {
+                        missing.push(f.l);
+                    }
+                });
+                const total = fields.length;
+                const completed_pct = Math.round((filled / total) * 100);
+                comp = {
+                    completed_pct,
+                    pending_pct: 100 - completed_pct,
+                    filled_count: filled,
+                    total_count: total,
+                    is_complete: (completed_pct === 100),
+                    missing_fields: missing
+                };
+            }
+
+            // If Corporate Profile is 100% complete, remove banner if present & do nothing!
+            if (comp.is_complete || comp.completed_pct >= 100) {
+                const existing = document.getElementById('org-profile-completion-banner');
+                if (existing) existing.remove();
+                return;
+            }
+
+            // Render notification banner
+            this.renderProfileCompletionBanner(comp);
+        } catch (e) {
+            console.warn('Profile completion check warning:', e);
+        }
+    },
+
+    renderProfileCompletionBanner(comp) {
+        if (document.getElementById('org-profile-completion-banner')) {
+            const pctEl = document.getElementById('opc-completed-pct');
+            if (pctEl) pctEl.innerText = `${comp.completed_pct}%`;
+            const pendEl = document.getElementById('opc-pending-pct');
+            if (pendEl) pendEl.innerText = `${comp.pending_pct}% Pending`;
+            return;
+        }
+
+        const banner = document.createElement('div');
+        banner.id = 'org-profile-completion-banner';
+        banner.className = 'container-fluid px-4 pt-2 pb-1';
+        banner.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between px-3 py-1.5 rounded-3 fade-in" style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.22); font-size: 12px; min-height: 36px;">
+                <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
+                    <i data-lucide="alert-circle" class="text-warning flex-shrink-0" style="width:15px;height:15px;"></i>
+                    <span class="fw-semibold text-main text-nowrap" style="font-size:12px;">Corporate Profile Incomplete:</span>
+                    <span class="badge py-0.5 px-2 text-xxs flex-shrink-0" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; font-weight: 600;">
+                        <span id="opc-completed-pct">${comp.completed_pct}%</span> Complete &bull; <span id="opc-pending-pct">${comp.pending_pct}% Pending</span>
+                    </span>
+                    <span class="text-secondary text-truncate d-none d-md-inline" style="max-width: 320px; font-size: 11px;">
+                        Missing: ${comp.missing_fields.slice(0, 2).join(', ')}${comp.missing_fields.length > 2 ? '...' : ''}
+                    </span>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    <a href="/admin/settings.html?tab=profile" class="btn btn-sm btn-primary py-0.5 px-2.5 text-xs fw-bold d-inline-flex align-items-center gap-1 opc-complete-btn" style="border-radius:6px; font-size:11px; height: 26px; line-height: 1;">
+                        <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Complete Profile (${comp.pending_pct}% Left)
+                    </a>
+                </div>
+            </div>
+        `;
+
+        const target = document.querySelector('main') || document.querySelector('.ds-main-content') || document.querySelector('.main-wrapper') || document.querySelector('#app-content');
+        if (target) {
+            target.insertBefore(banner, target.firstChild);
+        } else {
+            document.body.insertBefore(banner, document.body.firstChild);
+        }
+
+        const completeBtn = banner.querySelector('.opc-complete-btn');
+        if (completeBtn) {
+            completeBtn.addEventListener('click', (e) => {
+                if (window.location.pathname.includes('settings.html')) {
+                    e.preventDefault();
+                    if (window.settingsManager && typeof window.settingsManager.switchTab === 'function') {
+                        window.settingsManager.switchTab('profile');
+                    } else {
+                        const link = document.querySelector('.sidebar-link[data-target="profile"]');
+                        if (link) link.click();
+                    }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
+
+        if (window.lucide) lucide.createIcons();
     },
 
     /**
@@ -1044,262 +1173,98 @@ const QCMS = {
                 </div>
             `;
 
-        // ── COMPANY ADMIN ──────────────────────────
-        } else if (roleName === 'Admin') {
-            const canOverview = this.isModuleAllowed('Admin', 'overview');
-            const canProjRepo = this.isModuleAllowed('Admin', 'project_repo');
-            const canUserMgmt = this.isModuleAllowed('Admin', 'user_management');
-            const canPlants = this.isModuleAllowed('Admin', 'plants');
-            const canDepts = this.isModuleAllowed('Admin', 'departments');
-            const canAudit = this.isModuleAllowed('Admin', 'audit_logs');
-            const canTemplate = this.isModuleAllowed('Admin', 'stage_template');
-            const canKB = this.isModuleAllowed('Admin', 'knowledge_base');
-            const canRewards = this.isModuleAllowed('Admin', 'leaderboard');
-            const canSources = this.isModuleAllowed('Admin', 'additional_sources');
-            const canSettings = this.isModuleAllowed('Admin', 'settings');
+        // ── ALL ORGANIZATION ROLES (Admin, CEO, Facilitator, Reviewer, Team Leader, Team Member) ──
+        // Permissions are dynamically determined by the Organization's Role Access Control matrix
+        } else {
+            const canOverview = this.isModuleAllowed(roleName, 'overview');
+            const canProjRepo = this.isModuleAllowed(roleName, 'project_repo');
+            const canAnalytics = this.isModuleAllowed(roleName, 'analytics');
+            const canKB = this.isModuleAllowed(roleName, 'knowledge_base');
+            const canRewards = this.isModuleAllowed(roleName, 'leaderboard');
+            const canSources = this.isModuleAllowed(roleName, 'additional_sources');
+            const canUserMgmt = this.isModuleAllowed(roleName, 'user_management');
+            const canPlants = this.isModuleAllowed(roleName, 'plants');
+            const canDepts = this.isModuleAllowed(roleName, 'departments');
+            const canAudit = this.isModuleAllowed(roleName, 'audit_logs');
+            const canTemplate = this.isModuleAllowed(roleName, 'stage_template');
+            const canSettings = this.isModuleAllowed(roleName, 'settings');
+
+            const dashboardUrl = this.getDashboardUrl(roleName);
+
+            // Main section: Overview, Projects Repository, Analytics
+            let mainNav = '';
+            if (canOverview) {
+                if (roleName === 'CEO') {
+                    mainNav += `<a href="/dashboard/dashboard-ceo.html?view=strategic-overview" class="sidebar-link"><i class="link-icon" data-lucide="line-chart"></i><span data-i18n="sidebar.links.overview">Overview</span></a>`;
+                    mainNav += `<a href="/dashboard/dashboard-ceo.html?view=org-health" class="sidebar-link"><i class="link-icon" data-lucide="activity"></i><span data-i18n="sidebar.links.org_health">Organization Health</span></a>`;
+                    mainNav += `<a href="/dashboard/dashboard-ceo.html?view=roi-analytics" class="sidebar-link"><i class="link-icon" data-lucide="trending-up"></i><span data-i18n="sidebar.links.roi_analytics">ROI Analytics</span></a>`;
+                } else {
+                    mainNav += `<a href="${dashboardUrl}" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>`;
+                }
+            }
+            if (canProjRepo) {
+                mainNav += `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>`;
+            }
+            if (canAnalytics) {
+                mainNav += `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>`;
+            }
+
+            // Administration section: User Management, Plant Locations, Departments, Audit Logs, 8 Stage Template
+            let adminNav = '';
+            if (canUserMgmt) {
+                adminNav += `<a href="/admin/users.html" class="sidebar-link"><i class="link-icon" data-lucide="users"></i><span data-i18n="sidebar.links.user_management">User Management</span></a>`;
+            }
+            if (canPlants) {
+                adminNav += `<a href="/admin/plants.html" class="sidebar-link"><i class="link-icon" data-lucide="factory"></i><span>Plant Locations</span></a>`;
+            }
+            if (canDepts) {
+                adminNav += `<a href="/admin/departments.html" class="sidebar-link"><i class="link-icon" data-lucide="building-2"></i><span data-i18n="sidebar.links.departments">Departments</span></a>`;
+            }
+            if (canAudit) {
+                adminNav += `<a href="/admin/audit-logs.html" class="sidebar-link"><i class="link-icon" data-lucide="scroll-text"></i><span data-i18n="sidebar.links.audit_logs">Audit Logs</span></a>`;
+            }
+            if (canTemplate) {
+                adminNav += `<a href="/admin/stage-template.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-list"></i><span>8 Stage Template</span></a>`;
+            }
+
+            // Resources section: Knowledge Base, Leaderboard & Rewards, Additional Sources
+            let resNav = '';
+            if (canKB) {
+                resNav += `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>`;
+            }
+            if (canRewards) {
+                resNav += `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>`;
+            }
+            if (canSources) {
+                resNav += `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>`;
+            }
 
             sectionsHtml = `
-                ${(canOverview || canProjRepo) ? `
+                ${mainNav ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
                     <nav class="sidebar-nav">
-                        ${canOverview ? `<a href="/dashboard/dashboard-admin.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
-                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
+                        ${mainNav}
                     </nav>
                 </div>` : ''}
-                ${(canUserMgmt || canPlants || canDepts || canAudit || canTemplate) ? `
+
+                ${adminNav ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.administration">Administration</div>
                     <nav class="sidebar-nav">
-                        ${canUserMgmt ? `<a href="/admin/users.html" class="sidebar-link"><i class="link-icon" data-lucide="users"></i><span data-i18n="sidebar.links.user_management">User Management</span></a>` : ''}
-                        ${canPlants ? `<a href="/admin/plants.html" class="sidebar-link"><i class="link-icon" data-lucide="factory"></i><span>Plant Locations</span></a>` : ''}
-                        ${canDepts ? `<a href="/admin/departments.html" class="sidebar-link"><i class="link-icon" data-lucide="building-2"></i><span data-i18n="sidebar.links.departments">Departments</span></a>` : ''}
-                        ${canAudit ? `<a href="/admin/audit-logs.html" class="sidebar-link"><i class="link-icon" data-lucide="scroll-text"></i><span data-i18n="sidebar.links.audit_logs">Audit Logs</span></a>` : ''}
-                        ${canTemplate ? `<a href="/admin/stage-template.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-list"></i><span>8 Stage Template</span></a>` : ''}
+                        ${adminNav}
                     </nav>
                 </div>` : ''}
-                ${(canKB || canRewards || canSources) ? `
+
+                ${resNav ? `
                 <div class="sidebar-section">
                     <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
                     <nav class="sidebar-nav">
-                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
-                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
-                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
+                        ${resNav}
                     </nav>
                 </div>` : ''}
             `;
-            footerHtml = `
-                <div class="sidebar-footer">
-                    <nav class="sidebar-nav">
-                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
-                        <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
-                            <i class="link-icon" data-lucide="log-out"></i>
-                            <span data-i18n="sidebar.links.logout">Logout</span>
-                        </a>
-                    </nav>
-                </div>
-            `;
 
-        // ── TEAM LEADER ──────────────────────────
-        } else if (roleName === 'Team Leader') {
-            const canOverview = this.isModuleAllowed('Team Leader', 'overview');
-            const canProjRepo = this.isModuleAllowed('Team Leader', 'project_repo');
-            const canAnalytics = this.isModuleAllowed('Team Leader', 'analytics');
-            const canKB = this.isModuleAllowed('Team Leader', 'knowledge_base');
-            const canRewards = this.isModuleAllowed('Team Leader', 'leaderboard');
-            const canSources = this.isModuleAllowed('Team Leader', 'additional_sources');
-            const canSettings = this.isModuleAllowed('Team Leader', 'settings');
-
-            sectionsHtml = `
-                ${(canOverview || canProjRepo || canAnalytics) ? `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
-                    <nav class="sidebar-nav">
-                        ${canOverview ? `<a href="/dashboard/dashboard-team-member.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
-                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
-                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
-                    </nav>
-                </div>` : ''}
-
-                ${(canKB || canRewards || canSources) ? `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
-                    <nav class="sidebar-nav">
-                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
-                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
-                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
-                    </nav>
-                </div>` : ''}
-            `;
-            footerHtml = `
-                <div class="sidebar-footer">
-                    <nav class="sidebar-nav">
-                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
-                        <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
-                            <i class="link-icon" data-lucide="log-out"></i>
-                            <span data-i18n="sidebar.links.logout">Logout</span>
-                        </a>
-                    </nav>
-                </div>
-            `;
-
-        // ─── FACILITATOR ───────────────────────────
-        } else if (roleName === 'Facilitator') {
-            const canOverview = this.isModuleAllowed('Facilitator', 'overview');
-            const canProjRepo = this.isModuleAllowed('Facilitator', 'project_repo');
-            const canAnalytics = this.isModuleAllowed('Facilitator', 'analytics');
-            const canKB = this.isModuleAllowed('Facilitator', 'knowledge_base');
-            const canRewards = this.isModuleAllowed('Facilitator', 'leaderboard');
-            const canSources = this.isModuleAllowed('Facilitator', 'additional_sources');
-            const canSettings = this.isModuleAllowed('Facilitator', 'settings');
-
-            sectionsHtml = `
-                ${(canOverview || canProjRepo || canAnalytics) ? `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
-                    <nav class="sidebar-nav">
-                        ${canOverview ? `<a href="/dashboard/dashboard-facilitator.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
-                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
-                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
-                    </nav>
-                </div>` : ''}
-
-                ${(canKB || canRewards || canSources) ? `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
-                    <nav class="sidebar-nav">
-                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
-                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
-                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
-                    </nav>
-                </div>` : ''}
-            `;
-            footerHtml = `
-                <div class="sidebar-footer">
-                    <nav class="sidebar-nav">
-                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
-                        <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
-                            <i class="link-icon" data-lucide="log-out"></i>
-                            <span data-i18n="sidebar.links.logout">Logout</span>
-                        </a>
-                    </nav>
-                </div>
-            `;
-
-        // ─── REVIEWER ──────────────────────────────
-        } else if (roleName === 'Reviewer') {
-            const canOverview = this.isModuleAllowed('Reviewer', 'overview');
-            const canProjRepo = this.isModuleAllowed('Reviewer', 'project_repo');
-            const canAnalytics = this.isModuleAllowed('Reviewer', 'analytics');
-            const canKB = this.isModuleAllowed('Reviewer', 'knowledge_base');
-            const canRewards = this.isModuleAllowed('Reviewer', 'leaderboard');
-            const canSources = this.isModuleAllowed('Reviewer', 'additional_sources');
-            const canSettings = this.isModuleAllowed('Reviewer', 'settings');
-
-            sectionsHtml = `
-                ${(canOverview || canProjRepo || canAnalytics) ? `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
-                    <nav class="sidebar-nav">
-                        ${canOverview ? `<a href="/dashboard/dashboard-reviewer.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
-                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
-                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
-                    </nav>
-                </div>` : ''}
-
-                ${(canKB || canRewards || canSources) ? `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
-                    <nav class="sidebar-nav">
-                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
-                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
-                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
-                    </nav>
-                </div>` : ''}
-            `;
-            footerHtml = `
-                <div class="sidebar-footer">
-                    <nav class="sidebar-nav">
-                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
-                        <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
-                            <i class="link-icon" data-lucide="log-out"></i>
-                            <span data-i18n="sidebar.links.logout">Logout</span>
-                        </a>
-                    </nav>
-                </div>
-            `;
-        
-        // ── CEO ────────────────────────────────────
-        } else if (roleName === 'CEO') {
-            const canOverview = this.isModuleAllowed('CEO', 'overview');
-            const canProjRepo = this.isModuleAllowed('CEO', 'project_repo');
-            const canAnalytics = this.isModuleAllowed('CEO', 'analytics');
-            const canKB = this.isModuleAllowed('CEO', 'knowledge_base');
-            const canRewards = this.isModuleAllowed('CEO', 'leaderboard');
-            const canSettings = this.isModuleAllowed('CEO', 'settings');
-
-            sectionsHtml = `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.executive">Executive Oversight</div>
-                    <nav class="sidebar-nav">
-                        ${canOverview ? `<a href="/dashboard/dashboard-ceo.html?view=strategic-overview" class="sidebar-link"><i class="link-icon" data-lucide="line-chart"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
-                        <a href="/dashboard/dashboard-ceo.html?view=org-health" class="sidebar-link"><i class="link-icon" data-lucide="activity"></i><span data-i18n="sidebar.links.org_health">Organization Health</span></a>
-                        <a href="/dashboard/dashboard-ceo.html?view=roi-analytics" class="sidebar-link"><i class="link-icon" data-lucide="trending-up"></i><span data-i18n="sidebar.links.roi_analytics">ROI Analytics</span></a>
-                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-2"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
-                    </nav>
-                </div>
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.operations">Operational Intelligence</div>
-                    <nav class="sidebar-nav">
-                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
-                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
-                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
-                    </nav>
-                </div>
-            `;
-            footerHtml = `
-                <div class="sidebar-footer">
-                    <nav class="sidebar-nav">
-                        ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
-                        <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
-                            <i class="link-icon" data-lucide="log-out"></i>
-                            <span data-i18n="sidebar.links.logout">Logout</span>
-                        </a>
-                    </nav>
-                </div>
-            `;
-
-        // ── TEAM MEMBER ───────────────────────────
-        } else {
-            const canOverview = this.isModuleAllowed('Team Member', 'overview');
-            const canProjRepo = this.isModuleAllowed('Team Member', 'project_repo');
-            const canAnalytics = this.isModuleAllowed('Team Member', 'analytics');
-            const canKB = this.isModuleAllowed('Team Member', 'knowledge_base');
-            const canRewards = this.isModuleAllowed('Team Member', 'leaderboard');
-            const canSources = this.isModuleAllowed('Team Member', 'additional_sources');
-            const canSettings = this.isModuleAllowed('Team Member', 'settings');
-
-            sectionsHtml = `
-                ${(canOverview || canProjRepo || canAnalytics) ? `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.main">Main</div>
-                    <nav class="sidebar-nav">
-                        ${canOverview ? `<a href="/dashboard/dashboard-team-member.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>` : ''}
-                        ${canProjRepo ? `<a href="/projects/projects-repository.html" class="sidebar-link"><i class="link-icon" data-lucide="layers"></i><span data-i18n="sidebar.links.projects_repo">Project Repository</span></a>` : ''}
-                        ${canAnalytics ? `<a href="/analytics/analytics.html" class="sidebar-link"><i class="link-icon" data-lucide="bar-chart-3"></i><span data-i18n="sidebar.links.analytics">Analytics</span></a>` : ''}
-                    </nav>
-                </div>` : ''}
-
-                ${(canKB || canRewards || canSources) ? `
-                <div class="sidebar-section">
-                    <div class="sidebar-section-label" data-i18n="sidebar.labels.resources">Resources</div>
-                    <nav class="sidebar-nav">
-                        ${canKB ? `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>` : ''}
-                        ${canRewards ? `<a href="/rewards/leaderboard.html" class="sidebar-link"><i class="link-icon" data-lucide="award"></i><span>Leaderboard & Rewards</span></a>` : ''}
-                        ${canSources ? `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>` : ''}
-                    </nav>
-                </div>` : ''}
-            `;
             footerHtml = `
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
@@ -1313,7 +1278,7 @@ const QCMS = {
             `;
         }
 
-        sidebar.innerHTML = brandHtml + sectionsHtml + footerHtml;
+        sidebar.innerHTML = `${brandHtml}<div class="sidebar-body">${sectionsHtml}</div>${footerHtml}`;
         QCMS.refreshIcons();
         this.setActiveLink();
         if (window.i18n) window.i18n.translatePage();

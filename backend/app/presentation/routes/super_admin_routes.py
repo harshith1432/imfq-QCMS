@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
-from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, SubscriptionPayment, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
+from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, Subscription, SubscriptionPayment, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
 from app.presentation.middleware.middleware import super_admin_required, sub_role_write_required, sub_role_required, get_sa_permissions, _get_sa_sub_role
 from app import bcrypt
 from datetime import datetime, timedelta
@@ -418,6 +418,10 @@ def list_companies():
             "license_number": org.license_number or '—',
             "storage_limit_mb": org.storage_limit_mb or 10240.0,
             "storage_used_mb": org.storage_used_mb or 0.0,
+            "total_trial_requests": (getattr(org, 'security_settings', {}) or {}).get('total_trial_requests', (getattr(org, 'security_settings', {}) or {}).get('auto_approved_trial_extensions', org.trial_extension_count or 0) + (getattr(org, 'security_settings', {}) or {}).get('manual_approved_trial_extensions', 0)),
+            "auto_approved_trial_extensions": (getattr(org, 'security_settings', {}) or {}).get('auto_approved_trial_extensions', org.trial_extension_count or 0),
+            "manual_approved_trial_extensions": (getattr(org, 'security_settings', {}) or {}).get('manual_approved_trial_extensions', 0),
+            "trial_extension_count": org.trial_extension_count or 0,
             "enabled_modules": org.enabled_modules or ['7-qc-tools'],
             "is_deleted": org.is_deleted
         })
@@ -457,6 +461,11 @@ def get_company_details(org_id):
     if expiry_dt:
         rem_sec = (expiry_dt - datetime.utcnow()).total_seconds()
         trial_days = max(int(math.ceil(rem_sec / 86400.0)), 0)
+
+    sec_settings = getattr(org, 'security_settings', {}) or {}
+    auto_approved = sec_settings.get('auto_approved_trial_extensions', org.trial_extension_count or 0)
+    manual_approved = sec_settings.get('manual_approved_trial_extensions', 0)
+    total_requests = sec_settings.get('total_trial_requests', auto_approved + manual_approved)
 
     return jsonify({
         "status": "success",
@@ -499,6 +508,10 @@ def get_company_details(org_id):
             "license_number": org.license_number or '—',
             "storage_limit_mb": org.storage_limit_mb or 10240.0,
             "storage_used_mb": org.storage_used_mb or 0.0,
+            "total_trial_requests": total_requests,
+            "auto_approved_trial_extensions": auto_approved,
+            "manual_approved_trial_extensions": manual_approved,
+            "trial_extension_count": org.trial_extension_count or 0,
             "enabled_modules": org.enabled_modules or ['7-qc-tools'],
             "is_deleted": org.is_deleted
         }
@@ -1441,30 +1454,128 @@ def update_company_plan(org_id):
 
     return jsonify({"status": "success", "message": f"Plan changed from {old_plan} to {new_plan}"})
 
+@super_admin_bp.route('/trial-extensions', methods=['GET'])
+@jwt_required()
+@super_admin_required()
+def get_trial_extension_requests():
+    """List all trial extension requests and organizations' trial statuses"""
+    from app.presentation.routes.subscription_routes import check_and_apply_pending_trial_extensions
+    orgs = Organization.query.filter_by(is_deleted=False).order_by(Organization.id.desc()).all()
+    results = []
+    
+    for org in orgs:
+        check_and_apply_pending_trial_extensions(org)
+        sec = getattr(org, 'security_settings', {}) or {}
+        pending = sec.get('pending_trial_extension')
+        auto_count = sec.get('auto_approved_trial_extensions', org.trial_extension_count or 0)
+        manual_count = sec.get('manual_approved_trial_extensions', 0)
+        total_reqs = sec.get('total_trial_requests', auto_count + manual_count)
+
+        is_auto_approving = False
+        seconds_remaining = 0
+        is_auto_eligible = True
+
+        if pending and pending.get('status') == 'Pending':
+            is_auto_eligible = pending.get('is_auto_eligible', True)
+            req_at_str = pending.get('requested_at')
+            if req_at_str and is_auto_eligible:
+                try:
+                    req_at = datetime.fromisoformat(req_at_str)
+                    elapsed = (datetime.utcnow() - req_at).total_seconds()
+                    if elapsed < 300:
+                        is_auto_approving = True
+                        seconds_remaining = max(0, int(300 - elapsed))
+                except Exception:
+                    pass
+
+        if pending or total_reqs > 0 or org.subscription_status in ['Trialing', 'Trial', 'Expired']:
+            rem_days = None
+            if org.trial_ends_at:
+                rem_sec = (org.trial_ends_at - datetime.utcnow()).total_seconds()
+                rem_days = max(int(math.ceil(rem_sec / 86400.0)), 0)
+
+            results.append({
+                "id": org.id,
+                "org_id": org.id,
+                "name": org.name,
+                "org_code": org.org_code or '—',
+                "admin_email": org.email,
+                "subscription_plan": org.subscription_plan,
+                "subscription_status": org.subscription_status,
+                "trial_ends_at": org.trial_ends_at.isoformat() if org.trial_ends_at else None,
+                "trial_days_left": rem_days,
+                "pending_request": pending,
+                "is_auto_approving": is_auto_approving,
+                "seconds_remaining": seconds_remaining,
+                "is_auto_eligible": is_auto_eligible,
+                "total_trial_requests": total_reqs,
+                "auto_approved_trial_extensions": auto_count,
+                "manual_approved_trial_extensions": manual_count
+            })
+
+    return jsonify({"status": "success", "data": results})
+
 @super_admin_bp.route('/companies/<int:org_id>/trial', methods=['PUT'])
 @jwt_required()
 @super_admin_required()
 def extend_company_trial(org_id):
     """Extend or set a trial end date for an organization"""
     org = Organization.query.get_or_404(org_id)
-    data = request.json
+    data = request.json or {}
 
+    days = data.get('days')
     new_date_str = data.get('trial_ends_at')
-    if not new_date_str:
-        return jsonify({"msg": "trial_ends_at date is required (ISO format)"}), 400
 
-    try:
-        new_date = datetime.fromisoformat(new_date_str.replace('Z', '+00:00')).replace(tzinfo=None)
-    except (ValueError, AttributeError):
-        return jsonify({"msg": "Invalid date format. Use ISO format (YYYY-MM-DD)"}), 400
+    if days is not None:
+        try:
+            days = int(days)
+            new_date = datetime.utcnow() + timedelta(days=days)
+        except ValueError:
+            return jsonify({"msg": "Invalid days value"}), 400
+    elif new_date_str:
+        try:
+            new_date = datetime.fromisoformat(new_date_str.replace('Z', '+00:00')).replace(tzinfo=None)
+        except (ValueError, AttributeError):
+            return jsonify({"msg": "Invalid date format. Use ISO format (YYYY-MM-DD)"}), 400
+    else:
+        return jsonify({"msg": "Either 'days' or 'trial_ends_at' date is required"}), 400
 
     old_date = org.trial_ends_at.isoformat() if org.trial_ends_at else 'None'
     org.trial_ends_at = new_date
     org.subscription_status = 'Trialing'
+
+    # Update trial extension metrics in security_settings
+    sec_settings = dict(getattr(org, 'security_settings', {}) or {})
+    manual_count = sec_settings.get('manual_approved_trial_extensions', 0) + 1
+    sec_settings['manual_approved_trial_extensions'] = manual_count
+    
+    pending = sec_settings.get('pending_trial_extension')
+    if pending and pending.get('status') == 'Pending':
+        pending['status'] = 'Approved'
+        pending['approved_at'] = datetime.utcnow().isoformat()
+        pending['approved_by'] = 'SuperAdmin'
+        sec_settings['pending_trial_extension'] = pending
+        
+    total_reqs = sec_settings.get('total_trial_requests', 0)
+    sec_settings['total_trial_requests'] = max(total_reqs, sec_settings.get('auto_approved_trial_extensions', 0) + manual_count)
+    
+    org.security_settings = sec_settings
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(org, 'security_settings')
+
+    # Also sync subscription model if present
+    sub = Subscription.query.filter_by(org_id=org.id).first()
+    if not sub:
+        sub = Subscription.query.filter_by(organization_id=org.id).first()
+    if sub:
+        sub.trial_end_date = org.trial_ends_at
+        sub.end_date = org.trial_ends_at
+        sub.subscription_status = 'Trial'
+
     db.session.commit()
 
     log_admin_action(
-        f"Extended trial from {old_date} to {new_date.isoformat()}",
+        f"Manually extended trial from {old_date} to {new_date.isoformat()}",
         target_type="Organization",
         target_id=org.id
     )

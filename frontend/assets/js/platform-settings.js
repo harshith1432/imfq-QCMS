@@ -523,112 +523,117 @@ const PlatformSettings = {
             this.renderIntegrations(d.integrations_settings || {});
 
             // Landing CMS
-            const lCms = d.landing_cms_settings || {};
-            this.currentLandingCMS = lCms;
-            
-            // Enable / Disable Landing Page
-            const isLandingEnabled = lCms.enable_landing_page !== false;
-            const toggleEl = document.getElementById('ps-cms-enable-landing');
-            if (toggleEl) {
-                toggleEl.checked = isLandingEnabled;
-                this.toggleLandingPageStatus(isLandingEnabled, true);
-            }
-
-            // Hero
-            this._val('ps-cms-hero-badge', lCms.hero_badge || 'Version 3.0 Now Live');
-            this._val('ps-cms-hero-title', lCms.hero_title || 'Precision Quality <br><span class="text-primary">Management</span> at Scale.');
-            this._val('ps-cms-hero-subtitle', lCms.hero_subtitle || 'Optimize your organizational efficiency with our structured 8-stage workflow engine. Built for enterprise excellence, designed for modern teams.');
-            this._val('ps-cms-cta-primary', lCms.cta_primary_text || 'Start Free Trial');
-            this._val('ps-cms-cta-primary-url', lCms.cta_primary_url || '/auth/register-org.html');
-            this._val('ps-cms-cta-secondary', lCms.cta_secondary_text || 'Watch Demo');
-            this._val('ps-cms-cta-secondary-url', lCms.cta_secondary_url || '#features');
-            this._val('ps-cms-hero-stat1-val', lCms.hero_stat_1_val || '98.2%');
-            this._val('ps-cms-hero-stat1-lbl', lCms.hero_stat_1_lbl || 'Quality Score');
-            this._val('ps-cms-hero-stat2-val', lCms.hero_stat_2_val || 'A+');
-            this._val('ps-cms-hero-stat2-lbl', lCms.hero_stat_2_lbl || 'Active Nodes');
-            this._val('ps-cms-hero-stat3-val', lCms.hero_stat_3_val || '1,204');
-            this._val('ps-cms-hero-stat3-lbl', lCms.hero_stat_3_lbl || '+12 this hour');
-
-            // Trust Ticker
-            this._val('ps-cms-ticker-1', lCms.ticker_1 || '99.9% Uptime');
-            this._val('ps-cms-ticker-2', lCms.ticker_2 || 'ISO 9001 Ready');
-            this._val('ps-cms-ticker-3', lCms.ticker_3 || 'Enterprise Grade');
-            this._val('ps-cms-ticker-4', lCms.ticker_4 || 'Audit Secure');
-            this._val('ps-cms-ticker-5', lCms.ticker_5 || '24/7 Support');
-
-            // Trust Badges
-            this._val('ps-cms-badge-1-icon',  lCms.badge_1_icon  || 'award');
-            this._val('ps-cms-badge-1-label', lCms.badge_1_label || 'ISO 9001 Compliant');
-            this._val('ps-cms-badge-2-icon',  lCms.badge_2_icon  || 'shield-check');
-            this._val('ps-cms-badge-2-label', lCms.badge_2_label || 'Bank-Grade Security');
-            this._val('ps-cms-badge-3-icon',  lCms.badge_3_icon  || 'clock');
-            this._val('ps-cms-badge-3-label', lCms.badge_3_label || '99.9% Platform Uptime');
-            this._val('ps-cms-badge-4-icon',  lCms.badge_4_icon  || 'headset');
-            this._val('ps-cms-badge-4-label', lCms.badge_4_label || '24/7 Priority Support');
-
-            // Features
-            this._val('ps-cms-features-title', lCms.features_title || 'Engineered for Quality');
-            this._val('ps-cms-features-subtitle', lCms.features_subtitle || 'Every tool you need to maintain the highest standards across your industrial operations.');
-            const defaultFeatures = [
-                { icon: 'git-branch', title: '8-Stage Workflow', desc: 'Structured project lifecycle from problem identification to standardization.' },
-                { icon: 'layers', title: 'Role-Based Dashboards', desc: 'Custom workspaces for Admins, Reviewers, Facilitators, and Team members.' },
-                { icon: 'database', title: 'Knowledge Repo', desc: 'Centralized repository for SOPs, lessons learned, and project history.' },
-                { icon: 'bar-chart-3', title: 'Real-time Analytics', desc: 'Live KPI tracking with automated reporting and visual data insights.' },
-                { icon: 'shield-check', title: 'Automated Compliance', desc: 'Stay ISO ready with automated audit logs and version-controlled documents.' },
-                { icon: 'smartphone', title: 'Mobile Readiness', desc: 'Access your quality management engine from anywhere, on any device.' }
-            ];
-            this.renderFeatures((lCms.features_list && lCms.features_list.length) ? lCms.features_list : defaultFeatures);
-
-            // Steps
-            this._val('ps-cms-steps-title', lCms.steps_title || 'How It Works');
-            this._val('ps-cms-steps-subtitle', lCms.steps_subtitle || 'Deploy your enterprise-grade QMS in four simple steps.');
-            const defaultSteps = [
-                { num: '1', title: 'Register Company', desc: 'Set up your unique organizational instance and security parameters.' },
-                { num: '2', title: 'Setup Team', desc: 'Configure departments and assign role-based access to your workforce.' },
-                { num: '3', title: 'Launch Projects', desc: 'Initiate quality improvement projects using our 8-stage engine.' },
-                { num: '4', title: 'Track KPI', desc: 'Monitor real-time improvements in efficiency, cost, and safety.' }
-            ];
-            this.renderSteps((lCms.steps_list && lCms.steps_list.length) ? lCms.steps_list : defaultSteps);
-
-            // Pricing Plans
-            this._val('ps-cms-pricing-title', lCms.pricing_title || 'Flexible Plans for Every Stage');
-            this._val('ps-cms-pricing-subtitle', lCms.pricing_subtitle || 'Scale your quality operations without complexity.');
-            const defaultPricing = [
-                { name: 'Starter', badge: '', price: '₹0', period: '/month (14d Trial)', desc: 'For small focused teams', features: ['50 Users Max', 'Basic QC Workflow', 'Limited Reports', '14 Days Free Trial'], cta: 'Start Free Trial' },
-                { name: 'Professional', badge: 'MOST POPULAR', price: '₹199', period: '/month', desc: 'Complete enterprise engine', features: ['500 Users', 'Full Workflow Engine', 'Analytics Dashboard', 'Repository + AI Assistant', 'Reports + Audit Logs'], cta: 'Start Free Trial' },
-                { name: 'Enterprise', badge: '', price: 'Custom', period: '', desc: 'For global scale manufacturing', features: ['Unlimited Users', 'Multi Plant Support', 'White Label Branding', 'API Integration', 'Dedicated Support'], cta: 'Contact Sales' }
-            ];
-            this.renderPricingPlans((lCms.pricing_plans && lCms.pricing_plans.length) ? lCms.pricing_plans : defaultPricing);
-
-            // FAQs
-            this._val('ps-cms-faq-title', lCms.faq_title || 'Frequently Asked Questions');
-            this._val('ps-cms-faq-subtitle', lCms.faq_subtitle || 'Everything you need to know about QCMS Enterprise.');
-            const defaultFaqs = [
-                { q: 'How does the 14-day free trial work?', a: 'You get full access to all Enterprise features for 14 days. No credit card required.' },
-                { q: 'Can we upgrade plans later?', a: 'Yes, you can upgrade your plan at any time from the billing dashboard.' },
-                { q: 'Do you support multiple factories?', a: 'Absolutely. QCMS is built for multi-site enterprise deployments.' },
-                { q: 'Is white label branding available?', a: 'Yes, on the Enterprise tier you can fully customize logos, colors, and domains.' },
-                { q: 'Can we integrate with ERP/SAP?', a: 'Yes, we offer two-way sync with SAP S/4HANA, Oracle, and Microsoft Dynamics.' }
-            ];
-            this.renderFAQs((lCms.faqs && lCms.faqs.length) ? lCms.faqs : defaultFaqs);
-
-            // CTA Offer Banner
-            this._val('ps-cms-cta-banner-title', lCms.cta_banner_title || 'Start Your 14-Day Free Trial');
-            this._val('ps-cms-cta-banner-subtitle', lCms.cta_banner_subtitle || 'No Credit Card Required. Get instant access to admin dashboard, workflow engine, and analytics.');
-            this._val('ps-cms-cta-banner-btn1', lCms.cta_banner_btn1 || 'Launch Your Instance');
-            this._val('ps-cms-cta-banner-btn2', lCms.cta_banner_btn2 || 'Talk to Sales');
-
-            // Footer
-            this._val('ps-cms-footer-desc', lCms.footer_description || "The world's most advanced quality management system for modern manufacturing and enterprise excellence. Built for scale, security, and precision.");
-            this._val('ps-cms-footer-copy', lCms.footer_copyright || '© 2026 QCMS Precision Core. Engineered for Excellence.');
-            this._val('ps-cms-footer-status', lCms.footer_status || 'Operational');
-
-            this.loadFooterPages(lCms.footer_pages);
+            this.loadLandingCMS(d.landing_cms_settings || {});
 
             if (window.lucide) lucide.createIcons();
         } catch (e) {
             console.error('Failed to load platform settings', e);
         }
+    },
+
+    loadLandingCMS(lCms = {}) {
+        this.currentLandingCMS = lCms;
+        
+        // Enable / Disable Landing Page
+        const isLandingEnabled = lCms.enable_landing_page !== false;
+        const toggleEl = document.getElementById('ps-cms-enable-landing');
+        if (toggleEl) {
+            toggleEl.checked = isLandingEnabled;
+            this.toggleLandingPageStatus(isLandingEnabled, true);
+        }
+
+        // Hero
+        this._val('ps-cms-hero-badge', lCms.hero_badge || 'Version 3.0 Now Live');
+        this._val('ps-cms-hero-title', lCms.hero_title || 'Precision Quality <br><span class="text-primary">Management</span> at Scale.');
+        this._val('ps-cms-hero-subtitle', lCms.hero_subtitle || 'Optimize your organizational efficiency with our structured 8-stage workflow engine. Built for enterprise excellence, designed for modern teams.');
+        this._val('ps-cms-cta-primary', lCms.cta_primary_text || 'Start Free Trial');
+        this._val('ps-cms-cta-primary-url', lCms.cta_primary_url || '/auth/register-org.html');
+        this._val('ps-cms-cta-secondary', lCms.cta_secondary_text || 'Watch Demo');
+        this._val('ps-cms-cta-secondary-url', lCms.cta_secondary_url || '#features');
+        this._val('ps-cms-hero-stat1-val', lCms.hero_stat_1_val || '98.2%');
+        this._val('ps-cms-hero-stat1-lbl', lCms.hero_stat_1_lbl || 'Quality Score');
+        this._val('ps-cms-hero-stat2-val', lCms.hero_stat_2_val || 'A+');
+        this._val('ps-cms-hero-stat2-lbl', lCms.hero_stat_2_lbl || 'Active Nodes');
+        this._val('ps-cms-hero-stat3-val', lCms.hero_stat_3_val || '1,204');
+        this._val('ps-cms-hero-stat3-lbl', lCms.hero_stat_3_lbl || '+12 this hour');
+
+        // Trust Ticker
+        this._val('ps-cms-ticker-1', lCms.ticker_1 || '99.9% Uptime');
+        this._val('ps-cms-ticker-2', lCms.ticker_2 || 'ISO 9001 Ready');
+        this._val('ps-cms-ticker-3', lCms.ticker_3 || 'Enterprise Grade');
+        this._val('ps-cms-ticker-4', lCms.ticker_4 || 'Audit Secure');
+        this._val('ps-cms-ticker-5', lCms.ticker_5 || '24/7 Support');
+
+        // Trust Badges
+        this._val('ps-cms-badge-1-icon',  lCms.badge_1_icon  || 'award');
+        this._val('ps-cms-badge-1-label', lCms.badge_1_label || 'ISO 9001 Compliant');
+        this._val('ps-cms-badge-2-icon',  lCms.badge_2_icon  || 'shield-check');
+        this._val('ps-cms-badge-2-label', lCms.badge_2_label || 'Bank-Grade Security');
+        this._val('ps-cms-badge-3-icon',  lCms.badge_3_icon  || 'clock');
+        this._val('ps-cms-badge-3-label', lCms.badge_3_label || '99.9% Platform Uptime');
+        this._val('ps-cms-badge-4-icon',  lCms.badge_4_icon  || 'headset');
+        this._val('ps-cms-badge-4-label', lCms.badge_4_label || '24/7 Priority Support');
+
+        // Features
+        this._val('ps-cms-features-title', lCms.features_title || 'Engineered for Quality');
+        this._val('ps-cms-features-subtitle', lCms.features_subtitle || 'Every tool you need to maintain the highest standards across your industrial operations.');
+        const defaultFeatures = [
+            { icon: 'git-branch', title: '8-Stage Workflow', desc: 'Structured project lifecycle from problem identification to standardization.' },
+            { icon: 'layers', title: 'Role-Based Dashboards', desc: 'Custom workspaces for Admins, Reviewers, Facilitators, and Team members.' },
+            { icon: 'database', title: 'Knowledge Repo', desc: 'Centralized repository for SOPs, lessons learned, and project history.' },
+            { icon: 'bar-chart-3', title: 'Real-time Analytics', desc: 'Live KPI tracking with automated reporting and visual data insights.' },
+            { icon: 'shield-check', title: 'Automated Compliance', desc: 'Stay ISO ready with automated audit logs and version-controlled documents.' },
+            { icon: 'smartphone', title: 'Mobile Readiness', desc: 'Access your quality management engine from anywhere, on any device.' }
+        ];
+        this.renderFeatures((lCms.features_list && lCms.features_list.length) ? lCms.features_list : defaultFeatures);
+
+        // Steps
+        this._val('ps-cms-steps-title', lCms.steps_title || 'How It Works');
+        this._val('ps-cms-steps-subtitle', lCms.steps_subtitle || 'Deploy your enterprise-grade QMS in four simple steps.');
+        const defaultSteps = [
+            { num: '1', title: 'Register Company', desc: 'Set up your unique organizational instance and security parameters.' },
+            { num: '2', title: 'Setup Team', desc: 'Configure departments and assign role-based access to your workforce.' },
+            { num: '3', title: 'Launch Projects', desc: 'Initiate quality improvement projects using our 8-stage engine.' },
+            { num: '4', title: 'Track KPI', desc: 'Monitor real-time improvements in efficiency, cost, and safety.' }
+        ];
+        this.renderSteps((lCms.steps_list && lCms.steps_list.length) ? lCms.steps_list : defaultSteps);
+
+        // Pricing Plans
+        this._val('ps-cms-pricing-title', lCms.pricing_title || 'Flexible Plans for Every Stage');
+        this._val('ps-cms-pricing-subtitle', lCms.pricing_subtitle || 'Scale your quality operations without complexity.');
+        const defaultPricing = [
+            { name: 'Starter', badge: '', price: '₹0', period: '/month (14d Trial)', desc: 'For small focused teams', features: ['50 Users Max', 'Basic QC Workflow', 'Limited Reports', '14 Days Free Trial'], cta: 'Start Free Trial' },
+            { name: 'Professional', badge: 'MOST POPULAR', price: '₹199', period: '/month', desc: 'Complete enterprise engine', features: ['500 Users', 'Full Workflow Engine', 'Analytics Dashboard', 'Repository + AI Assistant', 'Reports + Audit Logs'], cta: 'Start Free Trial' },
+            { name: 'Enterprise', badge: '', price: 'Custom', period: '', desc: 'For global scale manufacturing', features: ['Unlimited Users', 'Multi Plant Support', 'White Label Branding', 'API Integration', 'Dedicated Support'], cta: 'Contact Sales' }
+        ];
+        this.renderPricingPlans((lCms.pricing_plans && lCms.pricing_plans.length) ? lCms.pricing_plans : defaultPricing);
+
+        // FAQs
+        this._val('ps-cms-faq-title', lCms.faq_title || 'Frequently Asked Questions');
+        this._val('ps-cms-faq-subtitle', lCms.faq_subtitle || 'Everything you need to know about QCMS Enterprise.');
+        const defaultFaqs = [
+            { q: 'How does the 14-day free trial work?', a: 'You get full access to all Enterprise features for 14 days. No credit card required.' },
+            { q: 'Can we upgrade plans later?', a: 'Yes, you can upgrade your plan at any time from the billing dashboard.' },
+            { q: 'Do you support multiple factories?', a: 'Absolutely. QCMS is built for multi-site enterprise deployments.' },
+            { q: 'Is white label branding available?', a: 'Yes, on the Enterprise tier you can fully customize logos, colors, and domains.' },
+            { q: 'Can we integrate with ERP/SAP?', a: 'Yes, we offer two-way sync with SAP S/4HANA, Oracle, and Microsoft Dynamics.' }
+        ];
+        this.renderFAQs((lCms.faqs && lCms.faqs.length) ? lCms.faqs : defaultFaqs);
+
+        // CTA Offer Banner
+        this._val('ps-cms-cta-banner-title', lCms.cta_banner_title || 'Start Your 14-Day Free Trial');
+        this._val('ps-cms-cta-banner-subtitle', lCms.cta_banner_subtitle || 'No Credit Card Required. Get instant access to admin dashboard, workflow engine, and analytics.');
+        this._val('ps-cms-cta-banner-btn1', lCms.cta_banner_btn1 || 'Launch Your Instance');
+        this._val('ps-cms-cta-banner-btn2', lCms.cta_banner_btn2 || 'Talk to Sales');
+
+        // Footer
+        this._val('ps-cms-footer-desc', lCms.footer_description || "The world's most advanced quality management system for modern manufacturing and enterprise excellence. Built for scale, security, and precision.");
+        this._val('ps-cms-footer-copy', lCms.footer_copyright || '© 2026 QCMS Precision Core. Engineered for Excellence.');
+        this._val('ps-cms-footer-status', lCms.footer_status || 'Operational');
+
+        this.loadFooterPages(lCms.footer_pages);
+
+        if (window.lucide) lucide.createIcons();
     },
 
     toggleCMSView(mode) {
@@ -651,10 +656,20 @@ const PlatformSettings = {
         }
     },
 
-    resetLandingCMSDefaults() {
-        if (!confirm('Are you sure you want to reset all landing page content to system default template?')) return;
+    async resetLandingCMSDefaults() {
+        if (!confirm('Are you sure you want to reset all landing page content to the system default template? All custom modifications will be replaced with system defaults.')) return;
+        
+        // 1. Populate all inputs with system defaults
         this.loadLandingCMS({});
-        if (window.QCMS) QCMS.toast('Landing page content reset to defaults.', 'info');
+        
+        // 2. Automatically save & publish the default template to the backend
+        try {
+            await this.saveLandingCMS();
+            if (window.QCMS) QCMS.toast('Landing page successfully reset to default system template and published!', 'success');
+        } catch (err) {
+            console.error('Error saving default landing CMS:', err);
+            if (window.QCMS) QCMS.toast('Reset to default values in form. Click "Publish Landing Page" to save.', 'info');
+        }
     },
 
     renderFeatures(features) {

@@ -68,6 +68,7 @@ const SupportDesk = {
                         <button class="ds-tab active" id="sd-tab-dashboard" onclick="SupportDesk.switchTab('dashboard')"><i data-lucide="gauge" class="me-1" style="width:14px;"></i> Dashboard</button>
                         <button class="ds-tab" id="sd-tab-tickets" onclick="SupportDesk.switchTab('tickets')"><i data-lucide="list" class="me-1" style="width:14px;"></i> Tickets List</button>
                         <button class="ds-tab" id="sd-tab-enquiry" onclick="SupportDesk.switchTab('enquiry')"><i data-lucide="phone-call" class="me-1" style="width:14px;"></i> Sales Enquiries</button>
+                        <button class="ds-tab" id="sd-tab-trial-extensions" onclick="SupportDesk.switchTab('trial-extensions')"><i data-lucide="clock" class="me-1" style="width:14px;"></i> Trial Extensions</button>
                         <button class="ds-tab" id="sd-tab-create" onclick="SupportDesk.switchTab('create')"><i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Create Ticket</button>
                         <button class="ds-tab" id="sd-tab-kb" onclick="SupportDesk.switchTab('kb')"><i data-lucide="book-open" class="me-1" style="width:14px;"></i> Knowledge Base</button>
                     </div>
@@ -461,6 +462,329 @@ const SupportDesk = {
             await this.renderKB();
         } else if (tabId === 'enquiry') {
             await this.renderEnquiryTab();
+        } else if (tabId === 'trial-extensions') {
+            await this.renderTrialExtensionsTab();
+        }
+    },
+
+    async renderTrialExtensionsTab() {
+        const view = document.getElementById('sdMainViewport');
+        if (!view) return;
+        view.innerHTML = `<div class="d-flex justify-content-center p-5"><div class="spinner-border text-primary" role="status"></div></div>`;
+
+        try {
+            const res = await api.get('/super-admin/trial-extensions');
+            const data = (res && Array.isArray(res.data)) ? res.data : [];
+
+            const totalRequests = data.reduce((acc, o) => acc + (o.total_trial_requests || 0), 0);
+            const autoApproved = data.reduce((acc, o) => acc + (o.auto_approved_trial_extensions || 0), 0);
+            const manualApproved = data.reduce((acc, o) => acc + (o.manual_approved_trial_extensions || 0), 0);
+            const pendingReqs = data.filter(o => o.pending_request && o.pending_request.status === 'Pending');
+
+            let hasActiveAutoApproving = false;
+
+            let rows = data.map(o => {
+                const pending = o.pending_request || {};
+                const isPending = pending.status === 'Pending';
+                const isAutoApproving = Boolean(o.is_auto_approving && o.seconds_remaining > 0);
+                if (isAutoApproving) hasActiveAutoApproving = true;
+
+                let statusBadge = '';
+                let actionButton = '';
+
+                if (isAutoApproving) {
+                    const m = Math.floor(o.seconds_remaining / 60);
+                    const s = o.seconds_remaining % 60;
+                    const timerStr = `${m}m ${s < 10 ? '0' : ''}${s}s`;
+                    statusBadge = `<span class="badge bg-info-subtle text-info font-semibold px-2 py-1 text-nowrap d-inline-flex align-items-center"><span class="spinner-border spinner-border-sm me-1" style="width:10px;height:10px;"></span> Auto-Approving (<span id="timer-span-org-${o.id}" data-countdown-sec="${o.seconds_remaining}">${timerStr}</span>)</span>`;
+                    actionButton = `<button class="ds-btn ds-btn-secondary ds-btn-sm text-nowrap" disabled style="opacity: 0.65; cursor: not-allowed; font-size:11px; padding: 4px 8px;" title="Auto-approval in progress (5 min timer active). Super Admin action is frozen."><i data-lucide="lock" style="width:11px;height:11px;" class="me-1"></i> Frozen</button>`;
+                } else if (isPending) {
+                    statusBadge = `<span class="badge bg-warning-subtle text-warning font-semibold px-2 py-1 text-nowrap">Pending Review</span>`;
+                    actionButton = `<button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap" style="font-size:11px; padding: 4px 10px;" onclick="SupportDesk.openExtendTrialModal(${o.id}, '${(o.name || '').replace(/'/g, "\\'")}', ${pending.days || 14})"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i> Extend Trial</button>`;
+                } else {
+                    statusBadge = (o.auto_approved_trial_extensions > 0 || o.manual_approved_trial_extensions > 0)
+                        ? `<span class="badge bg-success-subtle text-success font-semibold px-2 py-1 text-nowrap">Extended (${o.total_trial_requests}x)</span>`
+                        : `<span class="badge bg-secondary-subtle text-secondary font-semibold px-2 py-1 text-nowrap">Standard Trial</span>`;
+                    actionButton = `<button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap" style="font-size:11px; padding: 4px 10px;" onclick="SupportDesk.openExtendTrialModal(${o.id}, '${(o.name || '').replace(/'/g, "\\'")}', ${pending.days || 14})"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i> Extend Trial</button>`;
+                }
+
+                const requestedDays = pending.days ? `+${pending.days} Days` : '—';
+                const reasonText = pending.reason ? pending.reason : (o.total_trial_requests > 0 ? `${o.total_trial_requests} extension(s) granted` : 'No extension requests');
+                const reqDate = pending.requested_at ? QCMS.formatDate(pending.requested_at) : '—';
+                const expiryDate = o.trial_ends_at ? QCMS.formatDate(o.trial_ends_at) : '—';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-main text-truncate" style="max-width: 140px;">${o.name}</div>
+                            <div class="text-xxs text-muted">ID: ${o.id} • ${o.org_code}</div>
+                        </td>
+                        <td>
+                            <div class="text-xs text-secondary text-truncate" style="max-width: 150px;">${o.admin_email || '—'}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary fw-semibold">${requestedDays}</span>
+                        </td>
+                        <td style="max-width:180px;">
+                            <div class="text-xs text-secondary text-truncate" title="${reasonText}">${reasonText}</div>
+                        </td>
+                        <td>
+                            <div class="text-xs text-muted text-nowrap">${reqDate}</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-xs text-primary text-nowrap">${expiryDate}</div>
+                            <div class="text-xxs text-muted text-nowrap">${o.trial_days_left !== null ? o.trial_days_left + ' days left' : ''}</div>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td class="text-end">${actionButton}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (data.length === 0) {
+                rows = `<tr><td colspan="8" class="text-center py-5 text-muted"><i data-lucide="clock" style="width:32px;height:32px;" class="mb-2 text-muted"></i><br>No trial extension requests found.</td></tr>`;
+            }
+
+            if (this._trialCountdownTimer) clearInterval(this._trialCountdownTimer);
+            if (hasActiveAutoApproving) {
+                this._trialCountdownTimer = setInterval(() => {
+                    if (this.currentTab !== 'trial-extensions') {
+                        clearInterval(this._trialCountdownTimer);
+                        return;
+                    }
+                    const timerEls = document.querySelectorAll('[data-countdown-sec]');
+                    if (!timerEls.length) {
+                        clearInterval(this._trialCountdownTimer);
+                        return;
+                    }
+                    let anyExpired = false;
+                    timerEls.forEach(el => {
+                        let sec = parseInt(el.getAttribute('data-countdown-sec')) || 0;
+                        if (sec > 0) {
+                            sec -= 1;
+                            el.setAttribute('data-countdown-sec', sec);
+                            const m = Math.floor(sec / 60);
+                            const s = sec % 60;
+                            el.textContent = `${m}m ${s < 10 ? '0' : ''}${s}s`;
+                        } else {
+                            anyExpired = true;
+                        }
+                    });
+                    if (anyExpired) {
+                        clearInterval(this._trialCountdownTimer);
+                        setTimeout(() => {
+                            if (this.currentTab === 'trial-extensions') {
+                                this.renderTrialExtensionsTab();
+                            }
+                        }, 1000);
+                    }
+                }, 1000);
+            }
+
+            view.innerHTML = `
+                <div class="fade-in v-stack gap-4">
+                    <!-- KPI Cards -->
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="glass-card p-3 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                                <div class="p-2.5 rounded-circle bg-primary-subtle text-primary"><i data-lucide="file-text" style="width:20px;height:20px;"></i></div>
+                                <div>
+                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold">Total Requests</div>
+                                    <h4 class="fw-bold mb-0 text-main">${totalRequests}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="glass-card p-3 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                                <div class="p-2.5 rounded-circle bg-warning-subtle text-warning"><i data-lucide="alert-circle" style="width:20px;height:20px;"></i></div>
+                                <div>
+                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold">Pending Review</div>
+                                    <h4 class="fw-bold mb-0 text-main">${pendingReqs.length}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="glass-card p-3 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                                <div class="p-2.5 rounded-circle bg-success-subtle text-success"><i data-lucide="zap" style="width:20px;height:20px;"></i></div>
+                                <div>
+                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold">Auto-Approved</div>
+                                    <h4 class="fw-bold mb-0 text-main">${autoApproved}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="glass-card p-3 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                                <div class="p-2.5 rounded-circle bg-info-subtle text-info"><i data-lucide="check-circle" style="width:20px;height:20px;"></i></div>
+                                <div>
+                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold">Manually Granted</div>
+                                    <h4 class="fw-bold mb-0 text-main">${manualApproved}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Table -->
+                    <div class="glass-card p-4 rounded-3 border">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <h5 class="fw-bold text-main mb-1">Trial Extension Management</h5>
+                                <p class="text-xs text-muted mb-0">View all organization extension requests and grant instant trial period extensions.</p>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="ds-table align-middle text-xs mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:130px;">Organization</th>
+                                        <th style="min-width:140px;">Admin Email</th>
+                                        <th style="min-width:90px;">Requested</th>
+                                        <th style="min-width:140px;">Reason / Notes</th>
+                                        <th style="min-width:95px;">Request Date</th>
+                                        <th style="min-width:100px;">Current Expiry</th>
+                                        <th style="min-width:150px;">Status</th>
+                                        <th class="text-end" style="min-width:90px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        } catch (e) {
+            console.error('Failed to load trial extensions', e);
+            view.innerHTML = `<div class="alert alert-danger p-3 text-xs">Failed to load trial extensions tab.</div>`;
+        }
+    },
+
+    openExtendTrialModal(orgId, orgName, defaultDays = 14) {
+        let modalEl = document.getElementById('sdSuperExtendTrialModal');
+        if (!modalEl) {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div class="modal fade" id="sdSuperExtendTrialModal" tabindex="-1" style="z-index: 1090;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content glass-card border-0 shadow-lg" style="background: var(--ds-bg-card, #ffffff);">
+                            <div class="modal-header border-bottom p-4">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="p-2 rounded-3 bg-primary-subtle text-primary">
+                                        <i data-lucide="clock" style="width:22px;height:22px;"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="modal-title fw-bold mb-0">Extend Organization Trial</h5>
+                                        <p class="text-xs text-muted mb-0" id="sdSuperExtendOrgName">Organization Trial Extension</p>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                                <form id="sdSuperExtendForm" onsubmit="event.preventDefault(); SupportDesk.submitSuperTrialExtension();">
+                                    <input type="hidden" id="sdSuperExtendOrgId">
+                                    <div class="mb-3">
+                                        <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Select Extension Period</label>
+                                        <select class="ds-input text-sm" id="sdSuperExtendDays" required onchange="SupportDesk.toggleCustomTrialDaysInput(this.value)">
+                                            <option value="7">+7 Days Extension</option>
+                                            <option value="14">+14 Days Extension (Recommended)</option>
+                                            <option value="30">+30 Days Extension (1 Month)</option>
+                                            <option value="60">+60 Days Extension (2 Months)</option>
+                                            <option value="custom">Custom Days (Enter Manually)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="sdCustomDaysContainer" style="display: none;">
+                                        <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Enter Custom Number of Days <span class="text-danger">*</span></label>
+                                        <input type="number" class="ds-input text-sm" id="sdSuperCustomDaysInput" min="1" max="365" placeholder="e.g. 45">
+                                    </div>
+                                    <div class="d-flex justify-content-end gap-2 pt-2">
+                                        <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="ds-btn ds-btn-primary ds-btn-sm" id="btnSdSuperExtend">
+                                            <i data-lucide="check-circle" style="width:14px;height:14px;" class="me-1"></i> Grant Extension
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(div.firstElementChild);
+            modalEl = document.getElementById('sdSuperExtendTrialModal');
+        }
+
+        document.getElementById('sdSuperExtendOrgId').value = orgId;
+        document.getElementById('sdSuperExtendOrgName').innerText = `Grant extension for organization: ${orgName}`;
+        
+        // Select requested or default days in modal
+        const daysSelect = document.getElementById('sdSuperExtendDays');
+        const customInput = document.getElementById('sdSuperCustomDaysInput');
+        const targetDays = String(defaultDays || 14);
+        if (daysSelect) {
+            const hasOption = Array.from(daysSelect.options).some(o => o.value === targetDays);
+            if (hasOption) {
+                daysSelect.value = targetDays;
+                this.toggleCustomTrialDaysInput(targetDays);
+            } else {
+                daysSelect.value = 'custom';
+                this.toggleCustomTrialDaysInput('custom');
+                if (customInput) customInput.value = targetDays;
+            }
+        }
+
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
+        if (window.lucide) lucide.createIcons();
+    },
+
+    toggleCustomTrialDaysInput(val) {
+        const container = document.getElementById('sdCustomDaysContainer');
+        const input = document.getElementById('sdSuperCustomDaysInput');
+        if (container) {
+            if (val === 'custom') {
+                container.style.display = 'block';
+                if (input) { input.required = true; input.focus(); }
+            } else {
+                container.style.display = 'none';
+                if (input) { input.required = false; input.value = ''; }
+            }
+        }
+    },
+
+    async submitSuperTrialExtension() {
+        const orgId = document.getElementById('sdSuperExtendOrgId')?.value;
+        const daysSelect = document.getElementById('sdSuperExtendDays')?.value;
+        let days = 14;
+
+        if (daysSelect === 'custom') {
+            const customVal = parseInt(document.getElementById('sdSuperCustomDaysInput')?.value);
+            if (isNaN(customVal) || customVal <= 0) {
+                if (window.QCMS && QCMS.toast) QCMS.toast('Please enter a valid positive number of custom days', 'warning');
+                return;
+            }
+            days = customVal;
+        } else {
+            days = parseInt(daysSelect) || 14;
+        }
+
+        if (!orgId) return;
+
+        const btn = document.getElementById('btnSdSuperExtend');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...'; }
+
+        try {
+            const res = await api.put(`/super-admin/companies/${orgId}/trial`, { days });
+            if (window.QCMS && QCMS.toast) {
+                QCMS.toast(res.message || `Successfully extended trial by +${days} days!`, 'success');
+            }
+            const modalEl = document.getElementById('sdSuperExtendTrialModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+            await this.renderTrialExtensionsTab();
+        } catch (e) {
+            if (window.QCMS && QCMS.toast) QCMS.toast(e.message || 'Failed to extend trial', 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;" class="me-1"></i> Grant Extension'; }
         }
     },
 

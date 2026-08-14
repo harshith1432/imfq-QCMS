@@ -20,9 +20,15 @@ def admin_required(f):
     @jwt_required()
     def decorated(*args, **kwargs):
         user = User.query.get(get_jwt_identity())
-        if not user or user.role.name != 'Admin':
-            return jsonify({"msg": "Admin access required"}), 403
-        return f(*args, **kwargs)
+        if not user:
+            return jsonify({"msg": "User not found"}), 404
+        role_name = user.role.name if user.role else ''
+        if role_name in ('Admin', 'SuperAdmin', 'CEO'):
+            return f(*args, **kwargs)
+        from app.presentation.routes.admin_routes import check_user_module_permission
+        if check_user_module_permission(user, 'knowledge_base'):
+            return f(*args, **kwargs)
+        return jsonify({"msg": "Admin access required"}), 403
     return decorated
 
 # ============================

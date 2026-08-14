@@ -32,9 +32,15 @@ def audit_required(f):
     def decorated(*args, **kwargs):
         current_user_id = get_jwt_identity()
         user = db.session.get(User, current_user_id)
-        if not user or not user.role or user.role.name not in ('Admin', 'SuperAdmin', 'CEO', 'Owner', 'Platform Admin', 'Security Officer', 'Compliance Officer'):
+        if not user or not user.role:
             return jsonify({"message": "Audit or compliance administrator permissions required"}), 403
-        return f(*args, **kwargs)
+        role_name = user.role.name
+        if role_name in ('Admin', 'SuperAdmin', 'CEO', 'Owner', 'Platform Admin', 'Security Officer', 'Compliance Officer'):
+            return f(*args, **kwargs)
+        from app.presentation.routes.admin_routes import check_user_module_permission
+        if check_user_module_permission(user, 'audit_logs'):
+            return f(*args, **kwargs)
+        return jsonify({"message": "Audit or compliance administrator permissions required"}), 403
     return decorated
 
 import urllib.request

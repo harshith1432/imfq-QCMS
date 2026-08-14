@@ -777,7 +777,7 @@ html[data-theme="dark"] #footerPageModal .modal-content {
    MOBILE RESPONSIVENESS, COMPACT KPI CARDS & SIDEBAR SCROLLING FIXES
    ========================================================================== */
 
-/* 1. App Sidebar Flex Layout & Full Vertical Scrolling */
+/* 1. App Sidebar Flex Layout & Single Vertical Scrolling Container */
 .app-sidebar, .glass-sidebar {
     display: flex !important;
     flex-direction: column !important;
@@ -790,12 +790,18 @@ html[data-theme="dark"] #footerPageModal .modal-content {
     flex-shrink: 0 !important;
 }
 
-.sidebar-section {
+.sidebar-body, .sidebar-content {
     flex: 1 1 auto !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
-    padding: 1rem 0.75rem !important;
+    min-height: 0 !important;
+}
+
+.sidebar-section {
+    flex: none !important;
+    overflow: visible !important;
+    padding: 1.25rem 0.75rem 0.25rem !important;
 }
 
 .sidebar-nav {

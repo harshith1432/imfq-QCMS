@@ -132,7 +132,7 @@ const api = {
                 endpoint.includes('/auth/register') ||
                 endpoint.includes('/auth/login-config') ||
                 endpoint.includes('/auth/forgot-password') ||
-                endpoint.includes('/auth/reset-password') ||
+                endpoint.includes('/auth/reset-password-confirm') ||
                 endpoint.includes('/auth/sso/');
 
             if (token && !isPublicAuthEndpoint) {
@@ -158,22 +158,24 @@ const api = {
                 clearTimeout(timeoutId);
 
                 if (endpoint.includes('/auth/login')) {
-                    const data = await response.json().catch(() => ({}));
+                    const data = await response.clone().json().catch(() => ({}));
                     if (!response.ok) {
-                        const errMsg = data.msg || data.message || data.error || data.detail || 'Invalid username or password';
-                        const error = new Error(errMsg);
+                        const error = new Error(data.message || data.msg || 'Login failed. Please check your credentials.');
+                        error.errors = data.errors || [];
                         error.status = response.status;
-                        // Attach extra fields so callers can read lock info
-                        error.error_code = data.error_code || null;
-                        error.remaining_seconds = data.remaining_seconds || null;
-                        error.locked_until_epoch = data.locked_until_epoch || null;
+                        error.code = data.error_code || data.code;
+                        error.error_code = data.error_code || data.code;
+                        error.lockedUntilEpoch = data.locked_until_epoch;
+                        error.locked_until_epoch = data.locked_until_epoch;
+                        error.remainingSeconds = data.remaining_seconds;
+                        error.remaining_seconds = data.remaining_seconds;
                         throw error;
                     }
                     return data;
                 }
 
                 if (response.status === 401) {
-                    const isLogin = window.location.pathname.includes('login.html');
+                    const isAuthPage = window.location.pathname.includes('login.html') || window.location.pathname.includes('reset-password.html');
                     // Match only super-admin.html portal page (not standard org admin pages under /admin/)
                     const isSuperAdminPortal = window.location.pathname.includes('super-admin.html');
                     const isInsideSuperAdminIframe = (() => {
@@ -182,7 +184,7 @@ const api = {
                                 && window.parent.location.pathname.includes('super-admin.html');
                         } catch (_) { return false; }
                     })();
-                    if (!isLogin) {
+                    if (!isAuthPage) {
                         if (isSuperAdminPortal || isInsideSuperAdminIframe) {
                             console.warn('[API] 401 on super-admin portal for:', endpoint);
                             return null;

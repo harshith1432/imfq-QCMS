@@ -98,6 +98,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 username: data.username,
                 email: data.email,
                 role: data.role,
+                role_name: data.role_name || data.role,
+                role_permissions: data.role_permissions || null,
                 org_id: data.org_id,
                 org_name: data.org_name,
                 dept_id: data.department_id || data.dept_id,
@@ -121,6 +123,10 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
             sessionStorage.setItem('user', userPayload);
             localStorage.setItem('user', userPayload);
+            if (data.role_permissions) {
+                sessionStorage.setItem('role_permissions', JSON.stringify(data.role_permissions));
+                localStorage.setItem('role_permissions', JSON.stringify(data.role_permissions));
+            }
             
             // Sync global language
             if (data.language) {
