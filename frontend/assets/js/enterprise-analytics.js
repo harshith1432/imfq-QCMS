@@ -329,7 +329,7 @@ const EnterpriseAnalytics = {
                     { id: 'mrr', title: 'MRR (Monthly)', key: 'mrr', tab: 'revenue', desc: 'Monthly Recurring Revenue — predictable recurring income expected per month.' },
                     { id: 'arr', title: 'ARR (Annual)', key: 'arr', tab: 'revenue', desc: 'Annual Recurring Revenue — annualized financial projection over 12 months.' },
                     this.isSuperAdmin ? { id: 'total_orgs', title: 'Active Tenants', key: 'active_orgs', tab: 'organizations', desc: 'Total number of active customer organisations operating on the platform.' } : { id: 'active_users', title: 'Active Users', key: 'active_users', tab: 'users', desc: 'Total active user accounts across organisation workspaces.' },
-                    { id: 'storage_usage', title: 'Storage Usage', key: 'storage_usage', tab: 'overview', desc: 'Total cloud database storage & media file attachments consumed.' },
+                    { id: 'storage_usage', title: 'Platform Storage Usage', key: 'storage_usage', tab: 'overview', desc: 'Total cloud database storage & media file attachments consumed across the platform.' },
                     { id: 'total_support_tickets', title: 'Support Tickets', key: 'total_support_tickets', tab: 'support', desc: 'Total helpdesk support tickets and assistance requests submitted by users.' }
                 ];
 

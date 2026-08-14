@@ -261,6 +261,8 @@ class PointEngineService:
         by scanning real activity in Project, Stage trackers, SOPs, and Knowledge Repository.
         Guarantees NO fake numbers — only real historical actions!
         """
+        if not org_id:
+            return
         users = User.query.filter_by(org_id=org_id).all()
         for u in users:
             # Ensure leaderboard row exists

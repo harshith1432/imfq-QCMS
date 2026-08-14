@@ -105,35 +105,61 @@ const SupportDesk = {
                                 <!-- Timeline & Conversations (Left) -->
                                 <div class="col-lg-8 border-end" style="border-color:rgba(255,255,255,0.08)!important;">
                                     <div class="v-stack gap-3">
-                                        <div class="glass-card p-3" style="background: rgba(255,255,255,0.02);">
-                                            <div class="d-flex justify-content-between mb-2">
+                                        <!-- Main Ticket Details Card -->
+                                        <div class="glass-card p-3 rounded" style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
                                                 <span class="text-xs text-secondary" id="sdModalRequester">Raised by: -</span>
                                                 <span class="text-xs text-secondary" id="sdModalDate">Date: -</span>
                                             </div>
                                             <p class="text-sm text-secondary mb-0" id="sdModalDesc" style="white-space:pre-wrap;"></p>
+                                            
+                                            <!-- Uploaded Attachments / Documents Section -->
+                                            <div id="sdModalAttachmentsWrapper" class="mt-3 pt-3 border-top" style="display:none; border-color:rgba(255,255,255,0.08)!important;">
+                                                <div class="text-xs fw-bold text-main mb-2 d-flex align-items-center gap-1.5"><i data-lucide="paperclip" class="text-primary" style="width:14px;height:14px;"></i> Uploaded Documents & Media:</div>
+                                                <div id="sdModalAttachmentsList" class="d-flex flex-wrap gap-2"></div>
+                                            </div>
                                         </div>
 
                                         <!-- Timeline conversations -->
-                                        <h6 class="fw-bold text-main mt-3">Conversation & Internal Notes</h6>
-                                        <div class="v-stack gap-2.5 scroll-y" id="sdModalCommentsTimeline" style="max-height:280px;">
+                                        <h6 class="fw-bold text-main mt-3 mb-3 d-flex align-items-center gap-2" style="font-size:13px;letter-spacing:.01em;">
+                                            <i data-lucide="message-square" style="width:15px;height:15px;opacity:.7;"></i>
+                                            Conversation &amp; Internal Notes
+                                        </h6>
+                                        <div class="d-flex flex-column gap-3 overflow-auto" id="sdModalCommentsTimeline" style="max-height:300px;padding-right:4px;">
                                             <!-- Comments go here -->
                                         </div>
 
                                         <!-- Add Response Form -->
-                                        <div class="comment-composer-box mt-3 p-3 rounded" style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
-                                            <div class="h-stack gap-3 mb-2">
-                                                <label class="text-xs fw-bold cursor-pointer"><input type="radio" name="comment_type" value="public" checked id="cTypePublic"> Public Comment</label>
-                                                <label class="text-xs fw-bold cursor-pointer text-warning"><input type="radio" name="comment_type" value="internal" id="cTypeInternal"> Internal Note</label>
+                                        <div class="mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,0.09);">
+                                            <div class="d-flex align-items-center gap-3 mb-2">
+                                                <span class="text-xs fw-bold" style="color:var(--ds-text-secondary,#94a3b8);text-transform:uppercase;letter-spacing:.05em;">Reply as:</span>
+                                                <label class="d-flex align-items-center gap-1 text-xs fw-semibold cursor-pointer mb-0">
+                                                    <input type="radio" name="comment_type" value="public" checked id="cTypePublic" style="accent-color:var(--ds-accent,#4f8ef7);">
+                                                    Public Comment
+                                                </label>
+                                                <label class="d-flex align-items-center gap-1 text-xs fw-semibold cursor-pointer mb-0" style="color:#f59e0b;">
+                                                    <input type="radio" name="comment_type" value="internal" id="cTypeInternal" style="accent-color:#f59e0b;">
+                                                    Internal Note
+                                                </label>
                                             </div>
-                                            <textarea class="ds-input mb-2" id="sdNewCommentContent" rows="3" placeholder="Type your response... Support markdown..."></textarea>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div class="h-stack gap-2">
-                                                    <!-- Simple attachment simulated icon -->
-                                                    <button class="ds-btn ds-btn-ghost ds-btn-sm" onclick="document.getElementById('sdCommentFile').click()"><i data-lucide="paperclip" style="width:14px;"></i></button>
-                                                    <input type="file" id="sdCommentFile" style="display:none;" onchange="SupportDesk.uploadCommentFile(this)">
+                                            <textarea class="ds-input mb-2" id="sdNewCommentContent" rows="3"
+                                                placeholder="Type your response... Supports markdown..."
+                                                style="resize:vertical;min-height:80px;width:100%;"></textarea>
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    <button type="button" class="ds-btn ds-btn-outline ds-btn-sm d-inline-flex align-items-center gap-1" onclick="document.getElementById('sdCommentFile').click()">
+                                                        <i data-lucide="paperclip" style="width:13px;height:13px;"></i>
+                                                        <span>Upload Documents</span>
+                                                    </button>
+                                                    <input type="file" id="sdCommentFile" style="display:none;"
+                                                        accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,image/*,application/pdf"
+                                                        onchange="SupportDesk.uploadCommentFile(this)">
                                                     <span class="text-xs text-muted" id="sdCommentFileName"></span>
                                                 </div>
-                                                <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="SupportDesk.submitComment()">Submit Response</button>
+                                                <button class="ds-btn ds-btn-primary ds-btn-sm d-inline-flex align-items-center gap-1" onclick="SupportDesk.submitComment()">
+                                                    <i data-lucide="send" style="width:13px;height:13px;"></i>
+                                                    Submit Response
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -191,8 +217,7 @@ const SupportDesk = {
 
                                         <div class="metadata-block border-top pt-3" style="border-color:rgba(255,255,255,0.08)!important;">
                                             <button class="ds-btn ds-btn-outline ds-btn-sm w-100 text-warning justify-content-center mb-2" onclick="SupportDesk.escalateTicket()"><i data-lucide="trending-up" class="me-1" style="width:14px;"></i> Escalate Ticket</button>
-                                            <button class="ds-btn ds-btn-outline ds-btn-sm w-100 text-primary justify-content-center mb-2" onclick="SupportDesk.getAIRecommendation()"><i data-lucide="sparkles" class="me-1" style="width:14px;"></i> AI Suggested Response</button>
-                                            <button class="ds-btn ds-btn-outline ds-btn-sm w-100 text-success justify-content-center" onclick="SupportDesk.showCSATModal()"><i data-lucide="smile" class="me-1" style="width:14px;"></i> Rate Support (CSAT)</button>
+                                            <button class="ds-btn ds-btn-outline ds-btn-sm w-100 text-primary justify-content-center" onclick="SupportDesk.getAIRecommendation()"><i data-lucide="sparkles" class="me-1" style="width:14px;"></i> AI Suggested Response</button>
                                         </div>
                                     </div>
                                 </div>
@@ -210,12 +235,15 @@ const SupportDesk = {
             <!-- Audit Trail Modal -->
             <div class="modal fade" id="sdAuditModal" tabindex="-1">
                 <div class="modal-dialog modal-md modal-dialog-centered">
-                    <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
-                        <div class="modal-header border-0 pb-0">
-                            <h5 class="modal-title fw-bold text-main" style="color:var(--ds-text-main);"><i data-lucide="history" class="me-1 text-primary"></i> Support Audit Trail</h5>
+                    <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow: hidden;">
+                        <div class="modal-header border-bottom pb-3 pt-3 px-4" style="border-color: var(--ds-border-color, rgba(148,163,184,0.2)) !important;">
+                            <h5 class="modal-title fw-bold text-main d-flex align-items-center gap-2" style="color:var(--ds-text-main); font-size: 16px;">
+                                <i data-lucide="history" class="text-primary" style="width: 18px; height: 18px;"></i>
+                                Support Audit Trail
+                            </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
-                        <div class="modal-body scroll-y" style="max-height:400px;" id="sdAuditListBody">
+                        <div class="modal-body px-4 py-3" style="max-height: 420px; overflow-y: auto; overflow-x: hidden;" id="sdAuditListBody">
                             <!-- Populated dynamically -->
                         </div>
                     </div>
@@ -271,12 +299,6 @@ const SupportDesk = {
                                             <option value="Troubleshooting">Troubleshooting</option>
                                             <option value="General Inquiry">General Inquiry</option>
                                         </select>
-                                    </div>
-                                    <div class="col-md-6 d-flex align-items-end">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input" type="checkbox" id="sdKbIsInternal">
-                                            <label class="form-check-label text-xs fw-semibold text-secondary ms-2" for="sdKbIsInternal">Internal Only (Support Staff)</label>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
@@ -609,15 +631,16 @@ const SupportDesk = {
                                 <option value="20" ${meta.per_page == 20 ? 'selected' : ''}>20 per page</option>
                                 <option value="50" ${meta.per_page == 50 ? 'selected' : ''}>50 per page</option>
                             </select>
-                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5" ${meta.page <= 1 ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page - 1})">
+                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5 d-inline-flex align-items-center justify-content-center" ${meta.page <= 1 ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page - 1})" title="Previous Page">
                                 <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                             </button>
                             ${pageBtns}
-                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5" ${meta.page >= meta.total_pages ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page + 1})">
+                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5 d-inline-flex align-items-center justify-content-center" ${meta.page >= meta.total_pages ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page + 1})" title="Next Page">
                                 <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                             </button>
                         </div>
                     `;
+                    if (window.lucide) lucide.createIcons();
                 }
             }
         } catch (e) {
@@ -782,8 +805,8 @@ const SupportDesk = {
                     <div class="p-4 border rounded text-center cursor-pointer" style="border-style:dashed!important; border-color:var(--ds-border-color)!important;" onclick="document.getElementById('wizFileInp').click()">
                         <i data-lucide="upload-cloud" class="text-secondary mb-2" style="width:36px; height:36px;"></i>
                         <p class="text-sm mb-1 text-main">Click or drop files here to attach</p>
-                        <p class="text-xxs text-secondary">Images, PDFs, Word, Excel, Zips up to 10MB</p>
-                        <input type="file" id="wizFileInp" style="display:none;" onchange="SupportDesk.handleWizFileUpload(this)">
+                        <p class="text-xxs text-secondary">Only PDF, DOC/DOCX documents, and images (PNG/JPG/GIF/WEBP) allowed</p>
+                        <input type="file" id="wizFileInp" style="display:none;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="SupportDesk.handleWizFileUpload(this)">
                     </div>
                     <div class="v-stack gap-2" id="wizFilesList">
                         ${data.attachments.map((f, i) => `
@@ -1176,11 +1199,9 @@ const SupportDesk = {
         const titleEl = document.getElementById('sdKbTitle');
         const catEl = document.getElementById('sdKbCategory');
         const contentEl = document.getElementById('sdKbContent');
-        const internalEl = document.getElementById('sdKbIsInternal');
         if (titleEl) titleEl.value = '';
         if (catEl) catEl.value = 'Technical';
         if (contentEl) contentEl.value = '';
-        if (internalEl) internalEl.checked = false;
 
         const modalEl = this.ensureModalInBody('sdCreateKbModal');
         if (modalEl) {
@@ -1193,7 +1214,7 @@ const SupportDesk = {
         const title = document.getElementById('sdKbTitle')?.value?.trim();
         const category = document.getElementById('sdKbCategory')?.value;
         const content = document.getElementById('sdKbContent')?.value?.trim();
-        const is_internal = document.getElementById('sdKbIsInternal')?.checked || false;
+        const is_internal = false;
 
         if (!title || !content || !category) {
             QCMS.toast('Title, category, and content are required.', 'warning');
@@ -1244,6 +1265,32 @@ const SupportDesk = {
                 document.getElementById('sdModalStatus').value = t.status;
                 document.getElementById('sdModalCategory').value = t.category;
 
+                // Render uploaded attachments
+                const attWrapper = document.getElementById('sdModalAttachmentsWrapper');
+                const attList = document.getElementById('sdModalAttachmentsList');
+                if (attWrapper && attList) {
+                    const attachments = t.attachments || [];
+                    if (attachments.length > 0) {
+                        attWrapper.style.display = 'block';
+                        attList.innerHTML = attachments.map(att => {
+                            const isImg = /\.(png|jpe?g|gif|webp|svg)$/i.test(att.file_name);
+                            const iconName = isImg ? 'image' : (/\.pdf$/i.test(att.file_name) ? 'file-text' : 'file-text');
+                            const fileKb = att.file_size ? `${(att.file_size / 1024).toFixed(1)} KB` : '';
+                            return `
+                                <a href="${att.file_path}" target="_blank" download class="ds-btn ds-btn-outline ds-btn-sm text-main py-1 px-2.5 d-inline-flex align-items-center gap-1.5 text-decoration-none me-2 mb-2">
+                                    <i data-lucide="${iconName}" class="text-primary" style="width:14px;height:14px;"></i>
+                                    <span>${att.file_name}</span>
+                                    ${fileKb ? `<span class="text-muted text-xxs">(${fileKb})</span>` : ''}
+                                    <i data-lucide="download" class="text-muted ms-1" style="width:12px;height:12px;"></i>
+                                </a>
+                            `;
+                        }).join('');
+                    } else {
+                        attWrapper.style.display = 'none';
+                        attList.innerHTML = '';
+                    }
+                }
+
                 // Load timeline comments
                 this.renderComments(t.comments);
 
@@ -1274,19 +1321,114 @@ const SupportDesk = {
         if (!container) return;
 
         container.innerHTML = comments.map(c => {
-            const background = c.is_internal ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.02)';
-            const border = c.is_internal ? '1px solid rgba(245,158,11,0.2)' : '1px solid rgba(255,255,255,0.06)';
-            
+            const isInternal = c.is_internal;
+            const initials = (c.user || '?').split(/[@\s.]+/).map(p => p[0] || '').join('').toUpperCase().slice(0, 2) || '?';
+            const avatarBg = isInternal ? '#92400e' : 'var(--ds-accent, #4f8ef7)';
+            const internalBadge = isInternal
+                ? '<span class="badge ms-2" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;">Internal Note</span>'
+                : '<span class="badge ms-2" style="background:rgba(79,142,247,0.12);color:var(--ds-accent,#4f8ef7);border:1px solid rgba(79,142,247,0.25);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;">Public</span>';
+            const cardBg    = isInternal ? 'rgba(245,158,11,0.05)' : 'rgba(255,255,255,0.025)';
+            const cardBorder = isInternal ? '1px solid rgba(245,158,11,0.18)' : '1px solid rgba(255,255,255,0.07)';
+            const leftAccent = isInternal ? '#f59e0b' : 'var(--ds-accent,#4f8ef7)';
+
+            let attHtml = '';
+            if (c.attachments && c.attachments.length > 0) {
+                attHtml = '<div class="d-flex flex-wrap gap-2 mt-2 pt-2" style="border-top:1px solid rgba(255,255,255,0.07);">';
+                attHtml += c.attachments.map(a => {
+                    const isImg = /\.(png|jpe?g|gif|webp|svg)$/i.test(a.file_name);
+                    const icon = isImg ? 'image' : 'file-text';
+                    const kb = a.file_size ? `${(a.file_size / 1024).toFixed(1)} KB` : '';
+                    return `<a href="${a.file_path}" target="_blank" download
+                        class="ds-btn ds-btn-ghost ds-btn-sm py-1 px-2 d-inline-flex align-items-center gap-1 text-decoration-none"
+                        style="border:1px solid rgba(255,255,255,0.12);border-radius:6px;">
+                        <i data-lucide="${icon}" class="text-primary" style="width:12px;height:12px;"></i>
+                        <span class="text-xs">${a.file_name}</span>
+                        ${kb ? `<span class="text-xxs text-muted">(${kb})</span>` : ''}
+                        <i data-lucide="download" class="text-muted" style="width:11px;height:11px;"></i>
+                    </a>`;
+                }).join('');
+                attHtml += '</div>';
+            }
+
             return `
-                <div class="p-3 rounded" style="background:${background}; border:${border};">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="fw-bold text-xs text-main">${c.user}</span>
-                        <span class="text-xxs text-secondary">${QCMS.formatDate(c.created_at)}</span>
+                <div style="background:${cardBg};border:${cardBorder};border-left:3px solid ${leftAccent};border-radius:10px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;">
+                    <div style="flex-shrink:0;width:34px;height:34px;border-radius:50%;background:${avatarBg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.03em;">${initials}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+                            <div style="display:flex;align-items:center;flex-wrap:wrap;">
+                                <span style="font-size:12px;font-weight:700;color:var(--ds-text-main,#f1f5f9);white-space:nowrap;">${c.user}</span>
+                                ${internalBadge}
+                            </div>
+                            <span style="font-size:11px;color:var(--ds-text-secondary,#94a3b8);white-space:nowrap;flex-shrink:0;">${QCMS.formatDate(c.created_at)}</span>
+                        </div>
+                        <p style="font-size:13px;color:var(--ds-text-secondary,#cbd5e1);margin:0;white-space:pre-wrap;line-height:1.6;word-break:break-word;">${c.content}</p>
+                        ${attHtml}
                     </div>
-                    <p class="text-xs text-secondary mb-0">${c.content}</p>
                 </div>
             `;
-        }).join('') || '<div class="text-center text-muted text-xs py-3">No conversations recorded.</div>';
+        }).join('') || '<div class="text-center text-muted text-xs py-4"><i data-lucide="message-circle" style="width:20px;height:20px;opacity:.4;display:block;margin:0 auto 6px;"></i>No conversations recorded yet.</div>';
+        if (window.lucide) lucide.createIcons();
+    },
+
+    _pendingAttachment: null,
+
+    async uploadCommentFile(input) {
+        const file = input && input.files && input.files[0];
+        const el = document.getElementById('sdCommentFileName');
+        this._pendingAttachment = null;
+
+        if (!file) {
+            if (el) el.innerHTML = '';
+            return;
+        }
+
+        // Strict client-side type check — PDF and images only
+        const allowedExts = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'];
+        const ext = file.name.toLowerCase().split('.').pop();
+        if (!allowedExts.includes(ext)) {
+            QCMS.toast('Invalid file type. Only PDF and images (PNG, JPG, GIF, WEBP) are allowed.', 'warning');
+            input.value = '';
+            if (el) el.innerHTML = '';
+            return;
+        }
+
+        // Show uploading state
+        if (el) el.innerHTML = `<span class="badge bg-secondary-subtle text-secondary border py-1 px-2 d-inline-flex align-items-center gap-1"><i data-lucide="loader" style="width:12px;height:12px;"></i> Uploading...</span>`;
+        if (window.lucide) lucide.createIcons();
+
+        try {
+            const token = (window.api && window.api.token) 
+                || localStorage.getItem('access_token') 
+                || sessionStorage.getItem('access_token') 
+                || localStorage.getItem('token') 
+                || sessionStorage.getItem('token') 
+                || localStorage.getItem('qcms_token');
+            const formData = new FormData();
+            formData.append('file', file);
+            const resp = await fetch(`/api/support/tickets/${this.currentTicketId}/upload-attachment`, {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                body: formData
+            });
+            const result = await resp.json().catch(() => ({}));
+            if (resp.ok && result.status === 'success') {
+                this._pendingAttachment = result.attachment;
+                const kb = (file.size / 1024).toFixed(1);
+                const icon = ext === 'pdf' ? 'file-text' : 'image';
+                if (el) {
+                    el.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2 d-inline-flex align-items-center gap-1"><i data-lucide="${icon}" style="width:12px;height:12px;"></i> ${file.name} (${kb} KB) ✓</span>`;
+                    if (window.lucide) lucide.createIcons();
+                }
+            } else {
+                QCMS.toast(result.message || result.error || 'Upload failed', 'error');
+                input.value = '';
+                if (el) el.innerHTML = '';
+            }
+        } catch (e) {
+            QCMS.toast('Upload failed: ' + (e.message || 'Server network error'), 'error');
+            input.value = '';
+            if (el) el.innerHTML = '';
+        }
     },
 
     async submitComment() {
@@ -1299,14 +1441,19 @@ const SupportDesk = {
         }
 
         try {
-            const res = await api.post(`/support/tickets/${this.currentTicketId}/comments`, {
-                content: content,
-                is_internal: isInternal
-            });
+            const payload = { content, is_internal: isInternal, attachments: [] };
+            if (this._pendingAttachment) {
+                payload.attachments = [this._pendingAttachment];
+            }
+            const res = await api.post(`/support/tickets/${this.currentTicketId}/comments`, payload);
             if (res.status === 'success') {
                 QCMS.toast('Response submitted successfully', 'success');
                 document.getElementById('sdNewCommentContent').value = '';
-                // Reload details
+                const fileInput = document.getElementById('sdCommentFile');
+                if (fileInput) fileInput.value = '';
+                const fileNameEl = document.getElementById('sdCommentFileName');
+                if (fileNameEl) fileNameEl.innerHTML = '';
+                this._pendingAttachment = null;
                 this.openTicket(this.currentTicketId);
             }
         } catch (e) {
@@ -1406,19 +1553,48 @@ const SupportDesk = {
                 const audits = res.data.audits || [];
                 const container = document.getElementById('sdAuditListBody');
                 
-                container.innerHTML = audits.map(a => `
-                    <div class="mb-3 border-bottom pb-2" style="border-color:rgba(255,255,255,0.06)!important;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-xs fw-bold text-main">${a.action}</span>
-                            <span class="text-xxs text-secondary">${QCMS.formatDate(a.created_at)}</span>
+                container.innerHTML = audits.map((a, idx) => {
+                    const isLast = idx === audits.length - 1;
+                    let actionIcon = 'activity';
+                    let actionColor = 'var(--ds-accent, #4f8ef7)';
+                    const actLower = (a.action || '').toLowerCase();
+                    if (actLower.includes('create')) {
+                        actionIcon = 'plus-circle';
+                        actionColor = '#10b981';
+                    } else if (actLower.includes('comment')) {
+                        actionIcon = 'message-square';
+                        actionColor = '#6366f1';
+                    } else if (actLower.includes('status')) {
+                        actionIcon = 'refresh-cw';
+                        actionColor = '#f59e0b';
+                    } else if (actLower.includes('escalat')) {
+                        actionIcon = 'alert-triangle';
+                        actionColor = '#ef4444';
+                    }
+
+                    return `
+                        <div class="d-flex align-items-start gap-3 py-2.5 ${!isLast ? 'border-bottom' : ''}" style="border-color: var(--ds-border-color, rgba(148,163,184,0.18)) !important;">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-0.5"
+                                 style="width: 28px; height: 28px; background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2);">
+                                <i data-lucide="${actionIcon}" style="width: 14px; height: 14px; color: ${actionColor};"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
+                                    <span class="text-xs fw-bold text-main" style="color: var(--ds-text-main);">${a.action}</span>
+                                    <span class="text-xxs text-muted">${QCMS.formatDate(a.created_at)}</span>
+                                </div>
+                                <div class="text-xxs text-secondary mt-0.5" style="color: var(--ds-text-secondary);">
+                                    By: <span class="fw-semibold text-main" style="color: var(--ds-text-main);">${a.user}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="text-xxs text-secondary mt-0.5">By: ${a.user}</div>
-                    </div>
-                `).join('') || '<div class="text-center text-muted text-xs">No audit logs for this ticket.</div>';
+                    `;
+                }).join('') || '<div class="text-center text-muted text-xs py-4">No audit logs for this ticket.</div>';
 
                 const modalEl = this.ensureModalInBody('sdAuditModal');
                 const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 modal.show();
+                if (window.lucide) lucide.createIcons();
             }
         } catch (e) {
             QCMS.toast('Could not fetch audit trail', 'error');

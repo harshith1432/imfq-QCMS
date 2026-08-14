@@ -8,7 +8,7 @@ from sqlalchemy import func
 from app.infrastructure.database.models.models import (
     db, Organization, User, Project, SupportAttachment, 
     AnnouncementAttachment, KnowledgeRepository, AuditLog, SupportTicket,
-    Subscription, SaaSPlan, SaaSPlanLimits
+    Subscription, SaaSPlan, SaaSPlanLimits, ProjectWorkflow
 )
 
 def calculate_org_storage_realtime(org_id=None):
@@ -21,12 +21,6 @@ def calculate_org_storage_realtime(org_id=None):
     )
     if org_id:
         query = query.filter(Organization.id == org_id)
-    else:
-        query = query.filter(
-            Organization.is_platform_org == False,
-            Organization.id != 1,
-            Organization.name != 'QCMS Admin Org'
-        )
     
     orgs = query.all()
     
@@ -45,23 +39,68 @@ def calculate_org_storage_realtime(org_id=None):
             User, AnnouncementAttachment.uploaded_by == User.id
         ).filter(User.org_id == org.id).scalar() or 0
 
-        # 3. Count DB entity footprints
+        # 3. DB text & payload byte sizes for this organization
+        proj_bytes = db.session.query(
+            func.sum(
+                func.length(func.coalesce(Project.title, '')) + 
+                func.length(func.coalesce(Project.description, '')) +
+                func.length(func.coalesce(Project.category, '')) +
+                func.length(func.coalesce(Project.work_area, '')) +
+                func.length(func.coalesce(Project.plant, ''))
+            )
+        ).filter(Project.org_id == org.id).scalar() or 0
+
+        wf_bytes = db.session.query(
+            func.sum(func.length(func.cast(ProjectWorkflow.data, db.String)))
+        ).join(Project, ProjectWorkflow.project_id == Project.id).filter(Project.org_id == org.id).scalar() or 0
+
+        kr_bytes = db.session.query(
+            func.sum(
+                func.length(func.coalesce(KnowledgeRepository.title, '')) +
+                func.length(func.coalesce(KnowledgeRepository.problem_summary, '')) +
+                func.length(func.coalesce(KnowledgeRepository.root_cause, '')) +
+                func.length(func.coalesce(KnowledgeRepository.solution_summary, '')) +
+                func.length(func.coalesce(KnowledgeRepository.keywords, ''))
+            )
+        ).filter(KnowledgeRepository.org_id == org.id).scalar() or 0
+
+        audit_bytes = db.session.query(
+            func.sum(
+                func.length(func.coalesce(AuditLog.action, '')) +
+                func.length(func.coalesce(AuditLog.target_table, '')) +
+                func.length(func.cast(AuditLog.details, db.String))
+            )
+        ).filter(AuditLog.org_id == org.id).scalar() or 0
+
+        user_bytes = db.session.query(
+            func.sum(
+                func.length(func.coalesce(User.full_name, '')) +
+                func.length(func.coalesce(User.email, '')) +
+                func.length(func.coalesce(User.username, '')) +
+                func.length(func.cast(User.custom_fields, db.String))
+            )
+        ).filter(User.org_id == org.id).scalar() or 0
+
+        ticket_bytes = db.session.query(
+            func.sum(
+                func.length(func.coalesce(SupportTicket.subject, '')) +
+                func.length(func.coalesce(SupportTicket.message, ''))
+            )
+        ).filter(SupportTicket.org_id == org.id).scalar() or 0
+
+        # Count DB entities
         users_cnt = User.query.filter_by(org_id=org.id).count()
         projects_cnt = Project.query.filter_by(org_id=org.id).count()
         audits_cnt = AuditLog.query.filter_by(org_id=org.id).count()
         knowledge_cnt = KnowledgeRepository.query.filter_by(org_id=org.id).count()
-        tickets_cnt = SupportTicket.query.filter_by(org_id=org.id).count()
 
-        # 4. Physical file size in MB
-        file_mb = (att_bytes + ann_bytes) / (1024.0 * 1024.0)
+        # 4. Total actual bytes stored for this organization
+        total_actual_bytes = att_bytes + ann_bytes + proj_bytes + wf_bytes + kr_bytes + audit_bytes + user_bytes + ticket_bytes
         
-        # Weighted DB footprint (Users, Projects, Audit Logs, RAG Embeddings, Support Tickets)
-        db_mb = (users_cnt * 0.45) + (projects_cnt * 1.85) + (audits_cnt * 0.05) + (knowledge_cnt * 1.2) + (tickets_cnt * 0.25)
-        
-        # Base tenant metadata & configuration overhead
-        base_mb = 1.5 if (users_cnt > 0 or projects_cnt > 0 or audits_cnt > 0) else 0.5
-        
-        calc_used_mb = round(file_mb + db_mb + base_mb, 2)
+        # Exact physical & DB storage used in MB
+        calc_used_mb = round(total_actual_bytes / (1024.0 * 1024.0), 3)
+        if calc_used_mb == 0 and (users_cnt > 0 or projects_cnt > 0):
+            calc_used_mb = 0.01  # Minimum non-zero representation for active tenants with data
         
         # Resolve dynamic storage limit from plan allocation
         limit_mb = None
@@ -87,11 +126,12 @@ def calculate_org_storage_realtime(org_id=None):
         if not limit_mb:
             limit_mb = org.storage_limit_mb if (org.storage_limit_mb and org.storage_limit_mb > 0) else 10240.0
 
-        # Sync resolved storage limit to organization record
+        # Sync resolved storage limit and actual storage used to organization record
         org.storage_limit_mb = limit_mb
+        org.storage_used_mb = calc_used_mb
         limit_gb = round(limit_mb / 1024.0, 2)
-        used_gb = round(calc_used_mb / 1024.0, 2)
-        pct = round((calc_used_mb / limit_mb * 100), 1) if limit_mb > 0 else 0.0
+        used_gb = round(calc_used_mb / 1024.0, 4)
+        pct = round((calc_used_mb / limit_mb * 100), 2) if limit_mb > 0 else 0.0
 
         if pct >= 90:
             health_status = 'Critical'
@@ -102,6 +142,11 @@ def calculate_org_storage_realtime(org_id=None):
         else:
             health_status = 'Normal'
             badge_class = 'bg-success'
+
+        docs_sops_mb = round((att_bytes + ann_bytes + kr_bytes) / (1024.0 * 1024.0), 3)
+        proj_wf_mb = round((proj_bytes + wf_bytes) / (1024.0 * 1024.0), 3)
+        audits_mb = round(audit_bytes / (1024.0 * 1024.0), 3)
+        sys_db_mb = round((user_bytes + ticket_bytes) / (1024.0 * 1024.0), 3)
 
         org_data = {
             "id": org.id,
@@ -121,10 +166,10 @@ def calculate_org_storage_realtime(org_id=None):
             "health_status": health_status,
             "badge_class": badge_class,
             "breakdown": {
-                "documents_sops_mb": round(file_mb + (knowledge_cnt * 0.8), 2),
-                "project_workflows_mb": round(projects_cnt * 1.5, 2),
-                "audit_logs_mb": round(audits_cnt * 0.05, 2),
-                "system_db_mb": round(users_cnt * 0.45 + base_mb, 2)
+                "documents_sops_mb": docs_sops_mb,
+                "project_workflows_mb": proj_wf_mb,
+                "audit_logs_mb": audits_mb,
+                "system_db_mb": sys_db_mb
             }
         }
         result.append(org_data)
@@ -136,32 +181,56 @@ def calculate_org_storage_realtime(org_id=None):
     except Exception as e:
         db.session.rollback()
 
-    # Physical disk upload scan as fallback check if no org records calculated
-    if total_platform_used_mb <= 0:
-        total_disk_bytes = 0
-        for upload_dir in ['uploads', 'backend/uploads', 'frontend/uploads']:
-            if os.path.exists(upload_dir):
-                for dirpath, _, filenames in os.walk(upload_dir):
-                    for f in filenames:
-                        fp = os.path.join(dirpath, f)
-                        if os.path.exists(fp):
-                            total_disk_bytes += os.path.getsize(fp)
-        if total_disk_bytes > 0:
-            total_platform_used_mb = round(total_disk_bytes / (1024.0 * 1024.0), 2)
+    # Total storage used by customer organizations
+    total_orgs_used_mb = sum(o["storage_used_mb"] for o in result)
 
-    total_used_fmt = f"{total_platform_used_mb:.1f} MB" if total_platform_used_mb < 1024 else f"{(total_platform_used_mb / 1024.0):.2f} GB"
+    # Physical disk upload scan across all storage directories on disk
+    total_disk_bytes = 0
+    for upload_dir in ['uploads', 'backend/uploads', 'frontend/uploads', 'static/uploads', 'storage']:
+        if os.path.exists(upload_dir):
+            for dirpath, _, filenames in os.walk(upload_dir):
+                for f in filenames:
+                    fp = os.path.join(dirpath, f)
+                    if os.path.exists(fp):
+                        total_disk_bytes += os.path.getsize(fp)
+
+    disk_media_mb = round(total_disk_bytes / (1024.0 * 1024.0), 3)
+    total_software_used_mb = max(total_orgs_used_mb, disk_media_mb)
+
+    # Format tenant orgs storage for Organization Storage Analytics
+    if total_orgs_used_mb >= 1024.0:
+        total_used_fmt = f"{(total_orgs_used_mb / 1024.0):.2f} GB"
+    elif total_orgs_used_mb >= 0.1:
+        total_used_fmt = f"{total_orgs_used_mb:.2f} MB"
+    elif total_orgs_used_mb > 0:
+        total_used_fmt = f"{total_orgs_used_mb:.3f} MB"
+    else:
+        total_used_fmt = "0.00 MB"
+
+    # Format overall software storage for Platform Analytics
+    if total_software_used_mb >= 1024.0:
+        total_software_used_fmt = f"{(total_software_used_mb / 1024.0):.2f} GB"
+    elif total_software_used_mb >= 0.1:
+        total_software_used_fmt = f"{total_software_used_mb:.2f} MB"
+    elif total_software_used_mb > 0:
+        total_software_used_fmt = f"{total_software_used_mb:.3f} MB"
+    else:
+        total_software_used_fmt = "0.00 MB"
+
     total_limit_fmt = f"{(total_platform_limit_mb / 1024.0):.1f} GB"
 
     return {
         "organizations": result,
         "summary": {
-            "total_used_mb": round(total_platform_used_mb, 2),
+            "total_used_mb": round(total_orgs_used_mb, 3),
             "total_used_fmt": total_used_fmt,
+            "total_software_used_mb": round(total_software_used_mb, 3),
+            "total_software_used_fmt": total_software_used_fmt,
             "total_limit_mb": round(total_platform_limit_mb, 2),
             "total_limit_fmt": total_limit_fmt,
             "total_orgs": len(result),
             "high_usage_count": sum(1 for o in result if o["usage_percent"] >= 70),
-            "avg_usage_mb": round(total_platform_used_mb / len(result), 2) if len(result) > 0 else 0.0
+            "avg_usage_mb": round(total_orgs_used_mb / len(result), 3) if len(result) > 0 else 0.0
         }
     }
 

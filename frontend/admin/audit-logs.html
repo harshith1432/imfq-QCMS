@@ -298,11 +298,8 @@
                             <p class="ds-text-secondary mb-0">Immutable compliance logs, transaction histories, security access, and session monitors.</p>
                         </div>
                         <div class="h-stack gap-2">
-                            <button class="ds-btn ds-btn-secondary" onclick="Audit.verifyIntegrity()">
-                                <i data-lucide="shield-check" class="me-2" style="width:16px;"></i> Verify Stream Integrity
-                            </button>
-                            <button class="ds-btn ds-btn-primary" onclick="Audit.exportCSV()">
-                                <i data-lucide="download" class="me-2" style="width:16px;"></i> Compliance Export
+                            <button class="ds-btn ds-btn-danger" onclick="Audit.openPurgeModal()">
+                                <i data-lucide="trash-2" class="me-2" style="width:16px;"></i> Delete Audit Logs
                             </button>
                         </div>
                     </div>
@@ -671,7 +668,7 @@
                 tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading user sessions...</td></tr>`;
                 
                 try {
-                    const res = await api.get(`/admin/audit/sessions?page=${this.sessionFilters.page}&per_page=${this.sessionFilters.per_page}`);
+                    const res = await api.get(`/admin/audit/sessions?page=${this.sessionFilters.page}&per_page=${this.sessionFilters.per_page}&status=Active`);
                     this.sessions = res.data || [];
                     const pag = res.pagination || { total: this.sessions.length, page: this.sessionFilters.page, per_page: 10, pages: 1 };
 
@@ -679,8 +676,9 @@
                         tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center text-muted">No active session records found.</td></tr>`;
                     } else {
                         tbody.innerHTML = this.sessions.map(s => {
-                            const isAct = s.status === 'Active';
-                            const statusBadge = isAct ? '<span class="ds-badge green">Active</span>' : `<span class="ds-badge gray">${s.status}</span>`;
+                            const statusStr = String(s.status || '').trim().toLowerCase();
+                            const isAct = statusStr === 'active';
+                            const statusBadge = isAct ? '<span class="ds-badge green">ACTIVE</span>' : `<span class="ds-badge gray">${(s.status || 'LOGGEDOUT').toUpperCase()}</span>`;
                             const durMin = Math.round((s.session_duration || 0) / 60);
                             
                             return `
@@ -697,7 +695,7 @@
                                 <td class="text-end">
                                     ${isAct 
                                         ? `<button class="ds-btn ds-btn-outline-danger ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="Audit.terminateSession('${s.session_id}')"><i data-lucide="power" style="width:12px;height:12px;"></i> Terminate</button>` 
-                                        : `<button class="ds-btn ds-btn-outline-secondary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="Audit.terminateSession('${s.session_id}')"><i data-lucide="shield-off" style="width:12px;height:12px;"></i> Revoke Session</button>`
+                                        : `<span class="text-muted text-xs">—</span>`
                                     }
                                 </td>
                             </tr>`;
@@ -1073,10 +1071,318 @@
                 } catch(e) {
                     QCMS.toast('Failed to download compliance report', 'error');
                 }
+            },
+
+            // --- Audit Log Storage Purge & Retention Management ---
+            async openPurgeModal() {
+                let modalEl = document.getElementById('purgeAuditLogsModal');
+                if(!modalEl) return;
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+                document.getElementById('purgeModalLogCount').textContent = 'Loading…';
+                document.getElementById('purgeModalStorageSize').textContent = 'Loading…';
+                document.getElementById('purgeModalOldestDate').textContent = 'Loading…';
+
+                try {
+                    const res = await api.get('/admin/audit/storage-info');
+                    this._storageInfo = res;
+
+                    document.getElementById('purgeModalLogCount').textContent = res.total_count.toLocaleString() + ' logs';
+                    document.getElementById('purgeModalStorageSize').textContent = res.estimated_mb + ' MB';
+                    document.getElementById('purgeModalOldestDate').textContent = res.oldest_date ? res.oldest_date.split('T')[0] : 'None';
+
+                    if (document.getElementById('cnt-30d')) document.getElementById('cnt-30d').textContent = res.older_than_30d.toLocaleString();
+                    if (document.getElementById('cnt-60d')) document.getElementById('cnt-60d').textContent = res.older_than_60d.toLocaleString();
+                    if (document.getElementById('cnt-90d')) document.getElementById('cnt-90d').textContent = res.older_than_90d.toLocaleString();
+                    if (document.getElementById('cnt-180d')) document.getElementById('cnt-180d').textContent = res.older_than_180d.toLocaleString();
+                    if (document.getElementById('cnt-365d')) document.getElementById('cnt-365d').textContent = res.older_than_365d.toLocaleString();
+
+                    const autoSelect = document.getElementById('autoRetentionSelect');
+                    if (autoSelect) autoSelect.value = res.retention_days || 0;
+
+                    this.updatePurgePreview();
+                } catch(e) {
+                    QCMS.toast('Failed to load storage details', 'error');
+                }
+            },
+
+            updatePurgePreview() {
+                const selectedRadio = document.querySelector('input[name="purgePreset"]:checked');
+                const customBox = document.getElementById('customDateRangeBox');
+                const previewText = document.getElementById('purgePreviewText');
+                const btnExecute = document.getElementById('btnExecutePurge');
+
+                if (!selectedRadio) {
+                    if (customBox) customBox.classList.add('d-none');
+                    if (previewText) previewText.textContent = 'Select a retention horizon option above to preview deletion.';
+                    if (btnExecute) btnExecute.disabled = true;
+                    return;
+                }
+
+                const val = selectedRadio.value;
+                const info = this._storageInfo || {};
+
+                if (val === 'custom') {
+                    if (customBox) customBox.classList.remove('d-none');
+                    const startDate = document.getElementById('purgeStartDate')?.value;
+                    const endDate = document.getElementById('purgeEndDate')?.value;
+                    if (startDate && endDate) {
+                        previewText.innerHTML = `Will delete organization audit logs between <strong>${startDate}</strong> and <strong>${endDate}</strong>.`;
+                        btnExecute.disabled = false;
+                    } else if (startDate) {
+                        previewText.innerHTML = `Will delete organization audit logs created before <strong>${startDate}</strong>.`;
+                        btnExecute.disabled = false;
+                    } else {
+                        previewText.textContent = 'Please pick a start/cutoff date below.';
+                        btnExecute.disabled = true;
+                    }
+                } else {
+                    if (customBox) customBox.classList.add('d-none');
+                    btnExecute.disabled = false;
+
+                    if (val === 'all') {
+                        previewText.innerHTML = `<strong>⚠️ CRITICAL WARNING:</strong> This will delete <strong>ALL ${info.total_count || 0} audit logs</strong> for your organization. This action cannot be undone.`;
+                    } else if (val === '30') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_30d || 0} logs</strong> older than 30 days (keep last 1 month).`;
+                    } else if (val === '60') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_60d || 0} logs</strong> older than 60 days (keep last 2 months).`;
+                    } else if (val === '90') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_90d || 0} logs</strong> older than 90 days (keep last 3 months).`;
+                    } else if (val === '180') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_180d || 0} logs</strong> older than 180 days (keep last 6 months).`;
+                    } else if (val === '365') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_365d || 0} logs</strong> older than 1 year (keep last 365 days).`;
+                    }
+                }
+            },
+
+            async executePurge() {
+                const selectedRadio = document.querySelector('input[name="purgePreset"]:checked');
+                if (!selectedRadio) return;
+
+                const val = selectedRadio.value;
+                let payload = {};
+
+                if (val === 'all') {
+                    if (!confirm('Are you absolutely sure you want to delete ALL audit logs for your organization? This action is permanent!')) return;
+                    payload = { mode: 'all' };
+                } else if (val === 'custom') {
+                    const startDate = document.getElementById('purgeStartDate')?.value;
+                    const endDate = document.getElementById('purgeEndDate')?.value;
+                    if (!startDate) { QCMS.toast('Please select a valid date', 'error'); return; }
+                    payload = { mode: 'custom_range', start_date: startDate, end_date: endDate };
+                } else {
+                    const days = parseInt(val, 10);
+                    if (!confirm(`Are you sure you want to purge audit logs older than ${days} days?`)) return;
+                    payload = { mode: 'older_than_days', days: days };
+                }
+
+                const btnExecute = document.getElementById('btnExecutePurge');
+                if (btnExecute) { btnExecute.disabled = true; btnExecute.textContent = 'Purging…'; }
+
+                try {
+                    const res = await api.post('/admin/audit/purge', payload);
+                    QCMS.toast(res.message, 'success');
+                    
+                    const modalEl = document.getElementById('purgeAuditLogsModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
+                    await this.loadLogs();
+                } catch(e) {
+                    QCMS.toast(e.message || 'Error purging audit logs', 'error');
+                } finally {
+                    if (btnExecute) { btnExecute.disabled = false; btnExecute.textContent = 'Confirm & Purge'; }
+                }
+            },
+
+            async saveRetentionPolicy() {
+                const select = document.getElementById('autoRetentionSelect');
+                if (!select) return;
+                const retentionDays = parseInt(select.value, 10);
+
+                try {
+                    const res = await api.post('/admin/audit/retention-policy', { retention_days: retentionDays });
+                    QCMS.toast(res.message, 'success');
+                } catch(e) {
+                    QCMS.toast('Error updating retention policy', 'error');
+                }
             }
         };
 
         document.addEventListener('DOMContentLoaded', () => Audit.init());
     </script>
+
+    <!-- ── AUDIT LOG PURGE & RETENTION MODAL ── -->
+    <div class="modal fade" id="purgeAuditLogsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-panel border-0 shadow-2xl" style="border-radius:16px; overflow:hidden;">
+                <div class="modal-header border-bottom p-4" style="background: rgba(239, 68, 68, 0.05);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-circle">
+                            <i data-lucide="trash-2" style="width:24px;height:24px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-main mb-0">Audit Log Storage & Purge Management</h5>
+                            <p class="text-xs text-muted mb-0">Manage organization audit log database retention and clean up legacy logs.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body p-4">
+                    <!-- Storage Info Alert -->
+                    <div class="p-3 rounded-3 mb-4 border d-flex align-items-center justify-content-between flex-wrap gap-3" style="background: var(--ds-surface, #fff);">
+                        <div>
+                            <div class="text-xs text-muted fw-semibold uppercase tracking-wider">Total Organization Logs</div>
+                            <div class="h4 fw-bold mb-0 text-main" id="purgeModalLogCount">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted fw-semibold uppercase tracking-wider">Estimated DB Space Used</div>
+                            <div class="h4 fw-bold mb-0 text-primary" id="purgeModalStorageSize">—</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted fw-semibold uppercase tracking-wider">Oldest Record Date</div>
+                            <div class="text-sm fw-semibold text-main" id="purgeModalOldestDate">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Selector Tabs -->
+                    <ul class="nav nav-pills nav-fill mb-4 p-1 bg-light rounded-3 border" id="purgeTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active fw-bold text-xs py-2" id="tab-purge-now" data-bs-toggle="tab" data-bs-target="#panel-purge-now" type="button"><i data-lucide="scissors" style="width:14px;height:14px;" class="me-1"></i> Purge Logs Now</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link fw-bold text-xs py-2" id="tab-auto-retention" data-bs-toggle="tab" data-bs-target="#panel-auto-retention" type="button"><i data-lucide="settings" style="width:14px;height:14px;" class="me-1"></i> Auto-Retention Policy</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="purgeTabContent">
+                        <!-- Panel 1: Purge Now -->
+                        <div class="tab-pane fade show active" id="panel-purge-now" role="tabpanel">
+                            <label class="ds-label fw-bold mb-2">Select Retention Horizon (Logs to Keep):</label>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="30" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 1 Month</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 30 days (<span id="cnt-30d">0</span> logs)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="60" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 2 Months</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 60 days (<span id="cnt-60d">0</span> logs)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="90" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 3 Months</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 90 days (<span id="cnt-90d">0</span> logs)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="180" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 6 Months</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 180 days (<span id="cnt-180d">0</span> logs)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="365" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 1 Year</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 365 days (<span id="cnt-365d">0</span> logs)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="custom" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Custom Date Range</div>
+                                            <div class="text-xxs text-muted">Specify custom start & end cutoff dates</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-12">
+                                    <label class="p-3 border border-danger border-opacity-25 bg-danger bg-opacity-10 rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="all" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm text-danger">Delete All Audit Logs</div>
+                                            <div class="text-xxs text-muted">Purge 100% of historical activity logs for this organization</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Custom Date Range Picker Container -->
+                            <div id="customDateRangeBox" class="row g-2 mb-3 d-none p-3 border rounded-3 bg-light">
+                                <div class="col-md-6">
+                                    <label class="ds-label text-xs">Delete Logs Before / From Date</label>
+                                    <input type="date" class="ds-input" id="purgeStartDate" onchange="Audit.updatePurgePreview()">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="ds-label text-xs">To Date (Optional)</label>
+                                    <input type="date" class="ds-input" id="purgeEndDate" onchange="Audit.updatePurgePreview()">
+                                </div>
+                            </div>
+
+                            <!-- Preview Impact Box -->
+                            <div class="alert alert-warning d-flex align-items-center justify-content-between m-0" id="purgePreviewBox">
+                                <div class="text-xs">
+                                    <i data-lucide="alert-triangle" style="width:14px;height:14px;" class="me-1"></i>
+                                    <span id="purgePreviewText">Select a retention horizon option above to preview deletion.</span>
+                                </div>
+                                <button type="button" class="ds-btn ds-btn-danger ds-btn-sm text-nowrap" id="btnExecutePurge" onclick="Audit.executePurge()" disabled>
+                                    <i data-lucide="trash-2" style="width:12px;height:12px;" class="me-1"></i> Confirm & Purge
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Panel 2: Auto-Retention Policy -->
+                        <div class="tab-pane fade" id="panel-auto-retention" role="tabpanel">
+                            <div class="p-3 rounded-3 border mb-3" style="background: rgba(99, 102, 241, 0.04);">
+                                <h6 class="fw-bold text-main mb-1">Automatic Storage Retention Policy</h6>
+                                <p class="text-xs text-muted mb-3">By default, the platform does NOT automatically delete audit logs and keeps all logs indefinitely. You can set an automated policy below if desired.</p>
+                                
+                                <div class="ds-field mb-3">
+                                    <label class="ds-label fw-bold">Automated Retention Threshold:</label>
+                                    <select class="ds-input" id="autoRetentionSelect">
+                                        <option value="0" selected>Never Auto-Delete (Keep All Logs Indefinitely - Default)</option>
+                                        <option value="30">Auto-Purge Logs Older Than 1 Month (30 Days)</option>
+                                        <option value="60">Auto-Purge Logs Older Than 2 Months (60 Days)</option>
+                                        <option value="90">Auto-Purge Logs Older Than 3 Months (90 Days)</option>
+                                        <option value="180">Auto-Purge Logs Older Than 6 Months (180 Days)</option>
+                                        <option value="365">Auto-Purge Logs Older Than 1 Year (365 Days)</option>
+                                    </select>
+                                </div>
+
+                                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="Audit.saveRetentionPolicy()">
+                                    <i data-lucide="save" style="width:12px;height:12px;" class="me-1"></i> Save Retention Policy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-top p-3 bg-light">
+                    <button type="button" class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -1793,7 +1793,7 @@ const SubMgr = {
 
     async _openPlanChangeModal(id, title) {
         try {
-            const [subRes, plansRes] = await Promise.all([this.get(`/${id}`), this.get('/plans')]);
+            const [subRes, plansRes] = await Promise.all([this.get(`/${id}`), this.get(`/plans?sub_id=${id}&filter_by_storage=true`)]);
             this.planChangeSub = subRes.data;
             this.planChangeSelected = null;
             document.getElementById('planChangeTitle').textContent = title;

@@ -445,10 +445,15 @@
                                                     <span class="text-xs ds-text-secondary" data-i18n="settings.billing.active_plan">ACTIVE PLAN</span>
                                                     <div class="h-stack gap-2 mt-1">
                                                         <h3 class="mb-0 fw-bold ds-text-main" id="display_plan">Professional</h3>
-                                                        <span class="badge bg-success-subtle text-success border border-success-subtle">ACTIVE</span>
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle" id="display_plan_badge">ACTIVE</span>
                                                     </div>
                                                 </div>
-                                                <button class="ds-btn ds-btn-outline ds-btn-sm" onclick="openCheckoutModal()" data-i18n="settings.billing.change_plan">Change Plan</button>
+                                                <div class="d-flex gap-2 align-items-center">
+                                                    <button class="ds-btn ds-btn-primary ds-btn-sm" id="btnExtendTrial" style="display:none;" onclick="openExtendTrialModal()">
+                                                        <i data-lucide="clock" style="width:14px;height:14px;" class="me-1"></i> Extend Trial Plan
+                                                    </button>
+                                                    <button class="ds-btn ds-btn-outline ds-btn-sm" onclick="openCheckoutModal()" data-i18n="settings.billing.change_plan">Change Plan</button>
+                                                </div>
                                             </div>
                                             
                                             <div class="usage-stats v-stack gap-4">
@@ -1237,18 +1242,51 @@ console.log(data);
 
                         <!-- Audit Log Section -->
                         <div class="settings-pane" id="pane-audit">
-                            <div class="glass-card ds-card p-5 text-center my-3">
-                                <div class="p-3 bg-primary-subtle text-primary rounded-circle d-inline-flex mb-3">
-                                    <i data-lucide="shield-check" style="width:32px;height:32px;"></i>
-                                </div>
-                                <h5 class="fw-bold text-main mb-2" data-i18n="settings.audit.title">Enterprise Activity Audit Logs</h5>
-                                <p class="text-secondary text-sm mb-4 mx-auto" style="max-width: 520px;">
-                                    Audit logging has been centralized into the primary Enterprise Activity Audit Logs module under Administration for full security tracking, KPI analytics, risk alerts, and export capabilities.
-                                </p>
-                                <div>
-                                    <a href="/admin/audit-logs.html" class="ds-btn ds-btn-primary ds-btn-sm d-inline-flex align-items-center gap-1.5 px-4 py-2">
-                                        <i data-lucide="external-link" style="width:14px;height:14px;"></i> Open Full Audit Logs Module
+                            <div class="glass-card ds-card mb-4">
+                                <div class="ds-card-header p-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                            <i data-lucide="shield-check" style="width:22px;height:22px;" class="text-primary"></i>
+                                            Enterprise Activity Audit Logs & Storage Cleanup
+                                        </h5>
+                                        <p class="ds-text-secondary mb-0 text-sm">Manage organization audit log database retention, clear legacy logs to free storage, and view compliance activity trails.</p>
+                                    </div>
+                                    <a href="/admin/audit-logs.html" class="ds-btn ds-btn-primary ds-btn-sm d-inline-flex align-items-center gap-1.5 px-3 py-2">
+                                        <i data-lucide="external-link" style="width:14px;height:14px;"></i> Open Full Audit Logs Stream
                                     </a>
+                                </div>
+                                <div class="ds-card-body p-4">
+                                    <div class="row g-3 mb-4">
+                                        <div class="col-md-4">
+                                            <div class="p-3 border rounded-3 bg-light">
+                                                <div class="text-xs text-muted fw-semibold uppercase tracking-wider">Total Organization Logs</div>
+                                                <div class="h3 fw-bold text-main mb-0" id="settAuditCount">Loading…</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 border rounded-3 bg-light">
+                                                <div class="text-xs text-muted fw-semibold uppercase tracking-wider">Estimated DB Storage Used</div>
+                                                <div class="h3 fw-bold text-primary mb-0" id="settAuditStorage">Loading…</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 border rounded-3 bg-light">
+                                                <div class="text-xs text-muted fw-semibold uppercase tracking-wider">Current Auto-Retention Policy</div>
+                                                <div class="h6 fw-bold text-success mb-0 mt-1" id="settAuditPolicy">Indefinite (Keep All Logs)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-3 border rounded-3 bg-light mb-4">
+                                        <h6 class="fw-bold text-main mb-2"><i data-lucide="trash-2" style="width:16px;height:16px;" class="text-danger me-1"></i> Manual Storage Cleanup & Retention Ranges</h6>
+                                        <p class="text-xs text-muted mb-3">Delete older audit logs for this organization to recover database storage space. Scoped strictly to your organization.</p>
+                                        
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <a href="/admin/audit-logs.html" class="ds-btn ds-btn-danger ds-btn-sm d-inline-flex align-items-center gap-1.5">
+                                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete Audit Logs
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4914,6 +4952,15 @@ console.log(data);
                 const stats = await api.get('/admin/stats/usage');
                 const planEl = document.getElementById('display_plan');
                 if (planEl) planEl.innerText = stats.plan_name || stats.plan || 'Starter';
+
+                const planName = (stats.plan_name || stats.plan || '').toLowerCase();
+                const status = (stats.status || '').toLowerCase();
+                const isTrial = stats.is_trial || status.includes('trial') || planName.includes('trial');
+
+                const btnExtend = document.getElementById('btnExtendTrial');
+                if (btnExtend) {
+                    btnExtend.style.display = isTrial ? 'inline-flex' : 'none';
+                }
                 
                 const usage = stats.usage || { users: { current: 0, limit: 50 }, projects: { current: 0, limit: 1 } };
                 
@@ -6164,7 +6211,7 @@ ET`;
                 const plans = res?.data || (Array.isArray(res) ? res : []);
                 if (Array.isArray(plans) && plans.length > 0) {
                     loadedCheckoutPlans = plans;
-                    renderCheckoutPlanCards(plans);
+                    renderCheckoutPlanCards(plans, res?.current_storage_used_gb);
                     return;
                 }
             } catch (e) {
@@ -6177,13 +6224,22 @@ ET`;
             if (countTag) countTag.textContent = '0 Catalog Plans';
         }
 
-        function renderCheckoutPlanCards(plans) {
+        function renderCheckoutPlanCards(plans, currentStorageGb) {
             const container = document.getElementById('checkoutPlanListContainer');
             const countTag = document.getElementById('checkoutPlanCountTag');
             if (countTag) countTag.textContent = `${plans.length} Catalog ${plans.length === 1 ? 'Plan' : 'Plans'}`;
             if (!container) return;
 
-            container.innerHTML = plans.map((p, idx) => {
+            let html = '';
+            if (currentStorageGb && currentStorageGb > 0) {
+                html += `
+                <div class="p-2 mb-3 rounded bg-light border text-xs text-muted d-flex align-items-center gap-2">
+                    <i data-lucide="hard-drive" class="text-primary" style="width:14px;height:14px;"></i>
+                    <span>Showing plans supporting your organization's current data usage (≥ <strong>${currentStorageGb} GB</strong>).</span>
+                </div>`;
+            }
+
+            html += plans.map((p, idx) => {
                 const planKey = String(p.id || p.name);
                 const priceNum = parseFloat(p.base_price ?? p.price ?? 0);
                 const priceFmt = priceNum ? priceNum.toLocaleString('en-IN') : '0';
@@ -6192,7 +6248,7 @@ ET`;
                 const initialClass = idx === 0 ? 'border-primary bg-primary-subtle' : '';
 
                 return `
-                <div class="p-3 border rounded plan-card-item d-flex justify-content-between align-items-center ${initialClass}" style="cursor: pointer; transition: all 0.2s ease;" onclick="selectCheckoutPlan('${planKey}')" id="checkoutPlanCard_${planKey}">
+                <div class="p-3 border rounded plan-card-item d-flex justify-content-between align-items-center mb-2 ${initialClass}" style="cursor: pointer; transition: all 0.2s ease;" onclick="selectCheckoutPlan('${planKey}')" id="checkoutPlanCard_${planKey}">
                     <div>
                         <div class="fw-bold d-flex align-items-center gap-2 text-main">
                             ${QCMS.escapeHtml(p.name || p.plan_name)}
@@ -6208,6 +6264,9 @@ ET`;
                     </div>
                 </div>`;
             }).join('');
+
+            container.innerHTML = html;
+            if (window.lucide) lucide.createIcons();
 
             if (plans.length > 0) {
                 selectCheckoutPlan(plans[0].id || plans[0].name);
@@ -6404,7 +6463,77 @@ ET`;
             }
         }
 
+        /**
+         * Verify org has GST Number & PAN Number before any plan purchase.
+         * Shows a styled modal instead of the native browser confirm().
+         * Returns a Promise<boolean> — true = proceed, false = blocked.
+         */
+        function _checkGstPanBeforeCheckout() {
+            return new Promise(async (resolve) => {
+                try {
+                    const profile = await api.get('/admin/company-profile');
+                    const missing = [];
+                    if (!profile.gst_number || !String(profile.gst_number).trim()) missing.push({ label: 'GST Number (GSTIN)', icon: 'hash' });
+                    if (!profile.pan_number  || !String(profile.pan_number).trim())  missing.push({ label: 'PAN Number',          icon: 'credit-card' });
+
+                    if (!missing.length) { resolve(true); return; }
+
+                    // Populate missing list
+                    const listEl = document.getElementById('gstPanMissingList');
+                    if (listEl) {
+                        listEl.innerHTML = missing.map(m => `
+                            <div class="d-flex align-items-center gap-2 py-1">
+                                <div class="rounded d-flex align-items-center justify-content-center flex-shrink-0"
+                                     style="width:26px;height:26px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">
+                                    <i data-lucide="${m.icon}" style="width:13px;height:13px;color:#ef4444;"></i>
+                                </div>
+                                <span class="fw-semibold text-sm" style="font-size:13px;color:var(--ds-text-primary,#111827);">${m.label}</span>
+                                <span class="badge ms-auto" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2);font-size:10px;font-weight:600;">MISSING</span>
+                            </div>`).join('');
+                    }
+
+                    // Update subtext
+                    const subEl = document.getElementById('gstPanWarningSubtext');
+                    const names = missing.map(m => m.label).join(' and ');
+                    if (subEl) subEl.textContent = `Your ${names} ${missing.length > 1 ? 'are' : 'is'} required to purchase a plan and generate a GST invoice.`;
+
+                    // Show modal
+                    const modalEl = document.getElementById('gstPanWarningModal');
+                    const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                    if (window.lucide) lucide.createIcons();
+
+                    // Wire CTA button
+                    const goBtn = document.getElementById('gstPanGoToProfileBtn');
+                    const handler = () => {
+                        modal.hide();
+                        goBtn.removeEventListener('click', handler);
+                        // Switch to the Corporate Profile tab (data-target="profile")
+                        if (window.settingsManager && typeof settingsManager.switchTab === 'function') {
+                            settingsManager.switchTab('profile');
+                        } else {
+                            const btn = document.querySelector('.sidebar-link[data-target="profile"]');
+                            if (btn) btn.click();
+                        }
+                        setTimeout(() => {
+                            const gstField = document.getElementById('org_gst');
+                            if (gstField) { gstField.scrollIntoView({ behavior: 'smooth', block: 'center' }); gstField.focus(); }
+                        }, 450);
+                    };
+                    if (goBtn) { goBtn.removeEventListener('click', handler); goBtn.addEventListener('click', handler); }
+
+                    // Resolve false after modal is dismissed either way
+                    modalEl.addEventListener('hidden.bs.modal', () => resolve(false), { once: true });
+
+                } catch (e) {
+                    console.warn('Could not verify GST/PAN before checkout:', e);
+                    resolve(true); // Allow on API error to not block users unnecessarily
+                }
+            });
+        }
+
         async function openCheckoutModal() {
+            if (!await _checkGstPanBeforeCheckout()) return;
             selectedGateway = null;
             activeGateways = {};
             const pmContainer = document.getElementById('paymentMethodsContainer');
@@ -6603,6 +6732,178 @@ ET`;
             updatePaymentMethodDisplay();
             fetchOfflinePaymentStatus();
         });
+    </script>
+
+    <!-- GST / PAN Required Warning Modal -->
+    <div class="modal fade" id="gstPanWarningModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+            <div class="modal-content border-0 shadow-lg" style="background: var(--ds-bg-card, #ffffff); border-radius: 16px; overflow: hidden;">
+                <!-- Coloured accent top bar -->
+                <div style="height: 4px; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div>
+                <div class="modal-body p-0">
+                    <!-- Header -->
+                    <div class="d-flex align-items-start gap-3 p-4 pb-3">
+                        <div class="flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"
+                             style="width:48px;height:48px;background:rgba(245,158,11,0.1);border:1.5px solid rgba(245,158,11,0.3);">
+                            <i data-lucide="alert-triangle" style="width:24px;height:24px;color:#f59e0b;"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-1" style="font-size:16px;color:var(--ds-text-primary,#111827);">
+                                Organisation Details Required
+                            </h5>
+                            <p class="mb-0 text-muted" style="font-size:13px;" id="gstPanWarningSubtext">
+                                Your GST Number and PAN Number are needed to purchase a plan.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="px-4 pb-3">
+                        <div class="rounded-3 p-3 mb-3" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);">
+                            <p class="mb-2 text-sm fw-semibold" style="color:#92400e;font-size:13px;">
+                                <i data-lucide="file-text" style="width:14px;height:14px;display:inline;margin-right:5px;vertical-align:middle;"></i>
+                                Why is this required?
+                            </p>
+                            <p class="mb-0 text-muted" style="font-size:12.5px;line-height:1.6;">
+                                Indian regulations require your organisation's <strong>GST Number (GSTIN)</strong> and
+                                <strong>PAN Number</strong> to generate a valid tax invoice for any paid subscription.
+                                You cannot purchase or activate a plan without these details.
+                            </p>
+                        </div>
+
+                        <div class="rounded-3 p-3" style="background:var(--ds-bg-soft,#f8fafc);border:1px solid var(--ds-border,#e5e7eb);">
+                            <p class="mb-2 text-xs fw-bold text-uppercase text-muted" style="letter-spacing:.04em;">Missing Information</p>
+                            <div id="gstPanMissingList" class="d-flex flex-column gap-1">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer actions -->
+                    <div class="d-flex align-items-center justify-content-end gap-2 px-4 pb-4 pt-2 border-top" style="border-color:var(--ds-border,#e5e7eb) !important;">
+                        <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                        <button type="button" class="ds-btn ds-btn-sm fw-semibold" id="gstPanGoToProfileBtn"
+                                style="background:#f59e0b;border-color:#f59e0b;color:#fff;gap:6px;">
+                            <i data-lucide="settings" style="width:14px;height:14px;"></i>
+                            Go to Corporate Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extend Trial Modal -->
+    <div class="modal fade" id="extendTrialModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border-0 shadow-lg" style="background: var(--ds-bg-card, #ffffff);">
+                <div class="modal-header border-bottom p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="p-2 rounded-3 bg-primary-subtle text-primary">
+                            <i data-lucide="clock" style="width: 22px; height: 22px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">Extend Trial Plan</h5>
+                            <p class="text-xs text-muted mb-0" id="extendTrialSubtext">Request additional trial time for your organization</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3 p-3 rounded-3 bg-light border">
+                        <div class="d-flex align-items-center justify-content-between mb-1 text-xs text-muted">
+                            <span>EXTENSION POLICY</span>
+                            <span id="trialAutoExtBadge" class="badge bg-info-subtle text-info fw-semibold">Auto-Approved (Up to 2 Times)</span>
+                        </div>
+                        <div class="text-xs text-secondary">
+                            Organizations can auto-extend their trial <strong>2 times</strong> instantly. On the 3rd attempt, your request is submitted to Super Admin for manual review and approval.
+                        </div>
+                    </div>
+                    <form id="extendTrialForm" onsubmit="event.preventDefault(); submitTrialExtension();">
+                        <div class="mb-3">
+                            <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Reason for Extension <span class="text-danger">*</span></label>
+                            <textarea class="form-control text-sm" id="extendTrialReason" rows="3" placeholder="Please describe why your organization needs a trial extension (e.g. testing features, evaluating platform)..." required style="border-radius: 8px;"></textarea>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 pt-2">
+                            <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="ds-btn ds-btn-primary ds-btn-sm" id="btnSubmitTrialExt">
+                                <i data-lucide="send" style="width: 14px; height: 14px;" class="me-1"></i> Submit Extension Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function openExtendTrialModal() {
+            if (!await _checkGstPanBeforeCheckout()) return;
+            try {
+                const stats = await api.get('/admin/stats/usage');
+                const count = stats.trial_extension_count || 0;
+                const subtext = document.getElementById('extendTrialSubtext');
+                const badge = document.getElementById('trialAutoExtBadge');
+                if (subtext) {
+                    if (count < 2) {
+                        subtext.innerText = `Auto-extension ${count + 1} of 2 available. Instant activation.`;
+                    } else {
+                        subtext.innerText = `Auto-extensions limit reached (${count}/2 used). Requires Super Admin review.`;
+                    }
+                }
+                if (badge) {
+                    if (count < 2) {
+                        badge.className = 'badge bg-success-subtle text-success fw-semibold';
+                        badge.innerText = `Instant Auto-Approval (${count}/2 Used)`;
+                    } else {
+                        badge.className = 'badge bg-warning-subtle text-warning fw-semibold';
+                        badge.innerText = `Super Admin Review Required (${count}/2 Used)`;
+                    }
+                }
+                const reasonInput = document.getElementById('extendTrialReason');
+                if (reasonInput) reasonInput.value = '';
+                const modalEl = document.getElementById('extendTrialModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                }
+            } catch(e) {
+                console.error('Failed to open extend trial modal', e);
+            }
+        }
+
+        async function submitTrialExtension() {
+            const reasonInput = document.getElementById('extendTrialReason');
+            const reason = (reasonInput?.value || '').trim();
+            if (!reason) {
+                if (window.QCMS && QCMS.toast) QCMS.toast('Please provide a reason for the trial extension', 'warning');
+                return;
+            }
+            const btn = document.getElementById('btnSubmitTrialExt');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...'; }
+
+            try {
+                const res = await api.post('/subscription/request-trial-extension', { reason });
+                if (window.QCMS && QCMS.toast) {
+                    QCMS.toast(res.message || 'Trial extension processed', res.auto_approved ? 'success' : 'info');
+                }
+                const modalEl = document.getElementById('extendTrialModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                if (window.SettingsCenter && SettingsCenter.loadUsageStats) {
+                    SettingsCenter.loadUsageStats();
+                }
+            } catch(e) {
+                if (window.QCMS && QCMS.toast) QCMS.toast(e.message || 'Failed to submit trial extension request', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send" style="width: 14px; height: 14px;" class="me-1"></i> Submit Extension Request'; }
+                if (window.lucide) lucide.createIcons();
+            }
+        }
     </script>
     <script src="/assets/js/document-branding-manager.js"></script>
 </body>

@@ -98,12 +98,11 @@
                                 <tr>
                                     <th>Department Name</th>
                                     <th>Plant Location</th>
-                                    <th>Created At</th>
                                     <th class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="deptTableBody">
-                                <tr><td colspan="4" class="p-5 text-center text-muted">Loading departments...</td></tr>
+                                <tr><td colspan="3" class="p-5 text-center text-muted">Loading departments...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -312,7 +311,7 @@
             } catch (e) {
                 console.error(e);
                 const body = document.getElementById('deptTableBody');
-                body.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-danger">Failed to load departments.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-danger">Failed to load departments.</td></tr>`;
             }
         },
 
@@ -348,12 +347,12 @@
 
             if (!total) {
                 if (q) {
-                    body.innerHTML = `<tr><td colspan="4" class="text-center p-5 text-muted">
+                    body.innerHTML = `<tr><td colspan="3" class="text-center p-5 text-muted">
                         <i data-lucide="search-x" class="mb-3 text-slate-400" style="width: 48px; height: 48px;"></i>
                         <p class="mb-0">No results found for "${q}"</p>
                     </td></tr>`;
                 } else {
-                    body.innerHTML = `<tr><td colspan="4">${QCMS.emptyState('No Departments Found', 'Start by adding a department or change your plant filter.', 'building-2')}</td></tr>`;
+                    body.innerHTML = `<tr><td colspan="3">${QCMS.emptyState('No Departments Found', 'Start by adding a department or change your plant filter.', 'building-2')}</td></tr>`;
                 }
                 if (footer) footer.style.display = 'none';
                 if (window.lucide) lucide.createIcons();
@@ -375,7 +374,6 @@
                             <i data-lucide="factory" class="me-1" style="width:12px;height:12px;"></i> ${QCMS.escapeHtml(d.plant_name || 'Organization-Wide')}
                         </span>
                     </td>
-                    <td><span class="text-sm text-muted">${d.created_at ? QCMS.formatRelative(d.created_at) : 'Active'}</span></td>
                     <td class="text-end">
                         <div class="dropdown">
                             <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" data-bs-toggle="dropdown" data-bs-display="static">

@@ -247,12 +247,21 @@ def register_org():
         hashed_password=hashed_pw,
         role_id=admin_role.id if admin_role else None,
         status='Active',
-        is_verified=True # Already verified via OTP
+        is_verified=True # Pre-verified
     )
     db.session.add(admin_user)
     
-    # Clean up verification record
-    db.session.delete(verification)
+    # Clean up verification records if used
+    if require_email_otp:
+        verif = EmailVerification.query.filter_by(email=email).first()
+        if verif:
+            db.session.delete(verif)
+
+    if require_phone_otp:
+        phone_num = (data.get('phone') or '').strip()
+        pverif = PhoneVerification.query.filter_by(phone=phone_num).first()
+        if pverif:
+            db.session.delete(pverif)
     
     db.session.commit()
     
@@ -265,6 +274,10 @@ def register_org():
 @auth_bp.route('/request-registration-otp', methods=['POST'])
 def request_registration_otp():
     settings = get_platform_settings_safe()
+    require_email_otp = getattr(settings, 'require_email_otp', True) if settings else True
+    if not require_email_otp:
+        return jsonify({"msg": "Email OTP verification is disabled.", "require_email_otp": False}), 200
+
     if settings and not settings.registration_open:
         return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin.", "message": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
 
@@ -299,11 +312,15 @@ def request_registration_otp():
     EmailUtils.send_registration_otp(email, otp)
     
     db.session.commit()
-    return jsonify({"msg": "Verification code sent to your email."}), 200
+    return jsonify({"msg": "Verification code sent to your email.", "require_email_otp": True}), 200
 
 @auth_bp.route('/verify-registration-otp', methods=['POST'])
 def verify_registration_otp():
     settings = get_platform_settings_safe()
+    require_email_otp = getattr(settings, 'require_email_otp', True) if settings else True
+    if not require_email_otp:
+        return jsonify({"msg": "Email OTP verification is disabled. Proceeding.", "is_verified": True, "require_email_otp": False}), 200
+
     if settings and not settings.registration_open:
         return jsonify({"msg": "Self-service organization sign-up is currently disabled by the Super Admin.", "message": "Self-service organization sign-up is currently disabled by the Super Admin."}), 403
 
@@ -325,7 +342,7 @@ def verify_registration_otp():
     verification.is_verified = True
     db.session.commit()
     
-    return jsonify({"msg": "Email verified successfully. You can now proceed."}), 200
+    return jsonify({"msg": "Email verified successfully. You can now proceed.", "is_verified": True}), 200
 
 
 def dispatch_phone_otp_sms(phone, otp):
@@ -764,12 +781,17 @@ def login():
 
     # Brute-force / lockout check (enforces security_settings.max_login_attempts)
     try:
-        from app.presentation.middleware.security import is_login_locked
+        from app.presentation.middleware.security import is_login_locked, get_lockout_info
         client_ip = (request.headers.get('X-Forwarded-For', '') or '').split(',')[0].strip() or request.remote_addr or ''
-        if is_login_locked(identifier) or (client_ip and is_login_locked(client_ip)):
+        id_info  = get_lockout_info(identifier)
+        ip_info  = get_lockout_info(client_ip) if client_ip else {'is_locked': False, 'remaining_seconds': 0, 'locked_until_epoch': None}
+        if id_info['is_locked'] or ip_info['is_locked']:
+            info = id_info if id_info['is_locked'] else ip_info
             return jsonify({
-                "msg": "Account is temporarily locked due to too many failed login attempts. Please try again later.",
-                "error_code": "ACCOUNT_LOCKED"
+                "msg": "Account is temporarily locked due to too many failed login attempts.",
+                "error_code": "ACCOUNT_LOCKED",
+                "locked_until_epoch": info['locked_until_epoch'],
+                "remaining_seconds": info['remaining_seconds']
             }), 429
     except Exception:
         pass  # Never block login on middleware errors
@@ -1271,7 +1293,7 @@ def get_public_profile(user_id):
 def request_password_otp():
     user_id = int(get_jwt_identity())
     user = db.session.get(User, user_id)
-    data = request.get_json()
+    data = request.get_json() or {}
     
     current_password = data.get('current_password')
     if not current_password:
@@ -1280,6 +1302,11 @@ def request_password_otp():
     if not bcrypt.check_password_hash(user.hashed_password, current_password):
         return jsonify({"msg": "Invalid current password"}), 401
         
+    settings = get_platform_settings_safe()
+    require_email_otp = getattr(settings, 'require_email_otp', True) if settings else True
+    if not require_email_otp:
+        return jsonify({"msg": "Email OTP verification is disabled.", "require_email_otp": False}), 200
+
     # Generate 6-digit OTP
     import random
     otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
@@ -1291,31 +1318,35 @@ def request_password_otp():
     # Send OTP email
     EmailUtils.send_otp_email(user, otp)
     
-    return jsonify({"msg": "OTP sent to your email"}), 200
+    return jsonify({"msg": "OTP sent to your email", "require_email_otp": True}), 200
 
 @auth_bp.route('/change-password', methods=['PUT'])
 @jwt_required()
 def change_password():
     user_id = int(get_jwt_identity())
     user = db.session.get(User, user_id)
-    data = request.get_json()
+    data = request.get_json() or {}
     
     current_password = data.get('current_password')
     new_password = data.get('new_password')
     otp = data.get('otp')
     
-    if not current_password or not new_password or not otp:
-        return jsonify({"msg": "Current password, new password, and OTP required"}), 400
+    if not current_password or not new_password:
+        return jsonify({"msg": "Current password and new password required"}), 400
         
     if not user.check_password(current_password):
         return jsonify({"msg": "Invalid current password"}), 401
-        
-    # Verify OTP
-    if user.otp_token != otp:
-        return jsonify({"msg": "Invalid OTP"}), 400
-        
-    if user.otp_expiry < datetime.utcnow():
-        return jsonify({"msg": "OTP has expired"}), 400
+
+    settings = get_platform_settings_safe()
+    require_email_otp = getattr(settings, 'require_email_otp', True) if settings else True
+
+    if require_email_otp:
+        if not otp:
+            return jsonify({"msg": "OTP is required"}), 400
+        if user.otp_token != otp:
+            return jsonify({"msg": "Invalid OTP code"}), 400
+        if user.otp_expiry and user.otp_expiry < datetime.utcnow():
+            return jsonify({"msg": "OTP has expired"}), 400
         
     user.password = new_password
     user.is_temp_password = False
@@ -1514,8 +1545,31 @@ def handle_support_tickets():
         tickets = SupportTicket.query.filter_by(user_id=user_id).order_by(SupportTicket.created_at.desc()).all()
         output = []
         for t in tickets:
+            public_comments = []
+            for c in (t.comments or []):
+                if not c.is_internal:
+                    user_display = (c.user.username or c.user.email) if c.user else "Support Team"
+                    is_support = bool(c.user and c.user.role and c.user.role.name in ['SuperAdmin', 'Support Engineer', 'Support Manager', 'Admin'])
+                    public_comments.append({
+                        "id": c.id,
+                        "user": user_display,
+                        "is_support": is_support,
+                        "content": c.content,
+                        "created_at": c.created_at.isoformat() if c.created_at else "",
+                        "attachments": [{"file_name": a.file_name, "file_path": a.file_path, "file_size": a.file_size} for a in (c.attachments or [])]
+                    })
+
+            # Check if there is an explicit or effective resolution
+            res_val = t.resolution
+            if (not res_val or res_val.strip() == 'No resolution notes provided.') and public_comments:
+                for c in reversed(public_comments):
+                    if c["is_support"] or c["user"] != (user.username or user.email):
+                        res_val = c["content"]
+                        break
+
             output.append({
                 "id": t.id,
+                "ticket_number": t.ticket_number or f"TKT-{t.id:06d}",
                 "subject": t.subject,
                 "message": t.message,
                 "priority": t.priority,
@@ -1523,7 +1577,8 @@ def handle_support_tickets():
                 "category": t.category,
                 "created_at": t.created_at.isoformat(),
                 "resolved_at": t.resolved_at.isoformat() if t.resolved_at else None,
-                "resolution": t.resolution
+                "resolution": res_val,
+                "comments": public_comments
             })
         return jsonify({"status": "success", "data": output})
 

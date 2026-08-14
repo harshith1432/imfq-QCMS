@@ -1,6 +1,65 @@
 // Login Logic
+
+// ── Lockout countdown helpers ─────────────────────────────────────────────────
+let _lockoutTimer = null;
+
+function _startLockoutCountdown(remainingSeconds, errorMsgEl, loginBtnEl) {
+    // Clear any previous timer
+    if (_lockoutTimer) clearInterval(_lockoutTimer);
+
+    let secondsLeft = remainingSeconds;
+
+    function _fmt(s) {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    }
+
+    function _render() {
+        if (!errorMsgEl) return;
+        const span = errorMsgEl.querySelector('span');
+        const timeStr = _fmt(secondsLeft);
+        const msg = secondsLeft > 0
+            ? `Account locked due to too many failed attempts. Try again in ${timeStr}.`
+            : 'Lockout expired. You can now try signing in.';
+        if (span) span.innerHTML = msg;
+        else errorMsgEl.textContent = msg;
+        errorMsgEl.style.setProperty('display', 'flex', 'important');
+    }
+
+    // Disable the button
+    if (loginBtnEl) {
+        loginBtnEl.disabled = true;
+        loginBtnEl.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Locked</span>';
+    }
+
+    _render();
+
+    _lockoutTimer = setInterval(() => {
+        secondsLeft -= 1;
+        _render();
+        if (secondsLeft <= 0) {
+            clearInterval(_lockoutTimer);
+            _lockoutTimer = null;
+            // Re-enable the button
+            if (loginBtnEl) {
+                loginBtnEl.disabled = false;
+                loginBtnEl.innerHTML = 'Sign In';
+            }
+            // Clear the error after 2s
+            setTimeout(() => {
+                if (errorMsgEl) errorMsgEl.style.setProperty('display', 'none', 'important');
+            }, 2000);
+        }
+    }, 1000);
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    // Block submission if account is still locked (countdown active)
+    if (_lockoutTimer) return;
+
     const username = (document.getElementById('username')?.value || '').trim();
     const password = document.getElementById('password')?.value || '';
     const errorMsg = document.getElementById('errorMsg');
@@ -109,6 +168,15 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 setTimeout(() => attemptLogin(true), 15000);
                 return;
             }
+
+            // ── ACCOUNT_LOCKED: show countdown ───────────────────────────────
+            if (err.error_code === 'ACCOUNT_LOCKED' || (err.status === 429 && err.message && err.message.toLowerCase().includes('locked'))) {
+                const remaining = err.remaining_seconds || 900; // fallback 15 min
+                _startLockoutCountdown(remaining, errorMsg, loginBtn);
+                return; // Don't fall through to the generic handler
+            }
+            // ────────────────────────────────────────────────────────────────
+
             if (errorMsg) {
                 const span = errorMsg.querySelector('span');
                 const displayTxt = (err.message && err.message !== 'API Error' && err.message !== 'Request failed. Please try again.') ? err.message : 'Invalid username or password';
@@ -117,7 +185,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 errorMsg.style.setProperty('display', 'flex', 'important');
             }
         } finally {
-            if (!loginSuccess && (!isTimeout || isRetry)) {
+            if (!loginSuccess && (!isTimeout || isRetry) && !_lockoutTimer) {
                 isLoggingIn = false;
                 if (loginBtn) {
                     if (window.ActionLock) window.ActionLock.unlockButton(loginBtn);

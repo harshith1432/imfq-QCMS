@@ -1675,7 +1675,17 @@ const QCMS = {
         const input = document.getElementById('chat-input');
         const messages = document.getElementById('chat-messages');
 
-        toggle.onclick = () => chatWindow.classList.toggle('hidden');
+        toggle.onclick = () => {
+            const isOpening = chatWindow.classList.contains('hidden');
+            chatWindow.classList.toggle('hidden');
+            if (isOpening) {
+                // Automatically close Helpdesk Support widget if open
+                const helpdeskWindow = document.getElementById('helpdesk-window');
+                if (helpdeskWindow) {
+                    helpdeskWindow.classList.add('hidden');
+                }
+            }
+        };
         close.onclick = () => chatWindow.classList.add('hidden');
 
         form.onsubmit = async (e) => {
@@ -1788,8 +1798,14 @@ const QCMS = {
 
         // Toggle window visibility
         toggleBtn.onclick = () => {
+            const isOpening = helpdeskWindow.classList.contains('hidden');
             helpdeskWindow.classList.toggle('hidden');
-            if (!helpdeskWindow.classList.contains('hidden')) {
+            if (isOpening) {
+                // Automatically close Quality AI Assistant widget if open
+                const chatWindow = document.getElementById('chat-window');
+                if (chatWindow) {
+                    chatWindow.classList.add('hidden');
+                }
                 // Default to showing form when opened
                 switchTab('new');
             }
@@ -1909,49 +1925,175 @@ const QCMS = {
             };
         };
 
-        // Render ticket history
-        const renderHistory = async () => {
+        // Render ticket history (4 tickets per page)
+        let currentHistoryPage = 1;
+        const perPage = 4;
+
+        const renderHistory = async (page = 1) => {
+            contentArea.scrollTop = 0;
             contentArea.innerHTML = `<div class="text-center text-secondary py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading history...</div>`;
 
             try {
-                const token = sessionStorage.getItem('token');
+                const token = sessionStorage.getItem('token') || localStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
                 const response = await fetch('/api/auth/support/tickets', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
 
                 if (response.ok && data.status === 'success') {
-                    const tickets = data.data;
-                    if (!tickets || tickets.length === 0) {
+                    const allTickets = data.data || [];
+                    if (!allTickets || allTickets.length === 0) {
                         contentArea.innerHTML = `<div class="text-center text-secondary py-5">No support tickets submitted yet.</div>`;
                         return;
                     }
 
+                    const totalItems = allTickets.length;
+                    const totalPages = Math.ceil(totalItems / perPage) || 1;
+                    const validPage = Math.min(Math.max(1, page), totalPages);
+                    currentHistoryPage = validPage;
+
+                    const startIndex = (validPage - 1) * perPage;
+                    const pageTickets = allTickets.slice(startIndex, startIndex + perPage);
+
+                    let paginationHtml = '';
+                    if (totalPages > 1) {
+                        let pageBtns = '';
+                        for (let p = 1; p <= totalPages; p++) {
+                            const activeClass = p === validPage ? 'btn-primary' : 'btn-outline-secondary text-white';
+                            pageBtns += `<button type="button" class="btn btn-sm ${activeClass} py-0 px-2 text-xs fw-bold hd-page-btn" data-page="${p}" style="min-width:24px;height:24px;padding:0 6px;">${p}</button>`;
+                        }
+                        paginationHtml = `
+                            <div class="d-flex align-items-center justify-content-between pt-2.5 mt-3 border-top" style="border-color: rgba(255,255,255,0.08)!important;">
+                                <span class="text-xxs text-secondary">
+                                    Showing ${startIndex + 1}–${Math.min(startIndex + perPage, totalItems)} of ${totalItems}
+                                </span>
+                                <div class="d-flex align-items-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary text-white py-0 px-2 text-xs d-inline-flex align-items-center gap-1" style="height:24px;padding:0 6px;" ${validPage <= 1 ? 'disabled' : ''} id="hd-prev-btn">
+                                        <i data-lucide="chevron-left" style="width:12px;height:12px;"></i> Prev
+                                    </button>
+                                    ${pageBtns}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary text-white py-0 px-2 text-xs d-inline-flex align-items-center gap-1" style="height:24px;padding:0 6px;" ${validPage >= totalPages ? 'disabled' : ''} id="hd-next-btn">
+                                        Next <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+
                     contentArea.innerHTML = `
                         <div class="helpdesk-history-list">
-                            ${tickets.map(t => {
+                            ${pageTickets.map(t => {
                                 const createdDate = new Date(t.created_at).toLocaleDateString();
                                 const badgeHtml = this.statusBadge(t.status);
+                                const comments = t.comments || [];
+                                const hasComments = comments.length > 0;
+                                const isClosedOrResolved = ['closed', 'resolved', 'cancelled'].includes((t.status || '').toLowerCase());
+
+                                // Build comments / replies timeline
+                                let repliesHtml = '';
+                                if (hasComments) {
+                                    repliesHtml = `
+                                        <div class="mt-2.5 pt-2 border-top" style="border-color: rgba(255,255,255,0.08)!important;">
+                                            <div class="text-xxs fw-bold text-primary mb-2 d-flex align-items-center gap-1">
+                                                <i data-lucide="messages-square" style="width:12px;height:12px;"></i>
+                                                <span>Support Replies & Updates (${comments.length}):</span>
+                                            </div>
+                                            <div class="d-flex flex-column gap-2">
+                                                ${comments.map(c => {
+                                                    const isSupport = c.is_support || (c.user && !c.user.toLowerCase().includes('customer'));
+                                                    const badgeBg = isSupport 
+                                                        ? 'background: rgba(79, 142, 247, 0.15); color: #4f8ef7; border: 1px solid rgba(79, 142, 247, 0.3);' 
+                                                        : 'background: rgba(255, 255, 255, 0.08); color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.12);';
+                                                    const attHtml = (c.attachments && c.attachments.length > 0) ? `
+                                                        <div class="d-flex flex-wrap gap-1 mt-1.5 pt-1.5 border-top" style="border-color: rgba(255,255,255,0.06)!important;">
+                                                            ${c.attachments.map(a => `
+                                                                <a href="${a.file_path}" target="_blank" download class="badge text-decoration-none d-inline-flex align-items-center gap-1" style="background: rgba(255,255,255,0.08); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.15); padding: 3px 6px; font-size: 10px;">
+                                                                    <i data-lucide="paperclip" style="width:10px;height:10px;"></i>
+                                                                    <span class="text-truncate" style="max-width: 130px;">${QCMS.escapeHtml(a.file_name)}</span>
+                                                                </a>
+                                                            `).join('')}
+                                                        </div>
+                                                    ` : '';
+
+                                                    return `
+                                                        <div class="p-2 rounded" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); border-left: 3px solid ${isSupport ? '#4f8ef7' : '#94a3b8'};">
+                                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                <div class="d-flex align-items-center gap-1">
+                                                                    <span class="text-xs fw-bold text-white">${QCMS.escapeHtml(c.user)}</span>
+                                                                    <span class="badge py-0 px-1 text-xxs" style="${badgeBg}">${isSupport ? 'Support' : 'You'}</span>
+                                                                </div>
+                                                                <span class="text-xxs text-secondary">${c.created_at ? new Date(c.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : ''}</span>
+                                                            </div>
+                                                            <div class="text-xs" style="white-space: pre-wrap; word-break: break-word; color: #cbd5e1!important;">${QCMS.escapeHtml(c.content)}</div>
+                                                            ${attHtml}
+                                                        </div>
+                                                    `;
+                                                }).join('')}
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+
+                                // Build resolution section
+                                let resolutionHtml = '';
+                                const hasDistinctRes = t.resolution && t.resolution.trim() && t.resolution !== 'No resolution notes provided.' && (!hasComments || !comments.some(c => c.content === t.resolution));
+                                if (hasDistinctRes) {
+                                    resolutionHtml = `
+                                        <div class="helpdesk-resolution-box ${t.status.toLowerCase() === 'rejected' ? 'rejected' : ''} mt-2.5">
+                                            <div class="d-flex align-items-center gap-1.5 fw-bold mb-1" style="font-size: 11px;">
+                                                <i data-lucide="${t.status.toLowerCase() === 'rejected' ? 'x-circle' : 'check-circle'}" style="width:13px;height:13px;"></i>
+                                                <span>Resolution Summary:</span>
+                                            </div>
+                                            <div class="text-xs" style="white-space: pre-wrap; word-break: break-word;">${QCMS.escapeHtml(t.resolution)}</div>
+                                        </div>
+                                    `;
+                                } else if (isClosedOrResolved && !hasComments) {
+                                    resolutionHtml = `
+                                        <div class="helpdesk-resolution-box mt-2.5">
+                                            <div class="d-flex align-items-center gap-1.5 fw-bold mb-1" style="font-size: 11px;">
+                                                <i data-lucide="check-circle" style="width:13px;height:13px;"></i>
+                                                <span>Status:</span>
+                                            </div>
+                                            <div class="text-xs">This ticket has been marked as <strong>${t.status}</strong>.</div>
+                                        </div>
+                                    `;
+                                }
+
                                 return `
                                     <div class="helpdesk-history-item">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <span class="text-xs font-monospace text-secondary">#TKT-${t.id}</span>
                                             ${badgeHtml}
                                         </div>
-                                        <div class="fw-bold text-white text-sm mb-1">${t.subject}</div>
-                                        <div class="text-xs text-secondary mb-2">${createdDate} &bull; ${t.category} &bull; ${t.priority} Priority</div>
-                                        <div class="text-xs text-muted" style="white-space: pre-wrap; word-break: break-word;">${t.message}</div>
-                                        ${t.resolution ? `
-                                            <div class="helpdesk-resolution-box ${t.status.toLowerCase() === 'rejected' ? 'rejected' : ''}">
-                                                <strong>Resolution Summary:</strong>
-                                                <div class="mt-1">${t.resolution}</div>
-                                            </div>
-                                        ` : ''}
+                                        <div class="fw-bold text-white text-sm mb-1">${QCMS.escapeHtml(t.subject)}</div>
+                                        <div class="text-xs text-secondary mb-2">${createdDate} &bull; ${QCMS.escapeHtml(t.category)} &bull; ${QCMS.escapeHtml(t.priority)} Priority</div>
+                                        <div class="p-2 rounded mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+                                            <div class="text-xxs text-secondary mb-1 text-uppercase fw-bold" style="letter-spacing:.04em;">Your Message:</div>
+                                            <div class="text-xs text-muted" style="white-space: pre-wrap; word-break: break-word;">${QCMS.escapeHtml(t.message)}</div>
+                                        </div>
+                                        ${repliesHtml}
+                                        ${resolutionHtml}
                                     </div>
                                 `;
                             }).join('')}
+                            ${paginationHtml}
                         </div>
                     `;
+                    if (window.lucide) lucide.createIcons();
+
+                    // Bind pagination handlers
+                    const prevBtn = document.getElementById('hd-prev-btn');
+                    if (prevBtn) prevBtn.onclick = () => renderHistory(validPage - 1);
+
+                    const nextBtn = document.getElementById('hd-next-btn');
+                    if (nextBtn) nextBtn.onclick = () => renderHistory(validPage + 1);
+
+                    document.querySelectorAll('.hd-page-btn').forEach(btn => {
+                        btn.onclick = () => {
+                            const p = parseInt(btn.getAttribute('data-page'), 10);
+                            if (p) renderHistory(p);
+                        };
+                    });
                 } else {
                     contentArea.innerHTML = `<div class="text-center text-danger py-4">Failed to load history.</div>`;
                 }

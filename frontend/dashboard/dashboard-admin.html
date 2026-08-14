@@ -76,44 +76,7 @@
                     </div>
                 </div>
 
-                <!-- Projects Table Row -->
-                <div class="ds-card fade-in section-spacing">
-                    <div class="ds-card-header">
-                        <h5 class="card-title" data-i18n="dashboards.admin.pipeline_title">Active Projects</h5>
-                        <div class="d-flex gap-2">
-                            <select class="ds-input ds-btn-sm" id="statusFilter" onchange="adminDash.filterProjects()"
-                                style="width: auto;">
-                                <option value="" data-i18n="dashboards.common.all_status">All Status</option>
-                                <option value="Active" data-i18n="common.status_list.active">Active</option>
-                                <option value="Pending" data-i18n="common.status_list.pending">Pending</option>
-                                <option value="Pending Closure" data-i18n="common.status_list.pending_closure">Pending Closure</option>
-                                <option value="Completed" data-i18n="common.status_list.completed">Completed</option>
-                                <option value="Closed" data-i18n="common.status_list.closed">Closed</option>
-                            </select>
 
-                        </div>
-                    </div>
-                    <div class="ds-card-body p-0">
-                        <div class="table-responsive">
-                            <table class="ds-table">
-                                <thead>
-                                    <tr>
-                                        <th data-i18n="dashboards.admin.project_identity">Project Identity</th>
-                                        <th data-i18n="dashboards.admin.current_stage">Current Stage</th>
-                                        <th data-i18n="dashboards.admin.methodology_status">Methodology Status</th>
-                                        <th class="text-end" data-i18n="dashboards.common.command">Command</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="projectsBody">
-                                    <tr>
-                                        <td colspan="4" class="p-4 text-center text-muted" data-i18n="dashboards.admin.loading_pipeline">Loading pipeline data...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="projectsPagination"></div>
-                    </div>
-                </div>
 
                 <!-- Users Table Row -->
                 <div class="ds-card fade-in section-spacing">
@@ -121,10 +84,6 @@
                         <h5 class="card-title" data-i18n="dashboards.admin.stakeholders_title">Enterprise Stakeholders</h5>
                         <div class="d-flex gap-2">
                             <a href="/admin/users.html" class="ds-btn ds-btn-ghost ds-btn-sm" data-i18n="dashboards.admin.manage_users">Manage Users</a>
-                            <button class="ds-btn ds-btn-primary ds-btn-sm" data-roles="Admin" onclick="adminDash.openAddUserModal()">
-                                <i data-lucide="user-plus" style="width:14px; height:14px;"></i>
-                                <span data-i18n="dashboards.admin.provision_access">Provision Access</span>
-                            </button>
                         </div>
                     </div>
                     <div class="ds-card-body p-0">
@@ -590,6 +549,45 @@
                 </div>
             </div>
         </div>
+    <!-- Plant Locations Directory Modal -->
+    <div class="modal fade" id="plantDirectoryModal" tabindex="-1" aria-hidden="true" style="z-index: 1065 !important;">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content glass-card" style="border: 1px solid var(--ds-border-color); background: var(--ds-bg-card); box-shadow: var(--ds-shadow-xl);">
+                <div class="modal-header border-bottom pb-3" style="border-color: var(--ds-border-color) !important;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2.5 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; background: rgba(245, 158, 11, 0.12); color: #f59e0b; flex-shrink: 0;">
+                            <i data-lucide="building-2" style="width: 22px; height: 22px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0 text-main">Plant Locations & Department Directory</h5>
+                            <p class="text-xs text-muted mb-0">Overview of plants, departments, running vs closed projects, and member counts by location.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4" style="background: rgba(var(--ds-bg-card-rgb), 0.5);">
+                    <!-- Summary KPI Bar -->
+                    <div id="plantModalSummaryBar" style="display: grid !important; grid-template-columns: repeat(5, 1fr) !important; gap: 10px !important; margin-bottom: 20px !important; width: 100% !important;">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <!-- Plant Locations Accordion/Cards Container -->
+                    <div id="plantDirectoryContainer" class="d-flex flex-column gap-4">
+                        <div class="p-5 text-center text-muted">
+                            <span class="spinner-border spinner-border-sm me-2"></span> Loading plant locations data...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top pt-3" style="border-color: var(--ds-border-color) !important;">
+                    <a href="/admin/plants.html" class="ds-btn ds-btn-outline ds-btn-sm me-auto">
+                        <i data-lucide="external-link" style="width: 14px; height: 14px;"></i> Manage Plant Locations
+                    </a>
+                    <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -768,8 +766,10 @@
             },
 
             showInitialSkeletons() {
-                document.getElementById('projectsBody').innerHTML = `<tr><td colspan="4">${QCMS.tableSkeleton(5)}</td></tr>`;
-                document.getElementById('usersBody').innerHTML = `<tr><td colspan="5">${QCMS.tableSkeleton(3)}</td></tr>`;
+                const pb = document.getElementById('projectsBody');
+                if (pb) pb.innerHTML = `<tr><td colspan="4">${QCMS.tableSkeleton(5)}</td></tr>`;
+                const ub = document.getElementById('usersBody');
+                if (ub) ub.innerHTML = `<tr><td colspan="5">${QCMS.tableSkeleton(3)}</td></tr>`;
             },
 
             async loadStats() {
@@ -782,8 +782,10 @@
                         grid.innerHTML =
                             QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'folder-kanban', 'blue', null) +
                             QCMS.kpiCard('Team Stakeholders', stats.total_members || 0, 'users', 'purple', null, '/admin/users.html') +
-                            QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green', null, '/analytics/analytics.html');
-                        // Wire Active Pipeline card to scroll + filter
+                            QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green', null, '/analytics/analytics.html') +
+                            QCMS.kpiCard('Total Plants', stats.total_plants || 0, 'building-2', 'amber', null);
+
+                        // Wire Active Pipeline card & Plant Locations card
                         const kpiCols = document.querySelectorAll('#kpiGrid > div, #kpiGrid > a');
                         if (kpiCols[0]) {
                             kpiCols[0].style.cursor = 'pointer';
@@ -793,10 +795,188 @@
                                 document.querySelector('.ds-card.fade-in.section-spacing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             });
                         }
+                        if (kpiCols[3]) {
+                            kpiCols[3].style.cursor = 'pointer';
+                            kpiCols[3].addEventListener('click', (e) => {
+                                e.preventDefault();
+                                adminDash.openPlantDirectoryModal();
+                            });
+                        }
                     }
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error('Stats load failed', e);
+                }
+            },
+
+            async openPlantDirectoryModal() {
+                let modalEl = document.getElementById('plantDirectoryModal');
+                if (!modalEl) return;
+                if (modalEl.parentNode !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                let modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+
+                const summaryBar = document.getElementById('plantModalSummaryBar');
+                const container = document.getElementById('plantDirectoryContainer');
+                if (container) {
+                    container.innerHTML = `<div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading plant directory & department metrics...</div>`;
+                }
+
+                try {
+                    const res = await api.get('/admin/plants/directory-breakdown');
+                    const summary = res.summary || {};
+                    const plants = res.plants || [];
+
+                    if (summaryBar) {
+                        summaryBar.style.display = 'grid';
+                        summaryBar.style.gridTemplateColumns = 'repeat(5, 1fr)';
+                        summaryBar.style.gap = '10px';
+                        summaryBar.innerHTML = `
+                            <div class="p-2.5 rounded-3 border bg-card text-center" style="border-color: var(--ds-border-color) !important;">
+                                <div class="text-xxs text-muted text-uppercase fw-bold mb-1" style="font-size:10px; letter-spacing:0.4px;">Total Plants</div>
+                                <div class="fs-5 fw-bold text-warning">${summary.total_plants || 0}</div>
+                            </div>
+                            <div class="p-2.5 rounded-3 border bg-card text-center" style="border-color: var(--ds-border-color) !important;">
+                                <div class="text-xxs text-muted text-uppercase fw-bold mb-1" style="font-size:10px; letter-spacing:0.4px;">Departments</div>
+                                <div class="fs-5 fw-bold text-info">${summary.total_departments || 0}</div>
+                            </div>
+                            <div class="p-2.5 rounded-3 border bg-card text-center" style="border-color: var(--ds-border-color) !important;">
+                                <div class="text-xxs text-muted text-uppercase fw-bold mb-1" style="font-size:10px; letter-spacing:0.4px;">Running Projects</div>
+                                <div class="fs-5 fw-bold text-primary">${summary.running_projects || 0}</div>
+                            </div>
+                            <div class="p-2.5 rounded-3 border bg-card text-center" style="border-color: var(--ds-border-color) !important;">
+                                <div class="text-xxs text-muted text-uppercase fw-bold mb-1" style="font-size:10px; letter-spacing:0.4px;">Closed Projects</div>
+                                <div class="fs-5 fw-bold text-success">${summary.closed_projects || 0}</div>
+                            </div>
+                            <div class="p-2.5 rounded-3 border bg-card text-center" style="border-color: var(--ds-border-color) !important;">
+                                <div class="text-xxs text-muted text-uppercase fw-bold mb-1" style="font-size:10px; letter-spacing:0.4px;">Total Members</div>
+                                <div class="fs-5 fw-bold text-main">${summary.total_members || 0}</div>
+                            </div>
+                        `;
+                    }
+
+                    if (!plants || plants.length === 0) {
+                        container.innerHTML = `
+                            <div class="p-5 text-center text-muted border rounded-3" style="border-color: var(--ds-border-color) !important;">
+                                <i data-lucide="building" class="mb-2 text-secondary" style="width:32px; height:32px;"></i>
+                                <h6>No Plant Locations Found</h6>
+                                <p class="text-xs mb-3">You can create and manage plant locations in Plant Locations Settings.</p>
+                                <a href="/admin/plants.html" class="ds-btn ds-btn-primary ds-btn-sm">Add Plant Location</a>
+                            </div>
+                        `;
+                        if (window.lucide) lucide.createIcons();
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        <div class="table-responsive border rounded-3 overflow-hidden" style="border-color: var(--ds-border-color) !important; background: var(--ds-bg-card);">
+                            <table class="ds-table align-middle mb-0">
+                                <thead>
+                                    <tr style="background: rgba(var(--ds-bg-hover-rgb), 0.25);">
+                                        <th style="width: 32%;">PLANT LOCATION</th>
+                                        <th class="text-center" style="width: 14%;">DEPARTMENTS</th>
+                                        <th class="text-center" style="width: 15%;">OPENED PROJECTS</th>
+                                        <th class="text-center" style="width: 15%;">CLOSED PROJECTS</th>
+                                        <th class="text-center" style="width: 14%;">TOTAL MEMBERS</th>
+                                        <th class="text-end pe-4" style="width: 10%;">DETAILS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${plants.map((p, idx) => {
+                                        const depts = p.departments || [];
+                                        const collapseId = `plantRowCollapse_${p.id || idx}`;
+                                        return `
+                                            <!-- Plant Summary Row -->
+                                            <tr class="user-select-none" 
+                                                style="cursor: pointer;"
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#${collapseId}" 
+                                                aria-expanded="false" 
+                                                aria-controls="${collapseId}">
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-3">
+                                                        <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; width: 36px; height: 36px; flex-shrink: 0;">
+                                                            <i data-lucide="building" style="width:18px; height:18px;"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-bold text-main" style="font-size: 14px;">${p.name}</div>
+                                                            <div class="text-xxs text-muted d-flex align-items-center gap-1.5 mt-0.5">
+                                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-1.5 py-0.25" style="font-size:9.5px;">${p.code || 'PLANT'}</span>
+                                                                <span><i data-lucide="map-pin" style="width:11px; height:11px; vertical-align:-1px;"></i> ${p.location}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center fw-bold text-info fs-6">
+                                                    ${p.total_departments}
+                                                </td>
+                                                <td class="text-center fw-bold text-warning fs-6">
+                                                    ${p.running_projects}
+                                                </td>
+                                                <td class="text-center fw-bold text-success fs-6">
+                                                    ${p.closed_projects}
+                                                </td>
+                                                <td class="text-center fw-bold text-primary fs-6">
+                                                    ${p.total_members}
+                                                </td>
+                                                <td class="text-end pe-4 text-muted">
+                                                    <i data-lucide="chevron-down" style="width:18px; height:18px;"></i>
+                                                </td>
+                                            </tr>
+
+                                            <!-- Collapsible Department Breakdown Row -->
+                                            <tr>
+                                                <td colspan="6" class="p-0 border-0">
+                                                    <div id="${collapseId}" class="collapse">
+                                                        <div class="p-3" style="background: rgba(var(--ds-bg-hover-rgb), 0.08); border-bottom: 1px solid var(--ds-border-color);">
+                                                            <div class="text-xs fw-bold text-uppercase text-secondary mb-2 px-2 d-flex align-items-center gap-1">
+                                                                <i data-lucide="layers" style="width:13px; height:13px;"></i> Departments Breakdown for ${p.name}
+                                                            </div>
+                                                            ${depts.length === 0 ? `
+                                                                <div class="p-3 text-center text-muted text-xs">No departments registered under ${p.name}.</div>
+                                                            ` : `
+                                                                <div class="table-responsive rounded-2 border" style="border-color: var(--ds-border-color) !important; background: var(--ds-bg-card);">
+                                                                    <table class="ds-table align-middle mb-0 text-xs">
+                                                                        <thead>
+                                                                            <tr style="background: rgba(var(--ds-bg-hover-rgb), 0.15);">
+                                                                                <th style="width: 40%;">Department Name</th>
+                                                                                <th class="text-center" style="width: 20%;">Running Projects</th>
+                                                                                <th class="text-center" style="width: 20%;">Closed Projects</th>
+                                                                                <th class="text-center" style="width: 20%;">Total Members</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            ${depts.map(d => `
+                                                                                <tr>
+                                                                                    <td class="fw-semibold text-main">${d.name}</td>
+                                                                                    <td class="text-center fw-bold text-warning">${d.running_projects}</td>
+                                                                                    <td class="text-center fw-bold text-success">${d.closed_projects}</td>
+                                                                                    <td class="text-center fw-bold text-primary">${d.total_members}</td>
+                                                                                </tr>
+                                                                            `).join('')}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            `}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    console.error('[QCMS] Plant directory modal load failed:', e);
+                    if (container) {
+                        container.innerHTML = `<div class="p-4 text-center text-danger">Failed to load plant locations directory data. Please try again.</div>`;
+                    }
                 }
             },
 
@@ -839,17 +1019,17 @@
                         this.totalPages = res.total_pages || Math.ceil(this.totalProjects / 5) || 1;
 
                         this.renderProjects(items);
-                        if (res.all_projects_summary) {
-                            this.renderCategoryChart(res.all_projects_summary);
-                            this.renderStageChart(res.all_projects_summary);
-                        }
+                        const chartData = (res.all_projects_summary && res.all_projects_summary.length > 0) ? res.all_projects_summary : items;
+                        this.renderCategoryChart(chartData);
+                        this.renderStageChart(chartData);
                         if (res.pending_closures) {
                             this.renderClosureAlerts(res.pending_closures);
                         }
                     }
                 } catch (e) {
                     console.error('[QCMS] Failed to load projects:', e);
-                    document.getElementById('projectsBody').innerHTML = `<tr><td colspan="4">${QCMS.emptyState('Load Error', 'Unable to load active projects.', 'alert-circle')}</td></tr>`;
+                    const pb = document.getElementById('projectsBody');
+                    if (pb) pb.innerHTML = `<tr><td colspan="4">${QCMS.emptyState('Load Error', 'Unable to load active projects.', 'alert-circle')}</td></tr>`;
                 }
             },
 
@@ -901,6 +1081,7 @@
             renderProjects(items = []) {
                 const body = document.getElementById('projectsBody');
                 const paginationContainer = document.getElementById('projectsPagination');
+                if (!body) return;
 
                 if (!items.length) {
                     body.innerHTML = `<tr><td colspan="4">${QCMS.emptyState('No Projects Found', 'Try searching for something else or adjusting your filters.', 'search')}</td></tr>`;

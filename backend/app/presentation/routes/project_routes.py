@@ -56,10 +56,11 @@ def list_departments():
         p_ids = get_plant_ids_by_name(user.org_id, plant_name)
         if p_ids:
             q = q.filter(db.or_(Department.plant_id.in_(p_ids), Department.plant_id.is_(None)))
+        else:
+            from app.infrastructure.database.models.models import Plant
+            q = q.filter(Department.plant.has(Plant.name.ilike(f"%{plant_name}%")))
 
     depts = q.order_by(Department.name).all()
-    if not depts:
-        depts = Department.query.filter_by(org_id=user.org_id).order_by(Department.name).all()
     return jsonify([{"id": d.id, "name": d.name} for d in depts]), 200
 
 # ── Shared utility: plants list (accessible by all authenticated users) ──

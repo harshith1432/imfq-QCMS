@@ -282,23 +282,23 @@
     </header>
 
 
-    <section class="py-5"
+    <section class="py-5" id="lp-ticker-section"
         style="background: rgba(var(--ds-primary-rgb), 0.02); border-top: 1px solid var(--ds-border-color); border-bottom: 1px solid var(--ds-border-color);">
         <div class="container">
             <div class="row align-items-center justify-content-center text-center g-4">
-                <div class="col-6 col-md-2 opacity-50">
+                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-1-col">
                     <h5 class="fw-bold mb-0" id="lp-ticker-1">99.9% Uptime</h5>
                 </div>
-                <div class="col-6 col-md-2 opacity-50">
+                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-2-col">
                     <h5 class="fw-bold mb-0" id="lp-ticker-2">ISO 9001 Ready</h5>
                 </div>
-                <div class="col-6 col-md-2 opacity-50">
+                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-3-col">
                     <h5 class="fw-bold mb-0" id="lp-ticker-3">Enterprise Grade</h5>
                 </div>
-                <div class="col-6 col-md-2 opacity-50">
+                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-4-col">
                     <h5 class="fw-bold mb-0" id="lp-ticker-4">Audit Secure</h5>
                 </div>
-                <div class="col-6 col-md-2 opacity-50">
+                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-5-col">
                     <h5 class="fw-bold mb-0" id="lp-ticker-5">24/7 Support</h5>
                 </div>
             </div>
@@ -306,28 +306,28 @@
     </section>
 
     <!-- Value Pillars Section -->
-    <section class="py-5 border-bottom bg-white">
+    <section class="py-5 border-bottom bg-white" id="lp-badges-section">
         <div class="container">
             <div class="row align-items-center justify-content-center text-center g-5">
-                <div class="col-md-3">
+                <div class="col-md-3" id="lp-badge-1-col">
                     <div class="v-stack gap-2 opacity-60">
                         <i id="lp-badge-1-icon" data-lucide="award" class="mx-auto" style="width:32px; height:32px;"></i>
                         <h6 class="fw-bold mb-0" id="lp-badge-1-label">ISO 9001 Compliant</h6>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3" id="lp-badge-2-col">
                     <div class="v-stack gap-2 opacity-60">
                         <i id="lp-badge-2-icon" data-lucide="shield-check" class="mx-auto" style="width:32px; height:32px;"></i>
                         <h6 class="fw-bold mb-0" id="lp-badge-2-label">Bank-Grade Security</h6>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3" id="lp-badge-3-col">
                     <div class="v-stack gap-2 opacity-60">
                         <i id="lp-badge-3-icon" data-lucide="clock" class="mx-auto" style="width:32px; height:32px;"></i>
                         <h6 class="fw-bold mb-0" id="lp-badge-3-label">99.9% Platform Uptime</h6>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3" id="lp-badge-4-col">
                     <div class="v-stack gap-2 opacity-60">
                         <i id="lp-badge-4-icon" data-lucide="headset" class="mx-auto" style="width:32px; height:32px;"></i>
                         <h6 class="fw-bold mb-0" id="lp-badge-4-label">24/7 Priority Support</h6>
@@ -784,133 +784,195 @@
                         if(cms.cta_secondary_url) { const el = document.getElementById('lp-cta-secondary'); if(el) el.href = cms.cta_secondary_url; }
 
                         // Hero Stats
-                        if(cms.hero_stat_1_val) _txt('lp-hero-stat1-val', cms.hero_stat_1_val);
-                        if(cms.hero_stat_1_lbl) _txt('lp-hero-stat1-lbl', cms.hero_stat_1_lbl);
-                        if(cms.hero_stat_2_val) _txt('lp-hero-stat2-val', cms.hero_stat_2_val);
-                        if(cms.hero_stat_2_lbl) _txt('lp-hero-stat2-lbl', cms.hero_stat_2_lbl);
-                        if(cms.hero_stat_3_val) _txt('lp-hero-stat3-val', cms.hero_stat_3_val);
-                        if(cms.hero_stat_3_lbl) _txt('lp-hero-stat3-lbl', cms.hero_stat_3_lbl);
-
-                        // 1b. Trust Ticker Strip
-                        if(cms.ticker_1) _txt('lp-ticker-1', cms.ticker_1);
-                        if(cms.ticker_2) _txt('lp-ticker-2', cms.ticker_2);
-                        if(cms.ticker_3) _txt('lp-ticker-3', cms.ticker_3);
-                        if(cms.ticker_4) _txt('lp-ticker-4', cms.ticker_4);
-                        if(cms.ticker_5) _txt('lp-ticker-5', cms.ticker_5);
-
-                        // 1c. Trust / Credential Badges
-                        [1,2,3,4].forEach(n => {
-                            const iconKey   = `badge_${n}_icon`;
-                            const labelKey  = `badge_${n}_label`;
-                            const iconEl    = document.getElementById(`lp-badge-${n}-icon`);
-                            const labelEl   = document.getElementById(`lp-badge-${n}-label`);
-                            if(labelEl && cms[labelKey]) labelEl.textContent = cms[labelKey];
-                            if(iconEl  && cms[iconKey]) {
-                                // Swap the lucide icon by replacing data-lucide attribute and re-rendering
-                                iconEl.setAttribute('data-lucide', cms[iconKey]);
-                                iconEl.innerHTML = '';
-                            }
+                        [1, 2, 3].forEach(n => {
+                            const valKey = `hero_stat_${n}_val`;
+                            const lblKey = `hero_stat_${n}_lbl`;
+                            const val = (cms[valKey] !== undefined) ? cms[valKey] : '';
+                            const lbl = (cms[lblKey] !== undefined) ? cms[lblKey] : '';
+                            _txt(`lp-hero-stat${n}-val`, val);
+                            _txt(`lp-hero-stat${n}-lbl`, lbl);
                         });
 
+                        // 1b. Trust Ticker Strip
+                        let hasAnyTicker = false;
+                        [1, 2, 3, 4, 5].forEach(n => {
+                            const val = (cms[`ticker_${n}`] !== undefined) ? String(cms[`ticker_${n}`]).trim() : '';
+                            const txtEl = document.getElementById(`lp-ticker-${n}`);
+                            const colEl = document.getElementById(`lp-ticker-${n}-col`);
+                            if (txtEl) txtEl.textContent = val;
+                            if (val) {
+                                hasAnyTicker = true;
+                                if (colEl) colEl.style.display = '';
+                            } else {
+                                if (colEl) colEl.style.display = 'none';
+                            }
+                        });
+                        const tickerSec = document.getElementById('lp-ticker-section');
+                        if (tickerSec) {
+                            tickerSec.style.display = hasAnyTicker ? '' : 'none';
+                        }
+
+                        // 1c. Trust / Credential Badges
+                        let hasAnyBadge = false;
+                        [1, 2, 3, 4].forEach(n => {
+                            const iconKey   = `badge_${n}_icon`;
+                            const labelKey  = `badge_${n}_label`;
+                            const labelVal  = (cms[labelKey] !== undefined) ? String(cms[labelKey]).trim() : '';
+                            const iconVal   = (cms[iconKey] !== undefined) ? String(cms[iconKey]).trim() : '';
+                            const iconEl    = document.getElementById(`lp-badge-${n}-icon`);
+                            const labelEl   = document.getElementById(`lp-badge-${n}-label`);
+                            const colEl     = document.getElementById(`lp-badge-${n}-col`);
+
+                            if (labelEl) labelEl.textContent = labelVal;
+                            if (iconEl && iconVal) {
+                                iconEl.setAttribute('data-lucide', iconVal);
+                                iconEl.innerHTML = '';
+                            }
+                            if (labelVal) {
+                                hasAnyBadge = true;
+                                if (colEl) colEl.style.display = '';
+                            } else {
+                                if (colEl) colEl.style.display = 'none';
+                            }
+                        });
+                        const badgeSec = document.getElementById('lp-badges-section');
+                        if (badgeSec) {
+                            badgeSec.style.display = hasAnyBadge ? '' : 'none';
+                        }
+
                         // 2. Features Section
-                        if(cms.features_title) _txt('lp-features-title', cms.features_title);
-                        if(cms.features_subtitle) _txt('lp-features-subtitle', cms.features_subtitle);
-                        if(cms.features_list && Array.isArray(cms.features_list) && cms.features_list.length > 0) {
-                            const grid = document.getElementById('lp-features-grid');
-                            if(grid) {
-                                grid.innerHTML = cms.features_list.map(f => `
-                                <div class="col-md-4">
-                                    <div class="feature-card glass-card shimmer-effect">
-                                        <div class="icon-box"><i data-lucide="${f.icon || 'star'}" size="24"></i></div>
-                                        <h4 class="fw-bold">${f.title}</h4>
-                                        <p class="text-muted">${f.desc}</p>
-                                    </div>
-                                </div>`).join('');
+                        const featsList = (cms.features_list || []).filter(f => f && (f.title || f.desc));
+                        const featSec = document.getElementById('features');
+                        if (featsList.length === 0 && !cms.features_title && !cms.features_subtitle) {
+                            if (featSec) featSec.style.display = 'none';
+                        } else {
+                            if (featSec) featSec.style.display = '';
+                            if (cms.features_title !== undefined) _txt('lp-features-title', cms.features_title);
+                            if (cms.features_subtitle !== undefined) _txt('lp-features-subtitle', cms.features_subtitle);
+                            if (featsList.length > 0) {
+                                const grid = document.getElementById('lp-features-grid');
+                                if (grid) {
+                                    grid.innerHTML = featsList.map(f => `
+                                    <div class="col-md-4">
+                                        <div class="feature-card glass-card shimmer-effect">
+                                            <div class="icon-box"><i data-lucide="${f.icon || 'star'}" size="24"></i></div>
+                                            <h4 class="fw-bold">${f.title || ''}</h4>
+                                            <p class="text-muted">${f.desc || ''}</p>
+                                        </div>
+                                    </div>`).join('');
+                                }
                             }
                         }
 
                         // 3. Onboarding Steps
-                        if(cms.steps_title) _txt('lp-steps-title', cms.steps_title);
-                        if(cms.steps_subtitle) _txt('lp-steps-subtitle', cms.steps_subtitle);
-                        if(cms.steps_list && Array.isArray(cms.steps_list) && cms.steps_list.length > 0) {
-                            const grid = document.getElementById('lp-steps-grid');
-                            if(grid) {
-                                grid.innerHTML = cms.steps_list.map(s => `
-                                <div class="col-md-3 text-center">
-                                    <div class="icon-box mx-auto mb-4" style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
-                                        <h3 class="mb-0 fw-black text-primary">${s.num || '1'}</h3>
-                                    </div>
-                                    <h5 class="fw-bold">${s.title}</h5>
-                                    <p class="text-muted small">${s.desc}</p>
-                                </div>`).join('');
+                        const stepsList = (cms.steps_list || []).filter(s => s && (s.title || s.desc));
+                        const stepsSec = document.getElementById('how-it-works');
+                        if (stepsList.length === 0 && !cms.steps_title && !cms.steps_subtitle) {
+                            if (stepsSec) stepsSec.style.display = 'none';
+                        } else {
+                            if (stepsSec) stepsSec.style.display = '';
+                            if (cms.steps_title !== undefined) _txt('lp-steps-title', cms.steps_title);
+                            if (cms.steps_subtitle !== undefined) _txt('lp-steps-subtitle', cms.steps_subtitle);
+                            if (stepsList.length > 0) {
+                                const grid = document.getElementById('lp-steps-grid');
+                                if (grid) {
+                                    grid.innerHTML = stepsList.map(s => `
+                                    <div class="col-md-3 text-center">
+                                        <div class="icon-box mx-auto mb-4" style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
+                                            <h3 class="mb-0 fw-black text-primary">${s.num || '1'}</h3>
+                                        </div>
+                                        <h5 class="fw-bold">${s.title || ''}</h5>
+                                        <p class="text-muted small">${s.desc || ''}</p>
+                                    </div>`).join('');
+                                }
                             }
                         }
 
                         // 4. Pricing Plans
-                        if(cms.pricing_title) _txt('lp-pricing-title', cms.pricing_title);
-                        if(cms.pricing_subtitle) _txt('lp-pricing-subtitle', cms.pricing_subtitle);
-                        if(cms.pricing_plans && Array.isArray(cms.pricing_plans) && cms.pricing_plans.length > 0) {
-                            const grid = document.getElementById('lp-pricing-grid');
-                            if(grid) {
-                                grid.innerHTML = cms.pricing_plans.map(p => `
-                                <div class="col-lg-4 position-relative">
-                                    ${p.badge ? `<div class="position-absolute w-100 text-center" style="top: -15px; left: 0; z-index: 10;">
-                                        <span class="ds-badge px-3 py-1" style="background: #2563eb !important; color: #ffffff !important; border-radius: 20px; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.05em; padding: 4px 14px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); border: 1px solid rgba(255,255,255,0.25); display: inline-block;">${p.badge}</span>
-                                    </div>` : ''}
-                                    <div class="feature-card glass-card ${p.badge ? 'border-primary' : ''} h-100" ${p.badge ? 'style="border-width: 2px;"' : ''}>
-                                        <div class="mb-4">
-                                            <h3 class="fw-black mb-1">${p.name}</h3>
-                                            <p class="text-muted mb-4">${p.desc}</p>
-                                            <div class="d-flex align-items-baseline gap-1 mb-4">
-                                                <span class="fs-1 fw-black">${p.price}</span>
-                                                <span class="text-muted">${p.period}</span>
+                        const plansList = (cms.pricing_plans || []).filter(p => p && p.name);
+                        const pricingSec = document.getElementById('pricing');
+                        if (plansList.length === 0 && !cms.pricing_title && !cms.pricing_subtitle) {
+                            if (pricingSec) pricingSec.style.display = 'none';
+                        } else {
+                            if (pricingSec) pricingSec.style.display = '';
+                            if (cms.pricing_title !== undefined) _txt('lp-pricing-title', cms.pricing_title);
+                            if (cms.pricing_subtitle !== undefined) _txt('lp-pricing-subtitle', cms.pricing_subtitle);
+                            if (plansList.length > 0) {
+                                const grid = document.getElementById('lp-pricing-grid');
+                                if (grid) {
+                                    grid.innerHTML = plansList.map(p => `
+                                    <div class="col-lg-4 position-relative">
+                                        ${p.badge ? `<div class="position-absolute w-100 text-center" style="top: -15px; left: 0; z-index: 10;">
+                                            <span class="ds-badge px-3 py-1" style="background: #2563eb !important; color: #ffffff !important; border-radius: 20px; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.05em; padding: 4px 14px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); border: 1px solid rgba(255,255,255,0.25); display: inline-block;">${p.badge}</span>
+                                        </div>` : ''}
+                                        <div class="feature-card glass-card ${p.badge ? 'border-primary' : ''} h-100" ${p.badge ? 'style="border-width: 2px;"' : ''}>
+                                            <div class="mb-4">
+                                                <h3 class="fw-black mb-1">${p.name || ''}</h3>
+                                                <p class="text-muted mb-4">${p.desc || ''}</p>
+                                                <div class="d-flex align-items-baseline gap-1 mb-4">
+                                                    <span class="fs-1 fw-black">${p.price || ''}</span>
+                                                    <span class="text-muted">${p.period || ''}</span>
+                                                </div>
                                             </div>
+                                            <ul class="list-unstyled mb-5 v-stack gap-3">
+                                                ${(p.features || []).map(feat => `<li class="d-flex gap-2"><i data-lucide="check" class="text-success" style="width:20px;"></i> ${feat}</li>`).join('')}
+                                            </ul>
+                                            <a href="register-org.html?plan=${encodeURIComponent(p.name || '')}" class="ds-btn ds-btn-${p.badge ? 'primary' : 'secondary'} w-100 py-3">${p.cta || 'Start Free Trial'}</a>
                                         </div>
-                                        <ul class="list-unstyled mb-5 v-stack gap-3">
-                                            ${(p.features || []).map(feat => `<li class="d-flex gap-2"><i data-lucide="check" class="text-success" style="width:20px;"></i> ${feat}</li>`).join('')}
-                                        </ul>
-                                        <a href="register-org.html?plan=${encodeURIComponent(p.name)}" class="ds-btn ds-btn-${p.badge ? 'primary' : 'secondary'} w-100 py-3">${p.cta || 'Start Free Trial'}</a>
-                                    </div>
-                                </div>`).join('');
+                                    </div>`).join('');
+                                }
                             }
                         }
 
                         // 5. FAQs Section
-                        if(cms.faq_title) _txt('lp-faq-title', cms.faq_title);
-                        if(cms.faq_subtitle) _txt('lp-faq-subtitle', cms.faq_subtitle);
-                        if(cms.faqs && Array.isArray(cms.faqs) && cms.faqs.length > 0) {
-                            const acc = document.getElementById('faqAccordion');
-                            if(acc) {
-                                acc.innerHTML = cms.faqs.map((faq, i) => {
-                                    const id = 'faq' + i;
-                                    return `
-                                    <div class="accordion-item bg-transparent border-bottom">
-                                        <h2 class="accordion-header">
-                                            <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#${id}">
-                                                ${faq.q}
-                                            </button>
-                                        </h2>
-                                        <div id="${id}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                            <div class="accordion-body text-muted">${faq.a}</div>
-                                        </div>
-                                    </div>`;
-                                }).join('');
+                        const faqsList = (cms.faqs || []).filter(f => f && (f.q || f.a));
+                        const faqSec = document.getElementById('faq');
+                        if (faqsList.length === 0 && !cms.faq_title && !cms.faq_subtitle) {
+                            if (faqSec) faqSec.style.display = 'none';
+                        } else {
+                            if (faqSec) faqSec.style.display = '';
+                            if (cms.faq_title !== undefined) _txt('lp-faq-title', cms.faq_title);
+                            if (cms.faq_subtitle !== undefined) _txt('lp-faq-subtitle', cms.faq_subtitle);
+                            if (faqsList.length > 0) {
+                                const acc = document.getElementById('faqAccordion');
+                                if (acc) {
+                                    acc.innerHTML = faqsList.map((faq, i) => {
+                                        const id = 'faq' + i;
+                                        return `
+                                        <div class="accordion-item bg-transparent border-bottom">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#${id}">
+                                                    ${faq.q || ''}
+                                                </button>
+                                            </h2>
+                                            <div id="${id}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                                <div class="accordion-body text-muted">${faq.a || ''}</div>
+                                            </div>
+                                        </div>`;
+                                    }).join('');
+                                }
                             }
                         }
 
                         // 6. CTA Offer Banner
-                        if(cms.cta_banner_title) _txt('lp-cta-banner-title', cms.cta_banner_title);
-                        if(cms.cta_banner_subtitle) _txt('lp-cta-banner-subtitle', cms.cta_banner_subtitle);
-                        if(cms.cta_banner_btn1) _txt('lp-cta-banner-btn1', cms.cta_banner_btn1);
-                        if(cms.cta_banner_btn2) _txt('lp-cta-banner-btn2', cms.cta_banner_btn2);
+                        const ctaContainer = document.getElementById('lp-cta-banner-container');
+                        if (!cms.cta_banner_title && !cms.cta_banner_subtitle && !cms.cta_banner_btn1 && !cms.cta_banner_btn2) {
+                            if (ctaContainer) ctaContainer.style.display = 'none';
+                        } else {
+                            if (ctaContainer) ctaContainer.style.display = '';
+                            if (cms.cta_banner_title !== undefined) _txt('lp-cta-banner-title', cms.cta_banner_title);
+                            if (cms.cta_banner_subtitle !== undefined) _txt('lp-cta-banner-subtitle', cms.cta_banner_subtitle);
+                            if (cms.cta_banner_btn1 !== undefined) _txt('lp-cta-banner-btn1', cms.cta_banner_btn1);
+                            if (cms.cta_banner_btn2 !== undefined) _txt('lp-cta-banner-btn2', cms.cta_banner_btn2);
+                        }
 
                         // 7. Footer
-                        if(cms.footer_description) _txt('lp-footer-desc', cms.footer_description);
-                        if(cms.footer_copyright) _txt('lp-footer-copy', cms.footer_copyright);
-                        if(cms.footer_status) _txt('lp-footer-status', cms.footer_status);
+                        if (cms.footer_description !== undefined) _txt('lp-footer-desc', cms.footer_description);
+                        if (cms.footer_copyright !== undefined) _txt('lp-footer-copy', cms.footer_copyright);
+                        if (cms.footer_status !== undefined) _txt('lp-footer-status', cms.footer_status);
 
-                        if(cms.footer_pages && Object.keys(cms.footer_pages).length > 0) {
+                        if (cms.footer_pages && Object.keys(cms.footer_pages).length > 0) {
                             localStorage.setItem('ps-landing-cms-pages', JSON.stringify(cms.footer_pages));
                             if (window.renderFooterCols) window.renderFooterCols(cms.footer_pages);
                         }

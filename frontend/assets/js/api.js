@@ -163,6 +163,10 @@ const api = {
                         const errMsg = data.msg || data.message || data.error || data.detail || 'Invalid username or password';
                         const error = new Error(errMsg);
                         error.status = response.status;
+                        // Attach extra fields so callers can read lock info
+                        error.error_code = data.error_code || null;
+                        error.remaining_seconds = data.remaining_seconds || null;
+                        error.locked_until_epoch = data.locked_until_epoch || null;
                         throw error;
                     }
                     return data;

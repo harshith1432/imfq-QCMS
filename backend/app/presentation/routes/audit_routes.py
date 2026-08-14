@@ -658,7 +658,7 @@ def get_audit_sessions():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     q = request.args.get('q', '').strip()
-    status = request.args.get('status', '') # Active, LoggedOut, Terminated
+    status = request.args.get('status', 'Active').strip() # Active, LoggedOut, Terminated, or all
 
     query = SaaSUserSession.query.filter(get_user_org_filter(user, SaaSUserSession))
     
@@ -673,8 +673,8 @@ def get_audit_sessions():
             )
         )
         
-    if status:
-        query = query.filter(SaaSUserSession.status == status)
+    if status and status.lower() != 'all':
+        query = query.filter(SaaSUserSession.status.ilike(status))
 
     pagination = query.order_by(SaaSUserSession.login_time.desc()).paginate(page=page, per_page=per_page, error_out=False)
     sessions = pagination.items
@@ -954,3 +954,174 @@ def export_audit_logs():
         "csv": csv_data,
         "count": len(logs)
     }), 200
+
+
+@audit_bp.route('/storage-info', methods=['GET'])
+@jwt_required()
+@audit_required
+def get_audit_storage_info():
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    
+    org_filter = get_user_org_filter(user, AuditLog)
+    total_count = AuditLog.query.filter(org_filter).count()
+    
+    # Estimate size (approx 0.8 KB per audit log entry)
+    estimated_mb = round((total_count * 0.8) / 1024.0, 2)
+    
+    now = datetime.utcnow()
+    d30 = now - timedelta(days=30)
+    d60 = now - timedelta(days=60)
+    d90 = now - timedelta(days=90)
+    d180 = now - timedelta(days=180)
+    d365 = now - timedelta(days=365)
+    
+    older_than_30 = AuditLog.query.filter(org_filter, AuditLog.created_at < d30).count()
+    older_than_60 = AuditLog.query.filter(org_filter, AuditLog.created_at < d60).count()
+    older_than_90 = AuditLog.query.filter(org_filter, AuditLog.created_at < d90).count()
+    older_than_180 = AuditLog.query.filter(org_filter, AuditLog.created_at < d180).count()
+    older_than_365 = AuditLog.query.filter(org_filter, AuditLog.created_at < d365).count()
+    
+    oldest_log = AuditLog.query.filter(org_filter).order_by(AuditLog.created_at.asc()).first()
+    oldest_date = oldest_log.created_at.isoformat() + "Z" if (oldest_log and oldest_log.created_at) else None
+    
+    retention_days = 0 # Default: 0 = Never auto-delete (Keep all logs)
+    if user.org_id:
+        org = db.session.get(Organization, user.org_id)
+        if org and org.security_settings and isinstance(org.security_settings, dict):
+            retention_days = org.security_settings.get('audit_retention_days', 0)
+            
+    return jsonify({
+        "status": "success",
+        "total_count": total_count,
+        "estimated_mb": estimated_mb,
+        "oldest_date": oldest_date,
+        "older_than_30d": older_than_30,
+        "older_than_60d": older_than_60,
+        "older_than_90d": older_than_90,
+        "older_than_180d": older_than_180,
+        "older_than_365d": older_than_365,
+        "retention_days": retention_days
+    }), 200
+
+
+@audit_bp.route('/purge', methods=['POST'])
+@jwt_required()
+@audit_required
+def purge_audit_logs():
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    
+    data = request.get_json(silent=True) or {}
+    mode = data.get('mode', 'older_than_days') # 'older_than_days', 'custom_range', 'all'
+    days = data.get('days', None) # 30, 60, 90, 180, 365
+    start_date_str = data.get('start_date', '')
+    end_date_str = data.get('end_date', '')
+    
+    # Base filter strictly scoped to user's organization
+    base_filter = get_user_org_filter(user, AuditLog)
+    query = AuditLog.query.filter(base_filter)
+    
+    now = datetime.utcnow()
+    purge_summary = ""
+    
+    if mode == 'all':
+        purge_summary = "All historical organization audit logs"
+    elif mode == 'older_than_days' and days is not None:
+        cutoff_date = now - timedelta(days=int(days))
+        query = query.filter(AuditLog.created_at < cutoff_date)
+        purge_summary = f"Audit logs older than {days} days (created before {cutoff_date.strftime('%Y-%m-%d')})"
+    elif mode == 'custom_range':
+        if start_date_str and end_date_str:
+            try:
+                s_date = datetime.fromisoformat(start_date_str.replace('Z', ''))
+                e_date = datetime.fromisoformat(end_date_str.replace('Z', '')) + timedelta(days=1)
+                query = query.filter(AuditLog.created_at >= s_date, AuditLog.created_at < e_date)
+                purge_summary = f"Audit logs between {start_date_str} and {end_date_str}"
+            except ValueError:
+                return jsonify({"status": "error", "message": "Invalid date range format"}), 400
+        elif start_date_str:
+            try:
+                s_date = datetime.fromisoformat(start_date_str.replace('Z', ''))
+                query = query.filter(AuditLog.created_at < s_date)
+                purge_summary = f"Audit logs created before {start_date_str}"
+            except ValueError:
+                return jsonify({"status": "error", "message": "Invalid date format"}), 400
+        else:
+            return jsonify({"status": "error", "message": "Date parameter required for custom range"}), 400
+    else:
+        return jsonify({"status": "error", "message": "Invalid purge criteria"}), 400
+
+    deleted_count = query.count()
+    if deleted_count == 0:
+        return jsonify({
+            "status": "info",
+            "message": "No matching audit log records found for the selected purge criteria.",
+            "deleted_count": 0
+        }), 200
+
+    # Delete matching logs
+    query.delete(synchronize_session=False)
+    db.session.commit()
+    
+    # Log permanent audit trail event for the purge operation
+    log_audit_event(
+        org_id=user.org_id,
+        user_id=user.id,
+        action="PURGE_AUDIT_LOGS",
+        target_table="audit_logs",
+        target_id=None,
+        details={
+            "deleted_count": deleted_count,
+            "mode": mode,
+            "days": days,
+            "summary": purge_summary
+        }
+    )
+    
+    return jsonify({
+        "status": "success",
+        "message": f"Successfully deleted {deleted_count} audit log record(s) ({purge_summary}). Database storage freed.",
+        "deleted_count": deleted_count
+    }), 200
+
+
+@audit_bp.route('/retention-policy', methods=['POST'])
+@jwt_required()
+@audit_required
+def set_audit_retention_policy():
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    
+    if not user.org_id:
+        return jsonify({"status": "error", "message": "Organization context required"}), 400
+        
+    data = request.get_json(silent=True) or {}
+    retention_days = int(data.get('retention_days', 0)) # 0 = Never/Keep All (default)
+    
+    org = db.session.get(Organization, user.org_id)
+    if not org:
+        return jsonify({"status": "error", "message": "Organization not found"}), 404
+        
+    sec_settings = dict(org.security_settings or {})
+    sec_settings['audit_retention_days'] = retention_days
+    org.security_settings = sec_settings
+    db.session.commit()
+    
+    policy_name = "Never auto-delete (Keep all logs indefinitely - Default)" if retention_days == 0 else f"Auto-purge logs older than {retention_days} days"
+    
+    log_audit_event(
+        org_id=user.org_id,
+        user_id=user.id,
+        action="UPDATE_AUDIT_RETENTION_POLICY",
+        target_table="organizations",
+        target_id=org.id,
+        details={"retention_days": retention_days, "policy": policy_name}
+    )
+    
+    return jsonify({
+        "status": "success",
+        "message": f"Audit log retention policy updated to: {policy_name}.",
+        "retention_days": retention_days
+    }), 200
+

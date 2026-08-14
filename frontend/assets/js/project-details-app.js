@@ -793,10 +793,10 @@ const ProjectApp = {
         const exportBtn = document.getElementById('exportReportBtn');
         const qcBtn = document.getElementById('qcAnalysisBtn');
 
-        const isStage8Completed = stage8Tracker.status === 'Completed' || this.projectData.status === 'Closed' || this.projectData.status === 'Stage 8 Reviewer Approved';
+        const isProjectClosed = this.projectData.status === 'Closed' || this.projectData.status === 'Completed';
         
         if (exportBtn) {
-            if (isStage8Completed) {
+            if (isProjectClosed) {
                 exportBtn.classList.remove('d-none');
             } else {
                 exportBtn.classList.add('d-none');
@@ -1661,6 +1661,10 @@ const ProjectApp = {
     },
 
     async exportReport() {
+        if (this.projectData.status !== 'Closed' && this.projectData.status !== 'Completed') {
+            QCMS.toast('Project report is only available after project completion and closure (Stage 8).', 'warning');
+            return;
+        }
         if (window.FeatureEngine) {
             const isPdfEnabled = FeatureEngine.isEnabled('reports.pdf');
             if (!isPdfEnabled) {

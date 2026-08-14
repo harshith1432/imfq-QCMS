@@ -1267,18 +1267,9 @@ def get_enterprise_dashboard():
             return q.count()
 
         def get_storage_usage():
-            if f['org_id']:
-                org = Organization.query.get(f['org_id'])
-                mb = org.storage_used_mb if org else 0.0
-                return mb if mb > 0 else 15.4
-            total_mb = db.session.query(func.sum(Organization.storage_used_mb)).filter(
-                Organization.is_deleted == False,
-                Organization.is_platform_org == False
-            ).scalar() or 0.0
-            if total_mb == 0.0:
-                act_users = User.query.filter_by(is_active=True).count()
-                total_mb = round(max(15.4, act_users * 12.5), 1)
-            return total_mb
+            res = calculate_org_storage_realtime(f['org_id'] if f.get('org_id') else None)
+            summary = res.get('summary', {})
+            return summary.get('total_software_used_mb', summary.get('total_used_mb', 0.0))
 
         def get_api_usage(s_dt, e_dt):
             q = db.session.query(func.count(AuditLog.id)).filter(
@@ -1325,7 +1316,14 @@ def get_enterprise_dashboard():
         users_growth   = calc_growth(act_users, act_users_prev)
 
         stor_mb  = get_storage_usage()
-        stor_fmt = f"{round(stor_mb / 1024.0, 2)} GB" if stor_mb >= 1024.0 else f"{round(stor_mb, 1)} MB"
+        if stor_mb >= 1024.0:
+            stor_fmt = f"{(stor_mb / 1024.0):.2f} GB"
+        elif stor_mb >= 0.1:
+            stor_fmt = f"{stor_mb:.2f} MB"
+        elif stor_mb > 0:
+            stor_fmt = f"{stor_mb:.3f} MB"
+        else:
+            stor_fmt = "0.00 MB"
 
         api_cnt  = get_api_usage(start, end)
         api_prev = get_api_usage(prev_start, prev_end)

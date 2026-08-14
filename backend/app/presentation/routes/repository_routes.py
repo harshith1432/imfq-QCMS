@@ -6,7 +6,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
     User, Project, KnowledgeRepository, Stage3RCA, Stage7Impact,
-    Stage8Standardization, ProjectWorkflow, AuditLog
+    Stage8Standardization, ProjectWorkflow, AuditLog,
+    Stage7PerformanceVerificationBenefitsRealization as Stage7Verification
 )
 from app import db
 from datetime import datetime, timedelta
@@ -43,8 +44,9 @@ def list_repository_projects():
     status = request.args.get('status')
     stage = request.args.get('stage')
     category = request.args.get('category')
+    plant_param = (request.args.get('plant') or request.args.get('plant_name') or request.args.get('plant_id') or '').strip()
     
-    from app.infrastructure.database.models.models import ProjectMember, AuditLog
+    from app.infrastructure.database.models.models import ProjectMember, AuditLog, Plant, Department
     query = Project.query.filter_by(org_id=user.org_id)
     
     # Enforce Role-Based Access Control for visibility
@@ -60,6 +62,23 @@ def list_repository_projects():
     elif user.role.name == 'Facilitator':
         query = query.filter(Project.facilitator_id == user.id)
     # Reviewers, Admins, CEOs, SuperAdmins can see all org projects
+
+    if plant_param:
+        if plant_param.isdigit():
+            plant_obj = Plant.query.filter_by(id=int(plant_param), org_id=user.org_id).first()
+            pname = plant_obj.name if plant_obj else None
+            if pname:
+                query = query.filter(db.or_(
+                    Project.plant.ilike(f"%{pname}%"),
+                    Project.department.has(Department.plant_id == int(plant_param))
+                ))
+            else:
+                query = query.filter(Project.department.has(Department.plant_id == int(plant_param)))
+        else:
+            query = query.filter(db.or_(
+                Project.plant.ilike(f"%{plant_param}%"),
+                Project.department.has(Department.plant.has(Plant.name.ilike(f"%{plant_param}%")))
+            ))
 
     if q:
         q_term = f"%{q}%"
@@ -115,9 +134,22 @@ def list_repository_projects():
     stalled_count = 0
     
     for p in projects:
-        # Efficiency from Stage 7 Impact
-        impact = Stage7Impact.query.filter_by(project_id=p.id).first()
-        efficiency = impact.kpi_improvement_pct if impact and impact.kpi_improvement_pct else 0
+        # Efficiency: read real KPI improvement % from Stage 7 before_vs_after data
+        efficiency = 0
+        s7_verify = Stage7Verification.query.filter_by(project_id=p.id).first()
+        if s7_verify and s7_verify.before_vs_after:
+            try:
+                rows = s7_verify.before_vs_after if isinstance(s7_verify.before_vs_after, list) else []
+                pcts = [float(r.get('improvement_pct', 0) or 0) for r in rows if r.get('improvement_pct') not in (None, '', 'N/A')]
+                if pcts:
+                    efficiency = round(sum(pcts) / len(pcts), 1)
+            except Exception:
+                pass
+        # Fallback: use Stage 8 closure kpi_improvement_pct if Stage 7 data unavailable
+        if efficiency == 0:
+            impact = Stage7Impact.query.filter_by(project_id=p.id).first()
+            if impact and impact.kpi_improvement_pct:
+                efficiency = round(float(impact.kpi_improvement_pct), 1)
         
         # Detect stalled/inactive status: no AuditLog activity in 7 days
         last_log = AuditLog.query.filter_by(project_id=p.id).order_by(AuditLog.created_at.desc()).first()
@@ -428,6 +460,7 @@ def search_repository():
     keyword = request.args.get('q', '')
     dept_id = request.args.get('department_id')
     category = request.args.get('category')
+    plant_param = (request.args.get('plant') or request.args.get('plant_name') or request.args.get('plant_id') or '').strip()
     date_from = request.args.get('from')
     date_to = request.args.get('to')
     page = int(request.args.get('page', 1))
@@ -471,6 +504,26 @@ def search_repository():
         KnowledgeRepository.project_id.in_(closed_pids)
     )
     
+    if plant_param:
+        from app.infrastructure.database.models.models import Plant, Department
+        if plant_param.isdigit():
+            plant_obj = Plant.query.filter_by(id=int(plant_param), org_id=user.org_id).first()
+            pname = plant_obj.name if plant_obj else None
+            if pname:
+                query = query.join(Project, KnowledgeRepository.project_id == Project.id).filter(db.or_(
+                    Project.plant.ilike(f"%{pname}%"),
+                    Project.department.has(Department.plant_id == int(plant_param))
+                ))
+            else:
+                query = query.join(Project, KnowledgeRepository.project_id == Project.id).filter(
+                    Project.department.has(Department.plant_id == int(plant_param))
+                )
+        else:
+            query = query.join(Project, KnowledgeRepository.project_id == Project.id).filter(db.or_(
+                Project.plant.ilike(f"%{plant_param}%"),
+                Project.department.has(Department.plant.has(Plant.name.ilike(f"%{plant_param}%")))
+            ))
+
     if keyword:
         search_filter = f"%{keyword}%"
         query = query.filter(

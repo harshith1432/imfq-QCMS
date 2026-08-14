@@ -47,14 +47,20 @@
                                         <input type="text" class="ds-input" id="repoSearchInput" placeholder="Search projects..." style="width: 250px; padding-left: 36px;" oninput="repoApp.onSearchInput()">
                                     </div>
                                 </div>
+                                <div class="v-stack" id="plantFilterCol" style="display:none;">
+                                    <label class="ds-label mb-2"><i data-lucide="map-pin" style="width:13px;height:13px;" class="me-1 text-primary"></i> PLANT</label>
+                                    <select class="ds-input ds-select" id="filterPlant" style="width: 200px;" onchange="repoApp.handlePlantChange(this.value)">
+                                        <option value="">All Plants</option>
+                                    </select>
+                                </div>
                                 <div class="v-stack">
-                                    <label class="ds-label mb-2">DEPARTMENT</label>
+                                    <label class="ds-label mb-2"><i data-lucide="building-2" style="width:13px;height:13px;" class="me-1 text-primary"></i> DEPARTMENT</label>
                                     <select class="ds-input ds-select" id="filterDept" style="width: 200px;" onchange="repoApp.search(1)">
                                         <option value="">All Departments</option>
                                     </select>
                                 </div>
                                 <div class="v-stack">
-                                    <label class="ds-label mb-2">CATEGORY</label>
+                                    <label class="ds-label mb-2"><i data-lucide="tag" style="width:13px;height:13px;" class="me-1 text-primary"></i> CATEGORY</label>
                                     <select class="ds-input ds-select" id="filterCategory" style="width: 180px;" onchange="repoApp.search(1)">
                                         <option value="">All Categories</option>
                                         <option value="Quality">Quality</option>
@@ -115,7 +121,8 @@
                     searchInput.placeholder = "Search repository...";
                     searchInput.oninput = () => this.onSearchInput();
                 }
-                this.loadDepartments();
+                await this.loadPlants();
+                await this.loadDepartments();
                 this.search();
                 if (window.lucide) lucide.createIcons();
             },
@@ -126,27 +133,87 @@
                 this.searchTimeout = setTimeout(() => this.search(1), 300);
             },
 
-            async loadDepartments() {
+            async loadPlants() {
                 try {
-                    const depts = await api.get('/projects/departments');
+                    let plants = [];
+                    try {
+                        const res = await api.get('/projects/plants');
+                        plants = Array.isArray(res) ? res : (res && res.plants ? res.plants : []);
+                    } catch (e) {
+                        try {
+                            const res2 = await api.get('/admin/plants');
+                            plants = Array.isArray(res2) ? res2 : (res2 && res2.plants ? res2.plants : []);
+                        } catch (e2) {}
+                    }
+                    const plantCol = document.getElementById('plantFilterCol');
+                    const plantSelect = document.getElementById('filterPlant');
+                    if (plantSelect && plants && plants.length > 0) {
+                        if (plantCol) plantCol.style.display = 'flex';
+                        plantSelect.innerHTML = '<option value="">All Plants</option>';
+                        plants.forEach(p => {
+                            const pname = typeof p === 'string' ? p : (p.name || p.location || '');
+                            if (pname) {
+                                const opt = document.createElement('option');
+                                opt.value = pname;
+                                opt.textContent = pname;
+                                plantSelect.appendChild(opt);
+                            }
+                        });
+                    }
+                } catch (e) { console.error("Failed to load plants:", e); }
+            },
+
+            async handlePlantChange(plantVal) {
+                try {
+                    await this.loadDepartments(plantVal);
+                    await this.search(1);
+                } catch (e) { console.error('Failed to handle plant filter change', e); }
+            },
+
+            async loadDepartments(plantVal = '') {
+                try {
                     const select = document.getElementById('filterDept');
-                    depts.forEach(d => {
-                        const opt = document.createElement('option');
-                        opt.value = d.id;
-                        opt.textContent = d.name;
-                        select.appendChild(opt);
-                    });
+                    const plantCol = document.getElementById('plantFilterCol');
+                    const isPlantFilterVisible = plantCol && plantCol.style.display !== 'none';
+
+                    if (isPlantFilterVisible && !plantVal) {
+                        if (select) {
+                            select.innerHTML = '<option value="">Select plant location first...</option>';
+                            select.value = '';
+                            select.disabled = true;
+                        }
+                        return;
+                    }
+
+                    let url = '/projects/departments';
+                    if (plantVal) {
+                        url += '?plant_name=' + encodeURIComponent(plantVal);
+                    }
+                    const depts = await api.get(url);
+                    if (select && Array.isArray(depts)) {
+                        select.disabled = false;
+                        select.innerHTML = '<option value="">All Departments</option>';
+                        depts.forEach(d => {
+                            const opt = document.createElement('option');
+                            opt.value = d.id;
+                            opt.textContent = d.name;
+                            select.appendChild(opt);
+                        });
+                        select.value = '';
+                    }
                 } catch (e) { console.error("Failed to load departments:", e); }
             },
 
             async search(page = 1) {
                 this.currentPage = page;
                 const keyword = document.getElementById('repoSearchInput')?.value || document.getElementById('globalSearchInput')?.value || '';
-                const dept = document.getElementById('filterDept').value;
-                const category = document.getElementById('filterCategory').value;
+                const plant = document.getElementById('filterPlant')?.value || '';
+                const dept = document.getElementById('filterDept')?.value || '';
+                const category = document.getElementById('filterCategory')?.value || '';
 
                 let params = `page=${page}&per_page=${this.perPage}`;
                 if (keyword) params += `&q=${encodeURIComponent(keyword)}`;
+                if (plant) params += `&plant_name=${encodeURIComponent(plant)}`;
                 if (dept) params += `&department_id=${dept}`;
                 if (category) params += `&category=${category}`;
 

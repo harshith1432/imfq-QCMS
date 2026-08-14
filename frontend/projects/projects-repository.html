@@ -71,11 +71,19 @@
                     <div class="ds-card-body p-4">
                         <div class="row g-4 align-items-end">
 
+                            <div class="col-lg-2 col-md-4" id="plantFilterCol" style="display:none;">
+                                <label class="ds-label mb-2">
+                                    <i data-lucide="map-pin"></i> PLANT
+                                </label>
+                                <select class="ds-input ds-select" id="plantFilter" onchange="repoUI.handlePlantFilterChange(this.value)">
+                                    <option value="">All Plants</option>
+                                </select>
+                            </div>
                             <div class="col-lg-2 col-md-4">
                                 <label class="ds-label mb-2">
                                     <i data-lucide="building-2"></i> DEPARTMENT
                                 </label>
-                                <select class="ds-input ds-select" id="deptFilter" onchange="repoUI.loadData()">
+                                <select class="ds-input ds-select" id="deptFilter" onchange="repoUI.loadData(1)">
                                     <option value="">All Departments</option>
                                 </select>
                             </div>
@@ -83,7 +91,7 @@
                                 <label class="ds-label mb-2">
                                     <i data-lucide="activity"></i> STATUS
                                 </label>
-                                <select class="ds-input ds-select" id="statusFilter" onchange="repoUI.loadData()">
+                                <select class="ds-input ds-select" id="statusFilter" onchange="repoUI.loadData(1)">
                                     <option value="">All Status</option>
                                     <option value="Active" selected>Active</option>
                                     <option value="Closed">Completed</option>
@@ -95,7 +103,7 @@
                                 <label class="ds-label mb-2">
                                     <i data-lucide="layers"></i> STAGE
                                 </label>
-                                <select class="ds-input ds-select" id="stageFilter" onchange="repoUI.loadData()">
+                                <select class="ds-input ds-select" id="stageFilter" onchange="repoUI.loadData(1)">
                                     <option value="">All Stages</option>
                                     <option value="1">Stage 1: Problem Definition & Project Initiation</option>
                                     <option value="2">Stage 2: Observation & Data Collection</option>
@@ -108,7 +116,7 @@
                                 </select>
                             </div>
                             <div class="col-lg-3 col-md-12 d-flex gap-2">
-                                <button class="ds-btn ds-btn-primary flex-grow-1" onclick="repoUI.loadData()">
+                                <button class="ds-btn ds-btn-primary flex-grow-1" onclick="repoUI.loadData(1)">
                                     <i data-lucide="refresh-cw"></i> Sync Data
                                 </button>
                                 <button class="ds-btn ds-btn-primary flex-grow-1" id="initProjectBtn"
@@ -572,6 +580,14 @@
             if (allowedRoles.includes(role)) {
                 const btn = document.getElementById('initProjectBtn');
                 if (btn) btn.style.display = '';
+            }
+
+            // Show Plant filter for Admin, CEO, SuperAdmin or multi-plant organization
+            const isPlantAdminOrCeo = ['admin', 'ceo', 'superadmin'].includes(role) || (user.org && user.org.multi_plant);
+            if (isPlantAdminOrCeo) {
+                const plantCol = document.getElementById('plantFilterCol');
+                if (plantCol) plantCol.style.display = '';
+                await this.loadPlantsFilter();
             }
             
             await this.loadDepartments();
@@ -1678,11 +1694,67 @@
             }
         },
 
-        async loadDepartments() {
+        async loadPlantsFilter() {
             try {
-                const depts = await api.get('/projects/departments');
+                let plants = [];
+                try {
+                    const res = await api.get('/projects/plants');
+                    plants = Array.isArray(res) ? res : (res && res.plants ? res.plants : []);
+                } catch (e) {
+                    try {
+                        const res2 = await api.get('/admin/plants');
+                        plants = Array.isArray(res2) ? res2 : (res2 && res2.plants ? res2.plants : []);
+                    } catch (e2) {}
+                }
+                const plantSelect = document.getElementById('plantFilter');
+                if (plantSelect) {
+                    plantSelect.innerHTML = '<option value="">All Plants</option>';
+                    plants.forEach(p => {
+                        const pname = typeof p === 'string' ? p : (p.name || p.location || '');
+                        if (pname) {
+                            const opt = document.createElement('option');
+                            opt.value = pname;
+                            opt.textContent = pname;
+                            plantSelect.appendChild(opt);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load plants filter', e);
+            }
+        },
+
+        async handlePlantFilterChange(plantVal) {
+            try {
+                await this.loadDepartments(plantVal);
+                await this.loadData(1);
+            } catch (e) {
+                console.error('Failed to filter departments by plant', e);
+            }
+        },
+
+        async loadDepartments(plantVal = '') {
+            try {
                 const select = document.getElementById('deptFilter');
+                const plantCol = document.getElementById('plantFilterCol');
+                const isPlantFilterVisible = plantCol && plantCol.style.display !== 'none';
+
+                if (isPlantFilterVisible && !plantVal) {
+                    if (select) {
+                        select.innerHTML = '<option value="">Select plant location first...</option>';
+                        select.value = '';
+                        select.disabled = true;
+                    }
+                    return;
+                }
+
+                let url = '/projects/departments';
+                if (plantVal) {
+                    url += '?plant_name=' + encodeURIComponent(plantVal);
+                }
+                const depts = await api.get(url);
                 if (select && Array.isArray(depts)) {
+                    select.disabled = false;
                     select.innerHTML = '<option value="">All Departments</option>';
                     depts.forEach(d => {
                         const opt = document.createElement('option');
@@ -1690,24 +1762,28 @@
                         opt.textContent = d.name;
                         select.appendChild(opt);
                     });
+                    select.value = '';
                 }
             } catch (e) { console.error('Failed to load departments', e); }
         },
 
         resetFilters() {
             const search = document.getElementById('globalSearchInput');
+            const plant = document.getElementById('plantFilter');
             const dept = document.getElementById('deptFilter');
             const status = document.getElementById('statusFilter');
             const stage = document.getElementById('stageFilter');
             if (search) search.value = '';
+            if (plant) plant.value = '';
             if (dept) dept.value = '';
             if (status) status.value = 'Active';
             if (stage) stage.value = '';
+            this.loadDepartments('');
             this.loadData(1);
         },
 
         setupFilterListeners() {
-            ['globalSearchInput', 'deptFilter', 'statusFilter', 'stageFilter'].forEach(id => {
+            ['globalSearchInput', 'plantFilter', 'deptFilter', 'statusFilter', 'stageFilter'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 if (id === 'globalSearchInput') {
@@ -1724,6 +1800,7 @@
                 this.currentPage = page;
                 const filters = {
                     q: document.getElementById('globalSearchInput')?.value || '',
+                    plant: document.getElementById('plantFilter')?.value || '',
                     department_id: document.getElementById('deptFilter')?.value || '',
                     status: document.getElementById('statusFilter')?.value || '',
                     stage: document.getElementById('stageFilter')?.value || '',
@@ -1802,7 +1879,8 @@
         renderTable() {
             const body = document.getElementById('repoTableBody');
             const query = document.getElementById('globalSearchInput')?.value || '';
-            const hasActiveFilters = document.getElementById('deptFilter')?.value || 
+            const hasActiveFilters = document.getElementById('plantFilter')?.value || 
+                                     document.getElementById('deptFilter')?.value || 
                                      document.getElementById('statusFilter')?.value || 
                                      document.getElementById('stageFilter')?.value || 
                                      query;
@@ -1864,9 +1942,11 @@
                             <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-xs ds-btn-ghost d-flex align-items-center gap-1" title="Continue Workflow">
                                 <i data-lucide="play-circle" style="width:14px;"></i> Continue
                             </a>
-                            <button class="ds-btn ds-btn-xs ds-btn-ghost d-flex align-items-center gap-1" onclick="repoUI.downloadReport(${p.id}, '${p.project_uid}', '${(p.title || '').replace(/'/g, "\\'")}');" title="Download Project PDF Report">
-                                <i data-lucide="file-text" class="text-danger" style="width:14px;"></i> Report
-                            </button>
+                            ${(p.status === 'Closed' || p.status === 'Completed') ? `
+                                <button class="ds-btn ds-btn-xs ds-btn-ghost d-flex align-items-center gap-1" onclick="repoUI.downloadReport(${p.id}, '${p.project_uid}', '${(p.title || '').replace(/'/g, "\\'")}', '${p.status}');" title="Download Project PDF Report">
+                                    <i data-lucide="file-text" class="text-danger" style="width:14px;"></i> Report
+                                </button>
+                            ` : ''}
                         </div>
                     </td>
                 </tr>
@@ -1874,7 +1954,11 @@
             if (window.lucide) lucide.createIcons();
         },
 
-        downloadReport(id, uid, title) {
+        downloadReport(id, uid, title, status) {
+            if (status && status !== 'Closed' && status !== 'Completed') {
+                QCMS.toast('Report is only available after project closure (Stage 8 completion).', 'warning');
+                return;
+            }
             if (window.FeatureEngine) {
                 const pdfEnabled = FeatureEngine.isEnabled('reports.pdf');
                 if (!pdfEnabled) {

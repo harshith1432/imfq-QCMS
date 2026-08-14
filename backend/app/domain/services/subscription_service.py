@@ -242,9 +242,16 @@ class SubscriptionManager:
         current_users = User.query.filter_by(org_id=org_id).count()
         active_projects = Project.query.filter_by(org_id=org_id).filter(Project.status != 'Completed').count()
         
+        status_str = (org.subscription_status or 'Active')
+        plan_str = (org.subscription_plan or 'Starter')
+        is_trial = status_str.lower() in ['trialing', 'trial'] or 'trial' in plan_str.lower()
+
         return {
-            "plan_name": org.subscription_plan,
-            "status": org.subscription_status,
+            "plan_name": plan_str,
+            "status": status_str,
+            "is_trial": is_trial,
+            "trial_ends_at": org.trial_ends_at.isoformat() if org.trial_ends_at else None,
+            "trial_extension_count": getattr(org, 'trial_extension_count', 0) or 0,
             "usage": {
                 "users": {
                     "current": current_users,

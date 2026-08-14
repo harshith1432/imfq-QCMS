@@ -439,6 +439,17 @@ def get_ticket_details(ticket_id):
             "is_paused": ticket.sla.is_paused
         }
 
+    ticket_att_list = []
+    for att in (ticket.attachments or []):
+        ticket_att_list.append({
+            "id": att.id,
+            "file_name": att.file_name,
+            "file_path": att.file_path,
+            "file_size": att.file_size,
+            "mime_type": att.mime_type,
+            "uploaded_at": att.uploaded_at.isoformat() if hasattr(att, 'uploaded_at') and att.uploaded_at else ""
+        })
+
     return jsonify({
         "status": "success",
         "data": {
@@ -455,6 +466,7 @@ def get_ticket_details(ticket_id):
             "assigned_engineer": ticket.assigned_engineer.username if ticket.assigned_engineer else "Unassigned",
             "assigned_team": ticket.assigned_team or "Support Desk",
             "tags": ticket.tags or [],
+            "attachments": ticket_att_list,
             "requester": {
                 "name": ticket.user.username if ticket.user else "N/A",
                 "email": ticket.user.email if ticket.user else "N/A"
@@ -516,7 +528,16 @@ def update_ticket(ticket_id):
         # Record resolution timestamp
         if new_status in ['Resolved', 'Closed']:
             ticket.resolved_at = datetime.utcnow()
-            ticket.resolution = data.get('resolution', ticket.resolution or 'No resolution notes provided.')
+            res_val = data.get('resolution')
+            if res_val and str(res_val).strip():
+                ticket.resolution = str(res_val).strip()
+            elif not ticket.resolution or ticket.resolution == 'No resolution notes provided.':
+                last_pub = SupportComment.query.filter_by(ticket_id=ticket.id, is_internal=False).order_by(SupportComment.created_at.desc()).first()
+                if last_pub and last_pub.content:
+                    ticket.resolution = last_pub.content
+                else:
+                    ticket.resolution = f"Ticket marked as {new_status}."
+
             if ticket.sla:
                 ticket.sla.resolution_completed_at = datetime.utcnow()
                 # Check if resolved within SLA bounds
@@ -1018,3 +1039,79 @@ def send_enquiry_email(enquiry_id):
         return jsonify({"status": "error", "message": f"Failed to send email: {str(e)}"}), 500
 
 
+# --- FILE UPLOAD FOR SUPPORT TICKET ATTACHMENTS ---
+@support_bp.route('/tickets/<int:ticket_id>/upload-attachment', methods=['POST'])
+@jwt_required()
+def upload_ticket_attachment(ticket_id):
+    """Upload a file attachment for a support ticket (PDF and images only)."""
+    import os
+    from werkzeug.utils import secure_filename
+    from flask import current_app
+
+    user, err = get_current_user_and_check_rbac()
+    if err:
+        return jsonify({"status": "error", "message": err}), 403
+
+    ticket = SupportTicket.query.get_or_404(ticket_id)
+    if user.role.name != 'SuperAdmin' and ticket.org_id != user.org_id:
+        return jsonify({"status": "error", "message": "Access denied"}), 403
+
+    if 'file' not in request.files:
+        return jsonify({"status": "error", "message": "No file provided"}), 400
+
+    file = request.files['file']
+    if not file or file.filename == '':
+        return jsonify({"status": "error", "message": "No file selected"}), 400
+
+    # Strict file type validation — only PDF and images allowed
+    ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_EXTENSIONS:
+        return jsonify({
+            "status": "error",
+            "message": "Invalid file type. Only PDF and images (PNG, JPG, GIF, WEBP) are allowed."
+        }), 400
+
+    try:
+        filename = secure_filename(file.filename)
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        filename = f"ticket_{ticket_id}_{timestamp}_{filename}"
+
+        upload_dir = os.path.join(
+            current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'support_attachments'
+        )
+        os.makedirs(upload_dir, exist_ok=True)
+        file_path = os.path.join(upload_dir, filename)
+        file.save(file_path)
+
+        file_url = f"/uploads/support_attachments/{filename}"
+        file_size = os.path.getsize(file_path)
+
+        # Save record in DB linked to this ticket
+        att = SupportAttachment(
+            ticket_id=ticket.id,
+            comment_id=None,
+            file_name=file.filename,
+            file_path=file_url,
+            file_size=file_size,
+            mime_type=file.content_type or f"application/{ext}",
+            uploaded_by_id=user.id,
+            virus_scan_passed=True
+        )
+        db.session.add(att)
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "attachment": {
+                "id": att.id,
+                "file_name": att.file_name,
+                "file_path": att.file_path,
+                "file_size": att.file_size,
+                "mime_type": att.mime_type
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Upload failed: {str(e)}"}), 500

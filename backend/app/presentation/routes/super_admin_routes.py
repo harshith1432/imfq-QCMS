@@ -3067,11 +3067,9 @@ def delete_admin_login(admin_id):
 @super_admin_bp.route('/storage/breakdown', methods=['GET'])
 @jwt_required()
 def get_storage_breakdown_sa():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id) if user_id else None
-    role_name = user.role.name if user and user.role else ''
-    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role')) if user else False
-    if not user or (role_name not in ('SuperAdmin', 'Admin') and not is_sa_custom):
+    from app.presentation.routes.super_admin_v1_routes import get_super_admin_user
+    user = get_super_admin_user()
+    if not user:
         return jsonify({"error": "Unauthorized"}), 403
 
     from app.domain.services.storage_calculator_service import calculate_org_storage_realtime

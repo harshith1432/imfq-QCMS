@@ -22,6 +22,29 @@ def _get_current_user():
     user_id = get_jwt_identity()
     return User.query.get(user_id)
 
+
+def _require_gst_pan(org):
+    """Return (True, None) when org has both GST & PAN, else (False, error_response)."""
+    missing = []
+    if not org.gst_number or not str(org.gst_number).strip():
+        missing.append("GST Number")
+    if not org.pan_number or not str(org.pan_number).strip():
+        missing.append("PAN Number")
+    if missing:
+        fields = " and ".join(missing)
+        return False, jsonify({
+            "message": (
+                f"Your organisation's {fields} {'are' if len(missing) > 1 else 'is'} required to "
+                "purchase a plan and generate a GST invoice. "
+                "Please go to Settings → Corporate Profile and enter "
+                f"your {fields} before proceeding."
+            ),
+            "missing_fields": missing,
+            "redirect": "/admin/settings.html?tab=personal"
+        }), 422
+    return True, None
+
+
 def _audit_log(org_id, invoice_id, action, details):
     user_id = get_jwt_identity()
     audit = BillingAudit(
@@ -711,6 +734,33 @@ def create_razorpay_order():
     if not is_valid:
         return jsonify({"message": "Invalid plan name"}), 400
 
+    # GST / PAN guard — required for invoice generation
+    user = _get_current_user()
+    if user and user.org_id:
+        org_check = Organization.query.get(user.org_id)
+        if org_check:
+            ok, err = _require_gst_pan(org_check)
+            if not ok:
+                return err
+
+    # Storage Check: Ensure plan storage accommodates existing organization data
+    if user and user.org_id:
+        from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
+        calc = calculate_org_storage_realtime(user.org_id)
+        used_storage_gb = float(calc[0].get('storage_used_gb', 0.0)) if calc else float((user.organization.storage_used_mb or 0.0) / 1024.0) if user.organization else 0.0
+        
+        plan_storage_gb = 10.0
+        sp = SaaSPlan.query.filter(or_(SaaSPlan.name == resolved_name, SaaSPlan.code == resolved_name)).first()
+        if sp and sp.limits and sp.limits.storage_limit_gb is not None:
+            plan_storage_gb = float(sp.limits.storage_limit_gb)
+        elif resolved_name in PLAN_SPECS:
+            plan_storage_gb = float(PLAN_SPECS[resolved_name].get('storage_limit_gb', 10.0))
+            
+        if used_storage_gb > 0 and plan_storage_gb < used_storage_gb:
+            return jsonify({
+                "message": f"Cannot purchase '{resolved_name}'. Your organization currently uses {used_storage_gb:.2f} GB of data, which exceeds this plan's storage limit of {plan_storage_gb:.1f} GB. Please choose a plan supporting at least {used_storage_gb:.2f} GB."
+            }), 400
+
     gst = total_price - base_price
 
     order_id = f"order_{secrets.token_hex(8)}"
@@ -745,6 +795,11 @@ def verify_razorpay_payment():
     org = Organization.query.get(user.org_id)
     if not org:
         return jsonify({"message": "Organization not found"}), 404
+
+    # GST / PAN guard — required for invoice generation
+    ok, err = _require_gst_pan(org)
+    if not ok:
+        return err
 
     gst = total_price - base_price
 
@@ -803,6 +858,30 @@ def submit_offline_payment_proof():
     is_valid, resolved_plan_name, base_price, total_price, max_users, max_projects, cycle = _get_plan_details(plan_name)
     if not is_valid:
         return jsonify({"message": "Invalid or missing plan_name"}), 400
+
+    # GST / PAN guard — required for invoice generation
+    org_for_check = Organization.query.get(user.org_id)
+    if org_for_check:
+        ok, err = _require_gst_pan(org_for_check)
+        if not ok:
+            return err
+
+    # Storage Check: Ensure selected plan storage accommodates existing data
+    from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
+    calc = calculate_org_storage_realtime(user.org_id)
+    used_storage_gb = float(calc[0].get('storage_used_gb', 0.0)) if calc else float((user.organization.storage_used_mb or 0.0) / 1024.0) if user.organization else 0.0
+    
+    plan_storage_gb = 10.0
+    sp = SaaSPlan.query.filter(or_(SaaSPlan.name == resolved_plan_name, SaaSPlan.code == resolved_plan_name)).first()
+    if sp and sp.limits and sp.limits.storage_limit_gb is not None:
+        plan_storage_gb = float(sp.limits.storage_limit_gb)
+    elif resolved_plan_name in PLAN_SPECS:
+        plan_storage_gb = float(PLAN_SPECS[resolved_plan_name].get('storage_limit_gb', 10.0))
+        
+    if used_storage_gb > 0 and plan_storage_gb < used_storage_gb:
+        return jsonify({
+            "message": f"Cannot select '{resolved_plan_name}'. Your organization currently uses {used_storage_gb:.2f} GB of data, which exceeds this plan's storage limit of {plan_storage_gb:.1f} GB. Please choose a plan supporting at least {used_storage_gb:.2f} GB."
+        }), 400
 
     if not transaction_id or not transaction_id.strip():
         return jsonify({"message": "Transaction ID / UTR is required"}), 400

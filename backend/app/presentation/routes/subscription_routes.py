@@ -1251,9 +1251,25 @@ def upgrade_plan(sub_id):
     if err:
         return err
 
+    sub = Subscription.query.get_or_404(sub_id)
+    data = request.get_json(silent=True) or {}
+    new_plan = data.get('plan_name')
+
     plan_info = _get_plan_details(new_plan, sub.billing_cycle)
     if not plan_info:
         return jsonify({'error': f'Valid plan_name required: {new_plan}'}), 422
+
+    # Storage Check: Ensure plan storage accommodates existing data
+    org = sub.organization
+    if org:
+        from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
+        calc = calculate_org_storage_realtime(org.id)
+        used_storage_gb = float(calc[0].get('storage_used_gb', 0.0)) if calc else float((org.storage_used_mb or 0.0) / 1024.0)
+        target_storage_gb = float(data.get('storage_limit_gb', plan_info['storage_limit_gb']))
+        if target_storage_gb < used_storage_gb:
+            return jsonify({
+                'error': f'Cannot select plan "{new_plan}". Organization currently uses {used_storage_gb:.2f} GB of data, which exceeds this plan\'s storage limit of {target_storage_gb:.1f} GB. Please choose a plan supporting at least {used_storage_gb:.2f} GB.'
+            }), 400
 
     old_plan = sub.plan_name
     sub.plan_name = new_plan
@@ -1299,6 +1315,18 @@ def downgrade_plan(sub_id):
     plan_info = _get_plan_details(new_plan, sub.billing_cycle)
     if not plan_info:
         return jsonify({'error': f'Valid plan_name required: {new_plan}'}), 422
+
+    # Storage Check: Ensure downgraded plan storage accommodates existing data
+    org = sub.organization
+    if org:
+        from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
+        calc = calculate_org_storage_realtime(org.id)
+        used_storage_gb = float(calc[0].get('storage_used_gb', 0.0)) if calc else float((org.storage_used_mb or 0.0) / 1024.0)
+        target_storage_gb = float(data.get('storage_limit_gb', plan_info['storage_limit_gb']))
+        if target_storage_gb < used_storage_gb:
+            return jsonify({
+                'error': f'Cannot downgrade to "{new_plan}". Organization currently uses {used_storage_gb:.2f} GB of data, which exceeds this plan\'s storage limit of {target_storage_gb:.1f} GB. Please choose a plan supporting at least {used_storage_gb:.2f} GB or delete existing files.'
+            }), 400
 
     old_plan = sub.plan_name
     sub.plan_name = new_plan
@@ -1711,8 +1739,8 @@ def request_trial_extension():
     if not user:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    org_id = getattr(user, 'organization_id', None)
-    if not org_id and user.role == 'SuperAdmin':
+    org_id = getattr(user, 'org_id', None) or getattr(user, 'organization_id', None)
+    if not org_id and (user.role == 'SuperAdmin' or getattr(user.role, 'name', '') == 'SuperAdmin'):
         data = request.get_json(silent=True) or {}
         org_id = data.get('organization_id')
         
@@ -1722,6 +1750,9 @@ def request_trial_extension():
     org = Organization.query.get(org_id)
     if not org:
         return jsonify({'error': 'Organization not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    reason = (data.get('reason') or data.get('notes') or '').strip()
 
     trial_plan = SubscriptionManager.get_default_trial_plan()
     ps = PlatformSettings.query.first()
@@ -1733,7 +1764,6 @@ def request_trial_extension():
     if not default_days:
         default_days = (ps.trial_period_days if ps and ps.trial_period_days else 14)
 
-    data = request.get_json(silent=True) or {}
     days = int(data.get('days', default_days))
     
     current_count = getattr(org, 'trial_extension_count', 0) or 0
@@ -1748,7 +1778,9 @@ def request_trial_extension():
         org.subscription_status = 'Trialing'
         
         # Also sync subscription record if present
-        sub = Subscription.query.filter_by(organization_id=org.id).first()
+        sub = Subscription.query.filter_by(org_id=org.id).first()
+        if not sub:
+            sub = Subscription.query.filter_by(organization_id=org.id).first()
         if sub:
             sub.trial_end_date = org.trial_ends_at
             sub.end_date = org.trial_ends_at
@@ -1757,7 +1789,7 @@ def request_trial_extension():
         db.session.commit()
         
         _log(user, 'TRIAL_AUTO_EXTENDED', 'Organization', org.id,
-             None, {'days': days, 'extension_count': org.trial_extension_count, 'max_auto': max_auto})
+             None, {'days': days, 'extension_count': org.trial_extension_count, 'max_auto': max_auto, 'reason': reason})
              
         return jsonify({
             'status': 'success',
@@ -1769,11 +1801,12 @@ def request_trial_extension():
         })
     else:
         # Requires Super Admin approval
+        reason_str = f"\nReason: {reason}" if reason else ""
         ticket = SupportTicket(
-            organization_id=org.id,
+            org_id=org.id,
             user_id=user.id,
             subject=f"Trial Extension Approval Request: {org.name}",
-            description=f"Organization '{org.name}' (Admin: {user.email}) requested a +{days}-day trial extension. This organization has reached the auto-approval limit ({current_count}/{max_auto} used). Super Admin approval is required.",
+            description=f"Organization '{org.name}' (Admin: {user.email}) requested a +{days}-day trial extension.{reason_str}\nThis organization has reached the auto-approval limit ({current_count}/{max_auto} used). Super Admin approval is required.",
             status="Open",
             priority="High",
             category="Billing & Subscription"
@@ -1788,7 +1821,7 @@ def request_trial_extension():
             notif = Notification(
                 user_id=sa.id,
                 title=f"Trial Extension Request: {org.name}",
-                message=f"Organization '{org.name}' requested a +{days}-day trial extension ({current_count}/{max_auto} auto-approvals used). Super Admin review required.",
+                message=f"Organization '{org.name}' requested trial extension (+{days} days). Auto-approval limit reached ({current_count}/{max_auto} used). Super Admin review required.",
                 notification_type="TrialExtensionRequest",
                 priority="High",
                 is_read=False,
@@ -1798,14 +1831,14 @@ def request_trial_extension():
         db.session.commit()
         
         _log(user, 'TRIAL_EXTENSION_REQUESTED', 'Organization', org.id,
-             None, {'days': days, 'extension_count': current_count, 'max_auto': max_auto, 'ticket_id': ticket.id})
+             None, {'days': days, 'extension_count': current_count, 'max_auto': max_auto, 'ticket_id': ticket.id, 'reason': reason})
              
         return jsonify({
             'status': 'pending_approval',
             'auto_approved': False,
             'extension_count': current_count,
             'max_auto_allowed': max_auto,
-            'message': f'You have reached the maximum limit of auto-approved trial extensions ({current_count}/{max_auto} used). Your request for +{days} days has been submitted to Super Admin for manual approval.',
+            'message': f'Auto-extension limit reached ({current_count}/{max_auto} used). Your trial extension request has been submitted to Super Admin for manual verification and approval.',
             'ticket_id': ticket.id
         })
 
@@ -2046,6 +2079,25 @@ def get_plan_catalogue():
     price_filter = request.args.get('price_type', '') # Free, Paid, Custom
     search_q = request.args.get('q', '').strip()
 
+    # ── Resolve target organization and current storage usage ──
+    target_org = None
+    if not is_super_admin and user and user.org_id:
+        target_org = user.organization
+    elif request.args.get('org_id'):
+        target_org = db.session.get(Organization, request.args.get('org_id', type=int))
+    elif request.args.get('sub_id'):
+        sub_rec = db.session.get(Subscription, request.args.get('sub_id', type=int))
+        target_org = sub_rec.organization if sub_rec else None
+
+    current_storage_gb = 0.0
+    if target_org:
+        from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
+        calc = calculate_org_storage_realtime(target_org.id)
+        if calc and len(calc) > 0:
+            current_storage_gb = float(calc[0].get('storage_used_gb', 0.0))
+        else:
+            current_storage_gb = float((target_org.storage_used_mb or 0.0) / 1024.0)
+
     try:
         plans_query = SaaSPlan.query
         if not is_super_admin and not status_filter:
@@ -2066,6 +2118,15 @@ def get_plan_catalogue():
 
         result = []
         for plan in db_plans:
+            plan_storage_gb = float(plan.limits.storage_limit_gb if (plan.limits and plan.limits.storage_limit_gb is not None) else 10.0)
+
+            # STORAGE CAPACITY FILTER:
+            # If organization currently has e.g. 7 GB of data, filter out plans below 7 GB.
+            # Only show plans with storage limit >= organization's current storage usage.
+            if target_org and (not is_super_admin or request.args.get('filter_by_storage') == 'true'):
+                if current_storage_gb > 0 and plan_storage_gb < current_storage_gb:
+                    continue
+
             pricing_list = plan.pricing
             
             # Calculate active subscribers (trimmed & case-insensitive matching name or code)
@@ -2139,7 +2200,7 @@ def get_plan_catalogue():
                 'monthly_price': price_val,
                 'yearly_price': price_val,
                 'max_users': plan.limits.max_users if plan.limits else 100,
-                'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0,
+                'storage_limit_gb': plan_storage_gb,
                 'api_limit': plan.limits.api_limit if plan.limits else 10000,
                 'support_level': plan.limits.support_level if (plan.limits and hasattr(plan.limits, 'support_level')) else 'Standard',
                 'enabled_modules': enabled_modules,
@@ -2153,7 +2214,18 @@ def get_plan_catalogue():
                 'updated_at': plan.updated_at.isoformat() if plan.updated_at else None
             })
 
-        return jsonify({'status': 'success', 'data': result, 'billing_cycle': billing_cycle or 'Yearly'})
+        return jsonify({
+            'status': 'success',
+            'data': result,
+            'billing_cycle': billing_cycle or 'Yearly',
+            'current_storage_used_gb': round(current_storage_gb, 2),
+            'min_required_storage_gb': round(current_storage_gb, 2),
+            'storage_filtered': bool(target_org and current_storage_gb > 0)
+        })
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"[GET PLAN CATALOGUE ERROR] {e}")
+        return jsonify({'status': 'success', 'data': [], 'billing_cycle': billing_cycle or 'Yearly'})
     except Exception as e:
         from flask import current_app
         current_app.logger.error(f"[GET PLAN CATALOGUE ERROR] {e}")

@@ -1315,6 +1315,8 @@ def get_stats():
         .filter(ProjectStageTracker.org_id == org_id, ProjectStageTracker.status == 'In Progress')\
         .group_by(ProjectStageTracker.stage_number).all()
     
+    plant_count = Plant.query.filter_by(org_id=org_id).count()
+    
     return jsonify({
         "users": user_count,
         "total_members": user_count,
@@ -1322,7 +1324,159 @@ def get_stats():
         "active_projects": active_projects,
         "completed_projects": completed_projects,
         "pending_validations": pending_validations,
+        "total_plants": plant_count,
         "stage_distribution": dict(stages)
+    }), 200
+
+
+@admin_bp.route('/plants/directory-breakdown', methods=['GET'])
+@admin_required
+def get_plant_directory_breakdown():
+    """Returns detailed hierarchical breakdown of plants, departments, running/closed projects, and members count."""
+    current_user_id = get_jwt_identity()
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"message": "User not found"}), 404
+    org_id = current_user.org_id
+
+    plants = Plant.query.filter_by(org_id=org_id).order_by(Plant.name).all()
+    all_depts = Department.query.filter_by(org_id=org_id).order_by(Department.name).all()
+    all_users = User.query.filter_by(org_id=org_id).all()
+    all_projects = Project.query.filter_by(org_id=org_id).all()
+
+    # Pre-group departments by plant_id
+    plant_depts = {p.id: [] for p in plants}
+    unassigned_depts = []
+
+    for d in all_depts:
+        if d.plant_id and d.plant_id in plant_depts:
+            plant_depts[d.plant_id].append(d)
+        else:
+            unassigned_depts.append(d)
+
+    total_org_running = 0
+    total_org_closed = 0
+    total_org_members = len(all_users)
+    total_org_departments = len(all_depts)
+
+    plant_data_list = []
+
+    for p in plants:
+        depts_in_plant = plant_depts.get(p.id, [])
+        dept_breakdown = []
+
+        plant_running = 0
+        plant_closed = 0
+        plant_members_set = set()
+
+        for d in depts_in_plant:
+            # Users belonging to this department (or plant)
+            d_users = [u for u in all_users if u.department_id == d.id]
+            for u in d_users:
+                plant_members_set.add(u.id)
+
+            # Projects in this department
+            d_projects = [pr for pr in all_projects if pr.department_id == d.id]
+            d_running = len([pr for pr in d_projects if str(pr.status or '').strip() not in ('Closed', 'Archived', 'Completed')])
+            d_closed = len([pr for pr in d_projects if str(pr.status or '').strip() in ('Closed', 'Archived', 'Completed')])
+
+            plant_running += d_running
+            plant_closed += d_closed
+
+            dept_breakdown.append({
+                "id": d.id,
+                "name": d.name,
+                "running_projects": d_running,
+                "closed_projects": d_closed,
+                "total_members": len(d_users),
+                "members": [
+                    {
+                        "id": u.id,
+                        "name": u.full_name or u.username,
+                        "email": u.email,
+                        "role": u.role.name if u.role else "Member"
+                    }
+                    for u in d_users
+                ]
+            })
+
+        # Also add users explicitly assigned to this plant via plant_id
+        direct_plant_users = [u for u in all_users if u.plant_id == p.id]
+        for u in direct_plant_users:
+            plant_members_set.add(u.id)
+
+        total_org_running += plant_running
+        total_org_closed += plant_closed
+
+        plant_data_list.append({
+            "id": p.id,
+            "name": p.name,
+            "code": p.code or f"PLANT-{p.id}",
+            "location": p.location or p.name,
+            "total_departments": len(depts_in_plant),
+            "total_members": len(plant_members_set),
+            "running_projects": plant_running,
+            "closed_projects": plant_closed,
+            "departments": dept_breakdown
+        })
+
+    # Include unassigned departments if any exist
+    if unassigned_depts:
+        unassigned_breakdown = []
+        u_running_total = 0
+        u_closed_total = 0
+        u_members_set = set()
+
+        for d in unassigned_depts:
+            d_users = [u for u in all_users if u.department_id == d.id]
+            for u in d_users:
+                u_members_set.add(u.id)
+
+            d_projects = [pr for pr in all_projects if pr.department_id == d.id]
+            d_running = len([pr for pr in d_projects if str(pr.status or '').strip() not in ('Closed', 'Archived', 'Completed')])
+            d_closed = len([pr for pr in d_projects if str(pr.status or '').strip() in ('Closed', 'Archived', 'Completed')])
+
+            u_running_total += d_running
+            u_closed_total += d_closed
+
+            unassigned_breakdown.append({
+                "id": d.id,
+                "name": d.name,
+                "running_projects": d_running,
+                "closed_projects": d_closed,
+                "total_members": len(d_users),
+                "members": [
+                    {
+                        "id": u.id,
+                        "name": u.full_name or u.username,
+                        "email": u.email,
+                        "role": u.role.name if u.role else "Member"
+                    }
+                    for u in d_users
+                ]
+            })
+
+        plant_data_list.append({
+            "id": 0,
+            "name": "General / Unassigned Location",
+            "code": "HQ-GENERAL",
+            "location": "Global / Unassigned",
+            "total_departments": len(unassigned_depts),
+            "total_members": len(u_members_set),
+            "running_projects": u_running_total,
+            "closed_projects": u_closed_total,
+            "departments": unassigned_breakdown
+        })
+
+    return jsonify({
+        "summary": {
+            "total_plants": len(plants),
+            "total_departments": total_org_departments,
+            "total_members": total_org_members,
+            "running_projects": total_org_running,
+            "closed_projects": total_org_closed
+        },
+        "plants": plant_data_list
     }), 200
 
 
@@ -2018,7 +2172,26 @@ def upgrade_plan():
     current_user_id = get_jwt_identity()
     current_user = db.session.get(User, current_user_id)
     org = db.session.get(Organization, current_user.org_id)
-    
+
+    # GST / PAN guard — required before plan purchase
+    missing = []
+    if not org.gst_number or not str(org.gst_number).strip():
+        missing.append("GST Number")
+    if not org.pan_number or not str(org.pan_number).strip():
+        missing.append("PAN Number")
+    if missing:
+        fields = " and ".join(missing)
+        return jsonify({
+            "message": (
+                f"Your organisation's {fields} {'are' if len(missing) > 1 else 'is'} required to "
+                "purchase a plan and generate a GST invoice. "
+                "Please go to Settings → Corporate Profile and enter "
+                f"your {fields} before proceeding."
+            ),
+            "missing_fields": missing,
+            "redirect": "/admin/settings.html?tab=personal"
+        }), 422
+
     data = request.get_json()
     new_plan = data.get('plan_name')
     

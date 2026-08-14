@@ -436,6 +436,27 @@ def clear_login_lockout(identifier: str):
         _login_attempt_counters.pop(identifier, None)
 
 
+def get_lockout_info(identifier: str) -> dict:
+    """Return lockout details for the given identifier.
+    Returns a dict with keys: is_locked (bool), remaining_seconds (int), locked_until_epoch (float|None).
+    """
+    now = time.time()
+    with _lock:
+        entry = _login_attempt_counters.get(identifier)
+        if not entry:
+            return {'is_locked': False, 'remaining_seconds': 0, 'locked_until_epoch': None}
+        locked_until = entry.get('locked_until')
+        if locked_until and now < locked_until:
+            return {
+                'is_locked': True,
+                'remaining_seconds': int(locked_until - now),
+                'locked_until_epoch': locked_until
+            }
+        if locked_until and now >= locked_until:
+            _login_attempt_counters.pop(identifier, None)
+    return {'is_locked': False, 'remaining_seconds': 0, 'locked_until_epoch': None}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Security KPI Helpers (called by the settings dashboard endpoint)
 # ─────────────────────────────────────────────────────────────────────────────

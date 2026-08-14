@@ -989,7 +989,7 @@ const SuperAdmin = {
                             <i data-lucide="hard-drive" style="width:18px;height:18px;color:#8b5cf6;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);" id="saStorageKpiVal">${data.storage_used_fmt || (data.storage_used ? data.storage_used + ' MB' : '0 MB')}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Storage Used (All Orgs)</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Platform Storage Usage</div>
                     </div>
 
                     <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('billing')">
@@ -3407,7 +3407,7 @@ const SuperAdmin = {
         try {
             const orgParam = this.auditFilters.org_id ? `&org_id=${this.auditFilters.org_id}` : '';
             const pageParam = `page=${this.sessionFilters.page}&per_page=${this.sessionFilters.per_page}`;
-            const res = await api.get(`/admin/audit/sessions?${pageParam}${orgParam}`);
+            const res = await api.get(`/admin/audit/sessions?${pageParam}${orgParam}&status=Active`);
             this.auditSessions = res.data || [];
             const pag = res.pagination || { total: this.auditSessions.length, page: this.sessionFilters.page, per_page: 10, pages: 1 };
 
@@ -3415,8 +3415,9 @@ const SuperAdmin = {
                 tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center text-muted">No active session records found.</td></tr>`;
             } else {
                 tbody.innerHTML = this.auditSessions.map(s => {
-                    const isAct = s.status === 'Active';
-                    const statusBadge = isAct ? '<span class="ds-badge green">Active</span>' : `<span class="ds-badge gray">${s.status}</span>`;
+                    const statusStr = String(s.status || '').trim().toLowerCase();
+                    const isAct = statusStr === 'active';
+                    const statusBadge = isAct ? '<span class="ds-badge green">ACTIVE</span>' : `<span class="ds-badge gray">${(s.status || 'LOGGEDOUT').toUpperCase()}</span>`;
                     const durMin = Math.round((s.session_duration || 0) / 60);
                     
                     return `
@@ -3433,7 +3434,7 @@ const SuperAdmin = {
                         <td class="text-end">
                             ${isAct 
                                 ? `<button class="ds-btn ds-btn-outline-danger ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="SuperAdmin.terminateAuditSession('${s.session_id}')"><i data-lucide="power" style="width:12px;height:12px;"></i> Terminate</button>` 
-                                : `<button class="ds-btn ds-btn-outline-secondary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" onclick="SuperAdmin.terminateAuditSession('${s.session_id}')"><i data-lucide="shield-off" style="width:12px;height:12px;"></i> Revoke Session</button>`
+                                : `<span class="text-muted text-xs">—</span>`
                             }
                         </td>
                     </tr>`;
@@ -4452,11 +4453,26 @@ const SuperAdmin = {
         }
 
         try {
-            const token = (window.api && window.api.token) || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
-            const res = await fetch('/api/v1/storage/breakdown', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const json = await res.json();
+            let json = null;
+            if (window.api && window.api.get) {
+                try {
+                    json = await api.get('/v1/storage/breakdown');
+                } catch (e1) {
+                    try {
+                        json = await api.get('/super-admin/storage/breakdown');
+                    } catch (e2) {}
+                }
+            }
+            if (!json || !json.data || json.status !== 'success') {
+                const token = (window.api && window.api.token) || sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+                const res = await fetch('/api/v1/storage/breakdown', {
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                json = await res.json();
+            }
 
             if (json.status === 'success' && json.data) {
                 this._storageDataCache = json.data;
@@ -5303,7 +5319,7 @@ const SuperAdmin = {
     async openSubPlanModal(id, mode) {
         this._sub.planChangeMode=mode; this._sub.planChangeSub=null; this._sub.planChangeSelected=null;
         try {
-            const [subRes, plansRes]=await Promise.all([this._subGet(`/${id}`), this._subGet('/plans')]);
+            const [subRes, plansRes]=await Promise.all([this._subGet(`/${id}`), this._subGet(`/plans?sub_id=${id}&filter_by_storage=true`)]);
             this._sub.planChangeSub=subRes.data;
             this._sub.catalogue=Object.fromEntries(plansRes.data.map(p=>[p.plan_name,p]));
             document.getElementById('subPlanModalTitle').textContent=mode==='upgrade'?'Upgrade Plan':'Downgrade Plan';

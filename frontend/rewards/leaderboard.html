@@ -187,7 +187,12 @@
                             </div>
                         </div>
 
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <div id="plantFilterCol" style="display:none;">
+                                <select class="ds-input ds-select py-1 px-3 text-xs" id="plantFilter" style="width:auto;" onchange="rewardsApp.handlePlantChange(this.value)">
+                                    <option value="">All Plants</option>
+                                </select>
+                            </div>
                             <select class="ds-input ds-select py-1 px-3 text-xs" id="deptFilter" style="width:auto;" onchange="rewardsApp.loadLeaderboard()">
                                 <option value="">All Departments</option>
                             </select>
@@ -266,22 +271,87 @@
                 this.init();
             }
 
+            getToken() {
+                return (window.api && window.api.token) 
+                    || localStorage.getItem('access_token') 
+                    || sessionStorage.getItem('access_token') 
+                    || localStorage.getItem('token') 
+                    || sessionStorage.getItem('token');
+            }
+
             async init() {
+                await this.loadPlants();
                 await this.loadDepartments();
                 await this.loadLeaderboard(1);
             }
 
-            async loadDepartments() {
+            async loadPlants() {
                 try {
-                    const token = sessionStorage.getItem('token');
-                    const res = await fetch('/api/admin/departments', {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
+                    const token = this.getToken();
+                    let plants = [];
+                    try {
+                        const res = await fetch('/api/projects/plants', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+                        if (res.ok) {
+                            const data = await res.json();
+                            plants = Array.isArray(data) ? data : (data.plants || []);
+                        }
+                    } catch (e) {
+                        try {
+                            const res2 = await fetch('/api/admin/plants', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+                            if (res2.ok) {
+                                const data2 = await res2.json();
+                                plants = Array.isArray(data2) ? data2 : (data2.plants || []);
+                            }
+                        } catch (e2) {}
+                    }
+                    const plantCol = document.getElementById('plantFilterCol');
+                    const plantSelect = document.getElementById('plantFilter');
+                    if (plantSelect && plants && plants.length > 0) {
+                        if (plantCol) plantCol.style.display = 'block';
+                        plantSelect.innerHTML = '<option value="">All Plants</option>' + 
+                            plants.map(p => {
+                                const pname = typeof p === 'string' ? p : (p.name || p.location || '');
+                                return pname ? `<option value="${pname}">${pname}</option>` : '';
+                            }).join('');
+                    }
+                } catch (e) { console.error("Failed to load plants", e); }
+            }
+
+            async handlePlantChange(plantVal) {
+                try {
+                    await this.loadDepartments(plantVal);
+                    await this.loadLeaderboard(1);
+                } catch (e) { console.error("Failed to handle plant change", e); }
+            }
+
+            async loadDepartments(plantVal = '') {
+                try {
+                    const select = document.getElementById('deptFilter');
+                    const plantCol = document.getElementById('plantFilterCol');
+                    const isPlantFilterVisible = plantCol && plantCol.style.display !== 'none';
+
+                    if (isPlantFilterVisible && !plantVal) {
+                        if (select) {
+                            select.innerHTML = '<option value="">Select plant location first...</option>';
+                            select.value = '';
+                            select.disabled = true;
+                        }
+                        return;
+                    }
+
+                    const token = this.getToken();
+                    let url = '/api/projects/departments';
+                    if (plantVal) url += '?plant_name=' + encodeURIComponent(plantVal);
+
+                    const res = await fetch(url, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
                     if (res.ok) {
                         this.departments = await res.json();
-                        const sel = document.getElementById('deptFilter');
-                        sel.innerHTML = '<option value="">All Departments</option>' + 
-                            this.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                        if (select && Array.isArray(this.departments)) {
+                            select.disabled = false;
+                            select.innerHTML = '<option value="">All Departments</option>' + 
+                                this.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                            select.value = '';
+                        }
                     }
                 } catch (e) {
                     console.error("Failed to load departments", e);
@@ -291,16 +361,18 @@
             async loadLeaderboard(targetPage = 1) {
                 try {
                     this.page = targetPage;
-                    const token = sessionStorage.getItem('token');
+                    const token = this.getToken();
                     const search = (document.getElementById('leaderboardSearch')?.value || '').trim();
+                    const plantVal = document.getElementById('plantFilter')?.value || '';
                     const deptId = document.getElementById('deptFilter')?.value || '';
 
                     let url = `/api/leaderboard?page=${this.page}&per_page=5`;
+                    if (plantVal) url += `&plant_name=${encodeURIComponent(plantVal)}`;
                     if (deptId) url += `&department_id=${deptId}`;
                     if (search) url += `&q=${encodeURIComponent(search)}`;
 
                     const res = await fetch(url, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                     });
 
                     if (!res.ok) throw new Error("Failed to fetch leaderboard");

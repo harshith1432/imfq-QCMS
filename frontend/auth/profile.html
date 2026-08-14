@@ -305,14 +305,27 @@
             }
 
             if (!otpRequested) {
-                // Step 1: Request OTP
+                // Step 1: Request OTP or update directly if OTP disabled
                 try {
                     submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span class="ds-spinner-sm"></span> Sending OTP...';
+                    submitBtn.innerHTML = '<span class="ds-spinner-sm"></span> Processing...';
 
                     const response = await api.post('/auth/request-password-otp', {
                         current_password: currentPass
                     });
+
+                    if (response && response.require_email_otp === false) {
+                        // Email OTP disabled: update password directly
+                        const updateRes = await api.put('/auth/change-password', {
+                            current_password: currentPass,
+                            new_password: newPass
+                        });
+                        if (updateRes) {
+                            api.showNotification('Authentication credentials updated successfully.', 'success');
+                            togglePasswordReset();
+                        }
+                        return;
+                    }
 
                     if (response) {
                         api.showNotification('OTP sent! Please check your email.', 'success');

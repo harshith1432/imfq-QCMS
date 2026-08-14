@@ -128,6 +128,7 @@ def get_leaderboard():
 
     search_q = (request.args.get('q') or '').strip()
     dept_id = request.args.get('department_id', type=int)
+    plant_param = (request.args.get('plant') or request.args.get('plant_name') or request.args.get('plant_id') or '').strip()
     time_filter = request.args.get('period', 'all')  # 'all', 'monthly', 'yearly'
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 5, type=int)
@@ -138,6 +139,16 @@ def get_leaderboard():
         .join(User, User.id == EmployeeLeaderboard.employee_id)\
         .outerjoin(Department, User.department_id == Department.id)\
         .filter(EmployeeLeaderboard.organization_id == current_user.org_id)
+
+    if plant_param:
+        from app.infrastructure.database.models.models import Plant
+        if plant_param.isdigit():
+            query = query.filter(db.or_(getattr(User, 'plant_id', None) == int(plant_param), Department.plant_id == int(plant_param)))
+        else:
+            query = query.outerjoin(Plant, getattr(User, 'plant_id', None) == Plant.id).filter(db.or_(
+                Plant.name.ilike(f"%{plant_param}%"),
+                Department.plant.has(Plant.name.ilike(f"%{plant_param}%"))
+            ))
 
     if dept_id:
         query = query.filter(User.department_id == dept_id)

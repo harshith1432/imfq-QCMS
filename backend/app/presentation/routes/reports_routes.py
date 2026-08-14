@@ -144,10 +144,10 @@ def export_all_pdfs():
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
-    projects = _get_user_projects(user).all()
+    projects = [p for p in _get_user_projects(user).all() if p.status in ('Closed', 'Completed')]
 
     if not projects:
-        return jsonify({"msg": "No projects available"}), 404
+        return jsonify({"msg": "No closed projects available for report download"}), 404
 
     from app.utils.pdf_filler import generate_qc_story_closure_summary_pdf
 
@@ -195,6 +195,9 @@ def export_pdf(project_id):
         return jsonify({"msg": "User not found"}), 404
 
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
+
+    if project.status not in ('Closed', 'Completed'):
+        return jsonify({"msg": "Project report generation is disabled until Stage 8 completion and project closure."}), 400
 
     role = user.role.name if user.role else 'Team Member'
     if role in ('Admin', 'CEO', 'SuperAdmin'):
