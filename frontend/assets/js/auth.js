@@ -5,12 +5,17 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     const password = document.getElementById('password')?.value || '';
     const errorMsg = document.getElementById('errorMsg');
 
+    let isLoggingIn = false;
     const attemptLogin = async (isRetry = false) => {
+        if (isLoggingIn && !isRetry) return;
+        isLoggingIn = true;
         let isTimeout = false;
+        let loginSuccess = false;
+        const loginBtn = document.getElementById('loginBtn');
+
         try {
-            const loginBtn = document.getElementById('loginBtn');
             if (isRetry) {
-                if (loginBtn) loginBtn.innerHTML = '<span style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Retrying...</span>';
+                if (loginBtn) loginBtn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Retrying...</span>';
                 if (errorMsg) {
                     const span = errorMsg.querySelector('span');
                     const msg = 'Server is warming up, retrying now...';
@@ -18,8 +23,12 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                     else errorMsg.textContent = msg;
                     errorMsg.style.setProperty('display', 'flex', 'important');
                 }
+            } else if (loginBtn) {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Authenticating...</span>';
             }
-            const data = await api.post('/auth/login', { username, password }, { button: isRetry ? null : loginBtn });
+
+            const data = await api.post('/auth/login', { username, password }, { button: null });
             if (!data || !data.access_token) {
                 throw new Error(data?.msg || data?.message || "Invalid username or password");
             }
@@ -60,21 +69,30 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 if (window.i18n) window.i18n.setLanguage(data.language);
             }
 
+            loginSuccess = true;
+            if (loginBtn) {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Redirecting to dashboard...</span>';
+            }
+
             if (data.is_temp_password) {
-                window.location.href = '/auth/reset-password.html';
+                window.location.replace('/auth/reset-password.html');
                 return;
             }
 
             // Role-based redirection
             const role = data.role;
-            if (role === 'SuperAdmin') window.location.href = '/admin/super-admin.html';
-            else if (role === 'Admin') window.location.href = '/dashboard/dashboard-admin.html';
-            else if (role === 'Reviewer') window.location.href = '/dashboard/dashboard-reviewer.html';
-            else if (role === 'Facilitator') window.location.href = '/dashboard/dashboard-facilitator.html';
-            else if (role === 'Team Leader') window.location.href = '/dashboard/dashboard-team-member.html';
-            else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
-            else window.location.href = '/dashboard/dashboard-team-member.html';
+            let targetDashboard = '/dashboard/dashboard-team-member.html';
+            if (role === 'SuperAdmin') targetDashboard = '/admin/super-admin.html';
+            else if (role === 'Admin') targetDashboard = '/dashboard/dashboard-admin.html';
+            else if (role === 'Reviewer') targetDashboard = '/dashboard/dashboard-reviewer.html';
+            else if (role === 'Facilitator') targetDashboard = '/dashboard/dashboard-facilitator.html';
+            else if (role === 'Team Leader') targetDashboard = '/dashboard/dashboard-team-member.html';
+            else if (role === 'CEO') targetDashboard = '/dashboard/dashboard-ceo.html';
+            
+            window.location.replace(targetDashboard);
         } catch (err) {
+            isLoggingIn = false;
             if (err.isTimeout) {
                 isTimeout = true;
             }
@@ -87,8 +105,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                     else errorMsg.textContent = msg;
                     errorMsg.style.setProperty('display', 'flex', 'important');
                 }
-                const loginBtn = document.getElementById('loginBtn');
-                if (loginBtn) loginBtn.innerHTML = '<span style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Warming up...</span>';
+                if (loginBtn) loginBtn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Warming up...</span>';
                 setTimeout(() => attemptLogin(true), 15000);
                 return;
             }
@@ -100,8 +117,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 errorMsg.style.setProperty('display', 'flex', 'important');
             }
         } finally {
-            if (!isTimeout || isRetry) {
-                const loginBtn = document.getElementById('loginBtn');
+            if (!loginSuccess && (!isTimeout || isRetry)) {
+                isLoggingIn = false;
                 if (loginBtn) {
                     if (window.ActionLock) window.ActionLock.unlockButton(loginBtn);
                     loginBtn.disabled = false;

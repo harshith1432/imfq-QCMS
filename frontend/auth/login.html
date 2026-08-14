@@ -227,7 +227,7 @@
                 <span></span>
             </div>
 
-            <form id="loginForm" autocomplete="on">
+            <form id="loginForm" action="javascript:void(0);" onsubmit="return false;" autocomplete="on">
                 <div class="ds-field">
                     <label class="ds-label" id="identifierLabel"><i data-lucide="mail"></i> <span id="identifierLabelText">Email ID</span> <span class="text-danger">*</span></label>
                     <input type="text" class="ds-input" id="username"
@@ -273,23 +273,23 @@
         </div>
     </div>
 
-    <script src="/assets/js/api.js?v=2.0.2"></script>
+    <script src="/assets/js/api.js?v=2.0.3"></script>
     <script src="/assets/js/i18n.js"></script>
     <script src="/assets/js/enterprise-validator.js"></script>
-    <script src="/assets/js/auth.js?v=2.0.2"></script>
+    <script src="/assets/js/auth.js?v=2.0.3"></script>
     <script>
         // Check for URL parameters to show messages
         window.addEventListener('DOMContentLoaded', () => {
-            // Clear any stale tokens so fresh authentication can proceed cleanly
-            sessionStorage.removeItem('token');
-            localStorage.removeItem('token');
-            localStorage.removeItem('access_token');
-            sessionStorage.removeItem('access_token');
-            sessionStorage.removeItem('user');
-            localStorage.removeItem('user');
-
             const urlParams    = new URLSearchParams(window.location.search);
             const successMsgEl = document.getElementById('successMsg');
+
+            // Clear tokens only if explicitly logging out or session was terminated
+            if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
+                sessionStorage.clear();
+                localStorage.removeItem('token');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user');
+            }
 
             if (urlParams.get('registered')) {
                 successMsgEl.querySelector('span').textContent = "Registration successful! You can now log in.";

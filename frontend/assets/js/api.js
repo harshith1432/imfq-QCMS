@@ -1,6 +1,10 @@
-// Auto-detect Browser GPS Location
+// Auto-detect Browser GPS Location (Only runs after user is authenticated to prevent permission popups on login)
 (function initBrowserGeolocation() {
     if (typeof window === 'undefined' || !navigator || !navigator.geolocation) return;
+    const path = window.location.pathname || '';
+    if (path.includes('login') || path.includes('register') || path.includes('reset-password') || path.includes('forgot-password')) {
+        return;
+    }
     const cached = sessionStorage.getItem('browser_geo_location');
     if (cached) {
         window._cachedBrowserLocation = cached;
@@ -34,7 +38,7 @@
                 } catch (e) {}
             },
             (err) => {
-                console.log('[GeoLocation] GPS permission not granted or timeout; falling back to Plant/IP location.');
+                console.debug('[GeoLocation] GPS fallback to Plant/IP location.');
             },
             { timeout: 5000, maximumAge: 600000 }
         );

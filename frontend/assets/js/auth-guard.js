@@ -4,6 +4,27 @@
         || localStorage.getItem('access_token')
         || sessionStorage.getItem('access_token');
     const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+
+    function safeBase64Decode(str) {
+        if (!str) return null;
+        try {
+            let output = str.replace(/-/g, '+').replace(/_/g, '/');
+            switch (output.length % 4) {
+                case 0: break;
+                case 2: output += '=='; break;
+                case 3: output += '='; break;
+                default: break;
+            }
+            return decodeURIComponent(escape(atob(output)));
+        } catch (_) {
+            try {
+                return atob(str);
+            } catch (e) {
+                return null;
+            }
+        }
+    }
+
     function normalizeRole(role) {
         if (!role) return null;
         let roleStr = role;
@@ -37,9 +58,12 @@
             }
             if (!userRole && token.includes('.')) {
                 try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    if (payload.role) userRole = normalizeRole(payload.role);
-                    else if (payload.sa_sub_role || window.location.pathname.includes('super-admin.html')) userRole = 'SuperAdmin';
+                    const jsonStr = safeBase64Decode(token.split('.')[1]);
+                    if (jsonStr) {
+                        const payload = JSON.parse(jsonStr);
+                        if (payload.role) userRole = normalizeRole(payload.role);
+                        else if (payload.sa_sub_role || window.location.pathname.includes('super-admin.html')) userRole = 'SuperAdmin';
+                    }
                 } catch (_) {}
             }
         } catch (e) {
@@ -447,16 +471,19 @@
     // Check token expiration if JWT format
     if (token && token.includes('.')) {
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            if (payload.exp && payload.exp * 1000 < Date.now()) {
-                console.warn('[AuthGuard] Token expired. Clearing session and redirecting to login...');
-                sessionStorage.clear();
-                localStorage.removeItem('token');
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('user');
-                if (!isPublic) {
-                    window.location.replace('/auth/login.html');
-                    return;
+            const jsonStr = safeBase64Decode(token.split('.')[1]);
+            if (jsonStr) {
+                const payload = JSON.parse(jsonStr);
+                if (payload.exp && payload.exp * 1000 < Date.now()) {
+                    console.warn('[AuthGuard] Token expired. Clearing session and redirecting to login...');
+                    sessionStorage.clear();
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user');
+                    if (!isPublic) {
+                        window.location.replace('/auth/login.html');
+                        return;
+                    }
                 }
             }
         } catch (e) {}
@@ -497,18 +524,17 @@
 
     if (isAuthPage) {
         const urlParams = new URLSearchParams(window.location.search);
-        // Only auto-redirect if explicitly requested via ?auto=true
-        if (urlParams.get('auto') === 'true' && token) {
-            console.log('Auto-login requested. Redirecting to role dashboard...');
+        // Clear session on explicit logout or administrative session termination
+        if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
+            sessionStorage.clear();
+            localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+        } else if (token && userRole) {
+            // Active valid session present: auto-redirect to appropriate dashboard
+            console.log('Active session detected on login page. Redirecting to role dashboard...');
             redirectByRole(userRole);
-        } else {
-            // When navigating to login.html directly or via Sign In link, clear any stale session so login form is displayed strictly
-            if (urlParams.get('logout') === 'true' || !urlParams.get('auto')) {
-                sessionStorage.clear();
-                localStorage.removeItem('token');
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('user');
-            }
+            return;
         }
     } else if (token && userRole !== 'SuperAdmin') {
         let isDenied = false;
