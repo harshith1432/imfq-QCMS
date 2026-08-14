@@ -1379,9 +1379,15 @@ const QCMS = {
     },
 
     logout() {
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
-        window.location.href = '/auth/login.html';
+        try {
+            sessionStorage.clear();
+            localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('role_permissions');
+            sessionStorage.removeItem('role_permissions');
+        } catch (_) {}
+        window.location.replace('/auth/login.html?logout=true');
     },
 
     setLoading(btnId, isLoading) {

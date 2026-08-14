@@ -524,15 +524,18 @@
 
     if (isAuthPage) {
         const urlParams = new URLSearchParams(window.location.search);
-        // Clear session on explicit logout or administrative session termination
+        // Clear session on explicit logout, administrative session termination, or default direct landing without auto flag
         if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
-            sessionStorage.clear();
-            localStorage.removeItem('token');
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('user');
-        } else if (token && userRole) {
-            // Active valid session present: auto-redirect to appropriate dashboard
-            console.log('Active session detected on login page. Redirecting to role dashboard...');
+            try {
+                sessionStorage.clear();
+                localStorage.removeItem('token');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user');
+                localStorage.removeItem('role_permissions');
+                sessionStorage.removeItem('role_permissions');
+            } catch (_) {}
+        } else if (urlParams.get('auto') === 'true' && token && userRole) {
+            console.log('Auto-login requested on login page. Redirecting to role dashboard...');
             redirectByRole(userRole);
             return;
         }
@@ -1180,9 +1183,15 @@
 
     // Export logout globally
     window.logout = function () {
-        sessionStorage.clear();
-        localStorage.clear();
-        window.location.replace('/auth/login.html');
+        try {
+            sessionStorage.clear();
+            localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('role_permissions');
+            sessionStorage.removeItem('role_permissions');
+        } catch (_) {}
+        window.location.replace('/auth/login.html?logout=true');
     };
 
     // Force check on back/forward navigation

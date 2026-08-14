@@ -326,9 +326,13 @@ const api = {
             if (typeof window.logout === 'function') {
                 window.logout();
             } else {
-                sessionStorage.removeItem('token');
-                localStorage.removeItem('token');
-                window.location.href = '/auth/login.html';
+                try {
+                    sessionStorage.clear();
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user');
+                } catch (_) {}
+                window.location.replace('/auth/login.html?logout=true');
             }
             throw new Error('Unauthorized - please log in again');
         }

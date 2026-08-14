@@ -244,8 +244,15 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
 });
 
 function logout() {
-    sessionStorage.clear();
-    window.location.href = '/auth/login.html';
+    try {
+        sessionStorage.clear();
+        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('role_permissions');
+        sessionStorage.removeItem('role_permissions');
+    } catch (_) {}
+    window.location.replace('/auth/login.html?logout=true');
 }
 
 function checkAuth() {
