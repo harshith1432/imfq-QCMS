@@ -460,6 +460,7 @@ def create_app():
                     print("[QCMS] Seeded default SaaS Plans (Trial/Starter/Professional/Enterprise) successfully.")
                 else:
                     # Guarantee at least one system default trial plan exists
+                    from sqlalchemy import func
                     trial_exists = SaaSPlan.query.filter(
                         (SaaSPlan.is_default_trial == True) | 
                         (func.lower(SaaSPlan.plan_type) == 'trial') |

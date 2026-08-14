@@ -1024,6 +1024,7 @@ def login():
     except Exception as sess_err:
         db.session.rollback()
         print(f"[LOGIN SESSION WARNING] {sess_err}")
+    p_id, p_name, d_id, d_name = resolve_user_plant_and_dept(user)
     from app.presentation.routes.admin_routes import DEFAULT_ROLE_PERMISSIONS
     org_obj = user.organization if role_name != 'SuperAdmin' else None
     sec = getattr(org_obj, 'security_settings', {}) or {} if org_obj else {}
