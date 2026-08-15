@@ -66,13 +66,18 @@ def _get_pending_projects(org_id, reviewer_id, user_dept_id=None, is_admin=False
         return pending_list
 
     # Reviewer pending queue: any stage 1-8 in this org where tracker is 'Submitted For Review'.
-    # All reviewers in the org can see all pending submissions (not filtered by reviewer_id).
+    # All reviewers in the org can see pending submissions in their department, unassigned departments, or projects assigned to them.
+    from sqlalchemy import or_
     query = Project.query.filter(
         Project.org_id == org_id,
         Project.status != 'Closed'
     )
     if user_dept_id:
-        query = query.filter(Project.department_id == user_dept_id)
+        query = query.filter(or_(
+            Project.department_id == user_dept_id,
+            Project.reviewer_id == reviewer_id,
+            Project.department_id.is_(None)
+        ))
         
     active_projects = query.all()
     pending_list = []
@@ -124,7 +129,8 @@ def get_stats():
     )
     if not is_admin:
         if user_dept_id:
-            impact_query = impact_query.filter(Project.department_id == user_dept_id)
+            from sqlalchemy import or_
+            impact_query = impact_query.filter(or_(Project.department_id == user_dept_id, Project.reviewer_id == user.id, Project.department_id.is_(None)))
         else:
             impact_query = impact_query.filter(Project.reviewer_id == user.id)
     pending_impact = impact_query.count()
@@ -184,7 +190,7 @@ def get_pending_approvals():
     
     result = []
     for p, stage, workflow in pending_data:
-        dept = Department.query.get(p.department_id)
+        dept = Department.query.get(p.department_id) if p.department_id else None
         tl = User.query.get(p.creator_id) if p.creator_id else None
         
         # Build stage_data dict safely from the workflow's JSON data column.
@@ -235,12 +241,12 @@ def get_pending_approvals():
 @reviewer_required
 def process_decision():
     user = User.query.get(get_jwt_identity())
-    data = request.json
+    data = request.json or {}
     
     project_id = data.get('project_id')
     decision = data.get('decision')  # 'Approved', 'Rejected', 'Revision'
     comments = data.get('comments')
-    pending_stage = data.get('pending_stage')
+    pending_stage = data.get('pending_stage') or data.get('stage')
     return _process_decision_logic(user, project_id, decision, comments, pending_stage)
 
 def _process_decision_logic(user, project_id, decision, comments, pending_stage):
@@ -252,11 +258,13 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
         
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
     
-    # Enforce department restriction for Reviewer
+    # Enforce department restriction for Reviewer (unless explicitly assigned as reviewer or global department)
     if user.role.name != 'Admin' and user.dept and user.dept.name not in ['All', 'N/A']:
-        if project.department_id != user.department_id:
+        if project.reviewer_id != user.id and project.department_id and project.department_id != user.department_id:
             return jsonify({"msg": "Unauthorized: This project does not belong to your department."}), 403
     
+    if not pending_stage:
+        pending_stage = project.current_stage
     if not pending_stage or pending_stage < 1 or pending_stage > 8:
         return jsonify({"msg": "Invalid or missing pending_stage"}), 400
 
@@ -699,6 +707,8 @@ def get_closure_projects():
         result.append({
             "id": p.id,
             "title": p.title,
+            "status": p.status,
+            "is_pending_ceo": p.status == 'Pending CEO Review',
             "sop_status": sop_status,
             "sop_id": sop.id if sop else None,
             "has_training_records": has_training,
@@ -772,7 +782,45 @@ def complete_closure(project_id):
         user_name = user_info.full_name or user_info.username if user_info else f"ID {pending_training.user_id}"
         return jsonify({"msg": f"Project closure blocked: Assigned training records are not fully completed (Pending for: {user_name})."}), 400
 
-    # Move project to Closed stage directly
+    send_to_ceo = data.get('send_to_ceo', False) or data.get('action') == 'send_to_ceo'
+
+    if send_to_ceo:
+        # Escalate to CEO for Final Review and Closure
+        project.status = 'Pending CEO Review'
+        s8.facilitator_validation = True
+        reviewer_note = data.get('reviewer_notes') or data.get('comments') or 'Reviewer validated Stage 8. Sent to CEO for final executive sign-off & closure.'
+        s8.final_comments = f"Reviewer validated: {reviewer_note}"
+
+        db.session.flush()
+
+        from app.presentation.routes.notification_routes import create_notification
+        from app.infrastructure.database.models.models import Role
+
+        # Find CEO users in this organization
+        ceo_users = User.query.join(Role).filter(
+            User.org_id == project.org_id,
+            Role.name == 'CEO'
+        ).all()
+
+        for ceo in ceo_users:
+            create_notification(
+                user.org_id, ceo.id,
+                "Project Awaiting CEO Review & Closure",
+                f"Reviewer completed Stage 8 review for project '{project.title}'. Awaiting your executive review and closure sign-off.",
+                f"/dashboard/dashboard-ceo.html?view=executive-approvals",
+                commit=False
+            )
+
+        log_action(project.org_id, user.id, "Stage 8 Review: Sent to CEO for Final Review and Closure", project_id, str(data))
+        db.session.commit()
+
+        return jsonify({
+            "msg": f"Project '{project.title}' has been successfully forwarded to the CEO for executive review and closure.",
+            "status": "Pending CEO Review",
+            "pending_ceo": True
+        }), 200
+
+    # Direct Reviewer Closure: Move project to Closed stage directly
     project.status = 'Closed'
     project.end_date = datetime.utcnow().date()
     
@@ -818,6 +866,13 @@ def complete_closure(project_id):
 
     log_action(project.org_id, user.id, "Stage 8 Closure Signed Off and Closed by Reviewer", project_id, str(data))
     db.session.commit()
+
+    # Send Automated Project Completion & Congratulatory Report Email to all team participants & Admins
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.trigger_project_completed_notification(project.id)
+    except Exception as email_err:
+        print(f"[QCMS EMAIL] Non-blocking project completed email dispatch error: {email_err}")
 
     return jsonify({
         "msg": "Reviewer closure sign-off complete. Project has been officially closed and archived.",

@@ -474,11 +474,14 @@ const reviewer = {
 
             // Update button label
             const btnApprove = document.getElementById('btn-approve');
+            const btnSendCeo = document.getElementById('btn-send-ceo');
             if (btnApprove) {
                 if (data.pending_stage === 8) {
-                    btnApprove.innerHTML = `<i data-lucide="check-circle" class="me-2 text-sm"></i> Close Project`;
+                    btnApprove.innerHTML = `<i data-lucide="check-circle" class="me-2 text-sm"></i> Sign Off & Close Directly`;
+                    if (btnSendCeo) btnSendCeo.classList.remove('d-none');
                 } else {
                     btnApprove.innerHTML = `<i data-lucide="check-circle" class="me-2 text-sm"></i> Approve Transition`;
+                    if (btnSendCeo) btnSendCeo.classList.add('d-none');
                 }
                 if (window.lucide) lucide.createIcons();
             }
@@ -509,14 +512,23 @@ const reviewer = {
             const audit = this.pendingAudits.find(a => a.project_id === this.selectedProposalId);
             const pendingStage = audit ? audit.pending_stage : 1;
 
-            const result = await api.post(`/reviewer/decision`, {
-                project_id: this.selectedProposalId,
-                decision: decision,
-                comments: comments || "Approved",
-                pending_stage: pendingStage
-            });
-            
-            QCMS.toast(`Project ${decision} successfully.`, 'success');
+            if (decision === 'SendToCEO') {
+                const res = await api.post(`/reviewer/closure/${this.selectedProposalId}/complete`, {
+                    send_to_ceo: true,
+                    reviewer_notes: comments || "Forwarded to CEO for review.",
+                    lessons_learned: comments || "Stage 8 lessons recorded.",
+                    preventive_actions: "Stage 8 preventive actions recorded."
+                });
+                QCMS.toast(res.msg || "Project forwarded to CEO for review successfully.", 'success');
+            } else {
+                const result = await api.post(`/reviewer/decision`, {
+                    project_id: this.selectedProposalId,
+                    decision: decision,
+                    comments: comments || "Approved",
+                    pending_stage: pendingStage
+                });
+                QCMS.toast(`Project ${decision} successfully.`, 'success');
+            }
             
             // Close modal if open
             const modalEl = document.getElementById('reviewModal');

@@ -747,6 +747,13 @@ def create_org_v1():
         
         db.session.commit()
 
+        # Automatically dispatch Welcome & Onboarding Guide Email to new Org Admin
+        try:
+            from app.domain.services.email_notification_engine import EmailNotificationEngine
+            EmailNotificationEngine.trigger_new_org_welcome_notification(org.id, admin_user.id)
+        except Exception as email_err:
+            print(f"[QCMS SuperAdmin v1] Welcome email trigger non-blocking error: {email_err}")
+
         log_admin_action_v1(user, 'ORG_CREATED', 'Organization', org.id, None, {
             "name": org.name,
             "plan": org.subscription_plan,

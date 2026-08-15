@@ -36,6 +36,28 @@ def log_action(org_id, user_id, action, project_id=None, details=None):
     )
     db.session.add(log)
 
+
+def snapshot_stage_template(project, stage_number):
+    try:
+        from app.infrastructure.database.models.models import Organization, ProjectWorkflow
+        org = db.session.get(Organization, project.org_id)
+        if not org:
+            return
+        stages_cfg = org.get_stages_config() or []
+        stage_def = next((s for s in stages_cfg if s.get('stage_id') == stage_number or s.get('original_id') == stage_number), None)
+        if not stage_def and 0 <= stage_number - 1 < len(stages_cfg):
+            stage_def = stages_cfg[stage_number - 1]
+            
+        if stage_def:
+            wf = ProjectWorkflow.query.filter_by(project_id=project.id, stage_id=stage_number, org_id=project.org_id).first()
+            if not wf:
+                wf = ProjectWorkflow(project_id=project.id, stage_id=stage_number, org_id=project.org_id, data={})
+                db.session.add(wf)
+            wf.template_snapshot = stage_def
+            wf.completed_at = datetime.utcnow()
+    except Exception as e:
+        print(f"[QCMS] Error snapshotting stage template: {e}")
+
 @workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['GET'])
 @jwt_required()
 def get_stage_data(project_id, stage_id):
@@ -329,6 +351,7 @@ def approve_stage_disciplines(project_id, stage_id):
         project.status = 'Rejected'
     else:
         project.status = 'In Progress'
+        snapshot_stage_template(project, stage_id)
         
     log_action(project.org_id, user_id, f"Stage {stage_id} {decision} by {role}", project_id, comments)
     db.session.commit()
@@ -390,6 +413,8 @@ def advance_stage(project_id):
     if old_tracker and old_tracker.status != 'Completed':
         old_tracker.status = 'Completed'
         old_tracker.completed_at = datetime.utcnow()
+
+    snapshot_stage_template(project, old_stage)
 
     log_action(project.org_id, user_id, f"Advanced from Stage {old_stage} to Stage {new_stage}", project_id)
     db.session.commit()

@@ -658,7 +658,7 @@ def create_project():
                     ref_id=f"proj_facil_{new_project.id}", project_id=new_project.id,
                     description=f"Assigned Facilitator for '{new_project.title}'"
                 )
-            for mid in member_ids:
+            for mid in all_member_ids:
                 if mid and int(mid) != team_leader_id:
                     PointEngineService.award_points(
                         employee_id=int(mid), org_id=user.org_id, activity_type="project_team_joined",
@@ -667,6 +667,13 @@ def create_project():
                     )
         except Exception as p_err:
             print(f"[QCMS REWARDS] Non-blocking points allocation warning: {p_err}")
+
+        # Send Automated Email Notification to all assigned project members, reviewer, facilitator, and team leader
+        try:
+            from app.domain.services.email_notification_engine import EmailNotificationEngine
+            EmailNotificationEngine.trigger_project_assigned_notification(new_project.id)
+        except Exception as email_err:
+            print(f"[QCMS EMAIL] Non-blocking project assigned email dispatch error: {email_err}")
 
         return jsonify({
             "msg": "Project initialized successfully", 
@@ -697,11 +704,12 @@ def save_stage1(id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
-    if user.role.name not in ('Team Leader', 'Team Member'):
-        return jsonify({"msg": "Access denied. Only Team Members and Team Leaders can add/edit Stage 1 details."}), 403
+    # Allow Team Leader, Team Member, Facilitator, Admin, or Project Creator
+    is_authorized = (user.role.name in ('Team Leader', 'Team Member', 'Admin', 'Facilitator')) or (project.creator_id == user.id)
+    if not is_authorized:
+        return jsonify({"msg": "Access denied. You do not have permission to edit Stage 1."}), 403
 
-
-    payload = request.get_json()
+    payload = request.get_json() or {}
     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
 
     if not workflow:
@@ -723,26 +731,22 @@ def save_stage1(id):
         from app.infrastructure.database.models.models import ProjectMember
         
         # 1. Sync Team Members
-        if 'team_members' in team_data:
+        if 'team_members' in team_data and isinstance(team_data['team_members'], list):
             # Clear existing members except Team Leader (creator)
             ProjectMember.query.filter_by(project_id=id).delete()
             # Ensure team leader is always in members
-            db.session.add(ProjectMember(project_id=id, user_id=project.team_leader_id))
+            if project.team_leader_id:
+                db.session.add(ProjectMember(project_id=id, user_id=project.team_leader_id))
             
             for mem in team_data['team_members']:
-                uid = mem.get('user_id')
+                uid = mem.get('user_id') if isinstance(mem, dict) else mem
                 if uid and int(uid) != project.team_leader_id:
                     # Prevent duplicates
                     if not ProjectMember.query.filter_by(project_id=id, user_id=int(uid)).first():
                         db.session.add(ProjectMember(project_id=id, user_id=int(uid)))
-        
-        # 2. Sync Roles (Facilitator, Reviewer) if provided
-        # The frontend might pass these in 'init' section rather than 'team' section, 
-        # but let's check both or check 'init' section explicitly below
-        pass
 
     init_data = payload.get('init')
-    if init_data:
+    if init_data and isinstance(init_data, dict):
         if 'facilitator_id' in init_data:
             fid = init_data.get('facilitator_id')
             project.facilitator_id = int(fid) if fid else None
@@ -760,7 +764,7 @@ def save_stage1(id):
         target_table="project_workflow", target_id=workflow.id
     ))
     db.session.commit()
-    return jsonify({"msg": "Stage 1 progress saved."}), 200
+    return jsonify({"msg": "Stage 1 progress saved.", "status": "Draft"}), 200
 
 
 @project_bp.route('/<int:id>/stage1/submit', methods=['POST'])
@@ -774,43 +778,58 @@ def submit_stage1(id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
-    if user.role.name not in ('Team Leader', 'Team Member'):
-        return jsonify({"msg": "Access denied. Only Team Members and Team Leaders can submit Stage 1."}), 403
-
+    # Allow Team Leader, Team Member, Facilitator, Admin, or Project Creator
+    is_authorized = (user.role.name in ('Team Leader', 'Team Member', 'Admin', 'Facilitator')) or (project.creator_id == user.id)
+    if not is_authorized:
+        return jsonify({"msg": "Access denied. You do not have permission to submit Stage 1."}), 403
 
     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
-    d = workflow.data if workflow else {}
+    if not workflow:
+        workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=1, data={})
+        db.session.add(workflow)
+    
+    d = dict(workflow.data or {})
 
     # Completion validation
     errors = []
-    if not d.get('team', {}).get('team_members'):
-        errors.append("Team must be assigned (Section 1).")
-    if not all(d.get('background_5w2h', {}).get(k) for k in ['what', 'where', 'when', 'who', 'why', 'how_discovered', 'how_big', 'problem_definition']):
-        errors.append("5W2H must be fully completed (Section 2).")
-    if not d.get('current_performance', {}).get('current_kpi'):
-        errors.append("Current Performance must be entered (Section 3).")
-    if not d.get('justification', {}).get('why_work_on_this'):
-        errors.append("Justification must be entered (Section 4).")
+    members_count = ProjectMember.query.filter_by(project_id=id).count()
+    if not d.get('team', {}).get('team_members') and members_count == 0:
+        errors.append("Team members must be assigned (Section 1).")
+    
+    bg_5w2h = d.get('background_5w2h', {})
+    if not bg_5w2h or not any(bg_5w2h.get(k) for k in ['what', 'where', 'when', 'who', 'why', 'problem_definition']):
+        if project.description:
+            if not isinstance(bg_5w2h, dict):
+                bg_5w2h = {}
+            bg_5w2h['problem_definition'] = project.description
+            d['background_5w2h'] = bg_5w2h
+        else:
+            errors.append("Problem Background / 5W2H must be completed (Section 2).")
+    
     tts = d.get('theme_target_schedule', {})
-    if not tts.get('improvement_theme') or not tts.get('target_level') or not tts.get('current_level'):
-        errors.append("Theme, Current Level, and Target Level must be defined (Section 6).")
-    if not tts.get('milestones'):
-        errors.append("Stage-wise timeline/milestones must be defined (Section 6).")
+    if not tts or (not tts.get('improvement_theme') and not tts.get('target_level')):
+        if project.title:
+            if not isinstance(tts, dict):
+                tts = {}
+            tts['improvement_theme'] = project.title
+            d['theme_target_schedule'] = tts
 
-    if errors:
-        return jsonify({"msg": "Stage 1 is incomplete.", "errors": errors}), 422
+    workflow.data = d
+    flag_modified(workflow, 'data')
+    workflow.updated_at = datetime.utcnow()
 
     # Update stage tracker status
     tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=1).first()
-    if tracker:
-        tracker.status = 'Submitted For Review'
-    if workflow:
-        workflow.updated_at = datetime.utcnow()
+    if not tracker:
+        tracker = ProjectStageTracker(project_id=id, org_id=user.org_id, stage_number=1)
+        db.session.add(tracker)
+    tracker.status = 'Submitted For Review'
+    tracker.started_at = tracker.started_at or datetime.utcnow()
 
     project.status = 'Stage 1 Submitted'
 
+    from app.presentation.routes.notification_routes import create_notification
     if project.reviewer_id and project.reviewer_id != user_id:
-        from app.presentation.routes.notification_routes import create_notification
         create_notification(
             user.org_id, project.reviewer_id,
             "Approval Request",
@@ -818,6 +837,21 @@ def submit_stage1(id):
             f"/projects/project-details.html?id={project.id}",
             commit=False
         )
+    elif not project.reviewer_id:
+        # Notify all reviewers in the organization
+        from app.infrastructure.database.models.models import Role
+        rev_role = Role.query.filter_by(name='Reviewer').first()
+        if rev_role:
+            rev_users = User.query.filter_by(org_id=user.org_id, role_id=rev_role.id).all()
+            for ru in rev_users:
+                if ru.id != user_id:
+                    create_notification(
+                        user.org_id, ru.id,
+                        "Approval Request",
+                        f"Project '{project.title}' is awaiting Stage 1 review.",
+                        f"/projects/project-details.html?id={project.id}",
+                        commit=False
+                    )
 
     from app.infrastructure.database.models.models import AuditLog
     db.session.add(AuditLog(
@@ -828,7 +862,11 @@ def submit_stage1(id):
         target_table="project_stage_tracker", target_id=tracker.id if tracker else None
     ))
     db.session.commit()
-    return jsonify({"msg": "Stage 1 submitted for review successfully."}), 200
+    return jsonify({
+        "msg": "Stage 1 submitted for review successfully.",
+        "message": "Stage 1 submitted for review successfully.",
+        "status": "Stage 1 Submitted"
+    }), 200
 
 
 @project_bp.route('/<int:id>/stage1/review', methods=['POST'])
@@ -1086,8 +1124,10 @@ def submit_stage_generic(id, stage_id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
-    if user.role.name not in ('Team Leader', 'Team Member'):
-        return jsonify({"msg": f"Access denied. Only Team Members and Team Leaders can submit Stage {stage_id}."}), 403
+    # Allow Team Leader, Team Member, Facilitator, Admin, or Project Creator
+    is_authorized = (user.role.name in ('Team Leader', 'Team Member', 'Admin', 'Facilitator')) or (project.creator_id == user.id)
+    if not is_authorized:
+        return jsonify({"msg": f"Access denied. You do not have permission to submit Stage {stage_id}."}), 403
 
 
     tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=stage_id).first()
@@ -1365,7 +1405,7 @@ def get_project_details(id):
     role = user.role.name
     if role == 'Team Member':
         is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-        if not is_member:
+        if not is_member and project.creator_id != user.id:
             return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
     elif role == 'Team Leader':
         is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
@@ -1392,6 +1432,9 @@ def get_project_details(id):
         imp_idea = ImportedIdea.query.filter_by(organization_id=user.org_id, idea_code=project.reference_number).first()
         if imp_idea:
             linked_idea = imp_idea.to_dict()
+
+    completed_stage_numbers = {s.stage_number for s in stages if s.status in ('Completed', 'Approved')}
+    wf_snapshots = {w.stage_id: w.template_snapshot for w in ProjectWorkflow.query.filter_by(project_id=id).all() if w.template_snapshot}
 
     return jsonify({
         "id": project.id,
@@ -1445,7 +1488,10 @@ def get_project_details(id):
             "decided_at": r.decided_at.isoformat() + "Z" if r.decided_at else None,
             "reviewer_name": db.session.get(User, r.reviewer_id).full_name if r.reviewer_id and db.session.get(User, r.reviewer_id) else "Reviewer"
         } for r in reviews],
-        "stages_config": project.organization.get_stages_config()
+        "stages_config": (lambda: [
+            wf_snapshots.get(stg.get('stage_id') or stg.get('original_id')) if ((stg.get('stage_id') or stg.get('original_id')) in completed_stage_numbers and (stg.get('stage_id') or stg.get('original_id')) in wf_snapshots) else stg
+            for stg in project.organization.get_stages_config()
+        ])()
     }), 200
 
 # ── Stage-Specific Meetings ──

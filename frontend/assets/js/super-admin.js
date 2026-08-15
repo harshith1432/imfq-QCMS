@@ -3835,7 +3835,7 @@ const SuperAdmin = {
         const notifEl = document.getElementById('global_notification') || document.getElementById('ps-global-notification');
         const data = {
             site_name: siteNameEl ? siteNameEl.value : 'QCMS Enterprise OS',
-            support_email: supportEmailEl ? supportEmailEl.value : 'support@qcms.com',
+            support_email: supportEmailEl ? supportEmailEl.value : 'support@ifqm.org.in',
             global_notification: notifEl ? notifEl.value : '',
             registration_open: regEl ? regEl.checked : true,
             maintenance_mode: maintEl ? maintEl.checked : false
@@ -5272,7 +5272,7 @@ const SuperAdmin = {
 
         const titleHeader = tmpl.header_title || 'INVOICE';
         const companyBrandName = ctx.legal_company_name || ctx.trading_name || ctx.software_display_name || ctx.software_name || 'QCMS Enterprise OS';
-        const supportEmail = ctx.support_email || ctx.general_email || 'support@qcms.com';
+        const supportEmail = ctx.support_email || ctx.general_email || 'support@ifqm.org.in';
         const companyAddress = ctx.registered_office || ctx.corporate_office || '';
         const gstinText = ctx.gstin ? `GSTIN: ${ctx.gstin}` : '';
         const footerTerms = tmpl.footer_text || tmpl.terms_and_conditions || `Thank you for your business. For queries contact ${supportEmail}`;

@@ -1196,6 +1196,7 @@ const QCMS = {
             if (canOverview) {
                 if (roleName === 'CEO') {
                     mainNav += `<a href="/dashboard/dashboard-ceo.html?view=strategic-overview" class="sidebar-link"><i class="link-icon" data-lucide="line-chart"></i><span data-i18n="sidebar.links.overview">Overview</span></a>`;
+                    mainNav += `<a href="/dashboard/dashboard-ceo.html?view=executive-approvals" class="sidebar-link"><i class="link-icon" data-lucide="check-circle-2"></i><span>Project Closures</span><span class="badge bg-warning-subtle text-warning ms-auto d-none" id="ceoPendingApprovalsBadge">0</span></a>`;
                     mainNav += `<a href="/dashboard/dashboard-ceo.html?view=org-health" class="sidebar-link"><i class="link-icon" data-lucide="activity"></i><span data-i18n="sidebar.links.org_health">Organization Health</span></a>`;
                     mainNav += `<a href="/dashboard/dashboard-ceo.html?view=roi-analytics" class="sidebar-link"><i class="link-icon" data-lucide="trending-up"></i><span data-i18n="sidebar.links.roi_analytics">ROI Analytics</span></a>`;
                 } else {

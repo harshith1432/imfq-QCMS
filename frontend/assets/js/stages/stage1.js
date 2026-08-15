@@ -291,7 +291,7 @@ const Stage1 = {
             const memberData = {
                 user_id: id,
                 name: orgUser ? (orgUser.full_name || orgUser.username) : (savedMember ? savedMember.name : `User #${id}`),
-                role: orgUser ? orgUser.role : (savedMember ? savedMember.role : 'Team Member'),
+                role: orgUser ? ((orgUser.role && orgUser.role.name) ? orgUser.role.name : (typeof orgUser.role === 'string' ? orgUser.role : 'Team Member')) : (savedMember ? savedMember.role : 'Team Member'),
                 designation: savedMember ? savedMember.designation : ''
             };
             this.addTeamMemberRow(memberData);
@@ -417,7 +417,7 @@ const Stage1 = {
     addTeamMemberRow(data = {}) {
         const container = document.getElementById('teamMembersContainer');
         const row = document.createElement('div');
-        row.className = 'mb-2';
+        row.className = 'team-member-row dyn-row mb-2';
         row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr;gap:.5rem;align-items:center;';
         row.innerHTML = `
             <input type="text" class="ds-input tm-user-name" readonly 

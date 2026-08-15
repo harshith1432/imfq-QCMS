@@ -39,9 +39,12 @@ const Stage8 = {
                                     <label class="ds-label" for="s8_sop_category">Category *</label>
                                     <select id="s8_sop_category" class="ds-input ds-select" required>
                                         <option value="Quality">Quality</option>
-                                        <option value="Safety">Safety</option>
-                                        <option value="Productivity">Productivity</option>
                                         <option value="Cost">Cost</option>
+                                        <option value="Delivery">Delivery</option>
+                                        <option value="Safety">Safety</option>
+                                        <option value="Morale">Morale</option>
+                                        <option value="Environment">Environment</option>
+                                        <option value="Productivity">Productivity</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">

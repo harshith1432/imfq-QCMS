@@ -3,7 +3,11 @@ import csv
 import math
 from flask import Blueprint, jsonify, request, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.infrastructure.database.models.models import db, User, Role, Organization, Project, ProjectStageTracker, KPIMetric, AuditLog, KnowledgeRepository, Department, Stage8Implementation, ProjectReview, SOP, ProjectMember, ProjectWorkflow
+from app.infrastructure.database.models.models import (
+    db, User, Role, Organization, Project, ProjectStageTracker, KPIMetric, AuditLog, 
+    KnowledgeRepository, Department, Stage8Implementation, ProjectReview, SOP, 
+    ProjectMember, ProjectWorkflow, Stage8StandardizationKnowledgeSharingProjectClosure as Stage8Standardization
+)
 from app.presentation.middleware.middleware import role_required
 from sqlalchemy import func
 from datetime import datetime, timedelta
@@ -1007,3 +1011,228 @@ def export_ceo_report():
         import traceback
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─── Executive Project Review & Closure Routes ─────────────────
+
+@ceo_bp.route('/pending-closures', methods=['GET'])
+@jwt_required()
+@role_required(['CEO', 'SuperAdmin', 'Admin'])
+def get_pending_closures():
+    """Return all projects pending CEO review and final closure sign-off."""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.org_id:
+            return jsonify({"status": "error", "message": "User context not found"}), 404
+        
+        org_id = user.org_id
+
+        # Projects in Stage 8 that are awaiting CEO review or closure
+        projects = Project.query.filter(
+            Project.org_id == org_id,
+            Project.current_stage == 8,
+            Project.status != 'Closed',
+            Project.status.in_(['Pending CEO Review', 'Pending CEO Closure', 'Stage 8 Reviewer Approved', 'Stage 8 Submitted'])
+        ).order_by(Project.created_at.desc()).all()
+
+        results = []
+        for p in projects:
+            std = Stage8Standardization.query.filter_by(project_id=p.id).first()
+            sop = SOP.query.filter_by(project_id=p.id).first()
+            
+            # Fetch workflow stages snapshots
+            workflows = ProjectWorkflow.query.filter_by(project_id=p.id).order_by(ProjectWorkflow.stage_id.asc()).all()
+            wf_map = {w.stage_id: w.data for w in workflows if w.data}
+            
+            # Extract stage 8 data
+            s8_wf = wf_map.get(8, {})
+            lessons = (std.lessons_learned if std else None) or s8_wf.get('lessons_learned')
+            preventive = (std.preventive_actions if std else None) or s8_wf.get('preventive_actions')
+            benefits = (std.benefits_summary if std else None) or s8_wf.get('benefits_summary')
+            opportunities = (std.remaining_opportunities if std else None) or s8_wf.get('remaining_opportunities')
+
+            # Fetch team and leadership names
+            team_leader = db.session.get(User, p.team_leader_id) if p.team_leader_id else None
+            facilitator = db.session.get(User, p.facilitator_id) if p.facilitator_id else None
+            reviewer = db.session.get(User, p.reviewer_id) if p.reviewer_id else None
+            dept = p.department.name if p.department else 'N/A'
+            plant = p.plant.name if p.plant else 'N/A'
+
+            results.append({
+                "id": p.id,
+                "project_uid": p.project_uid or f"PRJ-{p.id}",
+                "title": p.title,
+                "description": p.description or '',
+                "department": dept,
+                "plant": plant,
+                "team_leader": team_leader.full_name or team_leader.username if team_leader else 'N/A',
+                "facilitator": facilitator.full_name or facilitator.username if facilitator else 'N/A',
+                "reviewer": reviewer.full_name or reviewer.username if reviewer else 'N/A',
+                "status": p.status,
+                "current_stage": p.current_stage,
+                "cost_savings": std.cost_savings if (std and std.cost_savings is not None) else 0.0,
+                "kpi_improvement_pct": std.kpi_improvement_pct if (std and std.kpi_improvement_pct is not None) else 0.0,
+                "baseline_data": std.baseline_data if std else None,
+                "final_data": std.final_data if std else None,
+                "sop": {
+                    "id": sop.id if sop else None,
+                    "title": sop.title if sop else 'N/A',
+                    "status": sop.status if sop else 'Pending',
+                    "sop_uid": sop.sop_uid if sop else None,
+                    "version": sop.version if sop else 1
+                } if sop else None,
+                "lessons_learned": lessons,
+                "preventive_actions": preventive,
+                "benefits_summary": benefits,
+                "remaining_opportunities": opportunities,
+                "reviewer_notes": std.final_comments if std else None,
+                "workflows": wf_map,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "submitted_at": p.created_at.isoformat() if p.created_at else None
+            })
+
+        return jsonify({"status": "success", "data": results, "count": len(results)}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@ceo_bp.route('/closure/<int:project_id>/decision', methods=['POST'])
+@jwt_required()
+@role_required(['CEO', 'SuperAdmin', 'Admin'])
+def process_ceo_closure_decision(project_id):
+    """CEO decision to Approve & Officially Close the project or Request Revisions."""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.org_id:
+            return jsonify({"status": "error", "message": "User context not found"}), 404
+
+        data = request.get_json() or {}
+        decision = data.get('decision', 'Approve').strip()
+        comments = (data.get('comments') or '').strip()
+
+        project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
+        if project.current_stage != 8:
+            return jsonify({"status": "error", "message": "Project is not in Stage 8"}), 400
+
+        std = Stage8Standardization.query.filter_by(project_id=project_id).first()
+        if not std:
+            std = Stage8Standardization(project_id=project_id, org_id=project.org_id)
+            db.session.add(std)
+
+        from app.presentation.routes.notification_routes import create_notification
+        from app.presentation.routes.workflow_routes import log_action
+
+        if decision in ['Approve', 'Approved']:
+            # Officially Close Project
+            project.status = 'Closed'
+            project.end_date = datetime.utcnow().date()
+
+            std.final_approval = True
+            std.final_approval_by = user.id
+            std.final_approval_at = datetime.utcnow()
+            std.final_comments = f"CEO Approved & Officially Closed: {comments}" if comments else "CEO Officially Approved & Closed"
+            std.admin_closure = True
+            std.facilitator_validation = True
+
+            # Mark Stage 8 Tracker Complete
+            tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=8).first()
+            if tracker:
+                tracker.status = 'Completed'
+                tracker.completed_at = datetime.utcnow()
+
+            db.session.flush()
+
+            # Auto-archive project to knowledge repository
+            from app.presentation.routes.repository_routes import auto_archive_project_to_repository
+            try:
+                auto_archive_project_to_repository(project_id, user.org_id)
+            except Exception as archive_err:
+                print(f"[QCMS CEO] Auto-archiving failed: {archive_err}")
+
+            # Award Leaderboard Points
+            try:
+                from app.domain.services.point_engine_service import PointEngineService
+                if project.creator_id:
+                    PointEngineService.award_points(employee_id=project.creator_id, org_id=user.org_id, activity_type='project_completed', project_id=project_id)
+            except Exception as pt_err:
+                print(f"[QCMS CEO] Point awarding failed: {pt_err}")
+
+            # Notify Team, Facilitator, Reviewer
+            notify_ids = set()
+            if project.team_leader_id: notify_ids.add(project.team_leader_id)
+            if project.creator_id: notify_ids.add(project.creator_id)
+            if project.facilitator_id: notify_ids.add(project.facilitator_id)
+            if project.reviewer_id: notify_ids.add(project.reviewer_id)
+
+            for uid in notify_ids:
+                if uid != user.id:
+                    create_notification(
+                        user.org_id, uid,
+                        "Project Officially Closed by CEO",
+                        f"CEO {user.full_name or user.username} has authorized and officially closed project '{project.title}'.",
+                        f"/projects/project-details.html?id={project_id}",
+                        commit=False
+                    )
+
+            log_action(user.org_id, user.id, "Stage 8 Project Officially Approved and Closed by CEO", project_id, comments)
+            db.session.commit()
+
+            # Non-blocking congratulatory email dispatch
+            try:
+                from app.domain.services.email_notification_engine import EmailNotificationEngine
+                EmailNotificationEngine.trigger_project_completed_notification(project.id)
+            except Exception as email_err:
+                print(f"[QCMS EMAIL] Project completed email dispatch error: {email_err}")
+
+            return jsonify({
+                "status": "success",
+                "message": f"Project '{project.title}' has been officially approved and closed by the CEO.",
+                "closed": True
+            }), 200
+
+        elif decision in ['Revision', 'Send Back']:
+            # Send back to Reviewer / Team
+            project.status = 'Stage 8 Sent Back by CEO'
+            tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=8).first()
+            if tracker:
+                tracker.status = 'Incomplete'
+
+            std.final_comments = f"CEO Feedback for Revision: {comments}"
+
+            # Notify Reviewer and Team Leader
+            notify_ids = set()
+            if project.reviewer_id: notify_ids.add(project.reviewer_id)
+            if project.team_leader_id: notify_ids.add(project.team_leader_id)
+            if project.facilitator_id: notify_ids.add(project.facilitator_id)
+
+            for uid in notify_ids:
+                if uid != user.id:
+                    create_notification(
+                        user.org_id, uid,
+                        "CEO Requested Project Revision",
+                        f"CEO {user.full_name or user.username} reviewed project '{project.title}' and requested revisions: {comments}",
+                        f"/dashboard/dashboard-reviewer.html",
+                        commit=False
+                    )
+
+            log_action(user.org_id, user.id, "Stage 8 Project Sent Back for Revision by CEO", project_id, comments)
+            db.session.commit()
+
+            return jsonify({
+                "status": "success",
+                "message": f"Project '{project.title}' has been sent back for revisions.",
+                "closed": False
+            }), 200
+
+        else:
+            return jsonify({"status": "error", "message": "Invalid decision type"}), 400
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+

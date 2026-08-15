@@ -546,7 +546,7 @@
                     const mbClass = noMargin ? 'mb-0' : 'mb-3';
                     if (isEdit) {
                         if (key === 'category') {
-                            const categories = ['Quality', 'Cost', 'Safety', 'Productivity', 'Delivery', 'Morale'];
+                            const categories = ['Quality', 'Cost', 'Delivery', 'Safety', 'Morale', 'Environment', 'Productivity'];
                             return `
                                     <div class="${mbClass}">
                                         <label class="ds-label text-xs mb-1 font-bold"><i data-lucide="${icon}" class="w-3 h-3 mr-1 inline"></i> ${label}</label>
@@ -987,7 +987,7 @@
                 const configs = {
                     1: [
                         { key: 'project_title', label: 'Project Title', type: 'text', icon: 'tag', placeholder: 'e.g. Reduction of Weld Defects' },
-                        { key: 'problem_category', label: 'Problem Category', type: 'select', icon: 'layers', options: ['Quality', 'Cost', 'Safety', 'Productivity', 'Delivery', 'Morale'] },
+                        { key: 'problem_category', label: 'Problem Category', type: 'select', icon: 'layers', options: ['Quality', 'Cost', 'Delivery', 'Safety', 'Morale', 'Environment', 'Productivity'] },
                         { key: 'business_unit', label: 'Business Unit', type: 'text', icon: 'briefcase', placeholder: 'e.g. Automotive Division' },
                         { key: 'plant', label: 'Plant Location', type: 'text', icon: 'building', placeholder: 'e.g. Plant-1 Chennai' },
                         { key: 'department', label: 'Department', type: 'text', icon: 'users', placeholder: 'e.g. Welding Operations' },

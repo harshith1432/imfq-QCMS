@@ -542,6 +542,9 @@
                 </div>
             </header>
 
+            <!-- Global Update Banner Container -->
+            <div id="globalUpdateBannerContainer"></div>
+
             <!-- Info banner -->
             <div class="info-banner">
                 <i data-lucide="info" style="width:17px;height:17px;"></i>
@@ -2088,12 +2091,63 @@ function deleteStage(idx) {
 }
 window.deleteStage = deleteStage;
 
+async function checkGlobalTemplateStatus() {
+    try {
+        const res = await api.get('/admin/stages-template/status');
+        const container = document.getElementById('globalUpdateBannerContainer');
+        if (!container) return;
+
+        if (res && res.has_pending_template_update) {
+            container.innerHTML = `
+                <div class="alert alert-warning border border-warning-subtle d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-xs">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-warning bg-opacity-20 d-flex align-items-center justify-content-center text-warning" style="width:38px;height:38px;flex-shrink:0;">
+                            <i data-lucide="sparkles" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">Global 8-Stage Workflow Template Update Available (v${res.global_template_version})</h6>
+                            <p class="mb-0 text-xs text-secondary">Super Admin published a new global template update. Your organization is currently on v${res.applied_template_version}.</p>
+                        </div>
+                    </div>
+                    <button class="ds-btn ds-btn-primary ds-btn-sm text-xs py-2 px-3 d-flex align-items-center gap-1.5" onclick="openGlobalSyncModal(${res.global_template_version}, ${res.applied_template_version})">
+                        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Review & Apply Global Template Changes
+                    </button>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        } else {
+            container.innerHTML = '';
+        }
+    } catch (e) {
+        console.warn('Could not check global template status:', e);
+    }
+}
+
+async function openGlobalSyncModal(globalVer, appliedVer) {
+    if (!confirm(`Synchronize Global 8-Stage Workflow Template (v${globalVer}) to your organization?\n\nThis will update your stage template layout. Completed stages in active projects will remain safely frozen.`)) {
+        return;
+    }
+    try {
+        const res = await api.post('/admin/stages-template/sync-global');
+        showToast(res.message || 'Global template synchronized successfully!');
+        await checkGlobalTemplateStatus();
+        const stagesRes = await api.get('/admin/stages-template');
+        stages = (stagesRes.stages || []).sort((a, b) => a.stage_id - b.stage_id);
+        renderList();
+    } catch (err) {
+        showToast('Error syncing template: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+window.openGlobalSyncModal = openGlobalSyncModal;
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
     bsIconModal = new bootstrap.Modal(document.getElementById('iconPickerModal'));
     bsToolModal = new bootstrap.Modal(document.getElementById('toolPickerModal'));
     bsAddStageModal = new bootstrap.Modal(document.getElementById('addStageModal'));
+
+    await checkGlobalTemplateStatus();
 
     try {
         const res = await api.get('/admin/stages-template');

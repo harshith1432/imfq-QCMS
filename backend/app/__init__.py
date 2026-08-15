@@ -146,6 +146,7 @@ def create_app():
         from .presentation.routes.sop_routes import sop_bp
         from .presentation.routes.document_branding_routes import document_branding_bp
         from .presentation.routes.feature_engine_routes import feature_engine_bp
+        from .presentation.routes.email_notification_routes import email_notification_bp
         from .presentation.routes.points_routes import points_bp
         from .presentation.routes.plant_routes import plant_bp
         
@@ -177,6 +178,7 @@ def create_app():
         app.register_blueprint(billing_bp, url_prefix='/api/billing')
         app.register_blueprint(audit_bp)
         app.register_blueprint(announcement_bp)
+        app.register_blueprint(email_notification_bp)
         app.register_blueprint(integrations_bp, url_prefix='/api/super-admin')
         app.register_blueprint(integration_v1_bp, url_prefix='/api/v1/integrations')
         app.register_blueprint(sop_bp, url_prefix='/api/sops')
@@ -204,7 +206,7 @@ def create_app():
                 # On first run: migrations execute and version is saved to DB.
                 # On ALL subsequent deploys: single query detects current version → skips
                 # all 100+ ALTER statements → boot time drops from 30-60s to <2s.
-                CURRENT_MIGRATIONS_VERSION = 1
+                CURRENT_MIGRATIONS_VERSION = 2
                 from sqlalchemy import text
                 migrations_needed = True
                 try:
@@ -230,6 +232,11 @@ def create_app():
 
                 if migrations_needed:
                     alter_statements = [
+                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS global_template_version INTEGER DEFAULT 1;",
+                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS global_template_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
+                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS applied_template_version INTEGER DEFAULT 1;",
+                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS has_pending_template_update BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE project_workflow ADD COLUMN IF NOT EXISTS template_snapshot JSON;",
                 "ALTER TABLE company_information DROP COLUMN IF EXISTS iso_certifications;",
                 "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS org_scale VARCHAR(50) DEFAULT 'Small';",
                 "CREATE TABLE IF NOT EXISTS plants (id SERIAL PRIMARY KEY, org_id INTEGER NOT NULL REFERENCES organizations(id), name VARCHAR(100) NOT NULL, code VARCHAR(50), location VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",

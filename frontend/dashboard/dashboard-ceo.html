@@ -178,6 +178,53 @@
                     </div>
                 </div>
 
+                <!-- ── Executive Approvals & Project Closures Section ── -->
+                <div id="sec-executive-approvals" class="mt-4 pt-3">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i data-lucide="check-circle-2" style="width:20px; height:20px;" class="text-warning"></i>
+                            <h5 class="fw-bold text-main mb-0">Executive Project Review &amp; Closure Sign-Off</h5>
+                        </div>
+                        <span class="badge bg-warning-subtle text-warning border border-warning px-3 py-1 font-mono fw-bold" id="ceoApprovalsCountBadge">0 Projects Pending Sign-Off</span>
+                    </div>
+
+                    <div class="ds-card mb-4">
+                        <div class="ds-card-header h-stack justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title mb-0">Projects Submitted for Final CEO Closure</h5>
+                                <p class="text-xs text-muted mb-0">Review completed 8-stage dossiers, verified impact, standardized SOPs, and authorize final closure.</p>
+                            </div>
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="ceoDash.loadPendingClosures()">
+                                <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div class="table-responsive">
+                                <table class="ds-table" style="width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>Project Details</th>
+                                            <th>Department / Plant</th>
+                                            <th>Financial Savings / Impact</th>
+                                            <th>Standardized SOP</th>
+                                            <th>Reviewer Status</th>
+                                            <th class="text-end">Executive Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ceoApprovalsTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4">
+                                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                                <span class="ms-2 text-xs text-muted">Loading pending closures...</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ── Org Health Index Section ── -->
                 <div id="sec-org-health" class="mt-4 pt-3">
                     <div class="d-flex align-items-center gap-2 mb-3">
@@ -334,6 +381,42 @@
         </main>
     </div>
 
+    <!-- CEO Executive Review Modal -->
+    <div class="modal fade" id="ceoReviewModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius: 16px;">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <span class="badge bg-warning text-dark text-xxs font-mono mb-1">EXECUTIVE SIGN-OFF &amp; CLOSURE</span>
+                        <h5 class="modal-title fw-bold" id="ceoModalProjectTitle">Project Review</h5>
+                        <p class="text-xs text-muted mb-0" id="ceoModalProjectMeta">Department | Stage 8 Completed</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <input type="hidden" id="ceoModalProjectId">
+                    <div id="ceoModalContentContainer"></div>
+                    
+                    <div class="mt-4 p-3 rounded-3 bg-light border">
+                        <label class="ds-label fw-bold mb-2">CEO Executive Decision Remarks <span class="text-muted">(Optional for Approval, Required for Revision)</span></label>
+                        <textarea class="ds-input ds-textarea w-100" id="ceoDecisionComments" rows="3" placeholder="Enter executive feedback, commendation, or revision requirements..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex justify-content-between flex-wrap gap-2">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Close Window</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-outline text-warning border-warning" id="ceoBtnRevision" onclick="ceoDash.submitClosureDecision('Revision')">
+                            <i data-lucide="rotate-ccw" style="width:15px;height:15px;margin-right:4px;"></i> Request Revisions
+                        </button>
+                        <button type="button" class="ds-btn ds-btn-primary" id="ceoBtnApprove" onclick="ceoDash.submitClosureDecision('Approve')">
+                            <i data-lucide="check-circle" style="width:15px;height:15px;margin-right:4px;"></i> Approve &amp; Officially Close Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/api.js"></script>
@@ -418,6 +501,7 @@
 
                     // Load Dashboard stats & charts
                     await this.loadDashboardData();
+                    await this.loadPendingClosures();
                     this.initRealTimeSync();
 
                     // Handle View parameter from URL or hash
@@ -433,10 +517,13 @@
 
             currentActiveView: null,
             isProgrammaticScroll: false,
+            pendingClosures: [],
+            selectedClosureId: null,
 
             initScrollSpy() {
                 const sections = [
                     { id: 'sec-strategic-overview', view: 'strategic-overview' },
+                    { id: 'sec-executive-approvals', view: 'executive-approvals' },
                     { id: 'sec-org-health', view: 'org-health' },
                     { id: 'sec-roi-analytics', view: 'roi-analytics' }
                 ];
@@ -499,6 +586,10 @@
                         title: 'Overview',
                         subtitle: 'Strategic Insights. Better Decisions. Stronger Tomorrow.'
                     },
+                    'executive-approvals': {
+                        title: 'Project Closures & Executive Approvals',
+                        subtitle: 'Review finalized 8-stage projects, verify lessons and SOPs, and sign off on project closure.'
+                    },
                     'org-health': {
                         title: 'Organization Health',
                         subtitle: 'Cross-department efficiency, project risk breakdown, and organizational health metrics.'
@@ -549,6 +640,7 @@
             switchView(viewName, doScroll = true) {
                 const targetIdMap = {
                     'strategic-overview': 'sec-strategic-overview',
+                    'executive-approvals': 'sec-executive-approvals',
                     'org-health': 'sec-org-health',
                     'roi-analytics': 'sec-roi-analytics'
                 };
@@ -561,6 +653,229 @@
                     if (el) {
                         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
+                }
+            },
+
+            async loadPendingClosures() {
+                try {
+                    const res = await api.get('/ceo/pending-closures?t=' + Date.now());
+                    const projects = res.data || [];
+                    this.pendingClosures = projects;
+                    this.renderPendingClosures(projects);
+
+                    // Update badges
+                    const count = projects.length;
+                    const badge = document.getElementById('ceoApprovalsCountBadge');
+                    if (badge) badge.textContent = `${count} Projects Pending Sign-Off`;
+
+                    const navBadge = document.getElementById('ceoPendingApprovalsBadge');
+                    if (navBadge) {
+                        navBadge.textContent = count;
+                        if (count > 0) navBadge.classList.remove('d-none');
+                        else navBadge.classList.add('d-none');
+                    }
+                } catch (e) {
+                    console.error('[CEO Dash] Failed to load pending closures:', e);
+                    const tbody = document.getElementById('ceoApprovalsTableBody');
+                    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Failed to load pending closures: ${e.message || e}</td></tr>`;
+                }
+            },
+
+            renderPendingClosures(projects) {
+                const tbody = document.getElementById('ceoApprovalsTableBody');
+                if (!tbody) return;
+
+                if (!projects.length) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted">
+                        <i data-lucide="check-circle" class="mb-2 text-success" style="width:32px;height:32px;"></i>
+                        <p class="fw-bold mb-1">No Projects Pending Executive Sign-Off</p>
+                        <p class="text-xs mb-0">All completed 8-stage projects have been authorized and closed.</p>
+                    </td></tr>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                tbody.innerHTML = projects.map(p => {
+                    const savingsStr = p.cost_savings ? `₹${Number(p.cost_savings).toLocaleString()}` : '—';
+                    const kpiPctStr = p.kpi_improvement_pct ? `${p.kpi_improvement_pct > 0 ? '+' : ''}${p.kpi_improvement_pct}%` : '—';
+                    const sopStatus = p.sop ? p.sop.status : 'Pending';
+                    const sopBadge = sopStatus === 'Active' || sopStatus === 'Uploaded' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning';
+
+                    return `
+                    <tr class="hover-row">
+                        <td>
+                            <div class="fw-bold text-main">${p.title}</div>
+                            <div class="text-xs text-muted font-mono">${p.project_uid} · Lead: ${p.team_leader}</div>
+                        </td>
+                        <td>
+                            <div class="text-sm fw-medium">${p.department}</div>
+                            <div class="text-xs text-muted">Plant: ${p.plant}</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-success text-sm">${savingsStr}</div>
+                            <div class="text-xs text-muted">KPI Impact: ${kpiPctStr}</div>
+                        </td>
+                        <td>
+                            <span class="badge ${sopBadge} text-xs">${p.sop ? p.sop.title : 'Standard SOP'} (${sopStatus})</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary text-xs">Reviewer Signed Off</span>
+                            ${p.reviewer_notes ? `<div class="text-xxs text-muted text-truncate mt-0.5" style="max-width:180px;" title="${p.reviewer_notes}">"${p.reviewer_notes}"</div>` : ''}
+                        </td>
+                        <td class="text-end">
+                            <button class="ds-btn ds-btn-sm ds-btn-primary py-1 px-3" onclick="ceoDash.openClosureReview(${p.id})">
+                                <i data-lucide="eye" style="width:13px;height:13px;margin-right:4px;"></i> Review &amp; Close
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+
+                if (window.lucide) lucide.createIcons();
+            },
+
+            openClosureReview(projectId, showStageNum = 8) {
+                const project = this.pendingClosures.find(p => p.id === projectId);
+                if (!project) return;
+                this.selectedClosureId = projectId;
+
+                document.getElementById('ceoModalProjectId').value = projectId;
+                document.getElementById('ceoModalProjectTitle').textContent = project.title;
+                document.getElementById('ceoModalProjectMeta').textContent = `${project.department} · Plant: ${project.plant} · Lead: ${project.team_leader} · Reviewer: ${project.reviewer}`;
+                document.getElementById('ceoDecisionComments').value = '';
+
+                const container = document.getElementById('ceoModalContentContainer');
+                const wf = project.workflows || {};
+
+                // Render Stage Tabs
+                const stageTabs = `
+                    <div class="d-flex flex-wrap gap-1 mb-3 p-1.5 rounded-3 bg-light border">
+                        ${[1, 2, 3, 4, 5, 6, 7, 8].map(sNum => {
+                            const isSelected = (sNum === showStageNum);
+                            const hasData = Boolean(wf[sNum]) || sNum === 8;
+                            let btnClass = isSelected ? 'btn btn-sm btn-primary' : (hasData ? 'btn btn-sm btn-outline-secondary' : 'btn btn-sm btn-light text-muted opacity-50');
+                            return `<button type="button" class="${btnClass} py-1 px-2 text-xs" onclick="ceoDash.openClosureReview(${projectId}, ${sNum})">Stage ${sNum}</button>`;
+                        }).join('')}
+                    </div>
+                `;
+
+                let stageDetailsHtml = '';
+                const currentStageData = wf[showStageNum] || {};
+
+                if (showStageNum === 8) {
+                    const lessons = project.lessons_learned || 'No lessons learned recorded.';
+                    const preventive = project.preventive_actions || 'No preventive actions recorded.';
+                    const savings = project.cost_savings ? `₹${Number(project.cost_savings).toLocaleString()}` : '₹0';
+                    const kpiChange = project.kpi_improvement_pct ? `${project.kpi_improvement_pct}%` : 'N/A';
+
+                    stageDetailsHtml = `
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="p-3 rounded-3 border bg-light h-100">
+                                    <div class="text-xs fw-bold text-uppercase text-muted mb-2">Verified Realized Impact</div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-sm text-secondary">Cumulative Annual Savings:</span>
+                                        <span class="text-sm fw-bold text-success">${savings}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-sm text-secondary">KPI Improvement Metric:</span>
+                                        <span class="text-sm fw-bold text-primary">${kpiChange}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 rounded-3 border bg-light h-100">
+                                    <div class="text-xs fw-bold text-uppercase text-muted mb-2">Standardized Operating Procedure (SOP)</div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-sm text-secondary">Title:</span>
+                                        <span class="text-sm fw-semibold">${project.sop ? project.sop.title : 'Standardized QC SOP'}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-sm text-secondary">Status:</span>
+                                        <span class="badge bg-success-subtle text-success">${project.sop ? project.sop.status : 'Active'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 rounded-3 border bg-light">
+                                    <div class="text-xs fw-bold text-uppercase text-muted mb-1">Key Lessons Learned</div>
+                                    <div class="text-xs text-secondary" style="white-space:pre-line;">${typeof lessons === 'object' ? JSON.stringify(lessons, null, 2) : lessons}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 rounded-3 border bg-light">
+                                    <div class="text-xs fw-bold text-uppercase text-muted mb-1">Preventive Actions / Error-Proofing</div>
+                                    <div class="text-xs text-secondary" style="white-space:pre-line;">${typeof preventive === 'object' ? JSON.stringify(preventive, null, 2) : preventive}</div>
+                                </div>
+                            </div>
+                            ${project.reviewer_notes ? `
+                            <div class="col-12">
+                                <div class="p-3 rounded-3 border border-warning-subtle bg-warning-subtle text-dark">
+                                    <div class="text-xs fw-bold text-uppercase text-warning-emphasis mb-1">Reviewer's Recommendation &amp; Sign-off Notes</div>
+                                    <div class="text-xs">${project.reviewer_notes}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    stageDetailsHtml = `
+                        <div class="p-3 rounded-3 border bg-light">
+                            <h6 class="fw-bold mb-2">Stage ${showStageNum} Submission Data</h6>
+                            <pre class="text-xs mb-0 bg-white p-2 rounded border" style="max-height: 240px; overflow-y:auto;">${JSON.stringify(currentStageData, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = `
+                    ${stageTabs}
+                    ${stageDetailsHtml}
+                `;
+
+                const modal = new bootstrap.Modal(document.getElementById('ceoReviewModal'));
+                modal.show();
+                if (window.lucide) lucide.createIcons();
+            },
+
+            async submitClosureDecision(decision) {
+                if (!this.selectedClosureId) return;
+                const comments = (document.getElementById('ceoDecisionComments')?.value || '').trim();
+                if (decision === 'Revision' && !comments) {
+                    QCMS.toast('Please provide comments describing the revisions required by the executive office.', 'warning');
+                    return;
+                }
+
+                const confirmMsg = decision === 'Approve'
+                    ? 'Are you sure you want to approve and officially close this project? This will mark it as Completed, auto-archive it into the Knowledge Repository, and award employee points.'
+                    : 'Send this project back to the Reviewer for revision?';
+                if (!confirm(confirmMsg)) return;
+
+                const btnApprove = document.getElementById('ceoBtnApprove');
+                const btnRevision = document.getElementById('ceoBtnRevision');
+                if (btnApprove) btnApprove.disabled = true;
+                if (btnRevision) btnRevision.disabled = true;
+
+                try {
+                    const res = await api.post(`/ceo/closure/${this.selectedClosureId}/decision`, {
+                        decision,
+                        comments
+                    });
+
+                    QCMS.toast(res.message || `Project ${decision === 'Approve' ? 'approved and closed' : 'sent back for revision'} successfully!`, 'success');
+                    
+                    const modalEl = document.getElementById('ceoReviewModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+
+                    await this.loadPendingClosures();
+                    await this.loadDashboardData();
+                } catch (e) {
+                    QCMS.toast(e.message || 'Failed to submit executive decision', 'danger');
+                } finally {
+                    if (btnApprove) btnApprove.disabled = false;
+                    if (btnRevision) btnRevision.disabled = false;
                 }
             },
 

@@ -7,7 +7,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
     User, Project, KnowledgeRepository, Stage3RCA, Stage7Impact,
     Stage8Standardization, ProjectWorkflow, AuditLog,
-    Stage7PerformanceVerificationBenefitsRealization as Stage7Verification
+    Stage7PerformanceVerificationBenefitsRealization as Stage7Verification,
+    Stage8StandardizationKnowledgeSharingProjectClosure as Stage8Implementation
 )
 from app import db
 from datetime import datetime, timedelta

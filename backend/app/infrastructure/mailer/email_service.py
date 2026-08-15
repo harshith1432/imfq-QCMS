@@ -111,9 +111,10 @@ class EmailUtils:
         return ctx.get('software_display_name') or ctx.get('software_name') or 'QCMS Notifications'
 
     @staticmethod
-    def send_email(to_email, subject, html_content, provider_override=None, email_type='general', org_id=None):
+    def send_email(to_email, subject, html_content, provider_override=None, email_type='general', org_id=None, sender_email=None, sender_name=None, reply_to=None, attachments=None):
         """Sends an email using the active connected integration provider (ZeptoMail or Resend) from the database."""
         import requests
+        import base64
         from app.infrastructure.database.models.models import IntegrationConfig
 
         provider_type, settings = None, {}
@@ -167,39 +168,69 @@ class EmailUtils:
             return None
 
         # Determine dynamic sender email & sender display name directly from Contact Directory field & Integration Hub
-        raw_sender = settings.get('sender_email') or ''
-        raw_sender_name = settings.get('sender_name') or ''
-        sender_email = EmailUtils.construct_sender_email(raw_sender, email_type=email_type, org_id=org_id)
-        sender_name = EmailUtils.construct_sender_name(raw_sender_name, email_type=email_type, org_id=org_id)
-        clean_from = sender_email
-        if "<" in sender_email and ">" in sender_email:
-            clean_from = sender_email.split("<")[1].split(">")[0]
+        cfg_sender = settings.get('sender_email') or ''
+        cfg_sender_name = settings.get('sender_name') or ''
+
+        # Extract verified domain from Integration Hub (Verified Sender Email Address)
+        clean_base = (cfg_sender or '').strip()
+        if "<" in clean_base and ">" in clean_base:
+            clean_base = clean_base.split("<")[1].split(">")[0].strip()
+        if '@' in clean_base:
+            verified_domain = clean_base.split("@")[-1].strip()
+        else:
+            verified_domain = clean_base
+
+        if sender_email and ('@' in str(sender_email)):
+            local_prefix = str(sender_email).split('@')[0].strip()
+            if verified_domain:
+                clean_from = f"{local_prefix}@{verified_domain}"
+            else:
+                clean_from = str(sender_email).strip()
+        elif sender_email and str(sender_email).strip():
+            local_prefix = str(sender_email).strip()
+            if verified_domain:
+                clean_from = f"{local_prefix}@{verified_domain}"
+            else:
+                clean_from = local_prefix
+        else:
+            clean_from = EmailUtils.construct_sender_email(cfg_sender, email_type=email_type, org_id=org_id)
+
+        if not sender_name:
+            sender_name = EmailUtils.construct_sender_name(cfg_sender_name, email_type=email_type, org_id=org_id)
+
+        if "<" in str(clean_from) and ">" in str(clean_from):
+            clean_from = str(clean_from).split("<")[1].split(">")[0]
 
         is_dev = os.getenv("FLASK_ENV") == "development"
 
         # Log email dispatch in development/console
         if is_dev:
-            print("\n" + "="*50)
-            print(f"DEVELOPMENT MODE: EMAIL SENT VIA {provider_type.upper()}")
-            print(f"FROM: {sender_name} <{clean_from}>")
-            print(f"TO: {to_email}")
-            print(f"SUBJECT: {subject}")
-            print("-" * 50)
-
-            otp_match = re.search(r'>\s*(\d{6})\s*<', html_content)
-            if otp_match:
-                print(f"OTP CODE: {otp_match.group(1)}")
-
-            links = re.findall(r'href="([^"]+)"', html_content)
-            if links:
-                print("EXTRACTED LINKS:")
-                for link in links:
-                    print(f"  - {link}")
+            try:
+                print("\n" + "="*50)
+                print(f"DEVELOPMENT MODE: EMAIL SENT VIA {provider_type.upper()}")
+                print(f"FROM: {sender_name} <{clean_from}>")
+                print(f"TO: {to_email}")
+                print(f"SUBJECT: {subject}".encode('ascii', errors='replace').decode('ascii'))
+                if reply_to:
+                    print(f"REPLY-TO: {reply_to}")
                 print("-" * 50)
 
-            print("EMAIL CONTENT:")
-            print(html_content)
-            print("="*50 + "\n")
+                otp_match = re.search(r'>\s*(\d{6})\s*<', html_content)
+                if otp_match:
+                    print(f"OTP CODE: {otp_match.group(1)}")
+
+                links = re.findall(r'href="([^"]+)"', html_content)
+                if links:
+                    print("EXTRACTED LINKS:")
+                    for link in links:
+                        print(f"  - {link}")
+                    print("-" * 50)
+
+                print("EMAIL CONTENT (Truncated preview):")
+                print(html_content[:300].encode('ascii', errors='replace').decode('ascii'))
+                print("="*50 + "\n")
+            except Exception:
+                pass
 
         # Real Email Dispatch
         try:
@@ -227,6 +258,22 @@ class EmailUtils:
                     "subject": subject,
                     "htmlbody": html_content
                 }
+                if reply_to:
+                    payload["reply_to"] = [{"address": reply_to, "name": sender_name}]
+
+                if attachments:
+                    payload["attachments"] = []
+                    for att in attachments:
+                        att_content = att.get("content", b"")
+                        if isinstance(att_content, bytes):
+                            att_base64 = base64.b64encode(att_content).decode("utf-8")
+                        else:
+                            att_base64 = str(att_content)
+                        payload["attachments"].append({
+                            "content": att_base64,
+                            "mime_type": att.get("mime_type", att.get("type", "application/pdf")),
+                            "name": att.get("filename", att.get("name", "Official_Invoice.pdf"))
+                        })
 
                 resp = requests.post(
                     api_url,
@@ -256,6 +303,22 @@ class EmailUtils:
                     "subject": subject,
                     "html": html_content,
                 }
+                if reply_to:
+                    params["reply_to"] = reply_to
+
+                if attachments:
+                    params["attachments"] = []
+                    for att in attachments:
+                        att_content = att.get("content", b"")
+                        if isinstance(att_content, bytes):
+                            att_base64 = base64.b64encode(att_content).decode("utf-8")
+                        else:
+                            att_base64 = str(att_content)
+                        params["attachments"].append({
+                            "content": att_base64,
+                            "filename": att.get("filename", att.get("name", "Official_Invoice.pdf"))
+                        })
+
                 email = resend.Emails.send(params)
                 return email
         except Exception as e:

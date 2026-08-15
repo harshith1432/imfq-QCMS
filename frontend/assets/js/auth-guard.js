@@ -842,7 +842,7 @@
                     </div>
 
                     <div class="susp-footer-note">
-                        If you believe this is an error, please reach out directly to your assigned supervisor or mail us at <a href="mailto:support@qcms.com">support@qcms.com</a>.
+                        If you believe this is an error, please reach out directly to your assigned supervisor or mail us at <a href="mailto:support@ifqm.org.in">support@ifqm.org.in</a>.
                     </div>
                     <div>
                         <button type="button" class="susp-logout-btn" onclick="sessionStorage.clear(); localStorage.clear(); window.location.href='/auth/login.html';">

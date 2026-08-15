@@ -95,6 +95,8 @@ class Organization(db.Model):
     
     # 8-Stage Workflow Template (org-level customization)
     stages_config = db.Column(db.JSON, nullable=True)
+    applied_template_version = db.Column(db.Integer, default=1, nullable=False)
+    has_pending_template_update = db.Column(db.Boolean, default=False, nullable=False)
     
     # Login Options: list of field keys allowed as login identifier
     # e.g. ["email", "phone", "employee_id"]
@@ -231,7 +233,7 @@ class Organization(db.Model):
         base_defaults = (ps and ps.global_stages_config) or self.DEFAULT_STAGES_CONFIG
         
         raw = self.stages_config
-        if raw and len(raw) == 8:
+        if raw and len(raw) > 0:
             # Back-fill sections from defaults for stages that don't have them yet
             default_map = {d["original_id"]: d for d in base_defaults}
             result = []
@@ -342,7 +344,7 @@ class Project(db.Model):
     description = db.Column(db.Text)
     creator_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'))
-    category = db.Column(db.String(20))  # Safety, Quality, Productivity, Cost
+    category = db.Column(db.String(20))  # Quality, Cost, Delivery, Safety, Morale, Environment, Productivity
     team_leader_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     facilitator_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -402,6 +404,7 @@ class ProjectWorkflow(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     stage_id = db.Column(db.Integer, nullable=False)
     data = db.Column(db.JSON, default={})
+    template_snapshot = db.Column(db.JSON, nullable=True)
     completed_at = db.Column(db.DateTime)
     updated_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1128,8 +1131,10 @@ class PlatformSettings(db.Model):
     require_email_otp = db.Column(db.Boolean, default=True)
     require_phone_otp = db.Column(db.Boolean, default=False)
     global_notification = db.Column(db.Text, nullable=True)
-    support_email = db.Column(db.String(120), default="support@qcms.com")
+    support_email = db.Column(db.String(120), default="support@ifqm.org.in")
     system_version = db.Column(db.String(20), default="1.0.0")
+    global_template_version = db.Column(db.Integer, default=1, nullable=False)
+    global_template_updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     default_plan = db.Column(db.String(50), default="Starter")
     trial_period_days = db.Column(db.Integer, default=14)
@@ -2640,7 +2645,7 @@ class CompanyContactsConfig(db.Model):
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id', ondelete='CASCADE'), nullable=True)
     general_email = db.Column(db.String(255), default="info@qcms.com")
     general_sender_name = db.Column(db.String(255), default="QCMS General Info")
-    support_email = db.Column(db.String(255), default="support@qcms.com")
+    support_email = db.Column(db.String(255), default="support@ifqm.org.in")
     support_sender_name = db.Column(db.String(255), default="QCMS Customer Support")
     billing_email = db.Column(db.String(255), default="billing@qcms.com")
     billing_sender_name = db.Column(db.String(255), default="QCMS Accounts & Billing")
@@ -2764,4 +2769,130 @@ class SettingUsageMap(db.Model):
             'usage_category': self.usage_category,
             'last_verified': self.last_verified.isoformat() if self.last_verified else None
         }
+
+
+# ---------------------------------------------------------------------------
+# Email Notification & Automation Rules Models
+# ---------------------------------------------------------------------------
+
+class EmailNotificationRule(db.Model):
+    """Configuration for Automated & Broadcast Email Notifications."""
+    __tablename__ = 'email_notification_rules'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(100), default='custom') # subscription_reminder, trial_reminder, maintenance, welcome, usage_guide, new_feature, support, custom
+    description = db.Column(db.Text, nullable=True)
+    
+    # Email Content
+    subject = db.Column(db.String(500), nullable=False)
+    preheader = db.Column(db.String(255), nullable=True)
+    heading = db.Column(db.String(255), nullable=True)
+    body_html = db.Column(db.Text, nullable=False)
+    banner_color = db.Column(db.String(50), default='#2563eb')
+    cta_text = db.Column(db.String(100), nullable=True)
+    cta_url = db.Column(db.String(500), nullable=True)
+    
+    # Sender Configuration
+    sender_email = db.Column(db.String(255), default='notifications@qcms.com')
+    sender_name = db.Column(db.String(255), default='QCMS Enterprise Notifications')
+    reply_to = db.Column(db.String(255), nullable=True)
+    
+    # Triggers & Timing
+    trigger_type = db.Column(db.String(50), default='manual') # event, scheduled, manual
+    event_trigger = db.Column(db.String(100), nullable=True) # subscription_expiring_soon, trial_expiring_soon, subscription_expired, new_org_welcome, new_user_welcome
+    trigger_days_before = db.Column(db.Integer, default=7) # e.g. 7, 3, 1, 0
+    scheduled_at = db.Column(db.DateTime, nullable=True)
+    
+    # Audience & Targeting Filters
+    target_audience_type = db.Column(db.String(50), default='all') # all, specific_orgs, role_based, subscription_based
+    target_org_ids = db.Column(db.JSON, default=list) # [1, 2, 3] or []
+    target_roles = db.Column(db.JSON, default=list) # ["Admin", "CEO", "All"]
+    target_plans = db.Column(db.JSON, default=list) # ["Small MSME's", "Enterprise"]
+    target_statuses = db.Column(db.JSON, default=list) # ["Active", "Trial", "Expiring", "Suspended"]
+    
+    # State & Audit
+    is_active = db.Column(db.Boolean, default=True)
+    is_system_preset = db.Column(db.Boolean, default=False)
+    last_triggered_at = db.Column(db.DateTime, nullable=True)
+    total_sent = db.Column(db.Integer, default=0)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'category': self.category,
+            'description': self.description or '',
+            'subject': self.subject,
+            'preheader': self.preheader or '',
+            'heading': self.heading or '',
+            'body_html': self.body_html,
+            'banner_color': self.banner_color or '#2563eb',
+            'cta_text': self.cta_text or '',
+            'cta_url': self.cta_url or '',
+            'sender_email': self.sender_email,
+            'sender_name': self.sender_name,
+            'reply_to': self.reply_to or '',
+            'trigger_type': self.trigger_type,
+            'event_trigger': self.event_trigger or '',
+            'trigger_days_before': self.trigger_days_before,
+            'scheduled_at': self.scheduled_at.isoformat() + 'Z' if self.scheduled_at else None,
+            'target_audience_type': self.target_audience_type,
+            'target_org_ids': self.target_org_ids or [],
+            'target_roles': self.target_roles or [],
+            'target_plans': self.target_plans or [],
+            'target_statuses': self.target_statuses or [],
+            'is_active': self.is_active,
+            'is_system_preset': self.is_system_preset,
+            'last_triggered_at': self.last_triggered_at.isoformat() + 'Z' if self.last_triggered_at else None,
+            'total_sent': self.total_sent or 0,
+            'created_by': self.created_by.username if self.created_by else 'Super Admin',
+            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() + 'Z' if self.updated_at else None
+        }
+
+
+class EmailNotificationLog(db.Model):
+    """Delivery log for email notifications sent via rules or manual broadcasts."""
+    __tablename__ = 'email_notification_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('email_notification_rules.id', ondelete='SET NULL'), nullable=True)
+    rule_name = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(100), default='custom')
+    subject = db.Column(db.String(500), nullable=False)
+    sender_email = db.Column(db.String(255), nullable=False)
+    sender_name = db.Column(db.String(255), nullable=True)
+    recipient_count = db.Column(db.Integer, default=0)
+    recipients_summary = db.Column(db.JSON, default=list)
+    status = db.Column(db.String(50), default='Delivered') # Delivered, Failed, Partially Delivered, Processing
+    error_message = db.Column(db.Text, nullable=True)
+    sent_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    rule = db.relationship('EmailNotificationRule', foreign_keys=[rule_id])
+    sent_by = db.relationship('User', foreign_keys=[sent_by_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'rule_id': self.rule_id,
+            'rule_name': self.rule_name,
+            'category': self.category,
+            'subject': self.subject,
+            'sender_email': self.sender_email,
+            'sender_name': self.sender_name or '',
+            'recipient_count': self.recipient_count,
+            'recipients_summary': self.recipients_summary or [],
+            'status': self.status,
+            'error_message': self.error_message or '',
+            'sent_by': self.sent_by.username if self.sent_by else 'System Automation',
+            'sent_at': self.sent_at.isoformat() + 'Z' if self.sent_at else None
+        }
+
 

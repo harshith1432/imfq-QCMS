@@ -230,7 +230,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">📋 Closure Sign-Off</h5>
+                    <h5 class="modal-title fw-bold">📋 Stage 8 Closure & Review</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -243,10 +243,21 @@
                         <label class="form-label fw-medium">Preventive Actions</label>
                         <textarea class="form-control" id="closurePreventive" rows="2" placeholder="Actions to prevent recurrence..."></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Reviewer Escalation / Closing Notes</label>
+                        <textarea class="form-control" id="closureReviewerNotes" rows="2" placeholder="Optional notes or recommendation when closing or forwarding to CEO..."></textarea>
+                    </div>
                 </div>
-                <div class="modal-footer border-0 pt-0">
+                <div class="modal-footer border-0 pt-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="ds-btn ds-btn-primary" onclick="revDash.submitClosure()">Sign Off & Close Project</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-outline text-warning border-warning" onclick="revDash.submitClosure('ceo')">
+                            <i data-lucide="send" style="width:14px;height:14px;margin-right:4px;"></i> Send to CEO to Review & Close
+                        </button>
+                        <button type="button" class="ds-btn ds-btn-primary" onclick="revDash.submitClosure('direct')">
+                            <i data-lucide="check-circle" style="width:14px;height:14px;margin-right:4px;"></i> Sign Off & Close Directly
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2973,17 +2984,32 @@
                 if (window.lucide) lucide.createIcons();
                 return;
             }
-            body.innerHTML = projects.map(p => `<tr>
-                <td><div class="fw-semibold">${p.title}</div></td>
-                <td><span class="ds-badge ${p.sop_status === 'Uploaded' || p.sop_status === 'Active' ? 'green' : 'orange'}">${p.sop_status}</span></td>
-                <td>${p.has_lessons ? '✅' : '—'}</td>
-                <td>${p.has_training_records ? '✅' : '—'}</td>
-                <td>${p.facilitator_signoff ? '<span class="ds-badge green">Signed Off</span>' : '<span class="ds-badge orange">Pending</span>'}</td>
-                <td class="text-end">
-                    ${!p.facilitator_signoff ? `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="revDash.openClosureModal(${p.id})">Sign Off</button>` : ''}
-                    <button class="ds-btn ds-btn-sm ds-btn-ghost ms-1" onclick="revDash.viewSOP(${p.id})">View SOP</button>
-                </td>
-            </tr>`).join('');
+            body.innerHTML = projects.map(p => {
+                const isUnderCeo = p.is_pending_ceo || p.status === 'Pending CEO Review';
+                let signoffStatus = '<span class="ds-badge orange">Pending</span>';
+                if (isUnderCeo) {
+                    signoffStatus = '<span class="ds-badge yellow"><i data-lucide="clock" style="width:12px;height:12px;margin-right:2px;"></i> Under CEO Review</span>';
+                } else if (p.facilitator_signoff) {
+                    signoffStatus = '<span class="ds-badge green">Signed Off</span>';
+                }
+
+                return `<tr>
+                    <td>
+                        <div class="fw-semibold">${p.title}</div>
+                        ${isUnderCeo ? '<small class="text-warning fw-semibold">Forwarded to CEO for Review &amp; Closure</small>' : ''}
+                    </td>
+                    <td><span class="ds-badge ${p.sop_status === 'Uploaded' || p.sop_status === 'Active' ? 'green' : 'orange'}">${p.sop_status}</span></td>
+                    <td>${p.has_lessons ? '✅' : '—'}</td>
+                    <td>${p.has_training_records ? '✅' : '—'}</td>
+                    <td>${signoffStatus}</td>
+                    <td class="text-end">
+                        ${!isUnderCeo && !p.facilitator_signoff ? `<button class="ds-btn ds-btn-sm ds-btn-primary" onclick="revDash.openClosureModal(${p.id})">Review &amp; Close</button>` : ''}
+                        ${isUnderCeo ? `<button class="ds-btn ds-btn-sm ds-btn-outline border-warning text-warning" onclick="revDash.openClosureModal(${p.id})">Update Review</button>` : ''}
+                        <button class="ds-btn ds-btn-sm ds-btn-ghost ms-1" onclick="revDash.viewSOP(${p.id})">View SOP</button>
+                    </td>
+                </tr>`;
+            }).join('');
+            if (window.lucide) lucide.createIcons();
         },
 
         // ─── Modals ───────────────────────────────────────────────
@@ -3043,22 +3069,37 @@
             document.getElementById('closureProjectId').value = projectId;
             document.getElementById('closureLessons').value = '';
             document.getElementById('closurePreventive').value = '';
+            const notesEl = document.getElementById('closureReviewerNotes');
+            if (notesEl) notesEl.value = '';
             this.closureModal.show();
         },
 
-        async submitClosure() {
+        async submitClosure(mode = 'direct') {
             const projectId = document.getElementById('closureProjectId').value;
             const lessons = document.getElementById('closureLessons').value.trim();
             const preventive = document.getElementById('closurePreventive').value.trim();
+            const reviewerNotes = document.getElementById('closureReviewerNotes')?.value.trim() || '';
             if (!lessons) return QCMS.toast('Lessons learned is required', 'warning');
+
+            const sendToCeo = (mode === 'ceo');
+            const confirmMsg = sendToCeo
+                ? 'Send this completed 8-stage project to the CEO for executive review and final closure?'
+                : 'Directly sign off and officially close this project?';
+            if (!confirm(confirmMsg)) return;
+
             try {
-                await api.post(`/reviewer/closure/${projectId}/complete`, { lessons_learned: lessons, preventive_actions: preventive });
+                const res = await api.post(`/reviewer/closure/${projectId}/complete`, { 
+                    lessons_learned: lessons, 
+                    preventive_actions: preventive,
+                    reviewer_notes: reviewerNotes,
+                    send_to_ceo: sendToCeo
+                });
                 this.closureModal.hide();
-                QCMS.toast('Closure signed off! Project has been closed.', 'success');
+                QCMS.toast(res.msg || (sendToCeo ? 'Project forwarded to CEO for review!' : 'Closure signed off! Project has been closed.'), 'success');
                 this.loadClosure();
                 this.loadStats();
                 this.loadQueue();
-            } catch (e) { QCMS.toast(e.message || 'Closure sign-off failed', 'danger'); }
+            } catch (e) { QCMS.toast(e.message || 'Closure action failed', 'danger'); }
         },
 
         async viewSOP(projectId) {

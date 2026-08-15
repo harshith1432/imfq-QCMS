@@ -715,6 +715,14 @@ def create_company():
     )
     
     db.session.commit()
+
+    # Automatically dispatch Welcome & Onboarding Guide Email to new Org Admin
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.trigger_new_org_welcome_notification(org.id, admin_user.id)
+    except Exception as email_err:
+        print(f"[QCMS SuperAdmin] Welcome email trigger non-blocking error: {email_err}")
+
     return jsonify({
         "status": "success",
         "message": "Organization provisioned successfully",
@@ -3286,11 +3294,56 @@ def save_global_stages_template():
         seen_seq.add(sid)
 
     ps.global_stages_config = stages
+    ps.global_template_version = (ps.global_template_version or 1) + 1
+    ps.global_template_updated_at = datetime.utcnow()
+
+    # Mark all active organizations as having a pending template update
+    Organization.query.filter_by(is_deleted=False).update({"has_pending_template_update": True})
     db.session.commit()
-    log_admin_action("Saved Global Stage Template customization", target_type="GlobalStageTemplate", details={"stages_count": len(stages)})
+
+    # Notify all Organization Admins (in-app Notification & email alert)
+    try:
+        from app.infrastructure.database.models.models import User, Role, Notification
+        from app.infrastructure.mailer.email_service import EmailUtils
+
+        admin_users = User.query.join(Role).filter(
+            Role.name == 'Admin',
+            User.is_active == True
+        ).all()
+
+        for admin in admin_users:
+            notif = Notification(
+                org_id=admin.org_id,
+                user_id=admin.id,
+                title="Global Workflow Template Update Available",
+                message=f"A new Global 8-Stage Workflow Template (v{ps.global_template_version}) has been published by Super Admin. Please review and apply the update in Admin Settings.",
+                link="/admin/stage-template.html"
+            )
+            db.session.add(notif)
+            
+            try:
+                EmailUtils.send_email(
+                    to_email=admin.email,
+                    subject=f"Notice: New Global 8-Stage Workflow Template (v{ps.global_template_version}) Available",
+                    html_content=f"""<p>Dear <strong>{admin.username}</strong>,</p>
+<p>Super Admin has published a new <strong>Global 8-Stage Workflow Template (v{ps.global_template_version})</strong> update.</p>
+<p>To review changes and synchronize your organization template, navigate to <strong>Admin Settings &gt; Stage Configuration Template</strong> and click <em>Review &amp; Apply Global Template Changes</em>.</p>""",
+                    email_type="general",
+                    org_id=admin.org_id
+                )
+            except Exception as em_err:
+                print(f"[QCMS] Email dispatch error for admin {admin.id}: {em_err}")
+                
+        db.session.commit()
+    except Exception as notif_err:
+        db.session.rollback()
+        print(f"[QCMS] Error notifying org admins: {notif_err}")
+
+    log_admin_action("GLOBAL_STAGES_TEMPLATE_PUBLISHED", target_type="GlobalStageTemplate", details={"version": ps.global_template_version, "stages_count": len(stages)})
 
     return jsonify({
         "status": "success",
-        "message": "Global 8-Stage Workflow Template saved successfully for all organizations.",
+        "message": f"Global 8-Stage Workflow Template (v{ps.global_template_version}) published and sent to all Organization Admins.",
+        "global_template_version": ps.global_template_version,
         "stages": stages
     }), 200

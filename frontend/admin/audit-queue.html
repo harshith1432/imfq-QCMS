@@ -92,12 +92,15 @@
                         <label class="ds-label mb-2">Reviewer Comments</label>
                         <textarea id="reviewerComments" class="ds-input mb-3" rows="3" placeholder="Provide detailed feedback or reasons for the decision..."></textarea>
                         
-                        <div class="h-stack justify-content-end gap-3">
+                        <div class="h-stack justify-content-end gap-3 flex-wrap">
                             <button class="ds-btn ds-btn-ghost text-danger" onclick="reviewer.submitDecision('Rejected')">
                                 <i data-lucide="x-circle" class="me-2 text-sm"></i> Reject
                             </button>
                             <button class="ds-btn ds-btn-ghost text-orange" onclick="reviewer.submitDecision('Revision')">
                                 <i data-lucide="rotate-ccw" class="me-2 text-sm"></i> Request Revision
+                            </button>
+                            <button class="ds-btn ds-btn-outline border-warning text-warning d-none" id="btn-send-ceo" onclick="reviewer.submitDecision('SendToCEO')">
+                                <i data-lucide="send" class="me-2 text-sm"></i> Send to CEO to Review & Close
                             </button>
                             <button class="ds-btn ds-btn-primary" id="btn-approve" onclick="reviewer.submitDecision('Approved')">
                                 <i data-lucide="check-circle" class="me-2 text-sm"></i> Approve Transition

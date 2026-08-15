@@ -836,6 +836,21 @@ def verify_razorpay_payment():
     db.session.add(notif)
     db.session.commit()
 
+    # Dispatch Payment Approval & Tax Invoice PDF Email
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.dispatch_payment_success_invoice_email(
+            org_id=org.id,
+            user_id=user.id,
+            plan_name=resolved_name,
+            billing_cycle=cycle,
+            amount=total_price,
+            transaction_id=razorpay_payment_id,
+            payment_date=datetime.utcnow()
+        )
+    except Exception as e:
+        print(f"Warning: Failed to dispatch Razorpay invoice email: {e}")
+
     return jsonify({
         "status": "success",
         "message": f"Payment verified! Your subscription plan has been upgraded to {resolved_name}.",
@@ -968,7 +983,7 @@ def get_offline_payment_status():
             "notes": proof.notes,
             "status": proof.status,  # Pending Verification, Approved, Rejected
             "rejection_reason": proof.rejection_reason,
-            "support_email": "support@qcms.com",
+            "support_email": DocumentBrandingService.get_branding_context().get('support_email') or "support@ifqm.org.in",
             "verified_by": verifier.username if verifier else None,
             "created_at": proof.created_at.strftime('%Y-%m-%d %H:%M') if proof.created_at else None,
             "verified_at": proof.verified_at.strftime('%Y-%m-%d %H:%M') if proof.verified_at else None
@@ -1074,6 +1089,21 @@ def approve_offline_payment(proof_id):
 
     db.session.commit()
 
+    # Dispatch Payment Approval & Official Tax Invoice PDF Email
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.dispatch_payment_success_invoice_email(
+            org_id=org.id,
+            user_id=proof.user_id,
+            plan_name=proof.plan_name or resolved_name,
+            billing_cycle=proof.billing_cycle or cycle,
+            amount=total_price,
+            transaction_id=proof.transaction_id,
+            payment_date=proof.created_at or datetime.utcnow()
+        )
+    except Exception as e:
+        print(f"Warning: Failed to dispatch payment invoice email: {e}")
+
     return jsonify({
         "status": "success",
         "message": f"Payment proof approved! Organization {org.name} plan updated to {proof.plan_name}."
@@ -1107,6 +1137,19 @@ def reject_offline_payment(proof_id):
     ))
 
     db.session.commit()
+
+    # Dispatch Payment Rejection Email with specified reason
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.dispatch_payment_rejection_email(
+            org_id=proof.org_id,
+            user_id=proof.user_id,
+            plan_name=proof.plan_name,
+            transaction_id=proof.transaction_id,
+            rejection_reason=reason
+        )
+    except Exception as e:
+        print(f"Warning: Failed to dispatch payment rejection email: {e}")
 
     return jsonify({
         "status": "success",

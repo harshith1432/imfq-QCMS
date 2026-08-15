@@ -10,7 +10,7 @@ from app.infrastructure.database.models.models import (
     Stage5CountermeasurePlanningSolutionDevelopment,
     Stage7PerformanceVerificationBenefitsRealization,
     Stage8StandardizationKnowledgeSharingProjectClosure,
-    KnowledgeRepository, Organization, SubscriptionPayment,
+    KnowledgeRepository, Organization, SubscriptionPayment, PlatformSettings,
     SOP, SOPTraining, SOPComment, UserCustomField,
     ComplianceStandard, SupportTicket, Notification, ImportedIdea
 )
@@ -2739,6 +2739,57 @@ def save_stages_template():
                target_table='organizations', target_id=org.id,
                details={"stages": [s['title'] for s in stages]})
     return jsonify({"message": "Stage template saved successfully.", "stages": stages}), 200
+
+
+@admin_bp.route('/stages-template/status', methods=['GET'])
+@admin_required
+def get_stages_template_status():
+    user_id = get_jwt_identity()
+    user = db.session.get(User, int(user_id))
+    org = db.session.get(Organization, user.org_id)
+    ps = PlatformSettings.query.first()
+
+    has_pending = bool(org and org.has_pending_template_update)
+    applied_ver = (org and org.applied_template_version) or 1
+    global_ver = (ps and ps.global_template_version) or 1
+    global_updated_at = (ps and ps.global_template_updated_at.isoformat()) if (ps and ps.global_template_updated_at) else None
+
+    return jsonify({
+        "status": "success",
+        "has_pending_template_update": has_pending,
+        "applied_template_version": applied_ver,
+        "global_template_version": global_ver,
+        "global_updated_at": global_updated_at
+    }), 200
+
+
+@admin_bp.route('/stages-template/sync-global', methods=['POST'])
+@admin_required
+def sync_global_stages_template():
+    import copy
+    user_id = get_jwt_identity()
+    user = db.session.get(User, int(user_id))
+    org = db.session.get(Organization, user.org_id)
+    ps = PlatformSettings.query.first()
+
+    global_stages = (ps and ps.global_stages_config) or Organization.DEFAULT_STAGES_CONFIG
+    global_ver = (ps and ps.global_template_version) or 1
+
+    org.stages_config = copy.deepcopy(global_stages)
+    org.applied_template_version = global_ver
+    org.has_pending_template_update = False
+    db.session.commit()
+
+    log_action(user_id, 'STAGES_TEMPLATE_SYNCED', user.org_id,
+               target_table='organizations', target_id=org.id,
+               details={"applied_version": global_ver, "stages_count": len(global_stages)})
+
+    return jsonify({
+        "status": "success",
+        "message": f"Global 8-Stage Workflow Template (v{global_ver}) successfully synchronized to your organization.",
+        "applied_template_version": global_ver,
+        "stages": org.get_stages_config()
+    }), 200
 
 
 # ===========================================================================

@@ -5035,7 +5035,7 @@ console.log(data);
             const compTax     = safe(`GSTIN: ${ctx.gstin || '27AAACQ1234F1Z9'} | CIN: ${ctx.cin || 'U72200MH2026PTC123456'}`);
             const compEmail   = safe(`Email: ${ctx.billing_email || 'billing@qcms.com'}`);
             const footerText  = safe(tmpl.footer_text || tmpl.terms_and_conditions || 'This is an official computer-generated tax invoice and payment receipt. No physical signature required.');
-            const footerBrand = safe(`${ctx.software_name || 'QCMS OS'} | ${ctx.website || 'https://qcms.io'} | Support: ${ctx.support_email || 'support@qcms.com'}`);
+            const footerBrand = safe(`${ctx.software_name || 'QCMS OS'} | ${ctx.website || 'https://qcms.io'} | Support: ${ctx.support_email || 'support@ifqm.org.in'}`);
 
             const subtotalVal = amtVal / 1.18;
             const gstValVal   = amtVal - subtotalVal;
@@ -6808,7 +6808,7 @@ ET`;
                                 </div>
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 text-xs">
                                     <div class="text-secondary">
-                                        Need assistance? Email Support: <a href="mailto:${QCMS.escapeHtml(p.support_email || 'support@qcms.com')}" class="fw-bold text-danger text-decoration-underline">${QCMS.escapeHtml(p.support_email || 'support@qcms.com')}</a>
+                                        Need assistance? Email Support: <a href="mailto:${QCMS.escapeHtml(p.support_email || 'support@ifqm.org.in')}" class="fw-bold text-danger text-decoration-underline">${QCMS.escapeHtml(p.support_email || 'support@ifqm.org.in')}</a>
                                     </div>
                                     <button type="button" class="ds-btn ds-btn-danger ds-btn-sm py-1.5 px-3" onclick="openCheckoutModal()">
                                         <i data-lucide="refresh-cw" class="me-1"></i> Submit New Payment Proof

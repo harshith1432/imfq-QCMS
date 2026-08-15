@@ -57,7 +57,7 @@ def get_support_email_safe():
     except Exception:
         pass
 
-    return "support@qcms.com"
+    return "support@ifqm.org.in"
 
 @auth_bp.route('/registration-status', methods=['GET'])
 def get_registration_status():
@@ -265,6 +265,13 @@ def register_org():
     
     db.session.commit()
     
+    # Automatically dispatch Welcome & Onboarding Guide Email to new Org Admin
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.trigger_new_org_welcome_notification(new_org.id, admin_user.id)
+    except Exception as email_err:
+        print(f"[QCMS Auth] Welcome email trigger non-blocking error: {email_err}")
+
     return jsonify({
         "msg": f"Organization '{new_org.name}' and Admin account created successfully under the '{plan_name}' Trial plan.",
         "plan_name": plan_name,

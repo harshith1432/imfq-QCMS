@@ -88,22 +88,30 @@ const ProjectApp = {
     },
 
     renderHeader(data) {
-        document.getElementById('projectTitleDisplay').textContent = data.title;
-        document.getElementById('projectUidDisplay').textContent = `UID: ${data.project_uid}`;
+        if (!data) return;
+        const titleEl = document.getElementById('projectTitleDisplay');
+        if (titleEl) titleEl.textContent = data.title || 'Untitled Project';
+
+        const uidEl = document.getElementById('projectUidDisplay');
+        if (uidEl) uidEl.textContent = `UID: ${data.project_uid || '---'}`;
         
         // Active stage status
         const activeTracker = (data.stages || []).find(s => s.stage_number === this.activeStageId);
         const status = activeTracker ? activeTracker.status : 'Incomplete';
         
         const badge = document.getElementById('stageStatusBadge');
-        badge.textContent = `Stage ${this.activeStageId}: ${status}`;
-        if (status === 'Completed') { badge.style.cssText = 'background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success)'; }
-        else if (status === 'Submitted For Review') { badge.style.cssText = 'background:rgba(var(--ds-info-rgb),.12);color:var(--ds-info)'; }
-        else if (status === 'Rejected' || status === 'Revision') { badge.style.cssText = 'background:rgba(var(--ds-danger-rgb),.12);color:var(--ds-danger)'; }
-        else { badge.style.cssText = 'background:rgba(var(--ds-warning-rgb),.12);color:var(--ds-warning)'; }
+        if (badge) {
+            badge.textContent = `Stage ${this.activeStageId}: ${status}`;
+            if (status === 'Completed') { badge.style.cssText = 'background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success)'; }
+            else if (status === 'Submitted For Review') { badge.style.cssText = 'background:rgba(var(--ds-info-rgb),.12);color:var(--ds-info)'; }
+            else if (status === 'Rejected' || status === 'Revision') { badge.style.cssText = 'background:rgba(var(--ds-danger-rgb),.12);color:var(--ds-danger)'; }
+            else { badge.style.cssText = 'background:rgba(var(--ds-warning-rgb),.12);color:var(--ds-warning)'; }
+        }
         
-        document.getElementById('projectMeta').textContent =
-            `${data.category} Project · ${data.department} · Status: ${data.status}`;
+        const metaEl = document.getElementById('projectMeta');
+        if (metaEl) {
+            metaEl.textContent = `${data.category || 'Quality'} Project · ${data.department || ''} · Status: ${data.status || 'Draft'}`;
+        }
 
         // Render Facilitator Card - ONLY for Team Member role (not Team Leader, Reviewer, etc.)
         const facCard = document.getElementById('facilitatorSupportCard');
@@ -297,7 +305,7 @@ const ProjectApp = {
         </style>
         <div class="qcms-stepper">
         ` + data.stages.map((s, i) => {
-            const stg     = stages[i];
+            const stg     = (stages && stages[i]) ? stages[i] : { name: `Stage ${i+1}`, icon: 'layers' };
             const st      = statusStyle[s.status] || statusStyle['Not Started'];
             const isActive= (i + 1) === this.activeStageId;
             const isClickable = s.status !== 'Not Started' || (i + 1) <= data.current_stage;
@@ -306,16 +314,16 @@ const ProjectApp = {
             return `
             <div class="qcms-step ${isClickable ? '' : 'locked'}"
                  onclick="ProjectApp.switchStage(${i+1}, ${isClickable})"
-                 title="${stg.name.replace(/\n/g,' ')}">
+                 title="${(stg.name || '').replace(/\n/g,' ')}">
                 <div class="step-icon-wrap ${isActive ? 'is-active' : ''}"
                      style="background:${isActive ? st.color : st.bg};
                             border-color:${st.border};
                             color:${isActive ? '#fff' : st.color};">
-                    <i data-lucide="${stg.icon}" style="width:22px;height:22px;stroke-width:1.75;"></i>
+                    <i data-lucide="${stg.icon || 'layers'}" style="width:22px;height:22px;stroke-width:1.75;"></i>
                     ${st.glyph ? `<div class="step-badge"><i data-lucide="${st.glyph}" style="width:11px;height:11px;color:${st.color};stroke-width:2.5;"></i></div>` : ''}
                 </div>
-                <span class="step-label" style="color:${isActive ? st.color : (s.status === 'Not Started' ? '#94a3b8' : st.color)};">${stg.name}</span>
-                <span class="step-status" style="color:${st.color};">${s.status}</span>
+                <span class="step-label" style="color:${isActive ? st.color : (s.status === 'Not Started' ? '#94a3b8' : st.color)};">${stg.name || ''}</span>
+                <span class="step-status" style="color:${st.color};">${s.status || ''}</span>
             </div>
             ${next ? `<div class="step-connector" style="--c-from:${st.border};--c-to:${next.border};"></div>` : ''}
             `;
@@ -756,11 +764,11 @@ const ProjectApp = {
         const user = JSON.parse(sessionStorage.getItem('user') || '{}');
         const roleName = (user.role && user.role.name) ? user.role.name : (user.role || '');
         const role = roleName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const isReviewer = (role === 'reviewer');
         const activeTracker = (this.projectData.stages || []).find(s => s.stage_number === stageId) || {};
-        let isReviewer = (role === 'reviewer');
-        const isStage8 = (stageId === this._stagesCfg.length);
-
-        const stage8Tracker = (this.projectData.stages || []).find(s => s.stage_number === this._stagesCfg.length) || {};
+        const stagesLen = (this._stagesCfg && this._stagesCfg.length) ? this._stagesCfg.length : 8;
+        const isStage8 = (stageId === stagesLen);
+        const stage8Tracker = (this.projectData.stages || []).find(s => s.stage_number === stagesLen) || {};
 
         const isProjectRejected = this.projectData.status === 'Rejected' || 
                                   this.projectData.status === 'Stage 8 Rejected' || 
@@ -774,7 +782,7 @@ const ProjectApp = {
         let allowedToEdit = false;
         if (stageId === 1) {
             allowedToEdit = ['teamleader', 'teammember', 'admin', 'superadmin'].includes(role);
-        } else if (stageId >= 2 && stageId <= this._stagesCfg.length) {
+        } else if (stageId >= 2 && stageId <= stagesLen) {
             if (stageId === 6) {
                 allowedToEdit = ['teammember', 'teamleader', 'reviewer', 'facilitator', 'admin', 'superadmin'].includes(role);
             } else {
@@ -794,6 +802,7 @@ const ProjectApp = {
         const qcBtn = document.getElementById('qcAnalysisBtn');
 
         const isProjectClosed = this.projectData.status === 'Closed' || this.projectData.status === 'Completed';
+        const isStage8Completed = isProjectClosed || stage8Tracker.status === 'Completed' || stage8Tracker.status === 'Approved';
         
         if (exportBtn) {
             if (isProjectClosed) {
@@ -1170,59 +1179,35 @@ const ProjectApp = {
             const headerText = headerEl ? headerEl.textContent.trim() : `Section ${cIdx + 1}`;
             const cleanSecTitle = headerText.replace(/\s*\*.*$/, '').replace(/\*+/g, '').trim();
 
-            const isAsteriskRequired = headerHtml.includes('text-danger') || headerText.includes('*') || cardEl.dataset.required === 'true';
+            const isCardExplicitlyRequired = cardEl.dataset.required === 'true';
 
-            let cfgSecRequired = false;
-            if (stageCfg && stageCfg.sections) {
-                const matchingSec = stageCfg.sections.find(s => s && s.label && cleanSecTitle.toLowerCase().includes(s.label.trim().toLowerCase()));
-                if (matchingSec && matchingSec.required !== false) {
-                    cfgSecRequired = true;
+            // Check visible inputs that are explicitly marked required
+            const visibleInputs = Array.from(cardEl.querySelectorAll('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([readonly]):not(:disabled), select:not([readonly]):not(:disabled), textarea:not([readonly]):not(:disabled)'));
+
+            visibleInputs.forEach(input => {
+                if (input.closest('.d-none') || input.offsetParent === null) return;
+                if (input.classList.contains('ignore-validation')) return;
+                
+                const label = input.closest('.ds-field, .mb-3, .form-group')?.querySelector('label');
+                const isFieldRequired = input.required || (label && (label.innerHTML.includes('text-danger') || label.textContent.includes('*'))) || isCardExplicitlyRequired;
+                
+                if (isFieldRequired && isInputEmpty(input)) {
+                    const colName = getColumnOrLabelName(input, cardEl);
+                    addInvalid(input, cleanSecTitle, colName);
                 }
-            }
+            });
 
-            const isSecRequired = isAsteriskRequired || cfgSecRequired;
-
-            if (isSecRequired) {
-                const visibleInputs = Array.from(cardEl.querySelectorAll('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([readonly]):not(:disabled), select:not([readonly]):not(:disabled), textarea:not([readonly]):not(:disabled)'));
-
-                visibleInputs.forEach(input => {
-                    if (input.closest('.d-none') || input.offsetParent === null) return;
-                    if (input.classList.contains('ignore-validation')) return;
-                    if (isInputEmpty(input)) {
-                        const colName = getColumnOrLabelName(input, cardEl);
-                        addInvalid(input, cleanSecTitle, colName);
-                    }
-                });
-
-                const dynContainers = cardEl.querySelectorAll('[id$="Container"], [id$="Table"], .table-responsive, table, .dyn-container');
+            // Only check dynamic containers if the card itself or the container is explicitly marked required
+            if (isCardExplicitlyRequired) {
+                const dynContainers = cardEl.querySelectorAll('[id$="Container"][data-required="true"], table[data-required="true"]');
                 dynContainers.forEach(container => {
                     if (container.closest('.d-none') || container.offsetParent === null) return;
 
-                    const rowSelector = 'tbody tr, .row.dyn-row, .row.align-items-center, .s1-row, .s2-row, .s3-row, .s4-row, .s5-row, .s6-task-row, .s6-resource-row, .s7-row, .s8-row, .team-member-row, .mapping-row, .why-row, .item-row, .countermeasure-row, .resource-row, [class*="-row"]';
+                    const rowSelector = 'tbody tr, .row.dyn-row, .row.align-items-center, .s1-row, .s2-row, .s3-row, .s4-row, .s5-row, .s6-task-row, .s6-resource-row, .s7-row, .s8-row, .team-member-row, .dyn-row, .mapping-row, .why-row, .item-row, .countermeasure-row, .resource-row, [class*="-row"]';
                     const rows = container.querySelectorAll(rowSelector);
 
                     if (rows.length === 0) {
                         addInvalid(cardEl, cleanSecTitle, 'At least 1 row entry is required');
-                    } else {
-                        rows.forEach((row, rIdx) => {
-                            const rowInputs = row.querySelectorAll('input:not([type="button"]):not([type="hidden"]):not([readonly]):not(:disabled), select:not([readonly]):not(:disabled), textarea:not([readonly]):not(:disabled)');
-                            rowInputs.forEach(rowInp => {
-                                if (isInputEmpty(rowInp)) {
-                                    const colName = getColumnOrLabelName(rowInp, cardEl);
-                                    addInvalid(rowInp, cleanSecTitle, colName ? `${colName} (Row ${rIdx + 1})` : `Row ${rIdx + 1}`);
-                                }
-                            });
-                        });
-                    }
-                });
-
-                const fileDropzones = cardEl.querySelectorAll('.border-dashed, [id*="upload"], [id*="evidence"], [id*="file"]');
-                fileDropzones.forEach(zone => {
-                    if (zone.closest('.d-none') || zone.offsetParent === null) return;
-                    const hasFile = zone.querySelector('.uploaded-file-link, .file-attached-badge, [data-file-url], input[type="file"]:valid') ||
-                                    (zone.dataset && zone.dataset.fileUploaded === 'true');
-                    if (!hasFile) {
-                        addInvalid(zone, cleanSecTitle, 'Evidence / File Upload');
                     }
                 });
             }
@@ -1267,19 +1252,19 @@ const ProjectApp = {
                         <div class="modal-body p-4">
                             <div class="alert alert-warning border-0 p-3 mb-3 rounded-3" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b !important;">
                                 <p class="mb-0 text-sm fw-bold text-dark d-flex align-items-start gap-2">
-                                    <span>⚠️ <strong>Warning:</strong> Once submitted, all inputs, attachments, and changes made in Stage ${stageId} will be locked and cannot be edited.</span>
+                                    <span>⚠️ <strong>Warning:</strong> Once submitted, all inputs, attachments, and changes made in Stage ${stageId} will be locked and sent for review.</span>
                                 </p>
                             </div>
                             <p class="text-secondary text-xs mb-0">
-                                Please ensure all entered section details, tables, and uploaded documents are complete and accurate before proceeding. Are you sure you want to finalize and submit ${submitLabel}?
+                                Please ensure all entered section details and problem descriptions are complete before proceeding. Are you ready to submit ${submitLabel}?
                             </p>
                         </div>
                         <div class="modal-footer border-0 bg-light-subtle py-3 px-4 d-flex justify-content-end gap-2">
                             <button type="button" class="ds-btn ds-btn-ghost text-xs" data-bs-dismiss="modal">
-                                <i data-lucide="x" style="width: 14px; height: 14px; margin-right: 4px;"></i> Cancel &amp; Review
+                                <i data-lucide="x" style="width: 14px; height: 14px; margin-right: 4px;"></i> Cancel &amp; Edit
                             </button>
                             <button type="button" class="ds-btn ds-btn-primary text-xs" id="confirmStageSubmitBtn">
-                                <i data-lucide="send" style="width: 14px; height: 14px; margin-right: 4px;"></i> Confirm &amp; Submit ${submitLabel}
+                                <i data-lucide="send" style="width: 14px; height: 14px; margin-right: 4px;"></i> Confirm &amp; Submit
                             </button>
                         </div>
                     </div>
@@ -1288,29 +1273,51 @@ const ProjectApp = {
 
             if (window.lucide) lucide.createIcons();
 
-            const bsModal = new bootstrap.Modal(modalEl);
+            let bsModal;
+            try {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                }
+            } catch (mErr) {
+                console.warn("[QCMS] bootstrap modal init warning:", mErr);
+            }
+
             let resolved = false;
 
             const confirmBtn = modalEl.querySelector('#confirmStageSubmitBtn');
-            confirmBtn.onclick = () => {
-                resolved = true;
-                bsModal.hide();
-                resolve(true);
-            };
+            if (confirmBtn) {
+                confirmBtn.onclick = () => {
+                    resolved = true;
+                    if (bsModal) {
+                        try { bsModal.hide(); } catch (_) {}
+                    }
+                    resolve(true);
+                };
+            }
 
             modalEl.addEventListener('hidden.bs.modal', () => {
                 if (!resolved) resolve(false);
             }, { once: true });
 
-            bsModal.show();
+            if (bsModal) {
+                try {
+                    bsModal.show();
+                } catch (e) {
+                    resolve(window.confirm(`Are you sure you want to finalize and submit Stage ${stageId}?`));
+                }
+            } else {
+                resolve(window.confirm(`Are you sure you want to finalize and submit Stage ${stageId}?`));
+            }
         });
     },
 
     async submitForReview() {
         console.log("[QCMS] submitForReview started for activeStageId:", this.activeStageId);
-        const module = StageModules[this.activeStageId];
+        const stageNum = this.activeStageId || 1;
+        const module = StageModules[stageNum];
         if (!module) {
-            console.error("[QCMS] active stage module not found!");
+            console.error("[QCMS] active stage module not found for stage:", stageNum);
+            QCMS.toast(`Cannot find Stage ${stageNum} module.`, 'error');
             return;
         }
 
@@ -1319,7 +1326,7 @@ const ProjectApp = {
         // 1. Template-driven mandatory section & input validation
         const activePane = document.getElementById('stageContentContainer') || document.querySelector('.tab-pane.active') || document.body;
         if (activePane) {
-            const validation = this.validateStageForSubmission(this.activeStageId, activePane);
+            const validation = this.validateStageForSubmission(stageNum, activePane);
             if (!validation.valid) {
                 validation.emptyFields.forEach(f => {
                     if (f && f.classList) {
@@ -1337,14 +1344,14 @@ const ProjectApp = {
                     }
                 });
 
-                let secMsg = ' Please fill out all mandatory sections and fields before submitting.';
+                let secMsg = ' Please complete the highlighted required fields before submitting.';
                 if (validation.missingDetails && validation.missingDetails.length > 0) {
                     secMsg = ` Mandatory field(s) missing:\n• ${validation.missingDetails.slice(0, 4).join('\n• ')}${validation.missingDetails.length > 4 ? '\n• and more...' : ''}`;
                 } else if (validation.missingSections && validation.missingSections.length > 0) {
                     secMsg = ` Mandatory section(s) incomplete: ${validation.missingSections.join(', ')}.`;
                 }
 
-                QCMS.toast(`Cannot submit Stage ${this.activeStageId}:${secMsg}`, 'error');
+                QCMS.toast(`Cannot submit Stage ${stageNum}:${secMsg}`, 'error');
 
                 const targetEl = validation.emptyFields[0];
                 if (targetEl) {
@@ -1359,18 +1366,33 @@ const ProjectApp = {
             }
         }
 
-        const isReviewStage = [1, 8].includes(this.activeStageId);
-        const userConfirmed = await this.showSubmissionWarningModal(this.activeStageId);
+        const isReviewStage = [1, 8].includes(stageNum);
+        const userConfirmed = await this.showSubmissionWarningModal(stageNum);
         if (!userConfirmed) return;
+
+        const submitBtnTop = document.getElementById('submitBtn');
+        const submitBtnBottom = document.getElementById('submitBtnBottom');
+        const originalTopHtml = submitBtnTop ? submitBtnTop.innerHTML : '';
+        const originalBottomHtml = submitBtnBottom ? submitBtnBottom.innerHTML : '';
+
         try {
-            const data = module.collectData();
+            if (submitBtnTop) {
+                submitBtnTop.disabled = true;
+                submitBtnTop.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Submitting...`;
+            }
+            if (submitBtnBottom) {
+                submitBtnBottom.disabled = true;
+                submitBtnBottom.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Submitting...`;
+            }
+
+            const data = (typeof module.collectData === 'function') ? module.collectData() : {};
 
             // Auto-merge custom fields/cards data using DynamicRenderer
             const customElements = [];
-            const stageCfg = (this._stagesCfg || [])[this.activeStageId - 1];
+            const stageCfg = (this._stagesCfg || [])[stageNum - 1];
             if (stageCfg && stageCfg.sections) {
                 stageCfg.sections.forEach(sec => {
-                    if (sec.id.startsWith('sec_')) {
+                    if (sec.id && sec.id.startsWith('sec_')) {
                         customElements.push(sec);
                     }
                     if (sec.fields) {
@@ -1388,21 +1410,37 @@ const ProjectApp = {
                 DynamicRenderer.sections = origSecs; // restore
             }
 
+            const routeSave = stageNum === 1 ? `/projects/${this.projectId}/stage1/save` : `/projects/${this.projectId}/stage/${stageNum}/save`;
+            const routeSubmit = stageNum === 1 ? `/projects/${this.projectId}/stage1/submit` : `/projects/${this.projectId}/stage/${stageNum}/submit`;
 
-            const routeSave = this.activeStageId === 1 ? `/projects/${this.projectId}/stage1/save` : `/projects/${this.projectId}/stage/${this.activeStageId}/save`;
-            const routeSubmit = this.activeStageId === 1 ? `/projects/${this.projectId}/stage1/submit` : `/projects/${this.projectId}/stage/${this.activeStageId}/submit`;
-
-
-
-            
             await api.post(routeSave, data);
-            await api.post(routeSubmit, {});
-            QCMS.toast(isReviewStage ? `Stage ${this.activeStageId} submitted for review!` : `Stage ${this.activeStageId} submitted!`, 'success');
-            setTimeout(() => location.reload(), 1000);
+            const submitResult = await api.post(routeSubmit, {});
+
+            QCMS.toast(isReviewStage ? `Stage ${stageNum} submitted for review successfully!` : `Stage ${stageNum} submitted successfully!`, 'success');
+            
+            // Update UI badge and status immediately
+            const badge = document.getElementById('stageStatusBadge');
+            if (badge) {
+                badge.textContent = isReviewStage ? `Stage ${stageNum}: Submitted For Review` : `Stage ${stageNum}: Completed`;
+                badge.style.cssText = 'background:rgba(var(--ds-info-rgb),.12);color:var(--ds-info)';
+            }
+            
+            setTimeout(() => location.reload(), 800);
         } catch (e) {
             console.error("[QCMS] submission caught exception:", e);
+            
+            if (submitBtnTop) {
+                submitBtnTop.disabled = false;
+                submitBtnTop.innerHTML = originalTopHtml;
+            }
+            if (submitBtnBottom) {
+                submitBtnBottom.disabled = false;
+                submitBtnBottom.innerHTML = originalBottomHtml;
+            }
+            if (window.lucide) lucide.createIcons();
+
             const errors = e.errors || [];
-            const msg = errors.length ? 'Incomplete: ' + errors.join(', ') : e.message;
+            const msg = errors.length ? 'Incomplete: ' + errors.join(', ') : (e.message || 'Submission failed. Please try again.');
 
             // Map backend validation errors to fields if possible
             const invalidFields = [];
@@ -1434,7 +1472,6 @@ const ProjectApp = {
                 }
             });
 
-            console.log("[QCMS] mapping results, invalidFields:", invalidFields);
             if (invalidFields.length > 0) {
                 this.highlightInvalidFields(invalidFields);
             }
