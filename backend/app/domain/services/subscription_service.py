@@ -16,8 +16,8 @@ PLAN_LIMITS = {
     'Starter': {
         'max_users': 50,
         'max_active_projects': 1,
-        'features': ['basic_workflow', 'standard_reports'],
-        'workflow_stages': [1, 2, 3, 4], # Starter only gets first 4 stages? Or maybe just limited active projects.
+        'features': ['basic_workflow', 'standard_reports', 'full_workflow'],
+        'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
         'ai_assistant': False,
         'white_label': False,
         'multi_plant': False,
