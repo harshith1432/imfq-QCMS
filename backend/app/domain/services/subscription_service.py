@@ -285,6 +285,17 @@ class SubscriptionManager:
 
 
 import math
+from datetime import timezone
+
+def make_naive_utc(dt):
+    if dt is None:
+        return None
+    if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+        try:
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        except Exception:
+            return dt.replace(tzinfo=None)
+    return dt
 
 def get_org_effective_expiry_and_start(org):
     """
@@ -301,17 +312,20 @@ def get_org_effective_expiry_and_start(org):
     from app.infrastructure.database.models.models import Subscription, SaaSPlan
     sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
 
-    start_date = getattr(org, 'license_start_date', None) or (sub.start_date if sub else None) or getattr(org, 'created_at', None) or now
+    raw_start = getattr(org, 'license_start_date', None) or (sub.start_date if sub else None) or getattr(org, 'created_at', None) or now
+    start_date = make_naive_utc(raw_start)
 
     # For Trialing / Trial organizations, trial_ends_at is the authoritative source of truth
     if status in ('trialing', 'trial'):
-        expiry_date = getattr(org, 'trial_ends_at', None) or getattr(org, 'license_expiry_date', None) or (sub.trial_end_date if sub else None) or (sub.end_date if sub else None)
+        raw_expiry = getattr(org, 'trial_ends_at', None) or getattr(org, 'license_expiry_date', None) or (sub.trial_end_date if sub else None) or (sub.end_date if sub else None)
+        expiry_date = make_naive_utc(raw_expiry)
         if not expiry_date:
             expiry_date = start_date + timedelta(days=30)
         return expiry_date, start_date
 
     # For Paid / Active / Other subscriptions
-    expiry_date = getattr(org, 'license_expiry_date', None) or (sub.end_date if sub else None) or getattr(org, 'trial_ends_at', None) or (sub.trial_end_date if sub else None)
+    raw_expiry = getattr(org, 'license_expiry_date', None) or (sub.end_date if sub else None) or getattr(org, 'trial_ends_at', None) or (sub.trial_end_date if sub else None)
+    expiry_date = make_naive_utc(raw_expiry)
 
     plan_name = getattr(org, 'subscription_plan', None) or (sub.plan_name if sub else None)
     if plan_name and not expiry_date:
@@ -364,7 +378,10 @@ def is_org_expiring_soon(org):
         return False
 
     now = datetime.utcnow()
-    remaining_seconds = (expiry_date - now).total_seconds()
+    exp_naive = make_naive_utc(expiry_date)
+    start_naive = make_naive_utc(start_date)
+
+    remaining_seconds = (exp_naive - now).total_seconds()
     remaining_days = remaining_seconds / 86400.0
 
     # If remaining_days is <= 0 but status is Active/Trialing (expiring today or due now)
@@ -373,8 +390,8 @@ def is_org_expiring_soon(org):
 
     # Calculate total plan/trial duration in days
     total_days = None
-    if start_date and expiry_date > start_date:
-        total_days = (expiry_date - start_date).days
+    if start_naive and exp_naive > start_naive:
+        total_days = (exp_naive - start_naive).days
 
     if not total_days or total_days <= 0:
         plan = (getattr(org, 'subscription_plan', '') or '').lower()

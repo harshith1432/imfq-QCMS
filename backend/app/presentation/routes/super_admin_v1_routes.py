@@ -169,6 +169,17 @@ def get_dashboard_stats():
         ~Organization.subscription_status.in_(['Suspended', 'SUSPENDED', 'Canceled', 'CANCELED'])
     ).count()
 
+    def _to_naive_utc(dt):
+        if dt is None:
+            return None
+        if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+            try:
+                from datetime import timezone
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+            except Exception:
+                return dt.replace(tzinfo=None)
+        return dt
+
     # 4b. Inactive 20d Organizations
     cutoff_20d = now - timedelta(days=20)
     all_non_deleted_orgs = Organization.query.filter(
@@ -177,7 +188,7 @@ def get_dashboard_stats():
     ).all()
     inactive_20d_orgs = len([
         o for o in all_non_deleted_orgs
-        if o.created_at and o.created_at < cutoff_20d and not any(u.last_login and u.last_login >= cutoff_20d for u in o.users)
+        if _to_naive_utc(o.created_at) and _to_naive_utc(o.created_at) < cutoff_20d and not any(_to_naive_utc(u.last_login) and _to_naive_utc(u.last_login) >= cutoff_20d for u in o.users)
     ])
 
     # 5. Total Users (registered tenant users only)

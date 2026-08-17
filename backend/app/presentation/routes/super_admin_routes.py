@@ -287,10 +287,22 @@ def list_companies():
     now = datetime.utcnow()
     cutoff_20d = now - timedelta(days=20)
     
+    def _to_naive_utc(dt):
+        if dt is None:
+            return None
+        if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+            try:
+                from datetime import timezone
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+            except Exception:
+                return dt.replace(tzinfo=None)
+        return dt
+
     def _is_inactive_20d(o):
-        if not o.created_at or o.created_at >= cutoff_20d:
+        c_at = _to_naive_utc(o.created_at)
+        if not c_at or c_at >= cutoff_20d:
             return False
-        recent_login = any(u.last_login and u.last_login >= cutoff_20d for u in o.users)
+        recent_login = any(_to_naive_utc(u.last_login) and _to_naive_utc(u.last_login) >= cutoff_20d for u in o.users)
         return not recent_login
 
     if license_status_filter == 'Expired':
@@ -370,7 +382,8 @@ def list_companies():
         expiry_dt, _ = get_org_effective_expiry_and_start(org)
         trial_days = None
         if expiry_dt:
-            rem_sec = (expiry_dt - datetime.utcnow()).total_seconds()
+            exp_n = _to_naive_utc(expiry_dt)
+            rem_sec = (exp_n - datetime.utcnow()).total_seconds()
             trial_days = max(int(math.ceil(rem_sec / 86400.0)), 0)
 
         admin_disp_name = org.admin_name

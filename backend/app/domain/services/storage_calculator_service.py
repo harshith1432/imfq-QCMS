@@ -30,69 +30,117 @@ def calculate_org_storage_realtime(org_id=None):
     
     for org in orgs:
         # 1. Support Attachment file sizes
-        att_bytes = db.session.query(func.sum(SupportAttachment.file_size)).join(
-            User, SupportAttachment.uploaded_by_id == User.id
-        ).filter(User.org_id == org.id).scalar() or 0
+        att_bytes = 0
+        try:
+            att_bytes = db.session.query(func.sum(SupportAttachment.file_size)).join(
+                User, SupportAttachment.uploaded_by_id == User.id
+            ).filter(User.org_id == org.id).scalar() or 0
+        except Exception:
+            pass
 
         # 2. Announcement Attachment file sizes
-        ann_bytes = db.session.query(func.sum(AnnouncementAttachment.file_size)).join(
-            User, AnnouncementAttachment.uploaded_by == User.id
-        ).filter(User.org_id == org.id).scalar() or 0
+        ann_bytes = 0
+        try:
+            ann_bytes = db.session.query(func.sum(AnnouncementAttachment.file_size)).join(
+                User, AnnouncementAttachment.uploaded_by == User.id
+            ).filter(User.org_id == org.id).scalar() or 0
+        except Exception:
+            pass
 
         # 3. DB text & payload byte sizes for this organization
-        proj_bytes = db.session.query(
-            func.sum(
-                func.length(func.coalesce(Project.title, '')) + 
-                func.length(func.coalesce(Project.description, '')) +
-                func.length(func.coalesce(Project.category, '')) +
-                func.length(func.coalesce(Project.work_area, '')) +
-                func.length(func.coalesce(Project.plant, ''))
-            )
-        ).filter(Project.org_id == org.id).scalar() or 0
+        proj_bytes = 0
+        try:
+            proj_bytes = db.session.query(
+                func.sum(
+                    func.length(func.coalesce(Project.title, '')) + 
+                    func.length(func.coalesce(Project.description, '')) +
+                    func.length(func.coalesce(Project.category, '')) +
+                    func.length(func.coalesce(Project.work_area, '')) +
+                    func.length(func.coalesce(Project.plant, ''))
+                )
+            ).filter(Project.org_id == org.id).scalar() or 0
+        except Exception:
+            pass
 
-        wf_bytes = db.session.query(
-            func.sum(func.length(func.cast(ProjectWorkflow.data, db.String)))
-        ).join(Project, ProjectWorkflow.project_id == Project.id).filter(Project.org_id == org.id).scalar() or 0
+        wf_bytes = 0
+        try:
+            wf_bytes = db.session.query(
+                func.sum(func.length(func.cast(ProjectWorkflow.data, db.String)))
+            ).join(Project, ProjectWorkflow.project_id == Project.id).filter(Project.org_id == org.id).scalar() or 0
+        except Exception:
+            pass
 
-        kr_bytes = db.session.query(
-            func.sum(
-                func.length(func.coalesce(KnowledgeRepository.title, '')) +
-                func.length(func.coalesce(KnowledgeRepository.problem_summary, '')) +
-                func.length(func.coalesce(KnowledgeRepository.root_cause, '')) +
-                func.length(func.coalesce(KnowledgeRepository.solution_summary, '')) +
-                func.length(func.coalesce(KnowledgeRepository.keywords, ''))
-            )
-        ).filter(KnowledgeRepository.org_id == org.id).scalar() or 0
+        kr_bytes = 0
+        try:
+            kr_bytes = db.session.query(
+                func.sum(
+                    func.length(func.coalesce(KnowledgeRepository.title, '')) +
+                    func.length(func.coalesce(KnowledgeRepository.problem_summary, '')) +
+                    func.length(func.coalesce(KnowledgeRepository.root_cause, '')) +
+                    func.length(func.coalesce(KnowledgeRepository.solution_summary, '')) +
+                    func.length(func.coalesce(KnowledgeRepository.keywords, ''))
+                )
+            ).filter(KnowledgeRepository.org_id == org.id).scalar() or 0
+        except Exception:
+            pass
 
-        audit_bytes = db.session.query(
-            func.sum(
-                func.length(func.coalesce(AuditLog.action, '')) +
-                func.length(func.coalesce(AuditLog.target_table, '')) +
-                func.length(func.cast(AuditLog.details, db.String))
-            )
-        ).filter(AuditLog.org_id == org.id).scalar() or 0
+        audit_bytes = 0
+        try:
+            audit_bytes = db.session.query(
+                func.sum(
+                    func.length(func.coalesce(AuditLog.action, '')) +
+                    func.length(func.coalesce(AuditLog.target_table, '')) +
+                    func.length(func.cast(AuditLog.details, db.String))
+                )
+            ).filter(AuditLog.org_id == org.id).scalar() or 0
+        except Exception:
+            pass
 
-        user_bytes = db.session.query(
-            func.sum(
-                func.length(func.coalesce(User.full_name, '')) +
-                func.length(func.coalesce(User.email, '')) +
-                func.length(func.coalesce(User.username, '')) +
-                func.length(func.cast(User.custom_fields, db.String))
-            )
-        ).filter(User.org_id == org.id).scalar() or 0
+        user_bytes = 0
+        try:
+            user_bytes = db.session.query(
+                func.sum(
+                    func.length(func.coalesce(User.full_name, '')) +
+                    func.length(func.coalesce(User.email, '')) +
+                    func.length(func.coalesce(User.username, '')) +
+                    func.length(func.cast(User.custom_fields, db.String))
+                )
+            ).filter(User.org_id == org.id).scalar() or 0
+        except Exception:
+            pass
 
-        ticket_bytes = db.session.query(
-            func.sum(
-                func.length(func.coalesce(SupportTicket.subject, '')) +
-                func.length(func.coalesce(SupportTicket.message, ''))
-            )
-        ).filter(SupportTicket.org_id == org.id).scalar() or 0
+        ticket_bytes = 0
+        try:
+            ticket_bytes = db.session.query(
+                func.sum(
+                    func.length(func.coalesce(SupportTicket.subject, '')) +
+                    func.length(func.coalesce(SupportTicket.message, ''))
+                )
+            ).filter(SupportTicket.org_id == org.id).scalar() or 0
+        except Exception:
+            pass
 
         # Count DB entities
-        users_cnt = User.query.filter_by(org_id=org.id).count()
-        projects_cnt = Project.query.filter_by(org_id=org.id).count()
-        audits_cnt = AuditLog.query.filter_by(org_id=org.id).count()
-        knowledge_cnt = KnowledgeRepository.query.filter_by(org_id=org.id).count()
+        users_cnt = 0
+        projects_cnt = 0
+        audits_cnt = 0
+        knowledge_cnt = 0
+        try:
+            users_cnt = User.query.filter_by(org_id=org.id).count()
+        except Exception:
+            pass
+        try:
+            projects_cnt = Project.query.filter_by(org_id=org.id).count()
+        except Exception:
+            pass
+        try:
+            audits_cnt = AuditLog.query.filter_by(org_id=org.id).count()
+        except Exception:
+            pass
+        try:
+            knowledge_cnt = KnowledgeRepository.query.filter_by(org_id=org.id).count()
+        except Exception:
+            pass
 
         # 4. Total actual bytes stored for this organization
         total_actual_bytes = att_bytes + ann_bytes + proj_bytes + wf_bytes + kr_bytes + audit_bytes + user_bytes + ticket_bytes
