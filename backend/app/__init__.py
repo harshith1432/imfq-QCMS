@@ -182,6 +182,7 @@ def create_app():
         app.register_blueprint(integrations_bp, url_prefix='/api/super-admin')
         app.register_blueprint(integration_v1_bp, url_prefix='/api/v1/integrations')
         app.register_blueprint(sop_bp, url_prefix='/api/sops')
+        app.register_blueprint(sop_bp, url_prefix='/api/sop', name='sop_alias_bp')
         app.register_blueprint(document_branding_bp)
         app.register_blueprint(feature_engine_bp)
 

@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify, send_file, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
     db, User, Department, Project, ProjectMember, AuditLog, SOP, SOPStep, SOPApproval, SOPVersion, SOPTraining, SOPComment,
-    SOPAcknowledgement, SOPAssessment, SOPAssessmentQuestion, SOPAssessmentResult, SOPCertificate, SOPAuditReport, SOPArchive, SOPNotification
+    SOPAcknowledgement, SOPAssessment, SOPAssessmentQuestion, SOPAssessmentResult, SOPCertificate, SOPAuditReport, SOPArchive, SOPNotification,
+    SOPCategory, SOPType
 )
 from app.presentation.middleware.middleware import role_required
 from datetime import datetime, timedelta
@@ -2004,4 +2005,164 @@ def upload_sop_file():
     
     file_url = f"/uploads/{filename}"
     return jsonify({"url": file_url}), 200
+
+
+# ==========================================
+# DYNAMIC SOP CATEGORY & TYPE MANAGEMENT
+# ==========================================
+
+DEFAULT_SOP_CATEGORIES = [
+    {"name": "Quality", "description": "Quality assurance and defect prevention standards"},
+    {"name": "Cost", "description": "Cost reduction and waste elimination procedures"},
+    {"name": "Delivery", "description": "Logistics, lead time, and delivery standards"},
+    {"name": "Safety", "description": "Occupational health and safety guidelines"},
+    {"name": "Morale", "description": "Team engagement, workplace culture, and recognition"},
+    {"name": "Environment", "description": "Environmental management and sustainability"},
+    {"name": "Productivity", "description": "OEE improvement and cycle time optimization"}
+]
+
+DEFAULT_SOP_TYPES = [
+    {"name": "Operational", "description": "Standard work instructions for daily machine and assembly operations"},
+    {"name": "Safety Standard", "description": "EHS protocols, PPE rules, and emergency procedures"},
+    {"name": "Quality Control", "description": "Inspection criteria, sampling methods, and defect verification"},
+    {"name": "Maintenance", "description": "Preventive maintenance checklists and calibration guides"},
+    {"name": "Administrative", "description": "Management processes, documentation, and office protocols"}
+]
+
+@sop_bp.route('/masters', methods=['GET'])
+@jwt_required()
+def get_sop_masters():
+    """Retrieve or auto-seed organization's custom Categories and SOP Types."""
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    org_id = user.org_id if (user and user.org_id) else 1
+
+    cats = SOPCategory.query.filter_by(org_id=org_id).order_by(SOPCategory.name.asc()).all()
+    if not cats:
+        for c in DEFAULT_SOP_CATEGORIES:
+            db.session.add(SOPCategory(org_id=org_id, name=c["name"], description=c["description"]))
+        db.session.commit()
+        cats = SOPCategory.query.filter_by(org_id=org_id).order_by(SOPCategory.name.asc()).all()
+
+    types = SOPType.query.filter_by(org_id=org_id).order_by(SOPType.name.asc()).all()
+    if not types:
+        for t in DEFAULT_SOP_TYPES:
+            db.session.add(SOPType(org_id=org_id, name=t["name"], description=t["description"]))
+        db.session.commit()
+        types = SOPType.query.filter_by(org_id=org_id).order_by(SOPType.name.asc()).all()
+
+    return jsonify({
+        "categories": [{"id": c.id, "name": c.name, "description": c.description, "created_at": c.created_at.isoformat() if c.created_at else None} for c in cats],
+        "types": [{"id": t.id, "name": t.name, "description": t.description, "created_at": t.created_at.isoformat() if t.created_at else None} for t in types]
+    }), 200
+
+@sop_bp.route('/categories', methods=['POST'])
+@jwt_required()
+def create_sop_category():
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    org_id = user.org_id if user else 1
+
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    desc = (data.get('description') or '').strip()
+
+    if not name:
+        return jsonify({"msg": "Category name is required"}), 400
+
+    existing = SOPCategory.query.filter_by(org_id=org_id, name=name).first()
+    if existing:
+        return jsonify({"msg": "Category already exists"}), 400
+
+    cat = SOPCategory(org_id=org_id, name=name, description=desc)
+    db.session.add(cat)
+    db.session.commit()
+
+    return jsonify({"msg": "Category created successfully", "category": {"id": cat.id, "name": cat.name, "description": cat.description}}), 201
+
+@sop_bp.route('/categories/<int:cat_id>', methods=['PUT'])
+@jwt_required()
+def update_sop_category(cat_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    org_id = user.org_id if user else 1
+
+    cat = SOPCategory.query.filter_by(id=cat_id, org_id=org_id).first_or_404()
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if name:
+        cat.name = name
+    if 'description' in data:
+        cat.description = (data.get('description') or '').strip()
+    db.session.commit()
+
+    return jsonify({"msg": "Category updated successfully", "category": {"id": cat.id, "name": cat.name, "description": cat.description}}), 200
+
+@sop_bp.route('/categories/<int:cat_id>', methods=['DELETE'])
+@jwt_required()
+def delete_sop_category(cat_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    org_id = user.org_id if user else 1
+
+    cat = SOPCategory.query.filter_by(id=cat_id, org_id=org_id).first_or_404()
+    db.session.delete(cat)
+    db.session.commit()
+
+    return jsonify({"msg": "Category deleted successfully"}), 200
+
+@sop_bp.route('/types', methods=['POST'])
+@jwt_required()
+def create_sop_type():
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    org_id = user.org_id if user else 1
+
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    desc = (data.get('description') or '').strip()
+
+    if not name:
+        return jsonify({"msg": "SOP Type name is required"}), 400
+
+    existing = SOPType.query.filter_by(org_id=org_id, name=name).first()
+    if existing:
+        return jsonify({"msg": "SOP Type already exists"}), 400
+
+    t = SOPType(org_id=org_id, name=name, description=desc)
+    db.session.add(t)
+    db.session.commit()
+
+    return jsonify({"msg": "SOP Type created successfully", "type": {"id": t.id, "name": t.name, "description": t.description}}), 201
+
+@sop_bp.route('/types/<int:type_id>', methods=['PUT'])
+@jwt_required()
+def update_sop_type(type_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    org_id = user.org_id if user else 1
+
+    t = SOPType.query.filter_by(id=type_id, org_id=org_id).first_or_404()
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if name:
+        t.name = name
+    if 'description' in data:
+        t.description = (data.get('description') or '').strip()
+    db.session.commit()
+
+    return jsonify({"msg": "SOP Type updated successfully", "type": {"id": t.id, "name": t.name, "description": t.description}}), 200
+
+@sop_bp.route('/types/<int:type_id>', methods=['DELETE'])
+@jwt_required()
+def delete_sop_type(type_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    org_id = user.org_id if user else 1
+
+    t = SOPType.query.filter_by(id=type_id, org_id=org_id).first_or_404()
+    db.session.delete(t)
+    db.session.commit()
+
+    return jsonify({"msg": "SOP Type deleted successfully"}), 200
 

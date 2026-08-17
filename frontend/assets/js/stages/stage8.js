@@ -11,14 +11,14 @@ const Stage8 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.1</span>
-                                Standardization &amp; SOP
+                                <span class="ds-tooltip-trigger" title="Standardization & SOP: Formally documented step-by-step procedures locking in new process standard">Standardization &amp; SOP</span> <span class="text-danger">*</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Update the SOP and procedure steps to lock in the new standard.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 1 - Standardization &amp; SOP</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 1 - Standardization & SOP: Full SOP document control & procedure definition">Section 1 - Standardization &amp; SOP</h6>
                             <button type="button" class="ds-btn ds-btn-primary" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[8].previewSop()">
                                 <i data-lucide="eye" style="width:12px;height:12px;color:white;"></i> Preview Formatted SOP
                             </button>
@@ -26,17 +26,17 @@ const Stage8 = {
 
                         <!-- Embedded Inline SOP Form -->
                         <div id="projectSopInlineForm" class="p-4 mb-4 border rounded" style="background:rgba(var(--ds-primary-rgb), 0.01); border-color:var(--ds-border-color) !important; border-radius:var(--ds-radius-lg);">
-                            <h6 class="fw-bold mb-3 d-flex align-items-center gap-2 text-sm" style="color:var(--ds-text-main);">
+                            <h6 class="fw-bold mb-3 d-flex align-items-center gap-2 text-sm ds-tooltip-trigger" title="Standard Operating Procedure Details: Document header metadata" style="color:var(--ds-text-main);">
                                 <i data-lucide="file-text" class="text-primary" style="width:16px;height:16px;"></i> Standard Operating Procedure (SOP) Details
                             </h6>
                             
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="ds-label" for="s8_sop_title">SOP Title *</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="SOP Title: Formal title of Standard Operating Procedure" for="s8_sop_title">SOP Title</label>
                                     <input type="text" id="s8_sop_title" class="ds-input" required placeholder="e.g., Boiler Temperature Calibration SOP">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="ds-label" for="s8_sop_category">Category *</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Category: Process domain (Quality, Safety, Cost, Delivery)" for="s8_sop_category">Category</label>
                                     <select id="s8_sop_category" class="ds-input ds-select" required>
                                         <option value="Quality">Quality</option>
                                         <option value="Cost">Cost</option>
@@ -48,7 +48,7 @@ const Stage8 = {
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="ds-label" for="s8_sop_type">SOP Type *</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="SOP Type: Document type classification" for="s8_sop_type">SOP Type</label>
                                     <select id="s8_sop_type" class="ds-input ds-select" required>
                                         <option value="Operational">Operational</option>
                                         <option value="Safety Standard">Safety Standard</option>
@@ -59,24 +59,24 @@ const Stage8 = {
                                 </div>
                                 
                                 <div class="col-md-6">
-                                    <label class="ds-label" for="s8_sop_description">Description / Summary</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Description / Summary: Concise summary of standard operational procedure" for="s8_sop_description">Description / Summary</label>
                                     <input type="text" id="s8_sop_description" class="ds-input" placeholder="e.g. Standard calibration routine for wire crimper pneumatic cylinder pressure" required>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="ds-label" for="s8_sop_applicability">Applicability</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Applicability: Shop floor lines, equipment, or products covered by SOP" for="s8_sop_applicability">Applicability</label>
                                     <input type="text" id="s8_sop_applicability" class="ds-input" placeholder="e.g. Assembly Line A, crimping machines CT-400 & CT-401" required>
                                 </div>
                                 
                                 <div class="col-md-6">
-                                    <label class="ds-label" for="s8_sop_purpose">Section 1: Purpose *</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Purpose: Core objective of implementing this standard procedure" for="s8_sop_purpose">Section 1: Purpose</label>
                                     <textarea id="s8_sop_purpose" class="ds-input ds-textarea" rows="2" required placeholder="e.g. To establish standard pressure settings and PM guidelines to eliminate wire crimping faults."></textarea>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="ds-label" for="s8_sop_scope">Section 2: Scope *</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Scope: Boundaries and operational areas covered by procedure" for="s8_sop_scope">Section 2: Scope</label>
                                     <textarea id="s8_sop_scope" class="ds-input ds-textarea" rows="2" required placeholder="e.g. Applies to all production operators and maintenance engineers working on Line A."></textarea>
                                 </div>
                                 <div class="col-md-12">
-                                    <label class="ds-label" for="s8_sop_responsibilities">Section 3: Responsibilities *</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Responsibilities: Specific roles responsible for executing and auditing procedure" for="s8_sop_responsibilities">Section 3: Responsibilities</label>
                                     <textarea id="s8_sop_responsibilities" class="ds-input ds-textarea" rows="2" required placeholder="e.g. Line Operator: Performs weekly pressure checks. Shift Supervisor: Performs monthly torque verification audits."></textarea>
                                 </div>
                             </div>
@@ -85,7 +85,7 @@ const Stage8 = {
                             
                             <!-- Procedure Steps Builder -->
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <label class="ds-label mb-0" style="font-size: 0.8rem; font-weight: 600;">Section 4: Procedure Steps</label>
+                                <label class="ds-label mb-0 ds-tooltip-trigger" title="Procedure Steps: Sequential operational steps for execution" style="font-size: 0.8rem; font-weight: 600;">Section 4: Procedure Steps</label>
                                 <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" style="font-size:.72rem;padding:.2rem .5rem;" onclick="StageModules[8].addSopStepRow()">
                                     <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Step
                                 </button>
@@ -313,9 +313,8 @@ const Stage8 = {
                         </div>
                         <div id="s8_teamContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Member</div>
-                                <div class="col-5">Contribution</div>
-                                <div class="col-3">Award/Recognition</div>
+                                <div class="col-4">Member</div>
+                                <div class="col-7">Member Contribution</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -337,16 +336,16 @@ const Stage8 = {
                         <h6 class="fw-bold mb-3 text-primary">Section 9 - Project Closure</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-2">
-                                <label class="ds-label">Project ID</label>
-                                <input type="text" id="s8_close_id" class="ds-input" readonly style="background:var(--ds-surface-raised)">
+                                <label class="ds-label ds-tooltip-trigger" title="Project ID: Generated project identification code">Project ID</label>
+                                <input type="text" id="s8_close_id" class="ds-input" readonly style="background:var(--ds-surface-raised); cursor:not-allowed;">
                             </div>
                             <div class="col-md-2">
                                 <label class="ds-label">Start Date</label>
                                 <input type="date" id="s8_close_start" class="ds-input" required>
                             </div>
                             <div class="col-md-2">
-                                <label class="ds-label">End Date</label>
-                                <input type="date" id="s8_close_end" class="ds-input" required>
+                                <label class="ds-label ds-tooltip-trigger" title="End Date: Today's system completion date (automatically fixed)">End Date</label>
+                                <input type="date" id="s8_close_end" class="ds-input" readonly style="background:var(--ds-surface-raised); cursor:not-allowed;" required>
                             </div>
                             <div class="col-md-3">
                                 <label class="ds-label">Final Status</label>
@@ -385,6 +384,89 @@ const Stage8 = {
                                     <!-- Populated dynamically -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 10 - Patentability, Technical Publications & Achievements -->
+                <div class="glass-card ds-card mb-4">
+                    <div class="ds-card-header p-4 border-bottom">
+                        <div>
+                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">8.10</span>
+                                Patentability, Technical Publications &amp; Achievements
+                            </h5>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Document intellectual property (IP) potential, published research papers, convention presentations, and quality awards.</p>
+                        </div>
+                    </div>
+                    <div class="ds-card-body p-4">
+                        <!-- Part A: IP & Patentability -->
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-primary-soft text-primary px-2 py-1" style="font-size:0.75rem; font-weight:600;"><i data-lucide="award" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Part A: Intellectual Property (IP) &amp; Patentability</span>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="ds-label ds-tooltip-trigger" title="Patentability Status: Determine whether the developed fixture, tooling, or algorithm qualifies for patenting" for="s8_ip_status">Patentability Status</label>
+                                <select id="s8_ip_status" class="ds-input ds-select">
+                                    <option value="Non-Patentable">Not Applicable / Standard Process Improvement (Non-Patentable)</option>
+                                    <option value="Under Evaluation">Under IP Evaluation / Novel Tooling or Mechanism</option>
+                                    <option value="Patent Application Filed">Provisional / Formal Patent Application Filed</option>
+                                    <option value="Patent Granted">Patent Granted / Registered Industrial Design</option>
+                                    <option value="Trade Secret">Trade Secret / Proprietary Know-How</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="ds-label ds-tooltip-trigger" title="Patent / IP Ref Number: Formal filing or docket identification number" for="s8_ip_ref_no">Patent / Filing Ref. Number</label>
+                                <input type="text" id="s8_ip_ref_no" class="ds-input" placeholder="e.g. IN-2026-PAT-00452 or Pending">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="ds-label ds-tooltip-trigger" title="Patent / Invention Title: Official title of the invention or industrial design" for="s8_ip_title">Patent / Invention Title</label>
+                                <input type="text" id="s8_ip_title" class="ds-input" placeholder="e.g. Automated Burr Trimming Mechanism">
+                            </div>
+                            <div class="col-12">
+                                <label class="ds-label ds-tooltip-trigger" title="Key Novelty & Inventive Step: Describe what makes this mechanism or method inventive and technically superior" for="s8_ip_novelty">Key Novelty &amp; Innovative Features</label>
+                                <textarea id="s8_ip_novelty" class="ds-textarea" rows="2" placeholder="Describe the innovative mechanism, tooling design, or algorithm that constitutes novel intellectual property..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Part B: Publications & Conventions -->
+                        <div class="d-flex align-items-center gap-2 mb-3 pt-2 border-top">
+                            <span class="badge bg-info-soft text-info px-2 py-1" style="font-size:0.75rem; font-weight:600;"><i data-lucide="book-open" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Part B: Research Publications &amp; Convention Presentations</span>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="ds-label ds-tooltip-trigger" title="Publication / Presentation Status: Type of public or industry forum where findings were presented" for="s8_pub_status">Publication / Forum Status</label>
+                                <select id="s8_pub_status" class="ds-input ds-select">
+                                    <option value="None">None / Confidential Internal Project</option>
+                                    <option value="Journal Publication">Published in Peer-Reviewed Technical Journal</option>
+                                    <option value="Quality Circle Convention">Presented at Quality Circle Convention (CCQC / NCQC / ICQCC)</option>
+                                    <option value="Industry Conference">Presented at Industry Conference (ASQ / CII / Six Sigma Summit)</option>
+                                    <option value="Internal Whitepaper">Internal Technical Whitepaper / Best Practice Case Study</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="ds-label ds-tooltip-trigger" title="Journal / Forum / Convention Name: Name of the journal, conference, or convention" for="s8_pub_forum">Journal / Forum / Convention Name</label>
+                                <input type="text" id="s8_pub_forum" class="ds-input" placeholder="e.g. NCQC 2026 Mumbai / Int. Journal of Lean Six Sigma">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="ds-label ds-tooltip-trigger" title="Paper Title, DOI or Link: Title of published paper or citation URL" for="s8_pub_title_link">Paper Title / DOI / Citation Link</label>
+                                <input type="text" id="s8_pub_title_link" class="ds-input" placeholder="e.g. Reduction of Trim Burr in Automotive Stamping (DOI/URL)">
+                            </div>
+                        </div>
+
+                        <!-- Part C: Awards & Recognitions -->
+                        <div class="d-flex align-items-center gap-2 mb-3 pt-2 border-top">
+                            <span class="badge bg-success-soft text-success px-2 py-1" style="font-size:0.75rem; font-weight:600;"><i data-lucide="trophy" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Part C: Honors, Awards &amp; Enterprise Scalability</span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="ds-label ds-tooltip-trigger" title="Awards & Recognitions Won: Any internal or external competition awards won by this project" for="s8_awards_won">Awards &amp; Competitions Won</label>
+                                <input type="text" id="s8_awards_won" class="ds-input" placeholder="e.g. Gold Trophy - NCQC 2026, Best Plant Kaizen Award">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="ds-label ds-tooltip-trigger" title="Enterprise Scalability Remarks: Commercial value, patent licensing, or replication potential across other facilities" for="s8_commercial_notes">Enterprise Replication &amp; Commercial Notes</label>
+                                <textarea id="s8_commercial_notes" class="ds-textarea" rows="2" placeholder="Notes on cross-plant replication potential, ROI benefits for sister manufacturing units, or commercial licensing..."></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -463,6 +545,15 @@ const Stage8 = {
                     } else {
                         this.addBenefitRow();
                     }
+                } else if (key === 'team') {
+                    const teamList = this.getProjectTeamList();
+                    if (teamList.length) {
+                        teamList.forEach(item => {
+                            this.addTeamRow({ member: item.name, contribution: '' });
+                        });
+                    } else {
+                        this.addTeamRow();
+                    }
                 } else {
                     this[`add${this.capitalize(key)}Row`]();
                 }
@@ -470,11 +561,34 @@ const Stage8 = {
         });
 
         const close = d.project_closure || {};
-        this.setVal('s8_close_id', close.project_id || projectData.id);
-        this.setVal('s8_close_start', close.start_date || projectData.start_date);
-        this.setVal('s8_close_end', close.end_date);
-        this.setVal('s8_close_status', close.final_status);
-        this.setVal('s8_close_handover', close.handover_to);
+
+        // 1. Display generated Project UID/Code (e.g. PRJ-EZPZ or PRJ-0035) instead of database integer ID
+        const genProjectId = projectData.project_uid || projectData.uid || projectData.project_code || projectData.code || projectData.reference_number || (projectData.id ? `PRJ-${String(projectData.id).padStart(4, '0')}` : '---');
+        this.setVal('s8_close_id', (close.project_id && close.project_id !== 'undefined' && isNaN(Number(close.project_id))) ? close.project_id : genProjectId);
+
+        // 2. Start Date
+        this.setVal('s8_close_start', close.start_date || projectData.start_date || new Date().toISOString().split('T')[0]);
+
+        // 3. End Date: Automatically set to today's system date and enforce readonly
+        const todayStr = new Date().toISOString().split('T')[0];
+        const endDateVal = (close.end_date && close.end_date !== 'undefined') ? close.end_date : todayStr;
+        this.setVal('s8_close_end', endDateVal);
+
+        const endInput = document.getElementById('s8_close_end');
+        if (endInput) {
+            endInput.value = endDateVal;
+            endInput.readOnly = true;
+            endInput.disabled = true;
+            endInput.style.cssText = 'background:var(--ds-surface-raised); cursor:not-allowed;';
+        }
+
+        // 4. Final Status
+        this.setVal('s8_close_status', close.final_status || 'Completed Successfully');
+
+        // 5. Handover To: Clean fallback if undefined
+        const defaultHandover = projectData.reviewer_name || (projectData.reviewer ? (projectData.reviewer.full_name || projectData.reviewer.username) : '') || 'Process Owner / Plant Operations';
+        const handoverVal = (close.handover_to && close.handover_to !== 'undefined') ? close.handover_to : defaultHandover;
+        this.setVal('s8_close_handover', handoverVal);
 
         const gate = d.approval_gate || {};
         this.setVal('s8_gate_verified_by', gate.verified_by);
@@ -490,6 +604,18 @@ const Stage8 = {
         const savedSignoff = d.signoff_table || [];
         this.renderSignoffTable(savedSignoff, projectData);
 
+        // Load Section 8.10 - Patentability, Publications & Achievements
+        const ipPub = d.ip_patent_publication || {};
+        this.setVal('s8_ip_status', ipPub.patentability_status || 'Non-Patentable');
+        this.setVal('s8_ip_ref_no', ipPub.patent_ref_no || '');
+        this.setVal('s8_ip_title', ipPub.patent_title || '');
+        this.setVal('s8_ip_novelty', ipPub.novelty_description || '');
+        this.setVal('s8_pub_status', ipPub.publication_status || 'None');
+        this.setVal('s8_pub_forum', ipPub.forum_name || '');
+        this.setVal('s8_pub_title_link', ipPub.paper_title_link || '');
+        this.setVal('s8_awards_won', ipPub.awards_won || '');
+        this.setVal('s8_commercial_notes', ipPub.commercial_notes || '');
+
         if (window.lucide) lucide.createIcons();
 
         // Restrict Section 5 (Benefits Summary / Impact Review) to Facilitator & Admin only
@@ -498,6 +624,30 @@ const Stage8 = {
         const roleNormalized = role.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
         if (roleNormalized !== 'teammember') {
             this.disableBenefitSummarySection();
+        }
+    },
+
+    async loadSopMasterOptions(savedCategory, savedType) {
+        const selCat = document.getElementById('s8_sop_category');
+        const selType = document.getElementById('s8_sop_type');
+        if (!selCat && !selType) return;
+
+        try {
+            const res = await api.get('/sop/masters');
+            const categories = res.categories || [];
+            const types = res.types || [];
+
+            if (selCat && categories.length) {
+                selCat.innerHTML = categories.map(c => `<option value="${QCMS.escapeHtml(c.name)}">${QCMS.escapeHtml(c.name)}</option>`).join('');
+                if (savedCategory) selCat.value = savedCategory;
+            }
+
+            if (selType && types.length) {
+                selType.innerHTML = types.map(t => `<option value="${QCMS.escapeHtml(t.name)}">${QCMS.escapeHtml(t.name)}</option>`).join('');
+                if (savedType) selType.value = savedType;
+            }
+        } catch (e) {
+            console.warn('Using default SOP options:', e);
         }
     },
 
@@ -518,6 +668,7 @@ const Stage8 = {
                 // Fetch the full details of the linked SOP
                 const details = await api.get(`/sops/${sops[0].id}`);
 
+                await this.loadSopMasterOptions(details.category, details.sop_type || 'Operational');
                 this.setVal('s8_sop_title', details.title);
                 this.setVal('s8_sop_category', details.category);
                 this.setVal('s8_sop_type', details.sop_type || 'Operational');
@@ -538,6 +689,7 @@ const Stage8 = {
                 const whyList = s4.why_why_analysis || [];
                 const rootCause = whyList.length ? whyList[whyList.length - 1].root_cause : '';
 
+                await this.loadSopMasterOptions(this.projectData.category || 'Quality', 'Operational');
                 // Populate default pre-fills from project context
                 this.setVal('s8_sop_title', this.projectData.title + ' SOP');
                 this.setVal('s8_sop_category', this.projectData.category || 'Quality');
@@ -893,7 +1045,18 @@ const Stage8 = {
                 responsibilities: this.getVal('s8_sop_responsibilities'),
                 steps: this.collectSopSteps()
             },
-            signoff_table: this.collectSignoffTable()
+            signoff_table: this.collectSignoffTable(),
+            ip_patent_publication: {
+                patentability_status: this.getVal('s8_ip_status'),
+                patent_ref_no: this.getVal('s8_ip_ref_no'),
+                patent_title: this.getVal('s8_ip_title'),
+                novelty_description: this.getVal('s8_ip_novelty'),
+                publication_status: this.getVal('s8_pub_status'),
+                forum_name: this.getVal('s8_pub_forum'),
+                paper_title_link: this.getVal('s8_pub_title_link'),
+                awards_won: this.getVal('s8_awards_won'),
+                commercial_notes: this.getVal('s8_commercial_notes')
+            }
         };
     },
 
@@ -1149,7 +1312,7 @@ const Stage8 = {
             <div class="col-4"><input type="text" class="ds-input r-sum" placeholder="e.g. Project presentation and control charts" value="${d.summary || ''}" required></div>
             <div class="col-4">
                 <div class="d-flex gap-1">
-                    <input type="text" class="ds-input r-lnk" placeholder="e.g. https://sharepoint.corp/qc-projects/imfq-39.pdf" value="${d.link || ''}" style="flex-grow: 1;" required>
+                    <input type="text" class="ds-input r-lnk" placeholder="e.g. https://sharepoint.corp/qc-projects/imfq-39.pdf" value="${d.link || ''}" style="flex-grow: 1;">
                     <label class="ds-btn ds-btn-ghost ds-btn-sm p-2 d-flex align-items-center justify-content-center" style="border: 1px solid var(--ds-input-border); min-width: 36px; border-radius: 10px; cursor: pointer; margin-bottom: 0;" title="Upload File">
                         <i data-lucide="upload" style="width:14px;height:14px;color:var(--ds-text-secondary);"></i>
                         <input type="file" style="display: none;" onchange="StageModules[8].handleFileChange(this)">
@@ -1157,11 +1320,112 @@ const Stage8 = {
                 </div>
             </div>`);
     },
+    getProjectTeamList() {
+        const list = [];
+        const p = this.projectData || window.currentProject || {};
+
+        // 1. Add Team Leader
+        let tlName = '';
+        if (p.team_leader) {
+            tlName = (typeof p.team_leader === 'object') ? (p.team_leader.full_name || p.team_leader.username) : p.team_leader;
+        }
+        if (!tlName && p.team_leader_name) {
+            tlName = p.team_leader_name;
+        }
+        if (!tlName && p.team_leader_id) {
+            const orgUser = (window.orgUsers || []).find(u => u.id == p.team_leader_id);
+            if (orgUser) tlName = orgUser.full_name || orgUser.username;
+        }
+        if (tlName && typeof tlName === 'string' && tlName.trim()) {
+            const cleanLeader = tlName.trim();
+            list.push({ name: cleanLeader, label: `${cleanLeader} (Team Leader)`, isLeader: true });
+        }
+
+        // 2. Add Members from p.members / p.team_members
+        const rawMembers = p.members || p.team_members || [];
+        if (Array.isArray(rawMembers)) {
+            rawMembers.forEach(m => {
+                const mName = (typeof m === 'object') ? (m.full_name || m.name || m.username) : m;
+                if (mName && typeof mName === 'string' && mName.trim()) {
+                    const cleanName = mName.trim();
+                    if (!list.some(item => item.name === cleanName)) {
+                        list.push({ name: cleanName, label: cleanName, isLeader: false });
+                    }
+                }
+            });
+        }
+
+        // 3. Add Members from p.member_ids using window.orgUsers
+        if (Array.isArray(p.member_ids)) {
+            p.member_ids.forEach(id => {
+                if (p.team_leader_id && id == p.team_leader_id) return;
+                const orgUser = (window.orgUsers || []).find(u => u.id == id);
+                if (orgUser) {
+                    const uName = orgUser.full_name || orgUser.username;
+                    if (uName && typeof uName === 'string' && uName.trim()) {
+                        const cleanName = uName.trim();
+                        if (!list.some(item => item.name === cleanName)) {
+                            list.push({ name: cleanName, label: cleanName, isLeader: false });
+                        }
+                    }
+                }
+            });
+        }
+
+        // 4. Fallback to Stage 1 team data if available
+        const wf = p.workflows || [];
+        const s1 = wf.find(w => w.stage_id === 1)?.data || {};
+        const s1Members = (s1.team && s1.team.team_members) ? s1.team.team_members : [];
+        if (Array.isArray(s1Members)) {
+            s1Members.forEach(m => {
+                const mName = m.name || m.full_name || m.username;
+                if (mName && typeof mName === 'string' && mName.trim()) {
+                    const cleanName = mName.trim();
+                    if (!list.some(item => item.name === cleanName)) {
+                        list.push({ name: cleanName, label: cleanName, isLeader: false });
+                    }
+                }
+            });
+        }
+
+        return list;
+    },
+
     addTeamRow(d = {}) {
+        const teamList = this.getProjectTeamList();
+        const savedMember = (d.member || '').trim();
+
+        let optionsHtml = `<option value="">Select Team Member...</option>`;
+        let foundSaved = false;
+
+        teamList.forEach(item => {
+            const isSelected = (savedMember === item.name || savedMember === item.label) ? 'selected' : '';
+            if (isSelected) foundSaved = true;
+            optionsHtml += `<option value="${QCMS.escapeHtml(item.name)}" ${isSelected}>${QCMS.escapeHtml(item.label)}</option>`;
+        });
+
+        if (savedMember && !foundSaved) {
+            optionsHtml += `<option value="${QCMS.escapeHtml(savedMember)}" selected>${QCMS.escapeHtml(savedMember)}</option>`;
+        }
+
+        const awardBadge = d.award ? `
+            <div class="mt-1 d-flex align-items-center gap-1">
+                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem; padding: 2px 6px;">
+                    <i data-lucide="award" style="width:11px;height:11px;vertical-align:text-bottom;"></i> Award Granted by Reviewer: <strong>${QCMS.escapeHtml(d.award)}</strong>
+                </span>
+            </div>` : '';
+
         this.addRowTemplate('s8_teamContainer', d, `
-            <div class="col-3"><input type="text" class="ds-input r-mem" placeholder="e.g. Ravi Kumar" value="${d.member || ''}" required></div>
-            <div class="col-5"><input type="text" class="ds-input r-con" placeholder="e.g. Identified root cause and designed torque sensor mount" value="${d.contribution || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-awd" placeholder="e.g. QC Champion Q2" value="${d.award || ''}" required></div>`);
+            <div class="col-4">
+                <select class="ds-input ds-select r-mem ds-tooltip-trigger" title="Project Member: Select Team Leader or Team Member assigned to this project" required>
+                    ${optionsHtml}
+                </select>
+            </div>
+            <div class="col-7">
+                <input type="text" class="ds-input r-con ds-tooltip-trigger" title="Contribution: Enter member specific contributions and achievements for reviewer evaluation" placeholder="Enter specific member contribution (e.g. Root cause analysis, Tooling design)..." value="${d.contribution || ''}" required>
+                ${awardBadge}
+                <input type="hidden" class="r-awd" value="${d.award || ''}">
+            </div>`);
     },
 
     disableSopFields() {

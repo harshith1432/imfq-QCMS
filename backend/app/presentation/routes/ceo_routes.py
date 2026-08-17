@@ -57,11 +57,23 @@ def get_top_contributors():
                 continue
             rank = (page - 1) * per_page + idx
             dept_name = u.dept.name if u.dept else (u.role.name if u.role else 'Team')
+
+            # Real-time project participation count
+            real_proj_count = Project.query.filter(
+                Project.org_id == org_id,
+                db.or_(
+                    Project.creator_id == u.id,
+                    Project.team_leader_id == u.id,
+                    Project.facilitator_id == u.id,
+                    Project.members.any(id=u.id)
+                )
+            ).count()
+
             contributors.append({
                 "name": u.full_name or u.username,
                 "dept": dept_name,
                 "score": lb.total_points,
-                "projects": lb.projects_completed,
+                "projects": real_proj_count,
                 "medal": medals_map.get(rank, '⭐'),
                 "badge": lb.badges,
                 "rank": rank + 1
@@ -196,7 +208,7 @@ def get_executive_summary():
         ).count()
         
         active_projects = proj_base.filter(
-            ~Project.status.in_(completed_statuses + ['Rejected', 'On Hold', 'Draft', 'Cancelled'])
+            ~Project.status.in_(completed_statuses + ['Rejected', 'Stage 1 Rejected', 'On Hold', 'Draft', 'Cancelled'])
         ).count()
         on_hold_projects = proj_base.filter(Project.status == 'On Hold').count()
         
@@ -218,15 +230,15 @@ def get_executive_summary():
         thirty_days_ago = now - timedelta(days=30)
         active_members_30d = User.query.filter(User.org_id == org_id, User.last_login >= thirty_days_ago).count()
 
-        # 5. Strategic Alignment / Project Pipeline (Only active/non-closed projects across stages)
+        # 5. Strategic Alignment / Project Stages (Only active running projects across stages)
         stages_count = db.session.query(
             Project.current_stage, 
             db.func.count(Project.id)
         ).filter(
             Project.org_id == org_id,
-            Project.status.notin_(['Closed', 'Completed', 'closed', 'completed'])
+            ~Project.status.in_(completed_statuses + ['Rejected', 'Stage 1 Rejected', 'On Hold', 'Draft', 'Cancelled'])
         ).group_by(Project.current_stage).all()
-        pipeline = {f"Stage {s}": count for s, count in stages_count}
+        pipeline = {f"Stage {s or 1}": count for s, count in stages_count if count > 0}
         for s in range(1, 9):
             stage_key = f"Stage {s}"
             if stage_key not in pipeline:
@@ -426,7 +438,7 @@ def get_executive_summary():
             run_c = Project.query.filter(
                 Project.org_id == org_id,
                 Project.created_at <= tp,
-                ~Project.status.in_(completed_statuses + ['Rejected', 'On Hold', 'Draft', 'Cancelled'])
+                ~Project.status.in_(completed_statuses + ['Rejected', 'Stage 1 Rejected', 'On Hold', 'Draft', 'Cancelled'])
             ).count()
             spark_projects_running.append(run_c)
 
@@ -443,8 +455,7 @@ def get_executive_summary():
 
             appr_c = ProjectStageTracker.query.filter(
                 ProjectStageTracker.org_id == org_id,
-                db.or_(ProjectStageTracker.started_at <= tp, ProjectStageTracker.started_at.is_(None)),
-                ProjectStageTracker.status.in_(pending_tracker_statuses)
+                ProjectStageTracker.status == 'Submitted For Review'
             ).count()
             spark_approvals.append(appr_c)
 
@@ -483,6 +494,7 @@ def get_executive_summary():
         return jsonify({
             "projects_running": active_projects,
             "completed_projects": completed_projects,
+            "rejected_projects": Project.query.filter(Project.org_id == org_id, Project.status.in_(['Rejected', 'Stage 1 Rejected'])).count(),
             "success_rate": completion_rate,
             "pending_approvals": pending_approvals,
             "annual_savings": round(total_savings / 10000000.0, 4), # Convert to ₹ Cr
@@ -1056,8 +1068,8 @@ def get_pending_closures():
             team_leader = db.session.get(User, p.team_leader_id) if p.team_leader_id else None
             facilitator = db.session.get(User, p.facilitator_id) if p.facilitator_id else None
             reviewer = db.session.get(User, p.reviewer_id) if p.reviewer_id else None
-            dept = p.department.name if p.department else 'N/A'
-            plant = p.plant.name if p.plant else 'N/A'
+            dept = p.department.name if (p.department and hasattr(p.department, 'name')) else (str(p.department) if p.department else 'N/A')
+            plant = p.plant if isinstance(p.plant, str) else (p.plant.name if (p.plant and hasattr(p.plant, 'name')) else (str(p.plant) if p.plant else 'N/A'))
 
             results.append({
                 "id": p.id,
@@ -1234,5 +1246,48 @@ def process_ceo_closure_decision(project_id):
     except Exception as e:
         import traceback
         traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@ceo_bp.route('/rejected-projects', methods=['GET'])
+@jwt_required()
+@role_required(['CEO', 'SuperAdmin', 'Admin'])
+def get_ceo_rejected_projects():
+    try:
+        user_id = get_jwt_identity()
+        user = db.session.get(User, int(user_id))
+        if not user or not user.org_id:
+            return jsonify({"status": "error", "message": "User context not found"}), 404
+        
+        org_id = user.org_id
+        rejected_projs = Project.query.filter(
+            Project.org_id == org_id,
+            Project.status.in_(['Rejected', 'Stage 1 Rejected'])
+        ).order_by(Project.created_at.desc()).all()
+
+        from app.infrastructure.database.models.models import ProjectReview
+        results = []
+        for p in rejected_projs:
+            rev = db.session.get(User, p.reviewer_id) if p.reviewer_id else p.reviewer
+            rev_name = (rev.full_name or rev.username) if rev else "Reviewer"
+            tl = db.session.get(User, p.team_leader_id) if p.team_leader_id else p.team_leader
+            tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
+            
+            review_log = ProjectReview.query.filter_by(project_id=p.id, decision='Rejected').order_by(ProjectReview.decided_at.desc()).first()
+            rejected_at = review_log.decided_at.isoformat() + "Z" if review_log and review_log.decided_at else (p.created_at.isoformat() + "Z" if p.created_at else "")
+            
+            results.append({
+                "id": p.id,
+                "project_uid": p.project_uid or f"PRJ-{p.id}",
+                "title": p.title,
+                "department": p.department.name if p.department else "N/A",
+                "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
+                "team_leader": tl_name,
+                "reviewer": rev_name,
+                "rejection_reason": p.rejection_reason or (review_log.comments if review_log else "No reason specified"),
+                "rejected_at": rejected_at
+            })
+            
+        return jsonify({"status": "success", "data": results}), 200
+    except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

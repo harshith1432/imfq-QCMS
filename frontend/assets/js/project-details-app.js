@@ -14,8 +14,18 @@ const ProjectApp = {
             return;
         }
 
+        window.addEventListener('qcms-theme-change', (e) => {
+            if (this.projectData) {
+                this.renderStepper(this.projectData);
+            }
+            if (typeof updateChartTheme === 'function') {
+                updateChartTheme(e.detail.theme);
+            }
+        });
+
         await this.loadOrgUsers();
         await this.loadProject();
+        this.setupUnsavedChangesNavigationGuard();
 
         if (window.lucide) lucide.createIcons();
     },
@@ -56,9 +66,10 @@ const ProjectApp = {
             const data = await api.get(`/projects/${this.projectId}`);
             this.projectData = data;
 
-            // Default to the highest stage they've unlocked/are working on, or URL parameter
+            // Default to stage parameter in URL, or Stage 1 if completed/closed project, or current_stage
             const stageParam = new URLSearchParams(window.location.search).get('stage');
-            this.activeStageId = stageParam ? parseInt(stageParam) : (data.current_stage || 1);
+            const isCompletedProj = data.status === 'Closed' || data.status === 'Completed' || data.status === 'Archived';
+            this.activeStageId = stageParam ? parseInt(stageParam) : (isCompletedProj ? 1 : (data.current_stage || 1));
 
             this.renderHeader(data);
             this.renderStepper(data);   // also sets this._stagesCfg
@@ -154,8 +165,44 @@ const ProjectApp = {
         // Find most recent review comment for active stage if rejected/revision
         const banner = document.getElementById('rejectionCommentsBanner');
         if (banner) {
+            const isRejected = (data.status === 'Rejected');
+            const isRevision = (data.status === 'Revision Required');
             const activeReview = (data.reviews || []).find(r => r.stage_number === this.activeStageId && (r.decision === 'Rejected' || r.decision === 'Revision'));
-            if (activeReview && (status === 'Rejected' || status === 'Revision')) {
+            const commentText = data.rejection_reason || (activeReview ? activeReview.comments : '') || 'No details specified.';
+
+            if (isRejected) {
+                banner.className = "alert alert-danger d-flex align-items-start gap-3 mb-4 fade-in";
+                banner.style.cssText = "border: 2px solid #ef4444; background: rgba(239,68,68,0.06); border-radius: var(--ds-radius-lg);";
+                banner.innerHTML = `
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background: rgba(239, 68, 68, 0.15);">
+                        <i data-lucide="x-circle" style="width: 22px; height: 22px; color: #ef4444;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-1 fw-bold text-danger" style="font-size: 15px;">Project Permanently Rejected</h6>
+                        <p class="mb-2 text-secondary text-xs">This project has been permanently rejected by the Reviewer. Editing and further stage progression are disabled.</p>
+                        <div class="p-3 border rounded text-xs fw-semibold text-main" style="background: var(--ds-bg-card, #ffffff); border-color: rgba(239, 68, 68, 0.2) !important;">
+                            <strong>Rejection Reason:</strong> "${QCMS.escapeHtml(commentText)}"
+                        </div>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+            } else if (isRevision) {
+                banner.className = "alert alert-warning d-flex align-items-start gap-3 mb-4 fade-in";
+                banner.style.cssText = "border: 2px solid #f59e0b; background: rgba(245,158,11,0.06); border-radius: var(--ds-radius-lg);";
+                banner.innerHTML = `
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background: rgba(245, 158, 11, 0.15);">
+                        <i data-lucide="rotate-ccw" style="width: 22px; height: 22px; color: #d97706;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-1 fw-bold text-warning" style="font-size: 15px;">Revision Requested - Reset to Stage 1</h6>
+                        <p class="mb-2 text-secondary text-xs">The Reviewer requested changes and returned this project to Stage 1. Please update the details and re-submit.</p>
+                        <div class="p-3 border rounded text-xs fw-semibold text-main" style="background: var(--ds-bg-card, #ffffff); border-color: rgba(245, 158, 11, 0.2) !important;">
+                            <strong>Reviewer Comments:</strong> "${QCMS.escapeHtml(commentText)}"
+                        </div>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+            } else if (activeReview && (status === 'Rejected' || status === 'Revision')) {
                 banner.className = "alert alert-danger d-flex align-items-start gap-3 mb-4 fade-in";
                 banner.style.cssText = "border: none; background: rgba(220, 38, 38, 0.08); border-left: 4px solid #dc2626; border-radius: var(--ds-radius-md); box-shadow: var(--ds-shadow-sm);";
                 banner.innerHTML = `
@@ -165,11 +212,8 @@ const ProjectApp = {
                     <div class="flex-grow-1">
                         <h6 class="alert-heading mb-1 fw-bold" style="font-size: 14px; color: #dc2626;">Stage ${this.activeStageId} Review Status: ${status === 'Revision' ? 'Revision Requested' : 'Rejected'}</h6>
                         <p class="mb-2 text-secondary text-xs" style="line-height: 1.4;">The Reviewer has requested changes/rejected this stage. Please find their comments below:</p>
-                        <div class="p-3 border rounded bg-white text-sm fw-semibold text-main shadow-xs" style="border-color: rgba(220, 38, 38, 0.15) !important;">
+                        <div class="p-3 border rounded text-sm fw-semibold text-main shadow-xs" style="background: var(--ds-bg-card, #ffffff); border-color: rgba(220, 38, 38, 0.15) !important;">
                             ${activeReview.comments || 'No comments provided.'}
-                        </div>
-                        <div class="text-xxs text-muted mt-2">
-                            Reviewed by <strong>${activeReview.reviewer_name}</strong> on ${QCMS.formatRelative ? QCMS.formatRelative(activeReview.decided_at) : new Date(activeReview.decided_at).toLocaleString()}
                         </div>
                     </div>
                 `;
@@ -281,7 +325,15 @@ const ProjectApp = {
             original_id: c.original_id,
         }));
 
-        const statusStyle = {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.body.classList.contains('dark-mode');
+
+        const statusStyle = isDark ? {
+            'Completed':            { color: '#4ade80', bg: 'rgba(34, 197, 94, 0.18)',  border: 'rgba(74, 222, 128, 0.45)', glyph: 'check-circle-2' },
+            'Submitted For Review': { color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.18)', border: 'rgba(96, 165, 250, 0.45)', glyph: 'hourglass'      },
+            'Incomplete':           { color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.18)', border: 'rgba(251, 191, 36, 0.45)', glyph: null             },
+            'Rejected':             { color: '#f87171', bg: 'rgba(239, 68, 68, 0.18)',  border: 'rgba(248, 113, 113, 0.45)', glyph: 'x-circle'       },
+            'Not Started':          { color: '#64748b', bg: 'rgba(30, 41, 59, 0.6)',    border: 'rgba(255, 255, 255, 0.1)',  glyph: null             },
+        } : {
             'Completed':            { color: '#16a34a', bg: '#dcfce7', border: '#86efac', glyph: 'check-circle-2' },
             'Submitted For Review': { color: '#2563eb', bg: '#dbeafe', border: '#93c5fd', glyph: 'hourglass'      },
             'Incomplete':           { color: '#d97706', bg: '#fef3c7', border: '#fcd34d', glyph: null             },
@@ -307,8 +359,9 @@ const ProjectApp = {
         ` + data.stages.map((s, i) => {
             const stg     = (stages && stages[i]) ? stages[i] : { name: `Stage ${i+1}`, icon: 'layers' };
             const st      = statusStyle[s.status] || statusStyle['Not Started'];
-            const isActive= (i + 1) === this.activeStageId;
-            const isClickable = s.status !== 'Not Started' || (i + 1) <= data.current_stage;
+            const isActive = (i + 1) === this.activeStageId;
+            const isCompletedProj = data.status === 'Closed' || data.status === 'Completed' || data.status === 'Archived' || (data.current_stage === 8 && (data.status === 'Stage 8 Approved' || data.status === 'Completed' || data.status === 'Closed'));
+            const isClickable = isCompletedProj || s.status !== 'Not Started' || (i + 1) <= (data.current_stage || 1);
             const next    = i < data.stages.length - 1 ? (statusStyle[data.stages[i+1].status] || statusStyle['Not Started']) : null;
 
             return `
@@ -334,6 +387,16 @@ const ProjectApp = {
 
     switchStage(stageId, isClickable) {
         if (!isClickable || stageId === this.activeStageId) return;
+        if (window.hasUnsavedChanges) {
+            this.showUnsavedChangesWarningModal(() => {
+                this.doSwitchStage(stageId);
+            });
+            return;
+        }
+        this.doSwitchStage(stageId);
+    },
+
+    doSwitchStage(stageId) {
         this.activeStageId = stageId;
         this.renderHeader(this.projectData);
         this.renderStepper(this.projectData);
@@ -444,6 +507,13 @@ const ProjectApp = {
             }
         }
 
+        // Strip required from all file inputs across the entire stage
+        container.querySelectorAll('input[type="file"]').forEach(f => {
+            f.required = false;
+            f.removeAttribute('required');
+            f.classList.remove('is-invalid');
+        });
+
         // 0. Tag predefined cards BEFORE injecting custom cards to prevent index shift issues
         const predefinedCards = Array.from(container.querySelectorAll('.glass-card.ds-card'));
         try {
@@ -454,14 +524,28 @@ const ProjectApp = {
                         const cardEl = predefinedCards[cardIdx];
                         if (cardEl) {
                             cardEl.dataset.secId = sec.id;
+                            const isMandatory = (sec.required === true);
+                            cardEl.dataset.required = isMandatory ? 'true' : 'false';
                             const titleEl = cardEl.querySelector('.ds-card-header h5, .ds-card-header h6');
                             if (titleEl) {
-                                let cleanTitle = titleEl.innerHTML.replace(/\s*<span class="text-danger">\*<\/span>/g, '');
-                                if (sec.required !== false) {
+                                let cleanTitle = titleEl.innerHTML.replace(/\s*<span class="text-danger">\*<\/span>/g, '').replace(/\*+/g, '').trim();
+                                if (isMandatory) {
                                     titleEl.innerHTML = `${cleanTitle} <span class="text-danger">*</span>`;
                                 } else {
                                     titleEl.innerHTML = cleanTitle;
                                 }
+                            }
+
+                            // If the section is NOT mandatory, remove required attributes and asterisks
+                            if (!isMandatory) {
+                                cardEl.querySelectorAll('input, select, textarea').forEach(inp => {
+                                    inp.required = false;
+                                    inp.removeAttribute('required');
+                                    inp.classList.remove('is-invalid');
+                                });
+                                cardEl.querySelectorAll('label').forEach(lbl => {
+                                    lbl.querySelectorAll('.text-danger, .required-star').forEach(s => s.remove());
+                                });
                             }
                         }
                     }
@@ -479,17 +563,19 @@ const ProjectApp = {
                     if (sec && sec.id && typeof sec.id === 'string' && sec.id.startsWith('sec_')) {
                         if (container.querySelector(`#card_${sec.id}`)) return; // already exists
 
+                        const isMandatory = (sec.required === true);
                         const cardEl = document.createElement('div');
                         cardEl.className = 'glass-card ds-card mb-4';
                         cardEl.id = `card_${sec.id}`;
                         cardEl.dataset.secId = sec.id;
+                        cardEl.dataset.required = isMandatory ? 'true' : 'false';
                         cardEl.innerHTML = `
                             <div class="ds-card-header p-4 border-bottom">
                                 <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                     <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;">
                                         <i data-lucide="layout" style="width:14px;height:14px;"></i>
                                     </span>
-                                    ${sec.label || 'Custom Section'}${sec.required !== false ? ' <span class="text-danger">*</span>' : ''}
+                                    ${sec.label || 'Custom Section'}${isMandatory ? ' <span class="text-danger">*</span>' : ''}
                                 </h5>
                             </div>
                             <div class="ds-card-body p-4">
@@ -512,38 +598,41 @@ const ProjectApp = {
             console.error("[QCMS] Error rendering custom cards:", e);
         }
 
-        // 2. Dynamically inject custom sub-fields defined on sections
+        // 2. Dynamically inject custom sub-fields defined on sections & register all custom elements
         try {
             const customElements = [];
             if (stageCfg && stageCfg.sections) {
                 stageCfg.sections.forEach((sec, sIdx) => {
-                    if (sec && sec.id && typeof sec.id === 'string' && sec.id.startsWith('sec_')) {
-                        customElements.push(sec);
-                    }
+                    customElements.push(sec);
 
-                    if (sec && sec.fields && sec.fields.length > 0) {
+                    const subFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
+                    if (subFields.length > 0) {
+                        subFields.forEach(f => {
+                            if (f && !customElements.some(item => item.id === f.id)) customElements.push(f);
+                        });
+
                         const cardIdx = sec.card_index !== undefined ? sec.card_index : sIdx;
                         const cardEl = predefinedCards[cardIdx];
-                        if (cardEl) {
+                        if (cardEl && !sec.id.startsWith('sec_')) {
                             const cardBody = cardEl.querySelector('.ds-card-body');
                             if (cardBody) {
-                                sec.fields.forEach(field => {
-                                    if (field) {
+                                subFields.forEach(field => {
+                                    if (field && !cardBody.querySelector(`#field_wrap_${field.id}`) && !cardBody.querySelector(`#${field.id}`)) {
                                         const fieldWrapper = document.createElement('div');
                                         fieldWrapper.className = 'ds-field mt-3 border-top pt-3';
+                                        fieldWrapper.id = `field_wrap_${field.id}`;
                                         
                                         const labelEl = document.createElement('label');
                                         labelEl.className = 'ds-label fw-bold mb-2 d-block';
-                                        labelEl.innerHTML = `${field.label || ''} <span class="text-danger">*</span>`;
+                                        labelEl.innerHTML = `${field.label || ''} ${field.required ? '<span class="text-danger">*</span>' : ''}`;
                                         fieldWrapper.appendChild(labelEl);
 
                                         // Render sub-field inner content via DynamicRenderer
                                         const contentWrapper = document.createElement('div');
-                                        contentWrapper.innerHTML = DynamicRenderer.getFieldContentHtml(field);
+                                        contentWrapper.innerHTML = DynamicRenderer.getFieldContentHtml(field, true);
                                         fieldWrapper.appendChild(contentWrapper);
                                         
                                         cardBody.appendChild(fieldWrapper);
-                                        customElements.push(field);
                                     }
                                 });
                             }
@@ -671,6 +760,8 @@ const ProjectApp = {
 
         this.applyPermissions(stageId);
 
+        window.hasUnsavedChanges = false;
+        this.attachDirtyListeners(container);
     },
 
     setupSectionNAToggles(container, stageCfg) {
@@ -771,26 +862,23 @@ const ProjectApp = {
         const stage8Tracker = (this.projectData.stages || []).find(s => s.stage_number === stagesLen) || {};
 
         const isProjectRejected = this.projectData.status === 'Rejected' || 
-                                  this.projectData.status === 'Stage 8 Rejected' || 
+                                  this.projectData.status === 'Stage 1 Rejected' || 
                                   (this.projectData.status && this.projectData.status.includes('Rejected')) ||
-                                  (stage8Tracker && stage8Tracker.status === 'Rejected');
+                                  (activeTracker && activeTracker.status === 'Rejected');
 
         const isSubmitted = activeTracker.status === 'Submitted For Review' && !isProjectRejected;
         const isApproved = (activeTracker.status === 'Completed' || activeTracker.status === 'Approved') && !isProjectRejected;
 
         // Check if role is allowed to edit/add details for this stage
+        // STRICT RULE: Only Team Leader and Team Member can edit and submit project details (Admin is read-only)
         let allowedToEdit = false;
-        if (stageId === 1) {
-            allowedToEdit = ['teamleader', 'teammember', 'admin', 'superadmin'].includes(role);
-        } else if (stageId >= 2 && stageId <= stagesLen) {
-            if (stageId === 6) {
-                allowedToEdit = ['teammember', 'teamleader', 'reviewer', 'facilitator', 'admin', 'superadmin'].includes(role);
-            } else {
-                allowedToEdit = ['teammember', 'teamleader', 'admin', 'superadmin'].includes(role);
+        if (!isProjectRejected) {
+            if (stageId >= 1 && stageId <= stagesLen) {
+                allowedToEdit = ['teamleader', 'teammember'].includes(role);
             }
         }
 
-        const isReadOnly = !allowedToEdit || (isApproved && !isProjectRejected) || isSubmitted;
+        const isReadOnly = isProjectRejected || !allowedToEdit || isApproved || isSubmitted;
 
         const reviewPanel = document.getElementById('reviewPanel');
         const stage8Notice = document.getElementById('stage8Notice');
@@ -800,6 +888,10 @@ const ProjectApp = {
         const lockedNotice = document.getElementById('lockedStagesNotice');
         const exportBtn = document.getElementById('exportReportBtn');
         const qcBtn = document.getElementById('qcAnalysisBtn');
+        const bottomContainer = document.getElementById('bottomStageActionsContainer');
+        const saveBtnBottom = document.getElementById('saveDraftBtnBottom');
+        const submitBtnBottom = document.getElementById('submitBtnBottom');
+        const scheduleMeetingBtn = document.getElementById('scheduleStageMeetingBtn');
 
         const isProjectClosed = this.projectData.status === 'Closed' || this.projectData.status === 'Completed';
         const isStage8Completed = isProjectClosed || stage8Tracker.status === 'Completed' || stage8Tracker.status === 'Approved';
@@ -832,131 +924,100 @@ const ProjectApp = {
             }
         }
 
-        // Render Rejection Alert Banner if Project is Rejected at Stage 8
-        let rejectionBanner = document.getElementById('projectRejectionNotice');
-        if (isProjectRejected) {
-            if (!rejectionBanner) {
-                rejectionBanner = document.createElement('div');
-                rejectionBanner.id = 'projectRejectionNotice';
-                rejectionBanner.className = 'alert alert-danger fade-in mb-4 d-flex align-items-center justify-content-between p-3';
-                rejectionBanner.style.cssText = 'background: rgba(239,68,68,0.08); border-left: 4px solid #ef4444; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);';
-                
-                const container = document.getElementById('stageContentContainer')?.parentElement;
-                if (container) {
-                    container.insertBefore(rejectionBanner, container.firstChild);
-                }
-            }
-            rejectionBanner.innerHTML = `
-                <div class="d-flex align-items-start gap-3">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(239,68,68,0.15);border:1px solid #ef4444;">
-                        <i data-lucide="alert-octagon" style="width:20px;height:20px;color:#ef4444;"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-1 fw-bold text-danger">⚠️ Stage 8 Approval Rejected by Reviewer</h6>
-                        <p class="mb-0 text-xs text-secondary">The reviewer rejected the final approval submission. <strong>All stages (Stage 1 through Stage 8) are now unlocked for editing and revision</strong>. You may navigate to any stage (Stage 1, 2, 3, 4, 5, 6, 7, or 8), update inputs, and re-submit Stage 8 when ready.</p>
-                    </div>
-                </div>
-            `;
-            rejectionBanner.classList.remove('d-none');
-            if (window.lucide) lucide.createIcons();
-        } else if (rejectionBanner) {
-            rejectionBanner.classList.add('d-none');
-        }
-
         const meetingsSec = document.getElementById('stageMeetingsSection');
 
         if (isStageLocked) {
-            lockedNotice.classList.remove('d-none');
-            document.getElementById('stageContentContainer').classList.add('d-none');
-            saveBtn.classList.add('d-none');
-            submitBtn.classList.add('d-none');
-            reviewPanel.classList.add('d-none');
+            if (lockedNotice) lockedNotice.classList.remove('d-none');
+            document.getElementById('stageContentContainer')?.classList.add('d-none');
+            if (saveBtn) saveBtn.classList.add('d-none');
+            if (submitBtn) submitBtn.classList.add('d-none');
+            if (reviewPanel) reviewPanel.classList.add('d-none');
             if (stage8Notice) stage8Notice.classList.add('d-none');
             if (stage8AdminApproval) stage8AdminApproval.classList.add('d-none');
             if (meetingsSec) meetingsSec.classList.add('d-none');
+            if (bottomContainer) bottomContainer.classList.add('d-none');
         } else {
-            lockedNotice.classList.add('d-none');
-            document.getElementById('stageContentContainer').classList.remove('d-none');
+            if (lockedNotice) lockedNotice.classList.add('d-none');
+            document.getElementById('stageContentContainer')?.classList.remove('d-none');
             if (meetingsSec) {
                 meetingsSec.classList.remove('d-none');
                 this.loadMeetings();
             }
+            if (scheduleMeetingBtn) {
+                if (isProjectRejected || isReadOnly) {
+                    scheduleMeetingBtn.classList.add('d-none');
+                } else {
+                    scheduleMeetingBtn.classList.remove('d-none');
+                }
+            }
 
             // Stage 8 review is handled by Reviewer inline, or closure panel by admin/facilitator
             if (isStage8) {
-                if (isReviewer && isSubmitted) {
-                    reviewPanel.classList.remove('d-none');
+                if (isReviewer && isSubmitted && !isProjectRejected) {
+                    if (reviewPanel) reviewPanel.classList.remove('d-none');
                 } else {
-                    reviewPanel.classList.add('d-none');
+                    if (reviewPanel) reviewPanel.classList.add('d-none');
                 }
                 
                 const isAdmin = ['admin', 'superadmin'].includes(role);
                 
                 if (stage8Notice) {
-                    const showNotice = isReviewer && isSubmitted && !allowedToEdit;
+                    const showNotice = isReviewer && isSubmitted && !allowedToEdit && !isProjectRejected;
                     stage8Notice.classList.toggle('d-none', !showNotice);
                 }
                 
                 if (stage8AdminApproval) {
-                    const showApproval = isAdmin && this.projectData.status === 'Pending Closure';
+                    const showApproval = isAdmin && this.projectData.status === 'Pending Closure' && !isProjectRejected;
                     stage8AdminApproval.classList.toggle('d-none', !showApproval);
                 }
-                
-                if (window.lucide) lucide.createIcons();
             } else {
                 if (stage8Notice) stage8Notice.classList.add('d-none');
                 if (stage8AdminApproval) stage8AdminApproval.classList.add('d-none');
                 // Show reviewer panel for Stage 1 ONLY
-                if (stageId === 1 && isReviewer && isSubmitted) {
-                    reviewPanel.classList.remove('d-none');
+                if (stageId === 1 && isReviewer && isSubmitted && !isProjectRejected) {
+                    if (reviewPanel) reviewPanel.classList.remove('d-none');
                 } else {
-                    reviewPanel.classList.add('d-none');
+                    if (reviewPanel) reviewPanel.classList.add('d-none');
                 }
             }
 
-            // Disable form if submitted or approved
-            if (isReadOnly) {
-                document.getElementById('stageContentContainer').querySelectorAll('input, textarea, select, button').forEach(el => el.disabled = true);
-                saveBtn.classList.add('d-none');
-                submitBtn.classList.add('d-none');
+            // Permanently rejected or Read-only state (including submitted, approved, completed, or previous stages)
+            if (isProjectRejected || isReadOnly) {
+                document.getElementById('stageContentContainer')?.querySelectorAll('input, textarea, select, button').forEach(el => el.disabled = true);
+                if (saveBtn) saveBtn.classList.add('d-none');
+                if (submitBtn) submitBtn.classList.add('d-none');
+                if (saveBtnBottom) saveBtnBottom.classList.add('d-none');
+                if (submitBtnBottom) submitBtnBottom.classList.add('d-none');
+                if (bottomContainer) {
+                    bottomContainer.classList.add('d-none');
+                    bottomContainer.style.setProperty('display', 'none', 'important');
+                }
             } else {
-                saveBtn.classList.remove('d-none');
-                submitBtn.classList.remove('d-none');
-                saveBtn.disabled = false;
-                submitBtn.disabled = false;
-                
-                const isReviewStage = [1, 8].includes(stageId);
-                if (isReviewStage) {
-                    submitBtn.innerHTML = `<i data-lucide="send" style="width:14px;height:14px;"></i> Submit For Review`;
-                } else {
-                    submitBtn.innerHTML = `<i data-lucide="send" style="width:14px;height:14px;"></i> Submit`;
+                if (saveBtn) {
+                    saveBtn.classList.remove('d-none');
+                    saveBtn.disabled = false;
                 }
-                if (window.lucide) lucide.createIcons();
-            }
-
-            if (isSubmitted && !isReviewer) {
-                submitBtn.classList.remove('d-none');
-                submitBtn.disabled = true;
-                const isReviewStage = [1, 8].includes(stageId);
-                if (isReviewStage) {
-                    submitBtn.innerHTML = `<i data-lucide="send" style="width:14px;height:14px;"></i> Awaiting Review`;
-                } else {
-                    submitBtn.innerHTML = `<i data-lucide="check-circle" style="width:14px;height:14px;"></i> Submitted`;
+                if (submitBtn) {
+                    submitBtn.classList.remove('d-none');
+                    submitBtn.disabled = false;
+                    const isReviewStage = [1, 8].includes(stageId);
+                    if (isReviewStage) {
+                        submitBtn.innerHTML = `<i data-lucide="send" style="width:14px;height:14px;"></i> Submit For Review`;
+                    } else {
+                        submitBtn.innerHTML = `<i data-lucide="send" style="width:14px;height:14px;"></i> Submit`;
+                    }
                 }
-                if (window.lucide) lucide.createIcons();
             }
         }
 
         // Synchronize Bottom Action Bar buttons with Top Action Bar buttons
-        const bottomContainer = document.getElementById('bottomStageActionsContainer');
-        const saveBtnBottom = document.getElementById('saveDraftBtnBottom');
-        const submitBtnBottom = document.getElementById('submitBtnBottom');
         if (bottomContainer) {
-            const isSaveHidden = !saveBtn || saveBtn.classList.contains('d-none');
-            const isSubmitHidden = !submitBtn || submitBtn.classList.contains('d-none');
+            const isSaveHidden = !saveBtn || saveBtn.classList.contains('d-none') || isProjectRejected || isReadOnly;
+            const isSubmitHidden = !submitBtn || submitBtn.classList.contains('d-none') || isProjectRejected || isReadOnly;
 
             if (isSaveHidden && isSubmitHidden) {
                 bottomContainer.classList.add('d-none');
+                bottomContainer.style.setProperty('display', 'none', 'important');
             } else {
                 bottomContainer.classList.remove('d-none');
                 bottomContainer.style.setProperty('display', 'flex', 'important');
@@ -980,8 +1041,8 @@ const ProjectApp = {
                     submitBtnBottom.style.setProperty('align-items', 'center', 'important');
                 }
             }
-            if (window.lucide) lucide.createIcons();
         }
+        if (window.lucide) lucide.createIcons();
     },
 
     clearValidationHighlights() {
@@ -1053,6 +1114,18 @@ const ProjectApp = {
     },
 
     async saveDraft() {
+        const sessionUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+        const role = ((sessionUser.role && sessionUser.role.name) ? sessionUser.role.name : (sessionUser.role || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!['teamleader', 'teammember'].includes(role)) {
+            QCMS.toast('Access denied. Only assigned Team Leader and Team Members can edit project details.', 'warning');
+            return;
+        }
+
+        if (this.projectData && (this.projectData.status === 'Rejected' || this.projectData.status === 'Stage 1 Rejected' || (this.projectData.status && this.projectData.status.includes('Rejected')))) {
+            QCMS.toast('This project has been permanently rejected and cannot be modified.', 'warning');
+            return;
+        }
+
         const module = StageModules[this.activeStageId];
         if (!module) return;
 
@@ -1065,12 +1138,11 @@ const ProjectApp = {
             const stageCfg = (this._stagesCfg || [])[this.activeStageId - 1];
             if (stageCfg && stageCfg.sections) {
                 stageCfg.sections.forEach(sec => {
-                    if (sec.id.startsWith('sec_')) {
+                    if (sec) {
                         customElements.push(sec);
-                    }
-                    if (sec.fields) {
-                        sec.fields.forEach(field => {
-                            customElements.push(field);
+                        const subFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
+                        subFields.forEach(field => {
+                            if (field) customElements.push(field);
                         });
                     }
                 });
@@ -1102,6 +1174,7 @@ const ProjectApp = {
                 wf.data = data;
             }
 
+            window.hasUnsavedChanges = false;
             QCMS.toast(`Stage ${this.activeStageId} draft saved successfully.`, 'success');
         } catch (e) {
             QCMS.toast('Save failed: ' + e.message, 'error');
@@ -1174,22 +1247,23 @@ const ProjectApp = {
             if (!cardEl || cardEl.closest('.d-none') || cardEl.offsetParent === null) return;
             if (cardEl.dataset.applicable === 'false' || cardEl.classList.contains('section-na')) return;
 
+            // STRICT: Only validate sections that are explicitly marked mandatory by Admin template settings
+            const isCardExplicitlyRequired = cardEl.dataset.required === 'true';
+            if (!isCardExplicitlyRequired) return;
+
             const headerEl = cardEl.querySelector('h5, h6, .card-title, .ds-card-title, .ds-card-header');
-            const headerHtml = headerEl ? headerEl.innerHTML : '';
             const headerText = headerEl ? headerEl.textContent.trim() : `Section ${cIdx + 1}`;
             const cleanSecTitle = headerText.replace(/\s*\*.*$/, '').replace(/\*+/g, '').trim();
 
-            const isCardExplicitlyRequired = cardEl.dataset.required === 'true';
-
-            // Check visible inputs that are explicitly marked required
-            const visibleInputs = Array.from(cardEl.querySelectorAll('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([readonly]):not(:disabled), select:not([readonly]):not(:disabled), textarea:not([readonly]):not(:disabled)'));
+            // Check visible inputs that are explicitly marked required (ignore file inputs and buttons/hidden)
+            const visibleInputs = Array.from(cardEl.querySelectorAll('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not([readonly]):not(:disabled), select:not([readonly]):not(:disabled), textarea:not([readonly]):not(:disabled)'));
 
             visibleInputs.forEach(input => {
                 if (input.closest('.d-none') || input.offsetParent === null) return;
                 if (input.classList.contains('ignore-validation')) return;
                 
                 const label = input.closest('.ds-field, .mb-3, .form-group')?.querySelector('label');
-                const isFieldRequired = input.required || (label && (label.innerHTML.includes('text-danger') || label.textContent.includes('*'))) || isCardExplicitlyRequired;
+                const isFieldRequired = input.required || (label && (label.innerHTML.includes('text-danger') || label.textContent.includes('*')));
                 
                 if (isFieldRequired && isInputEmpty(input)) {
                     const colName = getColumnOrLabelName(input, cardEl);
@@ -1198,19 +1272,17 @@ const ProjectApp = {
             });
 
             // Only check dynamic containers if the card itself or the container is explicitly marked required
-            if (isCardExplicitlyRequired) {
-                const dynContainers = cardEl.querySelectorAll('[id$="Container"][data-required="true"], table[data-required="true"]');
-                dynContainers.forEach(container => {
-                    if (container.closest('.d-none') || container.offsetParent === null) return;
+            const dynContainers = cardEl.querySelectorAll('[id$="Container"][data-required="true"], table[data-required="true"]');
+            dynContainers.forEach(container => {
+                if (container.closest('.d-none') || container.offsetParent === null) return;
 
-                    const rowSelector = 'tbody tr, .row.dyn-row, .row.align-items-center, .s1-row, .s2-row, .s3-row, .s4-row, .s5-row, .s6-task-row, .s6-resource-row, .s7-row, .s8-row, .team-member-row, .dyn-row, .mapping-row, .why-row, .item-row, .countermeasure-row, .resource-row, [class*="-row"]';
-                    const rows = container.querySelectorAll(rowSelector);
+                const rowSelector = 'tbody tr, .row.dyn-row, .row.align-items-center, .s1-row, .s2-row, .s3-row, .s4-row, .s5-row, .s6-task-row, .s6-resource-row, .s7-row, .s8-row, .team-member-row, .dyn-row, .mapping-row, .why-row, .item-row, .countermeasure-row, .resource-row, [class*="-row"]';
+                const rows = container.querySelectorAll(rowSelector);
 
-                    if (rows.length === 0) {
-                        addInvalid(cardEl, cleanSecTitle, 'At least 1 row entry is required');
-                    }
-                });
-            }
+                if (rows.length === 0) {
+                    addInvalid(cardEl, cleanSecTitle, 'At least 1 row entry is required');
+                }
+            });
         });
 
         return {
@@ -1219,6 +1291,161 @@ const ProjectApp = {
             missingSections,
             missingDetails
         };
+    },
+
+    attachDirtyListeners(container) {
+        if (!container) return;
+        const markDirty = () => { window.hasUnsavedChanges = true; };
+        container.addEventListener('input', markDirty);
+        container.addEventListener('change', markDirty);
+        container.querySelectorAll('button, .ds-btn').forEach(btn => {
+            btn.addEventListener('click', markDirty);
+        });
+    },
+
+    setupUnsavedChangesNavigationGuard() {
+        window.hasUnsavedChanges = false;
+
+        // Native browser beforeunload warning
+        window.addEventListener('beforeunload', (e) => {
+            if (window.hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes in this stage! If you leave without saving, your entered data will be lost.';
+                return e.returnValue;
+            }
+        });
+
+        // Intercept internal link clicks
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href], button[data-navigate]');
+            if (!link) return;
+            const href = link.getAttribute('href') || link.getAttribute('data-navigate');
+            if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('blob:')) return;
+            if (link.getAttribute('target') === '_blank') return;
+            
+            // Allow stage tab switching buttons to handle their own check via switchStage
+            if (link.closest('#stepperContainer')) return;
+
+            if (window.hasUnsavedChanges) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showUnsavedChangesWarningModal(() => {
+                    window.location.href = href;
+                });
+            }
+        }, true);
+    },
+
+    showUnsavedChangesWarningModal(onProceed) {
+        return new Promise((resolve) => {
+            let modalEl = document.getElementById('unsavedChangesModal');
+            if (!modalEl) {
+                modalEl = document.createElement('div');
+                modalEl.id = 'unsavedChangesModal';
+                modalEl.className = 'modal fade';
+                modalEl.setAttribute('tabindex', '-1');
+                modalEl.setAttribute('aria-hidden', 'true');
+                modalEl.setAttribute('data-bs-backdrop', 'static');
+                document.body.appendChild(modalEl);
+            }
+
+            modalEl.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered" style="max-width: 560px;">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                        <div class="modal-header border-0 bg-warning-subtle py-3 px-4">
+                            <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;">
+                                <span class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink:0;">
+                                    <i data-lucide="alert-triangle" style="width: 18px; height: 18px;"></i>
+                                </span>
+                                Unsaved Changes Warning
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="alert alert-warning border-0 p-3 mb-3 rounded-3" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b !important;">
+                                <p class="mb-0 text-sm fw-bold text-dark d-flex align-items-start gap-2">
+                                    <span>⚠️ <strong>Warning:</strong> You have unsaved changes in Stage ${this.activeStageId || 1}. If you leave without saving, your entered data will be lost.</span>
+                                </p>
+                            </div>
+                            <p class="text-secondary text-xs mb-0">
+                                Would you like to save your changes as a draft before leaving, or discard them?
+                            </p>
+                        </div>
+                        <div class="modal-footer border-0 bg-light-subtle py-3 px-4 d-flex align-items-center justify-content-end gap-2 flex-nowrap" style="white-space: nowrap;">
+                            <button type="button" class="ds-btn ds-btn-ghost text-xs" data-bs-dismiss="modal" id="cancelUnsavedBtn" style="white-space: nowrap;">
+                                Stay on Page
+                            </button>
+                            <button type="button" class="btn btn-outline-danger text-xs px-3 py-2 fw-semibold" id="discardUnsavedBtn" style="border-radius:8px; white-space: nowrap;">
+                                Discard &amp; Leave
+                            </button>
+                            <button type="button" class="ds-btn ds-btn-primary text-xs" id="saveAndLeaveBtn" style="white-space: nowrap;">
+                                <i data-lucide="save" style="width: 14px; height: 14px; margin-right: 4px;"></i> Save Draft &amp; Leave
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (window.lucide) lucide.createIcons();
+
+            let bsModal;
+            try {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                }
+            } catch (err) {
+                console.error("[QCMS] Bootstrap Modal error:", err);
+            }
+
+            const cleanup = () => {
+                if (bsModal) {
+                    try { bsModal.hide(); } catch (_) {}
+                } else {
+                    modalEl.classList.remove('show');
+                    modalEl.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) backdrop.remove();
+                }
+            };
+
+            const cancelBtn = modalEl.querySelector('#cancelUnsavedBtn');
+            const discardBtn = modalEl.querySelector('#discardUnsavedBtn');
+            const saveBtn = modalEl.querySelector('#saveAndLeaveBtn');
+
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    cleanup();
+                    resolve(false);
+                };
+            }
+
+            if (discardBtn) {
+                discardBtn.onclick = () => {
+                    window.hasUnsavedChanges = false;
+                    cleanup();
+                    if (onProceed) onProceed();
+                    resolve(true);
+                };
+            }
+
+            if (saveBtn) {
+                saveBtn.onclick = async () => {
+                    await this.saveDraft();
+                    window.hasUnsavedChanges = false;
+                    cleanup();
+                    if (onProceed) onProceed();
+                    resolve(true);
+                };
+            }
+
+            if (bsModal) {
+                bsModal.show();
+            } else {
+                modalEl.classList.add('show');
+                modalEl.style.display = 'block';
+            }
+        });
     },
 
     showSubmissionWarningModal(stageId) {
@@ -1250,14 +1477,11 @@ const ProjectApp = {
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body p-4">
-                            <div class="alert alert-warning border-0 p-3 mb-3 rounded-3" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b !important;">
+                            <div class="alert alert-warning border-0 p-3 mb-0 rounded-3" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b !important;">
                                 <p class="mb-0 text-sm fw-bold text-dark d-flex align-items-start gap-2">
                                     <span>⚠️ <strong>Warning:</strong> Once submitted, all inputs, attachments, and changes made in Stage ${stageId} will be locked and sent for review.</span>
                                 </p>
                             </div>
-                            <p class="text-secondary text-xs mb-0">
-                                Please ensure all entered section details and problem descriptions are complete before proceeding. Are you ready to submit ${submitLabel}?
-                            </p>
                         </div>
                         <div class="modal-footer border-0 bg-light-subtle py-3 px-4 d-flex justify-content-end gap-2">
                             <button type="button" class="ds-btn ds-btn-ghost text-xs" data-bs-dismiss="modal">
@@ -1312,6 +1536,18 @@ const ProjectApp = {
     },
 
     async submitForReview() {
+        const sessionUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+        const role = ((sessionUser.role && sessionUser.role.name) ? sessionUser.role.name : (sessionUser.role || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!['teamleader', 'teammember'].includes(role)) {
+            QCMS.toast('Access denied. Only assigned Team Leader and Team Members can submit project stages.', 'warning');
+            return;
+        }
+
+        if (this.projectData && (this.projectData.status === 'Rejected' || this.projectData.status === 'Stage 1 Rejected' || (this.projectData.status && this.projectData.status.includes('Rejected')))) {
+            QCMS.toast('This project has been permanently rejected and cannot be submitted for review.', 'warning');
+            return;
+        }
+
         console.log("[QCMS] submitForReview started for activeStageId:", this.activeStageId);
         const stageNum = this.activeStageId || 1;
         const module = StageModules[stageNum];
@@ -1392,12 +1628,11 @@ const ProjectApp = {
             const stageCfg = (this._stagesCfg || [])[stageNum - 1];
             if (stageCfg && stageCfg.sections) {
                 stageCfg.sections.forEach(sec => {
-                    if (sec.id && sec.id.startsWith('sec_')) {
+                    if (sec) {
                         customElements.push(sec);
-                    }
-                    if (sec.fields) {
-                        sec.fields.forEach(field => {
-                            customElements.push(field);
+                        const subFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
+                        subFields.forEach(field => {
+                            if (field) customElements.push(field);
                         });
                     }
                 });
@@ -1481,22 +1716,44 @@ const ProjectApp = {
     },
 
     async reviewStage(decision) {
-        const comments = document.getElementById('reviewComments').value;
-        const labels = { approve: 'Approve', reject: 'Reject', send_back: 'Send Back' };
-        if (!confirm(`Confirm: ${labels[decision]} Stage ${this.activeStageId}?`)) return;
-        try {
-            const route = this.activeStageId === 1 ? `/projects/${this.projectId}/stage1/review` : `/projects/${this.projectId}/stage/${this.activeStageId}/review`;
-            await api.post(route, { decision, comments });
-            QCMS.toast(`Stage ${this.activeStageId} ${labels[decision]}d successfully.`, 'success');
-            
-            if (this.activeStageId === this._stagesCfg.length && decision === 'approve') {
-                sessionStorage.setItem('auto_download_report_' + this.projectId, 'true');
+        const comments = document.getElementById('reviewComments')?.value || '';
+        const normDecision = (decision === 'approve' || decision === 'Approved') ? 'Approved' :
+                             (decision === 'reject' || decision === 'Rejected') ? 'Rejected' : 'Revision';
+
+        const projectTitle = this.projectData?.title || `Project #${this.projectId}`;
+
+        QCMS.showDecisionConfirmationDialog({
+            decision: normDecision,
+            projectTitle,
+            stageNumber: this.activeStageId,
+            comments,
+            onConfirm: async () => {
+                try {
+                    const payload = { decision, comments };
+                    if (this.activeStageId === 8 || this.activeStageId === (this._stagesCfg && this._stagesCfg.length)) {
+                        const module = StageModules[8];
+                        if (module && typeof module.collectData === 'function') {
+                            const s8Data = module.collectData();
+                            if (s8Data && s8Data.team_recognition) {
+                                payload.team_recognition = s8Data.team_recognition;
+                            }
+                        }
+                    }
+                    const route = this.activeStageId === 1 ? `/projects/${this.projectId}/stage1/review` : `/projects/${this.projectId}/stage/${this.activeStageId}/review`;
+                    await api.post(route, payload);
+                    const actionLabel = normDecision === 'Approved' ? 'approved' : normDecision === 'Rejected' ? 'rejected' : 'sent back for revision';
+                    QCMS.toast(`Stage ${this.activeStageId} ${actionLabel} successfully.`, 'success');
+                    
+                    if (this.activeStageId === this._stagesCfg.length && decision === 'approve') {
+                        sessionStorage.setItem('auto_download_report_' + this.projectId, 'true');
+                    }
+                    
+                    setTimeout(() => location.reload(), 1000);
+                } catch (e) {
+                    QCMS.toast(e.message, 'error');
+                }
             }
-            
-            setTimeout(() => location.reload(), 1000);
-        } catch (e) {
-            QCMS.toast(e.message, 'error');
-        }
+        });
     },
 
     facRequestModal: null,
@@ -1773,7 +2030,7 @@ const ProjectApp = {
                 <div id="exec-tab-dashboard" class="exec-tab-content">
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="border rounded p-3 bg-light">
+                            <div class="border rounded p-3 bg-white qc-chart-card">
                                 <h6 class="fw-bold mb-2 text-xs text-primary">Stage 2: Defect Pareto Chart</h6>
                                 <div style="height:220px;position:relative;">
                                     <canvas id="execS2ParetoCanvas"></canvas>
@@ -1781,7 +2038,7 @@ const ProjectApp = {
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="border rounded p-3 bg-light">
+                            <div class="border rounded p-3 bg-white qc-chart-card">
                                 <h6 class="fw-bold mb-2 text-xs text-primary">Stage 3: Cause Prioritization Pareto</h6>
                                 <div style="height:220px;position:relative;">
                                     <canvas id="execS3ParetoCanvas"></canvas>
@@ -1789,7 +2046,7 @@ const ProjectApp = {
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="border rounded p-3 bg-light">
+                            <div class="border rounded p-3 bg-white qc-chart-card">
                                 <h6 class="fw-bold mb-2 text-xs text-primary">Stage 4: Process Stability Control Chart</h6>
                                 <div style="height:220px;position:relative;">
                                     <canvas id="execS4ControlCanvas"></canvas>
@@ -1797,7 +2054,7 @@ const ProjectApp = {
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="border rounded p-3 bg-light">
+                            <div class="border rounded p-3 bg-white qc-chart-card">
                                 <h6 class="fw-bold mb-2 text-xs text-primary">Stage 7: Before vs After Stability Comparison</h6>
                                 <div style="height:220px;position:relative;">
                                     <canvas id="execS7ControlCanvas"></canvas>
@@ -2193,7 +2450,7 @@ const ProjectApp = {
                     listEl.innerHTML = '<div class="text-xs text-muted p-2">No review comments recorded.</div>';
                 } else {
                     listEl.innerHTML = notes.map(n => `
-                        <div class="border rounded p-2 bg-white shadow-sm mb-2" style="font-size:0.8rem;">
+                        <div class="border rounded p-2 shadow-sm mb-2" style="font-size:0.8rem; background: var(--ds-bg-card, #ffffff);">
                             <div class="d-flex justify-content-between text-xs text-muted mb-1">
                                 <strong>${n.created_by}</strong>
                                 <span>${new Date(n.created_at).toLocaleString()}</span>

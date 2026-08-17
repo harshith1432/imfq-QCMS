@@ -19,23 +19,23 @@ const Stage4 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.1</span>
-                                Root Causes
+                                <span class="ds-tooltip-trigger" title="Root Causes: Carried over verified causes from Stage 3 for detailed root-cause testing">Root Causes</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">List the causes carried over from Stage 3 for detailed root-cause testing.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 1 - Root Causes (from Stage 3)</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 1 - Root Causes: Suspect causes carried forward for root-cause testing">Section 1 - Root Causes (from Stage 3)</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[4].addVerifiedCauseRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Cause
                             </button>
                         </div>
                         <div id="s4_verifiedContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Cause</div>
-                                <div class="col-4">Method</div>
-                                <div class="col-3">Status</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Cause: Suspect cause under analysis">Cause</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Method: Root-cause validation method">Method</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Status: Validation status">Status</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -48,14 +48,14 @@ const Stage4 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.2</span>
-                                Why-Why Analysis (5-Why)
+                                <span class="ds-tooltip-trigger" title="5-Why Analysis: Iterative questioning technique ('Why?') to drill down from symptom to fundamental root cause">Why-Why Analysis (5-Why)</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Drill down from each suspect cause through repeated "why" questioning to reach the root cause.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 2 - Why-Why Analysis (5-Why Verification)</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="5-Why Verification: Sequential 5-Why root cause sequence">Section 2 - Why-Why Analysis (5-Why Verification)</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[4].addWhyRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add 5-Why Sequence
                             </button>
@@ -70,24 +70,24 @@ const Stage4 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.3</span>
-                                Hypothesis Testing
+                                <span class="ds-tooltip-trigger" title="Hypothesis Testing: H0 (Null: No effect) vs H1 (Alt: Statistically significant difference)">Hypothesis Testing</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">State and test the hypothesis linking the suspect cause to the observed effect.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 3 - Hypothesis Testing</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 3 - Hypothesis Testing: Statistical hypothesis framing and testing">Section 3 - Hypothesis Testing</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[4].addHypothesisRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Hypothesis
                             </button>
                         </div>
                         <div id="s4_hypothesisContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Hypothesis</div>
-                                <div class="col-3">Null Hyp (H0)</div>
-                                <div class="col-3">Alt Hyp (H1)</div>
-                                <div class="col-2">Test Used</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Hypothesis: Statement defining suspect cause-effect link">Hypothesis</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Null Hyp (H0): Baseline assumption that cause has no effect">Null Hyp (H0)</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Alt Hyp (H1): Alternative assumption that cause has statistically significant effect">Alt Hyp (H1)</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Test Used: Statistical test protocol executed">Test Used</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -100,24 +100,24 @@ const Stage4 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.4</span>
-                                Good vs Bad Comparison
+                                <span class="ds-tooltip-trigger" title="Good vs Bad Comparison: Side-by-side comparative analysis contrasting non-conforming vs optimal process parameters">Good vs Bad Comparison</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Compare good and bad outcomes side-by-side to isolate the differentiating factor.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 4 - Good vs Bad Comparison</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 4 - Good vs Bad Comparison: Side-by-side process parameter factor comparison">Section 4 - Good vs Bad Comparison</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[4].addGoodBadRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Factor
                             </button>
                         </div>
                         <div id="s4_goodBadContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Factor</div>
-                                <div class="col-3">Good Condition</div>
-                                <div class="col-3">Bad Condition</div>
-                                <div class="col-2">Difference</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Factor: Process variable, machine setting, or environmental condition under analysis">Factor</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Good Condition: Parameter value measured during defect-free production">Good Condition</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Bad Condition: Parameter value measured during defective production">Bad Condition</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Difference: Delta between good and bad condition parameter settings">Difference</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -130,30 +130,30 @@ const Stage4 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">4.5</span>
-                                Statistical Validation
+                                <span class="ds-tooltip-trigger" title="Statistical Validation: Scatter Diagram correlation & P-Value testing (P < 0.05 indicates statistical significance)">Statistical Validation</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Run scatter correlation and control-chart analysis to statistically confirm the cause-effect link.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 5 - Statistical Validation</h6>
-                            <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[4].addValidationRow()">
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 5 - Statistical Validation: Scatter Correlation and Control Chart verification">Section 5 - Statistical Validation</h6>
+                            <button class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Validation: Add a hypothesis test or statistical validation row (e.g., Chi-Square, t-Test, ANOVA)" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[4].addValidationRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Validation
                             </button>
                         </div>
                         <div id="s4_validationContainer" class="mb-4">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Test Type</div>
-                                <div class="col-2">p-Value</div>
-                                <div class="col-3">Confidence Level</div>
-                                <div class="col-3">Conclusion</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Test Type: Name of statistical hypothesis test executed (e.g. Chi-Square Test, 2-Sample t-Test, ANOVA, Regression)">Test Type</div>
+                                <div class="col-2 ds-tooltip-trigger" title="p-Value: Calculated significance level (p < 0.05 indicates statistical significance)">p-Value</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Confidence Level: Degree of statistical certainty (e.g. 95%, 99%)">Confidence Level</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Conclusion: Statistical outcome and inference (e.g. Statistically Significant, Correlation Confirmed)">Conclusion</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
 
                         <!-- QC Tool 6: Scatter Diagram -->
-                        <div class="p-3 border rounded bg-white mb-0 shadow-sm" style="border-radius: var(--radius-md);">
+                        <div class="p-3 border rounded mb-0 shadow-sm qc-tool-card" style="border-radius: var(--radius-md); background: var(--ds-bg-card, #ffffff);">
                             <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2">
                                 <i data-lucide="dot-chart" style="width:16px;height:16px;"></i> QC Tool 6: Scatter Correlation Diagram
                             </h6>
@@ -182,7 +182,7 @@ const Stage4 = {
                                     </div>
                                 </div>
                                 <div class="col-md-7 border-start text-center">
-                                    <div class="p-2 border rounded bg-light mb-3 text-start">
+                                    <div class="p-2 border rounded mb-3 text-start qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
                                         <h6 class="fw-bold text-xs mb-1">Correlation Summary:</h6>
                                         <div class="row g-2 text-xs">
                                             <div class="col-6">Coefficient (r): <span class="fw-bold" id="s4_scatter_r_display">---</span><input type="hidden" id="s4_scatter_r"></div>
@@ -219,40 +219,40 @@ const Stage4 = {
                         </div>
                         <div id="s4_reconfirmContainer" class="mb-4">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Data Set</div>
-                                <div class="col-2">Sample Size</div>
-                                <div class="col-3">Result</div>
-                                <div class="col-3">Validated (Yes/No)</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Data Set: Sample batch or dataset under reconfirmation test">Data Set</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Sample Size: Number of physical parts or process samples audited">Sample Size</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Result: Measured empirical outcome or defect count">Result</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Validated (Yes/No): Validation status confirming whether root cause is verified">Validated (Yes/No)</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
 
                         <!-- QC Tool 7: Control Chart -->
-                        <div class="p-3 border rounded bg-white mb-0 shadow-sm" style="border-radius: var(--radius-md);">
-                            <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2">
+                        <div class="p-3 border rounded mb-0 shadow-sm qc-tool-card" style="border-radius: var(--radius-md); background: var(--ds-bg-card, #ffffff);">
+                            <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2 ds-tooltip-trigger" title="QC Tool 7: Control Chart: Statistical process control chart tracking UCL, Center Line (Mean), and LCL over time">
                                 <i data-lucide="line-chart" style="width:16px;height:16px;"></i> QC Tool 7: Control Chart (Time-based Process Stability)
                             </h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <small class="fw-bold">Time-based Data Observations</small>
-                                        <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm py-0 text-xs px-2" onclick="StageModules[4].addControlRow()">+ Add Reading</button>
+                                        <small class="fw-bold ds-tooltip-trigger" title="Time-based Data Observations: Time-series observations for SPC charting">Time-based Data Observations</small>
+                                        <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm py-0 text-xs px-2 ds-tooltip-trigger" title="+ Add Reading: Log a new time-series measurement sample" onclick="StageModules[4].addControlRow()">+ Add Reading</button>
                                     </div>
                                     <div id="s4ControlPointsContainer" style="max-height: 180px; overflow-y: auto;">
                                         <div class="row text-muted text-xs mb-1">
-                                            <div class="col-5">Time/Date Label</div>
-                                            <div class="col-5">Measured Value</div>
+                                            <div class="col-5 ds-tooltip-trigger" title="Time/Date Label: Timestamp, shift, or sample reading label">Time/Date Label</div>
+                                            <div class="col-5 ds-tooltip-trigger" title="Measured Value: Numerical process parameter reading">Measured Value</div>
                                             <div class="col-2"></div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-7 border-start text-center">
-                                    <div class="p-2 border rounded bg-light mb-3 text-start">
-                                        <h6 class="fw-bold text-xs mb-1">Statistical Control Limits:</h6>
+                                    <div class="p-2 border rounded mb-3 text-start qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
+                                        <h6 class="fw-bold text-xs mb-1 ds-tooltip-trigger" title="Statistical Control Limits: Calculated 3-sigma process boundaries">Statistical Control Limits:</h6>
                                         <div class="row g-2 text-xs">
-                                            <div class="col-4">UCL: <span class="fw-bold text-danger" id="s4_control_ucl_display">---</span><input type="hidden" id="s4_control_ucl"></div>
-                                            <div class="col-4">CL (Mean): <span class="fw-bold text-primary" id="s4_control_cl_display">---</span><input type="hidden" id="s4_control_cl"></div>
-                                            <div class="col-4">LCL: <span class="fw-bold text-danger" id="s4_control_lcl_display">---</span><input type="hidden" id="s4_control_lcl"></div>
+                                            <div class="col-4 ds-tooltip-trigger" title="UCL: Upper Control Limit (+3 Standard Deviations from Mean)">UCL: <span class="fw-bold text-danger" id="s4_control_ucl_display">---</span><input type="hidden" id="s4_control_ucl"></div>
+                                            <div class="col-4 ds-tooltip-trigger" title="CL (Mean): Center Line process average value">CL (Mean): <span class="fw-bold text-primary" id="s4_control_cl_display">---</span><input type="hidden" id="s4_control_cl"></div>
+                                            <div class="col-4 ds-tooltip-trigger" title="LCL: Lower Control Limit (-3 Standard Deviations from Mean)">LCL: <span class="fw-bold text-danger" id="s4_control_lcl_display">---</span><input type="hidden" id="s4_control_lcl"></div>
                                             <div class="col-12 mt-1 border-top pt-1 text-danger" id="s4_control_warnings">No out-of-control points.</div>
                                         </div>
                                     </div>
@@ -415,13 +415,12 @@ const Stage4 = {
                 <div class="col-2"></div>
             </div>
         `;
-        const points = scatter.points || [];
+        const isMockScatter = (pts) => pts.some(p => (p.x === 10 || p.x == '10') && (p.y === 5 || p.y == '5'));
+        const points = (scatter.points || []).filter(p => !isMockScatter(scatter.points));
         if (points.length) {
             points.forEach(pt => this.addScatterRow(pt));
         } else {
-            // Default baseline dataset
-            const defaults = [{x:10, y:5}, {x:12, y:8}, {x:15, y:12}, {x:18, y:15}, {x:20, y:22}, {x:22, y:26}, {x:25, y:35}];
-            defaults.forEach(pt => this.addScatterRow(pt));
+            this.addScatterRow();
         }
         this.calcScatter();
 
@@ -451,18 +450,12 @@ const Stage4 = {
                 <div class="col-2"></div>
             </div>
         `;
-        const ctrlPoints = controlChart.points || [];
+        const isMockControl = (pts) => pts.some(p => p.label === 'Day 1' && (p.val === 14.2 || p.val == '14.2'));
+        const ctrlPoints = (controlChart.points || []).filter(p => !isMockControl(controlChart.points));
         if (ctrlPoints.length) {
             ctrlPoints.forEach(pt => this.addControlRow(pt));
         } else {
-            // Default time series dataset
-            const defaults = [
-                {label:'Day 1', val:14.2}, {label:'Day 2', val:15.1}, {label:'Day 3', val:13.9},
-                {label:'Day 4', val:19.8}, {label:'Day 5', val:14.5}, {label:'Day 6', val:15.2},
-                {label:'Day 7', val:13.8}, {label:'Day 8', val:22.5}, {label:'Day 9', val:14.9},
-                {label:'Day 10', val:14.1}
-            ];
-            defaults.forEach(pt => this.addControlRow(pt));
+            this.addControlRow();
         }
         this.calcControlChart();
 
@@ -1015,10 +1008,17 @@ const Stage4 = {
     },
 
     addVerifiedCauseRow(d = {}) {
+        const currentStat = d.status || 'In Progress';
+        const defaultOptions = ['In Progress', 'Verified', 'Root Cause Confirmed', 'Invalidated / Rejected', 'Pending Action', 'Completed'];
+        const allOptions = defaultOptions.includes(currentStat) ? defaultOptions : [currentStat, ...defaultOptions];
+        const selectHtml = `
+            <select class="ds-input ds-select r-stat text-center" style="text-align: center; text-align-last: center; font-weight: 600; cursor: pointer;" required>
+                ${allOptions.map(opt => `<option value="${opt}" ${currentStat === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+            </select>`;
         this.addRowTemplate('s4_verifiedContainer', d, `
             <div class="col-4"><input type="text" class="ds-input r-cause" placeholder="e.g. Inadequate pressure" value="${d.cause || ''}" oninput="StageModules[4].updateWhyCauseDropdowns()" required></div>
             <div class="col-4"><input type="text" class="ds-input r-meth" placeholder="e.g. Review gauge history" value="${d.method || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-stat" placeholder="e.g. In Progress" value="${d.status || ''}" required></div>`, true);
+            <div class="col-3">${selectHtml}</div>`, true);
         this.updateWhyCauseDropdowns();
     },
     addHypothesisRow(d = {}) {

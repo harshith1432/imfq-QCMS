@@ -217,7 +217,7 @@
                 <!-- ── TAB 1: WORKSTATION CONTENT ── -->
                 <div id="workstationTabContent">
                     <!-- KPI Cards for Workstation -->
-                    <div class="kpi-grid fade-in section-spacing" id="workstationKpiGrid">
+                    <div class="kpi-grid kpi-grid-5 fade-in section-spacing" id="workstationKpiGrid">
                         <div class="kpi-card">
                             <div class="skeleton-card skeleton"></div>
                         </div>
@@ -357,14 +357,8 @@
                         <div class="col-md-6">
                             <div class="ds-field">
                                 <label class="ds-label"><i data-lucide="tag"></i> Category</label>
-                                <select class="ds-input ds-select" id="editProjectCategory">
-                                    <option value="Quality">Quality</option>
-                                    <option value="Cost">Cost</option>
-                                    <option value="Delivery">Delivery</option>
-                                    <option value="Safety">Safety</option>
-                                    <option value="Morale">Morale</option>
-                                    <option value="Environment">Environment</option>
-                                    <option value="Productivity">Productivity</option>
+                                <select class="ds-input ds-select" id="editProjectCategory" data-source="categories">
+                                    <option value="">-- Select Category --</option>
                                 </select>
                             </div>
                         </div>
@@ -452,17 +446,9 @@
                                 </div>
                                 <div class="col-md-3">
                                     <div class="ds-field">
-                                        <label class="ds-label"><i data-lucide="tag"></i> Project Type *</label>
-                                        <select class="ds-input ds-select" id="projType" required onchange="tmDash?.handleProjectTypeChange ? tmDash.handleProjectTypeChange(this.value) : null">
-                                            <option value="" disabled selected>Select Type</option>
-                                            <option value="Quality">Quality</option>
-                                            <option value="Cost">Cost</option>
-                                            <option value="Delivery">Delivery</option>
-                                            <option value="Safety">Safety</option>
-                                            <option value="Morale">Morale</option>
-                                            <option value="Environment">Environment</option>
-                                            <option value="Productivity">Productivity</option>
-                                            <option value="Other">Other</option>
+                                        <label class="ds-label"><i data-lucide="tag"></i> Project Type / Category <span class="text-danger">*</span></label>
+                                        <select class="ds-input ds-select" id="projType" data-source="categories" required onchange="tmDash?.handleProjectTypeChange ? tmDash.handleProjectTypeChange(this.value) : null">
+                                            <option value="" disabled selected>Select Category</option>
                                         </select>
                                         <div class="mt-2" id="projTypeCustomContainer" style="display: none;">
                                             <input type="text" class="ds-input text-sm py-1 px-2" id="projTypeCustom" placeholder="Enter custom project type...">
@@ -520,7 +506,7 @@
                                 <div class="col-md-3">
                                     <div class="ds-field">
                                         <label class="ds-label"><i data-lucide="git-merge"></i> Project Source *</label>
-                                        <select class="ds-input ds-select" id="projSource" required>
+                                        <select class="ds-input ds-select" id="projSource" required onchange="tmDash?.handleProjectSourceChange ? tmDash.handleProjectSourceChange(this.value) : (this.value === 'Other' ? document.getElementById('projSourceCustomContainer').style.display='block' : document.getElementById('projSourceCustomContainer').style.display='none')">
                                             <option value="" disabled selected>Select Source</option>
                                             <option value="Policy">Policy</option>
                                             <option value="MPCP">MPCP</option>
@@ -529,7 +515,11 @@
                                             <option value="Audit Finding">Audit Finding</option>
                                             <option value="Safety Incident">Safety Incident</option>
                                             <option value="Employee Suggestion">Employee Suggestion</option>
+                                            <option value="Other">Other</option>
                                         </select>
+                                        <div class="mt-2" id="projSourceCustomContainer" style="display: none;">
+                                            <input type="text" class="ds-input text-sm py-1 px-2" id="projSourceCustom" placeholder="Specify custom project source...">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -760,26 +750,95 @@
             renderWorkstationKPIs() {
                 const total = this.projects.length;
                 const completed_statuses = ['Closed', 'Completed', 'Stage 8 Approved', 'Archived'];
-                const inactive_statuses = ['Rejected', 'Cancelled', 'On Hold'];
+                const rejected_statuses = ['Rejected', 'Cancelled'];
                 const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                const completed = this.projects.filter(p => completed_statuses.includes(p.status)).length;
-                const inactive = this.projects.filter(p => {
-                    if (inactive_statuses.includes(p.status)) return true;
-                    if (completed_statuses.includes(p.status)) return false;
-                    const lastActivity = p.last_updated ? new Date(p.last_updated) : (p.created_at ? new Date(p.created_at) : null);
-                    return lastActivity && lastActivity < sevenDaysAgo;
-                }).length;
-                const active = this.projects.filter(p =>
-                    !completed_statuses.includes(p.status) && !inactive_statuses.includes(p.status) &&
-                    (() => { const la = p.last_updated ? new Date(p.last_updated) : (p.created_at ? new Date(p.created_at) : null); return !la || la >= sevenDaysAgo; })()
-                ).length;
 
-                document.getElementById('workstationKpiGrid').innerHTML =
-                    QCMS.kpiCard('Total Projects Assigned', total, 'folder', 'blue') +
-                    QCMS.kpiCard('Active Projects', active, 'activity', 'green') +
-                    QCMS.kpiCard('Completed Projects', completed, 'award', 'cyan') +
-                    QCMS.kpiCard('Inactive Projects', inactive, 'clock', 'red');
+                const isCompleted = (p) => completed_statuses.includes(p.status);
+                const isRejected = (p) => rejected_statuses.includes(p.status) || (p.status || '').startsWith('Rejected');
+
+                const completed = this.projects.filter(p => isCompleted(p)).length;
+                const rejected = this.projects.filter(p => isRejected(p)).length;
+
+                // Inactive Projects: Open/in-progress projects with NO activity in the last 7 days
+                const inactive = this.projects.filter(p => {
+                    if (isCompleted(p) || isRejected(p)) return false;
+                    const dateStr = p.last_updated || p.updated_at || p.created_at;
+                    if (!dateStr) return false; // If no date specified, treat as active
+                    const lastActivity = new Date(dateStr);
+                    return !isNaN(lastActivity.getTime()) && lastActivity < sevenDaysAgo;
+                }).length;
+
+                // Active Projects: Open/in-progress projects with activity within the last 7 days
+                const active = this.projects.filter(p => {
+                    if (isCompleted(p) || isRejected(p)) return false;
+                    const dateStr = p.last_updated || p.updated_at || p.created_at;
+                    if (!dateStr) return true; // Default to active
+                    const lastActivity = new Date(dateStr);
+                    return isNaN(lastActivity.getTime()) || lastActivity >= sevenDaysAgo;
+                }).length;
+
+                const grid = document.getElementById('workstationKpiGrid');
+                if (grid) {
+                    grid.innerHTML =
+                        QCMS.kpiCard('Total Projects Assigned Till Now', total, 'folder', 'blue') +
+                        QCMS.kpiCard('Active Projects', active, 'activity', 'green') +
+                        QCMS.kpiCard('Total Completed Projects Till Now', completed, 'award', 'cyan') +
+                        QCMS.kpiCard('Inactive Projects', inactive, 'clock', 'orange') +
+                        QCMS.kpiCard('Total Projects Rejected', rejected, 'x-circle', 'red', null, "javascript:tmDash.openRejectedProjectsModal()");
+
+                    const cards = grid.querySelectorAll('& > div, & > a');
+                    if (cards[4]) {
+                        cards[4].style.cursor = 'pointer';
+                        cards[4].addEventListener('click', () => this.openRejectedProjectsModal());
+                    }
+                }
                 if (window.lucide) lucide.createIcons();
+            },
+
+            openRejectedProjectsModal() {
+                const rejected_statuses = ['Rejected', 'Cancelled'];
+                const rejectedProjs = (this.projects || []).filter(p => rejected_statuses.includes(p.status));
+
+                const body = document.getElementById('tmRejectedProjectsBody');
+                if (body) {
+                    if (!rejectedProjs.length) {
+                        body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">No rejected projects found for your workstation.</td></tr>`;
+                    } else {
+                        body.innerHTML = rejectedProjs.map(p => `
+                            <tr>
+                                <td class="py-3">
+                                    <div class="fw-bold text-danger">${QCMS.escapeHtml(p.title)}</div>
+                                    <div class="text-xxs text-muted font-mono">${QCMS.escapeHtml(p.project_uid || ('PRJ-' + p.id))}</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-main">${QCMS.escapeHtml(p.department || p.dept || 'N/A')}</div>
+                                    <div class="text-xxs text-muted">Plant: ${QCMS.escapeHtml(p.plant || 'General')}</div>
+                                </td>
+                                <td>
+                                    <span class="ds-badge red">Stage ${p.current_stage || p.stage || 1}</span>
+                                </td>
+                                <td>
+                                    <div class="d-inline-flex align-items-center px-2 py-1 rounded bg-danger-subtle text-danger border border-danger-subtle text-xs" style="white-space:pre-wrap; max-width:100%;">
+                                        <i data-lucide="info" style="width:12px;height:12px;margin-right:4px;flex-shrink:0;"></i>
+                                        <span>${QCMS.escapeHtml(p.rejection_reason || p.comments || 'No reason specified')}</span>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">View</a>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                if (!this.rejectedModal) {
+                    const el = document.getElementById('tmRejectedProjectsModal');
+                    if (el) this.rejectedModal = new bootstrap.Modal(el);
+                }
+                if (this.rejectedModal) {
+                    this.rejectedModal.show();
+                    if (window.lucide) lucide.createIcons();
+                }
             },
 
             renderWorkstationList() {
@@ -954,9 +1013,9 @@
                 try {
                     const stats = await api.get('/team-leader/dashboard');
                     document.getElementById('teamKpiGrid').innerHTML =
-                        QCMS.kpiCard('Total Projects Assigned', stats.total_projects || 0, 'folder-kanban', 'blue', null, "javascript:tmDash.filterBy('all')") +
+                        QCMS.kpiCard('Total Projects Assigned Till Now', stats.total_projects || 0, 'folder-kanban', 'blue', null, "javascript:tmDash.filterBy('all')") +
                         QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'activity', 'green', null, "javascript:tmDash.filterBy('progress')") +
-                        QCMS.kpiCard('Completed Projects', stats.completed_projects || 0, 'award', 'cyan', null, "javascript:tmDash.filterBy('completed')") +
+                        QCMS.kpiCard('Total Completed Projects Till Now', stats.completed_projects || 0, 'award', 'cyan', null, "javascript:tmDash.filterBy('completed')") +
                         QCMS.kpiCard('Inactive Projects', stats.stalled_projects || 0, 'clock', 'red', null, "javascript:tmDash.filterBy('inactive')");
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
@@ -1534,11 +1593,43 @@
                 }
             },
 
+            handleProjectTypeChange(val) {
+                const container = document.getElementById('projTypeCustomContainer');
+                const customInput = document.getElementById('projTypeCustom');
+                if (container) {
+                    if (val === 'Other') {
+                        container.style.display = 'block';
+                        if (customInput) customInput.focus();
+                    } else {
+                        container.style.display = 'none';
+                        if (customInput) customInput.value = '';
+                    }
+                }
+            },
+
+            handleProjectSourceChange(val) {
+                const container = document.getElementById('projSourceCustomContainer');
+                const customInput = document.getElementById('projSourceCustom');
+                if (container) {
+                    if (val === 'Other') {
+                        container.style.display = 'block';
+                        if (customInput) customInput.focus();
+                    } else {
+                        container.style.display = 'none';
+                        if (customInput) customInput.value = '';
+                    }
+                }
+            },
+
             async openInitModal() {
                 const projTypeCustomContainer = document.getElementById('projTypeCustomContainer');
                 if (projTypeCustomContainer) projTypeCustomContainer.style.display = 'none';
                 const projTypeCustom = document.getElementById('projTypeCustom');
                 if (projTypeCustom) projTypeCustom.value = '';
+                const projSourceCustomContainer = document.getElementById('projSourceCustomContainer');
+                if (projSourceCustomContainer) projSourceCustomContainer.style.display = 'none';
+                const projSourceCustom = document.getElementById('projSourceCustom');
+                if (projSourceCustom) projSourceCustom.value = '';
 
                 let currentUser = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
 
@@ -1619,7 +1710,13 @@
                 const workArea = document.getElementById('projWorkArea').value.trim();
                 const deptId = document.getElementById('projDepartmentId')?.value || document.getElementById('projDepartment')?.value;
                 const plant = document.getElementById('projPlant').value.trim();
-                const source = document.getElementById('projSource').value;
+                let source = document.getElementById('projSource').value;
+                if (source === 'Other') {
+                    source = (document.getElementById('projSourceCustom')?.value || '').trim();
+                    if (!source) {
+                        return QCMS.toast('Please enter custom Project Source.', 'warning');
+                    }
+                }
                 const facilitatorId = document.getElementById('projFacilitator').value;
                 const teamLeaderId = document.getElementById('projTeamLeader').value;
                 const reviewerId = document.getElementById('projReviewer').value;
@@ -2186,6 +2283,41 @@
             }
         });
     </script>
+
+    <!-- Rejected Projects Modal -->
+    <div class="modal fade" id="tmRejectedProjectsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card">
+                <div class="ds-card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title text-danger mb-0">
+                        <i data-lucide="x-circle" style="width:20px;height:20px;margin-right:6px;"></i> My Rejected Projects
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="ds-card-body p-0">
+                    <div class="table-responsive">
+                        <table class="ds-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>PROJECT</th>
+                                    <th>DEPARTMENT & PLANT</th>
+                                    <th>STAGE</th>
+                                    <th style="width:35%;">REJECTION REASON (WHY REJECTED)</th>
+                                    <th class="text-end">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tmRejectedProjectsBody">
+                                <tr><td colspan="5" class="p-4 text-center text-muted">Loading rejected projects...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

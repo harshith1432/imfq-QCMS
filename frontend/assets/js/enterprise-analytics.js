@@ -703,22 +703,66 @@ const EnterpriseAnalytics = {
             else if (this.currentTab === 'support') {
                 content.innerHTML = `
                     <div class="row g-4 fade-in">
-                        <div class="col-lg-6">
-                            <div class="glass-card">
-                                <div class="ds-card-header"><h6 class="card-title">Support Ticket Volume by Priority</h6></div>
-                                <div class="ds-card-body"><div style="height:260px;"><canvas id="ticketPriorityChart"></canvas></div></div>
+                        <div class="col-lg-5">
+                            <div class="glass-card h-100 p-0">
+                                <div class="ds-card-header p-3 border-bottom d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h6 class="card-title mb-0">Ticket Volume by Priority</h6>
+                                        <p class="text-xxs text-muted mb-0">Distribution across urgency tiers</p>
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary font-mono fw-bold" id="totalTicketsBadge">0 Tickets</span>
+                                </div>
+                                <div class="ds-card-body p-3 d-flex align-items-center justify-content-center">
+                                    <div style="height:250px; width:100%; position:relative;">
+                                        <canvas id="ticketPriorityChart"></canvas>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-lg-6">
-                            <div class="glass-card p-4 d-flex flex-column justify-content-center h-100">
-                                <div class="row text-center">
-                                    <div class="col-6 border-end">
-                                        <h3 class="fw-bold text-main" id="openTickets">0</h3>
-                                        <div class="text-xxs uppercase text-secondary">Open Issues</div>
+                        <div class="col-lg-7">
+                            <div class="glass-card h-100 p-4 d-flex flex-column justify-content-between">
+                                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                                    <h6 class="card-title mb-0">Helpdesk Resolution &amp; SLA Performance</h6>
+                                    <span class="text-xxs text-muted">Live telemetry</span>
+                                </div>
+
+                                <!-- 4-Stat Metric Grid -->
+                                <div class="row g-3 text-center mb-3">
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2.5 rounded border" style="background: rgba(59, 130, 246, 0.04); border-color: rgba(59, 130, 246, 0.18) !important;">
+                                            <h4 class="fw-bold text-primary mb-0" id="openTickets">0</h4>
+                                            <div class="text-xxs uppercase text-secondary fw-semibold mt-1">Open Issues</div>
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <h3 class="fw-bold text-success" id="slaCompliance">0%</h3>
-                                        <div class="text-xxs uppercase text-secondary">SLA Compliance</div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2.5 rounded border" style="background: rgba(139, 92, 246, 0.04); border-color: rgba(139, 92, 246, 0.18) !important;">
+                                            <h4 class="fw-bold mb-0" style="color: #8b5cf6;" id="inProgTickets">0</h4>
+                                            <div class="text-xxs uppercase text-secondary fw-semibold mt-1">In Progress</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2.5 rounded border" style="background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.18) !important;">
+                                            <h4 class="fw-bold text-success mb-0" id="closedTickets">0</h4>
+                                            <div class="text-xxs uppercase text-secondary fw-semibold mt-1">Resolved</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2.5 rounded border" style="background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.18) !important;">
+                                            <h4 class="fw-bold text-success mb-0" id="slaCompliance">100%</h4>
+                                            <div class="text-xxs uppercase text-secondary fw-semibold mt-1">SLA Target</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Resolution Velocity Details -->
+                                <div class="p-3 rounded border mt-auto" style="background: var(--ds-bg-subtle, rgba(0,0,0,0.02)); border-color: var(--ds-border-color, rgba(0,0,0,0.08)) !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 text-xs">
+                                        <span class="fw-semibold text-secondary">Average Resolution Time:</span>
+                                        <span class="fw-bold text-main" id="avgResTime">0 hrs</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center text-xs">
+                                        <span class="fw-semibold text-secondary">Active SLA Health:</span>
+                                        <span class="badge bg-success-subtle text-success fw-semibold" id="slaStatusBadge">Within Target</span>
                                     </div>
                                 </div>
                             </div>
@@ -727,22 +771,104 @@ const EnterpriseAnalytics = {
                 `;
                 
                 const supRes = await api.get(`/analytics/support?${query}`);
-                document.getElementById('openTickets').textContent = supRes.open;
-                document.getElementById('slaCompliance').textContent = `${supRes.sla_compliance_rate}%`;
+                document.getElementById('openTickets').textContent = supRes.open || 0;
+                if (document.getElementById('inProgTickets')) document.getElementById('inProgTickets').textContent = supRes.in_progress || 0;
+                if (document.getElementById('closedTickets')) document.getElementById('closedTickets').textContent = (supRes.resolved || 0) + (supRes.closed || 0);
+                document.getElementById('slaCompliance').textContent = `${supRes.sla_compliance_rate ?? 100}%`;
+                
+                if (document.getElementById('totalTicketsBadge')) {
+                    document.getElementById('totalTicketsBadge').textContent = `${supRes.total || 0} Ticket${(supRes.total || 0) === 1 ? '' : 's'}`;
+                }
+                if (document.getElementById('avgResTime')) {
+                    document.getElementById('avgResTime').textContent = supRes.average_resolution_time_hrs > 0 ? `${supRes.average_resolution_time_hrs} hrs` : '< 24 hrs';
+                }
+                if (document.getElementById('slaStatusBadge')) {
+                    const rate = supRes.sla_compliance_rate ?? 100;
+                    const badge = document.getElementById('slaStatusBadge');
+                    if (rate >= 90) {
+                        badge.className = 'badge bg-success-subtle text-success fw-semibold';
+                        badge.textContent = '100% Within SLA';
+                    } else if (rate >= 75) {
+                        badge.className = 'badge bg-warning-subtle text-warning fw-semibold';
+                        badge.textContent = `${rate}% (SLA Warning)`;
+                    } else {
+                        badge.className = 'badge bg-danger-subtle text-danger fw-semibold';
+                        badge.textContent = `${rate}% (SLA Breached)`;
+                    }
+                }
                 
                 const prioCtx = document.getElementById('ticketPriorityChart')?.getContext('2d');
                 if (prioCtx) {
+                    if (this.charts.ticketPrio) this.charts.ticketPrio.destroy();
+
                     const dist = supRes.priority_distribution && Object.keys(supRes.priority_distribution).length > 0
                         ? supRes.priority_distribution
-                        : { 'High': 0, 'Medium': 0, 'Low': 0 };
-                    
+                        : { 'No Tickets': 0 };
+
+                    const priorityColors = {
+                        'Critical': '#ef4444',
+                        'High': '#f97316',
+                        'Medium': '#f59e0b',
+                        'Low': '#3b82f6',
+                        'No Tickets': '#cbd5e1'
+                    };
+
+                    const labels = Object.keys(dist);
+                    const dataValues = Object.values(dist);
+                    const bgColors = labels.map(l => priorityColors[l] || '#6366f1');
+                    const totalCount = supRes.total || dataValues.reduce((a, b) => a + b, 0);
+
+                    const centerNumberPlugin = {
+                        id: 'centerNumberPlugin',
+                        afterDraw(chart) {
+                            const { ctx, chartArea } = chart;
+                            if (!chartArea) return;
+                            ctx.save();
+                            const centerX = (chartArea.left + chartArea.right) / 2;
+                            const centerY = (chartArea.top + chartArea.bottom) / 2;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            
+                            // Total Count Number
+                            ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                            ctx.fillStyle = '#0f172a';
+                            ctx.fillText(totalCount, centerX, centerY - 6);
+                            
+                            // Total Label
+                            ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                            ctx.fillStyle = '#64748b';
+                            ctx.fillText('TOTAL TICKETS', centerX, centerY + 16);
+                            ctx.restore();
+                        }
+                    };
+
                     this.charts.ticketPrio = new Chart(prioCtx, {
                         type: 'doughnut',
                         data: {
-                            labels: Object.keys(dist),
-                            datasets: [{ data: Object.values(dist), backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6'], borderWidth: 0 }]
+                            labels: labels,
+                            datasets: [{ 
+                                data: totalCount > 0 ? dataValues : [1], 
+                                backgroundColor: totalCount > 0 ? bgColors : ['#e2e8f0'], 
+                                borderWidth: 2,
+                                borderColor: '#ffffff',
+                                hoverOffset: 6
+                            }]
                         },
-                        options: { responsive: true, maintainAspectRatio: false, cutout: '75%' }
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            cutout: '72%',
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { usePointStyle: true, padding: 14, font: { size: 11, weight: 600 } }
+                                },
+                                tooltip: {
+                                    enabled: totalCount > 0
+                                }
+                            }
+                        },
+                        plugins: [centerNumberPlugin]
                     });
                 }
             }

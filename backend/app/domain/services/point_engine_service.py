@@ -194,9 +194,18 @@ class PointEngineService:
         total_pts = db.session.query(func.coalesce(func.sum(EmployeePoints.points), 0))\
             .filter(EmployeePoints.employee_id == employee_id).scalar() or 0
 
-        # Count specific activities
-        proj_created = EmployeePoints.query.filter_by(employee_id=employee_id, activity_type="project_created").count()
-        proj_completed = EmployeePoints.query.filter_by(employee_id=employee_id, activity_type="project_completed").count()
+        # Count specific activities from real source tables
+        proj_created = Project.query.filter_by(creator_id=employee_id, org_id=org_id).count()
+        proj_completed = Project.query.filter(
+            Project.org_id == org_id,
+            Project.status.in_(['Completed', 'Closed']),
+            db.or_(
+                Project.creator_id == employee_id,
+                Project.team_leader_id == employee_id,
+                Project.facilitator_id == employee_id,
+                Project.members.any(id=employee_id)
+            )
+        ).count()
         ideas_sub = EmployeePoints.query.filter_by(employee_id=employee_id, activity_type="idea_submitted").count()
         ideas_app = EmployeePoints.query.filter_by(employee_id=employee_id, activity_type="idea_approved").count()
         know_art = EmployeePoints.query.filter(
@@ -305,13 +314,17 @@ class PointEngineService:
                 )
 
             # 5. Knowledge Articles
-            know_entries = KnowledgeRepository.query.filter_by(org_id=org_id).all()
-            for k in know_entries:
-                if k.project_ref and k.project_ref.creator_id == u.id:
-                    PointEngineService.award_points(
-                        employee_id=u.id, org_id=org_id, activity_type="knowledge_article_published",
-                        ref_id=f"know_art_{k.id}", project_id=k.project_id, description=f"Published knowledge article for '{k.title}'"
-                    )
+            try:
+                from sqlalchemy.orm import defer
+                know_entries = KnowledgeRepository.query.options(defer(KnowledgeRepository.embedding)).filter_by(org_id=org_id).all()
+                for k in know_entries:
+                    if k.project_ref and k.project_ref.creator_id == u.id:
+                        PointEngineService.award_points(
+                            employee_id=u.id, org_id=org_id, activity_type="knowledge_article_published",
+                            ref_id=f"know_art_{k.id}", project_id=k.project_id, description=f"Published knowledge article for '{k.title}'"
+                        )
+            except Exception as k_err:
+                print(f"[PointEngine] Skipping knowledge articles points due to: {k_err}")
 
             PointEngineService.sync_employee_metrics(u.id, org_id)
 

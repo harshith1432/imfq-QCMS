@@ -176,7 +176,6 @@ class Organization(db.Model):
                 {"id": "s5_side_effect_analysis", "type": "table", "label": "Side Effect Analysis", "order": 5},
                 {"id": "s5_pilot_solution_verification", "type": "table", "label": "Pilot Solution Verification", "order": 6},
                 {"id": "s5_action_plan_3w1h", "type": "table", "label": "Action Plan (3W1H)", "order": 7},
-                {"id": "s5_resource_planning", "type": "table", "label": "Resource Planning", "order": 8},
             ]
         },
         {
@@ -185,7 +184,7 @@ class Organization(db.Model):
             "sections": [
                 {"id": "s6_countermeasures", "type": "table", "label": "Countermeasures", "order": 1},
                 {"id": "s6_tasks", "type": "table", "label": "Countermeasure Task Assignments", "order": 2},
-                {"id": "s6_resource_deployment", "type": "table", "label": "Resource Deployment", "order": 3},
+                {"id": "s6_resource_planning_deployment", "type": "table", "label": "Resource Planning & Deployment", "order": 3},
                 {"id": "s6_change_management", "type": "table", "label": "Change Management", "order": 4},
                 {"id": "s6_risk_resistance", "type": "table", "label": "Risk & Resistance Management", "order": 5},
                 {"id": "s6_side_effect_analysis", "type": "table", "label": "Side Effect Analysis", "order": 6},
@@ -360,6 +359,7 @@ class Project(db.Model):
     project_source = db.Column(db.String(100))
     reference_number = db.Column(db.String(100))
     sponsor = db.Column(db.String(255))
+    rejection_reason = db.Column(db.Text, nullable=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -372,6 +372,7 @@ class Project(db.Model):
     creator = db.relationship('User', foreign_keys=[creator_id], backref='created_projects')
     team_leader = db.relationship('User', foreign_keys=[team_leader_id], backref='led_projects')
     facilitator = db.relationship('User', foreign_keys=[facilitator_id], backref='facilitated_projects')
+    reviewer = db.relationship('User', foreign_keys=[reviewer_id], backref='reviewed_projects')
 
 class ProjectMember(db.Model):
     __tablename__ = 'project_members'
@@ -615,6 +616,7 @@ class Stage6ImplementationChangeManagement(db.Model):
     
     implementation_execution = db.Column(db.JSON)
     task_management = db.Column(db.JSON)
+    resource_planning_deployment = db.Column(db.JSON)
     resource_deployment = db.Column(db.JSON)
     change_management = db.Column(db.JSON)
     risk_resistance = db.Column(db.JSON)
@@ -1522,6 +1524,22 @@ class SubscriptionInvoice(db.Model):
 # ============================
 # MODULE: SOP Management
 # ============================
+
+class SOPCategory(db.Model):
+    __tablename__ = 'sop_categories'
+    id = db.Column(db.Integer, primary_key=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True, index=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class SOPType(db.Model):
+    __tablename__ = 'sop_types'
+    id = db.Column(db.Integer, primary_key=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True, index=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class SOP(db.Model):
     __tablename__ = 'sop_master'

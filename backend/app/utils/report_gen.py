@@ -1020,19 +1020,20 @@ def generate_8d_summary_report(project_id):
                     pdf.cell(0, 5, f"- [Ref: {cm_ref}] Task: {task_desc} (Assignee: {assignee}, Due: {due}, Completion: {pct}%)", 0, 1)
             pdf.ln(2)
 
-        # Render Resource Deployment
-        resources = d6.get('resource_deployment') or []
+        # Render Resource Planning & Deployment
+        resources = d6.get('resource_planning_deployment') or d6.get('resource_deployment') or d6.get('resource_planning') or []
         if resources:
             pdf.set_font('Helvetica', 'B', 10)
-            pdf.cell(0, 6, "Resource Deployment:", 0, 1)
+            pdf.cell(0, 6, "Resource Planning & Deployment:", 0, 1)
             pdf.set_font('Helvetica', '', 9)
             for r in resources:
                 if isinstance(r, dict):
-                    res = r.get('resource') or ''
-                    p_cost = r.get('planned_cost') or ''
-                    a_cost = r.get('actual_cost') or ''
-                    var = r.get('variance') or ''
-                    pdf.cell(0, 5, f"- Resource: {res} | Planned Cost: {p_cost} | Actual Cost: {a_cost} | Variance: {var}", 0, 1)
+                    res = r.get('resource') or r.get('resource_required') or ''
+                    budget = r.get('budget') or r.get('budget_allocation') or (f"INR {r.get('planned_cost')}" if r.get('planned_cost') else '')
+                    source = r.get('source') or ''
+                    due_dt = r.get('due_date') or r.get('when') or r.get('date') or ''
+                    status = r.get('status') or 'Planned'
+                    pdf.cell(0, 5, f"- Resource: {res} | Budget: {budget} | Source: {source} | Due: {due_dt} | Status: {status}", 0, 1)
             pdf.ln(2)
 
         # Render Change Management
@@ -1044,9 +1045,10 @@ def generate_8d_summary_report(project_id):
             for ch in changes:
                 if isinstance(ch, dict):
                     desc = ch.get('change_description') or ''
+                    owner = ch.get('owner') or ch.get('responsible') or 'N/A'
                     sop = ch.get('sop_updated') or ''
                     dt = ch.get('date') or ''
-                    pdf.cell(0, 5, f"- Change: {desc} (SOP Updated: {sop}, Date: {dt})", 0, 1)
+                    pdf.cell(0, 5, f"- Change: {desc} | Owner: {owner} (SOP Updated: {sop}, Date: {dt})", 0, 1)
             pdf.ln(2)
 
         # Render Risk & Resistance
@@ -1295,6 +1297,29 @@ def generate_8d_summary_report(project_id):
             dt = closure_data.get('end_date') or 'N/A'
             closure_summary = f"Handover To: {handover} | Final Status: {status_val} | Date: {dt}"
 
+        ip_data = None
+        if d8 and isinstance(d8, dict):
+            ip_data = d8.get('ip_patent_publication')
+        if not ip_data and s8 is not None:
+            ip_data = getattr(s8, 'ip_patent_publication', None)
+
+        ip_summary = None
+        if ip_data and isinstance(ip_data, dict):
+            pat_stat = ip_data.get('patentability_status') or 'Non-Patentable'
+            pat_title = ip_data.get('patent_title') or ip_data.get('patent_ref_no') or ''
+            pub_stat = ip_data.get('publication_status') or 'None'
+            forum = ip_data.get('forum_name') or ''
+            awards = ip_data.get('awards_won') or ''
+            parts = []
+            if pat_stat != 'Non-Patentable':
+                parts.append(f"Patent Status: {pat_stat} {f'({pat_title})' if pat_title else ''}")
+            if pub_stat != 'None':
+                parts.append(f"Publication: {pub_stat} {f'({forum})' if forum else ''}")
+            if awards:
+                parts.append(f"Awards: {awards}")
+            if parts:
+                ip_summary = " | ".join(parts)
+
         add_field("What Worked", what_worked_summary)
         add_field("What Failed", what_failed_summary)
         add_field("Best Practices", what_worked_summary)
@@ -1303,6 +1328,8 @@ def generate_8d_summary_report(project_id):
         add_field("Knowledge Sharing", ks_summary)
         add_field("Congratulation Notes", ee_summary)
         add_field("Closure Report", closure_summary)
+        if ip_summary:
+            add_field("IP, Patents & Publications", ip_summary)
     else:
         pdf.cell(0, 6, "No data available for D8", 0, 1)
     

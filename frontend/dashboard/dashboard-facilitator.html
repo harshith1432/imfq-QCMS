@@ -51,8 +51,8 @@
                         <button class="ds-btn-tab" data-tab="pipeline">
                             <i data-lucide="folder-open" style="width:16px;height:16px;margin-right:6px;"></i> Projects
                         </button>
-                        <button class="ds-btn-tab" data-tab="completed">
-                            <i data-lucide="check-square" style="width:16px;height:16px;margin-right:6px;"></i> Completed Projects
+                        <button class="ds-btn-tab" data-tab="assisted-history">
+                            <i data-lucide="history" style="width:16px;height:16px;margin-right:6px;"></i> Assisted Project History
                         </button>
                     </div>
 
@@ -86,13 +86,11 @@
                         </div>
                     </div>
 
-
-
-                    <!-- Pipeline Tab -->
+                    <!-- Pipeline / Projects Tab -->
                     <div id="tab-pipeline" class="tab-content-panel d-none">
                         <div class="glass-card">
                             <div class="ds-card-header">
-                                <h5 class="card-title"><i data-lucide="folder-open" class="inline-block text-primary me-2" style="width:20px;height:20px;vertical-align:text-bottom;"></i>Projects — All Stages</h5>
+                                <h5 class="card-title"><i data-lucide="folder-open" class="inline-block text-primary me-2" style="width:20px;height:20px;vertical-align:text-bottom;"></i>Projects — Active Assignments</h5>
                                 <span class="ds-badge blue" id="pipelineCount">Loading...</span>
                             </div>
                             <div class="ds-card-body p-0">
@@ -116,12 +114,12 @@
                         </div>
                     </div>
 
-                    <!-- Completed Projects Tab -->
-                    <div id="tab-completed" class="tab-content-panel d-none">
+                    <!-- Assisted Project History Tab -->
+                    <div id="tab-assisted-history" class="tab-content-panel d-none">
                         <div class="glass-card">
                             <div class="ds-card-header">
-                                <h5 class="card-title"><i data-lucide="archive" class="inline-block text-primary me-2" style="width:20px;height:20px;vertical-align:text-bottom;"></i>Completed Projects Repository</h5>
-                                <span class="ds-badge green" id="completedCount">Loading...</span>
+                                <h5 class="card-title"><i data-lucide="history" class="inline-block text-primary me-2" style="width:20px;height:20px;vertical-align:text-bottom;"></i>Assisted Project History</h5>
+                                <span class="ds-badge purple" id="assistedHistoryCount">0 Assisted</span>
                             </div>
                             <div class="ds-card-body p-0">
                                 <div class="table-responsive">
@@ -131,12 +129,16 @@
                                                 <th>Project</th>
                                                 <th>Department</th>
                                                 <th>Stage</th>
+                                                <th>Requested By</th>
+                                                <th>Assistance Request</th>
+                                                <th>Assistance Provided</th>
                                                 <th>Status</th>
+                                                <th>Assisted Date</th>
                                                 <th class="text-end">Action</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="completedBody">
-                                            <tr><td colspan="5" class="p-4 text-center text-muted">Loading completed projects...</td></tr>
+                                        <tbody id="assistedHistoryBody">
+                                            <tr><td colspan="9" class="p-4 text-center text-muted">Loading assisted history...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -201,8 +203,6 @@
         </div>
     </div>
 
-
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/api.js"></script>
     <script src="/assets/js/i18n.js"></script>
@@ -212,11 +212,13 @@
         noteModal: null,
         validateModal: null,
         replyModal: null,
+        assistedDetailsModal: null,
         
         // Cache for search
         rcaData: [],
         pipelineData: [],
-        completedData: [],
+        assistanceData: [],
+        assistedHistoryData: [],
         currentSearchQuery: '',
 
         switchTab(tabId) {
@@ -230,6 +232,7 @@
             QCMS.init();
             this.noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
             this.validateModal = new bootstrap.Modal(document.getElementById('validateRcaModal'));
+            this.assistedDetailsModal = new bootstrap.Modal(document.getElementById('assistedDetailsModal'));
 
             // Tab switching
             document.querySelectorAll('[data-tab]').forEach(btn => {
@@ -237,9 +240,13 @@
                     document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.add('d-none'));
-                    document.getElementById('tab-' + btn.dataset.tab).classList.remove('d-none');
-                    // Refresh assistance requests when switching to that tab
+                    const panel = document.getElementById('tab-' + btn.dataset.tab);
+                    if (panel) panel.classList.remove('d-none');
+                    
                     if (btn.dataset.tab === 'assistance') this.loadAssistanceRequests();
+                    if (btn.dataset.tab === 'pipeline') this.loadPipeline();
+                    if (btn.dataset.tab === 'assisted-history') this.loadAssistedHistory();
+                    if (window.lucide) lucide.createIcons();
                 });
             });
 
@@ -264,21 +271,30 @@
             this.loadStats();
             this.loadAssistanceRequests();
             this.loadPipeline();
-            this.loadCompleted();
+            this.loadAssistedHistory();
         },
 
         handleGlobalSearch(query) {
             this.currentSearchQuery = query.toLowerCase();
+            this.renderAssistanceRequests(this.filterData(this.assistanceData));
             this.renderPipeline(this.filterData(this.pipelineData));
-            this.renderCompleted(this.filterData(this.completedData));
+            this.renderAssistedHistory(this.filterData(this.assistedHistoryData));
         },
 
         filterData(data) {
-            if (!this.currentSearchQuery) return data;
+            if (!this.currentSearchQuery || !Array.isArray(data)) return data;
+            const q = this.currentSearchQuery;
             return data.filter(p => 
-                (p.title && p.title.toLowerCase().includes(this.currentSearchQuery)) ||
-                (p.dept && p.dept.toLowerCase().includes(this.currentSearchQuery)) ||
-                (p.uid && p.uid.toLowerCase().includes(this.currentSearchQuery))
+                (p.title && p.title.toLowerCase().includes(q)) ||
+                (p.project_title && p.project_title.toLowerCase().includes(q)) ||
+                (p.dept && p.dept.toLowerCase().includes(q)) ||
+                (p.uid && p.uid.toLowerCase().includes(q)) ||
+                (p.project_uid && p.project_uid.toLowerCase().includes(q)) ||
+                (p.user_name && p.user_name.toLowerCase().includes(q)) ||
+                (p.requested_by && p.requested_by.toLowerCase().includes(q)) ||
+                (p.message && p.message.toLowerCase().includes(q)) ||
+                (p.response && p.response.toLowerCase().includes(q)) ||
+                (p.status && p.status.toLowerCase().includes(q))
             );
         },
 
@@ -287,7 +303,7 @@
             try {
                 const s = await api.get('/facilitator/stats');
                 document.getElementById('kpiGrid').innerHTML =
-                    QCMS.kpiCard('Needs Guidance', s.pending_rca || 0, 'search', 'orange', null, "#rca") +
+                    QCMS.kpiCard('Needs Guidance', s.pending_rca || s.pending_assistance || 0, 'search', 'orange', null, "#assistance") +
                     QCMS.kpiCard('Inactive Projects', s.stalled_projects || 0, 'alert-triangle', 'red') +
                     QCMS.kpiCard('Total Active Projects', s.total_projects || 0, 'grid', 'blue', null, "#pipeline");
                 if (window.lucide) lucide.createIcons();
@@ -301,48 +317,57 @@
             if (!body) return;
             try {
                 const requests = await api.get('/facilitator/assistance-requests');
-                if (countEl) countEl.textContent = `${requests.length} Request${requests.length === 1 ? '' : 's'}`;
-                if (!requests || requests.length === 0) {
-                    body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-muted">No assistance requests received yet.</td></tr>`;
-                    return;
-                }
-                body.innerHTML = requests.map(r => {
-                    const statusBadge = r.status === 'Pending' ? 'orange'
-                        : r.status === 'Approved' ? 'green'
-                        : r.status === 'Not Approved' ? 'red' : 'blue';
-                    const replySection = r.response
-                        ? `<div class="mt-1 p-2 rounded" style="background:var(--ds-surface-2,#f0fdf4);border-left:3px solid #22c55e;font-size:12px;"><strong>Reply:</strong> ${r.response}</div>`
-                        : '';
-                    return `
-                    <tr>
-                        <td>
-                            <div class="fw-semibold">${r.project_title}</div>
-                            <span class="text-xxs font-mono text-muted">${r.project_uid}</span>
-                        </td>
-                        <td><span class="ds-badge blue">Stage ${r.stage_id}</span></td>
-                        <td>
-                            <div class="fw-medium">${r.user_name}</div>
-                            <div class="text-xxs text-muted">${r.user_email || ''}</div>
-                        </td>
-                        <td>
-                            <div style="max-width:220px;white-space:normal;font-size:13px;">${r.message}</div>
-                            ${replySection}
-                        </td>
-                        <td class="text-muted" style="font-size:12px;">${r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
-                        <td><span class="ds-badge ${statusBadge}">${r.status}</span></td>
-                        <td class="text-end" style="white-space:nowrap;">
-                            <a href="/projects/project-details.html?id=${r.project_id}&stage=${r.stage_id}" class="ds-btn ds-btn-sm ds-btn-ghost me-1">Open Stage ${r.stage_id}</a>
-                            <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.respondToRequest(${r.id}, '${r.project_title}', 'Stage ${r.stage_id}', '${r.user_name}', \`${r.message.replace(/`/g,"'")}\`, '${r.status}', '${r.response || ''}')">
-                                ${r.status === 'Pending' ? 'Reply' : 'Update Reply'}
-                            </button>
-                        </td>
-                    </tr>`;
-                }).join('');
-                if (window.lucide) lucide.createIcons();
+                this.assistanceData = requests || [];
+                this.renderAssistanceRequests(this.filterData(this.assistanceData));
             } catch (err) {
                 console.error('Assistance requests failed', err);
-                if (body) body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-danger">Failed to load assistance requests. Please refresh.</td></tr>`;
+                if (body) body.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-danger">Failed to load assistance requests. Please refresh.</td></tr>`;
             }
+        },
+
+        renderAssistanceRequests(requests) {
+            const body = document.getElementById('assistanceBody');
+            const countEl = document.getElementById('assistanceCount');
+            if (countEl) countEl.textContent = `${requests.length} Request${requests.length === 1 ? '' : 's'}`;
+            if (!requests || requests.length === 0) {
+                const msg = this.currentSearchQuery ? `No assistance requests matching "${this.currentSearchQuery}"` : 'No assistance requests received yet.';
+                body.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-muted">${QCMS.emptyState('help-circle', 'No Requests', msg)}</td></tr>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+            body.innerHTML = requests.map(r => {
+                const statusBadge = r.status === 'Pending' ? 'orange'
+                    : r.status === 'Approved' ? 'green'
+                    : r.status === 'Not Approved' ? 'red' : 'blue';
+                const replySection = r.response
+                    ? `<div class="mt-1 p-2 rounded" style="background:var(--ds-surface-2,#f0fdf4);border-left:3px solid #22c55e;font-size:12px;"><strong>Reply:</strong> ${r.response}</div>`
+                    : '';
+                return `
+                <tr>
+                    <td>
+                        <div class="fw-semibold">${r.project_title}</div>
+                        <span class="text-xxs font-mono text-muted">${r.project_uid}</span>
+                    </td>
+                    <td><span class="ds-badge blue">Stage ${r.stage_id}</span></td>
+                    <td>
+                        <div class="fw-medium">${r.user_name}</div>
+                        <div class="text-xxs text-muted">${r.user_email || ''}</div>
+                    </td>
+                    <td>
+                        <div style="max-width:220px;white-space:normal;font-size:13px;">${r.message}</div>
+                        ${replySection}
+                    </td>
+                    <td class="text-muted" style="font-size:12px;">${r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+                    <td><span class="ds-badge ${statusBadge}">${r.status}</span></td>
+                    <td class="text-end" style="white-space:nowrap;">
+                        <a href="/projects/project-details.html?id=${r.project_id}&stage=${r.stage_id}" class="ds-btn ds-btn-sm ds-btn-ghost me-1">Open Stage ${r.stage_id}</a>
+                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.respondToRequest(${r.id}, '${r.project_title}', 'Stage ${r.stage_id}', '${r.user_name}', \`${(r.message || '').replace(/`/g,"'")}\`, '${r.status}', \`${(r.response || '').replace(/`/g,"'")}\`)">
+                            ${r.status === 'Pending' ? 'Reply' : 'Update Reply'}
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+            if (window.lucide) lucide.createIcons();
         },
 
         respondToRequest(reqId, projectTitle, stage, userName, message, currentStatus, currentReply) {
@@ -373,132 +398,163 @@
             try {
                 await api.post(`/facilitator/assistance-requests/${reqId}/respond`, { response, status });
                 this.replyModal.hide();
-                QCMS.toast('Reply sent successfully!', 'success');
+                QCMS.toast('Reply sent successfully and recorded in Assisted Project History!', 'success');
                 this.loadAssistanceRequests();
+                this.loadAssistedHistory();
+                this.loadStats();
             } catch (e) {
                 QCMS.toast('Failed to send reply: ' + (e.message || 'Unknown error'), 'error');
             }
         },
 
-        // ─── RCA Workspace ───────────────────────────────────────
-        async loadRCA() {
-            try {
-                const projects = await api.get('/facilitator/rca-workspace');
-                this.rcaData = projects;
-                this.renderRCA(this.filterData(this.rcaData));
-            } catch (e) {
-                document.getElementById('rcaBody').innerHTML = `<div class="p-4 text-danger">Error loading RCA queue.</div>`;
-            }
-        },
-
-        renderRCA(projects) {
-            document.getElementById('rcaCount').textContent = `${projects.length} Pending`;
-            const body = document.getElementById('rcaBody');
-            if (!projects.length) {
-                const msg = this.currentSearchQuery ? `No projects matching "${this.currentSearchQuery}"` : 'All project root-causes are verified. Queue clear!';
-                body.innerHTML = `<div class="p-4">${QCMS.emptyState('check-circle', 'Queue Clear', msg)}</div>`;
-                if (window.lucide) lucide.createIcons();
-                return;
-            }
-            body.innerHTML = `<div class="p-3 d-flex flex-column gap-3">
-                ${projects.map(p => `
-                    <div class="border rounded p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <div class="fw-semibold text-primary">${p.title}</div>
-                                <div class="text-xs text-muted mt-0.5">TL: ${p.team_leader}</div>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="facDash.openNoteModal(${p.id}, 5)">
-                                    <i data-lucide="message-square" style="width:13px;height:13px;"></i> Note
-                                </button>
-                                <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.openValidateModal(${p.id})">
-                                    Validate RCA
-                                </button>
-                                <a href="/projects/workspace.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Workspace</a>
-                            </div>
-                        </div>
-                        <div class="p-2 bg-light rounded text-xs">
-                            <strong>Problem Statement:</strong> ${p.problem_statement || 'N/A'}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>`;
-            if (window.lucide) lucide.createIcons();
-        },
-
-        // ─── Pipeline ─────────────────────────────────────────────
+        // ─── Pipeline / Active Projects ───────────────────────────
         async loadPipeline() {
             try {
                 const projects = await api.get('/facilitator/projects');
-                this.pipelineData = projects;
+                this.pipelineData = projects || [];
                 this.renderPipeline(this.filterData(this.pipelineData));
             } catch (e) {
-                document.getElementById('pipelineBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Error loading pipeline.</td></tr>`;
+                document.getElementById('pipelineBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Error loading projects.</td></tr>`;
             }
         },
 
         renderPipeline(projects) {
-            document.getElementById('pipelineCount').textContent = `${projects.length} Projects`;
+            document.getElementById('pipelineCount').textContent = `${projects.length} Active Project${projects.length === 1 ? '' : 's'}`;
             const body = document.getElementById('pipelineBody');
             if (!projects.length) {
-                const msg = this.currentSearchQuery ? `No results for "${this.currentSearchQuery}"` : 'No active projects found in your oversight pipeline.';
-                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${QCMS.emptyState('search', 'No Projects matches', msg)}</td></tr>`;
+                const msg = this.currentSearchQuery ? `No active projects matching "${this.currentSearchQuery}"` : 'No active projects found where you are assigned as facilitator.';
+                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${QCMS.emptyState('folder-open', 'No Active Projects', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
+            const stageColors = {
+                1: 'blue', 2: 'cyan', 3: 'orange', 4: 'indigo', 
+                5: 'purple', 6: 'pink', 7: 'teal', 8: 'green'
+            };
             body.innerHTML = projects.map(p => {
-                const stageColors = {
-                    1: 'gray', 2: 'blue', 3: 'orange', 4: 'indigo', 
-                    5: 'purple', 6: 'pink', 7: 'yellow', 8: 'green'
-                };
-                
-                let statusCell = `<span class="ds-badge ghost">${p.status}</span>`;
-                let actionCell = `<a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Manage</a>`;
+                let statusBadge = p.status.includes('Approved') ? 'green' 
+                    : p.status.includes('Submitted') ? 'orange' 
+                    : p.status.includes('Rejected') ? 'red' : 'blue';
                 
                 return `<tr>
-                    <td><div class="fw-semibold">${p.title}</div><span class="text-xxs font-mono text-muted">${p.uid}</span></td>
-                    <td>${p.team_leader}</td>
-                    <td><span class="ds-badge ${stageColors[p.stage] || 'gray'}">Stage ${p.stage}</span></td>
-                    <td>${statusCell}</td>
-                    <td class="text-end">${actionCell}</td>
+                    <td>
+                        <div class="fw-semibold">${p.title}</div>
+                        <span class="text-xxs font-mono text-muted">${p.uid}</span>
+                    </td>
+                    <td>
+                        <div class="fw-medium">${p.dept}</div>
+                        <span class="text-xxs text-muted">TL: ${p.team_leader}</span>
+                    </td>
+                    <td><span class="ds-badge ${stageColors[p.stage] || 'blue'}">Stage ${p.stage}</span></td>
+                    <td><span class="ds-badge ${statusBadge}">${p.status}</span></td>
+                    <td class="text-end">
+                        <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-primary">
+                            <i data-lucide="external-link" style="width:13px;height:13px;margin-right:4px;"></i> Open Project
+                        </a>
+                    </td>
                 </tr>`;
             }).join('');
             if (window.lucide) lucide.createIcons();
         },
 
-        // ─── Completed Projects ──────────────────────────────────
-        async loadCompleted() {
+        // ─── Assisted Project History ────────────────────────────
+        async loadAssistedHistory() {
             try {
-                const projects = await api.get('/facilitator/completed-projects');
-                this.completedData = projects;
-                this.renderCompleted(this.filterData(this.completedData));
+                const history = await api.get('/facilitator/assisted-history');
+                this.assistedHistoryData = history || [];
+                this.renderAssistedHistory(this.filterData(this.assistedHistoryData));
             } catch (e) {
-                document.getElementById('completedBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Error loading completed projects.</td></tr>`;
+                document.getElementById('assistedHistoryBody').innerHTML = `<tr><td colspan="9" class="p-4 text-center text-danger">Error loading assisted history.</td></tr>`;
             }
         },
 
-        renderCompleted(projects) {
-            document.getElementById('completedCount').textContent = `${projects.length} Completed`;
-            const body = document.getElementById('completedBody');
-            if (!projects.length) {
-                const msg = this.currentSearchQuery ? `No results for "${this.currentSearchQuery}"` : 'No completed projects found.';
-                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${QCMS.emptyState('check-square', 'No Completed Projects', msg)}</td></tr>`;
+        renderAssistedHistory(items) {
+            document.getElementById('assistedHistoryCount').textContent = `${items.length} Assisted`;
+            const body = document.getElementById('assistedHistoryBody');
+            if (!items || !items.length) {
+                const msg = this.currentSearchQuery ? `No assisted history matching "${this.currentSearchQuery}"` : 'No assisted project history found yet. As you provide guidance and respond to project assistance requests, your assistance history will be logged here.';
+                body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-muted">${QCMS.emptyState('history', 'No Assisted History', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
-            body.innerHTML = projects.map(p => {
-                let statusCell = `<span class="ds-badge green">Completed</span>`;
-                let actionCell = `<a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost">Review Report &amp; Comment</a>`;
-                
+            body.innerHTML = items.map(item => {
+                const statusBadge = item.status === 'Approved' ? 'green' 
+                    : item.status === 'Not Approved' ? 'red' 
+                    : item.status === 'Needs Info' ? 'orange' : 'blue';
+
+                const responseExcerpt = item.response ? (
+                    item.response.length > 80 ? item.response.substring(0, 80) + '...' : item.response
+                ) : '<span class="text-muted fst-italic">No response details</span>';
+
+                const messageExcerpt = item.message ? (
+                    item.message.length > 70 ? item.message.substring(0, 70) + '...' : item.message
+                ) : '—';
+
+                const assistedDateStr = item.assisted_at ? new Date(item.assisted_at).toLocaleDateString('en-IN', {
+                    day: '2-digit', month: 'short', year: 'numeric'
+                }) : '—';
+
                 return `<tr>
-                    <td><div class="fw-semibold">${p.title}</div><span class="text-xxs font-mono text-muted">${p.uid}</span></td>
-                    <td>${p.team_leader}</td>
-                    <td><span class="ds-badge green">Stage 8</span></td>
-                    <td>${statusCell}</td>
-                    <td class="text-end">${actionCell}</td>
+                    <td>
+                        <div class="fw-semibold">${item.project_title}</div>
+                        <span class="text-xxs font-mono text-muted">${item.project_uid}</span>
+                    </td>
+                    <td><span class="text-sm">${item.dept}</span></td>
+                    <td><span class="ds-badge blue">Stage ${item.stage_id}</span></td>
+                    <td>
+                        <div class="fw-medium">${item.requested_by}</div>
+                        <div class="text-xxs text-muted">${item.user_email || ''}</div>
+                    </td>
+                    <td>
+                        <div style="max-width:180px;white-space:normal;font-size:12px;" class="text-muted" title="${(item.message || '').replace(/"/g, '&quot;')}">${messageExcerpt}</div>
+                    </td>
+                    <td>
+                        <div class="p-1.5 rounded" style="background:rgba(34,197,94,0.06);border-left:3px solid #22c55e;font-size:12px;max-width:220px;white-space:normal;">
+                            <strong class="text-success">Assistance:</strong> ${responseExcerpt}
+                        </div>
+                    </td>
+                    <td><span class="ds-badge ${statusBadge}">${item.status}</span></td>
+                    <td class="text-muted" style="font-size:12px;white-space:nowrap;">${assistedDateStr}</td>
+                    <td class="text-end" style="white-space:nowrap;">
+                        <button class="ds-btn ds-btn-sm ds-btn-ghost me-1" onclick="facDash.viewAssistedDetails(${item.id})">
+                            <i data-lucide="eye" style="width:13px;height:13px;margin-right:3px;"></i> View Details
+                        </button>
+                        <a href="/projects/project-details.html?id=${item.project_id}&stage=${item.stage_id}" class="ds-btn ds-btn-sm ds-btn-outline">
+                            Open Stage ${item.stage_id}
+                        </a>
+                    </td>
                 </tr>`;
             }).join('');
+            if (window.lucide) lucide.createIcons();
+        },
+
+        viewAssistedDetails(id) {
+            const item = this.assistedHistoryData.find(x => x.id === id);
+            if (!item) return;
+
+            document.getElementById('adProjectTitle').textContent = item.project_title;
+            document.getElementById('adProjectUid').textContent = item.project_uid;
+            document.getElementById('adProjectDept').textContent = item.dept || 'General';
+            document.getElementById('adProjectStage').textContent = `Stage ${item.stage_id}`;
+            document.getElementById('adRequester').textContent = `${item.requested_by} ${item.user_email ? '(' + item.user_email + ')' : ''}`;
+            
+            const dateStr = item.assisted_at ? new Date(item.assisted_at).toLocaleString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            }) : '—';
+            document.getElementById('adAssistedDate').textContent = dateStr;
+
+            const badge = document.getElementById('adStatusBadge');
+            badge.textContent = item.status;
+            badge.className = `ms-2 ds-badge ${item.status === 'Approved' ? 'green' : item.status === 'Not Approved' ? 'red' : item.status === 'Needs Info' ? 'orange' : 'blue'}`;
+
+            document.getElementById('adOriginalMessage').textContent = item.message || 'No description provided';
+            document.getElementById('adResponse').textContent = item.response || 'No assistance notes recorded.';
+            document.getElementById('adOpenStageLink').href = `/projects/project-details.html?id=${item.project_id}&stage=${item.stage_id}`;
+
+            if (!this.assistedDetailsModal) {
+                this.assistedDetailsModal = new bootstrap.Modal(document.getElementById('assistedDetailsModal'));
+            }
+            this.assistedDetailsModal.show();
             if (window.lucide) lucide.createIcons();
         },
 
@@ -536,8 +592,7 @@
             try {
                 await api.post(`/facilitator/rca/${projectId}/validate`, { validation_note: note });
                 this.validateModal.hide();
-                QCMS.toast('RCA Validated! Stage 4 is now unlocked.', 'success');
-                this.loadRCA();
+                QCMS.toast('RCA Validated! Stage 6 is now unlocked.', 'success');
                 this.loadStats();
             } catch (e) { QCMS.toast(e.message || 'Validation failed', 'error'); }
         }
@@ -594,6 +649,71 @@
                     <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitReply()">
                         <i data-lucide="send" style="width:14px;height:14px;margin-right:6px;"></i> Send Reply
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Assisted Details Modal ─────────────────────────────── -->
+    <div class="modal fade" id="assistedDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card ds-card border-0" style="border: 1px solid var(--ds-border-color) !important;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);">
+                        <i data-lucide="history" class="me-2 text-primary" style="width:20px;height:20px;vertical-align:text-bottom;"></i> Assisted Project Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Project metadata card -->
+                    <div class="p-3 rounded mb-3" style="background:var(--ds-surface-1,#f8fafc);border:1px solid var(--ds-border-color);">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <span class="text-xs text-muted d-block">Project</span>
+                                <strong id="adProjectTitle" class="text-sm">—</strong>
+                                <span id="adProjectUid" class="font-mono text-xxs text-muted d-block">—</span>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-xs text-muted d-block">Department / Plant</span>
+                                <span id="adProjectDept" class="fw-medium text-sm">—</span>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-xs text-muted d-block">Assisted Stage</span>
+                                <span id="adProjectStage" class="ds-badge blue">Stage —</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-xs text-muted d-block">Requested By</span>
+                                <span id="adRequester" class="fw-medium text-sm">—</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-xs text-muted d-block">Assisted Date &amp; Decision</span>
+                                <span id="adAssistedDate" class="text-xs text-muted">—</span>
+                                <span id="adStatusBadge" class="ms-2 ds-badge green">Approved</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Original Team Question / Request -->
+                    <div class="mb-3">
+                        <label class="ds-label fw-bold text-xs text-uppercase mb-1">
+                            <i data-lucide="help-circle" style="width:14px;height:14px;margin-right:4px;" class="text-warning"></i> Team Request / Issue Description
+                        </label>
+                        <div id="adOriginalMessage" class="p-3 rounded text-sm" style="background:var(--ds-surface-raised,#f1f5f9);border:1px solid var(--ds-border-color);white-space:pre-wrap;color:var(--ds-text-main);">—</div>
+                    </div>
+
+                    <!-- Facilitator Guidance & Assistance Provided -->
+                    <div class="mb-2">
+                        <label class="ds-label fw-bold text-xs text-uppercase mb-1">
+                            <i data-lucide="check-circle" style="width:14px;height:14px;margin-right:4px;" class="text-success"></i> Facilitator Assistance &amp; Guidance Provided
+                        </label>
+                        <div id="adResponse" class="p-3 rounded text-sm" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.3);border-left:4px solid #22c55e;white-space:pre-wrap;color:var(--ds-text-main);">—</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-2 d-flex justify-content-between">
+                    <a id="adOpenStageLink" href="#" class="ds-btn ds-btn-outline">
+                        <i data-lucide="external-link" style="width:14px;height:14px;margin-right:6px;"></i> Open Stage in Workspace
+                    </a>
+                    <button type="button" class="ds-btn ds-btn-primary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

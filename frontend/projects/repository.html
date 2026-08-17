@@ -91,12 +91,17 @@
     <div class="modal fade" id="detailModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content glass-card">
-                <div class="modal-header border-0 pb-0">
+                <div class="modal-header border-0 pb-0 d-flex justify-content-between align-items-center">
                     <div>
                         <h5 class="modal-title fw-bold" id="detailTitle">Project Title</h5>
                         <p class="text-xs text-muted mb-0" id="detailMeta">Category • Archived on</p>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="ds-btn ds-btn-primary ds-btn-sm text-xs py-1.5 px-3" id="detailModalDownloadBtn" onclick="repoApp.downloadCurrentReport()">
+                            <i data-lucide="download" style="width:14px;height:14px;margin-right:4px;"></i> Download Report
+                        </button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
                 </div>
                 <div class="modal-body" id="detailBody">
                     <!-- Loaded dynamically -->
@@ -123,6 +128,9 @@
                 }
                 await this.loadPlants();
                 await this.loadDepartments();
+                if (window.QCMS && typeof window.QCMS.populateCategorySelects === 'function') {
+                    await window.QCMS.populateCategorySelects();
+                }
                 this.search();
                 if (window.lucide) lucide.createIcons();
             },
@@ -271,9 +279,14 @@
                             </div>
                         </div>
                         
-                        <button class="ds-btn ds-btn-secondary w-100" onclick="repoApp.viewDetail(${p.id})">
-                            <i data-lucide="external-link" style="width:14px;height:14px;"></i> View Solution
-                        </button>
+                        <div class="d-flex gap-2">
+                            <a href="/projects/project-details.html?id=${p.project_id || p.id}" class="ds-btn ds-btn-secondary flex-grow-1 text-xs py-2 px-2 text-decoration-none d-flex align-items-center justify-content-center">
+                                <i data-lucide="external-link" style="width:14px;height:14px;margin-right:4px;"></i> View Solution
+                            </a>
+                            <button class="ds-btn ds-btn-primary flex-grow-1 text-xs py-2 px-2" onclick="repoApp.downloadReport(${p.project_id || p.id})" title="Download Final Summary Report PDF">
+                                <i data-lucide="download" style="width:14px;height:14px;margin-right:4px;"></i> Download Report
+                            </button>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -287,70 +300,60 @@
                 if (window.lucide) lucide.createIcons();
             },
 
+            currentProjectId: null,
+
+            downloadCurrentReport() {
+                if (this.currentProjectId) {
+                    this.downloadReport(this.currentProjectId);
+                } else {
+                    QCMS.toast('Project context not found for report download', 'warning');
+                }
+            },
+
+            downloadReport(projectId) {
+                if (!projectId) {
+                    QCMS.toast('Project ID missing for report generation', 'warning');
+                    return;
+                }
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                QCMS.toast('Preparing final summary report PDF...', 'info');
+
+                fetch(`/api/reports/export/pdf/${projectId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(async res => {
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.msg || errData.message || 'Failed to download report PDF');
+                    }
+                    return res.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Project_${projectId}_Summary_Report.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    QCMS.toast('Final summary report downloaded successfully!', 'success');
+                })
+                .catch(err => {
+                    console.error('[Repo] Download error:', err);
+                    QCMS.toast(err.message || 'Error downloading report PDF', 'danger');
+                });
+            },
+
             async viewDetail(entryId) {
                 try {
                     const detail = await api.get(`/repository/${entryId}`);
-                    document.getElementById('detailTitle').textContent = detail.title;
-                    document.getElementById('detailMeta').textContent = `${detail.category || 'General'} • Archived ${new Date(detail.archived_at).toLocaleDateString()}`;
-
-                    const stages = [
-                        'Stage 1: Problem Definition & Project Initiation',
-                        'Stage 2: Observation & Data Collection',
-                        'Stage 3: Cause Identification',
-                        'Stage 4: Root Cause Analysis & Verification',
-                        'Stage 5: Countermeasure Planning & Solution Development',
-                        'Stage 6: Implementation & Change Management',
-                        'Stage 7: Performance Verification & Benefits Realization',
-                        'Stage 8: Standardization, Knowledge Sharing & Project Closure'
-                    ];
-
-                    const accordionItems = stages.map((s, i) => {
-                        const stageNum = i + 1;
-                        const stageData = (detail.all_stages || {})[stageNum] || {};
-                        const stageHTML = repoApp.renderStageHTML(stageNum, stageData);
-                        
-                        return `
-                            <div class="accordion-item bg-transparent border-0 mb-3 glass-card">
-                                <h2 class="accordion-header" id="headingStage${stageNum}">
-                                    <button class="accordion-button collapsed bg-transparent ds-text-main fw-semibold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStage${stageNum}" aria-expanded="false" aria-controls="collapseStage${stageNum}" style="box-shadow: none;">
-                                        <span class="ds-icon-circle bg-primary-soft text-primary me-2" style="width:24px;height:24px;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;">${stageNum}</span>
-                                        ${s}
-                                    </button>
-                                </h2>
-                                <div id="collapseStage${stageNum}" class="accordion-collapse collapse" aria-labelledby="headingStage${stageNum}" data-bs-parent="#stageAccordion">
-                                    <div class="accordion-body border-top border-light p-4 text-xs text-secondary">
-                                        ${stageHTML}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-
-                    document.getElementById('detailBody').innerHTML = `
-                        <div class="glass-panel p-4 mb-4">
-                            <h6 class="text-xxs fw-bold uppercase text-muted mb-3">Project Lifecycle (All Stages Completed)</h6>
-                            <div class="stage-timeline">
-                                ${stages.map((s, i) => `
-                                    <div class="stage-step completed">
-                                        <div class="stage-dot">${i + 1}</div>
-                                        <small class="text-xxs d-block mt-1">Stage ${i + 1}</small>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                        <div class="row g-4">
-                            <div class="col-lg-12">
-                                <div class="accordion" id="stageAccordion">
-                                    ${accordionItems}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    new bootstrap.Modal(document.getElementById('detailModal')).show();
-                    if (window.lucide) lucide.createIcons();
-                } catch (e) { 
-                    console.error(e);
-                    QCMS.toast('Failed to load details', 'error'); 
+                    const projId = detail.project_id || detail.id || entryId;
+                    window.location.href = `/projects/project-details.html?id=${projId}`;
+                } catch (e) {
+                    window.location.href = `/projects/project-details.html?id=${entryId}`;
                 }
             },
 
@@ -604,10 +607,10 @@
                                     <div class="table-responsive mb-3">
                                         <table class="table table-sm table-bordered text-xs bg-white mb-0 text-dark">
                                             <thead>
-                                                <tr class="bg-light"><th>Change Description</th><th>SOP Updated?</th><th>Effective Date</th></tr>
+                                                <tr class="bg-light"><th>Change Description</th><th>Owner</th><th>SOP Updated?</th><th>Effective Date</th></tr>
                                             </thead>
                                             <tbody>
-                                                ${change.map(r => `<tr><td>${r.change_description || '--'}</td><td>${r.sop_updated || '--'}</td><td>${r.date || '--'}</td></tr>`).join('')}
+                                                ${change.map(r => `<tr><td>${r.change_description || '--'}</td><td>${r.owner || r.responsible || '--'}</td><td>${r.sop_updated || '--'}</td><td>${r.date || '--'}</td></tr>`).join('')}
                                             </tbody>
                                         </table>
                                     </div>

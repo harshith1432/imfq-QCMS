@@ -288,6 +288,10 @@ const api = {
         return this.get(url);
     },
 
+    getSOPMasters: function() {
+        return this.get('/sop/masters');
+    },
+
     getRepositoryProjects: function(filters = {}) {
         const params = new URLSearchParams();
         Object.entries(filters).forEach(([k, v]) => {

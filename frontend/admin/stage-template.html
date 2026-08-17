@@ -507,7 +507,22 @@
         }
         .btn-req-optional:hover {
             border-color: var(--ds-accent) !important;
-            color: var(--ds-accent) !important;
+        @keyframes diffPulse {
+            0% { background-color: rgba(59, 130, 246, 0.25); box-shadow: 0 0 16px rgba(59, 130, 246, 0.4); transform: scale(1.01); }
+            50% { background-color: rgba(59, 130, 246, 0.45); box-shadow: 0 0 24px rgba(59, 130, 246, 0.6); transform: scale(1.02); }
+            100% { background-color: transparent; box-shadow: none; transform: scale(1); }
+        }
+        .diff-highlight-pulse {
+            animation: diffPulse 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border: 2px solid var(--ds-primary, #3b82f6) !important;
+            border-radius: 8px !important;
+        }
+        #globalSyncDiffModal {
+            z-index: 100005 !important;
+        }
+        #globalSyncDiffModal + .modal-backdrop,
+        .modal-backdrop.show {
+            z-index: 100000 !important;
         }
     </style>
 
@@ -525,6 +540,11 @@
             <header class="ds-header-layout section-spacing">
                 <div class="h-stack justify-content-between w-100 flex-wrap gap-3">
                     <div class="v-stack">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <a href="/dashboard/dashboard-admin.html" target="_top" id="backNavBtn" class="ds-btn ds-btn-outline ds-btn-xs d-inline-flex align-items-center gap-1" style="text-decoration:none;">
+                                <i data-lucide="arrow-left" style="width:12px;height:12px;"></i> Back to Admin Dashboard
+                            </a>
+                        </div>
                         <h1 class="ds-title mb-0">8-Stage Workflow Template</h1>
                         <p class="ds-text-secondary mb-0">Customize your organization's workflow: drag stages to reorder, click stages to manage columns/QC Tools, and edit titles inline.</p>
                     </div>
@@ -1190,8 +1210,8 @@ function renderList() {
                         </div>
                         <div class="card-actions-wrap">
                             <div class="form-check form-switch mb-0 me-2" title="Toggle section mandatory requirement" onclick="event.stopPropagation();">
-                                <input class="form-check-input section-required-toggle" type="checkbox" role="switch" ${sec.required !== false ? 'checked' : ''}>
-                                <label class="text-xs ${sec.required !== false ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0">Mandatory</label>
+                                <input class="form-check-input section-required-toggle" type="checkbox" role="switch" ${sec.required === true ? 'checked' : ''}>
+                                <label class="text-xs ${sec.required === true ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0">${sec.required === true ? 'Mandatory' : 'Optional'}</label>
                             </div>
                             <div class="form-check form-switch mb-0 me-2" title="Allow project teams to mark this section Applicable / Not Applicable" onclick="event.stopPropagation();">
                                 <input class="form-check-input section-allowna-toggle" type="checkbox" role="switch" ${sec.allow_na ? 'checked' : ''}>
@@ -1219,7 +1239,7 @@ function renderList() {
                             sec.required = e.target.checked;
                             const label = e.target.nextElementSibling;
                             if (label) {
-                                label.textContent = 'Mandatory';
+                                label.textContent = e.target.checked ? 'Mandatory' : 'Optional';
                                 label.className = `text-xs ${e.target.checked ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0`;
                             }
                         });
@@ -1953,8 +1973,22 @@ function mockupHtmlForFieldType(type, placeholder = '', inputType = 'text') {
                     <span class="ms-1" style="vertical-align:middle;">[Mockup Stratification Table & Chart]</span>
                 </div>
             `;
+        case 'grid_2col': case '2_column_grid':
+            return `<div class="row g-2 text-xs" style="pointer-events:none;"><div class="col-6"><div class="p-2 border rounded bg-light text-center text-muted">Column 1 (Side-by-side)</div></div><div class="col-6"><div class="p-2 border rounded bg-light text-center text-muted">Column 2 (Side-by-side)</div></div></div>`;
+        case 'grid_3col': case '3_column_grid':
+            return `<div class="row g-2 text-xs" style="pointer-events:none;"><div class="col-4"><div class="p-2 border rounded bg-light text-center text-muted">Col 1</div></div><div class="col-4"><div class="p-2 border rounded bg-light text-center text-muted">Col 2</div></div><div class="col-4"><div class="p-2 border rounded bg-light text-center text-muted">Col 3</div></div></div>`;
+        case 'info_callout': case 'info': case 'callout':
+            return `<div class="alert alert-info py-2 px-3 mb-0 text-xs d-flex align-items-center gap-2" style="pointer-events:none;"><i data-lucide="info" style="width:14px;height:14px;"></i><span>${esc(placeholder || 'Information callout instructions banner...')}</span></div>`;
+        case 'attachment': case 'document_link':
+            return `<div class="input-group input-group-sm" style="pointer-events:none;"><span class="input-group-text bg-light text-muted"><i data-lucide="link" style="width:14px;height:14px;"></i></span><input type="text" class="ds-input" placeholder="${esc(placeholder || 'https://drive.google.com/...')}"><button class="ds-btn ds-btn-outline ds-btn-sm" type="button">Open Link</button></div>`;
+        case 'action_plan_3w1h':
+            return `<div class="table-responsive" style="pointer-events:none;"><table class="ds-table table-bordered mb-1 text-xs"><thead><tr><th>What (Action)</th><th>Who (Lead)</th><th>When</th><th>How</th><th>Status</th></tr></thead><tbody><tr><td>Sample Action</td><td>Lead A</td><td>YYYY-MM-DD</td><td>Method X</td><td><span class="badge bg-warning-subtle text-warning">Pending</span></td></tr></tbody></table></div>`;
+        case 'action_btn': case 'view_link':
+            return `<button class="ds-btn ds-btn-primary ds-btn-sm" style="pointer-events:none;" type="button"><i data-lucide="${type==='action_btn'?'play':'eye'}" style="width:12px;height:12px;margin-right:4px;"></i>${esc(placeholder || 'Trigger Action / View')}</button>`;
+        case 'facilitator_gate':
+            return `<div class="d-flex align-items-center justify-content-between p-2 rounded bg-light border" style="pointer-events:none;"><span class="text-xs fw-semibold">Facilitator Review Signoff</span><input class="form-check-input" type="checkbox" disabled></div>`;
         default:
-            return `<div class="text-xs text-secondary">[Mockup: ${type}]</div>`;
+            return `<div class="text-xs text-secondary">[Container / Field: ${type}]</div>`;
     }
 }
 
@@ -2123,22 +2157,145 @@ async function checkGlobalTemplateStatus() {
     }
 }
 
+let pendingGlobalDiffs = [];
+
 async function openGlobalSyncModal(globalVer, appliedVer) {
-    if (!confirm(`Synchronize Global 8-Stage Workflow Template (v${globalVer}) to your organization?\n\nThis will update your stage template layout. Completed stages in active projects will remain safely frozen.`)) {
-        return;
-    }
     try {
-        const res = await api.post('/admin/stages-template/sync-global');
+        const diffModalEl = document.getElementById('globalSyncDiffModal');
+        if (diffModalEl && diffModalEl.parentElement !== document.body) {
+            document.body.appendChild(diffModalEl);
+        }
+        let bsModal = bootstrap.Modal.getInstance(diffModalEl);
+        if (!bsModal) {
+            bsModal = new bootstrap.Modal(diffModalEl);
+        }
+
+        document.getElementById('globalSyncVersionBadge').textContent = `Version Transition: v${appliedVer || 1} (Your Org) → v${globalVer} (Super Admin Global Target)`;
+        document.getElementById('diffItemsList').innerHTML = `<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Calculating template diffs...</div>`;
+        document.getElementById('diffSummaryCards').innerHTML = '';
+
+        bsModal.show();
+
+        const res = await api.get('/admin/stages-template/diff');
+        pendingGlobalDiffs = res.diffs || [];
+
+        const addedCount = pendingGlobalDiffs.filter(d => d.type.includes('ADDED')).length;
+        const modCount = pendingGlobalDiffs.filter(d => d.type.includes('MODIFIED') || d.type.includes('TITLE') || d.type.includes('ICON')).length;
+        const remCount = pendingGlobalDiffs.filter(d => d.type.includes('REMOVED')).length;
+
+        document.getElementById('diffSummaryCards').innerHTML = `
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 text-center bg-success bg-opacity-10 border-success border-opacity-25 shadow-xs">
+                    <div class="fs-4 fw-bold text-success">${addedCount}</div>
+                    <div class="text-xs text-success fw-semibold">New Additions</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 text-center bg-warning bg-opacity-10 border-warning border-opacity-25 shadow-xs">
+                    <div class="fs-4 fw-bold text-warning">${modCount}</div>
+                    <div class="text-xs text-warning fw-semibold">Modifications</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 text-center bg-danger bg-opacity-10 border-danger border-opacity-25 shadow-xs">
+                    <div class="fs-4 fw-bold text-danger">${remCount}</div>
+                    <div class="text-xs text-danger fw-semibold">Removals</div>
+                </div>
+            </div>
+        `;
+
+        if (pendingGlobalDiffs.length === 0) {
+            document.getElementById('diffItemsList').innerHTML = `<div class="alert alert-info mb-0 text-xs">No structural differences found between your organization template and the Super Admin global template.</div>`;
+            return;
+        }
+
+        let html = '';
+        pendingGlobalDiffs.forEach((item, i) => {
+            let badgeClass = 'bg-primary';
+            let badgeText = 'CHANGE';
+            if (item.type.includes('ADDED')) { badgeClass = 'bg-success'; badgeText = 'NEW ADDITION'; }
+            else if (item.type.includes('MODIFIED') || item.type.includes('TITLE')) { badgeClass = 'bg-warning text-dark'; badgeText = 'MODIFIED'; }
+            else if (item.type.includes('REMOVED')) { badgeClass = 'bg-danger'; badgeText = 'REMOVED'; }
+
+            html += `
+                <div class="d-flex align-items-center justify-content-between p-3 border rounded-3 bg-white shadow-xs">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge ${badgeClass} text-xxs font-monospace px-2 py-1">${badgeText}</span>
+                        <div>
+                            <span class="fw-bold text-dark text-xs d-block">${escapeHtml(item.label)}</span>
+                            <span class="text-xxs text-muted">Target Location: Stage ${item.stage_id} (${escapeHtml(item.stage_title || '')})</span>
+                        </div>
+                    </div>
+                    <button class="ds-btn ds-btn-ghost ds-btn-xs" onclick="highlightDiffStage(${item.stage_id}, '${item.section_id || ''}')">
+                        <i data-lucide="eye" style="width:12px;height:12px;"></i> View Stage
+                    </button>
+                </div>
+            `;
+        });
+        document.getElementById('diffItemsList').innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+
+    } catch (e) {
+        console.error('Error loading template diffs:', e);
+        showToast('Could not calculate template diffs: ' + (e.message || e), 'error');
+    }
+}
+
+async function executeGlobalSync(mode) {
+    try {
+        const res = await api.post('/admin/stages-template/sync-global', { mode: mode || 'overwrite' });
         showToast(res.message || 'Global template synchronized successfully!');
+        
+        const diffModalEl = document.getElementById('globalSyncDiffModal');
+        const bsModal = bootstrap.Modal.getInstance(diffModalEl);
+        if (bsModal) bsModal.hide();
+
         await checkGlobalTemplateStatus();
         const stagesRes = await api.get('/admin/stages-template');
         stages = (stagesRes.stages || []).sort((a, b) => a.stage_id - b.stage_id);
         renderList();
+
+        if (pendingGlobalDiffs && pendingGlobalDiffs.length > 0) {
+            const firstDiff = pendingGlobalDiffs[0];
+            highlightDiffStage(firstDiff.stage_id, firstDiff.section_id);
+        }
     } catch (err) {
         showToast('Error syncing template: ' + (err.message || 'Unknown error'), 'error');
     }
 }
+
+function highlightDiffStage(stageId, sectionId) {
+    const list = document.getElementById('stageList');
+    if (!list) return;
+
+    const stageIdx = stages.findIndex(s => s.stage_id === stageId);
+    if (stageIdx < 0) return;
+
+    const cont = list.children[stageIdx];
+    if (cont) {
+        const detail = cont.querySelector('.stage-sections-detail');
+        const toggleIcon = cont.querySelector('.collapse-toggle i');
+        if (detail) detail.style.display = 'block';
+        if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
+        if (window.lucide) lucide.createIcons();
+
+        cont.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        cont.classList.add('diff-highlight-pulse');
+        setTimeout(() => cont.classList.remove('diff-highlight-pulse'), 3500);
+
+        if (sectionId) {
+            const secCard = cont.querySelector(`[data-sec-id="${sectionId}"]`);
+            if (secCard) {
+                secCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                secCard.classList.add('diff-highlight-pulse');
+                setTimeout(() => secCard.classList.remove('diff-highlight-pulse'), 3500);
+            }
+        }
+    }
+}
 window.openGlobalSyncModal = openGlobalSyncModal;
+window.executeGlobalSync = executeGlobalSync;
+window.highlightDiffStage = highlightDiffStage;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -2163,5 +2320,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 </script>
+
+<!-- Global Template Sync & Diff Review Modal -->
+<div class="modal fade" id="globalSyncDiffModal" tabindex="-1" aria-hidden="true" style="z-index: 100005;">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-bottom px-4 py-3 bg-light">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="ds-icon-circle bg-primary-soft text-primary" style="width:34px;height:34px;">
+                        <i data-lucide="sparkles" style="width:18px;height:18px;"></i>
+                    </span>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">Global Stage Template Changes Review</h5>
+                        <p class="text-xs text-muted mb-0" id="globalSyncVersionBadge">Comparing Org Template vs Super Admin Global Template</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-4" id="diffSummaryCards">
+                    <!-- Dynamic summary count cards -->
+                </div>
+                <div class="border rounded-3 p-3 mb-2 bg-light-subtle">
+                    <h6 class="fw-bold text-xs text-uppercase text-secondary mb-3 d-flex align-items-center gap-2">
+                        <i data-lucide="list-checks" style="width:14px;height:14px;"></i> Detailed Change Breakdown by Stage
+                    </h6>
+                    <div id="diffItemsList" class="v-stack gap-2">
+                        <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Analyzing template changes...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top px-4 py-3 bg-light d-flex justify-content-between">
+                <button type="button" class="ds-btn ds-btn-ghost text-secondary ds-btn-sm" data-bs-dismiss="modal">Keep Current Org Template</button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="ds-btn ds-btn-outline-primary ds-btn-sm" onclick="executeGlobalSync('merge')">
+                        <i data-lucide="git-merge" style="width:14px;height:14px;"></i> Merge Updates (Keep Custom Sections)
+                    </button>
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="executeGlobalSync('overwrite')">
+                        <i data-lucide="check-circle-2" style="width:14px;height:14px;"></i> Apply All Global Updates
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>

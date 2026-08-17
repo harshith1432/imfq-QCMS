@@ -1753,6 +1753,7 @@ def auto_approve_trial_extension_task(app_obj, org_id):
             current_count = getattr(org, 'trial_extension_count', 0) or 0
             org.trial_extension_count = current_count + 1
             org.trial_ends_at = datetime.utcnow() + timedelta(days=days)
+            org.license_expiry_date = org.trial_ends_at
             org.subscription_status = 'Trialing'
 
             auto_count = sec_settings.get('auto_approved_trial_extensions', 0) + 1
@@ -1799,6 +1800,7 @@ def check_and_apply_pending_trial_extensions(org):
             current_count = getattr(org, 'trial_extension_count', 0) or 0
             org.trial_extension_count = current_count + 1
             org.trial_ends_at = datetime.utcnow() + timedelta(days=days)
+            org.license_expiry_date = org.trial_ends_at
             org.subscription_status = 'Trialing'
 
             auto_count = sec_settings.get('auto_approved_trial_extensions', 0) + 1

@@ -1550,6 +1550,7 @@ def extend_company_trial(org_id):
 
     old_date = org.trial_ends_at.isoformat() if org.trial_ends_at else 'None'
     org.trial_ends_at = new_date
+    org.license_expiry_date = new_date
     org.subscription_status = 'Trialing'
 
     # Update trial extension metrics in security_settings
@@ -3301,43 +3302,52 @@ def save_global_stages_template():
     Organization.query.filter_by(is_deleted=False).update({"has_pending_template_update": True})
     db.session.commit()
 
-    # Notify all Organization Admins (in-app Notification & email alert)
-    try:
-        from app.infrastructure.database.models.models import User, Role, Notification
-        from app.infrastructure.mailer.email_service import EmailUtils
-
-        admin_users = User.query.join(Role).filter(
-            Role.name == 'Admin',
-            User.is_active == True
-        ).all()
-
-        for admin in admin_users:
-            notif = Notification(
-                org_id=admin.org_id,
-                user_id=admin.id,
-                title="Global Workflow Template Update Available",
-                message=f"A new Global 8-Stage Workflow Template (v{ps.global_template_version}) has been published by Super Admin. Please review and apply the update in Admin Settings.",
-                link="/admin/stage-template.html"
-            )
-            db.session.add(notif)
-            
+    # Offload all in-app Notifications & email alerts to background thread for instant HTTP response
+    def _async_notify_and_email(app_obj, version):
+        with app_obj.app_context():
             try:
-                EmailUtils.send_email(
-                    to_email=admin.email,
-                    subject=f"Notice: New Global 8-Stage Workflow Template (v{ps.global_template_version}) Available",
-                    html_content=f"""<p>Dear <strong>{admin.username}</strong>,</p>
-<p>Super Admin has published a new <strong>Global 8-Stage Workflow Template (v{ps.global_template_version})</strong> update.</p>
+                from app.infrastructure.database.models.models import User, Role, Notification, db
+                from app.infrastructure.mailer.email_service import EmailUtils
+
+                admin_users = User.query.join(Role).filter(
+                    Role.name.in_(['Admin', 'Organization Admin', 'admin']),
+                    User.is_active == True
+                ).all()
+
+                for admin in admin_users:
+                    try:
+                        notif = Notification(
+                            org_id=admin.org_id,
+                            user_id=admin.id,
+                            title="Global Workflow Template Update Available",
+                            message=f"A new Global 8-Stage Workflow Template (v{version}) has been published by Super Admin. Please review and apply the update in Admin Settings.",
+                            link="/admin/stage-template.html"
+                        )
+                        db.session.add(notif)
+                        db.session.commit()
+
+                        EmailUtils.send_email(
+                            to_email=admin.email,
+                            subject=f"Notice: New Global 8-Stage Workflow Template (v{version}) Available",
+                            html_content=f"""<p>Dear <strong>{admin.username}</strong>,</p>
+<p>Super Admin has published a new <strong>Global 8-Stage Workflow Template (v{version})</strong> update.</p>
 <p>To review changes and synchronize your organization template, navigate to <strong>Admin Settings &gt; Stage Configuration Template</strong> and click <em>Review &amp; Apply Global Template Changes</em>.</p>""",
-                    email_type="general",
-                    org_id=admin.org_id
-                )
-            except Exception as em_err:
-                print(f"[QCMS] Email dispatch error for admin {admin.id}: {em_err}")
-                
-        db.session.commit()
-    except Exception as notif_err:
-        db.session.rollback()
-        print(f"[QCMS] Error notifying org admins: {notif_err}")
+                            email_type="general",
+                            org_id=admin.org_id
+                        )
+                    except Exception as single_err:
+                        db.session.rollback()
+                        print(f"[QCMS] Async notification error for admin {admin.id}: {single_err}")
+            except Exception as bg_err:
+                print(f"[QCMS] Global template async notification error: {bg_err}")
+
+    try:
+        import threading
+        from flask import current_app
+        app_obj = current_app._get_current_object()
+        threading.Thread(target=_async_notify_and_email, args=(app_obj, ps.global_template_version), daemon=True).start()
+    except Exception as t_err:
+        print(f"[QCMS] Could not spawn background notification thread: {t_err}")
 
     log_admin_action("GLOBAL_STAGES_TEMPLATE_PUBLISHED", target_type="GlobalStageTemplate", details={"version": ps.global_template_version, "stages_count": len(stages)})
 

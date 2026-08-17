@@ -62,34 +62,6 @@
                                     <li><a class="dropdown-item rounded-2 py-2 px-3 text-xs" href="#" onclick="Analytics.setDateRange(0,'All Time'); return false;">All Time</a></li>
                                 </ul>
                             </div>
-                            <!-- Export Dropdown -->
-                            <div class="dropdown">
-                                <button class="ds-btn ds-btn-primary ds-btn-sm px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i data-lucide="download" class="me-2" style="width:14px;"></i>
-                                    <span>Export Report</span>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-2" style="min-width: 220px; border-radius: 12px;">
-                                    <li>
-                                        <a class="dropdown-item rounded-2 py-2 px-3 d-flex align-items-center gap-2" href="#" onclick="Analytics.exportReport('excel'); return false;">
-                                            <i data-lucide="file-spreadsheet" class="text-success" style="width:16px; height:16px;"></i>
-                                            <div class="fw-bold text-xs">Excel Report (.xlsx)</div>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item rounded-2 py-2 px-3 d-flex align-items-center gap-2" href="#" onclick="Analytics.exportReport('csv'); return false;">
-                                            <i data-lucide="file-text" class="text-primary" style="width:16px; height:16px;"></i>
-                                            <div class="fw-bold text-xs">CSV Report (.csv)</div>
-                                        </a>
-                                    </li>
-                                    <li><hr class="dropdown-divider opacity-10 my-1"></li>
-                                    <li>
-                                        <a class="dropdown-item rounded-2 py-2 px-3 d-flex align-items-center gap-2" href="#" onclick="Analytics.exportReport('print'); return false;">
-                                            <i data-lucide="printer" class="text-secondary" style="width:16px; height:16px;"></i>
-                                            <div class="fw-bold text-xs">Print View / PDF</div>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
                         </div>
                     </div>
                 </header>
@@ -127,11 +99,31 @@
                             </div>
                         </div>
 
-                        <!-- Individual Project Select -->
-                        <div id="individualProjectContainer" class="d-none flex-grow-1">
-                            <select id="projectSelector" class="form-select form-select-sm fw-bold text-xs" onchange="Analytics.onProjectSelect(this.value)">
-                                <option value="">-- Select Target Project --</option>
-                            </select>
+                        <!-- Individual Project Select with Inline Search -->
+                        <div id="individualProjectContainer" class="d-none flex-grow-1 position-relative" style="min-width: 280px; max-width: 450px;">
+                            <input type="hidden" id="projectSelector" value="">
+                            <div class="dropdown" id="projectDropdownWrapper">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 fw-bold text-xs d-flex align-items-center justify-content-between text-truncate bg-white border"
+                                        type="button" 
+                                        id="projectDropdownBtn" 
+                                        data-bs-toggle="dropdown" 
+                                        data-bs-auto-close="true"
+                                        aria-expanded="false" 
+                                        style="height: 31px; border-color: var(--ds-border-color) !important; border-radius: 8px;">
+                                    <span id="selectedProjectLabel" class="text-truncate text-main">-- Select Target Project --</span>
+                                </button>
+                                <div class="dropdown-menu p-2 shadow-lg border-0" aria-labelledby="projectDropdownBtn" style="min-width: 340px; width: 100%; border-radius: 12px; z-index: 1050; background: var(--ds-card-bg, #ffffff);">
+                                    <div class="p-1 mb-2 border-bottom pb-2">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-transparent border-end-0 text-muted"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
+                                            <input type="text" id="projectSearchInput" class="form-control border-start-0 text-xs shadow-none" placeholder="Search Project ID or Title..." oninput="Analytics.filterProjectDropdown(this.value)">
+                                        </div>
+                                    </div>
+                                    <div id="projectDropdownList" class="custom-scroll" style="max-height: 230px; overflow-y: auto;">
+                                        <div class="text-center text-muted text-xs py-3">Loading projects...</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -345,15 +337,20 @@
                 await this.loadProjectsList();
                 this.loadProjectRoster(1);
 
+                // Auto focus search input when project dropdown opens
+                const dropdownWrapper = document.getElementById('projectDropdownWrapper');
+                if (dropdownWrapper) {
+                    dropdownWrapper.addEventListener('shown.bs.dropdown', () => {
+                        const searchInput = document.getElementById('projectSearchInput');
+                        if (searchInput) searchInput.focus();
+                    });
+                }
+
                 const urlParams = new URLSearchParams(window.location.search);
                 const projectIdParam = urlParams.get('project') || urlParams.get('id');
                 if (projectIdParam) {
                     this.setScope('individual');
-                    const selector = document.getElementById('projectSelector');
-                    if (selector) {
-                        selector.value = projectIdParam;
-                        this.onProjectSelect(projectIdParam);
-                    }
+                    this.selectProjectFromDropdown(projectIdParam);
                 }
 
                 if (window.lucide) lucide.createIcons();
@@ -546,9 +543,8 @@
                     const selector = document.getElementById('projectSelector');
                     if (selector && selector.value) {
                         this.onProjectSelect(selector.value);
-                    } else if (selector && selector.options.length > 1) {
-                        selector.selectedIndex = 1;
-                        this.onProjectSelect(selector.value);
+                    } else if (this.projects && this.projects.length > 0) {
+                        this.selectProjectFromDropdown(this.projects[0].id);
                     }
                 }
                 if (window.lucide) lucide.createIcons();
@@ -559,6 +555,7 @@
                 this.selectedProjectId = projectId;
                 const selector = document.getElementById('projectSelector');
                 if (selector) selector.value = projectId;
+                this.updateSelectedProjectLabel(projectId);
 
                 try {
                     const data = await api.get(`/analytics/dashboard?project_id=${projectId}`);
@@ -683,11 +680,7 @@
 
             selectProjectFromRoster(projectId) {
                 this.setScope('individual');
-                const selector = document.getElementById('projectSelector');
-                if (selector) {
-                    selector.value = projectId;
-                    this.onProjectSelect(projectId);
-                }
+                this.selectProjectFromDropdown(projectId);
             },
 
             async loadProjectsList() {
@@ -696,13 +689,86 @@
                     const allProjects = Array.isArray(projects) ? projects : (projects.data || []);
                     this.projects = allProjects;
                     
-                    const selector = document.getElementById('projectSelector');
-                    if (selector) {
-                        selector.innerHTML = '<option value="">-- Select Target Project --</option>' + 
-                            allProjects.map(p => `<option value="${p.id}">${p.project_uid || ('PRJ-' + p.id)} - ${p.title}</option>`).join('');
+                    this.renderProjectDropdown(allProjects);
+                    if (this.selectedProjectId) {
+                        this.updateSelectedProjectLabel(this.selectedProjectId);
                     }
                 } catch (e) {
                     console.error("Failed to load projects list", e);
+                }
+            },
+
+            renderProjectDropdown(projects) {
+                const listContainer = document.getElementById('projectDropdownList');
+                if (!listContainer) return;
+
+                if (!projects || projects.length === 0) {
+                    listContainer.innerHTML = '<div class="text-center text-muted text-xs py-3">No matching projects found</div>';
+                    return;
+                }
+
+                const escape = (str) => (window.QCMS && QCMS.escapeHtml) ? QCMS.escapeHtml(str || '') : (str || '');
+
+                listContainer.innerHTML = projects.map(p => {
+                    const pId = p.id;
+                    const uid = p.project_uid || ('PRJ-' + p.id);
+                    const title = p.title || '';
+                    const dept = p.department || '';
+                    const isSelected = String(this.selectedProjectId) === String(pId);
+
+                    return `
+                        <div class="dropdown-item rounded-2 py-2 px-2 cursor-pointer ${isSelected ? 'active bg-primary text-white' : ''}" 
+                             onclick="Analytics.selectProjectFromDropdown('${pId}')"
+                             style="font-size: 0.8rem; cursor: pointer;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="fw-bold ${isSelected ? 'text-white' : 'text-primary'}">${escape(uid)}</span>
+                                <span class="badge ${isSelected ? 'bg-white text-primary border-0' : 'bg-light text-secondary border'} text-xxs">${escape(dept || 'General')}</span>
+                            </div>
+                            <div class="text-truncate mt-1 ${isSelected ? 'text-white-50' : 'text-muted'}" style="font-size:0.75rem;">${escape(title)}</div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            filterProjectDropdown(query) {
+                const q = (query || '').trim().toLowerCase();
+                if (!q) {
+                    this.renderProjectDropdown(this.projects || []);
+                    return;
+                }
+                const filtered = (this.projects || []).filter(p => {
+                    const uid = (p.project_uid || ('PRJ-' + p.id)).toLowerCase();
+                    const title = (p.title || '').toLowerCase();
+                    const dept = (p.department || '').toLowerCase();
+                    return uid.includes(q) || title.includes(q) || dept.includes(q);
+                });
+                this.renderProjectDropdown(filtered);
+            },
+
+            selectProjectFromDropdown(projectId) {
+                this.selectedProjectId = projectId;
+                const hiddenSelector = document.getElementById('projectSelector');
+                if (hiddenSelector) hiddenSelector.value = projectId;
+
+                this.updateSelectedProjectLabel(projectId);
+                this.onProjectSelect(projectId);
+
+                // Close dropdown menu
+                const dropdownBtn = document.getElementById('projectDropdownBtn');
+                if (dropdownBtn && window.bootstrap) {
+                    const bsDropdown = bootstrap.Dropdown.getInstance(dropdownBtn) || bootstrap.Dropdown.getOrCreateInstance(dropdownBtn);
+                    if (bsDropdown) bsDropdown.hide();
+                }
+            },
+
+            updateSelectedProjectLabel(projectId) {
+                const proj = (this.projects || []).find(p => String(p.id) === String(projectId));
+                const labelEl = document.getElementById('selectedProjectLabel');
+                if (proj && labelEl) {
+                    const uid = proj.project_uid || ('PRJ-' + proj.id);
+                    labelEl.textContent = `${uid} - ${proj.title}`;
+                } else if (labelEl && !projectId) {
+                    labelEl.textContent = '-- Select Target Project --';
                 }
             },
 

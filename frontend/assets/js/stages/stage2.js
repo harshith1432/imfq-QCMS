@@ -44,49 +44,49 @@ const Stage2 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.1</span>
-                                Process Observation
+                                <span class="ds-tooltip-trigger" title="Process Observation: On-site Gemba walkthrough observation of actual process operations">Process Observation</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Walk the actual process, upload the flow diagram, and log on-site findings before touching the data.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
-                        <h6 class="fw-bold mb-3 text-primary">Process Flow Diagram</h6>
+                        <h6 class="fw-bold mb-3 text-primary ds-tooltip-trigger" title="Process Flow Diagram: Documented operational workflow map">Process Flow Diagram</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="ds-label">Upload Diagram</label>
-                                <input type="file" class="ds-input" id="s2_flow_upload" required>
+                                <label class="ds-label ds-tooltip-trigger" title="Upload Diagram: Upload process flow diagram file (PNG, SVG, PDF)">Upload Diagram</label>
+                                <input type="file" class="ds-input" id="s2_flow_upload">
                             </div>
                             <div class="col-md-6">
-                                <label class="ds-label">Version</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Version: Document control revision number for process flow map">Version</label>
                                 <input type="text" class="ds-input" id="s2_flow_version" placeholder="e.g. v1.2" required>
                             </div>
                         </div>
 
-                        <h6 class="fw-bold mb-3 text-primary">Process Walkthrough</h6>
+                        <h6 class="fw-bold mb-3 text-primary ds-tooltip-trigger" title="Process Walkthrough: On-site physical Gemba observation details">Process Walkthrough</h6>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-3"><label class="ds-label">Observation Date</label><input type="date" class="ds-input" id="s2_pw_date" onclick="if(this.showPicker) this.showPicker()" required></div>
-                            <div class="col-md-3"><label class="ds-label">Observer Name</label><input type="text" class="ds-input" id="s2_pw_observer" required></div>
-                            <div class="col-md-3"><label class="ds-label">Area Observed</label><input type="text" class="ds-input" id="s2_pw_area" required></div>
-                            <div class="col-md-3"><label class="ds-label">Process Step</label><input type="text" class="ds-input" id="s2_pw_step" required></div>
-                            <div class="col-12"><label class="ds-label">Observation Notes</label><textarea class="ds-input ds-textarea" rows="2" id="s2_pw_notes" required></textarea></div>
+                            <div class="col-md-3"><label class="ds-label ds-tooltip-trigger" title="Observation Date: Date Gemba walkthrough observation was performed">Observation Date</label><input type="date" class="ds-input" id="s2_pw_date" onclick="if(this.showPicker) this.showPicker()" required></div>
+                            <div class="col-md-3"><label class="ds-label ds-tooltip-trigger" title="Observer Name: Team member conducting process walkthrough">Observer Name</label><input type="text" class="ds-input" id="s2_pw_observer" required></div>
+                            <div class="col-md-3"><label class="ds-label ds-tooltip-trigger" title="Area Observed: Specific shop floor workstation or plant line observed">Area Observed</label><input type="text" class="ds-input" id="s2_pw_area" required></div>
+                            <div class="col-md-3"><label class="ds-label ds-tooltip-trigger" title="Process Step: Operation step observed during Gemba walk">Process Step</label><input type="text" class="ds-input" id="s2_pw_step" required></div>
+                            <div class="col-12"><label class="ds-label ds-tooltip-trigger" title="Observation Notes: Detailed factual notes logged during process walkthrough">Observation Notes</label><textarea class="ds-input ds-textarea" rows="2" id="s2_pw_notes" required></textarea></div>
                         </div>
 
-                        <h6 class="fw-bold mb-3 text-primary">Observation Findings</h6>
+                        <h6 class="fw-bold mb-3 text-primary ds-tooltip-trigger" title="Observation Findings: Deviations, inefficiencies, or safety hazards observed">Observation Findings</h6>
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label class="ds-label">Type</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Type: Category of observation finding (Deviation, Inefficiency, Safety Hazard)">Type</label>
                                 <select class="ds-input ds-select" id="s2_pf_type" required>
                                     <option>Deviation</option><option>Inefficiency</option><option>Safety Hazard</option><option>Other</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="ds-label">Severity</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Severity: Impact rating of finding (Low, Medium, High, Critical)">Severity</label>
                                 <select class="ds-input ds-select" id="s2_pf_sev" required>
                                     <option>Low</option><option>Medium</option><option>High</option><option>Critical</option>
                                 </select>
                             </div>
-                            <div class="col-md-6"><label class="ds-label">Description</label><input type="text" class="ds-input" id="s2_pf_desc" required></div>
-                            <div class="col-12"><label class="ds-label">Evidence Upload (Images/Videos/Docs)</label><input type="file" multiple class="ds-input" id="s2_pf_evidence" required></div>
+                            <div class="col-md-6"><label class="ds-label ds-tooltip-trigger" title="Description: Summary description of observation finding">Description</label><input type="text" class="ds-input" id="s2_pf_desc" required></div>
+                            <div class="col-12"><label class="ds-label ds-tooltip-trigger" title="Evidence Upload: Photos, video clips, or audit logs supporting finding">Evidence Upload (Images/Videos/Docs)</label><input type="file" multiple class="ds-input" id="s2_pf_evidence"></div>
                         </div>
                     </div>
                 </div>
@@ -97,25 +97,24 @@ const Stage2 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.2</span>
-                                Standard Verification
+                                <span class="ds-tooltip-trigger" title="Standard Verification: Auditing whether current SOPs, Control Plans, and specs are documented and followed">Standard Verification</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Confirm whether the current SOP/work standard is actually being followed.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle text-sm">
+                        <div class="w-100" style="overflow: visible;">
+                            <table class="table table-bordered align-middle text-sm mb-0 w-100">
                                 <thead style="background:var(--ds-surface-raised)">
                                     <tr>
-                                        <th>Standard Type</th>
-                                        <th>Available?</th>
-                                        <th>Followed?</th>
-                                        <th>Deviation Found?</th>
-                                        <th>Details / Findings</th>
+                                        <th class="ds-tooltip-trigger" title="Standard Type: SOP, Quality Specification, Control Plan, or PFMEA">Standard Type</th>
+                                        <th class="ds-tooltip-trigger" title="Available?: Confirm whether documented standard exists at workstation">Available?</th>
+                                        <th class="ds-tooltip-trigger" title="Followed?: Confirm whether operators follow standard in daily work">Followed?</th>
+                                        <th class="ds-tooltip-trigger" title="Deviation Found?: Flag whether deviation from standard was observed">Deviation Found?</th>
+                                        <th class="ds-tooltip-trigger" title="Details / Findings: Audit findings and deviation gap details">Details / Findings</th>
                                     </tr>
-                                </thead>
                                     <tr>
-                                        <td class="fw-bold">SOP</td>
+                                        <td class="fw-bold"><span title="Standard Operating Procedure (SOP)" style="cursor: help; border-bottom: 1px dotted var(--ds-primary);" data-bs-toggle="tooltip">SOP</span></td>
                                         <td><input type="checkbox" id="sv_sop_avail"></td>
                                         <td><input type="checkbox" id="sv_sop_follow" onchange="StageModules[2].onStandardChange('sop')"></td>
                                         <td><input type="checkbox" id="sv_sop_dev" onchange="StageModules[2].onStandardChange('sop'); StageModules[2].onDeviationChange();"></td>
@@ -129,7 +128,7 @@ const Stage2 = {
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="fw-bold">Specification</td>
+                                        <td class="fw-bold"><span title="Technical Work & Quality Specifications" style="cursor: help; border-bottom: 1px dotted var(--ds-primary);" data-bs-toggle="tooltip">Specification</span></td>
                                         <td><input type="checkbox" id="sv_spec_avail"></td>
                                         <td><input type="checkbox" id="sv_spec_follow" onchange="StageModules[2].onStandardChange('spec')"></td>
                                         <td><input type="checkbox" id="sv_spec_dev" onchange="StageModules[2].onStandardChange('spec'); StageModules[2].onDeviationChange();"></td>
@@ -143,7 +142,7 @@ const Stage2 = {
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="fw-bold">Control Plan</td>
+                                        <td class="fw-bold"><span title="Quality Control & Process Monitoring Plan (CP)" style="cursor: help; border-bottom: 1px dotted var(--ds-primary);" data-bs-toggle="tooltip">Control Plan</span></td>
                                         <td><input type="checkbox" id="sv_cp_avail"></td>
                                         <td><input type="checkbox" id="sv_cp_follow" onchange="StageModules[2].onStandardChange('cp')"></td>
                                         <td><input type="checkbox" id="sv_cp_dev" onchange="StageModules[2].onStandardChange('cp'); StageModules[2].onDeviationChange();"></td>
@@ -157,7 +156,7 @@ const Stage2 = {
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="fw-bold">PFMEA</td>
+                                        <td class="fw-bold"><span title="Process Failure Mode and Effects Analysis (PFMEA)" style="cursor: help; border-bottom: 1px dotted var(--ds-primary);" data-bs-toggle="tooltip">PFMEA</span></td>
                                         <td><input type="checkbox" id="sv_pfmea_avail"></td>
                                         <td><input type="checkbox" id="sv_pfmea_review" onchange="StageModules[2].onStandardChange('pfmea')"></td>
                                         <td>-</td>
@@ -189,9 +188,9 @@ const Stage2 = {
                     <div class="ds-card-body p-4">
                         <div class="row g-3 mb-4">
                             <div class="col-12">
-                                <label class="ds-label">Upload Raw Data (Excel/CSV/PDF)</label>
+                                <label class="ds-label">Upload Raw Data (Excel/CSV/PDF) <span class="text-xs text-muted fw-normal">(Optional - Or enter observations manually in table below)</span></label>
                                 <div class="d-flex align-items-center gap-2 mb-2">
-                                    <input type="file" class="ds-input py-1" id="dc_upload" accept=".csv" style="flex-grow:1;" onchange="StageModules[2].handleCSVUpload(this)" required>
+                                    <input type="file" class="ds-input py-1" id="dc_upload" accept=".csv" style="flex-grow:1;" onchange="StageModules[2].handleCSVUpload(this)">
                                     <button type="button" class="ds-btn ds-btn-ghost text-primary py-1 px-2" style="font-size:0.75rem; white-space:nowrap; border:1px solid var(--ds-primary);" onclick="StageModules[2].downloadTemplate()">
                                         <i data-lucide="download" style="width:13px;height:13px;margin-right:4px;vertical-align:text-bottom;"></i> Download CSV Template
                                     </button>
@@ -232,12 +231,12 @@ const Stage2 = {
                                 <table class="table table-sm align-middle text-sm mb-0" id="obsTable">
                                     <thead style="background: var(--ds-bg-surface, #f8fafc) !important; position: sticky; top: 0; z-index: 10;">
                                         <tr>
-                                            <th style="min-width:190px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Category / Defect *</th>
-                                            <th style="min-width:110px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Value / Count *</th>
-                                            <th style="min-width:220px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Time *</th>
-                                            <th style="min-width:140px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Where (Location) *</th>
-                                            <th style="min-width:130px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Shift *</th>
-                                            <th style="min-width:140px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">How *</th>
+                                            <th style="min-width:190px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Category / Defect</th>
+                                            <th style="min-width:110px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Value / Count</th>
+                                            <th style="min-width:220px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Time</th>
+                                            <th style="min-width:140px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Where (Location)</th>
+                                            <th style="min-width:130px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Shift</th>
+                                            <th style="min-width:140px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">How</th>
                                             <th style="min-width:150px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);">Other Dimension</th>
                                             <th style="width:40px; position: sticky; top: 0; background: var(--ds-bg-surface, #f8fafc) !important; z-index: 10; border-bottom: 2px solid var(--ds-border-color);"></th>
                                         </tr>
@@ -287,7 +286,7 @@ const Stage2 = {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="border p-3 rounded bg-white shadow-xs w-100" style="min-height: 280px; position: relative;">
+                                <div class="border p-3 rounded shadow-xs w-100 qc-tool-card" style="min-height: 280px; position: relative; background: var(--ds-bg-card, #ffffff);">
                                     <canvas id="s2TrendCanvas" style="max-height: 280px; width: 100%;"></canvas>
                                 </div>
                             </div>
@@ -301,31 +300,31 @@ const Stage2 = {
                                         </h6>
                                         <div class="row g-2 mb-3">
                                             <div class="col-6">
-                                                <div class="p-2 border rounded text-center bg-light">
+                                                <div class="p-2 border rounded text-center qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
                                                     <small class="ds-text-secondary text-xs">Mean (Average)</small>
-                                                    <div class="fw-bold text-sm" id="s2_hist_mean_display">---</div>
+                                                    <div class="fw-bold text-sm text-main" id="s2_hist_mean_display">---</div>
                                                 </div>
                                             </div>
                                             <div class="col-6">
-                                                <div class="p-2 border rounded text-center bg-light">
+                                                <div class="p-2 border rounded text-center qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
                                                     <small class="ds-text-secondary text-xs">Median</small>
-                                                    <div class="fw-bold text-sm" id="s2_hist_median_display">---</div>
+                                                    <div class="fw-bold text-sm text-main" id="s2_hist_median_display">---</div>
                                                 </div>
                                             </div>
                                             <div class="col-6">
-                                                <div class="p-2 border rounded text-center bg-light">
+                                                <div class="p-2 border rounded text-center qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
                                                     <small class="ds-text-secondary text-xs">Std Dev (SD)</small>
-                                                    <div class="fw-bold text-sm" id="s2_hist_sd_display">---</div>
+                                                    <div class="fw-bold text-sm text-main" id="s2_hist_sd_display">---</div>
                                                 </div>
                                             </div>
                                             <div class="col-6">
-                                                <div class="p-2 border rounded text-center bg-light">
+                                                <div class="p-2 border rounded text-center qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
                                                     <small class="ds-text-secondary text-xs">Distribution Pattern</small>
-                                                    <div class="fw-bold text-xs" id="s2_hist_pattern_display">---</div>
+                                                    <div class="fw-bold text-xs text-main" id="s2_hist_pattern_display">---</div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="mx-auto border p-2 rounded bg-white" style="height: 180px; position: relative;">
+                                        <div class="mx-auto border p-2 rounded qc-tool-card" style="height: 180px; position: relative; background: var(--ds-bg-card, #ffffff);">
                                             <canvas id="s2HistogramCanvas" style="max-height: 160px; width: 100%;"></canvas>
                                         </div>
                                     </div>
@@ -369,20 +368,20 @@ const Stage2 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.4</span>
-                                Stratification Analysis
+                                <span class="ds-tooltip-trigger" title="Stratification Analysis: Breaking raw observation data down by shift, machine, or location to isolate problem concentration">Stratification Analysis</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Break the raw data down by shift, machine, or operator to isolate where the problem concentrates.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <label class="ds-label mb-0">Break down problem by categories (Auto-generated from logs or manually input)</label>
+                            <label class="ds-label mb-0 ds-tooltip-trigger" title="Stratification Categories: Break down problem by operational factors (Shift, Location, Machine, Operator)">Break down problem by categories (Auto-generated from logs or manually input)</label>
                         </div>
                         <div id="stratContainer" class="mb-3">
                             <div class="strat-row mb-1" style="display:grid;grid-template-columns:1fr 2fr 1fr 32px;gap:.5rem;align-items:end;">
-                                <small class="ds-label fw-bold">Type</small>
-                                <small class="ds-label fw-bold">Category Segment</small>
-                                <small class="ds-label fw-bold">Value / Quantity</small>
+                                <small class="ds-label fw-bold ds-tooltip-trigger" title="Type: Dimension type (e.g. By Shift, By Location, By Machine)">Type</small>
+                                <small class="ds-label fw-bold ds-tooltip-trigger" title="Category Segment: Specific segment factor under observation">Category Segment</small>
+                                <small class="ds-label fw-bold ds-tooltip-trigger" title="Value / Quantity: Defect count or metric value logged for this category segment">Value / Quantity</small>
                                 <span></span>
                             </div>
                         </div>
@@ -398,7 +397,7 @@ const Stage2 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">2.5</span>
-                                Pareto Prioritization (80/20)
+                                <span class="ds-tooltip-trigger" title="Pareto Prioritization (80/20 Rule): Rank defect categories by frequency to identify the 20% vital causes driving 80% of defects">Pareto Prioritization (80/20)</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Rank the stratified factors by frequency to identify the vital few driving most of the problem.</p>
                         </div>
@@ -407,20 +406,20 @@ const Stage2 = {
                         <div class="row g-4">
                             <div class="col-md-6 border-end">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <label class="ds-label mb-0 fw-bold">Defect/Failure Categories (Auto-derived from logs)</label>
+                                    <label class="ds-label mb-0 fw-bold ds-tooltip-trigger" title="Defect/Failure Categories: Categorized defect frequency tally derived from raw data log">Defect/Failure Categories (Auto-derived from logs)</label>
                                 </div>
                                 <div id="paretoContainer" class="mb-3" style="max-height: 250px; overflow-y: auto;">
                                     <div class="pareto-row mb-1" style="display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:.5rem;align-items:end;">
-                                        <small class="ds-label fw-bold">Category Name</small>
-                                        <small class="ds-label fw-bold">Count / Value</small>
-                                        <small class="ds-label fw-bold">Cum. %</small>
+                                        <small class="ds-label fw-bold ds-tooltip-trigger" title="Category Name: Name of defect or problem category">Category Name</small>
+                                        <small class="ds-label fw-bold ds-tooltip-trigger" title="Count / Value: Number of defect occurrences logged">Count / Value</small>
+                                        <small class="ds-label fw-bold ds-tooltip-trigger" title="Cum. %: Cumulative percentage contribution to total defects">Cum. %</small>
                                         <span></span>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="ds-label fw-bold mb-2">QC Tool: Pareto Chart (80/20 Rule)</label>
-                                <div class="mx-auto border p-2 rounded bg-white shadow-xs" style="height: 250px; position: relative;">
+                                <label class="ds-label fw-bold mb-2 ds-tooltip-trigger" title="QC Tool: Pareto Chart (80/20 Rule): Visual bar and cumulative line chart ranking defect priority">QC Tool: Pareto Chart (80/20 Rule)</label>
+                                <div class="mx-auto border p-2 rounded shadow-xs qc-tool-card" style="height: 250px; position: relative; background: var(--ds-bg-card, #ffffff);">
                                     <canvas id="s2ParetoCanvas" style="max-height: 230px; width: 100%;"></canvas>
                                 </div>
                             </div>
@@ -444,11 +443,11 @@ const Stage2 = {
                             <div class="col-md-6 border-end">
                                 <h6 class="fw-bold mb-2 text-primary">Gemba (Actual Place)</h6>
                                 <textarea class="ds-input ds-textarea mb-2" id="g5_gemba_notes" rows="2" placeholder="e.g. Visited welding bay 3 during night shift. Noticed workspace clutter and poor lighting." required></textarea>
-                                <input type="file" class="ds-input mb-4" id="g5_gemba_ev" required>
+                                <input type="file" class="ds-input mb-4" id="g5_gemba_ev">
                                 
                                 <h6 class="fw-bold mb-2 text-primary">Gembutsu (Actual Item)</h6>
                                 <input type="text" class="ds-input mb-2" id="g5_gembutsu_item" placeholder="e.g. Crimping tool model CT-400, serial #9921" required>
-                                <input type="file" class="ds-input mb-4" id="g5_gembutsu_ev" required>
+                                <input type="file" class="ds-input mb-4" id="g5_gembutsu_ev">
  
                                 <h6 class="fw-bold mb-2 text-primary">Genjitsu (Actual Facts)</h6>
                                 <textarea class="ds-input ds-textarea mb-2" id="g5_genjitsu_facts" rows="2" placeholder="e.g. Shift production logs show 15 defective assemblies were discarded in the scrap bin on 2025-06-25." required></textarea>
@@ -490,20 +489,20 @@ const Stage2 = {
                             <div class="col-md-6">
                                 <div class="ds-field mb-3">
                                     <label class="ds-label">Upload Before Images/Videos/Docs</label>
-                                    <input type="file" multiple class="ds-input" id="cs_media" onchange="StageModules[2].uploadEvidenceFiles(this)" required>
+                                    <input type="file" multiple class="ds-input" id="cs_media" onchange="StageModules[2].uploadEvidenceFiles(this)">
                                     <div id="cs_uploaded_files_list" class="mt-2 v-stack gap-2"></div>
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <div class="ds-field">
                                             <label class="ds-label">Video Link (e.g. MS Stream/YouTube)</label>
-                                            <input type="url" class="ds-input text-xs" id="cs_video_link" placeholder="https://..." style="height: 32px;" oninput="StageModules[2].updateLinks()" required>
+                                            <input type="url" class="ds-input text-xs" id="cs_video_link" placeholder="https://..." style="height: 32px;" oninput="StageModules[2].updateLinks()">
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="ds-field">
                                             <label class="ds-label">Google Drive / Shared Link</label>
-                                            <input type="url" class="ds-input text-xs" id="cs_drive_link" placeholder="https://drive.google.com/..." style="height: 32px;" oninput="StageModules[2].updateLinks()" required>
+                                            <input type="url" class="ds-input text-xs" id="cs_drive_link" placeholder="https://drive.google.com/..." style="height: 32px;" oninput="StageModules[2].updateLinks()">
                                         </div>
                                     </div>
                                 </div>
@@ -1642,7 +1641,7 @@ const Stage2 = {
             groups[r.type].push(r);
         });
 
-        let html = `<h6 class="fw-bold mb-3 text-secondary d-flex align-items-center gap-2"><i data-lucide="layers" style="width:15px;height:15px;"></i> QC Tool: Stratification Grouped Analysis</h6>`;
+        let html = `<h6 class="fw-bold mb-3 text-secondary d-flex align-items-center gap-2 ds-tooltip-trigger" title="QC Tool: Stratification Grouped Analysis: Automatic grouping by operational factors"><i data-lucide="layers" style="width:15px;height:15px;"></i> QC Tool: Stratification Grouped Analysis</h6>`;
         
         for (const [type, items] of Object.entries(groups)) {
             items.sort((a, b) => b.value - a.value);
@@ -1652,9 +1651,9 @@ const Stage2 = {
             html += `
                 <div class="glass-card ds-card p-3 mb-3 border" style="border-radius: var(--radius-md);">
                     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                        <span class="fw-bold text-sm text-primary">${type} Breakdown</span>
+                        <span class="fw-bold text-sm text-primary ds-tooltip-trigger" title="${type} Breakdown: Grouped distribution analysis for ${type}">${type} Breakdown</span>
                         ${highest && highest.value > 0 ? `
-                        <span class="ds-badge ds-badge-sm orange d-inline-flex align-items-center gap-1">
+                        <span class="ds-badge ds-badge-sm orange d-inline-flex align-items-center gap-1 ds-tooltip-trigger" title="Highest Contributor: ${highest.category} accounted for the highest defect volume (${highest.value})">
                             <i data-lucide="trending-up" style="width:10px;height:10px;"></i>
                             Highest Contributor: ${highest.category} (${highest.value})
                         </span>` : ''}
@@ -1663,9 +1662,9 @@ const Stage2 = {
                         <table class="table table-sm table-bordered text-xs mb-0 align-middle">
                             <thead style="background:var(--ds-surface-raised)">
                                 <tr>
-                                    <th>Segment Name</th>
-                                    <th class="text-end" style="width:80px;">Count / Val</th>
-                                    <th class="text-end" style="width:80px;">% Share</th>
+                                    <th class="ds-tooltip-trigger" title="Segment Name: Category segment under analysis">Segment Name</th>
+                                    <th class="text-end ds-tooltip-trigger" style="width:80px;" title="Count / Val: Quantity or defect volume logged">Count / Val</th>
+                                    <th class="text-end ds-tooltip-trigger" style="width:80px;" title="% Share: Percentage contribution of segment to total group volume">% Share</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1681,7 +1680,7 @@ const Stage2 = {
                                     `;
                                 }).join('')}
                                 <tr class="table-light fw-bold">
-                                    <td>Total Group Volume</td>
+                                    <td class="ds-tooltip-trigger" title="Total Group Volume: Sum of all logged quantities for this stratification category">Total Group Volume</td>
                                     <td class="text-end">${total}</td>
                                     <td class="text-end">100%</td>
                                 </tr>
@@ -2052,7 +2051,7 @@ const Stage2 = {
             }
             
             return `
-                <div class="h-stack justify-content-between p-2 rounded border bg-white shadow-xs fade-in" style="font-size: 0.8rem;">
+                <div class="h-stack justify-content-between p-2 rounded border shadow-xs fade-in qc-evidence-file" style="font-size: 0.8rem; background: var(--ds-bg-card, #ffffff);">
                     <div class="d-flex align-items-center gap-2">
                         ${preview}
                         <a href="${f.url}" target="_blank" class="fw-medium text-main text-decoration-none hover-underline" style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">

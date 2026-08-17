@@ -302,10 +302,19 @@ def get_org_effective_expiry_and_start(org):
     sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
 
     start_date = getattr(org, 'license_start_date', None) or (sub.start_date if sub else None) or getattr(org, 'created_at', None) or now
+
+    # For Trialing / Trial organizations, trial_ends_at is the authoritative source of truth
+    if status in ('trialing', 'trial'):
+        expiry_date = getattr(org, 'trial_ends_at', None) or getattr(org, 'license_expiry_date', None) or (sub.trial_end_date if sub else None) or (sub.end_date if sub else None)
+        if not expiry_date:
+            expiry_date = start_date + timedelta(days=30)
+        return expiry_date, start_date
+
+    # For Paid / Active / Other subscriptions
     expiry_date = getattr(org, 'license_expiry_date', None) or (sub.end_date if sub else None) or getattr(org, 'trial_ends_at', None) or (sub.trial_end_date if sub else None)
 
     plan_name = getattr(org, 'subscription_plan', None) or (sub.plan_name if sub else None)
-    if plan_name:
+    if plan_name and not expiry_date:
         sp = SaaSPlan.query.filter(
             db.or_(SaaSPlan.name == plan_name, SaaSPlan.code == plan_name)
         ).first()
@@ -327,11 +336,7 @@ def get_org_effective_expiry_and_start(org):
             else:
                 duration_days = 30  # Monthly default
 
-            calc_expiry = start_date + timedelta(days=duration_days)
-
-            # If no expiry date set or if existing expiry date exceeds plan cycle bounds (e.g. 365 for Quarterly)
-            if not expiry_date or abs((expiry_date - calc_expiry).days) > 3 or (cycle in ('Quarterly', 'Quarter') and (expiry_date - start_date).days > 100):
-                expiry_date = calc_expiry
+            expiry_date = start_date + timedelta(days=duration_days)
 
     if not expiry_date:
         expiry_date = start_date + timedelta(days=30)

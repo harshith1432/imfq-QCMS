@@ -44,7 +44,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     },
     "CEO": {
         "overview": True,
-        "project_repo": True,
+        "project_repo": False,
         "knowledge_base": True,
         "leaderboard": True,
         "additional_sources": True,
@@ -58,7 +58,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     },
     "Facilitator": {
         "overview": True,
-        "project_repo": True,
+        "project_repo": False,
         "knowledge_base": True,
         "leaderboard": True,
         "additional_sources": True,
@@ -72,7 +72,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     },
     "Reviewer": {
         "overview": True,
-        "project_repo": True,
+        "project_repo": False,
         "knowledge_base": True,
         "leaderboard": True,
         "additional_sources": True,
@@ -1129,6 +1129,7 @@ def update_user(user_id):
 
 
 @admin_bp.route('/users/<int:user_id>/regenerate-credentials', methods=['POST'])
+@admin_bp.route('/users/<int:user_id>/regenerate', methods=['POST'])
 @admin_required
 def regenerate_credentials(user_id):
     current_user_id = get_jwt_identity()
@@ -1407,18 +1408,26 @@ def get_stats():
         return jsonify({"message": "User not found"}), 404
     org_id = current_user.org_id
     
-    user_count = User.query.filter_by(org_id=org_id).count()
+    user_count = User.query.filter_by(org_id=org_id, is_active=True).count()
     project_count = Project.query.filter_by(org_id=org_id).count()
     
-    # Active Pipeline: Anything not Closed or Archived
+    # Inactive/terminal statuses
+    inactive_terminal_statuses = ['Closed', 'Archived', 'Completed', 'Rejected', 'Stage 1 Rejected', 'Cancelled']
+    
+    # Active Pipeline: Projects currently in progress and not completed/closed/rejected/archived
     active_projects = Project.query.filter(
         Project.org_id == org_id, 
-        ~Project.status.in_(['Closed', 'Archived'])
+        ~Project.status.in_(inactive_terminal_statuses)
     ).count()
     
     completed_projects = Project.query.filter(
         Project.org_id == org_id, 
-        Project.status.in_(['Closed', 'Archived'])
+        Project.status.in_(['Closed', 'Archived', 'Completed', 'Stage 8 Approved'])
+    ).count()
+
+    rejected_projects = Project.query.filter(
+        Project.org_id == org_id,
+        Project.status.in_(['Rejected', 'Stage 1 Rejected'])
     ).count()
     
     # Calculate pending validations — stages awaiting reviewer/admin approval (Stage 1-7 submitted for review + Stage 8 pending closure)
@@ -1456,6 +1465,7 @@ def get_stats():
         "projects": project_count,
         "active_projects": active_projects,
         "completed_projects": completed_projects,
+        "rejected_projects": rejected_projects,
         "pending_validations": pending_validations,
         "total_plants": plant_count,
         "stage_distribution": dict(stages)
@@ -1510,7 +1520,7 @@ def get_plant_directory_breakdown():
 
             # Projects in this department
             d_projects = [pr for pr in all_projects if pr.department_id == d.id]
-            d_running = len([pr for pr in d_projects if str(pr.status or '').strip() not in ('Closed', 'Archived', 'Completed')])
+            d_running = len([pr for pr in d_projects if str(pr.status or '').strip() not in ('Closed', 'Archived', 'Completed', 'Rejected', 'Stage 1 Rejected', 'Cancelled')])
             d_closed = len([pr for pr in d_projects if str(pr.status or '').strip() in ('Closed', 'Archived', 'Completed')])
 
             plant_running += d_running
@@ -1566,7 +1576,7 @@ def get_plant_directory_breakdown():
                 u_members_set.add(u.id)
 
             d_projects = [pr for pr in all_projects if pr.department_id == d.id]
-            d_running = len([pr for pr in d_projects if str(pr.status or '').strip() not in ('Closed', 'Archived', 'Completed')])
+            d_running = len([pr for pr in d_projects if str(pr.status or '').strip() not in ('Closed', 'Archived', 'Completed', 'Rejected', 'Stage 1 Rejected', 'Cancelled')])
             d_closed = len([pr for pr in d_projects if str(pr.status or '').strip() in ('Closed', 'Archived', 'Completed')])
 
             u_running_total += d_running
@@ -2136,23 +2146,6 @@ def update_org_settings():
     if 'auto_archive' in data: org.auto_archive = bool(data['auto_archive'])
     if 'notifications_enabled' in data: org.notifications_enabled = bool(data['notifications_enabled'])
     if 'maintenance_mode' in data: org.maintenance_mode = bool(data['maintenance_mode'])
-    if 'session_timeout' in data and data['session_timeout'] is not None:
-        try:
-            st = int(data['session_timeout'])
-            if st < 5 or st > 1440:
-                return jsonify({"message": "Session timeout must be between 5 and 1440 minutes."}), 400
-            org.session_timeout = st
-        except (ValueError, TypeError):
-            return jsonify({"message": "Invalid session timeout value."}), 400
-
-    if 'data_retention_days' in data and data['data_retention_days'] is not None:
-        try:
-            dr = int(data['data_retention_days'])
-            if dr < 30 or dr > 3650:
-                return jsonify({"message": "Data retention must be between 30 and 3650 days."}), 400
-            org.data_retention_days = dr
-        except (ValueError, TypeError):
-            return jsonify({"message": "Invalid data retention value."}), 400
 
     if 'compliance_standards' in data: org.compliance_standards = data['compliance_standards']
     
@@ -2212,7 +2205,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     },
     "CEO": {
         "overview": True,
-        "project_repo": True,
+        "project_repo": False,
         "knowledge_base": True,
         "leaderboard": True,
         "additional_sources": True,
@@ -2226,7 +2219,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     },
     "Facilitator": {
         "overview": True,
-        "project_repo": True,
+        "project_repo": False,
         "knowledge_base": True,
         "leaderboard": True,
         "additional_sources": True,
@@ -2240,7 +2233,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     },
     "Reviewer": {
         "overview": True,
-        "project_repo": True,
+        "project_repo": False,
         "knowledge_base": True,
         "leaderboard": True,
         "additional_sources": True,
@@ -2763,6 +2756,161 @@ def get_stages_template_status():
     }), 200
 
 
+@admin_bp.route('/stages-template/diff', methods=['GET'])
+@admin_required
+def get_global_stages_template_diff():
+    user_id = get_jwt_identity()
+    user = db.session.get(User, int(user_id))
+    org = db.session.get(Organization, user.org_id)
+    ps = PlatformSettings.query.first()
+
+    org_stages = org.get_stages_config() or Organization.DEFAULT_STAGES_CONFIG
+    global_stages = (ps and ps.global_stages_config) or Organization.DEFAULT_STAGES_CONFIG
+    
+    applied_ver = (org and org.applied_template_version) or 1
+    global_ver = (ps and ps.global_template_version) or 1
+
+    diffs = []
+
+    org_by_id = {s.get('stage_id', idx+1): s for idx, s in enumerate(org_stages) if isinstance(s, dict)}
+    global_by_id = {s.get('stage_id', idx+1): s for idx, s in enumerate(global_stages) if isinstance(s, dict)}
+
+    all_stage_ids = sorted(list(set(org_by_id.keys()) | set(global_by_id.keys())))
+
+    for stg_id in all_stage_ids:
+        org_s = org_by_id.get(stg_id)
+        glob_s = global_by_id.get(stg_id)
+
+        if not org_s and glob_s:
+            diffs.append({
+                "stage_id": stg_id,
+                "stage_title": glob_s.get('title', f"Stage {stg_id}"),
+                "type": "STAGE_ADDED",
+                "label": f"Stage {stg_id}: '{glob_s.get('title')}' added in Global Template",
+                "details": glob_s
+            })
+            continue
+
+        if org_s and not glob_s:
+            diffs.append({
+                "stage_id": stg_id,
+                "stage_title": org_s.get('title', f"Stage {stg_id}"),
+                "type": "STAGE_REMOVED",
+                "label": f"Stage {stg_id}: '{org_s.get('title')}' removed from Global Template",
+                "details": org_s
+            })
+            continue
+
+        stg_title = glob_s.get('title') or org_s.get('title') or f"Stage {stg_id}"
+
+        # 1. Stage title / icon changes
+        if org_s.get('title') != glob_s.get('title'):
+            diffs.append({
+                "stage_id": stg_id,
+                "stage_title": stg_title,
+                "type": "STAGE_TITLE_CHANGED",
+                "label": f"Stage {stg_id} title updated: '{org_s.get('title')}' → '{glob_s.get('title')}'",
+                "old_val": org_s.get('title'),
+                "new_val": glob_s.get('title')
+            })
+
+        if org_s.get('icon') and glob_s.get('icon') and org_s.get('icon') != glob_s.get('icon'):
+            diffs.append({
+                "stage_id": stg_id,
+                "stage_title": stg_title,
+                "type": "STAGE_ICON_CHANGED",
+                "label": f"Stage {stg_id} icon updated: '{org_s.get('icon')}' → '{glob_s.get('icon')}'"
+            })
+
+        # 2. Compare Sections inside Stage
+        org_secs_list = [sec for sec in (org_s.get('sections') or []) if isinstance(sec, dict)]
+        glob_secs_list = [sec for sec in (glob_s.get('sections') or []) if isinstance(sec, dict)]
+
+        def get_sec_key(sec, idx):
+            return sec.get('id') or sec.get('label') or f"sec_idx_{idx}"
+
+        org_secs_map = {get_sec_key(sec, idx): sec for idx, sec in enumerate(org_secs_list)}
+        glob_secs_map = {get_sec_key(sec, idx): sec for idx, sec in enumerate(glob_secs_list)}
+
+        for sec_key, g_sec in glob_secs_map.items():
+            g_sec_label = g_sec.get('label') or g_sec.get('title') or str(sec_key)
+            if sec_key not in org_secs_map:
+                diffs.append({
+                    "stage_id": stg_id,
+                    "stage_title": stg_title,
+                    "type": "SECTION_ADDED",
+                    "label": f"Stage {stg_id} → New Section '{g_sec_label}' added",
+                    "section_id": g_sec.get('id') or sec_key,
+                    "details": g_sec
+                })
+            else:
+                o_sec = org_secs_map[sec_key]
+                o_sec_label = o_sec.get('label') or o_sec.get('title') or str(sec_key)
+                if o_sec_label != g_sec_label:
+                    diffs.append({
+                        "stage_id": stg_id,
+                        "stage_title": stg_title,
+                        "type": "SECTION_MODIFIED",
+                        "label": f"Stage {stg_id} → Section '{o_sec_label}' renamed to '{g_sec_label}'",
+                        "section_id": g_sec.get('id') or sec_key
+                    })
+
+                # Compare sub-fields inside section
+                o_fields = [f for f in (o_sec.get('fields') or []) if isinstance(f, dict)]
+                g_fields = [f for f in (g_sec.get('fields') or []) if isinstance(f, dict)]
+
+                def get_f_key(f, f_idx):
+                    return f.get('id') or f.get('label') or f"f_idx_{f_idx}"
+
+                o_f_map = {get_f_key(f, f_idx): f for f_idx, f in enumerate(o_fields)}
+                g_f_map = {get_f_key(f, f_idx): f for f_idx, f in enumerate(g_fields)}
+
+                for f_key, gf in g_f_map.items():
+                    gf_label = gf.get('label') or f_key
+                    if f_key not in o_f_map:
+                        diffs.append({
+                            "stage_id": stg_id,
+                            "stage_title": stg_title,
+                            "type": "FIELD_ADDED",
+                            "label": f"Stage {stg_id} → '{g_sec_label}': New field '{gf_label}' ({gf.get('type','text')}) added",
+                            "section_id": g_sec.get('id') or sec_key,
+                            "field_id": gf.get('id') or f_key
+                        })
+
+                for f_key, of in o_f_map.items():
+                    of_label = of.get('label') or f_key
+                    if f_key not in g_f_map:
+                        diffs.append({
+                            "stage_id": stg_id,
+                            "stage_title": stg_title,
+                            "type": "FIELD_REMOVED",
+                            "label": f"Stage {stg_id} → '{g_sec_label}': Field '{of_label}' removed in Global Template",
+                            "section_id": o_sec.get('id') or sec_key,
+                            "field_id": of.get('id') or f_key
+                        })
+
+        for sec_key, o_sec in org_secs_map.items():
+            if sec_key not in glob_secs_map and not str(sec_key).startswith('sec_'):
+                o_sec_label = o_sec.get('label') or o_sec.get('title') or str(sec_key)
+                diffs.append({
+                    "stage_id": stg_id,
+                    "stage_title": stg_title,
+                    "type": "SECTION_REMOVED",
+                    "label": f"Stage {stg_id} → Section '{o_sec_label}' removed in Global Template",
+                    "section_id": o_sec.get('id') or sec_key
+                })
+
+    return jsonify({
+        "status": "success",
+        "applied_template_version": applied_ver,
+        "global_template_version": global_ver,
+        "diff_count": len(diffs),
+        "diffs": diffs,
+        "org_stages": org_stages,
+        "global_stages": global_stages
+    }), 200
+
+
 @admin_bp.route('/stages-template/sync-global', methods=['POST'])
 @admin_required
 def sync_global_stages_template():
@@ -2772,17 +2920,37 @@ def sync_global_stages_template():
     org = db.session.get(Organization, user.org_id)
     ps = PlatformSettings.query.first()
 
+    data = request.get_json(silent=True) or {}
+    mode = data.get('mode', 'overwrite')
+
     global_stages = (ps and ps.global_stages_config) or Organization.DEFAULT_STAGES_CONFIG
     global_ver = (ps and ps.global_template_version) or 1
 
-    org.stages_config = copy.deepcopy(global_stages)
+    if mode == 'merge' and org.stages_config:
+        merged_stages = copy.deepcopy(global_stages)
+        org_stages_by_id = {s.get('stage_id'): s for s in org.stages_config if isinstance(s, dict)}
+        for m_stg in merged_stages:
+            stg_id = m_stg.get('stage_id')
+            o_stg = org_stages_by_id.get(stg_id)
+            if o_stg and isinstance(o_stg.get('sections'), list):
+                custom_secs = [sec for sec in o_stg['sections'] if isinstance(sec, dict) and str(sec.get('id', '')).startswith('sec_')]
+                if custom_secs:
+                    if 'sections' not in m_stg or not isinstance(m_stg['sections'], list):
+                        m_stg['sections'] = []
+                    for c_sec in custom_secs:
+                        if not any(sec.get('id') == c_sec.get('id') for sec in m_stg['sections']):
+                            m_stg['sections'].append(c_sec)
+        org.stages_config = merged_stages
+    else:
+        org.stages_config = copy.deepcopy(global_stages)
+
     org.applied_template_version = global_ver
     org.has_pending_template_update = False
     db.session.commit()
 
     log_action(user_id, 'STAGES_TEMPLATE_SYNCED', user.org_id,
                target_table='organizations', target_id=org.id,
-               details={"applied_version": global_ver, "stages_count": len(global_stages)})
+               details={"applied_version": global_ver, "mode": mode, "stages_count": len(org.stages_config)})
 
     return jsonify({
         "status": "success",
@@ -3232,4 +3400,42 @@ def get_additional_sources_ideas():
         "api_endpoint": f"{base_url}/api/v1/integrations/ideas",
         "ideas": [i.to_dict() for i in ideas]
     }), 200
+
+@admin_bp.route('/rejected-projects', methods=['GET'])
+@admin_required
+def get_admin_rejected_projects():
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+        
+    rejected_projs = Project.query.filter(
+        Project.org_id == user.org_id,
+        Project.status.in_(['Rejected', 'Stage 1 Rejected'])
+    ).order_by(Project.created_at.desc()).all()
+
+    from app.infrastructure.database.models.models import ProjectReview
+    result = []
+    for p in rejected_projs:
+        rev = db.session.get(User, p.reviewer_id) if p.reviewer_id else p.reviewer
+        rev_name = (rev.full_name or rev.username) if rev else "Reviewer"
+        tl = db.session.get(User, p.team_leader_id) if p.team_leader_id else p.team_leader
+        tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
+        
+        review_log = ProjectReview.query.filter_by(project_id=p.id, decision='Rejected').order_by(ProjectReview.decided_at.desc()).first()
+        rejected_at = review_log.decided_at.isoformat() + "Z" if review_log and review_log.decided_at else (p.created_at.isoformat() + "Z" if p.created_at else "")
+        
+        result.append({
+            "id": p.id,
+            "project_uid": p.project_uid or f"PRJ-{p.id}",
+            "title": p.title,
+            "department": p.department.name if p.department else "N/A",
+            "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
+            "team_leader": tl_name,
+            "reviewer": rev_name,
+            "rejection_reason": p.rejection_reason or (review_log.comments if review_log else "No reason specified"),
+            "rejected_at": rejected_at
+        })
+        
+    return jsonify(result), 200
 

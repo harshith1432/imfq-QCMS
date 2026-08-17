@@ -19,7 +19,7 @@ const Stage3 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.1</span>
-                                Brainstorming Session
+                                <span class="ds-tooltip-trigger" title="Brainstorming Session: Open team cause generation session capturing all potential causes">Brainstorming Session</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Capture every potential cause the team raises before narrowing the list.</p>
                         </div>
@@ -27,23 +27,23 @@ const Stage3 = {
                     <div class="ds-card-body p-4">
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="ds-label">Session Name</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Session Name: Title or topic of team brainstorming meeting">Session Name</label>
                                 <input type="text" id="s3_bs_session" class="ds-input" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="ds-label">Facilitator</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Facilitator: Quality Leader facilitating brainstorming discussion">Facilitator</label>
                                 <input type="text" id="s3_bs_facilitator" class="ds-input" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="ds-label">Participants</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Participants: QC Circle team members participating in session">Participants</label>
                                 <input type="text" id="s3_bs_participants" class="ds-input" placeholder="e.g. Ravi Kumar, Shubham Singh, Rajesh Kumar" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="ds-label">Date</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Date: Date brainstorming session was conducted">Date</label>
                                 <input type="date" id="s3_bs_date" class="ds-input" required>
                             </div>
                             <div class="col-12">
-                                <label class="ds-label">Notes</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Notes: Summary discussion notes and focus areas from session">Notes</label>
                                 <textarea id="s3_bs_notes" class="ds-input ds-textarea" rows="2" placeholder="e.g. Focus on Line A night shift crimping parameters and operator training gaps." required></textarea>
                             </div>
                         </div>
@@ -62,12 +62,12 @@ const Stage3 = {
                         <div id="paretoAlertContainer"></div>
                         <div class="row align-items-center g-3">
                             <div class="col-md-7">
-                                <div class="border p-3 rounded bg-white shadow-sm" style="max-height: 280px; position: relative;">
+                                <div class="border p-3 rounded shadow-sm qc-tool-card" style="max-height: 280px; position: relative; background: var(--ds-bg-card, #ffffff);">
                                     <canvas id="s3ParetoCanvas" style="max-height: 250px; width: 100%;"></canvas>
                                 </div>
                             </div>
                             <div class="col-md-5">
-                                <div class="p-3 border rounded bg-light" style="border-radius: var(--radius-md);">
+                                <div class="p-3 border rounded" style="border-radius: var(--radius-md); background: var(--ds-bg-subtle, #f8fafc);">
                                     <h6 class="fw-bold mb-2 text-primary d-flex align-items-center gap-1">
                                         <i data-lucide="shield-alert" style="width:16px;height:16px;"></i>
                                         Vital Few Top Causes (80% Line)
@@ -85,18 +85,32 @@ const Stage3 = {
                 <!-- QC Tool 5: Fishbone Diagram -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2 text-primary">
+                        <h5 class="mb-0 fw-bold d-flex align-items-center gap-2 text-primary ds-tooltip-trigger" title="Ishikawa (Fishbone) 6M Diagram: Categorizing potential causes under Man, Machine, Material, Method, Measurement, Environment">
                             <i data-lucide="git-branch" style="width:20px;height:20px;transform: rotate(90deg);"></i>
                             QC Tool 5: Ishikawa (Fishbone) Diagram
                         </h5>
                     </div>
                     <div class="ds-card-body p-4">
-                        <label class="ds-label mb-3">Interactive Fishbone Visualization</label>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <label class="ds-label mb-0 ds-tooltip-trigger" title="Interactive Fishbone Visualization: Zoomable 6M Cause & Effect diagram">Interactive Fishbone Visualization</label>
+                            <div class="d-flex align-items-center gap-1 bg-light border p-1 rounded-3">
+                                <button type="button" class="ds-btn ds-btn-ghost p-1" style="height:28px;width:28px;" title="Zoom Out (-)" onclick="StageModules[3].zoomFishbone(-0.15)">
+                                    <i data-lucide="minus" style="width:14px;height:14px;"></i>
+                                </button>
+                                <span class="badge bg-white text-dark border px-2 py-1" id="fishboneZoomBadge" style="font-size:0.75rem; min-width:45px; text-align:center;">100%</span>
+                                <button type="button" class="ds-btn ds-btn-ghost p-1" style="height:28px;width:28px;" title="Zoom In (+)" onclick="StageModules[3].zoomFishbone(0.15)">
+                                    <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                                </button>
+                                <button type="button" class="ds-btn ds-btn-ghost p-1 text-secondary ms-1" style="height:28px;width:28px;" title="Reset Zoom" onclick="StageModules[3].resetFishboneZoom()">
+                                    <i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i>
+                                </button>
+                            </div>
+                        </div>
                         
                         <!-- Visual Fishbone SVG -->
-                        <div class="border p-3 rounded bg-white shadow-sm mb-4" style="overflow-x: auto;">
-                            <div style="min-width: 1000px; position: relative; height: 420px;">
-                                <svg viewBox="0 0 1100 440" width="100%" height="100%" style="font-family: inherit;">
+                        <div class="border p-3 rounded shadow-sm mb-4 qc-tool-card" style="overflow: auto; background: var(--ds-bg-card, #ffffff);">
+                            <div id="fishboneSvgContainer" style="min-width: 1000px; position: relative; height: 420px; transform-origin: top left; transition: transform 0.2s ease-out;">
+                                <svg id="fishboneSvg" viewBox="0 0 1100 440" width="100%" height="100%" style="font-family: inherit;">
                                     <defs>
                                         <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                                             <path d="M 0 0 L 10 5 L 0 10 z" fill="#1e293b" />
@@ -153,7 +167,7 @@ const Stage3 = {
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Detailed Causes List (Level 1 & 2)</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Detailed Causes List: Level 1 primary causes and Level 2 sub-causes">Detailed Causes List (Level 1 & 2)</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[3].addFishboneRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Cause
                             </button>
@@ -161,11 +175,11 @@ const Stage3 = {
                         
                         <div id="s3_fishboneContainer" class="mb-4">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-2">Category (6M)</div>
-                                <div class="col-3">Cause (Level 1)</div>
-                                <div class="col-3">Sub-Cause (Level 2)</div>
-                                <div class="col-2">Probability / Status</div>
-                                <div class="col-2">Actions</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Category (6M): Man, Machine, Material, Method, Measurement, Environment">Category (6M)</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Cause (Level 1): Primary suspect cause factor">Cause (Level 1)</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Sub-Cause (Level 2): Detailed sub-cause factor contributing to primary cause">Sub-Cause (Level 2)</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Probability / Status: Likelihood rating (High, Medium, Low)">Probability / Status</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Actions: Row edit and delete controls">Actions</div>
                             </div>
                         </div>
                     </div>
@@ -177,24 +191,24 @@ const Stage3 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.2</span>
-                                Cause Register
+                                <span class="ds-tooltip-trigger" title="Cause Register: Master consolidated list of suspect causes for tracking">Cause Register</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Consolidate the brainstormed causes into a single tracked list.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Register Details</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Register Details: Master cause inventory tracking">Register Details</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[3].addRegisterRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Register Entry
                             </button>
                         </div>
                         <div id="s3_registerContainer" class="mb-4">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-2">ID</div>
-                                <div class="col-2">Category</div>
-                                <div class="col-4">Cause Description</div>
-                                <div class="col-3">Origin</div>
+                                <div class="col-2 ds-tooltip-trigger" title="ID: Unique identifier tag for cause entry">ID</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Category: 6M category classification">Category</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Cause Description: Full description of suspect cause">Cause Description</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Origin: Brainstorming or Pareto source origin">Origin</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -207,25 +221,25 @@ const Stage3 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.3</span>
-                                Cause Prioritization Matrix
+                                <span class="ds-tooltip-trigger" title="Cause Prioritization Matrix: Prioritizing causes using Impact (1-10) x Frequency (1-10) x Control (1-10)">Cause Prioritization Matrix</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Score and rank the registered causes to decide which to verify first.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Prioritization Ranks</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Prioritization Ranks: Risk priority score evaluation">Prioritization Ranks</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[3].addPrioritizationRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Cause to Rank
                             </button>
                         </div>
                         <div id="s3_priorityContainer" class="mb-4">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Cause</div>
-                                <div class="col-2">Impact (1-10)</div>
-                                <div class="col-2">Freq (1-10)</div>
-                                <div class="col-2">Control (1-10)</div>
-                                <div class="col-2">Total Score</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Cause: Suspect cause description being evaluated">Cause</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Impact (1-10): Severity score of cause impact on defect (1=low, 10=critical)">Impact (1-10)</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Freq (1-10): Occurrence frequency score (1=rare, 10=continuous)">Freq (1-10)</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Control (1-10): Team ability to control or influence cause (1=no control, 10=full control)">Control (1-10)</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Total Score: Calculated risk priority score = Impact x Freq x Control">Total Score</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -238,25 +252,25 @@ const Stage3 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.4</span>
-                                Cause Verification
+                                <span class="ds-tooltip-trigger" title="Cause Verification: Empirical testing protocol confirming whether suspect causes are true root causes">Cause Verification</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Test the top-ranked causes against actual data to confirm which are real.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Verification Checklist</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Verification Checklist: Empirical test execution tracking">Verification Checklist</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[3].addVerificationRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Verification
                             </button>
                         </div>
                         <div id="s3_verificationContainer" class="mb-4">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-2">Cause</div>
-                                <div class="col-2">Method</div>
-                                <div class="col-3">Data Source</div>
-                                <div class="col-2">Result</div>
-                                <div class="col-2">Conclusion</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Cause: Suspect cause undergoing empirical verification test">Cause</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Method: Verification testing protocol (e.g. Audit, Measurement, DOE)">Method</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Data Source: Log sheet, measurement gauge, or observation record">Data Source</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Result: Test observation and numerical result">Result</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Conclusion: Verification conclusion (True Cause vs Invalidated)">Conclusion</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -275,12 +289,26 @@ const Stage3 = {
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
-                        <label class="ds-label mb-3">Interactive Fishbone Visualization (Verified Causes)</label>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <label class="ds-label mb-0">Interactive Fishbone Visualization (Verified Causes)</label>
+                            <div class="d-flex align-items-center gap-1 bg-light border p-1 rounded-3">
+                                <button type="button" class="ds-btn ds-btn-ghost p-1" style="height:28px;width:28px;" title="Zoom Out (-)" onclick="StageModules[3].zoomFishboneL3(-0.15)">
+                                    <i data-lucide="minus" style="width:14px;height:14px;"></i>
+                                </button>
+                                <span class="badge bg-white text-dark border px-2 py-1" id="fishboneL3ZoomBadge" style="font-size:0.75rem; min-width:45px; text-align:center;">100%</span>
+                                <button type="button" class="ds-btn ds-btn-ghost p-1" style="height:28px;width:28px;" title="Zoom In (+)" onclick="StageModules[3].zoomFishboneL3(0.15)">
+                                    <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                                </button>
+                                <button type="button" class="ds-btn ds-btn-ghost p-1 text-secondary ms-1" style="height:28px;width:28px;" title="Reset Zoom" onclick="StageModules[3].resetFishboneL3Zoom()">
+                                    <i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i>
+                                </button>
+                            </div>
+                        </div>
                         
                         <!-- Visual Fishbone SVG -->
-                        <div class="border p-3 rounded bg-white shadow-sm mb-4" style="overflow-x: auto;">
-                            <div style="min-width: 1000px; position: relative; height: 420px;">
-                                <svg viewBox="0 0 1100 440" width="100%" height="100%" style="font-family: inherit;">
+                        <div class="border p-3 rounded shadow-sm mb-4 qc-tool-card" style="overflow: auto; background: var(--ds-bg-card, #ffffff);">
+                            <div id="fishboneL3SvgContainer" style="min-width: 1000px; position: relative; height: 420px; transform-origin: top left; transition: transform 0.2s ease-out;">
+                                <svg id="fishboneL3Svg" viewBox="0 0 1100 440" width="100%" height="100%" style="font-family: inherit;">
                                     <defs>
                                         <marker id="arrow_v2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                                             <path d="M 0 0 L 10 5 L 0 10 z" fill="#1e293b" />
@@ -435,52 +463,32 @@ const Stage3 = {
         }
         this.drawVisualFishbone();
 
-        // Register
+        // Register: Sync from Selected Fishbone causes
         const reg = d.cause_register || [];
-        const regContainer = document.getElementById('s3_registerContainer');
-        regContainer.innerHTML = `
-            <div class="row text-muted small fw-bold mb-2 px-2">
-                <div class="col-2">ID</div>
-                <div class="col-2">Category</div>
-                <div class="col-4">Cause Description</div>
-                <div class="col-3">Origin</div>
-                <div class="col-1"></div>
-            </div>
-        `;
-        if (reg.length) reg.forEach(r => this.addRegisterRow(r));
-        else this.addRegisterRow();
+        const fishboneRows = this.collectFishboneRows();
+        const selectedFishboneRows = fishboneRows.filter(r => r.status === 'Selected' && r.level1 && r.level1.trim());
 
-        // Prioritization
+        if (selectedFishboneRows.length > 0) {
+            this.syncCauseRegisterFromFishbone();
+        } else {
+            const regContainer = document.getElementById('s3_registerContainer');
+            regContainer.innerHTML = `
+                <div class="row text-muted small fw-bold mb-2 px-2">
+                    <div class="col-2">ID</div>
+                    <div class="col-2">Category</div>
+                    <div class="col-4">Cause Description</div>
+                    <div class="col-3">Origin / Sub-Cause</div>
+                    <div class="col-1"></div>
+                </div>
+            `;
+            if (reg.length) reg.forEach(r => this.addRegisterRow(r));
+            else this.addRegisterRow();
+        }
+
+        // Prioritization & Verification: Always perform live sync from Cause Register!
         const prio = d.cause_prioritization || [];
-        const prioContainer = document.getElementById('s3_priorityContainer');
-        prioContainer.innerHTML = `
-            <div class="row text-muted small fw-bold mb-2 px-2">
-                <div class="col-3">Cause</div>
-                <div class="col-2">Impact (1-10)</div>
-                <div class="col-2">Freq (1-10)</div>
-                <div class="col-2">Control (1-10)</div>
-                <div class="col-2">Total Score</div>
-                <div class="col-1"></div>
-            </div>
-        `;
-        if (prio.length) prio.forEach(r => this.addPrioritizationRow(r));
-        else this.addPrioritizationRow();
-
-        // Verification
         const ver = d.cause_verification || [];
-        const verContainer = document.getElementById('s3_verificationContainer');
-        verContainer.innerHTML = `
-            <div class="row text-muted small fw-bold mb-2 px-2">
-                <div class="col-2">Cause</div>
-                <div class="col-2">Method</div>
-                <div class="col-3">Data Source</div>
-                <div class="col-2">Result</div>
-                <div class="col-2">Conclusion</div>
-                <div class="col-1"></div>
-            </div>
-        `;
-        if (ver.length) ver.forEach(r => this.addVerificationRow(r));
-        else this.addVerificationRow();
+        this.syncPrioritizationAndVerificationFromRegister(prio, ver);
 
         // L3 summary
         const l3 = d.fishbone_l3 || {};
@@ -689,6 +697,61 @@ const Stage3 = {
         }
     },
 
+    // ── Zoom Control Methods for Fishbone Diagrams ──
+    zoomFishbone(delta) {
+        this.fishboneZoomLevel = (this.fishboneZoomLevel || 1.0) + delta;
+        if (this.fishboneZoomLevel < 0.5) this.fishboneZoomLevel = 0.5;
+        if (this.fishboneZoomLevel > 2.5) this.fishboneZoomLevel = 2.5;
+
+        const container = document.getElementById('fishboneSvgContainer');
+        const badge = document.getElementById('fishboneZoomBadge');
+        if (container) {
+            container.style.transform = `scale(${this.fishboneZoomLevel})`;
+        }
+        if (badge) {
+            badge.textContent = `${Math.round(this.fishboneZoomLevel * 100)}%`;
+        }
+    },
+
+    resetFishboneZoom() {
+        this.fishboneZoomLevel = 1.0;
+        const container = document.getElementById('fishboneSvgContainer');
+        const badge = document.getElementById('fishboneZoomBadge');
+        if (container) {
+            container.style.transform = `scale(1.0)`;
+        }
+        if (badge) {
+            badge.textContent = `100%`;
+        }
+    },
+
+    zoomFishboneL3(delta) {
+        this.fishboneL3ZoomLevel = (this.fishboneL3ZoomLevel || 1.0) + delta;
+        if (this.fishboneL3ZoomLevel < 0.5) this.fishboneL3ZoomLevel = 0.5;
+        if (this.fishboneL3ZoomLevel > 2.5) this.fishboneL3ZoomLevel = 2.5;
+
+        const container = document.getElementById('fishboneL3SvgContainer');
+        const badge = document.getElementById('fishboneL3ZoomBadge');
+        if (container) {
+            container.style.transform = `scale(${this.fishboneL3ZoomLevel})`;
+        }
+        if (badge) {
+            badge.textContent = `${Math.round(this.fishboneL3ZoomLevel * 100)}%`;
+        }
+    },
+
+    resetFishboneL3Zoom() {
+        this.fishboneL3ZoomLevel = 1.0;
+        const container = document.getElementById('fishboneL3SvgContainer');
+        const badge = document.getElementById('fishboneL3ZoomBadge');
+        if (container) {
+            container.style.transform = `scale(1.0)`;
+        }
+        if (badge) {
+            badge.textContent = `100%`;
+        }
+    },
+
     // Fishbone dynamic drawing
     drawVisualFishbone() {
         const rows = this.collectFishboneRows();
@@ -834,10 +897,10 @@ const Stage3 = {
                     ${['Man','Machine','Method','Material','Measurement','Environment'].map(x => `<option ${data.category===x?'selected':''}>${x}</option>`).join('')}
                 </select>
             </div>
-            <div class="col-3"><input type="text" class="ds-input r-l1" placeholder="e.g. Die wear" value="${data.level1 || ''}" onchange="StageModules[3].drawVisualFishbone()" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-l2" placeholder="e.g. PM overdue by 2 weeks" value="${data.level2 || ''}" maxlength="35" onchange="StageModules[3].drawVisualFishbone()" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-l1" placeholder="e.g. Die wear" value="${data.level1 || ''}" onchange="StageModules[3].drawVisualFishbone()" oninput="StageModules[3].drawVisualFishbone()" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-l2" placeholder="e.g. PM overdue by 2 weeks" value="${data.level2 || ''}" maxlength="35" onchange="StageModules[3].drawVisualFishbone()" oninput="StageModules[3].drawVisualFishbone()" required></div>
             <div class="col-2">
-                <select class="ds-input ds-select r-stat" required>
+                <select class="ds-input ds-select r-stat" onchange="StageModules[3].drawVisualFishbone()" required>
                     <option value="Selected" ${data.status==='Selected'?'selected':''}>Selected</option>
                     <option value="Rejected" ${data.status==='Rejected'?'selected':''}>Rejected</option>
                 </select>
@@ -866,10 +929,10 @@ const Stage3 = {
                     ${['Man','Machine','Method','Material','Measurement','Environment'].map(x => `<option ${category===x?'selected':''}>${x}</option>`).join('')}
                 </select>
             </div>
-            <div class="col-3"><input type="text" class="ds-input r-l1" placeholder="e.g. Die wear" value="${this.escapeHtml(level1)}" onchange="StageModules[3].drawVisualFishbone()" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-l2" placeholder="e.g. PM overdue by 2 weeks" value="" maxlength="35" onchange="StageModules[3].drawVisualFishbone()" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-l1" placeholder="e.g. Die wear" value="${this.escapeHtml(level1)}" onchange="StageModules[3].drawVisualFishbone()" oninput="StageModules[3].drawVisualFishbone()" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-l2" placeholder="e.g. PM overdue by 2 weeks" value="" maxlength="35" onchange="StageModules[3].drawVisualFishbone()" oninput="StageModules[3].drawVisualFishbone()" required></div>
             <div class="col-2">
-                <select class="ds-input ds-select r-stat" required>
+                <select class="ds-input ds-select r-stat" onchange="StageModules[3].drawVisualFishbone()" required>
                     <option value="Selected" selected>Selected</option>
                     <option value="Rejected">Rejected</option>
                 </select>
@@ -993,15 +1056,22 @@ const Stage3 = {
                 txt.setAttribute('fill', '#0f172a');
                 txt.textContent = label1;
                 g.appendChild(txt);                // Sub-causes: branch lines terminating in interactive node point dots ● (hover for details, no text overlap)
-                if (subCauses && subCauses.length > 0) {
+                const validSubCauses = (subCauses || []).map(s => String(s).trim()).filter(Boolean);
+                if (validSubCauses.length > 0) {
                     if (window.fbTipInit) window.fbTipInit();
-                    subCauses.slice(0, 3).forEach((subStr, sIdx) => {
-                        const fullText = String(subStr).trim();
-                        if (!fullText) return;
+                    const totalCount = validSubCauses.length;
+                    const startMargin = 15;
+                    const endMargin = 15;
+                    const lineLen = 100;
+                    const usableLength = Math.max(lineLen - startMargin - endMargin, 30);
+                    const step = totalCount > 1 ? usableLength / (totalCount - 1) : usableLength / 2;
 
-                        // Position attachment point on horizontal line
-                        const subX1 = bx - 25 - (sIdx * 25);
-                        const subOffset = 18 + (sIdx * 4);
+                    validSubCauses.forEach((fullText, sIdx) => {
+                        // Calculate attachment point along horizontal line
+                        const subX1 = (totalCount === 1)
+                            ? bx - startMargin - (usableLength / 2)
+                            : bx - startMargin - (sIdx * step);
+                        const subOffset = Math.max(14, 20 - (totalCount > 4 ? (totalCount - 4) * 1.5 : 0));
                         const subY = isTop ? (ly + subOffset) : (ly - subOffset);
                         // Calculate subX2 so the sub-branch line is EXACTLY PARALLEL to the main category diagonal spine
                         const slopeRatio = 10 / 17; // dx/dy slope of main category spine
@@ -1040,6 +1110,127 @@ const Stage3 = {
                 }
             });
         });
+
+        this.syncCauseRegisterFromFishbone();
+    },
+
+    syncCauseRegisterFromFishbone() {
+        const regContainer = document.getElementById('s3_registerContainer');
+        if (!regContainer) return;
+
+        const fishboneRows = this.collectFishboneRows();
+        const selectedRows = fishboneRows.filter(r => r.status === 'Selected' && r.level1 && r.level1.trim());
+
+        const headerHtml = `
+            <div class="row text-muted small fw-bold mb-2 px-2">
+                <div class="col-2">ID</div>
+                <div class="col-2">Category</div>
+                <div class="col-4">Cause Description</div>
+                <div class="col-3">Origin / Sub-Cause</div>
+                <div class="col-1"></div>
+            </div>
+        `;
+
+        if (selectedRows.length === 0) {
+            return;
+        }
+
+        regContainer.innerHTML = headerHtml;
+        selectedRows.forEach((r, idx) => {
+            const rowId = `C-${String(idx + 1).padStart(2, '0')}`;
+            this.addRegisterRow({
+                id: rowId,
+                category: r.category,
+                description: r.level1,
+                origin: r.level2 || 'Brainstorming'
+            });
+        });
+
+        this.syncPrioritizationAndVerificationFromRegister();
+    },
+
+    syncPrioritizationAndVerificationFromRegister(initialPrio = null, initialVer = null) {
+        const regRows = this.collectRegisterRows();
+        const causeList = regRows.map(r => {
+            const desc = (r.description || '').trim();
+            const orig = (r.origin || '').trim();
+            if (orig && orig !== 'Brainstorming') {
+                return `${desc} - ${orig}`;
+            }
+            return desc;
+        }).filter(Boolean);
+
+        if (causeList.length === 0) return;
+
+        // 1. Sync Prioritization Matrix
+        const prioContainer = document.getElementById('s3_priorityContainer');
+        if (prioContainer) {
+            const existingPrio = (initialPrio && initialPrio.length) ? initialPrio : this.collectPrioritizationRows();
+            const findPrio = (causeName) => {
+                let match = existingPrio.find(p => p.cause && p.cause.trim() === causeName);
+                if (match) return match;
+                const baseDesc = causeName.split(' - ')[0].trim();
+                return existingPrio.find(p => p.cause && (causeName.includes(p.cause.trim()) || p.cause.trim().includes(baseDesc)));
+            };
+
+            const headerHtml = `
+                <div class="row text-muted small fw-bold mb-2 px-2">
+                    <div class="col-3">Cause</div>
+                    <div class="col-2">Impact (1-10)</div>
+                    <div class="col-2">Freq (1-10)</div>
+                    <div class="col-2">Control (1-10)</div>
+                    <div class="col-2">Total Score</div>
+                    <div class="col-1"></div>
+                </div>
+            `;
+
+            prioContainer.innerHTML = headerHtml;
+            causeList.forEach(cause => {
+                const existing = findPrio(cause);
+                this.addPrioritizationRow({
+                    cause: cause,
+                    impact: existing ? existing.impact : '',
+                    frequency: existing ? existing.frequency : '',
+                    control: existing ? existing.control : '',
+                    total: existing ? existing.total : ''
+                });
+            });
+        }
+
+        // 2. Sync Verification Checklist
+        const verContainer = document.getElementById('s3_verificationContainer');
+        if (verContainer) {
+            const existingVer = (initialVer && initialVer.length) ? initialVer : this.collectVerificationRows();
+            const findVer = (causeName) => {
+                let match = existingVer.find(v => v.cause && v.cause.trim() === causeName);
+                if (match) return match;
+                const baseDesc = causeName.split(' - ')[0].trim();
+                return existingVer.find(v => v.cause && (causeName.includes(v.cause.trim()) || v.cause.trim().includes(baseDesc)));
+            };
+
+            const headerHtml = `
+                <div class="row text-muted small fw-bold mb-2 px-2">
+                    <div class="col-2">Cause</div>
+                    <div class="col-2">Method</div>
+                    <div class="col-3">Data Source</div>
+                    <div class="col-2">Result</div>
+                    <div class="col-2">Conclusion</div>
+                    <div class="col-1"></div>
+                </div>
+            `;
+
+            verContainer.innerHTML = headerHtml;
+            causeList.forEach(cause => {
+                const existing = findVer(cause);
+                this.addVerificationRow({
+                    cause: cause,
+                    method: existing ? existing.method : '',
+                    source: existing ? (existing.source || existing.dataSource) : '',
+                    result: existing ? existing.result : '',
+                    conclusion: existing ? existing.conclusion : ''
+                });
+            });
+        }
     },
 
     addRegisterRow(data = {}) {
@@ -1047,11 +1238,11 @@ const Stage3 = {
         const r = document.createElement('div');
         r.className = 'row g-2 mb-2 align-items-center dyn-row';
         r.innerHTML = `
-            <div class="col-2"><input type="text" class="ds-input r-id" placeholder="e.g. RC-1" value="${data.id || ''}" required></div>
-            <div class="col-2"><input type="text" class="ds-input r-cat" placeholder="e.g. Machine" value="${data.category || ''}" required></div>
-            <div class="col-4"><input type="text" class="ds-input r-desc" placeholder="e.g. Crimping pressure fluctuation" value="${data.description || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-orig" placeholder="e.g. Brainstorming" value="${data.origin || ''}" required></div>
-            <div class="col-1"><button class="ds-btn ds-btn-ghost text-danger p-1" onclick="this.closest('.dyn-row').remove()"><i data-lucide="trash-2" style="width:14px;"></i></button></div>`;
+            <div class="col-2"><input type="text" class="ds-input r-id" placeholder="e.g. RC-1" value="${data.id || ''}" oninput="StageModules[3].syncPrioritizationAndVerificationFromRegister()" required></div>
+            <div class="col-2"><input type="text" class="ds-input r-cat" placeholder="e.g. Machine" value="${data.category || ''}" oninput="StageModules[3].syncPrioritizationAndVerificationFromRegister()" required></div>
+            <div class="col-4"><input type="text" class="ds-input r-desc" placeholder="e.g. Crimping pressure fluctuation" value="${data.description || ''}" oninput="StageModules[3].syncPrioritizationAndVerificationFromRegister()" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-orig" placeholder="e.g. Brainstorming" value="${data.origin || ''}" oninput="StageModules[3].syncPrioritizationAndVerificationFromRegister()" required></div>
+            <div class="col-1"><button type="button" class="ds-btn ds-btn-ghost text-danger p-1" onclick="this.closest('.dyn-row').remove(); StageModules[3].syncPrioritizationAndVerificationFromRegister()"><i data-lucide="trash-2" style="width:14px;"></i></button></div>`;
         c.appendChild(r);
         if (window.lucide) lucide.createIcons();
     },
@@ -1282,15 +1473,22 @@ const Stage3 = {
                 g.appendChild(txt);
 
                 // Sub-causes: branch lines terminating in interactive node point dots ● (hover for details, no text overlap)
-                if (subCauses && subCauses.length > 0) {
+                const validSubCauses = (subCauses || []).map(s => String(s).trim()).filter(Boolean);
+                if (validSubCauses.length > 0) {
                     if (window.fbTipInit) window.fbTipInit();
-                    subCauses.slice(0, 3).forEach((subStr, sIdx) => {
-                        const fullText = String(subStr).trim();
-                        if (!fullText) return;
+                    const totalCount = validSubCauses.length;
+                    const startMargin = 15;
+                    const endMargin = 15;
+                    const lineLen = 100;
+                    const usableLength = Math.max(lineLen - startMargin - endMargin, 30);
+                    const step = totalCount > 1 ? usableLength / (totalCount - 1) : usableLength / 2;
 
-                        // Position attachment point on horizontal line
-                        const subX1 = bx - 25 - (sIdx * 25);
-                        const subOffset = 18 + (sIdx * 4);
+                    validSubCauses.forEach((fullText, sIdx) => {
+                        // Calculate attachment point along horizontal line
+                        const subX1 = (totalCount === 1)
+                            ? bx - startMargin - (usableLength / 2)
+                            : bx - startMargin - (sIdx * step);
+                        const subOffset = Math.max(14, 20 - (totalCount > 4 ? (totalCount - 4) * 1.5 : 0));
                         const subY = isTop ? (ly + subOffset) : (ly - subOffset);
                         // Calculate subX2 so the sub-branch line is EXACTLY PARALLEL to the main category diagonal spine
                         const slopeRatio = 10 / 17; // dx/dy slope of main category spine

@@ -29,8 +29,23 @@ const DynamicRenderer = {
     getAllRenderableFields(sec) {
         if (!sec) return [];
         let list = [];
-        if (Array.isArray(sec.fields) && sec.fields.length > 0) {
-            sec.fields.forEach(f => list.push(f));
+        const rawFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
+        if (rawFields.length > 0) {
+            rawFields.forEach(f => {
+                if (f) {
+                    if (!list.some(item => item.id === f.id)) list.push(f);
+                    if (Array.isArray(f.fields) && f.fields.length > 0) {
+                        f.fields.forEach(subF => {
+                            if (subF && !list.some(item => item.id === subF.id)) list.push(subF);
+                        });
+                    }
+                }
+            });
+        }
+        if (Array.isArray(sec.children) && sec.children.length > 0) {
+            sec.children.forEach(f => {
+                if (f && !list.some(item => item.id === f.id)) list.push(f);
+            });
         }
         if (sec.predefined_fields && typeof sec.predefined_fields === 'object') {
             Object.keys(sec.predefined_fields).forEach(pfId => {
@@ -110,7 +125,7 @@ const DynamicRenderer = {
         const fieldType = (field.type || 'text').toLowerCase();
         
         let colWidth = field.col_span || field.col || 'col-md-6';
-        if (['textarea', 'multi_line_text', 'table', 'five_why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'multi_text', 'file_upload'].includes(fieldType)) {
+        if (['textarea', 'multi_line_text', 'table', 'five_why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'multi_text', 'file_upload', 'grid_2col', 'grid_3col', 'info_callout', 'action_plan_3w1h'].includes(fieldType)) {
             if (!field.col_span || field.col_span === 'col-md-6') {
                 colWidth = 'col-12';
             }
@@ -120,9 +135,9 @@ const DynamicRenderer = {
 
         return `
             <div class="${colWidth}">
-                <div class="ds-field-block p-2.5 rounded border bg-white mb-2" id="field_wrap_${field.id}">
+                <div class="ds-field-block p-2.5 rounded border mb-2" id="field_wrap_${field.id}" style="background: var(--ds-bg-card, #ffffff);">
                     <label class="ds-label text-xs fw-semibold mb-1 d-block text-main">
-                        ${this.escapeHtml(field.label || 'Field')}${field.required !== false ? ' <span class="text-danger">*</span>' : ''}
+                        ${this.escapeHtml(field.label || 'Field')}
                     </label>
                     ${innerContent}
                 </div>
@@ -154,14 +169,14 @@ const DynamicRenderer = {
                     if (unitBadge) {
                         contentHtml = `
                             <div class="input-group input-group-sm">
-                                <input type="${inputType}" class="ds-input" id="${sec.id}" placeholder="${this.escapeHtml(ph)}" ${sec.required!==false?'required':''} ${clickAttr}>
+                                <input type="${inputType}" class="ds-input" id="${sec.id}" placeholder="${this.escapeHtml(ph)}" ${sec.required === true ? 'required' : ''} ${clickAttr}>
                                 ${unitBadge}
                             </div>
                         `;
                     } else {
                         contentHtml = `
                             <div class="ds-field">
-                                <input type="${inputType}" class="ds-input" id="${sec.id}" placeholder="${this.escapeHtml(ph)}" ${sec.required!==false?'required':''} ${clickAttr}>
+                                <input type="${inputType}" class="ds-input" id="${sec.id}" placeholder="${this.escapeHtml(ph)}" ${sec.required === true ? 'required' : ''} ${clickAttr}>
                             </div>
                         `;
                     }
@@ -173,7 +188,7 @@ const DynamicRenderer = {
                     const ph = sec.placeholder || 'Enter detailed notes...';
                     contentHtml = `
                         <div class="ds-field">
-                            <textarea class="ds-input ds-textarea" id="${sec.id}" rows="3" placeholder="${this.escapeHtml(ph)}" ${sec.required!==false?'required':''}></textarea>
+                            <textarea class="ds-input ds-textarea" id="${sec.id}" rows="3" placeholder="${this.escapeHtml(ph)}" ${sec.required === true ? 'required' : ''}></textarea>
                         </div>
                     `;
                 }
@@ -198,7 +213,7 @@ const DynamicRenderer = {
                 }
                 contentHtml = `
                     <div class="ds-field">
-                        <select class="ds-input ds-select" id="${sec.id}" data-source="${sec.data_source || 'custom'}" ${sec.required!==false?'required':''}>
+                        <select class="ds-input ds-select" id="${sec.id}" data-source="${sec.data_source || 'custom'}" ${sec.required === true ? 'required' : ''}>
                             ${optionsHtml}
                         </select>
                     </div>
@@ -218,7 +233,26 @@ const DynamicRenderer = {
             case 'section_header':
             case 'header':
             case 'sub_section': {
-                contentHtml = `<div class="py-1"><hr class="my-2 border-secondary-subtle"></div>`;
+                const childFields = this.getAllRenderableFields(sec);
+                if (childFields.length > 0) {
+                    contentHtml = `<div class="row g-3">`;
+                    childFields.forEach(f => {
+                        const colW = f.col_span || f.col || 'col-md-6';
+                        contentHtml += `
+                            <div class="${colW}">
+                                <div class="ds-field-block p-2.5 rounded border mb-2" style="background: var(--ds-bg-card, #ffffff);">
+                                    <label class="ds-label text-xs fw-semibold mb-1 d-block text-main">
+                                        ${this.escapeHtml(f.label || 'Field')} ${f.required ? '<span class="text-danger">*</span>' : ''}
+                                    </label>
+                                    ${this.getFieldContentHtml(f, true)}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    contentHtml += `</div>`;
+                } else {
+                    contentHtml = `<div class="py-1"><hr class="my-2 border-secondary-subtle"></div>`;
+                }
                 break;
             }
             case 'multi_text':
@@ -305,8 +339,24 @@ const DynamicRenderer = {
                 contentHtml = `
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <div class="border rounded p-3 bg-white mb-2 overflow-auto" style="min-height:300px;">
-                                <svg width="100%" height="320" viewBox="0 0 820 320" id="${sec.id}_svg" style="background:var(--ds-bg-card,#ffffff);">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="ds-label mb-0">Fishbone Diagram Visualization</label>
+                                <div class="d-flex align-items-center gap-1 bg-light border p-1 rounded-3">
+                                    <button type="button" class="ds-btn ds-btn-ghost p-1" style="height:26px;width:26px;" title="Zoom Out (-)" onclick="DynamicRenderer.zoomFishbone('${sec.id}', -0.15)">
+                                        <i data-lucide="minus" style="width:12px;height:12px;"></i>
+                                    </button>
+                                    <span class="badge bg-white text-dark border px-2 py-1" id="${sec.id}_zoomBadge" style="font-size:0.75rem; min-width:40px; text-align:center;">100%</span>
+                                    <button type="button" class="ds-btn ds-btn-ghost p-1" style="height:26px;width:26px;" title="Zoom In (+)" onclick="DynamicRenderer.zoomFishbone('${sec.id}', 0.15)">
+                                        <i data-lucide="plus" style="width:12px;height:12px;"></i>
+                                    </button>
+                                    <button type="button" class="ds-btn ds-btn-ghost p-1 text-secondary ms-1" style="height:26px;width:26px;" title="Reset Zoom" onclick="DynamicRenderer.resetFishboneZoom('${sec.id}')">
+                                        <i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="border rounded p-3 mb-2 overflow-auto qc-tool-card" style="min-height:300px; background: var(--ds-bg-card, #ffffff);">
+                                <div id="${sec.id}_svgContainer" style="transform-origin: top left; transition: transform 0.2s ease-out;">
+                                    <svg width="100%" height="320" viewBox="0 0 820 320" id="${sec.id}_svg" style="background:var(--ds-bg-card,#ffffff);">
                                     <defs>
                                         <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                                             <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--ds-primary)" />
@@ -341,6 +391,7 @@ const DynamicRenderer = {
                                     <text x="500" y="295" font-size="11" font-weight="bold" fill="var(--ds-primary)">Environment</text>
                                     <g id="${sec.id}_bone_Environment"></g>
                                 </svg>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -549,6 +600,141 @@ const DynamicRenderer = {
                     </div>
                 `;
                 break;
+            case 'grid_2col':
+            case '2_column_grid':
+            case 'grid_2_column': {
+                const childFields = this.getAllRenderableFields(sec);
+                if (childFields.length > 0) {
+                    contentHtml = `<div class="row g-3">`;
+                    childFields.forEach(f => {
+                        const colW = f.col_span || f.col || 'col-md-6';
+                        contentHtml += `
+                            <div class="${colW}">
+                                <div class="ds-field-block p-2.5 rounded border mb-2" style="background: var(--ds-bg-card, #ffffff);">
+                                    <label class="ds-label text-xs fw-semibold mb-1 d-block text-main">
+                                        ${this.escapeHtml(f.label || 'Field')} ${f.required ? '<span class="text-danger">*</span>' : ''}
+                                    </label>
+                                    ${this.getFieldContentHtml(f, true)}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    contentHtml += `</div>`;
+                } else {
+                    contentHtml = `
+                        <div class="row g-3">
+                            <div class="col-md-6"><div class="border rounded p-3 text-muted text-xs bg-light">Column 1 (Add fields inside layout)</div></div>
+                            <div class="col-md-6"><div class="border rounded p-3 text-muted text-xs bg-light">Column 2 (Add fields inside layout)</div></div>
+                        </div>
+                    `;
+                }
+                break;
+            }
+            case 'grid_3col':
+            case '3_column_grid':
+            case 'grid_3_column': {
+                const childFields = this.getAllRenderableFields(sec);
+                if (childFields.length > 0) {
+                    contentHtml = `<div class="row g-3">`;
+                    childFields.forEach(f => {
+                        const colW = f.col_span || f.col || 'col-md-4';
+                        contentHtml += `
+                            <div class="${colW}">
+                                <div class="ds-field-block p-2.5 rounded border mb-2" style="background: var(--ds-bg-card, #ffffff);">
+                                    <label class="ds-label text-xs fw-semibold mb-1 d-block text-main">
+                                        ${this.escapeHtml(f.label || 'Field')} ${f.required ? '<span class="text-danger">*</span>' : ''}
+                                    </label>
+                                    ${this.getFieldContentHtml(f, true)}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    contentHtml += `</div>`;
+                } else {
+                    contentHtml = `
+                        <div class="row g-3">
+                            <div class="col-md-4"><div class="border rounded p-3 text-muted text-xs bg-light">Column 1</div></div>
+                            <div class="col-md-4"><div class="border rounded p-3 text-muted text-xs bg-light">Column 2</div></div>
+                            <div class="col-md-4"><div class="border rounded p-3 text-muted text-xs bg-light">Column 3</div></div>
+                        </div>
+                    `;
+                }
+                break;
+            }
+            case 'info_callout':
+            case 'info':
+            case 'callout': {
+                const text = sec.placeholder || sec.description || sec.label || 'Information callout instructions';
+                contentHtml = `
+                    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-0 py-2 px-3 text-xs" style="background: rgba(59, 130, 246, 0.1); color: #1e40af; border-radius: 8px;">
+                        <i data-lucide="info" style="width:16px;height:16px;" class="flex-shrink-0"></i>
+                        <div>${this.escapeHtml(text)}</div>
+                    </div>
+                `;
+                break;
+            }
+            case 'attachment':
+            case 'document_link': {
+                const ph = sec.placeholder || 'https://drive.google.com/... or cloud document link';
+                contentHtml = `
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light text-muted"><i data-lucide="link" style="width:14px;height:14px;"></i></span>
+                        <input type="url" class="ds-input border-start-0" id="${sec.id}" placeholder="${this.escapeHtml(ph)}" ${sec.required === true ? 'required' : ''}>
+                        <button class="ds-btn ds-btn-outline ds-btn-sm" type="button" onclick="const v=document.getElementById('${sec.id}')?.value; if(v) window.open(v,'_blank');">
+                            Open Link
+                        </button>
+                    </div>
+                `;
+                break;
+            }
+            case 'action_btn':
+            case 'view_link': {
+                const label = sec.label || (type === 'action_btn' ? 'Trigger Action' : 'View / Inspect');
+                contentHtml = `
+                    <button class="ds-btn ds-btn-primary ds-btn-sm" type="button" id="${sec.id}_btn" onclick="if(window.QCMS && QCMS.toast) QCMS.toast('${this.escapeHtml(label)} triggered','info');">
+                        <i data-lucide="${type === 'action_btn' ? 'play' : 'eye'}" style="width:14px;height:14px;margin-right:4px;"></i>
+                        ${this.escapeHtml(label)}
+                    </button>
+                `;
+                break;
+            }
+            case 'facilitator_gate': {
+                contentHtml = `
+                    <div class="d-flex align-items-center justify-content-between p-2.5 rounded bg-light border">
+                        <div class="v-stack">
+                            <span class="text-xs fw-bold text-main" id="${sec.id}_status_label">Facilitator Review Signoff</span>
+                            <span class="text-xxs text-muted" id="${sec.id}_time_label">Pending Facilitator Approval</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="${sec.id}">
+                        </div>
+                    </div>
+                `;
+                break;
+            }
+            case 'action_plan_3w1h': {
+                contentHtml = `
+                    <div class="table-responsive">
+                        <table class="ds-table table-bordered mb-2" id="${sec.id}_table">
+                            <thead>
+                                <tr>
+                                    <th>What (Countermeasure Action)</th>
+                                    <th>Who (Owner / Leader)</th>
+                                    <th>When (Target Date)</th>
+                                    <th>How (Implementation Method)</th>
+                                    <th>Status</th>
+                                    <th style="width:40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="ds-btn ds-btn-ghost ds-btn-sm" type="button" onclick="DynamicRenderer.addActionPlanTableRow('${sec.id}')">
+                        <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Action Item
+                    </button>
+                `;
+                break;
+            }
             default:
                 contentHtml = `<p class="text-xs text-danger mb-0 py-1">Unsupported field component type: ${this.escapeHtml(type)}</p>`;
         }
@@ -557,7 +743,7 @@ const DynamicRenderer = {
             return contentHtml;
         }
 
-        const colWidth = (['textarea', 'multi_line_text', 'table', 'five_why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'check_sheet'].includes(type)) ? 'col-12' : 'col-md-6';
+        const colWidth = (['textarea', 'multi_line_text', 'table', 'five_why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'check_sheet', 'grid_2col', 'grid_3col', 'info_callout', 'action_plan_3w1h'].includes(type)) ? 'col-12' : 'col-md-6';
         const orderLabel = (sec.order !== undefined && sec.order !== null && sec.order !== 'undefined') ? sec.order : '';
         const orderCircle = orderLabel ? `<span class="ds-icon-circle bg-primary-soft text-primary" style="width:24px;height:24px;font-size:.65rem;font-weight:700;">${orderLabel}</span>` : '';
 
@@ -574,7 +760,7 @@ const DynamicRenderer = {
                     <div class="ds-card-header p-3 border-bottom d-flex align-items-center justify-content-between">
                         <h6 class="mb-0 fw-bold d-flex align-items-center gap-2">
                             ${orderCircle}
-                            ${this.escapeHtml(sec.label || 'Section')}${sec.required !== false ? ' <span class="text-danger">*</span>' : ''}
+                            ${this.escapeHtml(sec.label || 'Section')}${sec.required === true ? ' <span class="text-danger">*</span>' : ''}
                         </h6>
                         ${naToggleHtml}
                     </div>
@@ -705,8 +891,7 @@ const DynamicRenderer = {
                         if (Array.isArray(itemVal)) {
                             itemVal.forEach(row => this.addParetoTableRow(item.id, row));
                         } else {
-                            const defaults = [{ category: 'Category A', count: 12 }, { category: 'Category B', count: 8 }, { category: 'Category C', count: 3 }];
-                            defaults.forEach(row => this.addParetoTableRow(item.id, row));
+                            this.addParetoTableRow(item.id, {});
                         }
                         this.updateParetoChart(item.id);
                         break;
@@ -718,7 +903,7 @@ const DynamicRenderer = {
                         if (Array.isArray(itemVal)) {
                             itemVal.forEach(row => this.addFishboneTableRow(item.id, row));
                         } else {
-                            this.addFishboneTableRow(item.id, { category: 'Man', cause: 'Lack of training', sub_cause: 'New operators' });
+                            this.addFishboneTableRow(item.id, { category: 'Man', cause: '', sub_cause: '' });
                         }
                         this.updateFishboneSVG(item.id);
                         break;
@@ -755,8 +940,7 @@ const DynamicRenderer = {
                         if (Array.isArray(itemVal)) {
                             itemVal.forEach(row => this.addHistogramTableRow(item.id, row));
                         } else {
-                            const defaults = [{ interval: '10-20', freq_before: 5, freq_after: 1 }, { interval: '20-30', freq_before: 12, freq_after: 4 }, { interval: '30-40', freq_before: 7, freq_after: 15 }];
-                            defaults.forEach(row => this.addHistogramTableRow(item.id, row));
+                            this.addHistogramTableRow(item.id, {});
                         }
                         this.updateHistogramChart(item.id);
                         break;
@@ -766,12 +950,7 @@ const DynamicRenderer = {
                         if (Array.isArray(itemVal)) {
                             itemVal.forEach(row => this.addControlChartTableRow(item.id, row));
                         } else {
-                            const defaults = [
-                                { sample: 'Sample 1', val: 10.2, cl: 10.0, ucl: 10.5, lcl: 9.5 },
-                                { sample: 'Sample 2', val: 9.8, cl: 10.0, ucl: 10.5, lcl: 9.5 },
-                                { sample: 'Sample 3', val: 10.4, cl: 10.0, ucl: 10.5, lcl: 9.5 }
-                            ];
-                            defaults.forEach(row => this.addControlChartTableRow(item.id, row));
+                            this.addControlChartTableRow(item.id, {});
                         }
                         this.updateControlChart(item.id);
                         break;
@@ -781,22 +960,27 @@ const DynamicRenderer = {
                         if (Array.isArray(itemVal)) {
                             itemVal.forEach(row => this.addScatterTableRow(item.id, row));
                         } else {
-                            const defaults = [{ sample: 'Point 1', x: 2, y: 4 }, { sample: 'Point 2', x: 4, y: 8 }, { sample: 'Point 3', x: 6, y: 11 }];
-                            defaults.forEach(row => this.addScatterTableRow(item.id, row));
+                            this.addScatterTableRow(item.id, {});
                         }
                         this.updateScatterChart(item.id);
                         break;
-                    case 'stratification':
-                        const stBodyA = document.querySelector(`#${item.id}_table_a tbody`);
-                        const stBodyB = document.querySelector(`#${item.id}_table_b tbody`);
-                        if (stBodyA) stBodyA.innerHTML = '';
-                        if (stBodyB) stBodyB.innerHTML = '';
-                        const valA = (itemVal && itemVal.table_a) || [];
-                        const valB = (itemVal && itemVal.table_b) || [];
-                        if (valA.length) valA.forEach(row => this.addStratRow(`${item.id}_table_a`, row));
-                        else this.addStratRow(`${item.id}_table_a`, { group: 'Shift A', count: 15 });
-                        if (valB.length) valB.forEach(row => this.addStratRow(`${item.id}_table_b`, row));
-                        else this.addStratRow(`${item.id}_table_b`, { group: 'Location X', count: 24 });
+                    case 'action_plan_3w1h':
+                        const apBody = document.querySelector(`#${item.id}_table tbody`);
+                        if (apBody) apBody.innerHTML = '';
+                        if (Array.isArray(itemVal) && itemVal.length > 0) {
+                            itemVal.forEach(row => this.addActionPlanTableRow(item.id, row));
+                        } else {
+                            this.addActionPlanTableRow(item.id, {});
+                        }
+                        break;
+                    case 'attachment':
+                    case 'document_link':
+                        const docEl = document.getElementById(item.id);
+                        if (docEl) docEl.value = itemVal || '';
+                        break;
+                    case 'facilitator_gate':
+                        const facCheck = document.getElementById(item.id);
+                        if (facCheck) facCheck.checked = !!itemVal;
                         break;
                 }
             });
@@ -932,6 +1116,22 @@ const DynamicRenderer = {
                             })).filter(r => r.group.trim())
                         };
                         break;
+                    case 'action_plan_3w1h':
+                        data[item.id] = [...document.querySelectorAll(`#${item.id}_table tbody tr`)].map(tr => ({
+                            what: tr.querySelector('.cell-what')?.value || '',
+                            who: tr.querySelector('.cell-who')?.value || '',
+                            when: tr.querySelector('.cell-when')?.value || '',
+                            how: tr.querySelector('.cell-how')?.value || '',
+                            status: tr.querySelector('.cell-status')?.value || 'Pending'
+                        })).filter(r => r.what.trim());
+                        break;
+                    case 'attachment':
+                    case 'document_link':
+                        data[item.id] = document.getElementById(item.id)?.value || '';
+                        break;
+                    case 'facilitator_gate':
+                        data[item.id] = !!document.getElementById(item.id)?.checked;
+                        break;
                 }
             });
         });
@@ -1030,6 +1230,32 @@ const DynamicRenderer = {
             if (subInput) subInput.focus();
         }
         this.updateFishboneSVG(secId);
+    },
+
+    addActionPlanTableRow(secId, row = {}) {
+        const tbody = document.querySelector(`#${secId}_table tbody`);
+        if (!tbody) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" class="ds-input py-1 text-sm cell-what" value="${this.escapeHtml(row.what || '')}" placeholder="Countermeasure action"></td>
+            <td><input type="text" class="ds-input py-1 text-sm cell-who" value="${this.escapeHtml(row.who || '')}" placeholder="Owner / Lead"></td>
+            <td><input type="date" class="ds-input py-1 text-sm cell-when" value="${this.escapeHtml(row.when || '')}"></td>
+            <td><input type="text" class="ds-input py-1 text-sm cell-how" value="${this.escapeHtml(row.how || '')}" placeholder="Implementation method"></td>
+            <td>
+                <select class="ds-input ds-select py-1 text-sm cell-status">
+                    <option value="Pending" ${row.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                    <option value="In Progress" ${row.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="Completed" ${row.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                </select>
+            </td>
+            <td class="text-center">
+                <button class="ds-btn ds-btn-ghost text-danger p-1" type="button" onclick="this.closest('tr').remove()">
+                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+        if (window.lucide) lucide.createIcons();
     },
 
     addFiveWhyTableRow(secId, row = {}) {
@@ -1419,6 +1645,38 @@ const DynamicRenderer = {
         });
     },
 
+    // ── Zoom Controls for Dynamic Fishbone Diagrams ──
+    zoomFishbone(secId, delta) {
+        if (!this.fishboneZoomLevels) this.fishboneZoomLevels = {};
+        const currentZoom = this.fishboneZoomLevels[secId] || 1.0;
+        let newZoom = currentZoom + delta;
+        if (newZoom < 0.5) newZoom = 0.5;
+        if (newZoom > 2.5) newZoom = 2.5;
+
+        this.fishboneZoomLevels[secId] = newZoom;
+        const container = document.getElementById(`${secId}_svgContainer`);
+        const badge = document.getElementById(`${secId}_zoomBadge`);
+        if (container) {
+            container.style.transform = `scale(${newZoom})`;
+        }
+        if (badge) {
+            badge.textContent = `${Math.round(newZoom * 100)}%`;
+        }
+    },
+
+    resetFishboneZoom(secId) {
+        if (!this.fishboneZoomLevels) this.fishboneZoomLevels = {};
+        this.fishboneZoomLevels[secId] = 1.0;
+        const container = document.getElementById(`${secId}_svgContainer`);
+        const badge = document.getElementById(`${secId}_zoomBadge`);
+        if (container) {
+            container.style.transform = `scale(1.0)`;
+        }
+        if (badge) {
+            badge.textContent = `100%`;
+        }
+    },
+
     // ── Fishbone Drawing Logic ───────────────────────────────────────────────────
     updateFishboneSVG(secId) {
         const rows = [...document.querySelectorAll(`#${secId}_table tbody tr`)].map(tr => ({
@@ -1517,15 +1775,22 @@ const DynamicRenderer = {
                 boneG.appendChild(text);
                 
                 // Sub-causes: branch lines terminating in interactive node point dots ● (hover for details, no text overlap)
-                if (subCauses && subCauses.length > 0) {
+                const validSubCauses = (subCauses || []).map(s => String(s).trim()).filter(Boolean);
+                if (validSubCauses.length > 0) {
                     if (window.fbTipInit) window.fbTipInit();
-                    subCauses.slice(0, 3).forEach((subStr, sIdx) => {
-                        const fullText = String(subStr).trim();
-                        if (!fullText) return;
+                    const totalCount = validSubCauses.length;
+                    const startMargin = 15;
+                    const endMargin = 15;
+                    const lineLen = 100;
+                    const usableLength = Math.max(lineLen - startMargin - endMargin, 30);
+                    const step = totalCount > 1 ? usableLength / (totalCount - 1) : usableLength / 2;
 
-                        // Position attachment point on horizontal line
-                        const subX1 = bx - 25 - (sIdx * 25);
-                        const subOffset = 18 + (sIdx * 4);
+                    validSubCauses.forEach((fullText, sIdx) => {
+                        // Calculate attachment point along horizontal line
+                        const subX1 = (totalCount === 1)
+                            ? bx - startMargin - (usableLength / 2)
+                            : bx - startMargin - (sIdx * step);
+                        const subOffset = Math.max(14, 20 - (totalCount > 4 ? (totalCount - 4) * 1.5 : 0));
                         const subY = isTop ? (ly + subOffset) : (ly - subOffset);
                         // Calculate subX2 so the sub-branch line is EXACTLY PARALLEL to the main category diagonal spine
                         const slopeRatio = 10 / 17; // dx/dy slope of main category spine
@@ -1618,6 +1883,19 @@ const DynamicRenderer = {
                     break;
                 case 'org_users':
                     items = (projectData.users || []).map(u => u.name || u.email);
+                    break;
+                case 'categories':
+                case 'sop_categories':
+                case 'org_categories':
+                    if (window.QCMS && typeof window.QCMS.loadCategories === 'function') {
+                        // Will be populated asynchronously or from cache
+                        window.QCMS.loadCategories().then(cats => {
+                            if (cats && cats.length > 0) {
+                                const firstOpt = sel.firstElementChild ? sel.firstElementChild.outerHTML : '<option value="">-- Select Category --</option>';
+                                sel.innerHTML = firstOpt + cats.map(it => `<option value="${QCMS.escapeHtml(it)}">${QCMS.escapeHtml(it)}</option>`).join('');
+                            }
+                        });
+                    }
                     break;
             }
 

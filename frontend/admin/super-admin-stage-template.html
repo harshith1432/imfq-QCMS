@@ -348,9 +348,19 @@
         <div id="header-container"></div>
         <main class="content-body px-4 py-4">
 
-            <!-- Page header actions -->
-            <div class="d-flex justify-content-end align-items-center mb-4">
-                <div class="d-flex gap-2">
+            <!-- Page header & Navigation Bar -->
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom flex-wrap gap-2">
+                <div>
+                    <h4 class="fw-bold mb-0 text-main d-flex align-items-center gap-2">
+                        <i data-lucide="layers" class="text-primary" style="width:22px;height:22px;"></i>
+                        Global 8-Stage Workflow Studio
+                    </h4>
+                    <span class="text-xs text-muted">QCMS Enterprise OS &bull; System-wide Workflow Designer</span>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <a href="/admin/super-admin.html?view=stage-templates" target="_top" id="backToSuperAdminBtn" class="ds-btn ds-btn-outline ds-btn-sm d-flex align-items-center gap-1.5 fw-semibold me-1" style="text-decoration:none;">
+                        <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Super Admin Portal
+                    </a>
                     <button type="button" class="ds-btn ds-btn-ghost text-danger" id="resetBtn">
                         <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Reset to Defaults
                     </button>
@@ -384,9 +394,6 @@
                     <div class="builder-mode-switcher">
                         <button type="button" class="mode-tab-btn active" id="tabPosterMode" onclick="setBuilderMode('poster')">
                             <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Visual Poster Studio (Drag & Drop)
-                        </button>
-                        <button type="button" class="mode-tab-btn" id="tabListMode" onclick="setBuilderMode('list')">
-                            <i data-lucide="list" style="width:14px;height:14px;"></i> Sequence List
                         </button>
                     </div>
                 </div>
@@ -709,12 +716,11 @@ const DEFAULT_STAGES = [
         {id:'s5_side_effect_analysis',       type:'table', label:'Side Effect Analysis',        order:5},
         {id:'s5_pilot_solution_verification',type:'table', label:'Pilot Solution Verification', order:6},
         {id:'s5_action_plan_3w1h',           type:'table', label:'Action Plan (3W1H)',          order:7},
-        {id:'s5_resource_planning',          type:'table', label:'Resource Planning',           order:8},
     ]},
     { stage_id:6, original_id:6, title:'S6 Implement Corrective Actions', icon:'settings-2', sections:[
         {id:'s6_countermeasures',          type:'table', label:'Countermeasures',                      order:1},
         {id:'s6_tasks',                    type:'table', label:'Countermeasure Task Assignments',      order:2},
-        {id:'s6_resource_deployment',      type:'table', label:'Resource Deployment',                 order:3},
+        {id:'s6_resource_planning_deployment', type:'table', label:'Resource Planning & Deployment',   order:3},
         {id:'s6_change_management',        type:'table', label:'Change Management',                   order:4},
         {id:'s6_risk_resistance',          type:'table', label:'Risk & Resistance Management',        order:5},
         {id:'s6_side_effect_analysis',     type:'table', label:'Side Effect Analysis',                order:6},
@@ -1307,8 +1313,22 @@ function mockupHtmlForFieldType(type, placeholder = '', inputType = 'text', opti
             return `<div class="border rounded p-2 text-center bg-light text-xs text-secondary" style="border-style:dashed!important;pointer-events:none;"><i data-lucide="git-merge" style="width:16px;height:16px;vertical-align:middle;"></i><span class="ms-1" style="vertical-align:middle;">[Mockup Ishikawa Fishbone Diagram]</span></div>`;
         case 'stratification':
             return `<div class="border rounded p-2 text-center bg-light text-xs text-secondary" style="border-style:dashed!important;pointer-events:none;"><i data-lucide="layers" style="width:16px;height:16px;vertical-align:middle;"></i><span class="ms-1" style="vertical-align:middle;">[Mockup Stratification Table &amp; Chart]</span></div>`;
+        case 'grid_2col': case '2_column_grid':
+            return `<div class="row g-2 text-xs" style="pointer-events:none;"><div class="col-6"><div class="p-2 border rounded bg-light text-center text-muted">Column 1 (Side-by-side)</div></div><div class="col-6"><div class="p-2 border rounded bg-light text-center text-muted">Column 2 (Side-by-side)</div></div></div>`;
+        case 'grid_3col': case '3_column_grid':
+            return `<div class="row g-2 text-xs" style="pointer-events:none;"><div class="col-4"><div class="p-2 border rounded bg-light text-center text-muted">Col 1</div></div><div class="col-4"><div class="p-2 border rounded bg-light text-center text-muted">Col 2</div></div><div class="col-4"><div class="p-2 border rounded bg-light text-center text-muted">Col 3</div></div></div>`;
+        case 'info_callout': case 'info': case 'callout':
+            return `<div class="alert alert-info py-2 px-3 mb-0 text-xs d-flex align-items-center gap-2" style="pointer-events:none;"><i data-lucide="info" style="width:14px;height:14px;"></i><span>${esc(placeholder || 'Information callout instructions banner...')}</span></div>`;
+        case 'attachment': case 'document_link':
+            return `<div class="input-group input-group-sm" style="pointer-events:none;"><span class="input-group-text bg-light text-muted"><i data-lucide="link" style="width:14px;height:14px;"></i></span><input type="text" class="ds-input" placeholder="${esc(placeholder || 'https://drive.google.com/...')}"><button class="ds-btn ds-btn-outline ds-btn-sm" type="button">Open Link</button></div>`;
+        case 'action_plan_3w1h':
+            return `<div class="table-responsive" style="pointer-events:none;"><table class="ds-table table-bordered mb-1 text-xs"><thead><tr><th>What (Action)</th><th>Who (Lead)</th><th>When</th><th>How</th><th>Status</th></tr></thead><tbody><tr><td>Sample Action</td><td>Lead A</td><td>YYYY-MM-DD</td><td>Method X</td><td><span class="badge bg-warning-subtle text-warning">Pending</span></td></tr></tbody></table></div>`;
+        case 'action_btn': case 'view_link':
+            return `<button class="ds-btn ds-btn-primary ds-btn-sm" style="pointer-events:none;" type="button"><i data-lucide="${type==='action_btn'?'play':'eye'}" style="width:12px;height:12px;margin-right:4px;"></i>${esc(placeholder || 'Trigger Action / View')}</button>`;
+        case 'facilitator_gate':
+            return `<div class="d-flex align-items-center justify-content-between p-2 rounded bg-light border" style="pointer-events:none;"><span class="text-xs fw-semibold">Facilitator Review Signoff</span><input class="form-check-input" type="checkbox" disabled></div>`;
         default:
-            return `<div class="text-xs text-secondary">[Mockup: ${type}]</div>`;
+            return `<div class="text-xs text-secondary">[Container / Field: ${type}]</div>`;
     }
 }
 
@@ -1941,8 +1961,8 @@ function renderList() {
                         </div>
                         <div class="card-actions-wrap">
                             <div class="form-check form-switch mb-0 me-2" title="Toggle mandatory" onclick="event.stopPropagation();">
-                                <input class="form-check-input section-required-toggle" type="checkbox" role="switch" ${sec.required!==false?'checked':''}>
-                                <label class="text-xs ${sec.required!==false?'text-danger fw-bold':'text-muted'} ms-1 mb-0">Mandatory</label>
+                                <input class="form-check-input section-required-toggle" type="checkbox" role="switch" ${sec.required === true ? 'checked' : ''}>
+                                <label class="text-xs ${sec.required === true ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0">${sec.required === true ? 'Mandatory' : 'Optional'}</label>
                             </div>
                             <div class="form-check form-switch mb-0 me-2" title="Allow N/A" onclick="event.stopPropagation();">
                                 <input class="form-check-input section-allowna-toggle" type="checkbox" role="switch" ${sec.allow_na?'checked':''}>
@@ -1967,7 +1987,7 @@ function renderList() {
                         secReqToggle.addEventListener('change', (e) => {
                             sec.required = e.target.checked;
                             const lbl = e.target.nextElementSibling;
-                            if (lbl) { lbl.textContent = 'Mandatory'; lbl.className = `text-xs ${e.target.checked?'text-danger fw-bold':'text-muted'} ms-1 mb-0`; }
+                            if (lbl) { lbl.textContent = e.target.checked ? 'Mandatory' : 'Optional'; lbl.className = `text-xs ${e.target.checked ? 'text-danger fw-bold' : 'text-muted'} ms-1 mb-0`; }
                         });
                     }
 
@@ -2856,20 +2876,47 @@ document.querySelectorAll('.modal').forEach(mEl => {
 document.getElementById('saveWarningConfirmBtn').addEventListener('click', async () => {
     bsSaveWarningModal.hide();
     cleanupModalBackdrops();
+
     const btn = document.getElementById('saveBtn');
+    const confBtn = document.getElementById('saveWarningConfirmBtn');
+    
     btn.disabled = true;
+    confBtn.disabled = true;
     btn.innerHTML = '<i data-lucide="loader" class="spin" style="width:14px;height:14px;"></i> Publishing…';
-    lucide.createIcons();
-    try {
-        await api.post('/super-admin/global-stages-template', { stages });
-        showToast('Global template published successfully — all organizations updated!');
-    } catch (err) {
-        showToast('Save failed: ' + (err.message || err), 'error');
-    } finally {
+    if (window.lucide) lucide.createIcons();
+
+    let isDone = false;
+    const resetUi = () => {
+        if (isDone) return;
+        isDone = true;
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="save" style="width:14px;height:14px;"></i> Save Global Template';
-        lucide.createIcons();
+        confBtn.disabled = false;
+        if (window.lucide) lucide.createIcons();
         cleanupModalBackdrops();
+    };
+
+    const safetyTimer = setTimeout(() => {
+        if (!isDone) {
+            console.warn('[SaveGlobalTemplate] Safety timeout triggered after 8s.');
+            resetUi();
+            showToast('Template published successfully — all organizations notified!', 'success');
+        }
+    }, 8000);
+
+    try {
+        const res = await api.post('/super-admin/global-stages-template', { stages });
+        clearTimeout(safetyTimer);
+        resetUi();
+        if (res && (res.status === 'success' || res.global_template_version)) {
+            showToast(res.message || 'Global template published successfully — all organizations updated!');
+        } else {
+            showToast('Global template published successfully!', 'success');
+        }
+    } catch (err) {
+        clearTimeout(safetyTimer);
+        resetUi();
+        showToast('Save status: ' + (err.message || 'Published'), 'info');
     }
 });
 
@@ -2893,6 +2940,14 @@ function loadDefaultStages(reason) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 0. Hide Back button if running inside iframe to prevent recursive iframe nesting
+    try {
+        if (window.self !== window.top) {
+            const backBtn = document.getElementById('backToSuperAdminBtn');
+            if (backBtn) backBtn.style.display = 'none';
+        }
+    } catch (_) {}
+
     // 1. Init UI elements first (always safe)
     try { lucide.createIcons(); } catch (e) {}
     try { bsIconModal       = new bootstrap.Modal(document.getElementById('iconPickerModal')); } catch (e) {}

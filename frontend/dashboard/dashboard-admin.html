@@ -134,14 +134,8 @@
                         <div class="col-md-6">
                             <div class="ds-field">
                                 <label class="ds-label"><i data-lucide="tag"></i> Category</label>
-                                <select class="ds-input ds-select" id="editProjectCategory">
-                                    <option value="Quality">Quality</option>
-                                    <option value="Cost">Cost</option>
-                                    <option value="Delivery">Delivery</option>
-                                    <option value="Safety">Safety</option>
-                                    <option value="Morale">Morale</option>
-                                    <option value="Environment">Environment</option>
-                                    <option value="Productivity">Productivity</option>
+                                <select class="ds-input ds-select" id="editProjectCategory" data-source="categories">
+                                    <option value="">-- Select Category --</option>
                                 </select>
                             </div>
                         </div>
@@ -425,14 +419,8 @@
                             <div class="col-md-4">
                                 <div class="ds-field">
                                     <label class="ds-label"><i data-lucide="tag"></i> Strategic Category</label>
-                                    <select class="ds-input ds-select" id="projCategory" required>
-                                        <option value="Quality">Quality</option>
-                                        <option value="Cost">Cost</option>
-                                        <option value="Delivery">Delivery</option>
-                                        <option value="Safety">Safety</option>
-                                        <option value="Morale">Morale</option>
-                                        <option value="Environment">Environment</option>
-                                        <option value="Productivity">Productivity</option>
+                                    <select class="ds-input ds-select" id="projCategory" data-source="categories" required>
+                                        <option value="">-- Select Category --</option>
                                     </select>
                                 </div>
                             </div>
@@ -789,9 +777,10 @@
                             QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'folder-kanban', 'blue', null) +
                             QCMS.kpiCard('Team Stakeholders', stats.total_members || 0, 'users', 'purple', null, '/admin/users.html') +
                             QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green', null, '/analytics/analytics.html') +
+                            QCMS.kpiCard('Rejected Projects', stats.rejected_projects || 0, 'x-circle', 'red', null) +
                             QCMS.kpiCard('Total Plants', stats.total_plants || 0, 'building-2', 'amber', null);
 
-                        // Wire Active Pipeline card & Plant Locations card
+                        // Wire Active Pipeline card, Rejected Projects card & Plant Locations card
                         const kpiCols = document.querySelectorAll('#kpiGrid > div, #kpiGrid > a');
                         if (kpiCols[0]) {
                             kpiCols[0].style.cursor = 'pointer';
@@ -804,6 +793,13 @@
                         if (kpiCols[3]) {
                             kpiCols[3].style.cursor = 'pointer';
                             kpiCols[3].addEventListener('click', (e) => {
+                                e.preventDefault();
+                                adminDash.openRejectedProjectsModal();
+                            });
+                        }
+                        if (kpiCols[4]) {
+                            kpiCols[4].style.cursor = 'pointer';
+                            kpiCols[4].addEventListener('click', (e) => {
                                 e.preventDefault();
                                 adminDash.openPlantDirectoryModal();
                             });
@@ -1221,6 +1217,8 @@
                     cats[c] = (cats[c] || 0) + 1;
                 });
 
+                const totalProjectsCount = projects.length;
+
                 chartArea.innerHTML = '<canvas id="categoryChart" height="280"></canvas>';
                 const ctx = document.getElementById('categoryChart');
                 // Destroy previous chart instance if any
@@ -1238,6 +1236,30 @@
                 };
                 const vibrantColors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4', '#EF4444', '#F97316', '#6366F1'];
                 const bgColors = Object.keys(cats).map((cat, i) => categoryColors[cat] || vibrantColors[i % vibrantColors.length]);
+
+                const centerTextPlugin = {
+                    id: 'centerTextPlugin',
+                    afterDraw(chart) {
+                        const { ctx, chartArea } = chart;
+                        if (!chartArea) return;
+                        ctx.save();
+                        const centerX = (chartArea.left + chartArea.right) / 2;
+                        const centerY = (chartArea.top + chartArea.bottom) / 2;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        // Total Count Number
+                        ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        ctx.fillStyle = '#0f172a';
+                        ctx.fillText(totalProjectsCount, centerX, centerY - 6);
+                        
+                        // Total Label
+                        ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        ctx.fillStyle = '#64748b';
+                        ctx.fillText('TOTAL', centerX, centerY + 16);
+                        ctx.restore();
+                    }
+                };
 
                 new Chart(ctx, {
                     type: 'doughnut',
@@ -1261,7 +1283,8 @@
                                 labels: { usePointStyle: true, padding: 16, font: { size: 11, weight: 600 } }
                             }
                         }
-                    }
+                    },
+                    plugins: [centerTextPlugin]
                 });
             },
 
@@ -1275,8 +1298,14 @@
                     return;
                 }
 
+                // Filter to running / active projects only (exclude rejected and cancelled projects)
+                const runningProjects = projects.filter(p => {
+                    const st = (p.status || '').trim().toLowerCase();
+                    return st !== 'rejected' && st !== 'discarded' && st !== 'cancelled' && st !== 'archived';
+                });
+
                 const stageCounts = Array(8).fill(0);
-                projects.forEach(p => {
+                runningProjects.forEach(p => {
                     const s = (p.stage || 1) - 1;
                     if (s >= 0 && s < 8) stageCounts[s]++;
                 });
@@ -1306,7 +1335,7 @@
                     data: {
                         labels: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'],
                         datasets: [{
-                            label: 'Projects',
+                            label: 'Running Projects',
                             data: stageCounts,
                             backgroundColor: stageColors,
                             hoverBackgroundColor: stageHoverColors,
@@ -1318,7 +1347,11 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-                            y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.04)' } },
+                            y: { 
+                                beginAtZero: true, 
+                                ticks: { stepSize: 1, precision: 0 },
+                                grid: { color: 'rgba(0, 0, 0, 0.04)' } 
+                            },
                             x: { grid: { display: false } }
                         },
                         plugins: { legend: { display: false } }
@@ -1917,6 +1950,82 @@
                 } finally {
                     QCMS.setLoading('confirmDeleteUserBtn', false);
                 }
+            },
+
+            async openRejectedProjectsModal() {
+                let modalEl = document.getElementById('rejectedProjectsModal');
+                if (!modalEl) return;
+                if (modalEl.parentNode !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                let modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+
+                const container = document.getElementById('rejectedProjectsModalBody');
+                if (container) {
+                    container.innerHTML = `<div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading rejected projects...</div>`;
+                }
+
+                try {
+                    const projects = await api.get('/admin/rejected-projects');
+                    if (!projects || !projects.length) {
+                        container.innerHTML = `
+                            <div class="p-5 text-center text-muted border rounded-3">
+                                <i data-lucide="check-circle" class="mb-2 text-success" style="width:36px; height:36px;"></i>
+                                <h6 class="fw-bold">No Rejected Projects Found</h6>
+                                <p class="text-xs mb-0">All organization projects are active or completed cleanly.</p>
+                            </div>
+                        `;
+                        if (window.lucide) lucide.createIcons();
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        <div class="table-responsive border rounded-3 overflow-hidden" style="background: var(--ds-bg-card);">
+                            <table class="ds-table align-middle mb-0 text-xs">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="py-2.5 px-3">PROJECT</th>
+                                        <th class="py-2.5 px-3">DEPARTMENT & PLANT</th>
+                                        <th class="py-2.5 px-3">REVIEWER & LEADER</th>
+                                        <th class="py-2.5 px-3" style="width:35%;">REJECTION REASON (WHY REJECTED)</th>
+                                        <th class="py-2.5 px-3 text-end">DATE REJECTED</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${projects.map(p => `
+                                        <tr>
+                                            <td class="py-3 px-3">
+                                                <div class="fw-bold text-danger">${QCMS.escapeHtml(p.title)}</div>
+                                                <div class="text-xxs text-muted font-mono">${QCMS.escapeHtml(p.project_uid)}</div>
+                                            </td>
+                                            <td class="py-3 px-3">
+                                                <div class="fw-semibold text-main">${QCMS.escapeHtml(p.department)}</div>
+                                                <div class="text-xxs text-muted">Plant: ${QCMS.escapeHtml(p.plant)}</div>
+                                            </td>
+                                            <td class="py-3 px-3">
+                                                <div class="fw-semibold text-dark">Rev: ${QCMS.escapeHtml(p.reviewer)}</div>
+                                                <div class="text-xxs text-muted">Lead: ${QCMS.escapeHtml(p.team_leader)}</div>
+                                            </td>
+                                            <td class="py-3 px-3">
+                                                <div class="d-inline-flex align-items-center px-2 py-1 rounded bg-danger-subtle text-danger border border-danger-subtle text-xs" style="white-space:pre-wrap; max-width:100%;">
+                                                    <i data-lucide="info" style="width:12px;height:12px;margin-right:4px;flex-shrink:0;"></i>
+                                                    <span>${QCMS.escapeHtml(p.rejection_reason || 'No reason specified')}</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-3 text-end text-muted text-xxs">
+                                                ${new Date(p.rejected_at).toLocaleDateString()}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    container.innerHTML = `<div class="p-4 text-center text-danger">Failed to load rejected projects: ${QCMS.escapeHtml(e.message)}</div>`;
+                }
             }
         };
 
@@ -1941,6 +2050,32 @@
 
         document.addEventListener('DOMContentLoaded', () => adminDash.init().catch(e => console.error('[QCMS] Dashboard init failed:', e)));
     </script>
+
+    <!-- Rejected Projects Modal -->
+    <div class="modal fade" id="rejectedProjectsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content glass-card ds-card border-0">
+                <div class="modal-header border-bottom p-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle p-2 bg-danger bg-opacity-10 text-danger d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                            <i data-lucide="x-circle" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">Rejected Projects Directory</h5>
+                            <p class="text-xs text-muted mb-0">Audit trail of projects permanently rejected by reviewers with feedback details.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="rejectedProjectsModalBody">
+                    <div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading rejected projects...</div>
+                </div>
+                <div class="modal-footer border-0 p-4">
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

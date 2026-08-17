@@ -22,6 +22,12 @@ window.ensureRedAsterisksOnLabels = function(targetContainer) {
     try {
         const scope = targetContainer || document;
         scope.querySelectorAll('label, .ds-label, .form-label').forEach(label => {
+            const cardParent = label.closest('[data-required="false"], [data-applicable="false"]');
+            if (cardParent) {
+                // Inside an optional or not-applicable section - strip asterisks
+                label.querySelectorAll('.text-danger, .required-star').forEach(s => s.remove());
+                return;
+            }
             if (label.querySelector('.text-danger') || label.querySelector('.required-star')) return;
             let html = label.innerHTML;
             if (/\s*\*\s*$/.test(html)) {
@@ -35,7 +41,7 @@ window.ensureRedAsterisksOnLabels = function(targetContainer) {
                         input = parentField.querySelector('input:not([type="hidden"]), select, textarea');
                     }
                 }
-                if (input && input.hasAttribute('required')) {
+                if (input && input.hasAttribute('required') && input.type !== 'file') {
                     label.innerHTML = html.trim() + ' <span class="text-danger" style="color: #ef4444 !important; font-weight: bold; margin-left: 2px;">*</span>';
                 }
             }
@@ -211,8 +217,6 @@ const QCMS = {
             const user = userStr ? JSON.parse(userStr) : {};
             const perms = user.role_permissions || JSON.parse(sessionStorage.getItem('role_permissions') || localStorage.getItem('role_permissions') || 'null');
             
-            if (!perms) return true;
-            
             let normRole = roleName || user.role;
             if (typeof normRole === 'object') normRole = normRole.name || '';
             
@@ -223,8 +227,13 @@ const QCMS = {
                        (normRole === 'Admin' || normRole === 'admin' || normRole === 'SuperAdmin') ? 'Admin' :
                        'Team Member';
                        
-            if (perms[normRole] && typeof perms[normRole][moduleKey] === 'boolean') {
+            if (perms && perms[normRole] && typeof perms[normRole][moduleKey] === 'boolean') {
                 return perms[normRole][moduleKey];
+            }
+
+            // Default rules: Project Repository is hidden by default for CEO, Facilitator, and Reviewer
+            if (moduleKey === 'project_repo' && ['CEO', 'Facilitator', 'Reviewer'].includes(normRole)) {
+                return false;
             }
         } catch (e) {
             console.warn('RBAC check error:', e);
@@ -1227,6 +1236,9 @@ const QCMS = {
             if (canTemplate) {
                 adminNav += `<a href="/admin/stage-template.html" class="sidebar-link"><i class="link-icon" data-lucide="layout-list"></i><span>8 Stage Template</span></a>`;
             }
+            if (canTemplate || canUserMgmt) {
+                adminNav += `<a href="/admin/sop-masters.html" class="sidebar-link"><i class="link-icon" data-lucide="file-text"></i><span>Categories & Types</span></a>`;
+            }
 
             // Resources section: Knowledge Base, Leaderboard & Rewards, Additional Sources
             let resNav = '';
@@ -1805,13 +1817,13 @@ const QCMS = {
             contentArea.innerHTML = `
                 <form id="helpdesk-form" class="v-stack gap-3">
                     <div class="ds-field">
-                        <label class="ds-label text-white">Subject</label>
+                        <label class="ds-label text-white">Subject <span class="text-danger">*</span></label>
                         <input type="text" id="helpdesk-subject" class="ds-input form-control" placeholder="Brief summary of the issue..." required>
                     </div>
                     <div class="row g-2">
                         <div class="col-6">
                             <div class="ds-field">
-                                <label class="ds-label text-white">Category</label>
+                                <label class="ds-label text-white">Category <span class="text-danger">*</span></label>
                                 <select id="helpdesk-category" class="ds-input form-control" style="background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,0.1);">
                                     <option value="Technical">Technical</option>
                                     <option value="Billing">Billing</option>
@@ -1822,7 +1834,7 @@ const QCMS = {
                         </div>
                         <div class="col-6">
                             <div class="ds-field">
-                                <label class="ds-label text-white">Priority</label>
+                                <label class="ds-label text-white">Priority <span class="text-danger">*</span></label>
                                 <select id="helpdesk-priority" class="ds-input form-control" style="background:#0f172a;color:#f8fafc;border-color:rgba(255,255,255,0.1);">
                                     <option value="Low">Low</option>
                                     <option value="Medium" selected>Medium</option>
@@ -1833,7 +1845,7 @@ const QCMS = {
                         </div>
                     </div>
                     <div class="ds-field">
-                        <label class="ds-label text-white">Description / Message</label>
+                        <label class="ds-label text-white">Description / Message <span class="text-danger">*</span></label>
                         <textarea id="helpdesk-message" class="ds-input form-control" rows="4" placeholder="Explain the problem in detail..." required></textarea>
                     </div>
                     <button type="submit" id="helpdesk-submit-btn" class="ds-btn ds-btn-primary w-100 mt-2">
@@ -2354,6 +2366,82 @@ QCMS.escapeHtml = function(str) {
         .replace(/'/g, '&#039;');
 };
 
+// Dynamic Organization Category Manager
+QCMS._cachedCategories = null;
+QCMS._categoryFetchPromise = null;
+
+QCMS.loadCategories = async function(forceRefresh = false) {
+    if (QCMS._cachedCategories && !forceRefresh) {
+        return QCMS._cachedCategories;
+    }
+    if (QCMS._categoryFetchPromise && !forceRefresh) {
+        return QCMS._categoryFetchPromise;
+    }
+
+    const defaultCategories = ['Quality', 'Cost', 'Delivery', 'Safety', 'Morale', 'Environment', 'Productivity'];
+
+    QCMS._categoryFetchPromise = (async () => {
+        try {
+            if (typeof api !== 'undefined' && typeof api.get === 'function') {
+                const res = await api.get('/sop/masters');
+                if (res && Array.isArray(res.categories) && res.categories.length > 0) {
+                    const loaded = res.categories.map(c => typeof c === 'string' ? c : (c.name || '')).filter(Boolean);
+                    if (loaded.length > 0) {
+                        QCMS._cachedCategories = loaded;
+                        return loaded;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Could not fetch categories from server, using defaults:', e);
+        }
+        QCMS._cachedCategories = defaultCategories;
+        return defaultCategories;
+    })();
+
+    return QCMS._categoryFetchPromise;
+};
+
+QCMS.populateCategorySelects = async function(targetContainer) {
+    try {
+        const categories = await QCMS.loadCategories();
+        const root = targetContainer || document;
+        
+        const selects = root.querySelectorAll(`
+            select#categoryFilter,
+            select#filterCategory,
+            select#initCategory,
+            select#projCategory,
+            select#projectCategory,
+            select#s8_sop_category,
+            select#s1_init_category,
+            select[name="category"],
+            select[name="project_category"],
+            select[data-source="categories"],
+            select[data-source="sop_categories"]
+        `);
+
+        selects.forEach(select => {
+            const currentVal = select.value;
+            const isFilter = select.id.toLowerCase().includes('filter') || select.classList.contains('filter-select') || (select.name && select.name.includes('filter'));
+            const placeholderText = isFilter ? 'All Categories' : '-- Select Category --';
+            
+            let optionsHtml = `<option value="">${placeholderText}</option>`;
+            categories.forEach(cat => {
+                const isSelected = (currentVal === cat) ? ' selected' : '';
+                optionsHtml += `<option value="${QCMS.escapeHtml(cat)}"${isSelected}>${QCMS.escapeHtml(cat)}</option>`;
+            });
+
+            select.innerHTML = optionsHtml;
+            if (currentVal && categories.includes(currentVal)) {
+                select.value = currentVal;
+            }
+        });
+    } catch (err) {
+        console.warn('Error in populateCategorySelects:', err);
+    }
+};
+
 // Standardized Icon Refresh
 QCMS.refreshIcons = function() {
     if (window.lucide) {
@@ -2364,6 +2452,180 @@ QCMS.refreshIcons = function() {
             }
         });
     }
+};
+
+// Auto-populate Category dropdowns on page load and modal open
+document.addEventListener('DOMContentLoaded', () => {
+    QCMS.populateCategorySelects();
+});
+
+QCMS.showDecisionConfirmationDialog = function({
+    decision,
+    projectTitle = '',
+    stageNumber = null,
+    comments = '',
+    onConfirm = () => {},
+    onCancel = () => {}
+}) {
+    const existing = document.getElementById('qcms-decision-confirm-modal');
+    if (existing) existing.remove();
+
+    const normalized = (decision === 'SendToCEO' || decision === 'send_to_ceo' || decision === 'Send to CEO') ? 'SendToCEO' :
+                       (decision === 'Approved' || decision === 'approved' || decision === 'Approve') ? 'Approved' :
+                       (decision === 'Rejected' || decision === 'rejected' || decision === 'Reject') ? 'Rejected' :
+                       'Revision';
+
+    const configs = {
+        'Approved': {
+            title: 'Confirm Project Stage Approval',
+            badge: stageNumber === 8 ? 'Final Closure Sign-Off' : `Stage ${stageNumber || ''} Approval`,
+            badgeClass: 'bg-success text-white',
+            borderColor: '#10b981',
+            icon: 'check-circle-2',
+            iconColor: '#10b981',
+            btnClass: 'ds-btn ds-btn-primary',
+            btnStyle: 'background:#10b981; border-color:#10b981; color:#fff;',
+            confirmText: 'Yes, Approve & Advance',
+            impacts: [
+                { icon: 'arrow-right-circle', text: stageNumber === 8 ? '<strong>Project Closure:</strong> Formally marks this project as Completed & archives it in the Knowledge Repository.' : `<strong>Stage Progression:</strong> Automatically advances the project to <strong>Stage ${(stageNumber || 0) + 1}</strong> and unlocks next deliverables.` },
+                { icon: 'award', text: '<strong>Recognition & Points:</strong> Officially credits nominated team awards and leaderboard rewards to all participating members.' },
+                { icon: 'shield-check', text: '<strong>Quality Gate Pass:</strong> Permanently locks review sign-off in the enterprise immutable audit trail.' }
+            ]
+        },
+        'Revision': {
+            title: 'Confirm Revision Request',
+            badge: `Stage ${stageNumber || ''} Revision`,
+            badgeClass: 'bg-warning text-dark',
+            borderColor: '#f59e0b',
+            icon: 'rotate-ccw',
+            iconColor: '#f59e0b',
+            btnClass: 'ds-btn ds-btn-secondary',
+            btnStyle: 'background:#f59e0b; border-color:#f59e0b; color:#fff;',
+            confirmText: 'Send Revision Request',
+            impacts: [
+                { icon: 'unlock', text: '<strong>Stage Reopened:</strong> Unlocks editing permissions for the Team Leader and members to update their inputs.' },
+                { icon: 'bell', text: '<strong>Team Notification:</strong> Dispatches high-priority notification with your reviewer feedback comments.' },
+                { icon: 'clock', text: '<strong>Pending Re-submission:</strong> Project remains in Revision Required state until the team submits updated deliverables.' }
+            ]
+        },
+        'Rejected': {
+            title: 'Confirm Project Rejection',
+            badge: 'Irreversible Action',
+            badgeClass: 'bg-danger text-white',
+            borderColor: '#ef4444',
+            icon: 'alert-octagon',
+            iconColor: '#ef4444',
+            btnClass: 'ds-btn ds-btn-danger',
+            btnStyle: 'background:#ef4444; border-color:#ef4444; color:#fff;',
+            confirmText: 'Yes, Reject Project',
+            impacts: [
+                { icon: 'alert-triangle', text: '<strong>Workflow Terminated:</strong> Project progress is halted and locked across all 8 stages.' },
+                { icon: 'lock', text: '<strong>Read-Only Lock:</strong> Team members will no longer be permitted to edit or advance this project.' },
+                { icon: 'file-x', text: '<strong>Stakeholder Notification:</strong> Detailed rejection rationale is recorded in audit logs and sent to project sponsor.' }
+            ]
+        },
+        'SendToCEO': {
+            title: 'Forward Project to CEO for Executive Review',
+            badge: 'Executive Escalation',
+            badgeClass: 'bg-primary text-white',
+            borderColor: '#6366f1',
+            icon: 'send',
+            iconColor: '#6366f1',
+            btnClass: 'ds-btn ds-btn-primary',
+            btnStyle: 'background:#6366f1; border-color:#6366f1; color:#fff;',
+            confirmText: 'Forward to CEO Dashboard',
+            impacts: [
+                { icon: 'crown', text: '<strong>Executive Dossier:</strong> Sends the complete 8-stage project dossier directly to the CEO Dashboard.' },
+                { icon: 'sparkles', text: '<strong>Strategic Recognition:</strong> Flags this project for executive review, corporate awards, and multi-plant scaling.' },
+                { icon: 'check-square', text: '<strong>Executive Closure:</strong> Final project closure and executive sign-off will be performed by the CEO.' }
+            ]
+        }
+    };
+
+    const cfg = configs[normalized] || configs['Revision'];
+
+    const modalHtml = `
+        <div class="modal fade" id="qcms-decision-confirm-modal" tabindex="-1" style="z-index: 10050;">
+            <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+                <div class="modal-content" style="border-radius: 16px; border: 1px solid ${cfg.borderColor}40; box-shadow: 0 25px 60px rgba(0,0,0,0.3); background: var(--ds-bg-card, #ffffff); overflow: hidden;">
+                    
+                    <!-- Header -->
+                    <div class="p-4 d-flex align-items-start gap-3 border-bottom" style="background: var(--ds-bg-elevated, #f8fafc);">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: ${cfg.iconColor}15; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="${cfg.icon}" style="width: 24px; height: 24px; color: ${cfg.iconColor};"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge ${cfg.badgeClass}" style="font-size: 0.7rem; padding: 3px 8px; border-radius: 6px;">${cfg.badge}</span>
+                                ${stageNumber ? `<span class="text-xs text-muted fw-bold">Stage ${stageNumber}</span>` : ''}
+                            </div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.1rem;">${cfg.title}</h5>
+                            ${projectTitle ? `<div class="text-xs text-secondary text-truncate mt-1" style="max-width: 380px;">Project: <strong>${QCMS.escapeHtml(projectTitle)}</strong></div>` : ''}
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <!-- Body / Impact Explanation -->
+                    <div class="p-4">
+                        <div class="text-xs text-uppercase fw-bold text-muted mb-2 letter-spacing-1">
+                            <i data-lucide="info" style="width: 13px; height: 13px; margin-right: 4px;"></i> Action Impact & Next Steps:
+                        </div>
+                        
+                        <div class="d-flex flex-column gap-3 p-3 rounded-3 mb-3 border" style="background: var(--ds-bg-surface, #f8fafc);">
+                            ${cfg.impacts.map(imp => `
+                                <div class="d-flex align-items-start gap-2 text-xs" style="line-height: 1.5; color: var(--ds-text-main, #1e293b);">
+                                    <i data-lucide="${imp.icon}" style="width: 16px; height: 16px; color: ${cfg.iconColor}; flex-shrink: 0; margin-top: 2px;"></i>
+                                    <div>${imp.text}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        ${comments ? `
+                            <div class="p-2 px-3 rounded-2 text-xs border" style="background: rgba(0,0,0,0.02);">
+                                <span class="text-muted fw-bold">Reviewer Feedback:</span>
+                                <div class="text-secondary italic text-truncate" style="max-height: 40px; overflow-y: auto;">"${QCMS.escapeHtml(comments)}"</div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Footer Buttons -->
+                    <div class="p-3 px-4 border-top d-flex justify-content-end gap-2" style="background: var(--ds-bg-elevated, #f8fafc);">
+                        <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal" id="qcms-btn-cancel-decision">
+                            Cancel
+                        </button>
+                        <button type="button" class="${cfg.btnClass} ds-btn-sm fw-bold" style="${cfg.btnStyle}" id="qcms-btn-confirm-decision">
+                            ${cfg.confirmText}
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modalEl = document.getElementById('qcms-decision-confirm-modal');
+    const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+
+    if (window.lucide) lucide.createIcons({ root: modalEl });
+
+    document.getElementById('qcms-btn-confirm-decision').onclick = () => {
+        bsModal.hide();
+        setTimeout(() => {
+            modalEl.remove();
+            onConfirm();
+        }, 200);
+    };
+
+    document.getElementById('qcms-btn-cancel-decision').onclick = () => {
+        onCancel();
+    };
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        modalEl.remove();
+    });
+
+    bsModal.show();
 };
 
 // Global calendar picker activator: opening calendar on click for date/datetime inputs

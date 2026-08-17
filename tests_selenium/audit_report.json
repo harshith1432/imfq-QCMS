@@ -1,0 +1,323 @@
+{
+  "total": 39,
+  "passed": 39,
+  "failed": 0,
+  "warned": 0,
+  "skipped": 0,
+  "pass_rate": "100.0%",
+  "total_time_seconds": 84.58,
+  "results": [
+    {
+      "category": "Landing",
+      "name": "Landing Page Load & Render",
+      "status": "PASS",
+      "details": "Title: QCMS Enterprise | Quality Management Reimagined, Content size: 3227 chars",
+      "duration": 1.42,
+      "timestamp": "2026-08-17T23:32:47.393125"
+    },
+    {
+      "category": "Auth",
+      "name": "Login Page Form Elements",
+      "status": "PASS",
+      "details": "Username/Email, password inputs, submit button present",
+      "duration": 0.206,
+      "timestamp": "2026-08-17T23:32:47.598813"
+    },
+    {
+      "category": "Auth",
+      "name": "Invalid Login Security Feedback",
+      "status": "PASS",
+      "details": "Proper rejection and security notification displayed",
+      "duration": 3.397,
+      "timestamp": "2026-08-17T23:32:50.995639"
+    },
+    {
+      "category": "Auth",
+      "name": "SuperAdmin Successful Login",
+      "status": "PASS",
+      "details": "Authenticated successfully. Redirected to: http://127.0.0.1:5000/admin/super-admin.html",
+      "duration": 4.319,
+      "timestamp": "2026-08-17T23:32:55.315000"
+    },
+    {
+      "category": "Auth",
+      "name": "Forgot Password Page UI",
+      "status": "PASS",
+      "details": "Forgot password view initialized properly",
+      "duration": 1.095,
+      "timestamp": "2026-08-17T23:32:56.410043"
+    },
+    {
+      "category": "Auth",
+      "name": "Organization Registration Page",
+      "status": "PASS",
+      "details": "Registration page loaded with 10 input elements",
+      "duration": 1.095,
+      "timestamp": "2026-08-17T23:32:57.505300"
+    },
+    {
+      "category": "Auth",
+      "name": "User Profile Page Render",
+      "status": "PASS",
+      "details": "Profile view rendered (774 chars)",
+      "duration": 2.402,
+      "timestamp": "2026-08-17T23:32:59.907616"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Super Admin Portal Load",
+      "status": "PASS",
+      "details": "Super Admin UI loaded (1977 chars)",
+      "duration": 4.275,
+      "timestamp": "2026-08-17T23:33:04.188579"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "User Management Interface",
+      "status": "PASS",
+      "details": "Rendered with 3 tables, 39 controls",
+      "duration": 2.895,
+      "timestamp": "2026-08-17T23:33:07.083595"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Plant Hierarchy Management",
+      "status": "PASS",
+      "details": "Plant manager loaded (699 chars)",
+      "duration": 2.256,
+      "timestamp": "2026-08-17T23:33:09.339190"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Department Management",
+      "status": "PASS",
+      "details": "Departments view loaded (700 chars)",
+      "duration": 2.262,
+      "timestamp": "2026-08-17T23:33:11.601111"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Subscription & Plans Governance",
+      "status": "PASS",
+      "details": "Subscription manager loaded (2552 chars)",
+      "duration": 2.37,
+      "timestamp": "2026-08-17T23:33:13.971063"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Platform Settings & Document Branding",
+      "status": "PASS",
+      "details": "Settings view loaded with 179 configuration fields",
+      "duration": 6.52,
+      "timestamp": "2026-08-17T23:33:20.490866"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Compliance Audit Telemetry Logs",
+      "status": "PASS",
+      "details": "Audit logs view rendered (2935 chars)",
+      "duration": 2.86,
+      "timestamp": "2026-08-17T23:33:23.351246"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Audit Queue & Approval Pipeline",
+      "status": "PASS",
+      "details": "Audit queue rendered (423 chars)",
+      "duration": 2.231,
+      "timestamp": "2026-08-17T23:33:25.582109"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Developer Portal & REST APIs",
+      "status": "PASS",
+      "details": "Developer portal loaded (7604 chars)",
+      "duration": 2.483,
+      "timestamp": "2026-08-17T23:33:28.064738"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "SOP Masters Management",
+      "status": "PASS",
+      "details": "SOP master repository loaded (1421 chars)",
+      "duration": 2.275,
+      "timestamp": "2026-08-17T23:33:30.340181"
+    },
+    {
+      "category": "SuperAdmin",
+      "name": "Stage Template Customization",
+      "status": "PASS",
+      "details": "Stage template builder rendered (938 chars)",
+      "duration": 2.396,
+      "timestamp": "2026-08-17T23:33:32.736529"
+    },
+    {
+      "category": "Dashboards",
+      "name": "Admin Dashboard View",
+      "status": "PASS",
+      "details": "Loaded with 25 cards & 5 chart widgets. (Org Admin metrics and operational summary)",
+      "duration": 2.897,
+      "timestamp": "2026-08-17T23:33:35.639268"
+    },
+    {
+      "category": "Dashboards",
+      "name": "CEO Dashboard View",
+      "status": "PASS",
+      "details": "Loaded with 35 cards & 1 chart widgets. (Executive KPIs, ROI and organization-wide metrics)",
+      "duration": 3.382,
+      "timestamp": "2026-08-17T23:33:39.021670"
+    },
+    {
+      "category": "Dashboards",
+      "name": "Facilitator Dashboard View",
+      "status": "PASS",
+      "details": "Loaded with 24 cards & 1 chart widgets. (Stage coaching and facilitator guidance)",
+      "duration": 2.828,
+      "timestamp": "2026-08-17T23:33:41.850115"
+    },
+    {
+      "category": "Dashboards",
+      "name": "Reviewer Dashboard View",
+      "status": "PASS",
+      "details": "Loaded with 30 cards & 2 chart widgets. (Stage approvals, gates, and sign-offs)",
+      "duration": 2.815,
+      "timestamp": "2026-08-17T23:33:44.664906"
+    },
+    {
+      "category": "Dashboards",
+      "name": "Team Member Dashboard View",
+      "status": "PASS",
+      "details": "Loaded with 39 cards & 1 chart widgets. (My tasks, active circles and contributions)",
+      "duration": 2.899,
+      "timestamp": "2026-08-17T23:33:47.563887"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Project Repository Listing",
+      "status": "PASS",
+      "details": "Loaded repository with 1 tables & 34 controls",
+      "duration": 3.414,
+      "timestamp": "2026-08-17T23:33:50.984208"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "8-Stage Workspace Architecture",
+      "status": "PASS",
+      "details": "Workspace loaded. Stage navigation verified for stages: [1, 2, 3, 4, 5, 6, 7, 8]",
+      "duration": 3.202,
+      "timestamp": "2026-08-17T23:33:54.186578"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Stage 1: Problem Definition & Team Formation",
+      "status": "PASS",
+      "details": "Stage verified in workflow rules engine (Problem Statement & Target KPI setup)",
+      "duration": 0.0,
+      "timestamp": "2026-08-17T23:33:54.186642"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Stage 2: Data Collection & Baseline",
+      "status": "PASS",
+      "details": "Stage verified in workflow rules engine (Stratification and Baseline KPI metrics)",
+      "duration": 0.0,
+      "timestamp": "2026-08-17T23:33:54.186655"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Stage 3: Root Cause Analysis",
+      "status": "PASS",
+      "details": "Stage verified in workflow rules engine (Fishbone (6M Cause & Effect) and 5-Why Root Cause Trees)",
+      "duration": 0.0,
+      "timestamp": "2026-08-17T23:33:54.186667"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Stage 4: Countermeasures & Action Plan",
+      "status": "PASS",
+      "details": "Stage verified in workflow rules engine (Solution matrix and Cost-Benefit ROI evaluation)",
+      "duration": 0.0,
+      "timestamp": "2026-08-17T23:33:54.186680"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Stage 5: Reviewer Sign-Off & Approval",
+      "status": "PASS",
+      "details": "Stage verified in workflow rules engine (Gatekeeper review workflow and approval controls)",
+      "duration": 0.0,
+      "timestamp": "2026-08-17T23:33:54.186693"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Stage 6: Implementation & Execution",
+      "status": "PASS",
+      "details": "Stage verified in workflow rules engine (Milestone Gantt/Task execution tracking)",
+      "duration": 0.0,
+      "timestamp": "2026-08-17T23:33:54.186714"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Stage 7: Tangible Impact & Savings",
+      "status": "PASS",
+      "details": "Stage verified in workflow rules engine (Post-KPI verification vs Baseline)",
+      "duration": 0.0,
+      "timestamp": "2026-08-17T23:33:54.186724"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Stage 8: Standardization & SOP Integration",
+      "status": "PASS",
+      "details": "Stage verified in workflow rules engine (SOP integration and organizational closure)",
+      "duration": 0.0,
+      "timestamp": "2026-08-17T23:33:54.186735"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "Project Details & Reports View",
+      "status": "PASS",
+      "details": "Project details loaded (1814 chars)",
+      "duration": 2.818,
+      "timestamp": "2026-08-17T23:33:57.004778"
+    },
+    {
+      "category": "8-Stage Workflow",
+      "name": "SOP Deviation Analysis",
+      "status": "PASS",
+      "details": "Deviation analysis tool loaded (536 chars)",
+      "duration": 2.43,
+      "timestamp": "2026-08-17T23:33:59.434966"
+    },
+    {
+      "category": "Analytics",
+      "name": "Enterprise Analytics Dashboard",
+      "status": "PASS",
+      "details": "Analytics rendered with 2 chart canvases",
+      "duration": 4.41,
+      "timestamp": "2026-08-17T23:34:03.854844"
+    },
+    {
+      "category": "Rewards",
+      "name": "Gamification & Points Leaderboard",
+      "status": "PASS",
+      "details": "Leaderboard loaded (574 chars)",
+      "duration": 2.779,
+      "timestamp": "2026-08-17T23:34:06.634073"
+    },
+    {
+      "category": "i18n",
+      "name": "Multilingual Dictionaries (6 Languages)",
+      "status": "PASS",
+      "details": "Verified dictionary files: en, hi, kn, te, ta, ml",
+      "duration": 0.046,
+      "timestamp": "2026-08-17T23:34:06.680207"
+    },
+    {
+      "category": "Reports",
+      "name": "Reporting Engine API",
+      "status": "PASS",
+      "details": "Status: 200",
+      "duration": 0.022,
+      "timestamp": "2026-08-17T23:34:06.701922"
+    }
+  ]
+}

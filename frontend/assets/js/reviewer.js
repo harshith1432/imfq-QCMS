@@ -501,54 +501,65 @@ const reviewer = {
     },
 
     async submitDecision(decision, providedComments = null) {
-        const comments = providedComments || document.getElementById('reviewerComments')?.value;
+        const comments = providedComments || document.getElementById('reviewerComments')?.value || '';
         if (!comments && (decision === 'Rejected' || decision === 'Revision')) {
-            alert("Please provide comments for rejection or revision.");
+            QCMS.toast("Please provide comments for rejection or revision.", "warning");
             return;
         }
 
-        try {
-            QCMS.setLoading('btn-approve', true);
-            const audit = this.pendingAudits.find(a => a.project_id === this.selectedProposalId);
-            const pendingStage = audit ? audit.pending_stage : 1;
+        const audit = this.pendingAudits?.find(a => a.project_id === this.selectedProposalId);
+        const pendingStage = audit ? audit.pending_stage : 1;
+        const projectTitle = audit ? (audit.title || `Project #${this.selectedProposalId}`) : `Project #${this.selectedProposalId}`;
 
-            if (decision === 'SendToCEO') {
-                const res = await api.post(`/reviewer/closure/${this.selectedProposalId}/complete`, {
-                    send_to_ceo: true,
-                    reviewer_notes: comments || "Forwarded to CEO for review.",
-                    lessons_learned: comments || "Stage 8 lessons recorded.",
-                    preventive_actions: "Stage 8 preventive actions recorded."
-                });
-                QCMS.toast(res.msg || "Project forwarded to CEO for review successfully.", 'success');
-            } else {
-                const result = await api.post(`/reviewer/decision`, {
-                    project_id: this.selectedProposalId,
-                    decision: decision,
-                    comments: comments || "Approved",
-                    pending_stage: pendingStage
-                });
-                QCMS.toast(`Project ${decision} successfully.`, 'success');
+        QCMS.showDecisionConfirmationDialog({
+            decision,
+            projectTitle,
+            stageNumber: pendingStage,
+            comments,
+            onConfirm: async () => {
+                try {
+                    QCMS.setLoading('btn-approve', true);
+
+                    if (decision === 'SendToCEO') {
+                        const res = await api.post(`/reviewer/closure/${this.selectedProposalId}/complete`, {
+                            send_to_ceo: true,
+                            reviewer_notes: comments || "Forwarded to CEO for review.",
+                            lessons_learned: comments || "Stage 8 lessons recorded.",
+                            preventive_actions: "Stage 8 preventive actions recorded."
+                        });
+                        QCMS.toast(res.msg || "Project forwarded to CEO for review successfully.", 'success');
+                    } else {
+                        const result = await api.post(`/reviewer/decision`, {
+                            project_id: this.selectedProposalId,
+                            decision: decision,
+                            comments: comments || "Approved",
+                            pending_stage: pendingStage
+                        });
+                        QCMS.toast(`Project ${decision} successfully.`, 'success');
+                    }
+                    
+                    // Close modal if open
+                    const modalEl = document.getElementById('reviewModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+
+                    // Clear inputs
+                    const commEl = document.getElementById('reviewerComments');
+                    if (commEl) commEl.value = '';
+
+                    // Reload reviewer queues
+                    if (typeof Reviewer !== 'undefined' && Reviewer.loadInitialData) {
+                        Reviewer.loadInitialData();
+                    }
+                } catch (err) {
+                    QCMS.toast(err.message || "Failed to submit decision", 'error');
+                } finally {
+                    QCMS.setLoading('btn-approve', false);
+                }
             }
-            
-            // Close modal if open
-            const modalEl = document.getElementById('reviewModal');
-            if (modalEl) {
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            }
-
-            // Clear inputs
-            if (document.getElementById('reviewerComments')) document.getElementById('reviewerComments').value = '';
-
-            // Reload data
-            this.fetchAuditQueue();
-            this.fetchAuditStats();
-            this.loadQueue(); // If on dashboard
-        } catch (err) {
-            QCMS.toast("Failed to submit decision: " + (err.message || 'Unknown error'), 'error');
-        } finally {
-            QCMS.setLoading('btn-approve', false);
-        }
+        });
     }
 };
 

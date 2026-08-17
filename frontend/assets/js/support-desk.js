@@ -10,7 +10,7 @@ const SupportDesk = {
     sortOrder: 'desc',
     filters: {
         q: '',
-        status: '',
+        status: 'Open',
         priority: '',
         category: '',
         sla_status: '',
@@ -781,6 +781,11 @@ const SupportDesk = {
                 if (modal) modal.hide();
             }
             await this.renderTrialExtensionsTab();
+            if (window.superAdminApp && typeof window.superAdminApp.loadOrganizations === 'function') {
+                window.superAdminApp.loadOrganizations();
+            } else if (window.superAdmin && typeof window.superAdmin.loadOrganizations === 'function') {
+                window.superAdmin.loadOrganizations();
+            }
         } catch (e) {
             if (window.QCMS && QCMS.toast) QCMS.toast(e.message || 'Failed to extend trial', 'error');
         } finally {
@@ -838,29 +843,29 @@ const SupportDesk = {
                         
                         <!-- Filters -->
                         <select class="ds-input ds-select py-1.5" style="max-width:140px; font-size:12.5px;" onchange="SupportDesk.setFilter('status', this.value)">
-                            <option value="">All Status</option>
-                            <option value="Open">Open</option>
-                            <option value="Assigned">Assigned</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Waiting for Customer">Waiting for Customer</option>
-                            <option value="Resolved">Resolved</option>
-                            <option value="Closed">Closed</option>
+                            <option value="Open" ${this.filters.status === 'Open' ? 'selected' : ''}>Open</option>
+                            <option value="" ${!this.filters.status ? 'selected' : ''}>All Status</option>
+                            <option value="Assigned" ${this.filters.status === 'Assigned' ? 'selected' : ''}>Assigned</option>
+                            <option value="In Progress" ${this.filters.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Waiting for Customer" ${this.filters.status === 'Waiting for Customer' ? 'selected' : ''}>Waiting for Customer</option>
+                            <option value="Resolved" ${this.filters.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                            <option value="Closed" ${this.filters.status === 'Closed' ? 'selected' : ''}>Closed</option>
                         </select>
 
                         <select class="ds-input ds-select py-1.5" style="max-width:140px; font-size:12.5px;" onchange="SupportDesk.setFilter('priority', this.value)">
-                            <option value="">All Priorities</option>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                            <option value="Critical">Critical</option>
+                            <option value="" ${!this.filters.priority ? 'selected' : ''}>All Priorities</option>
+                            <option value="Low" ${this.filters.priority === 'Low' ? 'selected' : ''}>Low</option>
+                            <option value="Medium" ${this.filters.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+                            <option value="High" ${this.filters.priority === 'High' ? 'selected' : ''}>High</option>
+                            <option value="Critical" ${this.filters.priority === 'Critical' ? 'selected' : ''}>Critical</option>
                         </select>
 
                         <select class="ds-input ds-select py-1.5" style="max-width:140px; font-size:12.5px;" onchange="SupportDesk.setFilter('category', this.value)">
-                            <option value="">All Categories</option>
-                            <option value="Technical">Technical</option>
-                            <option value="Billing">Billing</option>
-                            <option value="License">License</option>
-                            <option value="Subscription">Subscription</option>
+                            <option value="" ${!this.filters.category ? 'selected' : ''}>All Categories</option>
+                            <option value="Technical" ${this.filters.category === 'Technical' ? 'selected' : ''}>Technical</option>
+                            <option value="Billing" ${this.filters.category === 'Billing' ? 'selected' : ''}>Billing</option>
+                            <option value="License" ${this.filters.category === 'License' ? 'selected' : ''}>License</option>
+                            <option value="Subscription" ${this.filters.category === 'Subscription' ? 'selected' : ''}>Subscription</option>
                         </select>
                     </div>
                 </div>
@@ -1049,7 +1054,7 @@ const SupportDesk = {
             stepView.innerHTML = `
                 <div class="v-stack gap-3">
                     <div class="ds-field position-relative" id="sdOrgSelectorWrapper">
-                        <label class="ds-label">Organization Name</label>
+                        <label class="ds-label">Organization Name <span class="text-danger">*</span></label>
                         <div class="position-relative">
                             <input type="text" 
                                    class="ds-input w-100 pe-5" 
@@ -1078,11 +1083,11 @@ const SupportDesk = {
                         </div>
                     </div>
                     <div class="ds-field">
-                        <label class="ds-label">Requester Name</label>
+                        <label class="ds-label">Requester Name <span class="text-danger">*</span></label>
                         <input type="text" class="ds-input" id="wizReqName" placeholder="e.g. John Doe" value="${data.requester_name}" oninput="SupportDesk.wizards.data.requester_name = this.value">
                     </div>
                     <div class="ds-field">
-                        <label class="ds-label">Requester Email</label>
+                        <label class="ds-label">Requester Email <span class="text-danger">*</span></label>
                         <input type="email" class="ds-input" id="wizReqEmail" placeholder="john.doe@org.com" value="${data.requester_email}" oninput="SupportDesk.wizards.data.requester_email = this.value">
                     </div>
                 </div>
@@ -1093,16 +1098,16 @@ const SupportDesk = {
             stepView.innerHTML = `
                 <div class="v-stack gap-3">
                     <div class="ds-field">
-                        <label class="ds-label">Subject</label>
+                        <label class="ds-label">Subject <span class="text-danger">*</span></label>
                         <input type="text" class="ds-input" id="wizSubject" placeholder="Brief summary of the issue..." value="${data.subject}" oninput="SupportDesk.wizards.data.subject = this.value">
                     </div>
                     <div class="ds-field">
-                        <label class="ds-label">Description</label>
+                        <label class="ds-label">Description <span class="text-danger">*</span></label>
                         <textarea class="ds-input" id="wizDesc" rows="4" placeholder="Detail the steps to reproduce, errors seen..." oninput="SupportDesk.wizards.data.description = this.value">${data.description}</textarea>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="ds-label">Priority</label>
+                            <label class="ds-label">Priority <span class="text-danger">*</span></label>
                             <select class="ds-input ds-select" id="wizPriority" onchange="SupportDesk.wizards.data.priority = this.value">
                                 <option value="Low" ${data.priority === 'Low' ? 'selected' : ''}>Low</option>
                                 <option value="Medium" ${data.priority === 'Medium' ? 'selected' : ''}>Medium</option>
@@ -1111,7 +1116,7 @@ const SupportDesk = {
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="ds-label">Category</label>
+                            <label class="ds-label">Category <span class="text-danger">*</span></label>
                             <select class="ds-input ds-select" id="wizCategory" onchange="SupportDesk.wizards.data.category = this.value">
                                 <option value="Technical" ${data.category === 'Technical' ? 'selected' : ''}>Technical</option>
                                 <option value="Billing" ${data.category === 'Billing' ? 'selected' : ''}>Billing</option>
@@ -1154,7 +1159,7 @@ const SupportDesk = {
                         </div>
                     </div>
                     <div class="ds-field">
-                        <label class="ds-label">Assign Group / Tier</label>
+                        <label class="ds-label">Assign Group / Tier <span class="text-danger">*</span></label>
                         <select class="ds-input ds-select" id="wizTeam" onchange="SupportDesk.wizards.data.assigned_team = this.value">
                             <option value="Tier 1 Support" ${data.assigned_team === 'Tier 1 Support' ? 'selected' : ''}>Tier 1 Support</option>
                             <option value="Tier 2 Technical Support" ${data.assigned_team === 'Tier 2 Technical Support' ? 'selected' : ''}>Tier 2 Technical Support</option>

@@ -122,7 +122,7 @@ const Stage5 = {
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 4 - Cost Benefit Analysis</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 4 - Cost Benefit Analysis (CBA & ROI): Financial payback calculation">Section 4 - Cost Benefit Analysis</h6>
                             <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[5].addCBARow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Analysis
                             </button>
@@ -130,10 +130,10 @@ const Stage5 = {
                         <div class="table-responsive">
                             <div id="s5_cbaContainer" class="mb-0" style="min-width: 650px;">
                                 <div class="row text-muted small fw-bold mb-2 px-2">
-                                    <div class="col-4">Solution</div>
-                                    <div class="col-2">Estimated Cost</div>
-                                    <div class="col-3">Expected Benefit/Savings</div>
-                                    <div class="col-2">ROI</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Solution: Proposed solution candidate under economic evaluation">Solution</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Estimated Cost: One-time and recurring capital expenditure needed for implementation">Estimated Cost</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Expected Benefit/Savings: Projected annual monetary savings from defect reduction">Expected Benefit/Savings</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="ROI: Return on Investment calculation = ((Savings - Cost) / Cost) * 100">ROI</div>
                                     <div class="col-1"></div>
                                 </div>
                             </div>
@@ -147,14 +147,14 @@ const Stage5 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.5</span>
-                                Side Effect Analysis
+                                <span class="ds-tooltip-trigger" title="Side Effect Analysis: Evaluating potential secondary risks or negative unintended consequences">Side Effect Analysis</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Analyze potential negative side effects of the proposed solution before piloting.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 5 - Side Effect Analysis</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 5 - Side Effect Analysis: Identification of secondary operational risks and mitigation plans">Section 5 - Side Effect Analysis</h6>
                             <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[5].addSideEffectRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Risk
                             </button>
@@ -162,9 +162,9 @@ const Stage5 = {
                         <div class="table-responsive">
                             <div id="s5_seContainer" class="mb-0" style="min-width: 650px;">
                                 <div class="row text-muted small fw-bold mb-2 px-2">
-                                    <div class="col-3">Solution</div>
-                                    <div class="col-4">Potential Risk</div>
-                                    <div class="col-4">Mitigation Plan</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Solution: Countermeasure solution candidate being evaluated for risks">Solution</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Potential Risk: Negative secondary effect that could occur during implementation">Potential Risk</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Mitigation Plan: Preventive controls designed to eliminate or reduce side effect risk">Mitigation Plan</div>
                                     <div class="col-1"></div>
                                 </div>
                             </div>
@@ -178,25 +178,25 @@ const Stage5 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.6</span>
-                                Pilot Solution Verification
+                                <span class="ds-tooltip-trigger" title="Pilot Solution Verification: Limited trial run testing solution effectiveness before full rollout">Pilot Solution Verification</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Trial the solution on a limited scale and confirm it delivers the intended result.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6 - Pilot Solution Verification</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 6 - Pilot Solution Verification: Trial run testing protocols and decision tracking">Section 6 - Pilot Solution Verification</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[5].addPilotRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Pilot Run
                             </button>
                         </div>
                         <div id="s5_pilotContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Solution</div>
-                                <div class="col-2">Location</div>
-                                <div class="col-2">Duration</div>
-                                <div class="col-2">Result</div>
-                                <div class="col-2">Decision</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Solution: Countermeasure solution candidate undergoing pilot trial">Solution</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Location: Workstation or shop floor line where pilot was conducted">Location</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Duration: Time duration or batch size of pilot trial">Duration</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Result: Measured trial result or defect reduction">Result</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Decision: Go / No-Go decision for full rollout">Decision</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -209,14 +209,14 @@ const Stage5 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.7</span>
-                                Action Plan (3W1H)
+                                <span class="ds-tooltip-trigger" title="Action Plan (3W1H Framework): What (Task), Who (Owner), When (Target Date), How (Implementation Steps)">Action Plan (3W1H)</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Define What will be done, Who is responsible, When it's due, and How it will be executed.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 7 - Action Plan (3W1H)</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 7 - Action Plan (3W1H): Implementation task schedule">Section 7 - Action Plan (3W1H)</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[5].addActionRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Action Item
                             </button>
@@ -227,36 +227,6 @@ const Stage5 = {
                                 <div class="col-2">Who (Owner)</div>
                                 <div class="col-2">When (Due Date)</div>
                                 <div class="col-3">How (Implementation Steps)</div>
-                                <div class="col-1"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 8 - Resource Planning -->
-                <div class="glass-card ds-card mb-4">
-                    <div class="ds-card-header p-4 border-bottom">
-                        <div>
-                            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                                <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">5.8</span>
-                                Resource Planning
-                            </h5>
-                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Identify the budget, manpower, and materials needed to implement the solution.</p>
-                        </div>
-                    </div>
-                    <div class="ds-card-body p-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 8 - Resource Planning</h6>
-                            <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[5].addResourceRow()">
-                                <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Resource
-                            </button>
-                        </div>
-                        <div id="s5_resourceContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Resource Required</div>
-                                <div class="col-2">Budget Allocation</div>
-                                <div class="col-3">Source</div>
-                                <div class="col-2">Status</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -281,7 +251,7 @@ const Stage5 = {
         }
 
         // Fill containers
-        const containers = ['mapping', 'bs', 'eval', 'cba', 'se', 'pilot', 'action', 'resource'];
+        const containers = ['mapping', 'bs', 'eval', 'cba', 'se', 'pilot', 'action'];
         containers.forEach(key => {
             const arr = d[this.getMap(key)] || [];
             const containerEl = document.getElementById(`s5_${key}Container`);
@@ -338,7 +308,6 @@ const Stage5 = {
             side_effect_analysis: this.collectRows('s5_seContainer', ['.r-sol', '.r-risk', '.r-plan'], ['solution', 'potential_risk', 'mitigation_plan']),
             pilot_solution_verification: this.collectRows('s5_pilotContainer', ['.r-sol', '.r-loc', '.r-dur', '.r-res', '.r-dec'], ['solution', 'location', 'duration', 'result', 'decision']),
             action_plan_3w1h: this.collectRows('s5_actionContainer', ['.r-act', '.r-own', '.r-due', '.r-how'], ['what', 'who', 'when', 'how']),
-            resource_planning: this.collectRows('s5_resourceContainer', ['.r-res', '.r-bud', '.r-src', '.r-stat'], ['resource', 'budget', 'source', 'status']),
             approval_gate: {
                 verified_by: this.getVal('s5_gate_verified_by'),
                 date: this.getVal('s5_gate_date'),
@@ -352,7 +321,7 @@ const Stage5 = {
         return {
             'mapping': 'root_cause_mapping', 'bs': 'solution_brainstorming', 'eval': 'solution_evaluation',
             'cba': 'cost_benefit_analysis', 'se': 'side_effect_analysis', 'pilot': 'pilot_solution_verification',
-            'action': 'action_plan_3w1h', 'resource': 'resource_planning'
+            'action': 'action_plan_3w1h'
         }[k];
     },
     capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); },
@@ -560,13 +529,6 @@ const Stage5 = {
             <div class="col-2"><input type="text" class="ds-input r-own" placeholder="e.g. Rajesh Kumar" value="${d.who || ''}" required></div>
             <div class="col-2"><input type="date" class="ds-input r-due" value="${d.when || ''}" required></div>
             <div class="col-3"><input type="text" class="ds-input r-how" placeholder="e.g. Issue purchase order via SAP" value="${d.how || ''}" required></div>`);
-    },
-    addResourceRow(d = {}) {
-        this.addRowTemplate('s5_resourceContainer', d, `
-            <div class="col-4"><input type="text" class="ds-input r-res" placeholder="e.g. Torque wrench calibration rig" value="${d.resource || ''}" required></div>
-            <div class="col-2"><input type="text" class="ds-input r-bud" placeholder="e.g. ₹15,000" value="${d.budget || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-src" placeholder="e.g. Vendor ABC Ltd" value="${d.source || ''}" required></div>
-            <div class="col-2"><input type="text" class="ds-input r-stat" placeholder="e.g. Approved" value="${d.status || ''}" required></div>`);
     },
 
     getVal(id) { return (document.getElementById(id) || {}).value || ''; },

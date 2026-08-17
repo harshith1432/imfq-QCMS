@@ -11,59 +11,31 @@ const Stage7 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.1</span>
-                                KPI Verification
+                                <span class="ds-tooltip-trigger" title="KPI Verification: Key Performance Indicator target vs actual achievement rate">KPI Verification</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Check the project's measurable KPI against the target set in Stage 1.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
-                        <!-- Premium Benefits Realization Dashboard -->
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-3">
-                                <div class="p-3 border rounded text-center shadow-sm" style="border-radius: var(--radius-md); background: rgba(var(--ds-primary-rgb), 0.04);">
-                                    <small class="ds-text-secondary text-xs fw-bold uppercase">KPI Achievement</small>
-                                    <div class="fw-bold text-lg mt-1 text-primary" id="s7_dash_kpi">---</div>
-                                    <span class="text-xs text-muted">Avg Target vs Actual</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="p-3 border rounded text-center shadow-sm" style="border-radius: var(--radius-md); background: rgba(var(--ds-success-rgb), 0.04);">
-                                    <small class="ds-text-secondary text-xs fw-bold uppercase">Annual Savings</small>
-                                    <div class="fw-bold text-lg mt-1 text-success" id="s7_dash_savings">---</div>
-                                    <span class="text-xs text-muted">ROI Verified Savings</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="p-3 border rounded text-center shadow-sm" style="border-radius: var(--radius-md); background: rgba(var(--ds-warning-rgb), 0.04);">
-                                    <small class="ds-text-secondary text-xs fw-bold uppercase">Process Quality Imp.</small>
-                                    <div class="fw-bold text-lg mt-1 text-warning" id="s7_dash_quality">---</div>
-                                    <span class="text-xs text-muted">Avg Defect Reduction</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="p-3 border rounded text-center shadow-sm" style="border-radius: var(--radius-md); background: rgba(var(--ds-info-rgb), 0.04);">
-                                    <small class="ds-text-secondary text-xs fw-bold uppercase">Payback Period</small>
-                                    <div class="fw-bold text-lg mt-1 text-info" id="s7_dash_payback">---</div>
-                                    <span class="text-xs text-muted">Investment recovery</span>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 1 - KPI Verification</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 1 - KPI Verification: Verify baseline, target, and actual performance metrics">Section 1 - KPI Verification</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[7].addKpiRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add KPI
                             </button>
                         </div>
                         <div id="s7_kpiContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Metric</div>
-                                <div class="col-2">Baseline</div>
-                                <div class="col-2">Target</div>
-                                <div class="col-2">Actual</div>
-                                <div class="col-2">Variance</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Metric: Name of Key Performance Indicator (e.g. Defect Rate, Scrap Loss)">Metric</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Baseline: Measured starting level prior to improvement">Baseline</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Target: Desired achievement goal metric level">Target</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Actual: Final measured performance metric post-countermeasures">Actual</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Variance: Difference between actual and target performance">Variance</div>
                                 <div class="col-1"></div>
                             </div>
+                        </div>
+                        <div class="mt-3 p-2 border rounded bg-light text-xs fw-bold d-flex align-items-center justify-content-between">
+                            <span class="ds-tooltip-trigger" title="KPI Achievement: Average percentage of target performance achieved across all verified KPIs">KPI Achievement (Avg Target vs Actual):</span>
+                            <span id="s7_dash_kpi" class="text-primary fs-6 fw-bold">---</span>
                         </div>
                     </div>
                 </div>
@@ -74,31 +46,35 @@ const Stage7 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.2</span>
-                                Before vs After Analysis
+                                <span class="ds-tooltip-trigger" title="Before vs After Analysis: Comparative evaluation measuring defect reduction percentage & process variation improvements">Before vs After Analysis</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Compare before and after data using histogram and control-chart views to confirm improvement.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 2 - Before vs After Analysis</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 2 - Before vs After Analysis: Compare pre-improvement and post-improvement process performance">Section 2 - Before vs After Analysis</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[7].addBeforeAfterRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Item
                             </button>
                         </div>
-                        <div id="s7_beforeAfterContainer" class="mb-4">
+                        <div id="s7_beforeAfterContainer" class="mb-2">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Metric/Process</div>
-                                <div class="col-3">Before Condition</div>
-                                <div class="col-3">After Condition</div>
-                                <div class="col-2">Improvement %</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Metric/Process: Quality characteristic or process parameter being compared">Metric/Process</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Before Condition: Initial baseline defect rate or measured process parameter before countermeasure">Before Condition</div>
+                                <div class="col-3 ds-tooltip-trigger" title="After Condition: Measured defect rate or process parameter after countermeasure implementation">After Condition</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Improvement %: Percentage defect reduction = ((Before - After) / Before) * 100">Improvement %</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
+                        <div class="mt-2 p-2 border rounded bg-light text-xs fw-bold d-flex align-items-center justify-content-between mb-4">
+                            <span class="ds-tooltip-trigger" title="Process Quality Improvement: Average percentage defect reduction across all evaluated process parameters">Process Quality Improvement (Avg Defect Reduction):</span>
+                            <span id="s7_dash_quality" class="text-warning fs-6 fw-bold">---</span>
+                        </div>
 
                         <!-- QC Tools Data Upload -->
-                        <div class="p-3 border rounded bg-white mb-4 shadow-sm" style="border-radius: var(--radius-md);">
-                            <label class="ds-label mb-1">Upload QC Tools Data (Excel/CSV)</label>
+                        <div class="p-3 border rounded mb-4 shadow-sm qc-tool-card" style="border-radius: var(--radius-md); background: var(--ds-bg-card, #ffffff);">
+                            <label class="ds-label mb-1 ds-tooltip-trigger" title="Upload QC Tools Data (Excel/CSV): Import raw measurement log to generate Before vs After Histogram & Control Chart">Upload QC Tools Data (Excel/CSV)</label>
                             <div class="text-xs text-muted mb-2">Upload data for both the Process Variation Histogram and the Control Chart.</div>
                             <div class="d-flex align-items-center gap-2">
                                 <input type="file" class="ds-input py-1" id="s7_upload" accept=".csv" style="flex-grow:1;" onchange="StageModules[7].handleCSVUpload(this)">
@@ -109,15 +85,15 @@ const Stage7 = {
                         </div>
 
                         <!-- QC Tool: Histogram Comparison -->
-                        <div class="p-3 border rounded bg-white mb-4 shadow-sm" style="border-radius: var(--radius-md);">
-                            <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2">
+                        <div class="p-3 border rounded mb-4 shadow-sm qc-tool-card" style="border-radius: var(--radius-md); background: var(--ds-bg-card, #ffffff);">
+                            <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2 ds-tooltip-trigger" title="Process Variation Histogram: Visual distribution comparison of process data standard deviation before vs after">
                                 <i data-lucide="bar-chart-3" style="width:16px;height:16px;"></i> QC Tool Comparison: Process Variation Histogram (Before vs After)
                             </h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
-                                    <label class="ds-label">Stage 7 After Improvement Numerical Readings (comma-separated)</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Stage 7 After Improvement Readings: Post-countermeasure numerical measurement samples">Stage 7 After Improvement Numerical Readings (comma-separated)</label>
                                     <textarea class="ds-input ds-textarea" id="s7_hist_after_values" rows="4" placeholder="e.g. 10.1, 10.2, 10.0, 9.9, 10.1, 10.2, 10.0, 10.1, 10.0, 10.1" onchange="StageModules[7].calcHistComparison()" required></textarea>
-                                    <div class="mt-2 p-2 border rounded bg-light text-xs text-muted">
+                                    <div class="mt-2 p-2 border rounded text-xs qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
                                         <div class="fw-bold mb-1">Variation Reduction Stats:</div>
                                         <div>Before SD: <span id="s7_hist_sd_before" class="fw-bold">---</span> | After SD: <span id="s7_hist_sd_after" class="fw-bold">---</span></div>
                                         <div class="mt-1 text-success fw-bold" id="s7_hist_var_reduction">Variation Reduction: ---</div>
@@ -132,10 +108,14 @@ const Stage7 = {
                         </div>
 
                         <!-- QC Tool: Control Chart Comparison -->
-                        <div class="p-3 border rounded bg-white mb-0 shadow-sm" style="border-radius: var(--radius-md);">
-                            <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2">
+                        <div class="p-3 border rounded mb-0 shadow-sm qc-tool-card" style="border-radius: var(--radius-md); background: var(--ds-bg-card, #ffffff);">
+                            <h6 class="fw-bold text-primary mb-2 d-flex align-items-center gap-2">
                                 <i data-lucide="line-chart" style="width:16px;height:16px;"></i> QC Tool Comparison: Control Chart Comparison (Before vs After Stability)
                             </h6>
+                            <div class="p-2 mb-3 rounded border text-xs d-flex align-items-center gap-2 qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
+                                <i data-lucide="info" style="width:14px;height:14px;" class="text-primary flex-shrink-0"></i>
+                                <span><strong>Instructions:</strong> Enter the measured values recorded after implementing countermeasures (e.g. Day 11 to Day 20 readings) in the table below to generate the After-Improvement Control Chart &amp; compare process stability.</span>
+                            </div>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -149,7 +129,7 @@ const Stage7 = {
                                             <div class="col-2"></div>
                                         </div>
                                     </div>
-                                    <div class="mt-2 p-2 border rounded bg-light text-xs text-muted">
+                                    <div class="mt-2 p-2 border rounded text-xs qc-stat-box" style="background: var(--ds-bg-subtle, #f8fafc);">
                                         <div class="fw-bold mb-1">Stability Analysis:</div>
                                         <div>Before Out-Of-Control: <span id="s7_ctrl_violations_before" class="fw-bold text-danger">---</span></div>
                                         <div>After Out-Of-Control: <span id="s7_ctrl_violations_after" class="fw-bold text-success">---</span></div>
@@ -172,23 +152,23 @@ const Stage7 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.3</span>
-                                Statistical Validation
+                                <span class="ds-tooltip-trigger" title="Statistical Validation: Statistically confirm the improvement is real and not due to random chance (p-Value < 0.05)">Statistical Validation</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Statistically confirm the improvement is real and not due to chance.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 3 - Statistical Validation</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 3 - Statistical Validation: Run statistical hypothesis tests (2-sample t-test, proportion test)">Section 3 - Statistical Validation</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[7].addStatRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Stat Check
                             </button>
                         </div>
                         <div id="s7_statContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Test Type</div>
-                                <div class="col-3">p-Value</div>
-                                <div class="col-4">Conclusion</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Test Type: Name of statistical hypothesis test executed (e.g. 2-Sample t-Test, Chi-Square)">Test Type</div>
+                                <div class="col-3 ds-tooltip-trigger" title="p-Value: Calculated probability value (p < 0.05 indicates statistically significant improvement)">p-Value</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Conclusion: Statistical interpretation (e.g. Reject H0; defect reduction is statistically significant)">Conclusion</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -201,24 +181,24 @@ const Stage7 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.4</span>
-                                Benefit Realization &amp; Savings
+                                <span class="ds-tooltip-trigger" title="Benefit Realization & Savings: Quantify actual annual savings & quality performance improvements achieved">Benefit Realization &amp; Savings</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Quantify the actual annual savings and quality improvement achieved.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 4 - Benefit Realization</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 4 - Benefit Realization: Financial savings tracking comparing expected vs actual economic return">Section 4 - Benefit Realization</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[7].addBenefitRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Benefit
                             </button>
                         </div>
                         <div id="s7_benefitContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Benefit Category</div>
-                                <div class="col-2">Expected</div>
-                                <div class="col-2">Actual</div>
-                                <div class="col-3">Variance</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Benefit Category: Financial category (e.g. Scrap Reduction, Rework Cost, Warranty Savings)">Benefit Category</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Expected: Projected annual monetary savings estimated in Stage 5">Expected</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Actual: Verified actual monetary savings achieved after countermeasure implementation">Actual</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Variance: Difference between actual savings achieved and expected savings projection">Variance</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -231,29 +211,43 @@ const Stage7 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.5</span>
-                                ROI Validation
+                                <span class="ds-tooltip-trigger" title="ROI Validation: Net Return on Investment (%) measuring annual net economic gain relative to capital invested">ROI Validation</span>
                             </h5>
-                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Validate the return on investment against the cost-benefit projection from Stage 5.</p>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Validate the return on investment against Stage 5 projections. <strong>ROI (%) represents Annual Net Return on Investment</strong>, calculated as: <code class="text-primary font-mono text-xs">((Annual Savings - Total Investment) / Total Investment) × 100</code>.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
-                        <h6 class="fw-bold mb-3 text-primary">Section 5 - ROI Validation</h6>
+                        <h6 class="fw-bold mb-3 text-primary ds-tooltip-trigger" title="Section 5 - ROI Validation: Financial investment recovery and ROI analysis">Section 5 - ROI Validation</h6>
                         <div class="row g-3 mb-0">
                             <div class="col-md-3">
-                                <label class="ds-label">Total Investment</label>
-                                <input type="number" id="s7_roi_inv" class="ds-input" onchange="StageModules[7].calcROI()" required>
+                                <label class="ds-label ds-tooltip-trigger" title="Total Investment: Capital expenditure, tooling, equipment, and labor implementation costs">Total Investment</label>
+                                <input type="number" id="s7_roi_inv" class="ds-input" oninput="StageModules[7].calcROI()" onchange="StageModules[7].calcROI()" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="ds-label">Annual Savings</label>
-                                <input type="number" id="s7_roi_sav" class="ds-input" onchange="StageModules[7].calcROI()" required>
+                                <label class="ds-label ds-tooltip-trigger" title="Annual Savings: Verified annual monetary savings from defect reduction & process improvements">Annual Savings</label>
+                                <input type="number" id="s7_roi_sav" class="ds-input" oninput="StageModules[7].calcROI()" onchange="StageModules[7].calcROI()" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="ds-label">Payback Period</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Payback Period: Number of years required to recover total investment = Total Investment / Annual Savings">Payback Period</label>
                                 <input type="text" id="s7_roi_payback" class="ds-input" readonly style="background:var(--ds-surface-raised)">
                             </div>
                             <div class="col-md-3">
-                                <label class="ds-label">ROI (%)</label>
+                                <label class="ds-label ds-tooltip-trigger" title="Annual Net Return on Investment (%): Annual net economic return percentage = ((Annual Savings - Total Investment) / Total Investment) * 100">ROI (%) <span class="text-xs text-muted font-normal">(Annual Net ROI)</span></label>
                                 <input type="text" id="s7_roi_pct" class="ds-input" readonly style="background:var(--ds-surface-raised)">
+                            </div>
+                        </div>
+                        <div class="mt-3 p-2 border rounded bg-light text-xs fw-bold d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div>
+                                <span class="ds-tooltip-trigger" title="Annual Savings (ROI Verified): Total verified monetary savings per year">Annual Savings (ROI Verified): </span>
+                                <span id="s7_dash_savings" class="text-success fs-6 fw-bold me-3">---</span>
+                            </div>
+                            <div>
+                                <span class="ds-tooltip-trigger" title="Payback Period (Investment Recovery): Years required to recover total capital outlay">Payback Period (Investment Recovery): </span>
+                                <span id="s7_dash_payback" class="text-info fs-6 fw-bold me-3">---</span>
+                            </div>
+                            <div>
+                                <span class="ds-tooltip-trigger" title="Annual Net ROI = ((Annual Savings - Total Investment) / Total Investment) * 100">Annual Net ROI (%): </span>
+                                <span id="s7_dash_roi_pct" class="text-primary fs-6 fw-bold">---</span>
                             </div>
                         </div>
                     </div>
@@ -265,24 +259,24 @@ const Stage7 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.6</span>
-                                Sustainability Check
+                                <span class="ds-tooltip-trigger" title="Sustainability Check: Confirm improved performance holds steady over time without reverting">Sustainability Check</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Confirm the improved performance is holding steady over time, not reverting.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6 - Sustainability Check</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 6 - Sustainability Check: Auditing long-term performance stability">Section 6 - Sustainability Check</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[7].addSustainRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Check
                             </button>
                         </div>
                         <div id="s7_sustainContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Check Item</div>
-                                <div class="col-2">Auditor</div>
-                                <div class="col-2">Result</div>
-                                <div class="col-3">Action Required</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Check Item: Inspection item or process parameter audited for stability">Check Item</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Auditor: Person conducting the sustainability audit">Auditor</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Result: Audit finding (e.g. Pass, Fail, Stable, Reverting)">Result</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Action Required: Corrective action taken if performance shows signs of reversion">Action Required</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -295,23 +289,23 @@ const Stage7 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.7</span>
-                                Side Effect Verification
+                                <span class="ds-tooltip-trigger" title="Side Effect Verification: Confirm no new quality defects or operational issues were introduced">Side Effect Verification</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Check whether any negative side effects flagged in Stage 5 actually materialized.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 7 - Side Effect Verification</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 7 - Side Effect Verification: Post-improvement side effect audit">Section 7 - Side Effect Verification</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[7].addSideEffectRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Verification
                             </button>
                         </div>
                         <div id="s7_sideEffectContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Process Area</div>
-                                <div class="col-2">Negative Impact?</div>
-                                <div class="col-5">Details</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Process Area: Workstation or shop floor area audited for secondary side effects">Process Area</div>
+                                <div class="col-2 ds-tooltip-trigger" title="Negative Impact?: Status indicating whether any negative side effect occurred">Negative Impact?</div>
+                                <div class="col-5 ds-tooltip-trigger" title="Details: Explanation of audit findings and corrective adjustments">Details</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -324,23 +318,23 @@ const Stage7 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">7.8</span>
-                                Lessons Implementation
+                                <span class="ds-tooltip-trigger" title="Lessons Implementation: Documenting key insights and best practices for future projects">Lessons Implementation</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Record what worked and what didn't during implementation for future reference.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 8 - Lessons Learned from Implementation</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 8 - Lessons Learned from Implementation: Key technical and process takeaways">Section 8 - Lessons Learned from Implementation</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[7].addLessonRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Lesson
                             </button>
                         </div>
                         <div id="s7_lessonContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Category</div>
-                                <div class="col-4">Lesson</div>
-                                <div class="col-4">Actionable Insight</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Category: Insight domain (e.g. Technical, Process, Governance, Training)">Category</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Lesson: Key takeaway or observation during execution">Lesson</div>
+                                <div class="col-4 ds-tooltip-trigger" title="Actionable Insight: Concrete recommendation for future QC Circle projects">Actionable Insight</div>
                                 <div class="col-1"></div>
                             </div>
                         </div>
@@ -396,14 +390,7 @@ const Stage7 = {
         if (afterControl.length) {
             afterControl.forEach(row => this.addControlRow(row));
         } else {
-            // Default sequential points
-            const defaults = [
-                {label:'Day 11', val:14.0}, {label:'Day 12', val:14.2}, {label:'Day 13', val:13.8},
-                {label:'Day 14', val:14.1}, {label:'Day 15', val:13.9}, {label:'Day 16', val:14.0},
-                {label:'Day 17', val:14.3}, {label:'Day 18', val:14.1}, {label:'Day 19', val:13.9},
-                {label:'Day 20', val:14.0}
-            ];
-            defaults.forEach(pt => this.addControlRow(pt));
+            this.addControlRow();
         }
         this.calcControlComparison();
 
@@ -583,8 +570,8 @@ const Stage7 = {
         const r = document.createElement('div');
         r.className = 'row g-1 mb-1 align-items-center control-row dyn-sub-row';
         r.innerHTML = `
-            <div class="col-5"><input type="text" class="ds-input py-1 px-2 text-xs ctrl-lbl" value="${data.label || ''}" placeholder="e.g. Day 11" onchange="StageModules[7].calcControlComparison()" required></div>
-            <div class="col-5"><input type="number" step="any" class="ds-input py-1 px-2 text-xs ctrl-val" value="${data.val !== undefined ? data.val : ''}" onchange="StageModules[7].calcControlComparison()" required></div>
+            <div class="col-5"><input type="text" class="ds-input py-1 px-2 text-xs ctrl-lbl" value="${data.label || ''}" placeholder="e.g. Day 11" oninput="StageModules[7].calcControlComparison()" onchange="StageModules[7].calcControlComparison()" required></div>
+            <div class="col-5"><input type="number" step="any" class="ds-input py-1 px-2 text-xs ctrl-val" value="${data.val !== undefined ? data.val : ''}" oninput="StageModules[7].calcControlComparison()" onchange="StageModules[7].calcControlComparison()" required></div>
             <div class="col-2"><button type="button" class="ds-btn ds-btn-ghost text-danger p-1" onclick="this.closest('.control-row').remove(); StageModules[7].calcControlComparison()"><i data-lucide="trash-2" style="width:12px;"></i></button></div>
         `;
         c.appendChild(r);
@@ -766,12 +753,16 @@ const Stage7 = {
 
         // Update dashboard ROI and savings
         const savingsEl = document.getElementById('s7_dash_savings');
-        if (savingsEl && sav > 0) {
-            savingsEl.innerText = '$' + sav.toLocaleString();
+        if (savingsEl) {
+            savingsEl.innerText = sav > 0 ? '₹' + sav.toLocaleString() : '---';
         }
         const paybackEl = document.getElementById('s7_dash_payback');
-        if (paybackEl && pb > 0) {
-            paybackEl.innerText = pb.toFixed(1) + ' yrs';
+        if (paybackEl) {
+            paybackEl.innerText = (sav > 0 && pb > 0) ? pb.toFixed(1) + ' yrs' : '---';
+        }
+        const roiPctEl = document.getElementById('s7_dash_roi_pct');
+        if (roiPctEl) {
+            roiPctEl.innerText = inv > 0 ? roi.toFixed(1) + '%' : '---';
         }
     },
 
@@ -809,8 +800,8 @@ const Stage7 = {
             }
         });
         const qualDisplay = document.getElementById('s7_dash_quality');
-        if (qualDisplay && countImp > 0) {
-            qualDisplay.innerText = (sumImp / countImp).toFixed(1) + '%';
+        if (qualDisplay) {
+            qualDisplay.innerText = countImp > 0 ? (sumImp / countImp).toFixed(1) + '%' : '---';
         }
     },
 
@@ -851,20 +842,30 @@ const Stage7 = {
     },
 
     addKpiRow(d = {}) {
-        const calc = "const p=this.closest('.dyn-row'); p.querySelector('.r-var').value = ((parseFloat(p.querySelector('.r-act').value)||0) - (parseFloat(p.querySelector('.r-tgt').value)||0)).toFixed(2); StageModules[7].updateDashboard();";
+        const calc = "const p=this.closest('.dyn-row'); if(p){ p.querySelector('.r-var').value = ((parseFloat(p.querySelector('.r-act').value)||0) - (parseFloat(p.querySelector('.r-tgt').value)||0)).toFixed(2); } StageModules[7].updateDashboard();";
         this.addRowTemplate('s7_kpiContainer', d, `
             <div class="col-3"><input type="text" class="ds-input r-met" placeholder="e.g. Crimp Defect Rate" value="${d.metric || ''}" required></div>
-            <div class="col-2"><input type="number" class="ds-input r-base" placeholder="e.g. 4.2" value="${d.baseline || ''}" onchange="StageModules[7].updateDashboard()" required></div>
-            <div class="col-2"><input type="number" class="ds-input r-tgt" placeholder="e.g. 0.5" value="${d.target || ''}" onchange="${calc}" required></div>
-            <div class="col-2"><input type="number" class="ds-input r-act" placeholder="e.g. 0.3" value="${d.actual || ''}" onchange="${calc}" required></div>
-            <div class="col-2"><input type="number" class="ds-input r-var" readonly style="background:var(--ds-surface-raised)" value="${d.variance || ''}"></div>`);
+            <div class="col-2"><input type="number" step="any" class="ds-input r-base" placeholder="e.g. 4.2" value="${d.baseline || ''}" oninput="${calc}" onchange="${calc}" required></div>
+            <div class="col-2"><input type="number" step="any" class="ds-input r-tgt" placeholder="e.g. 0.5" value="${d.target || ''}" oninput="${calc}" onchange="${calc}" required></div>
+            <div class="col-2"><input type="number" step="any" class="ds-input r-act" placeholder="e.g. 0.3" value="${d.actual || ''}" oninput="${calc}" onchange="${calc}" required></div>
+            <div class="col-2"><input type="number" step="any" class="ds-input r-var" readonly style="background:var(--ds-surface-raised)" value="${d.variance || ''}"></div>`);
     },
     addBeforeAfterRow(d = {}) {
+        let initImp = (d.improvement_pct !== undefined && d.improvement_pct !== null && d.improvement_pct !== '') ? d.improvement_pct : '';
+        if (!initImp && d.before_condition && d.after_condition) {
+            const b = parseFloat(String(d.before_condition).replace(/[^0-9.-]/g, ''));
+            const a = parseFloat(String(d.after_condition).replace(/[^0-9.-]/g, ''));
+            if (!isNaN(b) && !isNaN(a) && b !== 0) {
+                const p = ((b - a) / Math.abs(b)) * 100;
+                initImp = Number.isInteger(p) ? p : p.toFixed(1);
+            }
+        }
+        const calc = "const r=this.closest('.dyn-row'); if(r){ const b=parseFloat((r.querySelector('.r-bef').value||'').replace(/[^0-9.-]/g,'')); const a=parseFloat((r.querySelector('.r-aft').value||'').replace(/[^0-9.-]/g,'')); if(!isNaN(b)&&!isNaN(a)&&b!==0){ const p=((b-a)/Math.abs(b))*100; r.querySelector('.r-imp').value = Number.isInteger(p)?p:p.toFixed(1); } } StageModules[7].updateDashboard();";
         this.addRowTemplate('s7_beforeAfterContainer', d, `
             <div class="col-3"><input type="text" class="ds-input r-met" placeholder="e.g. Crimp Defect Rate" value="${d.metric || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-bef" placeholder="e.g. 4.2%" value="${d.before_condition || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-aft" placeholder="e.g. 0.3%" value="${d.after_condition || ''}" required></div>
-            <div class="col-2"><input type="number" class="ds-input r-imp" placeholder="e.g. 92" value="${d.improvement_pct || ''}" onchange="StageModules[7].updateDashboard()" required></div>`);
+            <div class="col-3"><input type="text" class="ds-input r-bef" placeholder="e.g. 4.2%" value="${d.before_condition || ''}" oninput="${calc}" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-aft" placeholder="e.g. 0.3%" value="${d.after_condition || ''}" oninput="${calc}" required></div>
+            <div class="col-2"><input type="number" step="any" class="ds-input r-imp" value="${initImp}" onchange="StageModules[7].updateDashboard()" required></div>`);
     },
     addStatRow(d = {}) {
         this.addRowTemplate('s7_statContainer', d, `

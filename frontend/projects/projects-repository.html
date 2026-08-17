@@ -44,22 +44,17 @@
 
                 <!-- Summary Stats Section -->
                 <div class="row g-4 mb-4" id="repoStats">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="ds-card p-3 h-100 skeleton">
                             <div style="height: 100px;"></div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="ds-card p-3 h-100 skeleton">
                             <div style="height: 100px;"></div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="ds-card p-3 h-100 skeleton">
-                            <div style="height: 100px;"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="ds-card p-3 h-100 skeleton">
                             <div style="height: 100px;"></div>
                         </div>
@@ -79,7 +74,7 @@
                                     <option value="">All Plants</option>
                                 </select>
                             </div>
-                            <div class="col-lg-2 col-md-4">
+                            <div class="col-lg-2 col-md-4" id="deptFilterCol">
                                 <label class="ds-label mb-2">
                                     <i data-lucide="building-2"></i> DEPARTMENT
                                 </label>
@@ -89,12 +84,19 @@
                             </div>
                             <div class="col-lg-2 col-md-4">
                                 <label class="ds-label mb-2">
+                                    <i data-lucide="tag"></i> CATEGORY
+                                </label>
+                                <select class="ds-input ds-select" id="categoryFilter" onchange="repoUI.loadData(1)">
+                                    <option value="">All Categories</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-2 col-md-4">
+                                <label class="ds-label mb-2">
                                     <i data-lucide="activity"></i> STATUS
                                 </label>
                                 <select class="ds-input ds-select" id="statusFilter" onchange="repoUI.loadData(1)">
                                     <option value="">All Status</option>
                                     <option value="Active" selected>Active</option>
-                                    <option value="Closed">Completed</option>
                                     <option value="Inactive">Inactive</option>
                                     <option value="Pending Approval">Pending Approval</option>
                                 </select>
@@ -115,7 +117,7 @@
                                     <option value="8">Stage 8: Standardization, Knowledge Sharing & Project Closure</option>
                                 </select>
                             </div>
-                            <div class="col-lg-3 col-md-12 d-flex gap-2">
+                            <div class="col-lg-2 col-md-12 d-flex gap-2">
                                 <button class="ds-btn ds-btn-primary flex-grow-1" onclick="repoUI.loadData(1)">
                                     <i data-lucide="refresh-cw"></i> Sync Data
                                 </button>
@@ -247,17 +249,9 @@
                                 </div>
                                 <div class="col-md-3">
                                     <div class="ds-field">
-                                        <label class="ds-label"><i data-lucide="tag"></i> Project Type <span class="text-danger">*</span></label>
-                                        <select class="ds-input ds-select" id="projType" required onchange="repoUI.handleProjectTypeChange(this.value)">
-                                            <option value="" disabled selected>Select Type</option>
-                                            <option value="Quality">Quality</option>
-                                            <option value="Cost">Cost</option>
-                                            <option value="Delivery">Delivery</option>
-                                            <option value="Safety">Safety</option>
-                                            <option value="Morale">Morale</option>
-                                            <option value="Environment">Environment</option>
-                                            <option value="Productivity">Productivity</option>
-                                            <option value="Other">Other</option>
+                                        <label class="ds-label"><i data-lucide="tag"></i> Project Type / Category <span class="text-danger">*</span></label>
+                                        <select class="ds-input ds-select" id="projType" data-source="categories" required onchange="repoUI.handleProjectTypeChange(this.value)">
+                                            <option value="" disabled selected>Select Category</option>
                                         </select>
                                         <div class="mt-2" id="projTypeCustomContainer" style="display: none;">
                                             <input type="text" class="ds-input text-sm py-1 px-2" id="projTypeCustom" placeholder="Enter custom project type...">
@@ -315,7 +309,7 @@
                                 <div class="col-md-3">
                                     <div class="ds-field">
                                         <label class="ds-label"><i data-lucide="git-merge"></i> Project Source <span class="text-danger">*</span></label>
-                                        <select class="ds-input ds-select" id="projSource" required>
+                                        <select class="ds-input ds-select" id="projSource" required onchange="repoUI.handleProjectSourceChange(this.value)">
                                             <option value="" disabled selected>Select Source</option>
                                             <option value="Policy">Policy</option>
                                             <option value="MPCP">MPCP</option>
@@ -324,7 +318,11 @@
                                             <option value="Audit Finding">Audit Finding</option>
                                             <option value="Safety Incident">Safety Incident</option>
                                             <option value="Employee Suggestion">Employee Suggestion</option>
+                                            <option value="Other">Other</option>
                                         </select>
+                                        <div class="mt-2" id="projSourceCustomContainer" style="display: none;">
+                                            <input type="text" class="ds-input text-sm py-1 px-2" id="projSourceCustom" placeholder="Specify custom project source...">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -479,6 +477,38 @@
         </div>
     </div>
 </div>
+
+<!-- Project Governance & Team Management Modal -->
+<div class="modal fade" id="projectTeamModal" tabindex="-1" aria-labelledby="projectTeamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-card border-0 shadow-lg" style="border-radius: var(--ds-radius-lg, 16px);">
+            <div class="modal-header border-bottom p-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="ds-icon-circle bg-primary-soft text-primary">
+                        <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="govProjectTitle">Project Team & Governance</h5>
+                        <p class="text-xs text-muted mb-0 mt-0.5" id="govProjectSub">View team members and manage governance roles</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="govModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                    <span class="text-sm text-muted">Loading team details...</span>
+                </div>
+            </div>
+            <div class="modal-footer border-top p-3 px-4 d-flex justify-content-between">
+                <span class="text-xs text-muted" id="govFooterNotice"></span>
+                <div class="d-flex gap-2" id="govFooterActions">
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
         </main>
     </div>
 
@@ -591,8 +621,15 @@
                 if (plantCol) plantCol.style.display = '';
                 await this.loadPlantsFilter();
             }
-            
-            await this.loadDepartments();
+
+            // Hide Department filter dropdown for Team Members (since list automatically shows assigned projects)
+            if (role === 'teammember') {
+                const deptCol = document.getElementById('deptFilterCol');
+                if (deptCol) deptCol.style.display = 'none';
+            } else {
+                await this.loadDepartments();
+            }
+
             await this.loadData();
             
             this.setupFilterListeners();
@@ -687,20 +724,20 @@
         async handleMemberDeptFilterChange(val) {
             try {
                 let members = [];
+                const plantName = (document.getElementById('projPlant')?.value || '').trim();
+                const plantQuery = plantName ? `&plant_name=${encodeURIComponent(plantName)}` : '';
                 if (val === 'all') {
-                    if (!this.allOrgMembers || !this.allOrgMembers.length) {
-                        this.allOrgMembers = await api.get('/projects/potential-members?role=Team Member&ignore_dept=true');
-                    }
+                    this.allOrgMembers = await api.get(`/projects/potential-members?role=Team Member&ignore_dept=true${plantQuery}`);
                     members = [...(this.allOrgMembers || [])];
                 } else if (val === 'current') {
                     const projDeptId = document.getElementById('projDepartment').value;
                     if (projDeptId) {
-                        members = await api.get(`/projects/potential-members?role=Team Member&dept_id=${projDeptId}`);
+                        members = await api.get(`/projects/potential-members?role=Team Member&dept_id=${projDeptId}${plantQuery}`);
                     } else {
                         members = [...(this.allOrgMembers || [])];
                     }
                 } else if (val) {
-                    members = await api.get(`/projects/potential-members?role=Team Member&dept_id=${val}`);
+                    members = await api.get(`/projects/potential-members?role=Team Member&dept_id=${val}${plantQuery}`);
                 }
 
                 const currentUser = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
@@ -1595,6 +1632,10 @@
             if (projTypeCustomContainer) projTypeCustomContainer.style.display = 'none';
             const projTypeCustom = document.getElementById('projTypeCustom');
             if (projTypeCustom) projTypeCustom.value = '';
+            const projSourceCustomContainer = document.getElementById('projSourceCustomContainer');
+            if (projSourceCustomContainer) projSourceCustomContainer.style.display = 'none';
+            const projSourceCustom = document.getElementById('projSourceCustom');
+            if (projSourceCustom) projSourceCustom.value = '';
 
             this.renderSelectedMembersList();
             this.initModal.show();
@@ -1604,6 +1645,20 @@
         handleProjectTypeChange(val) {
             const container = document.getElementById('projTypeCustomContainer');
             const customInput = document.getElementById('projTypeCustom');
+            if (container) {
+                if (val === 'Other') {
+                    container.style.display = 'block';
+                    if (customInput) customInput.focus();
+                } else {
+                    container.style.display = 'none';
+                    if (customInput) customInput.value = '';
+                }
+            }
+        },
+
+        handleProjectSourceChange(val) {
+            const container = document.getElementById('projSourceCustomContainer');
+            const customInput = document.getElementById('projSourceCustom');
             if (container) {
                 if (val === 'Other') {
                     container.style.display = 'block';
@@ -1633,7 +1688,13 @@
             }
             const plant = document.getElementById('projPlant').value.trim();
             const workArea = document.getElementById('projWorkArea').value.trim();
-            const source = document.getElementById('projSource').value;
+            let source = document.getElementById('projSource').value;
+            if (source === 'Other') {
+                source = (document.getElementById('projSourceCustom')?.value || '').trim();
+                if (!source) {
+                    return QCMS.toast('Please enter custom Project Source.', 'warning');
+                }
+            }
             const refNumber = document.getElementById('projRefNumber').value.trim();
             const facilitatorId = document.getElementById('projFacilitator').value;
             const reviewerId = document.getElementById('projReviewer').value;
@@ -1773,11 +1834,13 @@
             const search = document.getElementById('globalSearchInput');
             const plant = document.getElementById('plantFilter');
             const dept = document.getElementById('deptFilter');
+            const category = document.getElementById('categoryFilter');
             const status = document.getElementById('statusFilter');
             const stage = document.getElementById('stageFilter');
             if (search) search.value = '';
             if (plant) plant.value = '';
             if (dept) dept.value = '';
+            if (category) category.value = '';
             if (status) status.value = 'Active';
             if (stage) stage.value = '';
             this.loadDepartments('');
@@ -1785,7 +1848,7 @@
         },
 
         setupFilterListeners() {
-            ['globalSearchInput', 'plantFilter', 'deptFilter', 'statusFilter', 'stageFilter'].forEach(id => {
+            ['globalSearchInput', 'plantFilter', 'deptFilter', 'categoryFilter', 'statusFilter', 'stageFilter'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 if (id === 'globalSearchInput') {
@@ -1804,6 +1867,7 @@
                     q: document.getElementById('globalSearchInput')?.value || '',
                     plant: document.getElementById('plantFilter')?.value || '',
                     department_id: document.getElementById('deptFilter')?.value || '',
+                    category: document.getElementById('categoryFilter')?.value || '',
                     status: document.getElementById('statusFilter')?.value || '',
                     stage: document.getElementById('stageFilter')?.value || '',
                     page: this.currentPage,
@@ -1862,16 +1926,13 @@
         renderStats(stats) {
             const container = document.getElementById('repoStats');
             container.innerHTML = `
-                <div class="col-md-3 col-sm-6">
+                <div class="col-md-4 col-sm-6">
                     ${QCMS.kpiCard('Total Projects', stats.total, 'layers', 'blue')}
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    ${QCMS.kpiCard('Current Projects', stats.active, 'activity', 'green')}
+                <div class="col-md-4 col-sm-6">
+                    ${QCMS.kpiCard('Active Projects', stats.active, 'activity', 'green')}
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    ${QCMS.kpiCard('Completed Projects', stats.completed, 'check-circle', 'cyan')}
-                </div>
-                <div class="col-md-3 col-sm-6">
+                <div class="col-md-4 col-sm-6">
                     ${QCMS.kpiCard('Inactive Projects', stats.stalled, 'clock', 'red')}
                 </div>
             `;
@@ -1940,15 +2001,29 @@
                         <div class="text-xs text-muted">Latest update</div>
                     </td>
                     <td class="text-end">
-                        <div class="d-flex justify-content-end gap-1">
+                        <div class="d-flex justify-content-end gap-1 align-items-center">
                             <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-xs ds-btn-ghost d-flex align-items-center gap-1" title="Continue Workflow">
                                 <i data-lucide="play-circle" style="width:14px;"></i> Continue
                             </a>
-                            ${(p.status === 'Closed' || p.status === 'Completed') ? `
-                                <button class="ds-btn ds-btn-xs ds-btn-ghost d-flex align-items-center gap-1" onclick="repoUI.downloadReport(${p.id}, '${p.project_uid}', '${(p.title || '').replace(/'/g, "\\'")}', '${p.status}');" title="Download Project PDF Report">
-                                    <i data-lucide="file-text" class="text-danger" style="width:14px;"></i> Report
+                            <div class="dropdown d-inline-block">
+                                <button class="ds-btn ds-btn-xs ds-btn-ghost p-1 text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More Options">
+                                    <i data-lucide="more-vertical" style="width:16px;height:16px;"></i>
                                 </button>
-                            ` : ''}
+                                <ul class="dropdown-menu dropdown-menu-end shadow-md py-1 border-0" style="min-width: 210px; border-radius: var(--ds-radius-md, 8px);">
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="javascript:void(0)" onclick="repoUI.openTeamGovernanceModal(${p.id})">
+                                            <i data-lucide="users" style="width:14px;" class="text-primary"></i> Team & Governance
+                                        </a>
+                                    </li>
+                                    ${(p.status === 'Closed' || p.status === 'Completed') ? `
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="javascript:void(0)" onclick="repoUI.downloadReport(${p.id}, '${p.project_uid}', '${(p.title || '').replace(/'/g, "\\'")}', '${p.status}')">
+                                            <i data-lucide="file-text" style="width:14px;" class="text-danger"></i> Download PDF Report
+                                        </a>
+                                    </li>
+                                    ` : ''}
+                                </ul>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -1980,6 +2055,330 @@
                     }
                     QCMS.toast(err.message || 'PDF export failed', 'error');
                 });
+        },
+
+        async openTeamGovernanceModal(projectId) {
+            this.activeGovProjectId = projectId;
+            this.govModal = this.govModal || new bootstrap.Modal(document.getElementById('projectTeamModal'));
+            
+            const body = document.getElementById('govModalBody');
+            body.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                    <span class="text-sm text-muted">Loading project governance & team...</span>
+                </div>`;
+            this.govModal.show();
+
+            try {
+                const proj = await api.get(`/projects/${projectId}`);
+                this.govProjData = proj;
+                
+                const plantParam = proj.plant_id ? `?plant_id=${proj.plant_id}` : (proj.plant_name ? `?plant_name=${encodeURIComponent(proj.plant_name)}` : '');
+                const orgMembers = await api.get(`/projects/members${plantParam}`).catch(() => []);
+
+                this.govOrgMembers = orgMembers || [];
+                this.govDraftMembers = [...(proj.members || [])];
+                
+                document.getElementById('govProjectTitle').textContent = proj.title || 'Project Details';
+                document.getElementById('govProjectSub').textContent = `${proj.project_uid || ''} • ${proj.department || 'N/A'} • Status: ${proj.status || 'Active'}`;
+                
+                this.renderGovernanceModal();
+            } catch (e) {
+                body.innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Failed to load project details: ' + e.message)}</div>`;
+            }
+        },
+
+        renderGovernanceModal() {
+            const proj = this.govProjData;
+            const orgMembers = this.govOrgMembers || [];
+            const isUserAdmin = this.isAdmin;
+            const body = document.getElementById('govModalBody');
+            const footerActions = document.getElementById('govFooterActions');
+            const footerNotice = document.getElementById('govFooterNotice');
+
+            const currentLeaderId = proj.team_leader_id;
+            const currentFacId = proj.facilitator_id;
+            const currentRevId = proj.reviewer_id;
+
+            // Requirement 2: Team Leader options ONLY from working team members
+            const workingMembers = this.govDraftMembers || [];
+
+            // Requirement 3: Facilitators & Reviewers strictly filtered by Plant Location
+            const projPlantId = proj.plant_id;
+            const projPlantName = (proj.plant_name || '').toLowerCase().trim();
+
+            let plantScopedMembers = orgMembers.filter(u => {
+                if (!projPlantId && !projPlantName) return true;
+                if (projPlantId && u.plant_id && u.plant_id == projPlantId) return true;
+                if (projPlantName && u.plant_name) {
+                    const up = u.plant_name.toLowerCase().trim();
+                    return up === projPlantName || projPlantName.includes(up) || up.includes(projPlantName);
+                }
+                return false;
+            });
+            if (!plantScopedMembers.length && !projPlantId && !projPlantName) {
+                plantScopedMembers = orgMembers;
+            }
+
+            const plantFacilitators = plantScopedMembers.filter(u => {
+                const r = (u.role || '').toLowerCase().trim();
+                return r === 'facilitator' || r.includes('facilitator') || r === 'admin';
+            });
+            let facOptions = [...plantFacilitators];
+            if (currentFacId && !facOptions.some(u => u.id == currentFacId)) {
+                const assignedFac = (this.govOrgMembers || []).find(u => u.id == currentFacId);
+                if (assignedFac) facOptions.unshift(assignedFac);
+            }
+
+            const plantReviewers = plantScopedMembers.filter(u => {
+                const r = (u.role || '').toLowerCase().trim();
+                return r === 'reviewer' || r.includes('reviewer') || r === 'admin';
+            });
+            let revOptions = [...plantReviewers];
+            if (currentRevId && !revOptions.some(u => u.id == currentRevId)) {
+                const assignedRev = (this.govOrgMembers || []).find(u => u.id == currentRevId);
+                if (assignedRev) revOptions.unshift(assignedRev);
+            }
+
+            let leaderHTML = '';
+            let facHTML = '';
+            let revHTML = '';
+
+            if (isUserAdmin) {
+                leaderHTML = `
+                    <select class="ds-input ds-select text-sm fw-semibold" id="govTeamLeaderSelect">
+                        <option value="">-- Select Leader from Team --</option>
+                        ${workingMembers.map(m => `<option value="${m.id}" ${m.id == currentLeaderId ? 'selected' : ''}>${esc(m.full_name || m.username)} (${esc(m.role || 'Member')})</option>`).join('')}
+                    </select>`;
+                facHTML = `
+                    <select class="ds-input ds-select text-sm fw-semibold" id="govFacilitatorSelect">
+                        <option value="">-- Unassigned --</option>
+                        ${facOptions.map(u => `<option value="${u.id}" ${u.id == currentFacId ? 'selected' : ''}>${esc(u.full_name || u.username)} (${esc(u.role || 'Facilitator')}${u.plant_name ? ' - ' + esc(u.plant_name) : ''})</option>`).join('')}
+                    </select>`;
+                revHTML = `
+                    <select class="ds-input ds-select text-sm fw-semibold" id="govReviewerSelect">
+                        <option value="">-- Unassigned --</option>
+                        ${revOptions.map(u => `<option value="${u.id}" ${u.id == currentRevId ? 'selected' : ''}>${esc(u.full_name || u.username)} (${esc(u.role || 'Reviewer')}${u.plant_name ? ' - ' + esc(u.plant_name) : ''})</option>`).join('')}
+                    </select>`;
+            } else {
+                leaderHTML = `<div class="ds-input text-sm fw-semibold" readonly style="background:var(--ds-bg-subtle, rgba(241,245,249,0.75));cursor:not-allowed;">${esc(proj.team_leader_name || 'Unassigned')}</div>`;
+                facHTML = `<div class="ds-input text-sm fw-semibold" readonly style="background:var(--ds-bg-subtle, rgba(241,245,249,0.75));cursor:not-allowed;">${esc(proj.facilitator_name || 'Unassigned')}</div>`;
+                revHTML = `<div class="ds-input text-sm fw-semibold" readonly style="background:var(--ds-bg-subtle, rgba(241,245,249,0.75));cursor:not-allowed;">${esc(proj.reviewer_name || 'Unassigned')}</div>`;
+            }
+
+            body.innerHTML = `
+                <!-- Governance & Roles Section -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-xs text-uppercase fw-bold text-muted mb-0 d-flex align-items-center gap-1">
+                            <i data-lucide="shield-check" style="width:14px;" class="text-primary"></i> Governance & Leadership Roles
+                        </h6>
+                        ${proj.plant_name ? `<span class="badge bg-light text-dark border text-xxs"><i data-lucide="map-pin" style="width:10px;"></i> Plant: ${esc(proj.plant_name)}</span>` : ''}
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="ds-label mb-1 text-xs fw-semibold"><i data-lucide="crown" style="width:12px;" class="text-warning"></i> Team Leader (From Team)</label>
+                            ${leaderHTML}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="ds-label mb-1 text-xs fw-semibold"><i data-lucide="user-check" style="width:12px;" class="text-info"></i> Facilitator (Plant Scoped)</label>
+                            ${facHTML}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="ds-label mb-1 text-xs fw-semibold"><i data-lucide="check-square" style="width:12px;" class="text-success"></i> Reviewer (Plant Scoped)</label>
+                            ${revHTML}
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Working Team Members Section -->
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-xs text-uppercase fw-bold text-muted mb-0 d-flex align-items-center gap-1">
+                            <i data-lucide="users" style="width:14px;" class="text-primary"></i> Working Team Members (${this.govDraftMembers.length})
+                        </h6>
+                    </div>
+
+                    ${isUserAdmin ? `
+                    <!-- Requirement 1: Interactive Search Box for Member Adding -->
+                    <div class="card p-3 mb-3 border-0 rounded-3" style="background: var(--ds-bg-subtle, rgba(241, 245, 249, 0.6)); border: 1px solid var(--ds-border-color) !important;">
+                        <label class="ds-label mb-1 text-xs fw-semibold">Search & Add Team Member</label>
+                        <div class="position-relative">
+                            <input type="text" class="ds-input text-xs pe-4" id="govMemberSearchInput" 
+                                placeholder="Type name, email, or username to search members..." 
+                                oninput="repoUI.onGovMemberSearchInput(this.value)" 
+                                onfocus="repoUI.onGovMemberSearchInput(this.value)" 
+                                autocomplete="off">
+                            <i data-lucide="search" class="position-absolute text-muted" style="right:12px; top:50%; transform:translateY(-50%); width:14px; height:14px; pointer-events:none;"></i>
+                            
+                            <div id="govMemberSearchResults" class="position-absolute w-100 bg-white border rounded shadow-lg overflow-auto d-none" 
+                                style="max-height: 220px; z-index: 1055; top: 100%; left: 0; margin-top: 4px;">
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Members List Table -->
+                    <div class="table-responsive border rounded overflow-hidden">
+                        <table class="table table-hover align-middle mb-0 text-xs">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="py-2 px-3">Name</th>
+                                    <th class="py-2 px-3">Role</th>
+                                    ${isUserAdmin ? '<th class="py-2 px-3 text-end" style="width:80px;">Action</th>' : ''}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${this.govDraftMembers.length ? this.govDraftMembers.map(m => `
+                                    <tr>
+                                        <td class="py-2.5 px-3">
+                                            <div class="fw-bold text-dark">${esc(m.full_name || m.username)}</div>
+                                        </td>
+                                        <td class="py-2.5 px-3 text-muted">
+                                            ${esc(m.role || 'Team Member')}
+                                        </td>
+                                        ${isUserAdmin ? `
+                                        <td class="py-2.5 px-3 text-end">
+                                            <button class="ds-btn ds-btn-xs ds-btn-ghost text-danger p-1" title="Remove Member" onclick="repoUI.removeMemberFromGovModal(${m.id})">
+                                                <i data-lucide="trash-2" style="width:14px;"></i>
+                                            </button>
+                                        </td>
+                                        ` : ''}
+                                    </tr>
+                                `).join('') : `
+                                    <tr><td colspan="${isUserAdmin ? 3 : 2}" class="text-center py-4 text-muted">No team members assigned to this project yet.</td></tr>
+                                `}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            if (isUserAdmin) {
+                footerNotice.textContent = "Admin Control Mode: Modify roles/members and save.";
+                footerActions.innerHTML = `
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm d-flex align-items-center gap-1" onclick="repoUI.saveTeamGovernance()">
+                        <i data-lucide="check" style="width:14px;"></i> Save Governance & Team
+                    </button>`;
+            } else {
+                footerNotice.textContent = "Read-Only Mode: Viewing project governance & team.";
+                footerActions.innerHTML = `<button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>`;
+            }
+
+            if (window.lucide) lucide.createIcons();
+        },
+
+        onGovMemberSearchInput(q) {
+            const resDiv = document.getElementById('govMemberSearchResults');
+            if (!resDiv) return;
+
+            const proj = this.govProjData || {};
+            const projPlantId = proj.plant_id;
+            const projPlantName = (proj.plant_name || '').toLowerCase().trim();
+
+            const currentMemberIds = new Set(this.govDraftMembers.map(m => m.id));
+            const candidates = (this.govOrgMembers || []).filter(u => {
+                if (currentMemberIds.has(u.id)) return false;
+                const r = (u.role || '').toLowerCase().trim();
+                if (!(r === 'team member' || r === 'teammember' || r === 'member' || r === 'team leader' || r === 'teamleader')) return false;
+
+                // STRICTLY filter by project plant:
+                if (projPlantId && u.plant_id) {
+                    return u.plant_id == projPlantId;
+                }
+                if (projPlantName && u.plant_name) {
+                    const up = u.plant_name.toLowerCase().trim();
+                    return up === projPlantName || projPlantName.includes(up) || up.includes(projPlantName);
+                }
+                if (!projPlantId && !projPlantName) return true;
+                return false;
+            });
+
+            const query = (q || '').toLowerCase().trim();
+            const matches = query ? candidates.filter(u => {
+                const name = (u.full_name || '').toLowerCase();
+                const uname = (u.username || '').toLowerCase();
+                const email = (u.email || '').toLowerCase();
+                const dept = (u.department || '').toLowerCase();
+                return name.includes(query) || uname.includes(query) || email.includes(query) || dept.includes(query);
+            }) : candidates;
+
+            const topMatches = matches.slice(0, 10);
+
+            if (!topMatches.length) {
+                resDiv.innerHTML = `<div class="p-3 text-xs text-muted text-center">${query ? 'No matching team members found in this plant' : 'All available team members in this plant have been added'}</div>`;
+                resDiv.classList.remove('d-none');
+                return;
+            }
+
+            resDiv.innerHTML = topMatches.map(u => `
+                <div class="p-2 px-3 border-bottom search-item cursor-pointer text-xs hover-bg-light d-flex justify-content-between align-items-center" 
+                    style="cursor:pointer;"
+                    onclick="repoUI.selectGovMemberSearchResult(${u.id})">
+                    <div>
+                        <div class="fw-bold text-dark">${esc(u.full_name || u.username)}</div>
+                        <div class="text-xxs text-muted">${esc(u.email || u.username)} • ${esc(u.department || 'General')}${u.plant_name ? ' (' + esc(u.plant_name) + ')' : ''}</div>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-xxs">+ Add Member</span>
+                </div>
+            `).join('');
+
+            resDiv.classList.remove('d-none');
+        },
+
+        selectGovMemberSearchResult(userId) {
+            const userObj = (this.govOrgMembers || []).find(u => u.id == userId);
+            if (userObj && !this.govDraftMembers.some(m => m.id == userId)) {
+                this.govDraftMembers.push({
+                    id: userObj.id,
+                    username: userObj.username,
+                    full_name: userObj.full_name || userObj.username,
+                    role: userObj.role || 'Team Member'
+                });
+                this.renderGovernanceModal();
+            }
+            const resDiv = document.getElementById('govMemberSearchResults');
+            if (resDiv) resDiv.classList.add('d-none');
+        },
+
+        addMemberToGovModal() {
+            const select = document.getElementById('govAddMemberSelect');
+            if (!select || !select.value) {
+                return QCMS.toast('Please select a member to add.', 'warning');
+            }
+            const userId = parseInt(select.value);
+            this.selectGovMemberSearchResult(userId);
+        },
+
+        removeMemberFromGovModal(userId) {
+            this.govDraftMembers = this.govDraftMembers.filter(m => m.id != userId);
+            this.renderGovernanceModal();
+        },
+
+        async saveTeamGovernance() {
+            try {
+                const leaderId = document.getElementById('govTeamLeaderSelect')?.value || null;
+                const facId = document.getElementById('govFacilitatorSelect')?.value || null;
+                const revId = document.getElementById('govReviewerSelect')?.value || null;
+                const memberIds = this.govDraftMembers.map(m => m.id);
+
+                const payload = {
+                    team_leader_id: leaderId ? parseInt(leaderId) : null,
+                    facilitator_id: facId ? parseInt(facId) : null,
+                    reviewer_id: revId ? parseInt(revId) : null,
+                    member_ids: memberIds
+                };
+
+                await api.put(`/projects/${this.activeGovProjectId}`, payload);
+                QCMS.toast('Project governance & team updated successfully!', 'success');
+                if (this.govModal) this.govModal.hide();
+                this.loadData(this.currentPage);
+            } catch (e) {
+                QCMS.toast('Failed to update project team: ' + e.message, 'danger');
+            }
         }
     };
 
@@ -1995,10 +2394,10 @@
             pMenu.style.display = 'none';
         }
 
-        const dInput = document.getElementById('projDepartment');
-        const dMenu = document.getElementById('deptDropdownMenu');
-        if (dMenu && dInput && !dInput.contains(e.target) && !dMenu.contains(e.target)) {
-            dMenu.style.display = 'none';
+        const gInput = document.getElementById('govMemberSearchInput');
+        const gMenu = document.getElementById('govMemberSearchResults');
+        if (gMenu && gInput && !gInput.contains(e.target) && !gMenu.contains(e.target)) {
+            gMenu.classList.add('d-none');
         }
     });
     </script>

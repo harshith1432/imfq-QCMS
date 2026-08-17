@@ -1445,8 +1445,8 @@
                 
                 try {
                     QCMS.toast('Regenerating credentials...', 'info');
-                    await api.post(`/admin/users/${id}/regenerate`);
-                    QCMS.toast('New credentials generated successfully.', 'success');
+                    const res = await api.post(`/admin/users/${id}/regenerate`);
+                    QCMS.toast(res?.message || 'New credentials generated and emailed successfully.', 'success');
                 } catch (e) {
                     QCMS.toast(e.message || 'Failed to regenerate credentials.', 'error');
                 }

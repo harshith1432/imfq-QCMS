@@ -53,6 +53,12 @@
                         <button class="ds-btn-tab" data-tab="closure">
                             <i data-lucide="archive" style="width:16px;height:16px;margin-right:6px;"></i> Standardization & Closure
                         </button>
+                        <button class="ds-btn-tab" data-tab="approved">
+                            <i data-lucide="check-circle" style="width:16px;height:16px;margin-right:6px;"></i> Approved Projects
+                        </button>
+                        <button class="ds-btn-tab" data-tab="rejected">
+                            <i data-lucide="x-circle" style="width:16px;height:16px;margin-right:6px;"></i> Rejected Projects
+                        </button>
                     </div>
 
                     <!-- Pending Approvals Tab -->
@@ -67,10 +73,11 @@
                                     </div>
                                 </div>
                                 <div class="ds-card-body p-0">
-                                    <div style="min-height:500px;" id="reviewQueueBody">
+                                    <div style="min-height:450px;" id="reviewQueueBody">
                                         <div class="p-5 text-center text-muted">Initialize Approval Queue...</div>
                                     </div>
                                 </div>
+                                <div id="pendingPaginationContainer"></div>
                             </div>
 
                             <!-- Decision History (Recent) -->
@@ -128,6 +135,66 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Approved Projects Tab -->
+                    <div id="tab-approved" class="tab-content-panel d-none">
+                        <div class="glass-card">
+                            <div class="ds-card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title">✅ Approved Projects</h5>
+                                <span class="ds-badge green" id="approvedCount">0 Approved</span>
+                            </div>
+                            <div class="ds-card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="ds-table align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>PROJECT</th>
+                                                <th>DEPARTMENT & PLANT</th>
+                                                <th>TEAM LEADER</th>
+                                                <th>STAGE & STATUS</th>
+                                                <th class="text-end">APPROVAL DATE</th>
+                                                <th class="text-end">ACTION</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="approvedBody">
+                                            <tr><td colspan="6" class="p-4 text-center text-muted">Loading approved projects...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="approvedPaginationContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- Rejected Projects Tab -->
+                    <div id="tab-rejected" class="tab-content-panel d-none">
+                        <div class="glass-card">
+                            <div class="ds-card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title">❌ Rejected Projects</h5>
+                                <span class="ds-badge red" id="rejectedCount">0 Rejected</span>
+                            </div>
+                            <div class="ds-card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="ds-table align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>PROJECT</th>
+                                                <th>DEPARTMENT & PLANT</th>
+                                                <th>TEAM LEADER</th>
+                                                <th style="width:35%;">REJECTION REASON (WHY REJECTED)</th>
+                                                <th class="text-end">REJECTION DATE</th>
+                                                <th class="text-end">ACTION</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rejectedBody">
+                                            <tr><td colspan="6" class="p-4 text-center text-muted">Loading rejected projects...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="rejectedPaginationContainer"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -148,7 +215,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-4">
                     <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="ds-btn ds-btn-ghost text-warning" id="revisionBtn">
+                    <button type="button" class="ds-btn ds-btn-warning shadow-sm" id="revisionBtn" style="background-color: #f59e0b; color: #ffffff !important; border: 1px solid #d97706; font-weight: 600;">
                         <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i> Request Revision
                     </button>
                     <button type="button" class="ds-btn ds-btn-danger" id="rejectBtn">
@@ -188,38 +255,41 @@
 
     <!-- Approve Impact Modal -->
     <div class="modal fade" id="approveImpactModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius: 16px;">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">🎯 Approve Impact Results</h5>
+                    <div>
+                        <span class="badge bg-primary-subtle text-primary text-xxs font-mono mb-1">IMPACT EVALUATION</span>
+                        <h5 class="modal-title fw-bold">🎯 Approve Impact Results</h5>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body py-3">
                     <div class="ds-alert info mb-3">
                         <div class="d-flex gap-2">
                             <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
-                            <div class="text-sm">Approving will save the post-implementation baseline/final values and automatically approve the impact review.</div>
+                            <div class="text-sm">Approving will save post-implementation baseline and final values across all measured KPIs and automatically approve the project impact review.</div>
                         </div>
                     </div>
                     <input type="hidden" id="approveImpactProjectId">
                     <div id="approveImpactSummary" class="mb-3"></div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-medium">Baseline Value</label>
-                        <input class="form-control" type="number" id="baselineValue" placeholder="e.g. 120">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0 text-primary" style="font-size: 0.9rem;">Measured Impact Metrics</h6>
+                        <button type="button" class="ds-btn ds-btn-sm ds-btn-outline" onclick="revDash.addImpactMetricRow()" style="border-radius:8px; font-size:0.8rem;">
+                            <i data-lucide="plus" style="width:14px;height:14px;margin-right:4px;"></i> Add Impact Metric
+                        </button>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-medium">Final / Post Value</label>
-                        <input class="form-control" type="number" id="finalValue" placeholder="e.g. 85">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-medium">KPI Label (e.g. Defect Rate)</label>
-                        <input class="form-control" type="text" id="kpiLabel" placeholder="Defect Rate">
+
+                    <div id="impactMetricsContainer" class="d-flex flex-column gap-2">
+                        <!-- Dynamic Impact Metric Rows Injected Here -->
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="ds-btn ds-btn-primary" onclick="revDash.submitImpactApproval()">Approve Results</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="revDash.submitImpactApproval()">
+                        <i data-lucide="check-circle" style="width:15px;height:15px;margin-right:4px;"></i> Approve Results
+                    </button>
                 </div>
             </div>
         </div>
@@ -227,8 +297,8 @@
 
     <!-- Closure Sign-off Modal -->
     <div class="modal fade" id="closureModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px;">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">📋 Stage 8 Closure & Review</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -236,26 +306,26 @@
                 <div class="modal-body">
                     <input type="hidden" id="closureProjectId">
                     <div class="mb-3">
-                        <label class="form-label fw-medium">Lessons Learned <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="closureLessons" rows="3" placeholder="What did the team learn?"></textarea>
+                        <label class="form-label fw-medium text-xs">Lessons Learned <span class="text-danger">*</span></label>
+                        <textarea class="form-control text-xs" id="closureLessons" rows="3" placeholder="What did the team learn?"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-medium">Preventive Actions</label>
-                        <textarea class="form-control" id="closurePreventive" rows="2" placeholder="Actions to prevent recurrence..."></textarea>
+                        <label class="form-label fw-medium text-xs">Preventive Actions</label>
+                        <textarea class="form-control text-xs" id="closurePreventive" rows="2" placeholder="Actions to prevent recurrence..."></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-medium">Reviewer Escalation / Closing Notes</label>
-                        <textarea class="form-control" id="closureReviewerNotes" rows="2" placeholder="Optional notes or recommendation when closing or forwarding to CEO..."></textarea>
+                        <label class="form-label fw-medium text-xs">Reviewer Escalation / Closing Notes</label>
+                        <textarea class="form-control text-xs" id="closureReviewerNotes" rows="2" placeholder="Optional notes or recommendation when closing or forwarding to CEO..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="ds-btn ds-btn-outline text-warning border-warning" onclick="revDash.submitClosure('ceo')">
-                            <i data-lucide="send" style="width:14px;height:14px;margin-right:4px;"></i> Send to CEO to Review & Close
+                    <button type="button" class="ds-btn ds-btn-sm ds-btn-ghost text-xs" data-bs-dismiss="modal">Cancel</button>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="ds-btn ds-btn-sm ds-btn-outline text-warning border-warning text-xs py-1.5 px-3" onclick="revDash.submitClosure('ceo')" title="Send to CEO to Review & Close">
+                            <i data-lucide="send" style="width:13px;height:13px;margin-right:4px;"></i> Send to CEO
                         </button>
-                        <button type="button" class="ds-btn ds-btn-primary" onclick="revDash.submitClosure('direct')">
-                            <i data-lucide="check-circle" style="width:14px;height:14px;margin-right:4px;"></i> Sign Off & Close Directly
+                        <button type="button" class="ds-btn ds-btn-sm ds-btn-primary text-xs py-1.5 px-3" onclick="revDash.submitClosure('direct')" title="Sign Off & Close Directly">
+                            <i data-lucide="check-circle" style="width:13px;height:13px;margin-right:4px;"></i> Sign Off & Close
                         </button>
                     </div>
                 </div>
@@ -332,6 +402,67 @@
         </div>
     </div>
 
+    <!-- Review Decision & Comments Modal -->
+    <div class="modal fade" id="reviewCommentsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content glass-card ds-card border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header border-0 pb-0 px-4 pt-4 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="revCommBadge" class="ds-badge green">Stage 1 · Approved</span>
+                        <h5 class="modal-title fw-bold mb-0" id="revCommModalTitle">Stage Review Approval Comments</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 py-3">
+                    <!-- Project Summary Info -->
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-0 fs-5" id="revCommProjectTitle">Project Title</h6>
+                                <span class="text-xxs text-muted font-mono" id="revCommProjectUid">PRJ-001</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="text-xxs text-muted text-uppercase fw-bold d-block">Decision Date</span>
+                                <span class="text-xs fw-semibold text-secondary" id="revCommDate">--</span>
+                            </div>
+                        </div>
+                        <div class="row g-2 text-xs pt-2 border-top">
+                            <div class="col-sm-4">
+                                <span class="text-muted">Department:</span>
+                                <span class="fw-semibold text-dark ms-1" id="revCommDept">Maintenance</span>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="text-muted">Plant:</span>
+                                <span class="fw-semibold text-dark ms-1" id="revCommPlant">Chennai</span>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="text-muted">Team Leader:</span>
+                                <span class="fw-semibold text-dark ms-1" id="revCommTeamLeader">Amit Verma</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reviewer Comments Box -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-xs text-uppercase text-secondary d-flex align-items-center gap-1.5 mb-2">
+                            <i data-lucide="message-square-quote" style="width:15px;height:15px;color:var(--ds-primary);"></i>
+                            Reviewer Comments Recorded at Time of Review
+                        </label>
+                        <div class="p-3 rounded-3 border bg-white shadow-sm" style="min-height: 100px; max-height: 240px; overflow-y: auto; border-left: 4px solid var(--ds-success) !important;" id="revCommTextContainer">
+                            <p class="mb-0 text-sm" id="revCommText" style="white-space: pre-wrap; line-height: 1.6;"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 d-flex justify-content-between align-items-center">
+                    <a href="#" id="revCommOpenProjectBtn" target="_blank" class="ds-btn ds-btn-sm ds-btn-primary d-inline-flex align-items-center gap-1.5" style="border-radius: 6px; text-decoration: none;">
+                        <i data-lucide="external-link" style="width:13px;height:13px;"></i> Open Full Project Details
+                    </a>
+                    <button type="button" class="ds-btn ds-btn-sm ds-btn-outline" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/api.js"></script>
     <script src="/assets/js/i18n.js"></script>
@@ -344,10 +475,17 @@
         closureModal: null,
         noteModal: null,
         sopViewModal: null,
+        commentsModal: null,
         queueData: [],
         impactData: [],
         closureData: [],
+        approvedData: [],
+        rejectedData: [],
         currentSearchQuery: '',
+        pendingPage: 1,
+        approvedPage: 1,
+        rejectedPage: 1,
+        pageSize: 5,
 
         async init() {
             QCMS.init();
@@ -356,6 +494,7 @@
             this.closureModal = new bootstrap.Modal(document.getElementById('closureModal'));
             this.noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
             this.sopViewModal = new bootstrap.Modal(document.getElementById('sopViewModal'));
+            this.commentsModal = new bootstrap.Modal(document.getElementById('reviewCommentsModal'));
             
             // Tab switching
             document.querySelectorAll('[data-tab]').forEach(btn => {
@@ -372,6 +511,8 @@
             this.loadHistory();
             this.loadImpact();
             this.loadClosure();
+            this.loadApproved();
+            this.loadRejected();
 
             window.addEventListener('qcms-global-search', (e) => {
                 this.handleGlobalSearch(e.detail.query);
@@ -382,6 +523,11 @@
             document.getElementById('revisionBtn').onclick = () => this.submitDecision('Revision');
 
             QCMS.enforceUIPermissions();
+        },
+
+        switchTab(tabName) {
+            const btn = document.querySelector(`[data-tab="${tabName}"]`);
+            if (btn) btn.click();
         },
 
         handleGlobalSearch(query) {
@@ -416,11 +562,306 @@
                 document.getElementById('kpiGrid').innerHTML =
                     QCMS.kpiCard('Pending Review', stats.pending_count || 0, 'clock', 'orange') +
                     QCMS.kpiCard('Impact Review', stats.pending_impact || 0, 'bar-chart-3', 'blue') +
-                    QCMS.kpiCard('Pending Closure', stats.pending_closure || 0, 'archive', 'yellow');
+                    QCMS.kpiCard('Pending Closure', stats.pending_closure || 0, 'archive', 'yellow') +
+                    QCMS.kpiCard('Approved Projects', stats.approved_count || 0, 'check-circle', 'green') +
+                    QCMS.kpiCard('Rejected Projects', stats.rejected_count || 0, 'x-circle', 'red');
+
+                const kpiCols = document.querySelectorAll('#kpiGrid > div, #kpiGrid > a');
+                if (kpiCols[3]) {
+                    kpiCols[3].style.cursor = 'pointer';
+                    kpiCols[3].addEventListener('click', () => this.switchTab('approved'));
+                }
+                if (kpiCols[4]) {
+                    kpiCols[4].style.cursor = 'pointer';
+                    kpiCols[4].addEventListener('click', () => this.switchTab('rejected'));
+                }
+
                 if (window.lucide) lucide.createIcons();
             } catch (e) { 
                 console.error(e); 
             }
+        },
+
+        renderPagination(totalItems, currentPage, pageSize, changeFnName) {
+            if (!totalItems || totalItems <= 0) return '';
+            const totalPages = Math.ceil(totalItems / pageSize) || 1;
+            const startIdx = (currentPage - 1) * pageSize + 1;
+            const endIdx = Math.min(currentPage * pageSize, totalItems);
+
+            return `
+                <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top bg-light text-xs text-muted">
+                    <div>Showing <strong>${startIdx}</strong> to <strong>${endIdx}</strong> of <strong>${totalItems}</strong> entries</div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="ds-btn ds-btn-sm ds-btn-ghost py-1 px-2" ${currentPage <= 1 ? 'disabled' : ''} onclick="${changeFnName}(${currentPage - 1})">
+                            <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Previous
+                        </button>
+                        <span class="px-2 font-mono text-dark fw-bold">Page ${currentPage} of ${totalPages}</span>
+                        <button class="ds-btn ds-btn-sm ds-btn-ghost py-1 px-2" ${currentPage >= totalPages ? 'disabled' : ''} onclick="${changeFnName}(${currentPage + 1})">
+                            Next <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        },
+
+        changePendingPage(page) {
+            this.pendingPage = page;
+            this.renderQueue();
+        },
+
+        changeApprovedPage(page) {
+            this.approvedPage = page;
+            this.renderApproved(this.approvedData);
+        },
+
+        changeRejectedPage(page) {
+            this.rejectedPage = page;
+            this.renderRejected(this.rejectedData);
+        },
+
+        async loadApproved() {
+            try {
+                const projects = await api.get('/reviewer/approved-projects');
+                this.approvedData = projects || [];
+                this.approvedPage = 1;
+                this.renderApproved(this.approvedData);
+            } catch (e) {
+                const body = document.getElementById('approvedBody');
+                if (body) body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-danger">Failed to load approved projects.</td></tr>`;
+            }
+        },
+
+        renderApproved(projects) {
+            const countEl = document.getElementById('approvedCount');
+            if (countEl) countEl.textContent = `${projects.length} Approved`;
+            const body = document.getElementById('approvedBody');
+            const pagContainer = document.getElementById('approvedPaginationContainer');
+            if (!body) return;
+
+            if (!projects.length) {
+                body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-muted">No projects approved by you yet.</td></tr>`;
+                if (pagContainer) pagContainer.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.ceil(projects.length / this.pageSize) || 1;
+            if (this.approvedPage > totalPages) this.approvedPage = totalPages;
+            if (this.approvedPage < 1) this.approvedPage = 1;
+
+            const sliced = projects.slice((this.approvedPage - 1) * this.pageSize, this.approvedPage * this.pageSize);
+
+            body.innerHTML = sliced.map(p => `
+                <tr>
+                    <td class="py-3">
+                        <div class="fw-bold text-success">${QCMS.escapeHtml(p.title)}</div>
+                        <div class="text-xxs text-muted font-mono">${QCMS.escapeHtml(p.project_uid)}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-main">${QCMS.escapeHtml(p.department)}</div>
+                        <div class="text-xxs text-muted">Plant: ${QCMS.escapeHtml(p.plant)}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-main">${QCMS.escapeHtml(p.team_leader)}</div>
+                    </td>
+                    <td>
+                        <span class="ds-badge green">Stage ${p.approved_stage || p.stage_number || p.current_stage || 1} · Approved</span>
+                    </td>
+                    <td class="text-end text-muted text-xs">
+                        ${p.approved_at ? new Date(p.approved_at).toLocaleDateString() : '--'}
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="ds-btn ds-btn-sm ds-btn-ghost" onclick="revDash.viewApprovedComments(${p.id}, ${p.review_id || 'null'}, ${p.approved_stage || p.stage_number || 1})">View</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            if (pagContainer) {
+                pagContainer.innerHTML = this.renderPagination(projects.length, this.approvedPage, this.pageSize, 'revDash.changeApprovedPage');
+            }
+            if (window.lucide) lucide.createIcons();
+        },
+
+        async loadRejected() {
+            try {
+                const projects = await api.get('/reviewer/rejected-projects');
+                this.rejectedData = projects || [];
+                this.rejectedPage = 1;
+                this.renderRejected(this.rejectedData);
+            } catch (e) {
+                const body = document.getElementById('rejectedBody');
+                if (body) body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-danger">Failed to load rejected projects.</td></tr>`;
+            }
+        },
+
+        renderRejected(projects) {
+            const countEl = document.getElementById('rejectedCount');
+            if (countEl) countEl.textContent = `${projects.length} Rejected`;
+            const body = document.getElementById('rejectedBody');
+            const pagContainer = document.getElementById('rejectedPaginationContainer');
+            if (!body) return;
+
+            if (!projects.length) {
+                body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-muted">No rejected projects found under your review.</td></tr>`;
+                if (pagContainer) pagContainer.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.ceil(projects.length / this.pageSize) || 1;
+            if (this.rejectedPage > totalPages) this.rejectedPage = totalPages;
+            if (this.rejectedPage < 1) this.rejectedPage = 1;
+
+            const sliced = projects.slice((this.rejectedPage - 1) * this.pageSize, this.rejectedPage * this.pageSize);
+
+            body.innerHTML = sliced.map(p => `
+                <tr>
+                    <td class="py-3">
+                        <div class="fw-bold text-danger">${QCMS.escapeHtml(p.title)}</div>
+                        <div class="text-xxs text-muted font-mono">${QCMS.escapeHtml(p.project_uid)}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-main">${QCMS.escapeHtml(p.department)}</div>
+                        <div class="text-xxs text-muted">Plant: ${QCMS.escapeHtml(p.plant)}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-main">${QCMS.escapeHtml(p.team_leader)}</div>
+                    </td>
+                    <td>
+                        <div class="d-inline-flex align-items-center px-2 py-1 rounded bg-danger-subtle text-danger border border-danger-subtle text-xs" style="white-space:pre-wrap; max-width:100%;">
+                            <i data-lucide="info" style="width:12px;height:12px;margin-right:4px;flex-shrink:0;"></i>
+                            <span>Stage ${p.rejected_stage || p.stage_number || p.current_stage || 1}: ${QCMS.escapeHtml(p.rejection_reason || 'No reason specified')}</span>
+                        </div>
+                    </td>
+                    <td class="text-end text-muted text-xs">
+                        ${p.rejected_at ? new Date(p.rejected_at).toLocaleDateString() : '--'}
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="ds-btn ds-btn-sm ds-btn-ghost" onclick="revDash.viewRejectedComments(${p.id}, ${p.review_id || 'null'}, ${p.rejected_stage || p.stage_number || 1})">View</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            if (pagContainer) {
+                pagContainer.innerHTML = this.renderPagination(projects.length, this.rejectedPage, this.pageSize, 'revDash.changeRejectedPage');
+            }
+            if (window.lucide) lucide.createIcons();
+        },
+
+        viewApprovedComments(projectId, reviewId, stageNumber) {
+            const item = (this.approvedData || []).find(p => (reviewId && p.review_id === reviewId) || (p.id === projectId && (p.approved_stage == stageNumber || p.stage_number == stageNumber))) || (this.approvedData || []).find(p => p.id === projectId);
+            if (!item) return;
+
+            const modalTitle = document.getElementById('revCommModalTitle');
+            if (modalTitle) modalTitle.textContent = "Stage Review Approval Comments";
+
+            const badge = document.getElementById('revCommBadge');
+            if (badge) {
+                badge.className = 'ds-badge green';
+                badge.textContent = `Stage ${item.approved_stage || item.stage_number || 1} · Approved`;
+            }
+
+            const titleEl = document.getElementById('revCommProjectTitle');
+            if (titleEl) titleEl.textContent = item.title || 'Project';
+
+            const uidEl = document.getElementById('revCommProjectUid');
+            if (uidEl) uidEl.textContent = item.project_uid || `PRJ-${item.id}`;
+
+            const deptEl = document.getElementById('revCommDept');
+            if (deptEl) deptEl.textContent = item.department || 'N/A';
+
+            const plantEl = document.getElementById('revCommPlant');
+            if (plantEl) plantEl.textContent = item.plant || 'General';
+
+            const tlEl = document.getElementById('revCommTeamLeader');
+            if (tlEl) tlEl.textContent = item.team_leader || 'Unassigned';
+
+            const dateEl = document.getElementById('revCommDate');
+            if (dateEl) dateEl.textContent = item.approved_at ? new Date(item.approved_at).toLocaleDateString() : '--';
+
+            const commentBox = document.getElementById('revCommTextContainer');
+            if (commentBox) {
+                commentBox.style.setProperty('border-left', '4px solid var(--ds-success)', 'important');
+            }
+
+            const comments = (item.comments || '').trim();
+            const commentEl = document.getElementById('revCommText');
+            if (commentEl) {
+                if (comments) {
+                    commentEl.textContent = `"${comments}"`;
+                    commentEl.classList.remove('text-muted');
+                    commentEl.classList.add('text-dark');
+                } else {
+                    commentEl.textContent = "No specific comments were recorded at the time of approval.";
+                    commentEl.classList.remove('text-dark');
+                    commentEl.classList.add('text-muted');
+                }
+            }
+
+            const openBtn = document.getElementById('revCommOpenProjectBtn');
+            if (openBtn) {
+                openBtn.href = `/projects/project-details.html?id=${item.id}`;
+            }
+
+            if (window.lucide) lucide.createIcons();
+            if (this.commentsModal) this.commentsModal.show();
+        },
+
+        viewRejectedComments(projectId, reviewId, stageNumber) {
+            const item = (this.rejectedData || []).find(p => (reviewId && p.review_id === reviewId) || (p.id === projectId && (p.rejected_stage == stageNumber || p.stage_number == stageNumber))) || (this.rejectedData || []).find(p => p.id === projectId);
+            if (!item) return;
+
+            const modalTitle = document.getElementById('revCommModalTitle');
+            if (modalTitle) modalTitle.textContent = "Stage Review Rejection Details";
+
+            const badge = document.getElementById('revCommBadge');
+            if (badge) {
+                badge.className = 'ds-badge red';
+                badge.textContent = `Stage ${item.rejected_stage || item.stage_number || 1} · Rejected`;
+            }
+
+            const titleEl = document.getElementById('revCommProjectTitle');
+            if (titleEl) titleEl.textContent = item.title || 'Project';
+
+            const uidEl = document.getElementById('revCommProjectUid');
+            if (uidEl) uidEl.textContent = item.project_uid || `PRJ-${item.id}`;
+
+            const deptEl = document.getElementById('revCommDept');
+            if (deptEl) deptEl.textContent = item.department || 'N/A';
+
+            const plantEl = document.getElementById('revCommPlant');
+            if (plantEl) plantEl.textContent = item.plant || 'General';
+
+            const tlEl = document.getElementById('revCommTeamLeader');
+            if (tlEl) tlEl.textContent = item.team_leader || 'Unassigned';
+
+            const dateEl = document.getElementById('revCommDate');
+            if (dateEl) dateEl.textContent = item.rejected_at ? new Date(item.rejected_at).toLocaleDateString() : '--';
+
+            const commentBox = document.getElementById('revCommTextContainer');
+            if (commentBox) {
+                commentBox.style.setProperty('border-left', '4px solid var(--ds-danger)', 'important');
+            }
+
+            const comments = (item.rejection_reason || item.comments || '').trim();
+            const commentEl = document.getElementById('revCommText');
+            if (commentEl) {
+                if (comments && comments !== 'No reason specified') {
+                    commentEl.textContent = `"${comments}"`;
+                    commentEl.classList.remove('text-muted');
+                    commentEl.classList.add('text-dark');
+                } else {
+                    commentEl.textContent = "No specific rejection reason recorded.";
+                    commentEl.classList.remove('text-dark');
+                    commentEl.classList.add('text-muted');
+                }
+            }
+
+            const openBtn = document.getElementById('revCommOpenProjectBtn');
+            if (openBtn) {
+                openBtn.href = `/projects/project-details.html?id=${item.id}`;
+            }
+
+            if (window.lucide) lucide.createIcons();
+            if (this.commentsModal) this.commentsModal.show();
         },
 
         async loadQueue() {
@@ -428,6 +869,7 @@
                 const projects = await api.get('/reviewer/pending');
                 this.queueData = projects || [];
                 this.queue = [...this.queueData];
+                this.pendingPage = 1;
                 this.renderQueue();
             } catch (e) { 
                 console.error('loadQueue Error:', e); 
@@ -445,14 +887,22 @@
 
         renderQueue() {
             const container = document.getElementById('reviewQueueBody');
+            const pagContainer = document.getElementById('pendingPaginationContainer');
             const projects = this.queue || [];
             document.getElementById('pendingCount').textContent = `${projects.length} Pending`;
 
             if (!projects.length) {
                 container.innerHTML = `<div class="p-5">${QCMS.emptyState('inbox', 'No data is available', 'No projects matching your search.')}</div>`;
+                if (pagContainer) pagContainer.innerHTML = '';
                 if (window.lucide) lucide.createIcons();
                 return;
             }
+
+            const totalPages = Math.ceil(projects.length / this.pageSize) || 1;
+            if (this.pendingPage > totalPages) this.pendingPage = totalPages;
+            if (this.pendingPage < 1) this.pendingPage = 1;
+
+            const sliced = projects.slice((this.pendingPage - 1) * this.pageSize, this.pendingPage * this.pageSize);
 
             container.innerHTML = `
                 <div class="table-responsive">
@@ -465,7 +915,7 @@
                                 <th class="text-end" style="width: 15%;">Action</th>
                             </tr>
                         </thead>
-                        <tbody>${projects.map(p => `
+                        <tbody>${sliced.map(p => `
                             <tr class="fade-in data-row">
                                 <td>
                                     <div class="v-stack">
@@ -505,6 +955,10 @@
                     </table>
                 </div>
             `;
+
+            if (pagContainer) {
+                pagContainer.innerHTML = this.renderPagination(projects.length, this.pendingPage, this.pageSize, 'revDash.changePendingPage');
+            }
             if (window.lucide) lucide.createIcons();
         },
 
@@ -543,56 +997,33 @@
             this.selectedProjectId = p.project_id;
             this.pendingStage = p.pending_stage;
             
-            if (!p.all_workflows) {
-                try {
-                    const projectDetails = await api.get('/projects/' + projectId);
-                    p.all_workflows = projectDetails.workflows || [];
-                } catch (e) {
-                    console.error("Failed to load project details for review history", e);
-                    p.all_workflows = [];
-                }
+            try {
+                const projectDetails = await api.get('/projects/' + projectId);
+                this.currentProject = projectDetails;
+                p.project_details = projectDetails;
+                p.all_workflows = projectDetails.workflows || [];
+                p.members = projectDetails.members || [];
+                p.team_leader = projectDetails.team_leader || null;
+            } catch (e) {
+                console.error("Failed to load project details for review history", e);
+                p.all_workflows = p.all_workflows || [];
             }
 
             const activeStage = showStageNum || p.pending_stage;
 
-            let stageTabs = '';
-            if (p.all_workflows && p.all_workflows.length > 0) {
-                const buttonsHtml = [1, 2, 3, 4, 5, 6, 7, 8].map(sNum => {
-                    const isCurrentPending = (sNum === p.pending_stage);
-                    const isActive = (sNum === activeStage);
-                    const hasData = p.all_workflows.some(w => w.stage_id === sNum) || sNum === p.pending_stage;
-                    
-                    let btnClass = 'ds-btn ds-btn-sm ';
-                    if (isActive) {
-                        btnClass += 'ds-btn-primary';
-                    } else if (isCurrentPending) {
-                        btnClass += 'ds-btn-outline border-warning text-warning';
-                    } else if (hasData) {
-                        btnClass += 'ds-btn-outline border-secondary text-secondary';
-                    } else {
-                        btnClass += 'ds-btn-ghost text-muted opacity-50';
-                    }
-                    
-                    let label = `Stage ${sNum}`;
-                    if (isCurrentPending) {
-                        label += ' ⚠️';
-                    }
-                    
-                    const clickAttr = hasData ? `onclick="revDash.openReview(${p.project_id}, ${sNum})"` : 'disabled';
-                    return `<button type="button" class="${btnClass} py-1 px-2.5" ${clickAttr} style="font-size: 0.72rem; border-radius: 6px;">
-                        ${label}
-                    </button>`;
-                }).join('');
-
-                stageTabs = `
-                    <div class="mb-4">
-                        <div class="text-xs text-muted fw-bold mb-2 uppercase tracking-wider">Project Stage History</div>
-                        <div class="d-flex flex-wrap gap-1.5 p-1.5 rounded-3" style="border: 1px solid rgba(0,0,0,0.08); background: rgba(0,0,0,0.03);">
-                            ${buttonsHtml}
+            stageTabs = `
+                <div class="mb-4">
+                    <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 bg-light border">
+                        <div class="d-flex align-items-center gap-2 text-xs text-secondary fw-semibold">
+                            <i data-lucide="folder-kanban" style="width:16px;height:16px;color:var(--ds-primary);"></i>
+                            Project Workspace &amp; Stage Details
                         </div>
+                        <a href="/projects/project-details.html?id=${p.project_id}" target="_blank" class="ds-btn ds-btn-sm ds-btn-primary py-1.5 px-3 text-xs d-inline-flex align-items-center gap-1.5" style="border-radius:6px; text-decoration:none; font-weight:600;">
+                            <i data-lucide="external-link" style="width:13px;height:13px;"></i> Open Full Project Details
+                        </a>
                     </div>
-                `;
-            }
+                </div>
+            `;
             
             const contentDiv = document.getElementById('dynamicModalContent');
             
@@ -606,7 +1037,9 @@
             
             let leftCol = `<div id="modalProjectInfo">
                 <div class="v-stack gap-1">
-                    <div class="fw-bold fs-4 ds-text-main">${p.title}</div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h4 class="fw-bold fs-4 ds-text-main mb-0">${QCMS.escapeHtml(p.title)}</h4>
+                    </div>
                     <div class="h-stack gap-2 text-xs ds-text-secondary">
                         <span class="ds-badge-dot blue"></span> ${p.department} 
                         <span class="mx-1">•</span> 
@@ -702,11 +1135,11 @@
                                 <div class="col-md-6">
                                     <div class="text-xs text-muted fw-bold mb-2">CURRENT METRICS</div>
                                     <div class="bg-white p-3 rounded border text-xs">
-                                        <div class="row mb-1"><div class="col-6 text-muted">Current KPI:</div><div class="col-6 fw-bold text-end">${cp.current_kpi || '--'}</div></div>
-                                        <div class="row mb-1"><div class="col-6 text-muted">Defect Rate:</div><div class="col-6 fw-bold text-end">${cp.defect_rate || '--'}</div></div>
-                                        <div class="row mb-1"><div class="col-6 text-muted">Complaints:</div><div class="col-6 fw-bold text-end">${cp.complaint_count || '--'}</div></div>
-                                        <div class="row mb-1"><div class="col-6 text-muted">Cost Impact:</div><div class="col-6 fw-bold text-end">${cp.cost_impact || '--'}</div></div>
-                                        <div class="row mb-0"><div class="col-6 text-muted">Downtime:</div><div class="col-6 fw-bold text-end">${cp.downtime || '--'}</div></div>
+                                        <div class="row mb-2 align-items-baseline"><div class="col-4 text-muted fw-semibold">Current KPI:</div><div class="col-8 fw-bold text-start ds-text-main">${cp.current_kpi || '--'}</div></div>
+                                        <div class="row mb-2 align-items-baseline"><div class="col-4 text-muted fw-semibold">Defect Rate:</div><div class="col-8 fw-bold text-start ds-text-main">${cp.defect_rate || '--'}</div></div>
+                                        <div class="row mb-2 align-items-baseline"><div class="col-4 text-muted fw-semibold">Complaints:</div><div class="col-8 fw-bold text-start ds-text-main">${cp.complaint_count || '--'}</div></div>
+                                        <div class="row mb-2 align-items-baseline"><div class="col-4 text-muted fw-semibold">Cost Impact:</div><div class="col-8 fw-bold text-start ds-text-main">${cp.cost_impact || '--'}</div></div>
+                                        <div class="row mb-0 align-items-baseline"><div class="col-4 text-muted fw-semibold">Downtime:</div><div class="col-8 fw-bold text-start ds-text-main">${cp.downtime || '--'}</div></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -1709,13 +2142,13 @@
                         </div>
                     </div>
 
-                    <!-- Action Plan & Resources -->
+                    <!-- Action Plan (3W1H) -->
                     <div class="card mb-2 shadow-sm border-0 bg-light">
                         <div class="card-header bg-white fw-bold ds-text-main py-2">
-                            <i data-lucide="check-square" style="width:16px;height:16px;margin-right:6px;color:var(--ds-primary);vertical-align:middle;"></i> Action Plan & Resources
+                            <i data-lucide="check-square" style="width:16px;height:16px;margin-right:6px;color:var(--ds-primary);vertical-align:middle;"></i> Action Plan (3W1H)
                         </div>
                         <div class="card-body p-3 text-xs">
-                            <div class="mb-3">
+                            <div class="mb-0">
                                 <div class="text-muted fw-bold mb-2">ACTION PLAN (3W1H)</div>
                                 ${action.length > 0 ? `
                                     <div class="table-responsive">
@@ -1742,33 +2175,6 @@
                                     </div>
                                 ` : '<div class="text-secondary italic">No actions planned.</div>'}
                             </div>
-                            <div class="border-top pt-2">
-                                <div class="text-muted fw-bold mb-2">RESOURCE PLANNING</div>
-                                ${resource.length > 0 ? `
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-bordered text-xs bg-white mb-0">
-                                            <thead>
-                                                <tr class="bg-light">
-                                                    <th>Required Resource</th>
-                                                    <th>Budget</th>
-                                                    <th>Source</th>
-                                                    <th>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${resource.map(row => `
-                                                    <tr>
-                                                        <td>${row.resource || '--'}</td>
-                                                        <td>${row.budget || '--'}</td>
-                                                        <td>${row.source || '--'}</td>
-                                                        <td>${row.status || '--'}</td>
-                                                    </tr>
-                                                `).join('')}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ` : '<div class="text-secondary italic">No resource planning.</div>'}
-                            </div>
                         </div>
                     </div>
                 `;
@@ -1777,7 +2183,7 @@
                 const s6 = d.data || {};
                 const exec = s6.countermeasures || s6.implementation_execution || [];
                 const task = s6.countermeasure_task_assignments || s6.task_management || [];
-                const resource = s6.resource_deployment || [];
+                const resource = s6.resource_planning_deployment || s6.resource_deployment || s6.resource_planning || [];
                 const change = s6.change_management || [];
                 const risk = s6.risk_resistance || [];
                 const training = (s6.communication_training && s6.communication_training.training_awareness) || s6.training_awareness || [];
@@ -1858,31 +2264,33 @@
                         </div>
                         <div class="card-body p-3 text-xs">
                             <div class="mb-3">
-                                <div class="text-muted fw-bold mb-2">RESOURCE DEPLOYMENT</div>
+                                <div class="text-muted fw-bold mb-2">RESOURCE PLANNING & DEPLOYMENT</div>
                                 ${resource.length > 0 ? `
                                     <div class="table-responsive">
                                         <table class="table table-sm table-bordered text-xs bg-white mb-0">
                                             <thead>
                                                 <tr class="bg-light">
-                                                    <th>Resource</th>
-                                                    <th>Planned Cost</th>
-                                                    <th>Actual Cost</th>
-                                                    <th>Variance</th>
+                                                    <th>Resource Required</th>
+                                                    <th>Budget Allocation</th>
+                                                    <th>Source</th>
+                                                    <th>Due Date</th>
+                                                    <th>Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 ${resource.map(row => `
                                                     <tr>
-                                                        <td>${row.resource || '--'}</td>
-                                                        <td>${row.planned_cost || '0'}</td>
-                                                        <td>${row.actual_cost || '0'}</td>
-                                                        <td>${row.variance || '0'}</td>
+                                                        <td>${row.resource || row.resource_required || '--'}</td>
+                                                        <td>${row.budget || row.budget_allocation || (row.planned_cost ? `₹${row.planned_cost}` : '--')}</td>
+                                                        <td>${row.source || '--'}</td>
+                                                        <td>${row.due_date || row.when || row.date || '--'}</td>
+                                                        <td><span class="badge ${row.status === 'Completed' || row.status === 'Procured / Allocated' ? 'bg-success' : (row.status === 'Approved' ? 'bg-primary' : 'bg-secondary')}">${row.status || 'Planned'}</span></td>
                                                     </tr>
                                                 `).join('')}
                                             </tbody>
                                         </table>
                                     </div>
-                                ` : '<div class="text-secondary italic">No resource variance logged.</div>'}
+                                ` : '<div class="text-secondary italic">No resources logged.</div>'}
                             </div>
                             <div class="border-top pt-2">
                                 <div class="text-muted fw-bold mb-2">CHANGE MANAGEMENT</div>
@@ -1892,6 +2300,7 @@
                                             <thead>
                                                 <tr class="bg-light">
                                                     <th>Change Description</th>
+                                                    <th>Owner</th>
                                                     <th>SOP Updated</th>
                                                     <th>Date</th>
                                                 </tr>
@@ -1900,6 +2309,7 @@
                                                 ${change.map(row => `
                                                     <tr>
                                                         <td>${row.change_description || '--'}</td>
+                                                        <td>${row.owner || row.responsible || '--'}</td>
                                                         <td>${row.sop_updated || '--'}</td>
                                                         <td>${row.date || '--'}</td>
                                                     </tr>
@@ -2301,7 +2711,10 @@
                 `;
             } else if (activeStage === 8) {
                 currentStageName = "Stage 8: Standardization, Knowledge Sharing & Project Closure";
-                const s8 = d.data || {};
+                const s8 = (d && d.data && (d.data.project_closure || d.data.standardization || d.data.lessons_learned)) 
+                    ? d.data 
+                    : (d && (d.project_closure || d.standardization || d.lessons_learned) ? d : (d.data || d || {}));
+
                 const std = s8.standardization || [];
                 const training = s8.training_adoption || [];
                 const deploy = s8.horizontal_deployment || [];
@@ -2309,8 +2722,30 @@
                 const benefit = s8.benefits_summary || [];
                 const opp = s8.remaining_opportunities || [];
                 const repo = s8.knowledge_repository || [];
-                const team = s8.team_recognition || [];
-                const closure = s8.project_closure || {};
+                let team = s8.team_recognition || [];
+                if ((!team || team.length === 0) && this.currentProject) {
+                    const p = this.currentProject;
+                    const defaultTeam = [];
+                    if (p.team_leader) {
+                        const tlName = p.team_leader.full_name || p.team_leader.username || '';
+                        if (tlName) defaultTeam.push({ member: `${tlName} (Team Leader)`, contribution: 'Project leadership & coordination', award: '' });
+                    }
+                    if (Array.isArray(p.members)) {
+                        p.members.forEach((m, idx) => {
+                            const memName = m.full_name || m.username || '';
+                            if (memName) defaultTeam.push({ member: `${memName} (Team Member ${idx + 1})`, contribution: 'Process analysis & trial execution', award: '' });
+                        });
+                    }
+                    if (defaultTeam.length > 0) {
+                        team = defaultTeam;
+                    }
+                }
+                const closure = s8.project_closure || (d && d.project_closure) || (d && d.data && d.data.project_closure) || {};
+                const startDateVal = closure.start_date || p.start_date || (this.currentProject && this.currentProject.start_date) || '--';
+                const endDateVal = closure.end_date || p.end_date || (this.currentProject && this.currentProject.end_date) || new Date().toISOString().split('T')[0];
+                const finalStatusVal = closure.final_status || p.status || 'Completed Successfully';
+                const defaultHandover = p.reviewer_name || (p.reviewer ? (p.reviewer.full_name || p.reviewer.username) : '') || (this.currentProject && (this.currentProject.reviewer_name || (this.currentProject.reviewer && (this.currentProject.reviewer.full_name || this.currentProject.reviewer.username)))) || 'Process Owner / Plant Operations';
+                const handoverVal = (closure.handover_to && closure.handover_to !== 'undefined') ? closure.handover_to : defaultHandover;
                 
                 stageSpecificFields = `
                     <!-- Standardization & Training -->
@@ -2530,29 +2965,52 @@
                                 ` : '<div class="text-secondary italic">No assets added.</div>'}
                             </div>
                             <div class="border-top pt-2">
-                                <div class="text-muted fw-bold mb-2">TEAM RECOGNITION</div>
-                                ${team.length > 0 ? `
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-bordered text-xs bg-white mb-0">
-                                            <thead>
-                                                <tr class="bg-light">
-                                                    <th>Member</th>
-                                                    <th>Contribution</th>
-                                                    <th>Award/Recognition</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${team.map(row => `
-                                                    <tr>
-                                                        <td>${row.member || '--'}</td>
-                                                        <td>${row.contribution || '--'}</td>
-                                                        <td>${row.award || '--'}</td>
-                                                    </tr>
-                                                `).join('')}
-                                            </tbody>
-                                        </table>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="text-muted fw-bold d-flex align-items-center gap-1">
+                                        <i data-lucide="award" style="width:14px;height:14px;color:var(--ds-primary);"></i>
+                                        <span>TEAM RECOGNITION &amp; AWARDS ASSIGNMENT</span>
                                     </div>
-                                ` : '<div class="text-secondary italic">No member recognitions.</div>'}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:10px;">
+                                        <i data-lucide="award" style="width:11px;height:11px;vertical-align:text-bottom;"></i> Reviewer Award Assignment
+                                    </span>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered text-xs bg-white mb-0 align-middle" id="rev_team_awards_table">
+                                        <thead>
+                                            <tr class="bg-light text-secondary font-semibold">
+                                                <th style="width: 30%;">Member</th>
+                                                <th style="width: 35%;">Member Contribution</th>
+                                                <th style="width: 35%;">Assign Award / Recognition</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rev_team_awards_tbody">
+                                            ${team.map((row, rIdx) => `
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-bold text-dark text-xs rev-member-text">${QCMS.escapeHtml(row.member || '--')}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="text-secondary text-xs rev-contrib-text" style="line-height: 1.4;">${QCMS.escapeHtml(row.contribution || '--')}</div>
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" 
+                                                            class="form-control form-control-sm rev-team-award text-xs fw-bold text-primary" 
+                                                            data-member="${QCMS.escapeHtml(row.member || '')}" 
+                                                            data-contribution="${QCMS.escapeHtml(row.contribution || '')}" 
+                                                            placeholder="e.g. QC Champion, Star Contributor..." 
+                                                            value="${QCMS.escapeHtml(row.award || '')}">
+                                                        <div class="d-flex gap-1 mt-1 flex-wrap">
+                                                            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:10px;" onclick="this.closest('td').querySelector('.rev-team-award').value='QC Champion';">QC Champion</button>
+                                                            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:10px;" onclick="this.closest('td').querySelector('.rev-team-award').value='Best Innovation';">Best Innovation</button>
+                                                            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:10px;" onclick="this.closest('td').querySelector('.rev-team-award').value='Star Contributor';">Star Contributor</button>
+                                                            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:10px;" onclick="this.closest('td').querySelector('.rev-team-award').value='Kaizen Excellence';">Kaizen Excellence</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2564,10 +3022,10 @@
                         </div>
                         <div class="card-body p-3 text-xs">
                             <div class="row g-3">
-                                <div class="col-md-3"><div class="text-muted fw-bold">START DATE</div><div class="fw-semibold mt-1">${closure.start_date || '--'}</div></div>
-                                <div class="col-md-3"><div class="text-muted fw-bold">END DATE</div><div class="fw-semibold mt-1">${closure.end_date || '--'}</div></div>
-                                <div class="col-md-3"><div class="text-muted fw-bold">FINAL STATUS</div><div class="fw-semibold mt-1">${closure.final_status || '--'}</div></div>
-                                <div class="col-md-3"><div class="text-muted fw-bold">HANDOVER TO</div><div class="fw-semibold mt-1">${closure.handover_to || '--'}</div></div>
+                                <div class="col-md-3"><div class="text-muted fw-bold">START DATE</div><div class="fw-semibold mt-1">${startDateVal}</div></div>
+                                <div class="col-md-3"><div class="text-muted fw-bold">END DATE</div><div class="fw-semibold mt-1">${endDateVal}</div></div>
+                                <div class="col-md-3"><div class="text-muted fw-bold">FINAL STATUS</div><div class="fw-semibold mt-1">${finalStatusVal}</div></div>
+                                <div class="col-md-3"><div class="text-muted fw-bold">HANDOVER TO</div><div class="fw-semibold mt-1">${handoverVal}</div></div>
                             </div>
                         </div>
                     </div>
@@ -2640,7 +3098,7 @@
             
             // Apply customized template fields and sections to reviewer modal
             this.applyCustomReviewerElements(p, contentDiv.querySelector('.col-lg-8'));
-            
+
             this.reviewModal.show();
             if (window.lucide) lucide.createIcons();
         },
@@ -2888,32 +3346,69 @@
                 return;
             }
 
-            if (!confirm(`Are you sure you want to mark this project as ${decision}?`)) return;
+            const projectTitle = this.currentProject?.title || (this.queueData || []).find(p => p.id === this.selectedProjectId)?.title || '';
 
-            try {
-                if (this.pendingStage === 8 && decision === 'Approved') {
-                    // Stage 8 submission approval route
-                    await api.post(`/reviewer/stage8/${this.selectedProjectId}/approve-submission`, {
-                        comments
+            QCMS.showDecisionConfirmationDialog({
+                decision,
+                projectTitle,
+                stageNumber: this.pendingStage,
+                comments,
+                onConfirm: async () => {
+                    // Collect any reviewer assigned awards for Stage 8 directly from non-typeable stage 8 member list
+                    const teamAwards = [];
+                    document.querySelectorAll('#rev_team_awards_tbody tr').forEach(tr => {
+                        const awdInp = tr.querySelector('.rev-team-award');
+                        const mem = awdInp?.dataset.member || tr.querySelector('.rev-member-text')?.textContent.trim() || '';
+                        const con = awdInp?.dataset.contribution || tr.querySelector('.rev-contrib-text')?.textContent.trim() || '';
+                        const awd = awdInp ? awdInp.value.trim() : '';
+                        if (mem || con || awd) {
+                            teamAwards.push({
+                                member: mem,
+                                contribution: con,
+                                award: awd
+                            });
+                        }
                     });
-                } else {
-                    await api.post(`/reviewer/decision`, { 
-                        project_id: this.selectedProjectId, 
-                        decision, 
-                        comments,
-                        pending_stage: this.pendingStage
-                    });
+
+                    try {
+                        if (decision === 'SendToCEO') {
+                            await api.post(`/reviewer/closure/${this.selectedProjectId}/complete`, {
+                                send_to_ceo: true,
+                                reviewer_notes: comments,
+                                comments: comments,
+                                team_recognition: teamAwards.length > 0 ? teamAwards : undefined
+                            });
+                            QCMS.toast('Project successfully forwarded to CEO for executive review.', 'success');
+                        } else if (this.pendingStage === 8 && decision === 'Approved') {
+                            // Stage 8 submission approval route
+                            await api.post(`/reviewer/stage8/${this.selectedProjectId}/approve-submission`, {
+                                comments,
+                                team_recognition: teamAwards.length > 0 ? teamAwards : undefined
+                            });
+                            QCMS.toast(`Project Approved successfully.`, 'success');
+                        } else {
+                            await api.post(`/reviewer/decision`, { 
+                                project_id: this.selectedProjectId, 
+                                decision, 
+                                comments,
+                                pending_stage: this.pendingStage,
+                                team_recognition: teamAwards.length > 0 ? teamAwards : undefined
+                            });
+                            QCMS.toast(`Project ${decision} successfully.`, 'success');
+                        }
+                        this.reviewModal.hide();
+                        this.loadQueue();
+                        this.loadStats();
+                        this.loadHistory();
+                        this.loadImpact();
+                        this.loadClosure();
+                        this.loadApproved();
+                        this.loadRejected();
+                    } catch (e) {
+                        QCMS.toast(e.message || 'Failed to submit decision.', 'danger');
+                    }
                 }
-                QCMS.toast(`Project ${decision} successfully.`, 'success');
-                this.reviewModal.hide();
-                this.loadQueue();
-                this.loadStats();
-                this.loadHistory();
-                this.loadImpact();
-                this.loadClosure();
-            } catch (e) {
-                QCMS.toast(e.message || 'Failed to submit decision.', 'danger');
-            }
+            });
         },
 
         // ─── Impact Review ────────────────────────────────────────
@@ -3035,29 +3530,143 @@
             } catch (e) { QCMS.toast('Failed to add note', 'danger'); }
         },
 
+        addImpactMetricRow(data = {}) {
+            const container = document.getElementById('impactMetricsContainer');
+            if (!container) return;
+
+            const rowId = 'impact_row_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            const label = data.label || '';
+            const baseline = data.baseline !== undefined ? data.baseline : '';
+            const final = data.final !== undefined ? data.final : '';
+
+            const rowHtml = `
+                <div class="card p-2 border rounded-3 bg-light impact-metric-row" id="${rowId}">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label text-xs text-muted mb-1">KPI / Metric Label</label>
+                            <input type="text" class="form-control form-control-sm imp-label" placeholder="e.g. Defect Rate (%)" value="${label}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-xs text-muted mb-1">Baseline Value</label>
+                            <input type="number" step="any" class="form-control form-control-sm imp-baseline" placeholder="e.g. 120" value="${baseline}" oninput="revDash.calcImpactRowPct('${rowId}')">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-xs text-muted mb-1">Final / Post Value</label>
+                            <input type="number" step="any" class="form-control form-control-sm imp-final" placeholder="e.g. 85" value="${final}" oninput="revDash.calcImpactRowPct('${rowId}')">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-center justify-content-between pt-3">
+                            <span class="badge bg-secondary-subtle text-dark text-xs imp-change" id="${rowId}_change">—</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1" onclick="revDash.removeImpactMetricRow('${rowId}')" title="Remove Metric">
+                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', rowHtml);
+            if (window.lucide) lucide.createIcons();
+            this.calcImpactRowPct(rowId);
+        },
+
+        calcImpactRowPct(rowId) {
+            const row = document.getElementById(rowId);
+            if (!row) return;
+            const baseline = parseFloat(row.querySelector('.imp-baseline').value);
+            const final = parseFloat(row.querySelector('.imp-final').value);
+            const changeBadge = document.getElementById(`${rowId}_change`);
+            if (!changeBadge) return;
+
+            if (!isNaN(baseline) && !isNaN(final) && baseline > 0) {
+                const pct = roundToTwo(((final - baseline) / baseline) * 100);
+                changeBadge.textContent = `${pct > 0 ? '+' : ''}${pct}%`;
+                changeBadge.className = `badge text-xs ${pct < 0 ? 'bg-success-subtle text-success' : (pct > 0 ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-dark')}`;
+            } else {
+                changeBadge.textContent = '—';
+                changeBadge.className = 'badge bg-secondary-subtle text-dark text-xs';
+            }
+
+            function roundToTwo(num) {
+                return +(Math.round(num + "e+2")  + "e-2");
+            }
+        },
+
+        removeImpactMetricRow(rowId) {
+            const container = document.getElementById('impactMetricsContainer');
+            const rows = container ? container.querySelectorAll('.impact-metric-row') : [];
+            if (rows.length <= 1) {
+                QCMS.toast('At least one impact review metric is required.', 'warning');
+                return;
+            }
+            const el = document.getElementById(rowId);
+            if (el) el.remove();
+        },
+
         openApproveModal(projectId) {
             document.getElementById('approveImpactProjectId').value = projectId;
-            document.getElementById('baselineValue').value = '';
-            document.getElementById('finalValue').value = '';
-            document.getElementById('kpiLabel').value = '';
+            const container = document.getElementById('impactMetricsContainer');
+            if (container) container.innerHTML = '';
+
+            const p = (this.impactData || []).find(item => item.id === projectId);
+            if (p && p.results_data && Array.isArray(p.results_data) && p.results_data.length > 0) {
+                p.results_data.forEach(m => this.addImpactMetricRow(m));
+            } else if (p && (p.baseline || p.final)) {
+                this.addImpactMetricRow({
+                    label: p.baseline?.label || 'Defect Rate',
+                    baseline: p.baseline?.value ?? '',
+                    final: p.final?.value ?? ''
+                });
+            } else {
+                this.addImpactMetricRow({ label: 'Defect Rate (%)', baseline: '', final: '' });
+                this.addImpactMetricRow({ label: 'Cycle Time (sec)', baseline: '', final: '' });
+            }
+
             this.approveModal.show();
             if (window.lucide) lucide.createIcons();
         },
 
         async submitImpactApproval() {
             const projectId = document.getElementById('approveImpactProjectId').value;
-            const baseline = parseFloat(document.getElementById('baselineValue').value);
-            const final = parseFloat(document.getElementById('finalValue').value);
-            const label = document.getElementById('kpiLabel').value.trim() || 'KPI';
-            if (isNaN(baseline) || isNaN(final)) return QCMS.toast('Please enter baseline and final values', 'warning');
+            const container = document.getElementById('impactMetricsContainer');
+            const rowEls = container ? container.querySelectorAll('.impact-metric-row') : [];
+
+            const metrics = [];
+            for (const row of rowEls) {
+                const label = row.querySelector('.imp-label').value.trim() || 'KPI';
+                const baselineVal = parseFloat(row.querySelector('.imp-baseline').value);
+                const finalVal = parseFloat(row.querySelector('.imp-final').value);
+
+                if (isNaN(baselineVal) || isNaN(finalVal)) {
+                    QCMS.toast(`Please fill valid baseline and final values for "${label}".`, 'warning');
+                    return;
+                }
+                const pct = baselineVal > 0 ? roundToTwo(((finalVal - baselineVal) / baselineVal) * 100) : 0;
+                metrics.push({
+                    label,
+                    baseline: baselineVal,
+                    final: finalVal,
+                    kpi_improvement_pct: pct
+                });
+            }
+
+            if (metrics.length === 0) {
+                QCMS.toast('Please add at least one impact metric row.', 'warning');
+                return;
+            }
+
+            function roundToTwo(num) {
+                return +(Math.round(num + "e+2")  + "e-2");
+            }
+
             try {
-                // Submit post-data (baseline & final)
+                // Submit multi-metric impact post-data
                 await api.post(`/reviewer/impact/${projectId}/post-data`, {
-                    baseline_data: { value: baseline, label },
-                    final_data: { value: final, label }
+                    metrics,
+                    baseline_data: { label: metrics[0].label, value: metrics[0].baseline },
+                    final_data: { label: metrics[0].label, value: metrics[0].final }
                 });
                 this.approveModal.hide();
-                QCMS.toast('Impact approved! Project advanced to Stage 8 Closure.', 'success');
+                QCMS.toast('All impact metrics approved! Project advanced to Stage 8 Closure.', 'success');
                 this.loadImpact();
                 this.loadClosure();
                 this.loadStats();
@@ -3082,24 +3691,29 @@
             if (!lessons) return QCMS.toast('Lessons learned is required', 'warning');
 
             const sendToCeo = (mode === 'ceo');
-            const confirmMsg = sendToCeo
-                ? 'Send this completed 8-stage project to the CEO for executive review and final closure?'
-                : 'Directly sign off and officially close this project?';
-            if (!confirm(confirmMsg)) return;
+            const projectTitle = document.getElementById('closureProjectTitle')?.textContent || `Project #${projectId}`;
 
-            try {
-                const res = await api.post(`/reviewer/closure/${projectId}/complete`, { 
-                    lessons_learned: lessons, 
-                    preventive_actions: preventive,
-                    reviewer_notes: reviewerNotes,
-                    send_to_ceo: sendToCeo
-                });
-                this.closureModal.hide();
-                QCMS.toast(res.msg || (sendToCeo ? 'Project forwarded to CEO for review!' : 'Closure signed off! Project has been closed.'), 'success');
-                this.loadClosure();
-                this.loadStats();
-                this.loadQueue();
-            } catch (e) { QCMS.toast(e.message || 'Closure action failed', 'danger'); }
+            QCMS.showDecisionConfirmationDialog({
+                decision: sendToCeo ? 'SendToCEO' : 'Approved',
+                projectTitle,
+                stageNumber: 8,
+                comments: reviewerNotes,
+                onConfirm: async () => {
+                    try {
+                        const res = await api.post(`/reviewer/closure/${projectId}/complete`, { 
+                            lessons_learned: lessons, 
+                            preventive_actions: preventive,
+                            reviewer_notes: reviewerNotes,
+                            send_to_ceo: sendToCeo
+                        });
+                        this.closureModal.hide();
+                        QCMS.toast(res.msg || (sendToCeo ? 'Project forwarded to CEO for review!' : 'Closure signed off! Project has been closed.'), 'success');
+                        this.loadClosure();
+                        this.loadStats();
+                        this.loadQueue();
+                    } catch (e) { QCMS.toast(e.message || 'Closure action failed', 'danger'); }
+                }
+            });
         },
 
         async viewSOP(projectId) {

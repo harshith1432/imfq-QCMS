@@ -142,7 +142,7 @@
                             <div class="ds-card h-100">
                                 <div class="ds-card-header h-stack justify-content-between align-items-center">
                                     <div>
-                                        <h5 class="card-title mb-0">Project Pipeline Stages</h5>
+                                        <h5 class="card-title mb-0">Project Stages</h5>
                                         <p class="text-xs text-muted mb-0">Active projects by lifecycle stages</p>
                                     </div>
                                     <span id="pipelineTotalBadge" class="badge bg-primary-soft text-primary font-mono fw-bold">0 Active</span>
@@ -405,6 +405,9 @@
                 <div class="modal-footer border-0 pt-0 d-flex justify-content-between flex-wrap gap-2">
                     <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Close Window</button>
                     <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-danger" id="ceoBtnReject" onclick="ceoDash.submitClosureDecision('Reject')">
+                            <i data-lucide="x" style="width:15px;height:15px;margin-right:4px;"></i> Reject
+                        </button>
                         <button type="button" class="ds-btn ds-btn-outline text-warning border-warning" id="ceoBtnRevision" onclick="ceoDash.submitClosureDecision('Revision')">
                             <i data-lucide="rotate-ccw" style="width:15px;height:15px;margin-right:4px;"></i> Request Revisions
                         </button>
@@ -730,8 +733,105 @@
                     </tr>
                     `;
                 }).join('');
+            },
 
-                if (window.lucide) lucide.createIcons();
+            renderFormattedStageData(stageNum, data) {
+                if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
+                    return `<div class="p-4 text-center text-muted border rounded-3 bg-light">
+                        <i data-lucide="info" class="mb-2 text-primary" style="width:24px;height:24px;"></i>
+                        <p class="mb-0 text-sm font-medium">No submission data recorded for Stage ${stageNum}.</p>
+                    </div>`;
+                }
+
+                const formatLabel = (str) => {
+                    if (!str) return '';
+                    return str.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                };
+
+                const listKeys = (arr) => {
+                    const kSet = new Set();
+                    arr.forEach(item => {
+                        if (item && typeof item === 'object') {
+                            Object.keys(item).forEach(k => kSet.add(k));
+                        }
+                    });
+                    return Array.from(kSet);
+                };
+
+                const renderValue = (val) => {
+                    if (val === null || val === undefined || val === '') return '<span class="text-muted italic">--</span>';
+                    if (typeof val === 'boolean') return val ? '<span class="badge bg-success-subtle text-success">Yes / Verified</span>' : '<span class="badge bg-secondary-subtle text-secondary">No</span>';
+                    if (typeof val === 'object') {
+                        if (Array.isArray(val)) {
+                            if (val.length === 0) return '<span class="text-muted italic">No items recorded</span>';
+                            if (typeof val[0] !== 'object') {
+                                return `<div class="d-flex flex-wrap gap-1">${val.map(v => `<span class="badge bg-light text-dark border">${QCMS.escapeHtml(String(v))}</span>`).join('')}</div>`;
+                            }
+                            const keys = listKeys(val);
+                            return `<div class="table-responsive my-1"><table class="table table-sm table-bordered bg-white text-xs mb-0">
+                                <thead class="bg-light"><tr>${keys.map(k => `<th class="py-1 px-2 text-muted fw-bold">${formatLabel(k)}</th>`).join('')}</tr></thead>
+                                <tbody>${val.map(row => `<tr>${keys.map(k => `<td class="py-1 px-2">${renderValue(row[k])}</td>`).join('')}</tr>`).join('')}</tbody>
+                            </table></div>`;
+                        }
+                        const keys = Object.keys(val);
+                        if (keys.length === 0) return '<span class="text-muted italic">--</span>';
+                        return `<div class="row g-2 p-2 bg-white rounded border my-1">${keys.map(k => `
+                            <div class="col-sm-6"><span class="text-muted fw-semibold text-xs">${formatLabel(k)}:</span> <span class="fw-medium text-xs text-dark">${renderValue(val[k])}</span></div>
+                        `).join('')}</div>`;
+                    }
+                    return `<span class="fw-medium text-dark">${QCMS.escapeHtml(String(val))}</span>`;
+                };
+
+                let html = `<div class="v-stack gap-3">`;
+                Object.keys(data).forEach(sectionKey => {
+                    const sectionVal = data[sectionKey];
+                    if (sectionVal === null || sectionVal === undefined) return;
+
+                    html += `<div class="card border-0 shadow-sm bg-light">
+                        <div class="card-header bg-white py-2 fw-bold text-xs text-uppercase ds-text-main d-flex align-items-center">
+                            <i data-lucide="layers" class="me-2 text-primary" style="width:14px;height:14px;"></i>
+                            ${formatLabel(sectionKey)}
+                        </div>
+                        <div class="card-body p-3 text-xs">`;
+
+                    if (Array.isArray(sectionVal)) {
+                        if (sectionVal.length === 0) {
+                            html += `<div class="text-muted italic">No records in this section.</div>`;
+                        } else if (typeof sectionVal[0] !== 'object') {
+                            html += `<div class="d-flex flex-wrap gap-1">${sectionVal.map(v => `<span class="badge bg-white text-dark border">${QCMS.escapeHtml(String(v))}</span>`).join('')}</div>`;
+                        } else {
+                            const keys = listKeys(sectionVal);
+                            html += `<div class="table-responsive"><table class="table table-sm table-striped table-bordered bg-white text-xs mb-0">
+                                <thead class="table-light"><tr>${keys.map(k => `<th class="py-1.5 px-2 text-muted fw-bold">${formatLabel(k)}</th>`).join('')}</tr></thead>
+                                <tbody>${sectionVal.map(row => `<tr>${keys.map(k => `<td class="py-1.5 px-2">${renderValue(row[k])}</td>`).join('')}</tr>`).join('')}</tbody>
+                            </table></div>`;
+                        }
+                    } else if (typeof sectionVal === 'object') {
+                        const keys = Object.keys(sectionVal);
+                        if (keys.length === 0) {
+                            html += `<div class="text-muted italic">No data recorded.</div>`;
+                        } else {
+                            html += `<div class="row g-3">`;
+                            keys.forEach(k => {
+                                const subVal = sectionVal[k];
+                                const isComplex = typeof subVal === 'object' && subVal !== null;
+                                const colClass = isComplex ? 'col-12' : 'col-md-4 col-sm-6';
+                                html += `<div class="${colClass}">
+                                    <div class="text-muted fw-bold mb-1 text-uppercase" style="font-size:0.7rem; tracking-wide;">${formatLabel(k)}</div>
+                                    <div>${renderValue(subVal)}</div>
+                                </div>`;
+                            });
+                            html += `</div>`;
+                        }
+                    } else {
+                        html += `<div>${renderValue(sectionVal)}</div>`;
+                    }
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div>`;
+                return html;
             },
 
             openClosureReview(projectId, showStageNum = 8) {
@@ -740,22 +840,23 @@
                 this.selectedClosureId = projectId;
 
                 document.getElementById('ceoModalProjectId').value = projectId;
-                document.getElementById('ceoModalProjectTitle').textContent = project.title;
+                document.getElementById('ceoModalProjectTitle').innerHTML = `<a href="/projects/project-details.html?id=${projectId}" target="_blank" class="text-dark text-decoration-none hover-primary">${QCMS.escapeHtml(project.title)} <i data-lucide="external-link" class="ms-1 text-primary" style="width:18px;height:18px;vertical-align:middle;"></i></a>`;
                 document.getElementById('ceoModalProjectMeta').textContent = `${project.department} · Plant: ${project.plant} · Lead: ${project.team_leader} · Reviewer: ${project.reviewer}`;
                 document.getElementById('ceoDecisionComments').value = '';
 
                 const container = document.getElementById('ceoModalContentContainer');
                 const wf = project.workflows || {};
 
-                // Render Stage Tabs
+                // Replace 8 stage buttons with direct Open Project Details action bar
                 const stageTabs = `
-                    <div class="d-flex flex-wrap gap-1 mb-3 p-1.5 rounded-3 bg-light border">
-                        ${[1, 2, 3, 4, 5, 6, 7, 8].map(sNum => {
-                            const isSelected = (sNum === showStageNum);
-                            const hasData = Boolean(wf[sNum]) || sNum === 8;
-                            let btnClass = isSelected ? 'btn btn-sm btn-primary' : (hasData ? 'btn btn-sm btn-outline-secondary' : 'btn btn-sm btn-light text-muted opacity-50');
-                            return `<button type="button" class="${btnClass} py-1 px-2 text-xs" onclick="ceoDash.openClosureReview(${projectId}, ${sNum})">Stage ${sNum}</button>`;
-                        }).join('')}
+                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 p-2.5 rounded-3 bg-light border">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary text-white font-semibold text-xs py-1.5 px-2.5">Executive Sign-off & Closure</span>
+                            <span class="text-xs text-muted">Review Stage 8 Impact & Closure summary below or inspect full project details.</span>
+                        </div>
+                        <a href="/projects/project-details.html?id=${projectId}" target="_blank" class="btn btn-sm btn-outline-primary text-xs d-inline-flex align-items-center gap-1.5" style="border-radius:6px; font-weight:600; text-decoration:none;">
+                            <i data-lucide="external-link" style="width:14px;height:14px;"></i> Open Full Project Details
+                        </a>
                     </div>
                 `;
 
@@ -819,12 +920,7 @@
                         </div>
                     `;
                 } else {
-                    stageDetailsHtml = `
-                        <div class="p-3 rounded-3 border bg-light">
-                            <h6 class="fw-bold mb-2">Stage ${showStageNum} Submission Data</h6>
-                            <pre class="text-xs mb-0 bg-white p-2 rounded border" style="max-height: 240px; overflow-y:auto;">${JSON.stringify(currentStageData, null, 2)}</pre>
-                        </div>
-                    `;
+                    stageDetailsHtml = this.renderFormattedStageData(showStageNum, currentStageData);
                 }
 
                 container.innerHTML = `
@@ -838,52 +934,65 @@
             },
 
             async submitClosureDecision(decision) {
-                if (!this.selectedClosureId) return;
+                const projectId = this.selectedClosureId || document.getElementById('ceoModalProjectId')?.value;
+                if (!projectId) {
+                    QCMS.toast('Project ID not found for executive decision', 'danger');
+                    return;
+                }
                 const comments = (document.getElementById('ceoDecisionComments')?.value || '').trim();
-                if (decision === 'Revision' && !comments) {
-                    QCMS.toast('Please provide comments describing the revisions required by the executive office.', 'warning');
+                if ((decision === 'Revision' || decision === 'Reject') && !comments) {
+                    QCMS.toast(`Please provide executive remarks explaining the ${decision === 'Revision' ? 'revision requirements' : 'rejection'}.`, 'warning');
                     return;
                 }
 
-                const confirmMsg = decision === 'Approve'
-                    ? 'Are you sure you want to approve and officially close this project? This will mark it as Completed, auto-archive it into the Knowledge Repository, and award employee points.'
-                    : 'Send this project back to the Reviewer for revision?';
+                let confirmMsg = 'Are you sure you want to approve and officially close this project? This will mark it as Completed, auto-archive it into the Knowledge Repository, and award employee points.';
+                if (decision === 'Revision') {
+                    confirmMsg = 'Send this project back to the Reviewer/Team for revision?';
+                } else if (decision === 'Reject') {
+                    confirmMsg = 'Are you sure you want to reject this project?';
+                }
+
                 if (!confirm(confirmMsg)) return;
 
                 const btnApprove = document.getElementById('ceoBtnApprove');
                 const btnRevision = document.getElementById('ceoBtnRevision');
+                const btnReject = document.getElementById('ceoBtnReject');
                 if (btnApprove) btnApprove.disabled = true;
                 if (btnRevision) btnRevision.disabled = true;
+                if (btnReject) btnReject.disabled = true;
 
                 try {
-                    const res = await api.post(`/ceo/closure/${this.selectedClosureId}/decision`, {
+                    const res = await api.post(`/ceo/closure/${projectId}/decision`, {
                         decision,
                         comments
                     });
 
-                    QCMS.toast(res.message || `Project ${decision === 'Approve' ? 'approved and closed' : 'sent back for revision'} successfully!`, 'success');
+                    QCMS.toast(res.message || res.msg || `Project ${decision === 'Approve' ? 'approved and closed' : (decision === 'Reject' ? 'rejected' : 'sent back for revision')} successfully!`, 'success');
                     
                     const modalEl = document.getElementById('ceoReviewModal');
                     if (modalEl) {
-                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
                         if (modal) modal.hide();
                     }
 
                     await this.loadPendingClosures();
-                    await this.loadDashboardData();
+                    if (typeof this.loadDashboardData === 'function') {
+                        await this.loadDashboardData();
+                    }
                 } catch (e) {
-                    QCMS.toast(e.message || 'Failed to submit executive decision', 'danger');
+                    QCMS.toast(e.message || e.msg || 'Failed to submit executive decision', 'danger');
                 } finally {
                     if (btnApprove) btnApprove.disabled = false;
                     if (btnRevision) btnRevision.disabled = false;
+                    if (btnReject) btnReject.disabled = false;
                 }
             },
 
             async loadDashboardData() {
                 try {
                     const timelineVal = document.getElementById('comparePeriod')?.value || document.getElementById('savingsTimelineFilter')?.value || '6';
-                    // Fetch full strategic overview data
-                    const [metrics, trend, health, topProjects, contributors] = await Promise.all([
+                    // Fetch full strategic overview data safely
+                    const results = await Promise.allSettled([
                         api.get('/ceo/executive-summary'),
                         api.get('/ceo/strategic-analytics?timeline=' + encodeURIComponent(timelineVal)),
                         api.get('/ceo/org-health'),
@@ -891,26 +1000,27 @@
                         api.get('/ceo/top-contributors')
                     ]);
 
+                    const metrics = results[0].status === 'fulfilled' ? (results[0].value || {}) : {};
+                    const trend = results[1].status === 'fulfilled' ? (results[1].value || {}) : {};
+                    const health = results[2].status === 'fulfilled' ? (results[2].value || {}) : {};
+                    const topProjects = results[3].status === 'fulfilled' ? (results[3].value || {}) : {};
+                    const contributors = results[4].status === 'fulfilled' ? (results[4].value || {}) : {};
+
                     // Bind strategic KPI metrics cards
-                    this.renderKpiGrid(metrics);
-                    
-                    // Bind AI summary content
-                    this.renderAISummary(metrics.ai_summary);
+                    if (metrics && Object.keys(metrics).length > 0) {
+                        this.renderKpiGrid(metrics);
+                        this.renderAISummary(metrics.ai_summary);
+                        this.renderFinancialImpact(metrics.financial_impact);
+                        this.renderPipelineChart(metrics.project_pipeline);
+                        this.renderHealthChart(metrics.project_health);
+                        this.renderKnowledgeChart(metrics);
+                    }
 
-                    // Render dynamic financial impacts
-                    this.renderFinancialImpact(metrics.financial_impact);
-
-                    // Render project pipeline donut chart
-                    this.renderPipelineChart(metrics.project_pipeline);
-
-                    // Render cost savings line chart
-                    this.renderSavingsChart(trend);
-
-                    // Render quality weekly index multi-line
-                    this.renderQualityTrendChart(trend.quality_trend);
-
-                    // Render Health donut chart
-                    this.renderHealthChart(metrics.project_health);
+                    // Render trend charts
+                    if (trend && Object.keys(trend).length > 0) {
+                        this.renderSavingsChart(trend);
+                        this.renderQualityTrendChart(trend.quality_trend);
+                    }
 
                     // Load 5 departments per page dynamically
                     this.allDepartments = health.department_health || [];
@@ -922,14 +1032,9 @@
                     // Render leaderboard with 5 members per page dynamically
                     this.loadLeaderboard(1);
 
-                    // Render knowledge repository chart
-                    this.renderKnowledgeChart(metrics);
-
-
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error('[CEO Dash] Failed loading datasets:', e);
-                    QCMS.toast('Error loading operational metrics', 'danger');
                 }
             },
 
@@ -939,7 +1044,7 @@
                 const kpis = [
                     { title: 'Projects Running', value: metrics.projects_running || 0, trend: 'Optimal', type: 'success', color: 'blue', sparkColor: '#3b82f6', sparkData: spark.projects_running || [0, 0, 0, metrics.projects_running || 0] },
                     { title: 'Completed Projects', value: metrics.completed_projects || 0, trend: 'Real-time', type: 'primary', color: 'green', sparkColor: '#10b981', sparkData: spark.completed_projects || [0, 0, 0, metrics.completed_projects || 0] },
-                    { title: 'Success Rate', value: `${(metrics.success_rate || 0).toFixed(1)}%`, trend: 'On Track', type: 'success', color: 'purple', sparkColor: '#8b5cf6', sparkData: spark.success_rate || [0, 0, 0, metrics.success_rate || 0] },
+                    { title: 'Rejected Projects', value: metrics.rejected_projects || 0, trend: 'Audit Trail', type: 'danger', color: 'red', sparkColor: '#ef4444', sparkData: [0, 0, 0, metrics.rejected_projects || 0], isRejected: true },
                     { title: 'Annual Savings', value: QCMS.formatINR(Math.round((metrics.annual_savings || 0) * 10000000)), trend: 'Growing', type: 'success', color: 'green', sparkColor: '#10b981', sparkData: spark.annual_savings || [0, 0, 0, metrics.annual_savings || 0] },
                     { title: 'Average ROI', value: `${(metrics.roi || 0).toFixed(1)}%`, trend: 'Outstanding', type: 'success', color: 'purple', sparkColor: '#8b5cf6', sparkData: spark.roi || [0, 0, 0, metrics.roi || 0] },
                     { title: 'Total Employees', value: metrics.employees_participating || 0, trend: 'Active', type: 'primary', color: 'blue', sparkColor: '#3b82f6', sparkData: spark.employees_participating || [0, 0, 0, metrics.employees_participating || 0] }
@@ -947,11 +1052,11 @@
 
                 const container = document.getElementById('ceoKpiGrid');
                 container.innerHTML = kpis.map((kpi, idx) => `
-                    <div class="ds-card p-3 shadow-sm hover-row">
+                    <div class="ds-card p-3 shadow-sm hover-row" id="ceoKpiCard_${idx}" style="${kpi.isRejected ? 'cursor:pointer;' : ''}">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <span class="text-xs text-muted fw-medium">${kpi.title}</span>
-                                <h4 class="fw-bold mb-1 mt-1 text-primary" style="font-size:1.15rem;">${kpi.value}</h4>
+                                <h4 class="fw-bold mb-1 mt-1 ${kpi.isRejected ? 'text-danger' : 'text-primary'}" style="font-size:1.15rem;">${kpi.value}</h4>
                                 <span class="text-${kpi.type} text-xs fw-semibold">${kpi.trend}</span>
                             </div>
                             <span class="ds-badge ds-badge-sm ${kpi.type}">${kpi.trend}</span>
@@ -960,8 +1065,13 @@
                     </div>
                 `).join('');
 
-                // Render mini sparklines via ApexCharts
                 kpis.forEach((kpi, idx) => {
+                    if (kpi.isRejected) {
+                        const cardEl = document.getElementById(`ceoKpiCard_${idx}`);
+                        if (cardEl) {
+                            cardEl.addEventListener('click', () => ceoDash.openRejectedProjectsModal());
+                        }
+                    }
                     new ApexCharts(document.getElementById(`sparkline-chart-${idx}`), {
                         chart: { type: 'area', height: 35, sparkline: { enabled: true } },
                         series: [{ data: kpi.sparkData }],
@@ -1008,17 +1118,26 @@
 
             renderPipelineChart(pipeline) {
                 if (this.charts.pipeline) this.charts.pipeline.destroy();
-                const totalActive = Object.values(pipeline || {}).reduce((a, b) => a + b, 0);
+                
+                const cleanPipeline = {};
+                for (const [k, v] of Object.entries(pipeline || {})) {
+                    if (v > 0) cleanPipeline[k] = v;
+                }
+                const totalActive = Object.values(cleanPipeline).reduce((a, b) => a + b, 0);
 
                 if (document.getElementById('pipelineTotalBadge')) {
                     document.getElementById('pipelineTotalBadge').textContent = `${totalActive} Active Project${totalActive === 1 ? '' : 's'}`;
                 }
 
+                const seriesData = totalActive > 0 ? Object.values(cleanPipeline) : [1];
+                const labelsData = totalActive > 0 ? Object.keys(cleanPipeline) : ['No Active Projects'];
+                const colorsData = totalActive > 0 ? ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#fd7e14', '#17a2b8', '#6c757d'] : ['#e2e8f0'];
+
                 this.charts.pipeline = new ApexCharts(document.getElementById('pipelineChart'), {
                     chart: { type: 'donut', height: 270 },
-                    series: Object.values(pipeline || {}),
-                    labels: Object.keys(pipeline || {}),
-                    colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#fd7e14', '#17a2b8', '#6c757d'],
+                    series: seriesData,
+                    labels: labelsData,
+                    colors: colorsData,
                     stroke: { width: 0 },
                     plotOptions: {
                         pie: {
@@ -1041,7 +1160,14 @@
                             }
                         }
                     },
-                    legend: { position: 'bottom', labels: { colors: 'var(--ds-text-primary)' } }
+                    legend: { 
+                        show: totalActive > 0,
+                        position: 'bottom', 
+                        labels: { colors: 'var(--ds-text-primary)' } 
+                    },
+                    tooltip: {
+                        enabled: totalActive > 0
+                    }
                 });
                 this.charts.pipeline.render();
             },
@@ -1580,6 +1706,83 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+            },
+
+            async openRejectedProjectsModal() {
+                let modalEl = document.getElementById('rejectedProjectsModal');
+                if (!modalEl) return;
+                if (modalEl.parentNode !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                let modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+
+                const container = document.getElementById('rejectedProjectsModalBody');
+                if (container) {
+                    container.innerHTML = `<div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading rejected projects...</div>`;
+                }
+
+                try {
+                    const res = await api.get('/ceo/rejected-projects');
+                    const projects = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
+                    if (!projects || !projects.length) {
+                        container.innerHTML = `
+                            <div class="p-5 text-center text-muted border rounded-3">
+                                <i data-lucide="check-circle" class="mb-2 text-success" style="width:36px; height:36px;"></i>
+                                <h6 class="fw-bold">No Rejected Projects Found</h6>
+                                <p class="text-xs mb-0">All organization projects are active or completed cleanly.</p>
+                            </div>
+                        `;
+                        if (window.lucide) lucide.createIcons();
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        <div class="table-responsive border rounded-3 overflow-hidden" style="background: var(--ds-bg-card);">
+                            <table class="ds-table align-middle mb-0 text-xs">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="py-2.5 px-3">PROJECT</th>
+                                        <th class="py-2.5 px-3">DEPARTMENT & PLANT</th>
+                                        <th class="py-2.5 px-3">REVIEWER & LEADER</th>
+                                        <th class="py-2.5 px-3" style="width:35%;">REJECTION REASON (WHY REJECTED)</th>
+                                        <th class="py-2.5 px-3 text-end">DATE REJECTED</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${projects.map(p => `
+                                        <tr>
+                                            <td class="py-3 px-3">
+                                                <div class="fw-bold text-danger">${QCMS.escapeHtml(p.title)}</div>
+                                                <div class="text-xxs text-muted font-mono">${QCMS.escapeHtml(p.project_uid)}</div>
+                                            </td>
+                                            <td class="py-3 px-3">
+                                                <div class="fw-semibold text-main">${QCMS.escapeHtml(p.department)}</div>
+                                                <div class="text-xxs text-muted">Plant: ${QCMS.escapeHtml(p.plant)}</div>
+                                            </td>
+                                            <td class="py-3 px-3">
+                                                <div class="fw-semibold text-dark">Rev: ${QCMS.escapeHtml(p.reviewer)}</div>
+                                                <div class="text-xxs text-muted">Lead: ${QCMS.escapeHtml(p.team_leader)}</div>
+                                            </td>
+                                            <td class="py-3 px-3">
+                                                <div class="d-inline-flex align-items-center px-2 py-1 rounded bg-danger-subtle text-danger border border-danger-subtle text-xs" style="white-space:pre-wrap; max-width:100%;">
+                                                    <i data-lucide="info" style="width:12px;height:12px;margin-right:4px;flex-shrink:0;"></i>
+                                                    <span>${QCMS.escapeHtml(p.rejection_reason || 'No reason specified')}</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-3 text-end text-muted text-xxs">
+                                                ${new Date(p.rejected_at).toLocaleDateString()}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    if (window.lucide) lucide.createIcons();
+                } catch (e) {
+                    container.innerHTML = `<div class="p-4 text-center text-danger">Failed to load rejected projects: ${QCMS.escapeHtml(e.message)}</div>`;
+                }
             }
         };
 
@@ -1604,6 +1807,32 @@
 
         document.addEventListener('DOMContentLoaded', () => ceoDash.init());
     </script>
+
+    <!-- Rejected Projects Modal for CEO -->
+    <div class="modal fade" id="rejectedProjectsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content glass-card ds-card border-0">
+                <div class="modal-header border-bottom p-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle p-2 bg-danger bg-opacity-10 text-danger d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                            <i data-lucide="x-circle" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">Rejected Projects Governance Audit</h5>
+                            <p class="text-xs text-muted mb-0">Executive view of projects permanently rejected by reviewers with feedback details.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="rejectedProjectsModalBody">
+                    <div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading rejected projects...</div>
+                </div>
+                <div class="modal-footer border-0 p-4">
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

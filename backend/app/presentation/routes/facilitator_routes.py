@@ -45,22 +45,17 @@ def get_stats():
     user = db.session.get(User, get_jwt_identity())
     org_id = user.org_id
 
-    if user.role.name == 'Admin':
+    if user.role.name in ('Admin', 'SuperAdmin'):
         projects = Project.query.filter_by(org_id=org_id).all()
     else:
-        projects = Project.query.filter(
-            Project.org_id == org_id,
-            db.or_(
-                Project.facilitator_id == user.id,
-                Project.department_id == user.department_id
-            )
-        ).all()
+        # Strictly projects assigned to this particular Facilitator
+        projects = Project.query.filter_by(org_id=org_id, facilitator_id=user.id).all()
 
     completed_statuses = {'Closed', 'Completed', 'Stage 8 Approved'}
-    inactive_statuses = {'Rejected', 'Archived', 'Cancelled', 'On Hold'}
+    inactive_statuses = {'Inactive', 'On Hold', 'Stalled', 'Archived', 'Cancelled'}
+    rejected_statuses = {'Rejected'}
 
-    # Needs Guidance: Assistance requests that have NOT been replied to yet (status = 'Pending')
-    # Once the facilitator replies, status becomes 'Responded' and it no longer counts
+    # Needs Guidance: Assistance requests assigned to this facilitator that are 'Pending'
     from app.infrastructure.database.models.models import FacilitatorAssistanceRequest as FAR
     pending_rca = FAR.query.filter(
         FAR.org_id == org_id,
@@ -70,33 +65,35 @@ def get_stats():
 
     pending_impact = sum(
         1 for p in projects 
-        if p.current_stage == 8 and p.status not in ['Closed', 'Completed']
+        if p.current_stage == 8 and p.status not in completed_statuses and p.status not in rejected_statuses
     )
 
-    # Inactive Projects: status in inactive_statuses OR no AuditLog activity in > 7 days
+    # Inactive Projects (assigned to this facilitator):
+    # Projects with status in inactive_statuses OR active projects with no AuditLog activity in > 7 days
     stalled_cutoff = datetime.utcnow() - timedelta(days=7)
     inactive_projects_count = 0
     for p in projects:
         if p.status in inactive_statuses:
             inactive_projects_count += 1
-        elif p.status not in completed_statuses and (p.current_stage or 1) < 8:
+        elif p.status not in completed_statuses and p.status not in rejected_statuses and (p.current_stage or 1) < 8:
             last_log = AuditLog.query.filter_by(project_id=p.id).order_by(AuditLog.created_at.desc()).first()
             last_activity = last_log.created_at if last_log else p.created_at
             if last_activity and last_activity < stalled_cutoff:
                 inactive_projects_count += 1
 
-    # Total Active Projects: Projects currently active in-progress (stage < 8 and not completed/inactive)
+    # Total Active Projects: Projects assigned to this facilitator currently active in-progress
     active_projects_count = sum(
         1 for p in projects 
         if p.status not in completed_statuses 
         and p.status not in inactive_statuses 
+        and p.status not in rejected_statuses
         and (p.current_stage or 1) < 8
     )
 
     from app.infrastructure.database.models.models import Stage8Implementation, FacilitatorAssistanceRequest
     impacts_query = Stage8Implementation.query.join(Project).filter(
         Project.org_id == org_id,
-        db.or_(Project.facilitator_id == user.id, Project.department_id == user.department_id),
+        Project.facilitator_id == user.id,
         Stage8Implementation.results_data.isnot(None)
     )
     impacts = impacts_query.all()
@@ -106,7 +103,8 @@ def get_stats():
 
     pending_assistance = FacilitatorAssistanceRequest.query.filter(
         FacilitatorAssistanceRequest.org_id == org_id,
-        db.or_(FacilitatorAssistanceRequest.facilitator_id == user.id, FacilitatorAssistanceRequest.status == 'Pending')
+        FacilitatorAssistanceRequest.facilitator_id == user.id,
+        FacilitatorAssistanceRequest.status == 'Pending'
     ).count()
 
     return jsonify({
@@ -125,32 +123,73 @@ def get_stats():
 @facilitator_required
 def get_all_projects():
     user = User.query.get(get_jwt_identity())
-    # Only show projects where this user is the assigned facilitator.
-    # Exclude projects pending Reviewer approval ("Stage X Submitted") — those belong in the Reviewer's queue.
-    import sqlalchemy as sa
+    # Show all active projects where this user is the assigned facilitator.
+    # Exclude closed and archived projects so only active projects appear.
     query = Project.query.filter(
         Project.org_id == user.org_id,
         Project.facilitator_id == user.id,
         Project.status != 'Closed',
-        ~Project.status.like('Stage % Submitted')
+        Project.status != 'Archived'
     )
-    projects = query.all()
+    projects = query.order_by(Project.created_at.desc()).all()
 
     result = []
     for p in projects:
-        creator = User.query.get(p.creator_id)
-        dept = Department.query.get(p.department_id)
+        creator = User.query.get(p.creator_id) if p.creator_id else None
+        leader = User.query.get(p.team_leader_id) if p.team_leader_id else creator
+        dept = Department.query.get(p.department_id) if p.department_id else None
         result.append({
             "id": p.id,
             "uid": p.project_uid,
             "title": p.title,
             "stage": p.current_stage,
             "status": p.status,
-            "team_leader": creator.full_name if creator else "Unknown",
-            "dept": dept.name if dept else "Unknown",
-            "created_at": p.created_at.isoformat() + "Z"
+            "team_leader": leader.full_name or leader.username if leader else "Unknown",
+            "dept": dept.name if dept else (p.plant or "General"),
+            "plant": p.plant or "Main Plant",
+            "created_at": p.created_at.isoformat() + "Z" if p.created_at else None
         })
     return jsonify(result)
+
+@facilitator_bp.route('/assisted-history', methods=['GET'])
+@facilitator_required
+def get_assisted_history():
+    user = User.query.get(get_jwt_identity())
+    from app.infrastructure.database.models.models import FacilitatorAssistanceRequest
+    
+    # Query all assistance records handled/assisted by this facilitator (where responded or non-pending)
+    requests = FacilitatorAssistanceRequest.query.filter(
+        FacilitatorAssistanceRequest.org_id == user.org_id,
+        FacilitatorAssistanceRequest.facilitator_id == user.id,
+        (FacilitatorAssistanceRequest.status != 'Pending') | (FacilitatorAssistanceRequest.response.isnot(None))
+    ).order_by(
+        FacilitatorAssistanceRequest.updated_at.desc(),
+        FacilitatorAssistanceRequest.created_at.desc()
+    ).all()
+
+    res = []
+    for r in requests:
+        req_user = User.query.get(r.user_id) if r.user_id else None
+        proj = Project.query.get(r.project_id) if r.project_id else None
+        dept = Department.query.get(proj.department_id) if (proj and proj.department_id) else None
+        
+        res.append({
+            "id": r.id,
+            "project_id": r.project_id,
+            "project_uid": proj.project_uid if proj else "PRJ-???",
+            "project_title": proj.title if proj else "Unknown",
+            "dept": dept.name if dept else (proj.plant if proj else "General"),
+            "stage_id": r.stage_id,
+            "requested_by": (req_user.full_name or req_user.username) if req_user else "Unknown User",
+            "user_email": req_user.email if req_user else "",
+            "message": r.message or "",
+            "response": r.response or "",
+            "status": r.status or "Responded",
+            "project_status": proj.status if proj else "Unknown",
+            "created_at": r.created_at.isoformat() + "Z" if r.created_at else None,
+            "assisted_at": (r.updated_at or r.created_at).isoformat() + "Z" if (r.updated_at or r.created_at) else None
+        })
+    return jsonify(res), 200
 
 @facilitator_bp.route('/completed-projects', methods=['GET'])
 @facilitator_required
@@ -691,6 +730,21 @@ def respond_assistance_request(req_id):
     data = request.get_json() or {}
     req_obj.response = data.get('response', '')
     req_obj.status = data.get('status', 'Responded')
+    req_obj.updated_at = datetime.utcnow()
+
+    # Notify requester
+    from app.presentation.routes.notification_routes import create_notification
+    proj = Project.query.get(req_obj.project_id)
+    proj_title = proj.title if proj else "your project"
+    create_notification(
+        user.org_id,
+        req_obj.user_id,
+        f"Facilitator Assistance: {req_obj.status}",
+        f"Facilitator {user.full_name or user.username} responded to your Stage {req_obj.stage_id} request on '{proj_title}'.",
+        f"/projects/project-details.html?id={req_obj.project_id}&stage={req_obj.stage_id}",
+        commit=False
+    )
+
     db.session.commit()
-    return jsonify({"msg": "Response updated successfully"}), 200
+    return jsonify({"msg": "Response updated successfully", "status": req_obj.status, "response": req_obj.response}), 200
 

@@ -32,6 +32,38 @@ def get_plant_ids_by_name(org_id, name_str):
     plants = Plant.query.filter(Plant.org_id == org_id, db.or_(*conds)).all()
     return [p.id for p in plants]
 
+def apply_plant_filter_to_user_query(q, org_id, plant_id=None, plant_name=None):
+    from app.infrastructure.database.models.models import Plant, Department
+    if plant_id:
+        try:
+            p_int = int(plant_id)
+            return q.filter(
+                db.or_(
+                    User.plant_id == p_int,
+                    db.and_(User.plant_id.is_(None), User.dept.has(Department.plant_id == p_int))
+                )
+            )
+        except (ValueError, TypeError):
+            pass
+    elif plant_name and str(plant_name).strip():
+        p_name = str(plant_name).strip()
+        p_ids = get_plant_ids_by_name(org_id, p_name)
+        if p_ids:
+            return q.filter(
+                db.or_(
+                    User.plant_id.in_(p_ids),
+                    db.and_(User.plant_id.is_(None), User.dept.has(Department.plant_id.in_(p_ids)))
+                )
+            )
+        else:
+            return q.filter(
+                db.or_(
+                    User.plant.has(Plant.name.ilike(f"%{p_name}%")),
+                    db.and_(User.plant_id.is_(None), User.dept.has(Department.plant.has(Plant.name.ilike(f"%{p_name}%"))))
+                )
+            )
+    return q
+
 @project_bp.route('/departments', methods=['GET'])
 @jwt_required()
 def list_departments():
@@ -61,7 +93,7 @@ def list_departments():
             q = q.filter(Department.plant.has(Plant.name.ilike(f"%{plant_name}%")))
 
     depts = q.order_by(Department.name).all()
-    return jsonify([{"id": d.id, "name": d.name} for d in depts]), 200
+    return jsonify([{"id": d.id, "name": d.name, "plant_id": d.plant_id} for d in depts]), 200
 
 # ── Shared utility: plants list (accessible by all authenticated users) ──
 @project_bp.route('/plants', methods=['GET'])
@@ -80,7 +112,7 @@ def list_plants():
 @project_bp.route('/facilitators', methods=['GET'])
 @jwt_required()
 def list_facilitators():
-    """Return Facilitators/users under the selected plant and department."""
+    """Return Facilitators under the selected plant and department."""
     from app.infrastructure.database.models.models import Role, Department
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
@@ -95,16 +127,7 @@ def list_facilitators():
         User.org_id == user.org_id,
         User.is_active == True
     )
-
-    if plant_id:
-        try:
-            q = q.filter(db.or_(User.plant_id == int(plant_id), User.plant_id.is_(None)))
-        except ValueError:
-            pass
-    elif plant_name:
-        p_ids = get_plant_ids_by_name(user.org_id, plant_name)
-        if p_ids:
-            q = q.filter(db.or_(User.plant_id.in_(p_ids), User.plant_id.is_(None)))
+    q = apply_plant_filter_to_user_query(q, user.org_id, plant_id=plant_id, plant_name=plant_name)
     
     target_dept_id = None
     if dept_id:
@@ -112,27 +135,25 @@ def list_facilitators():
             target_dept_id = int(dept_id)
         except ValueError:
             pass
-    elif user.role and user.role.name in ('Team Leader', 'Team Member'):
-        target_dept_id = user.department_id
 
     if target_dept_id:
         q_dept = q.filter(db.or_(
             User.department_id == target_dept_id,
             User.department_id.is_(None)
         ))
-        if q_dept.count() > 0:
+        if q_dept.join(Role).filter(db.func.lower(Role.name) == 'facilitator').count() > 0:
             q = q_dept
 
     # Filter strictly for users with Facilitator role
-    q = q.join(Role).filter(db.func.lower(Role.name) == 'facilitator')
+    q_fac = q.join(Role).filter(db.func.lower(Role.name) == 'facilitator')
+    facilitators = q_fac.order_by(User.full_name).all()
 
-    facilitators = q.order_by(User.full_name).all()
-
-    # Org-wide fallback for Facilitators if none in specified department
+    # Fallback only within the SAME plant if plant filter is active, or org-wide if no plant specified
     if not facilitators:
-        facilitators = User.query.join(Role).filter(
-            User.org_id == user.org_id,
-            User.is_active == True,
+        q_fallback = User.query.filter(User.org_id == user.org_id, User.is_active == True)
+        if plant_id or plant_name:
+            q_fallback = apply_plant_filter_to_user_query(q_fallback, user.org_id, plant_id=plant_id, plant_name=plant_name)
+        facilitators = q_fallback.join(Role).filter(
             db.func.lower(Role.name) == 'facilitator'
         ).order_by(User.full_name).all()
 
@@ -140,30 +161,42 @@ def list_facilitators():
         "id": u.id,
         "full_name": u.full_name or u.username,
         "username": u.username,
-        "role": u.role.name if u.role else "Facilitator"
+        "role": u.role.name if u.role else "Facilitator",
+        "plant_id": u.plant_id or (u.dept.plant_id if u.dept else None),
+        "plant_name": u.plant.name if u.plant else (u.dept.plant.name if u.dept and u.dept.plant else None)
     } for u in facilitators]), 200
 
 # ── Shared utility: all org members (accessible by all authenticated users) ──
 @project_bp.route('/members', methods=['GET'])
 @jwt_required()
 def list_org_members():
-    """Return all active users in the current user's organisation for team assignment."""
-    from app.infrastructure.database.models.models import Role
+    """Return all active users in the current user's organisation for team assignment, optionally filtered by plant."""
+    from app.infrastructure.database.models.models import Role, Department
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
-    members = User.query.join(Role).filter(
+        
+    plant_id = request.args.get('plant_id')
+    plant_name = request.args.get('plant_name')
+    
+    q = User.query.filter(
         User.org_id == user.org_id,
-        User.is_active == True,
-        Role.name == 'Team Member'
-    ).order_by(User.full_name).all()
+        User.is_active == True
+    )
+    q = apply_plant_filter_to_user_query(q, user.org_id, plant_id=plant_id, plant_name=plant_name)
+    
+    members = q.order_by(User.full_name).all()
     return jsonify([{
         "id": u.id,
         "full_name": u.full_name or u.username,
         "username": u.username,
-        "role": u.role.name,
-        "department_id": u.department_id
+        "email": u.email or '',
+        "role": u.role.name if u.role else "Team Member",
+        "department_id": u.department_id,
+        "department": u.dept.name if u.dept else "General",
+        "plant_id": u.plant_id or (u.dept.plant_id if u.dept else None),
+        "plant_name": u.plant.name if u.plant else (u.dept.plant.name if u.dept and u.dept.plant else None)
     } for u in members]), 200
 
 @project_bp.route('', methods=['GET'], strict_slashes=False)
@@ -187,19 +220,15 @@ def get_projects():
     
     as_member = (request.args.get('as_member') == 'true') or (request.args.get('scope') == 'member') or (request.args.get('role_filter') == 'member')
 
-    if as_member:
-        # Strictly filter projects where user is a team member
-        query = query.filter(Project.members.any(id=user.id))
-    elif role == 'Admin' or role == 'CEO':
+    if as_member or role in ('Team Leader', 'Team Member'):
+        # Filter projects where user is team leader, team member, or creator
+        query = query.filter(db.or_(Project.team_leader_id == user.id, Project.members.any(id=user.id), Project.creator_id == user.id))
+    elif role in ('Admin', 'CEO'):
         pass # Full access within organization
     elif role == 'Facilitator':
         query = query.filter(Project.facilitator_id == user.id)
     elif role == 'Reviewer':
         query = query.filter(Project.reviewer_id == user.id)
-    elif role == 'Team Leader':
-        query = query.filter(Project.team_leader_id == user.id)
-    elif role == 'Team Member':
-        query = query.filter(Project.members.any(id=user.id))
     else:
         query = query.filter(False)
 
@@ -213,7 +242,11 @@ def get_projects():
 
     query = query.order_by(Project.created_at.desc())
 
+    from app.presentation.routes.repository_routes import calculate_project_realtime_efficiency
+
     def serialize_proj(p):
+        created_iso = p.created_at.isoformat() if p.created_at else None
+        eff_val = calculate_project_realtime_efficiency(p.id, p.current_stage)
         return {
             "id": p.id,
             "project_uid": p.project_uid,
@@ -222,7 +255,19 @@ def get_projects():
             "current_stage": p.current_stage,
             "status": p.status,
             "department": p.department.name if p.department else "N/A",
-            "creator": p.creator.username if p.creator else "System"
+            "creator": p.creator.username if p.creator else "System",
+            "created_at": created_iso,
+            "updated_at": created_iso,
+            "last_updated": created_iso,
+            "team_leader_id": p.team_leader_id,
+            "team_leader_name": (p.team_leader.full_name or p.team_leader.username) if p.team_leader else None,
+            "facilitator_id": p.facilitator_id,
+            "facilitator_name": (p.facilitator.full_name or p.facilitator.username) if p.facilitator else None,
+            "reviewer_id": p.reviewer_id,
+            "reviewer_name": (p.reviewer.full_name or p.reviewer.username) if p.reviewer else None,
+            "rejection_reason": p.rejection_reason,
+            "efficiency": eff_val,
+            "kpi_improvement_pct": eff_val
         }
 
     if page is not None:
@@ -250,16 +295,7 @@ def get_potential_members():
     
     # Base query: active users in the same organization
     q = User.query.filter(User.org_id == org_id, User.is_active == True)
-
-    if plant_id:
-        try:
-            q = q.filter(db.or_(User.plant_id == int(plant_id), User.plant_id.is_(None)))
-        except ValueError:
-            pass
-    elif plant_name:
-        p_ids = get_plant_ids_by_name(org_id, plant_name)
-        if p_ids:
-            q = q.filter(db.or_(User.plant_id.in_(p_ids), User.plant_id.is_(None)))
+    q = apply_plant_filter_to_user_query(q, org_id, plant_id=plant_id, plant_name=plant_name)
     
     # Filter by department
     target_dept_id = None
@@ -283,9 +319,10 @@ def get_potential_members():
             q_rev = q.join(Role).filter(db.func.lower(Role.name) == 'reviewer')
             users = q_rev.order_by(User.full_name).all()
             if not users:
-                users = User.query.join(Role).filter(
-                    User.org_id == org_id,
-                    User.is_active == True,
+                q_fb = User.query.filter(User.org_id == org_id, User.is_active == True)
+                if plant_id or plant_name:
+                    q_fb = apply_plant_filter_to_user_query(q_fb, org_id, plant_id=plant_id, plant_name=plant_name)
+                users = q_fb.join(Role).filter(
                     db.func.lower(Role.name) == 'reviewer'
                 ).order_by(User.full_name).all()
         elif req_role_lower in ('team member', 'teammember'):
@@ -295,9 +332,10 @@ def get_potential_members():
             q_fa = q.join(Role).filter(db.func.lower(Role.name) == 'facilitator')
             users = q_fa.order_by(User.full_name).all()
             if not users:
-                users = User.query.join(Role).filter(
-                    User.org_id == org_id,
-                    User.is_active == True,
+                q_fb = User.query.filter(User.org_id == org_id, User.is_active == True)
+                if plant_id or plant_name:
+                    q_fb = apply_plant_filter_to_user_query(q_fb, org_id, plant_id=plant_id, plant_name=plant_name)
+                users = q_fb.join(Role).filter(
                     db.func.lower(Role.name) == 'facilitator'
                 ).order_by(User.full_name).all()
         else:
@@ -305,9 +343,6 @@ def get_potential_members():
             users = q_other.order_by(User.full_name).all()
     else:
         users = q.order_by(User.full_name).all()
-        page_param = 1
-        per_page_param = total_count
-        total_pages = 1
     
     # Find the custom field key for phone number in this org:
     phone_field = UserCustomField.query.filter_by(org_id=org_id, data_type='phone').first()
@@ -333,20 +368,13 @@ def get_potential_members():
             "phone": phone_val,
             "department_id": u.department_id,
             "role": u.role.name if u.role else "N/A",
-            "department": u.dept.name if u.dept else "N/A"
+            "department": u.dept.name if u.dept else "N/A",
+            "plant_id": u.plant_id or (u.dept.plant_id if u.dept else None),
+            "plant_name": u.plant.name if u.plant else (u.dept.plant.name if u.dept and u.dept.plant else None)
         })
         
-    if request.args.get('page') or request.args.get('per_page'):
-        return jsonify({
-            "items": serialized_users,
-            "members": serialized_users,
-            "total": total_count,
-            "page": page_param,
-            "per_page": per_page_param,
-            "total_pages": total_pages
-        }), 200
-
     return jsonify(serialized_users), 200
+
 
 @project_bp.route('/imported-idea/<string:idea_code>', methods=['GET'])
 @jwt_required()
@@ -704,10 +732,14 @@ def save_stage1(id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
-    # Allow Team Leader, Team Member, Facilitator, Admin, or Project Creator
-    is_authorized = (user.role.name in ('Team Leader', 'Team Member', 'Admin', 'Facilitator')) or (project.creator_id == user.id)
+    # Check if project is permanently rejected
+    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+        return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
+
+    # STRICT RULE: Only assigned Team Leader or Team Member can edit Stage 1 (Admin is read-only)
+    is_authorized = user.role.name in ('Team Leader', 'Team Member')
     if not is_authorized:
-        return jsonify({"msg": "Access denied. You do not have permission to edit Stage 1."}), 403
+        return jsonify({"msg": "Access denied. Only assigned Team Leaders and Team Members can edit project details."}), 403
 
     payload = request.get_json() or {}
     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
@@ -778,10 +810,14 @@ def submit_stage1(id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
-    # Allow Team Leader, Team Member, Facilitator, Admin, or Project Creator
-    is_authorized = (user.role.name in ('Team Leader', 'Team Member', 'Admin', 'Facilitator')) or (project.creator_id == user.id)
+    # Check if project is permanently rejected
+    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+        return jsonify({"msg": "This project has been permanently rejected and cannot be submitted for review."}), 400
+
+    # STRICT RULE: Only assigned Team Leader or Team Member can submit Stage 1 (Admin is read-only)
+    is_authorized = user.role.name in ('Team Leader', 'Team Member')
     if not is_authorized:
-        return jsonify({"msg": "Access denied. You do not have permission to submit Stage 1."}), 403
+        return jsonify({"msg": "Access denied. Only assigned Team Leaders and Team Members can submit project stages for review."}), 403
 
     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
     if not workflow:
@@ -921,7 +957,8 @@ def review_stage1(id):
     elif decision == 'reject':
         if tracker:
             tracker.status = 'Rejected'
-        project.status = 'Stage 1 Rejected'
+        project.status = 'Rejected'
+        project.rejection_reason = comments
         action_label = "Stage 1 Rejected"
         msg = "Stage 1 rejected."
 
@@ -1064,11 +1101,14 @@ def save_stage_generic(id, stage_id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
-    allowed_roles = ['Team Member', 'Team Leader']
-    if stage_id == 6:
-        allowed_roles.extend(['Reviewer', 'Facilitator'])
-    if user.role.name not in allowed_roles:
-        return jsonify({"msg": f"Access denied. Only Team Members (and designated roles for Stage {stage_id}) can add/edit Stage {stage_id} details."}), 403
+    # Check if project is permanently rejected
+    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+        return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
+
+    # STRICT RULE: Only assigned Team Leader or Team Member can edit Stage 2-8 details (Admin is read-only)
+    is_authorized = user.role.name in ('Team Leader', 'Team Member')
+    if not is_authorized:
+        return jsonify({"msg": f"Access denied. Only assigned Team Leaders and Team Members can edit Stage {stage_id} details."}), 403
 
 
     payload = request.get_json()
@@ -1124,10 +1164,14 @@ def submit_stage_generic(id, stage_id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
-    # Allow Team Leader, Team Member, Facilitator, Admin, or Project Creator
-    is_authorized = (user.role.name in ('Team Leader', 'Team Member', 'Admin', 'Facilitator')) or (project.creator_id == user.id)
+    # Check if project is permanently rejected
+    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+        return jsonify({"msg": "This project has been permanently rejected and cannot be submitted for review."}), 400
+
+    # STRICT RULE: Only assigned Team Leader or Team Member can submit Stage 2-8 (Admin is read-only)
+    is_authorized = user.role.name in ('Team Leader', 'Team Member')
     if not is_authorized:
-        return jsonify({"msg": f"Access denied. You do not have permission to submit Stage {stage_id}."}), 403
+        return jsonify({"msg": f"Access denied. Only assigned Team Leaders and Team Members can submit Stage {stage_id} for review."}), 403
 
 
     tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=stage_id).first()
@@ -1352,6 +1396,10 @@ def review_stage_generic(id, stage_id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
+    # Check if project is permanently rejected
+    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+        return jsonify({"msg": "This project has already been permanently rejected and cannot be reviewed again."}), 400
+
     # All 8 stages require Reviewer or Admin approval
     if user.role.name not in ('Reviewer', 'Admin'):
         return jsonify({"msg": f"Only a Reviewer can review Stage {stage_id}."}), 403
@@ -1403,21 +1451,25 @@ def get_project_details(id):
             fac_user = None
         
     role = user.role.name
-    if role == 'Team Member':
-        is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-        if not is_member and project.creator_id != user.id:
-            return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
-    elif role == 'Team Leader':
-        is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-        if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
-            return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
-    elif role == 'Facilitator':
-        if project.facilitator_id != user.id and (not fac_user or fac_user.id != user.id):
-            return jsonify({"msg": "Unauthorized access. You are not the facilitator for this project."}), 403
-    elif role == 'Reviewer':
-        # Reviewers can only view projects they are specifically assigned to
-        if project.reviewer_id != user.id:
-            return jsonify({"msg": "Unauthorized access. You are not the reviewer for this project."}), 403
+    # Allow read-only visibility to closed/completed/archived projects for all users within the same organization
+    is_archived_or_closed = project.status in ('Closed', 'Completed', 'Archived') or (project.current_stage == 8 and 'Approved' in (project.status or ''))
+    
+    if not is_archived_or_closed:
+        if role == 'Team Member':
+            is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+            if not is_member and project.creator_id != user.id:
+                return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
+        elif role == 'Team Leader':
+            is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+            if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
+                return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
+        elif role == 'Facilitator':
+            if project.facilitator_id != user.id and (not fac_user or fac_user.id != user.id):
+                return jsonify({"msg": "Unauthorized access. You are not the facilitator for this project."}), 403
+        elif role == 'Reviewer':
+            # Reviewers can only view projects they are specifically assigned to
+            if project.reviewer_id != user.id:
+                return jsonify({"msg": "Unauthorized access. You are not the reviewer for this project."}), 403
 
 
     # Fetch all stages for tracker
@@ -1449,6 +1501,7 @@ def get_project_details(id):
         "linked_idea": linked_idea,
         "current_stage": project.current_stage,
         "status": project.status,
+        "rejection_reason": project.rejection_reason,
         "start_date": project.start_date.isoformat() if project.start_date else None,
         "end_date": project.end_date.isoformat() if project.end_date else None,
         "department": project.department.name if project.department else "N/A",
@@ -1464,6 +1517,16 @@ def get_project_details(id):
         "reviewer_name": (db.session.get(User, project.reviewer_id).full_name or db.session.get(User, project.reviewer_id).username) if project.reviewer_id and db.session.get(User, project.reviewer_id) else None,
         "department_id": project.department_id,
         "deadline": project.deadline.isoformat() if project.deadline else None,
+        "plant_id": (
+            project.department.plant_id if (project.department and project.department.plant_id)
+            else (get_plant_ids_by_name(user.org_id, project.plant)[0] if (project.plant and get_plant_ids_by_name(user.org_id, project.plant))
+            else (project.creator.plant_id if (project.creator and project.creator.plant_id) else None))
+        ),
+        "plant_name": (
+            project.plant
+            or (project.department.plant.name if project.department and project.department.plant else None)
+            or (project.creator.plant.name if project.creator and project.creator.plant else None)
+        ),
         "member_ids": [m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()],
         "members": [{
             "id": m.user_id,
@@ -1768,7 +1831,7 @@ def get_project_activity(id):
         "created_at": log.created_at.isoformat() + "Z"
     } for log in logs]), 200
 
-@project_bp.route('/<int:id>', methods=['PATCH'])
+@project_bp.route('/<int:id>', methods=['PATCH', 'PUT'])
 @jwt_required()
 def update_project(id):
     user_id = get_jwt_identity()
@@ -1778,10 +1841,10 @@ def update_project(id):
     if not project or project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
         
-    # RBAC: Only Admin or Project Creator or TL of same dept
-    can_edit = (user.role.name == 'Admin' or 
+    # RBAC: Only Admin, SuperAdmin, Project Creator or TL of same dept
+    can_edit = ((user.role and user.role.name in ('Admin', 'SuperAdmin')) or 
                 project.creator_id == user.id or 
-                (user.role.name == 'Team Leader' and project.department_id == user.department_id))
+                (user.role and user.role.name == 'Team Leader' and project.department_id == user.department_id))
     
     if not can_edit:
         return jsonify({"msg": "Permission denied"}), 403
@@ -1793,6 +1856,7 @@ def update_project(id):
     if 'department_id' in data: project.department_id = data['department_id']
     old_tl = project.team_leader_id
     old_fac = project.facilitator_id
+    old_rev = project.reviewer_id
     if 'facilitator_id' in data:
         fid = data['facilitator_id']
         new_fac = int(fid) if fid is not None and str(fid).strip() != "" else None
@@ -1802,12 +1866,21 @@ def update_project(id):
                 from app.presentation.routes.notification_routes import create_notification
                 create_notification(user.org_id, new_fac, "Project Assigned", f"You have been assigned as the Facilitator for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
     if 'team_leader_id' in data:
-        new_tl = data['team_leader_id']
+        tl_val = data['team_leader_id']
+        new_tl = int(tl_val) if tl_val is not None and str(tl_val).strip() != "" else None
         if new_tl != old_tl:
             project.team_leader_id = new_tl
             if new_tl and new_tl != user_id:
                 from app.presentation.routes.notification_routes import create_notification
                 create_notification(user.org_id, new_tl, "Project Assigned", f"You have been assigned as the Team Leader for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
+    if 'reviewer_id' in data:
+        rid = data['reviewer_id']
+        new_rev = int(rid) if rid is not None and str(rid).strip() != "" else None
+        if new_rev != old_rev:
+            project.reviewer_id = new_rev
+            if new_rev and new_rev != user_id:
+                from app.presentation.routes.notification_routes import create_notification
+                create_notification(user.org_id, new_rev, "Project Assigned", f"You have been assigned as the Reviewer for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
 
     if 'deadline' in data:
         try:

@@ -1817,19 +1817,28 @@ def get_support_analytics():
         tickets_q = tickets_q.filter_by(org_id=f['org_id'])
         
     total_t = tickets_q.count()
-    open_t = tickets_q.filter(SupportTicket.status.in_(['Open', 'In Progress', 'OPEN', 'IN_PROGRESS', 'Assigned', 'Waiting for Customer'])).count()
-    closed_t = tickets_q.filter(SupportTicket.status.in_(['Closed', 'Resolved', 'CLOSED', 'RESOLVED'])).count()
+    open_t = tickets_q.filter(SupportTicket.status.in_(['Open', 'OPEN'])).count()
+    in_prog_t = tickets_q.filter(SupportTicket.status.in_(['In Progress', 'IN_PROGRESS', 'Assigned', 'Waiting for Customer'])).count()
+    resolved_t = tickets_q.filter(SupportTicket.status.in_(['Resolved', 'RESOLVED'])).count()
+    closed_t = tickets_q.filter(SupportTicket.status.in_(['Closed', 'CLOSED'])).count()
     
     if total_t == 0:
-        sla_rate = 0.0
+        sla_rate = 100.0
         avg_res_hrs = 0.0
     else:
-        breached_count = tickets_q.filter(SupportTicket.sla_status == 'Breached').count()
+        breached_count = tickets_q.filter(SupportTicket.sla_status.in_(['Breached', 'Overdue', 'BREACHED'])).count()
         met_count = total_t - breached_count
         sla_rate = round((met_count / total_t) * 100.0, 1)
 
-        resolved_tickets = tickets_q.filter(SupportTicket.resolved_at.isnot(None), SupportTicket.created_at.isnot(None)).all()
-        durations = [(t.resolved_at - t.created_at).total_seconds() / 3600.0 for t in resolved_tickets if t.resolved_at and t.created_at and t.resolved_at > t.created_at]
+        resolved_tickets = tickets_q.filter(
+            SupportTicket.status.in_(['Resolved', 'RESOLVED', 'Closed', 'CLOSED']),
+            SupportTicket.created_at.isnot(None)
+        ).all()
+        durations = []
+        for t in resolved_tickets:
+            end_time = t.resolved_at or t.updated_at
+            if end_time and t.created_at and end_time >= t.created_at:
+                durations.append((end_time - t.created_at).total_seconds() / 3600.0)
         avg_res_hrs = round(sum(durations) / len(durations), 1) if durations else 0.0
 
     prio_q = db.session.query(SupportTicket.priority, func.count(SupportTicket.id))
@@ -1837,14 +1846,29 @@ def get_support_analytics():
         prio_q = prio_q.filter(SupportTicket.org_id == f['org_id'])
     priority_dist = {prio or "Medium": cnt for prio, cnt in prio_q.group_by(SupportTicket.priority).all()}
 
+    cat_q = db.session.query(SupportTicket.category, func.count(SupportTicket.id))
+    if f['org_id']:
+        cat_q = cat_q.filter(SupportTicket.org_id == f['org_id'])
+    category_dist = {cat or "General": cnt for cat, cnt in cat_q.group_by(SupportTicket.category).all()}
+
+    status_q = db.session.query(SupportTicket.status, func.count(SupportTicket.id))
+    if f['org_id']:
+        status_q = status_q.filter(SupportTicket.org_id == f['org_id'])
+    status_dist = {st or "Open": cnt for st, cnt in status_q.group_by(SupportTicket.status).all()}
+
     return jsonify({
         "status": "success",
         "open": open_t,
+        "in_progress": in_prog_t,
+        "resolved": resolved_t,
         "closed": closed_t,
+        "active_issues": open_t + in_prog_t,
         "total": total_t,
         "average_resolution_time_hrs": avg_res_hrs,
         "sla_compliance_rate": sla_rate,
-        "priority_distribution": priority_dist
+        "priority_distribution": priority_dist,
+        "category_distribution": category_dist,
+        "status_distribution": status_dist
     })
 
 

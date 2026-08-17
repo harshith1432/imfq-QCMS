@@ -9,7 +9,7 @@ const Stage6 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.1</span>
-                                Countermeasure Task Assignments
+                                <span class="ds-tooltip-trigger" title="Countermeasure Task Assignments: Task execution tracking, owner assignment, due dates, and completion status">Countermeasure Task Assignments</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Team members can view and update completion.</p>
                         </div>
@@ -17,18 +17,18 @@ const Stage6 = {
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <h6 class="fw-bold mb-0 text-primary">Section 6.1 - Countermeasure Task Assignments</h6>
+                                <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 6.1 - Countermeasure Task Assignments: Execution tracking matrix">Section 6.1 - Countermeasure Task Assignments</h6>
                             </div>
-                            <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addTaskRow()">
+                            <button type="button" class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Task: Add a new execution task item" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addTaskRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Task
                             </button>
                         </div>
                         <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-3">Countermeasure</div>
-                            <div class="col-2">Owner</div>
-                            <div class="col-2">Task</div>
-                            <div class="col-2">Due Date</div>
-                            <div class="col-2" title="Completion percentage" style="cursor:help;">Comp %</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Countermeasure: Specific action item being executed">Countermeasure</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Owner: Assigned person responsible for task execution">Owner</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Task: Task description or milestone step">Task</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Due Date: Target completion deadline">Due Date</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Comp %: Completion percentage progress (0-100%)">Comp %</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_taskContainer" class="mb-0">
@@ -36,29 +36,30 @@ const Stage6 = {
                     </div>
                 </div>
 
-                <!-- Section 2 - Resource Deployment -->
+                <!-- Section 2 - Resource Planning & Deployment -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-4 border-bottom">
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.2</span>
-                                Resource Deployment
+                                <span class="ds-tooltip-trigger" title="Resource Planning & Deployment: Identify and track the budget, manpower, and materials needed to implement the solution">Resource Planning & Deployment</span>
                             </h5>
-                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Track the actual deployment of the budget, manpower, and materials planned in Stage 5.</p>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Identify the budget, manpower, and materials needed to implement the solution and track deployment status.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6.2 - Resource Deployment</h6>
-                            <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addResourceRow()">
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 6.2 - Resource Planning & Deployment: Resource allocation and deployment tracking">Section 6.2 - Resource Planning & Deployment</h6>
+                            <button type="button" class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Resource: Log resource allocation and status" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addResourceRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Resource
                             </button>
                         </div>
                         <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-4">Resource</div>
-                            <div class="col-2">Planned Cost</div>
-                            <div class="col-2">Actual Cost</div>
-                            <div class="col-3">Variance</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Resource Required: Description of equipment, tool, material, or manpower">Resource Required</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Budget Allocation: Allocated financial budget or cost">Budget Allocation</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Source: Internal department, vendor, or supplier">Source</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Due Date: Target date for procurement/allocation">Due Date</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Status: Current allocation/deployment status">Status</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_resourceContainer" class="mb-0">
@@ -72,26 +73,24 @@ const Stage6 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.3</span>
-                                Change Management
+                                <span class="ds-tooltip-trigger" title="Change Management: Updating Standard Operating Procedures (SOP) and issuing Engineering Change Notices (ECN)">Change Management</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Executed once all countermeasures are completed. Used for implementing approved changes.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <h6 class="fw-bold mb-0 text-primary">Section 6.3 - Change Management</h6>
-                                <small class="text-muted">Executed once all countermeasures are completed. Used for implementing approved changes.</small>
-                            </div>
-                            <button type="button" id="s6_addChangeBtn" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addChangeRow()">
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 6.3 - Change Management: Official SOP and document updates">Section 6.3 - Change Management</h6>
+                            <button type="button" id="s6_addChangeBtn" class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Change: Record an official SOP/work instruction update" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addChangeRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Change
                             </button>
                         </div>
 
                         <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-6">Change Description</div>
-                            <div class="col-2">SOP Updated (Y/N)</div>
-                            <div class="col-3">Date</div>
+                            <div class="col-5 ds-tooltip-trigger" title="Change Description: Description of standard procedure or work instruction change">Change Description</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Owner: Person or role responsible for executing and standardizing this change">Owner</div>
+                            <div class="col-2 ds-tooltip-trigger" title="SOP Updated (Y/N): Confirmation whether formal SOP documentation was revised">SOP Updated (Y/N)</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Date: Implementation date of standard revision">Date</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_changeContainer" class="mb-0">
@@ -105,22 +104,22 @@ const Stage6 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.4</span>
-                                Risk &amp; Resistance Management
+                                <span class="ds-tooltip-trigger" title="Risk & Resistance Management: Identifying implementation risks, user resistance, and executed engagement strategies">Risk &amp; Resistance Management</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Identify implementation risks and organizational resistance, and how each was addressed.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6.4 - Risk &amp; Resistance Management</h6>
-                            <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addRiskRow()">
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 6.4 - Risk & Resistance Management: Mitigation strategy tracking">Section 6.4 - Risk &amp; Resistance Management</h6>
+                            <button type="button" class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Risk: Record identified resistance or operational risk" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addRiskRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Risk
                             </button>
                         </div>
                         <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-5">Anticipated Risk/Resistance</div>
-                            <div class="col-4">Strategy Executed</div>
-                            <div class="col-2">Status</div>
+                            <div class="col-5 ds-tooltip-trigger" title="Anticipated Risk/Resistance: Potential hurdle or user resistance factor">Anticipated Risk/Resistance</div>
+                            <div class="col-4 ds-tooltip-trigger" title="Strategy Executed: Action taken to overcome risk or resistance">Strategy Executed</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Status: Current resolution status">Status</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_riskContainer" class="mb-0">
@@ -134,18 +133,15 @@ const Stage6 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.5</span>
-                                Side Effect Analysis
+                                <span class="ds-tooltip-trigger" title="Side Effect Analysis: Live monitoring tracking real-time implementation for unintended negative side effects">Side Effect Analysis</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Analyze potential negative side effects of the solutions. Modifications to the plan may be needed.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <h6 class="fw-bold mb-0 text-primary">Section 6.5 - Side Effect Analysis</h6>
-                                <small class="text-muted">Analyze potential negative side effects of the solutions. Modifications to the plan may be needed.</small>
-                            </div>
-                            <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addSideEffectRow()">
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 6.5 - Side Effect Analysis: Live side effect monitoring and mitigation tracking">Section 6.5 - Side Effect Analysis</h6>
+                            <button type="button" class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Side Effect: Log an observed secondary impact" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addSideEffectRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Side Effect
                             </button>
                         </div>
@@ -159,10 +155,10 @@ const Stage6 = {
                         </div>
 
                         <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-4">Side Effect Description</div>
-                            <div class="col-2">Impact Level</div>
-                            <div class="col-3">Mitigation Strategy</div>
-                            <div class="col-2">Plan Modification</div>
+                            <div class="col-4 ds-tooltip-trigger" title="Side Effect Description: Description of secondary issue or negative operational outcome">Side Effect Description</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Impact Level: Severity rating of side effect (Low, Medium, High, Critical)">Impact Level</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Mitigation Strategy: Corrective action taken to mitigate secondary impact">Mitigation Strategy</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Plan Modification: Flag whether countermeasure action plan requires modification">Plan Modification</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_sideEffectContainer" class="mb-0">
@@ -176,23 +172,23 @@ const Stage6 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.6</span>
-                                Implementation Evidence
+                                <span class="ds-tooltip-trigger" title="Implementation Evidence: Photos, log sheets, and audit documents verifying physical execution">Implementation Evidence</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Attach photos, logs, or documents proving the countermeasure was actually implemented.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6.6 - Implementation Evidence</h6>
-                            <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addEvidenceRow()">
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 6.6 - Implementation Evidence: Documented proof of completed countermeasures">Section 6.6 - Implementation Evidence</h6>
+                            <button type="button" class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Evidence: Upload implementation photo or document" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addEvidenceRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Evidence
                             </button>
                         </div>
                         <div class="row text-muted small fw-bold mb-2 px-2 align-items-center">
-                            <div class="col-3">Document/Photo Name</div>
-                            <div class="col-3">Link/Reference</div>
-                            <div class="col-2">Uploaded By</div>
-                            <div class="col-3">Attachment (Max 2MB)</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Document/Photo Name: Title of verification file or photo evidence">Document/Photo Name</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Link/Reference: External drive link or document reference ID">Link/Reference</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Uploaded By: Team member uploading proof">Uploaded By</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Attachment (Max 2MB): Uploaded image or PDF file">Attachment (Max 2MB)</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_evidenceContainer" class="mb-0">
@@ -206,22 +202,22 @@ const Stage6 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.7</span>
-                                Communication Log
+                                <span class="ds-tooltip-trigger" title="Communication Log: Recording how and when process changes were communicated to affected stakeholders">Communication Log</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Record how and when the change was communicated to affected stakeholders.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-end mb-3">
-                            <button type="button" class="ds-btn ds-btn-ghost text-xs" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addCommRow()">
+                            <button type="button" class="ds-btn ds-btn-ghost text-xs ds-tooltip-trigger" title="+ Add Comm: Log a stakeholder communication event" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addCommRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Comm
                             </button>
                         </div>
                         <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-3">Stakeholder</div>
-                            <div class="col-4">Message</div>
-                            <div class="col-2">Date</div>
-                            <div class="col-2">Channel</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Stakeholder: Target audience or team receiving communication">Stakeholder</div>
+                            <div class="col-4 ds-tooltip-trigger" title="Message: Summary of communication brief or shift announcement">Message</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Date: Communication date">Date</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Channel: Delivery channel (Meeting, Email, Noticeboard)">Channel</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_commContainer" class="mb-0">
@@ -235,23 +231,23 @@ const Stage6 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.8</span>
-                                Training &amp; Awareness
+                                <span class="ds-tooltip-trigger" title="Training & Awareness: Logging operator training sessions, attendance rates, and training materials">Training &amp; Awareness</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Log training sessions conducted so staff are aware of the new standard.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-end mb-3">
-                            <button type="button" class="ds-btn ds-btn-ghost text-xs" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addTrainingRow()">
+                            <button type="button" class="ds-btn ds-btn-ghost text-xs ds-tooltip-trigger" title="+ Add Training: Record an operator training session" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addTrainingRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Training
                             </button>
                         </div>
                         <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-3">Target Group</div>
-                            <div class="col-2">Training Module</div>
-                            <div class="col-2">Date</div>
-                            <div class="col-2">Attend %</div>
-                            <div class="col-2">Attachment (Max 2MB)</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Target Group: Audience or department receiving training (e.g. Line A Operators)">Target Group</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Training Module: Course title or skill module name">Training Module</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Date: Training completion date">Date</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Attend %: Attendance percentage of target operators">Attend %</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Attachment (Max 2MB): Attendance sheet or training slide upload">Attachment (Max 2MB)</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_trainingContainer" class="mb-0">
@@ -265,22 +261,22 @@ const Stage6 = {
                         <div>
                             <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">6.9</span>
-                                Readiness Verification
+                                <span class="ds-tooltip-trigger" title="Readiness Verification: Pre-launch audit confirming process and personnel readiness before full go-live">Readiness Verification</span>
                             </h5>
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Confirm the process and people are ready before the change goes fully live.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary">Section 6.10 - Readiness Verification</h6>
-                            <button type="button" class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addReadinessRow()">
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Readiness Verification: Final pre-flight verification sign-off">Section 6.10 - Readiness Verification</h6>
+                            <button type="button" class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Check: Add a readiness audit checklist item" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addReadinessRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Check
                             </button>
                         </div>
                         <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-6">Item</div>
-                            <div class="col-3">Verified By</div>
-                            <div class="col-2">Status</div>
+                            <div class="col-6 ds-tooltip-trigger" title="Item: Specific readiness condition being verified">Item</div>
+                            <div class="col-3 ds-tooltip-trigger" title="Verified By: Auditor or supervisor conducting verification">Verified By</div>
+                            <div class="col-2 ds-tooltip-trigger" title="Status: Readiness status (Ready, Pending, Failed)">Status</div>
                             <div class="col-1"></div>
                         </div>
                         <div id="s6_readinessContainer" class="mb-0">
@@ -308,8 +304,13 @@ const Stage6 = {
             }
         }
 
-        // Resources (Section 2)
-        const resourcesArr = d.resource_deployment || [];
+        // Resources (Section 2: Resource Planning & Deployment)
+        const s5Wf = wf.find(w => w.stage_id === 5)?.data || {};
+        const resourcesArr = (d.resource_planning_deployment && d.resource_planning_deployment.length)
+            ? d.resource_planning_deployment
+            : ((d.resource_deployment && d.resource_deployment.length)
+                ? d.resource_deployment
+                : (d.resource_planning || s5Wf.resource_planning || []));
         const resourceContainer = document.getElementById('s6_resourceContainer');
         if (resourceContainer) {
             resourceContainer.innerHTML = '';
@@ -420,11 +421,13 @@ const Stage6 = {
 
     collectData() {
         const tasks = this.collectRows('s6_taskContainer', ['.r-act', '.r-own', '.r-tsk', '.r-due', '.r-pct'], ['countermeasure', 'owner', 'task', 'due_date', 'completion_pct']);
+        const resRows = this.collectRows('s6_resourceContainer', ['.r-res', '.r-bud', '.r-src', '.r-date', '.r-stat'], ['resource', 'budget', 'source', 'due_date', 'status']);
         return {
             countermeasures: tasks.map(t => ({ countermeasure: t.countermeasure, owner: t.owner, status: parseInt(t.completion_pct, 10) >= 100 ? 'Completed' : 'In Progress' })),
             countermeasure_task_assignments: tasks,
-            resource_deployment: this.collectRows('s6_resourceContainer', ['.r-res', '.r-plan', '.r-act', '.r-var'], ['resource', 'planned_cost', 'actual_cost', 'variance']),
-            change_management: this.collectRows('s6_changeContainer', ['.r-desc', '.r-sop', '.r-dt'], ['change_description', 'sop_updated', 'date']),
+            resource_planning_deployment: resRows,
+            resource_deployment: resRows,
+            change_management: this.collectRows('s6_changeContainer', ['.r-desc', '.r-own', '.r-sop', '.r-dt'], ['change_description', 'owner', 'sop_updated', 'date']),
             risk_resistance: this.collectRows('s6_riskContainer', ['.r-rsk', '.r-str', '.r-stat'], ['anticipated_risk', 'strategy_executed', 'status']),
             side_effect_analysis: this.collectRows('s6_sideEffectContainer', ['.r-desc', '.r-impact', '.r-mit', '.r-mod'], ['description', 'impact_level', 'mitigation', 'plan_modification_required']),
             implementation_evidence: this.collectRows('s6_evidenceContainer', ['.r-nam', '.r-lnk', '.r-upb'], ['document_name', 'link', 'uploaded_by']),
@@ -506,24 +509,38 @@ const Stage6 = {
     },
 
     addResourceRow(d = {}) {
-        const calc = "const p=this.closest('.dyn-row'); p.querySelector('.r-var').value = (parseFloat(p.querySelector('.r-plan').value)||0) - (parseFloat(p.querySelector('.r-act').value)||0);";
+        const currentStat = d.status || 'Planned';
+        const defaultOptions = ['Planned', 'Approved', 'In Progress', 'Procured / Allocated', 'Completed', 'On Hold / Rejected'];
+        const allOptions = defaultOptions.includes(currentStat) ? defaultOptions : [currentStat, ...defaultOptions];
+        const selectHtml = `
+            <select class="ds-input ds-select r-stat text-center" style="text-align: center; text-align-last: center; font-weight: 600; cursor: pointer;" required>
+                ${allOptions.map(opt => `<option value="${opt}" ${currentStat === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+            </select>`;
+
+        const resVal = d.resource || d.resource_required || '';
+        const budVal = d.budget || d.budget_allocation || (d.planned_cost !== undefined && d.planned_cost !== '' ? `₹${d.planned_cost}` : '');
+        const srcVal = d.source || '';
+        const dateVal = d.due_date || d.when || d.date || '';
+
         this.addRowTemplate('s6_resourceContainer', d, `
-            <div class="col-4"><input type="text" class="ds-input r-res" placeholder="e.g. Calibration sensors kit" value="${d.resource || ''}" required></div>
-            <div class="col-2"><input type="number" class="ds-input r-plan" placeholder="e.g. 15000" value="${d.planned_cost || ''}" onchange="${calc}" required></div>
-            <div class="col-2"><input type="number" class="ds-input r-act" placeholder="e.g. 14200" value="${d.actual_cost || ''}" onchange="${calc}" required></div>
-            <div class="col-3"><input type="number" class="ds-input r-var" readonly style="background:var(--ds-surface-raised)" value="${d.variance || ''}"></div>`);
+            <div class="col-3"><input type="text" class="ds-input r-res" placeholder="e.g. Torque wrench calibration rig" value="${resVal}" required></div>
+            <div class="col-2"><input type="text" class="ds-input r-bud" placeholder="e.g. ₹15,000" value="${budVal}" required></div>
+            <div class="col-2"><input type="text" class="ds-input r-src" placeholder="e.g. Vendor ABC Ltd" value="${srcVal}" required></div>
+            <div class="col-2"><input type="date" class="ds-input r-date" value="${dateVal}" required></div>
+            <div class="col-2">${selectHtml}</div>`);
     },
 
     addChangeRow(d = {}) {
         this.addRowTemplate('s6_changeContainer', d, `
-            <div class="col-6"><input type="text" class="ds-input r-desc" placeholder="e.g. Torque standard updated from 4.5 to 5.5 bar" value="${d.change_description || ''}" required></div>
+            <div class="col-5"><input type="text" class="ds-input r-desc" placeholder="e.g. Torque standard updated from 4.5 to 5.5 bar" value="${d.change_description || ''}" required></div>
+            <div class="col-2"><input type="text" class="ds-input r-own" placeholder="e.g. Rahul Sharma" value="${d.owner || d.responsible || ''}" required></div>
             <div class="col-2">
                 <select class="ds-input ds-select r-sop" required>
                     <option ${d.sop_updated==='Y'?'selected':''}>Y</option>
                     <option ${d.sop_updated==='N'?'selected':''}>N</option>
                 </select>
             </div>
-            <div class="col-3"><input type="date" class="ds-input r-dt" value="${d.date || ''}" required></div>`);
+            <div class="col-2"><input type="date" class="ds-input r-dt" value="${d.date || ''}" required></div>`);
     },
 
     addRiskRow(d = {}) {
@@ -565,7 +582,7 @@ const Stage6 = {
     addEvidenceRow(d = {}) {
         const rowEl = this.addRowTemplate('s6_evidenceContainer', d, `
             <div class="col-3"><input type="text" class="ds-input r-nam" placeholder="e.g. Calibration Report #CR-2025" value="${d.document_name || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-lnk" placeholder="e.g. /uploads/... or URL" value="${d.link || ''}" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-lnk" placeholder="e.g. /uploads/... or URL" value="${d.link || ''}"></div>
             <div class="col-2"><input type="text" class="ds-input r-upb" placeholder="e.g. Rajesh Kumar" value="${d.uploaded_by || ''}" required></div>
             <div class="col-2 d-flex align-items-center">
                 <button type="button" class="btn btn-outline-primary text-xs w-100 d-flex align-items-center justify-content-center gap-1 btn-upload-ev py-2 px-2" style="height:38px; border-style:dashed; border-width:1.5px; border-radius:8px; font-weight:600; white-space:nowrap;" title="Upload PDF, PPT, Photo, Document (Max 2MB)">

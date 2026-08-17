@@ -546,11 +546,11 @@
                     const mbClass = noMargin ? 'mb-0' : 'mb-3';
                     if (isEdit) {
                         if (key === 'category') {
-                            const categories = ['Quality', 'Cost', 'Delivery', 'Safety', 'Morale', 'Environment', 'Productivity'];
+                            const categories = (window.QCMS && window.QCMS._cachedCategories) || ['Quality', 'Cost', 'Delivery', 'Safety', 'Morale', 'Environment', 'Productivity'];
                             return `
                                     <div class="${mbClass}">
                                         <label class="ds-label text-xs mb-1 font-bold"><i data-lucide="${icon}" class="w-3 h-3 mr-1 inline"></i> ${label}</label>
-                                        <select id="edit_${key}" class="ds-input w-100 font-medium">
+                                        <select id="edit_${key}" class="ds-input w-100 font-medium" data-source="categories">
                                             ${categories.map(c => `<option value="${c}" ${val === c ? 'selected' : ''}>${c}</option>`).join('')}
                                         </select>
                                     </div>
