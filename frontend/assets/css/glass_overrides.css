@@ -1379,3 +1379,50 @@ html[data-theme="dark"] .qc-evidence-file {
 body.dark-mode .qc-evidence-file .text-main {
     color: #f8fafc !important;
 }
+
+/* ========================================================
+   UNIVERSAL NAV PILLS & TAB BUTTONS (Dark Borders & High Contrast)
+   ======================================================== */
+.nav-pills .nav-link {
+    background: var(--ds-bg-card, #ffffff) !important;
+    border: 1.5px solid var(--ds-border-color, #94a3b8) !important;
+    color: var(--ds-text-main, #1e293b) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1.25rem !important;
+    transition: all 0.18s ease-in-out !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+    cursor: pointer !important;
+}
+
+.nav-pills .nav-link:hover:not(.active) {
+    background: rgba(59, 130, 246, 0.08) !important;
+    border-color: var(--ds-primary, #2563eb) !important;
+    color: var(--ds-primary, #2563eb) !important;
+    transform: translateY(-1px);
+}
+
+.nav-pills .nav-link.active {
+    background: var(--ds-primary, #2563eb) !important;
+    border-color: var(--ds-primary, #2563eb) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+[data-theme="dark"] .nav-pills .nav-link,
+body.dark-mode .nav-pills .nav-link,
+html[data-theme="dark"] .nav-pills .nav-link {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border-color: rgba(255, 255, 255, 0.22) !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .nav-pills .nav-link.active,
+body.dark-mode .nav-pills .nav-link.active,
+html[data-theme="dark"] .nav-pills .nav-link.active {
+    background: var(--ds-primary, #3b82f6) !important;
+    border-color: var(--ds-primary, #3b82f6) !important;
+    color: #ffffff !important;
+}

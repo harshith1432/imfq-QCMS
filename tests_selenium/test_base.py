@@ -8,6 +8,14 @@ import time
 import json
 import traceback
 from datetime import datetime
+
+# Ensure stdout handles UTF-8 smoothly on Windows console
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -56,7 +64,11 @@ class DetailedTestReport:
         self.category_counts[category] = self.category_counts.get(category, 0) + 1
         
         status_symbol = "[PASS]" if status == "PASS" else "[FAIL]" if status == "FAIL" else "[WARN]"
-        print(f"{status_symbol} [#{res['id']}] [{category}] {name} ({round(duration, 2)}s) -> {status}", flush=True)
+        try:
+            print(f"{status_symbol} [#{res['id']}] [{category}] {name} ({round(duration, 2)}s) -> {status}", flush=True)
+        except Exception:
+            clean_str = f"{status_symbol} [#{res['id']}] [{category}] {name} ({round(duration, 2)}s) -> {status}".encode('ascii', errors='replace').decode('ascii')
+            print(clean_str, flush=True)
 
     def summary(self):
         total = len(self.results)
@@ -72,7 +84,8 @@ class DetailedTestReport:
             if cat not in categories_breakdown:
                 categories_breakdown[cat] = {"total": 0, "passed": 0, "failed": 0, "warned": 0, "blocked": 0}
             categories_breakdown[cat]["total"] += 1
-            categories_breakdown[cat][r["status"].lower()] += 1
+            status_key = "passed" if r["status"] == "PASS" else "failed" if r["status"] == "FAIL" else "warned" if r["status"] == "WARN" else "blocked"
+            categories_breakdown[cat][status_key] += 1
 
         return {
             "total_test_cases": total,
@@ -112,19 +125,21 @@ def capture_screen(driver, name):
 def login_as(driver, email, password):
     driver.get(f"{BASE_URL}/auth/login.html")
     time.sleep(1.2)
-    user_inp = driver.find_elements(By.CSS_SELECTOR, "#username, input[type='text'], input[type='email']")
-    pass_inp = driver.find_elements(By.CSS_SELECTOR, "#password, input[type='password']")
-    btn = driver.find_elements(By.CSS_SELECTOR, "button[type='submit'], #login-btn, .btn-primary")
-    
-    if user_inp and pass_inp and btn:
-        user_inp[0].clear()
-        user_inp[0].send_keys(email)
-        pass_inp[0].clear()
-        pass_inp[0].send_keys(password)
-        btn[0].click()
-        time.sleep(2)
+    try:
+        user_inp = driver.find_element(By.CSS_SELECTOR, "#username, input[type='text'], input[type='email']")
+        pass_inp = driver.find_element(By.CSS_SELECTOR, "#password, input[type='password']")
+        btn = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], #loginBtn, .btn-primary")
+        
+        user_inp.clear()
+        user_inp.send_keys(email)
+        pass_inp.clear()
+        pass_inp.send_keys(password)
+        btn.click()
+        time.sleep(2.5)
         return True
-    return False
+    except Exception as e:
+        print(f"[!] Login error for {email}: {e}")
+        return False
 
 def logout(driver):
     try:

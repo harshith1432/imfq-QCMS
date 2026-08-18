@@ -803,7 +803,8 @@ def login():
         from app.presentation.middleware.security import is_login_locked, get_lockout_info
         client_ip = (request.headers.get('X-Forwarded-For', '') or '').split(',')[0].strip() or request.remote_addr or ''
         id_info  = get_lockout_info(identifier)
-        ip_info  = get_lockout_info(client_ip) if client_ip else {'is_locked': False, 'remaining_seconds': 0, 'locked_until_epoch': None}
+        is_loopback = client_ip in ('127.0.0.1', 'localhost', '::1', '')
+        ip_info  = get_lockout_info(client_ip) if (client_ip and not is_loopback) else {'is_locked': False, 'remaining_seconds': 0, 'locked_until_epoch': None}
         if id_info['is_locked'] or ip_info['is_locked']:
             info = id_info if id_info['is_locked'] else ip_info
             return jsonify({
@@ -875,7 +876,7 @@ def login():
             from app.presentation.routes.audit_routes import log_audit_event
             client_ip = (request.headers.get('X-Forwarded-For', '') or '').split(',')[0].strip() or request.remote_addr or ''
             record_failed_login(identifier)
-            if client_ip:
+            if client_ip and client_ip not in ('127.0.0.1', 'localhost', '::1'):
                 record_failed_login(client_ip)
             log_audit_event(
                 org_id=None,
@@ -896,7 +897,7 @@ def login():
             from app.presentation.routes.audit_routes import log_audit_event
             client_ip = (request.headers.get('X-Forwarded-For', '') or '').split(',')[0].strip() or request.remote_addr or ''
             is_locked, attempts = record_failed_login(identifier)
-            if client_ip:
+            if client_ip and client_ip not in ('127.0.0.1', 'localhost', '::1'):
                 record_failed_login(client_ip)
             
             if is_locked:
