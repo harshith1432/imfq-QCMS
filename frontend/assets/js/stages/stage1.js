@@ -267,14 +267,27 @@ const Stage1 = {
     },
 
     prefillSection1(data) {
+        if (!data) return;
         const init = (data.stage1_data || {}).init || {};
-        this.setVal('s1_work_area', init.work_area || data.work_area || data.description || '');
-        this.setVal('s1_sponsor', init.sponsor || data.sponsor || '');
         
-        // Facilitator: Always prioritize live project governance facilitator
+        // 1. Work Area
+        const workAreaDefault = (init.work_area && init.work_area.trim()) || 
+                                (data.work_area && data.work_area.trim()) || 
+                                (data.plant_name ? `${data.plant_name} - ${data.department || 'Shop Floor'}` : (data.department || 'Shop Floor'));
+        this.setVal('s1_work_area', workAreaDefault);
+        
+        // 2. Sponsor
+        const sponsorDefault = (init.sponsor && init.sponsor.trim()) || 
+                               (data.sponsor && data.sponsor.trim()) || 
+                               `${data.department || 'Plant'} Head / Operations Manager`;
+        this.setVal('s1_sponsor', sponsorDefault);
+        
+        // 3. Facilitator: Always prioritize live project governance facilitator
         let facName = '';
-        if (data.facilitator_name) {
+        if (data.facilitator_name && data.facilitator_name.trim()) {
             facName = data.facilitator_name;
+        } else if (init.facilitator && init.facilitator.trim()) {
+            facName = init.facilitator;
         } else if (data.facilitator && typeof data.facilitator === 'object') {
             facName = data.facilitator.full_name || data.facilitator.username || '';
         } else if (typeof data.facilitator === 'string' && data.facilitator.trim()) {
@@ -283,13 +296,15 @@ const Stage1 = {
             const fUser = (window.orgUsers || []).find(u => u.id == data.facilitator_id);
             if (fUser) facName = fUser.full_name || fUser.username;
         }
-        if (!facName) facName = init.facilitator || '';
+        if (!facName) facName = 'Assigned Facilitator';
         this.setVal('s1_facilitator', facName);
 
-        // Team Leader: Always prioritize live project governance team leader
+        // 4. Team Leader: Always prioritize live project governance team leader
         let tlName = '';
-        if (data.team_leader_name) {
+        if (data.team_leader_name && data.team_leader_name.trim()) {
             tlName = data.team_leader_name;
+        } else if (init.team_leader && init.team_leader.trim()) {
+            tlName = init.team_leader;
         } else if (data.team_leader && typeof data.team_leader === 'object') {
             tlName = data.team_leader.full_name || data.team_leader.username || '';
         } else if (typeof data.team_leader === 'string' && data.team_leader.trim()) {
@@ -297,15 +312,19 @@ const Stage1 = {
         } else if (data.team_leader_id) {
             const tlUser = (window.orgUsers || []).find(u => u.id == data.team_leader_id);
             if (tlUser) tlName = tlUser.full_name || tlUser.username;
-            else if (data.creator && typeof data.creator === 'object') tlName = data.creator.full_name || data.creator.username || '';
         }
-        if (!tlName) tlName = init.team_leader || '';
+        if (!tlName && data.creator) {
+            tlName = typeof data.creator === 'object' ? (data.creator.full_name || data.creator.username) : data.creator;
+        }
+        if (!tlName) tlName = 'Team Leader';
         this.setVal('s1_team_leader', tlName);
 
-        // Reviewer: Always prioritize live project governance reviewer
+        // 5. Reviewer: Always prioritize live project governance reviewer
         let revName = '';
-        if (data.reviewer_name) {
+        if (data.reviewer_name && data.reviewer_name.trim()) {
             revName = data.reviewer_name;
+        } else if (init.reviewer && init.reviewer.trim()) {
+            revName = init.reviewer;
         } else if (data.reviewer && typeof data.reviewer === 'object') {
             revName = data.reviewer.full_name || data.reviewer.username || '';
         } else if (typeof data.reviewer === 'string' && data.reviewer.trim()) {
@@ -314,39 +333,79 @@ const Stage1 = {
             const revUser = (window.orgUsers || []).find(u => u.id == data.reviewer_id);
             if (revUser) revName = revUser.full_name || revUser.username;
         }
-        if (!revName) revName = init.reviewer || '';
+        if (!revName) revName = 'Quality Reviewer';
         this.setVal('s1_reviewer', revName);
 
-        const start = init.planned_start_date || data.start_date;
-        const end = init.planned_end_date || data.end_date;
-        if (start && end) {
-            const days = Math.round((new Date(end) - new Date(start)) / (1000*60*60*24));
-            this.setVal('s1_duration', `${days} days (${start} → ${end})`);
+        // 6. Duration: Calculation from start_date/created_at to end_date/deadline
+        const start = (init.planned_start_date && init.planned_start_date.trim()) || data.start_date || data.created_at;
+        const end = (init.planned_end_date && init.planned_end_date.trim()) || data.end_date || data.deadline;
+        let durationStr = (init.duration && init.duration.trim()) || '';
+        if (!durationStr && start && end) {
+            const sDate = new Date(start);
+            const eDate = new Date(end);
+            const diffTime = eDate.getTime() - sDate.getTime();
+            const days = Math.max(1, Math.round(Math.abs(diffTime) / (1000 * 60 * 60 * 24)));
+            const sStr = isNaN(sDate.getTime()) ? String(start).split('T')[0] : sDate.toISOString().split('T')[0];
+            const eStr = isNaN(eDate.getTime()) ? String(end).split('T')[0] : eDate.toISOString().split('T')[0];
+            durationStr = `${days} days (${sStr} → ${eStr})`;
         }
+        if (!durationStr) durationStr = '90 days (Standard 8D Lifecycle)';
+        this.setVal('s1_duration', durationStr);
     },
 
     prefillAllSections(d) {
+        if (!d) d = {};
         const team = d.team || {};
-        this.setVal('s1_circle_name', team.circle_name || '');
+        const circleDefault = (team.circle_name && team.circle_name.trim()) || 
+                              (this.projectData && this.projectData.title ? `${this.projectData.title} Circle` : `${(this.projectData && this.projectData.department) || 'Quality'} Circle`);
+        this.setVal('s1_circle_name', circleDefault);
         
-        // Load team members from the project's member_ids (excluding the Team Leader)
-        const teamMembersIds = (this.projectData.member_ids || []).filter(id => id != this.projectData.team_leader_id);
-        
+        // Load team members from all available sources (excluding the Team Leader)
         const container = document.getElementById('teamMembersContainer');
         if (container) container.innerHTML = '';
 
-        teamMembersIds.forEach(id => {
-            const orgUser = (window.orgUsers || []).find(u => u.id == id);
-            const savedMember = (team.team_members || []).find(m => m.user_id == id);
-            
-            const memberData = {
-                user_id: id,
-                name: orgUser ? (orgUser.full_name || orgUser.username) : (savedMember ? savedMember.name : `User #${id}`),
-                role: orgUser ? ((orgUser.role && orgUser.role.name) ? orgUser.role.name : (typeof orgUser.role === 'string' ? orgUser.role : 'Team Member')) : (savedMember ? savedMember.role : 'Team Member'),
-                designation: savedMember ? savedMember.designation : ''
-            };
-            this.addTeamMemberRow(memberData);
+        const membersList = [];
+        const seenUserIds = new Set();
+        const tlId = (this.projectData && this.projectData.team_leader_id) || null;
+
+        // Source A: Saved team members in workflow data
+        (team.team_members || []).forEach(m => {
+            if (m && m.user_id && m.user_id != tlId && !seenUserIds.has(m.user_id)) {
+                seenUserIds.add(m.user_id);
+                membersList.push({
+                    user_id: m.user_id,
+                    name: m.name || `User #${m.user_id}`,
+                    role: m.role || 'Team Member'
+                });
+            }
         });
+
+        // Source B: projectData.members (direct user objects from API)
+        ((this.projectData && this.projectData.members) || []).forEach(m => {
+            if (m && m.id && m.id != tlId && !seenUserIds.has(m.id)) {
+                seenUserIds.add(m.id);
+                membersList.push({
+                    user_id: m.id,
+                    name: m.full_name || m.username || `User #${m.id}`,
+                    role: m.role || 'Team Member'
+                });
+            }
+        });
+
+        // Source C: projectData.member_ids
+        ((this.projectData && this.projectData.member_ids) || []).forEach(id => {
+            if (id && id != tlId && !seenUserIds.has(id)) {
+                seenUserIds.add(id);
+                const orgUser = (window.orgUsers || []).find(u => u.id == id);
+                membersList.push({
+                    user_id: id,
+                    name: orgUser ? (orgUser.full_name || orgUser.username) : `User #${id}`,
+                    role: orgUser ? ((orgUser.role && orgUser.role.name) ? orgUser.role.name : (typeof orgUser.role === 'string' ? orgUser.role : 'Team Member')) : 'Team Member'
+                });
+            }
+        });
+
+        membersList.forEach(m => this.addTeamMemberRow(m));
 
         const w = d.background_5w2h || {};
         this.setVal('s1_5w2h_what', w.what || '');
@@ -410,6 +469,7 @@ const Stage1 = {
                 work_area: this.getVal('s1_work_area'),
                 facilitator: this.getVal('s1_facilitator'),
                 team_leader: this.getVal('s1_team_leader'),
+                reviewer: this.getVal('s1_reviewer'),
                 duration: this.getVal('s1_duration')
             },
             team: {

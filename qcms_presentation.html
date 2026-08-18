@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QCMS Enterprise OS - Presentation Deck</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: 1920px 1080px;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #090d16;
+            color: #1e293b;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .slide {
+            width: 1920px;
+            height: 1080px;
+            page-break-after: always;
+            position: relative;
+            overflow: hidden;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            padding: 80px 100px;
+        }
+        
+        /* ── Slide 1: Cover ── */
+        .slide-cover {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 35%, #4f46e5 70%, #9333ea 100%);
+            color: #ffffff;
+            justify-content: center;
+            padding: 100px 120px;
+        }
+        .slide-cover::before {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; width: 50%; height: 100%;
+            background: radial-gradient(circle at top right, rgba(236, 72, 153, 0.3), transparent 70%);
+            pointer-events: none;
+        }
+        .cover-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 40px;
+            width: fit-content;
+        }
+        .cover-title {
+            font-size: 76px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 28px;
+            background: linear-gradient(to right, #ffffff, #e0e7ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .cover-subtitle {
+            font-size: 28px;
+            color: #cbd5e1;
+            font-weight: 400;
+            max-width: 900px;
+            line-height: 1.5;
+            margin-bottom: 50px;
+        }
+        .cover-footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding-top: 30px;
+            color: #94a3b8;
+            font-size: 18px;
+        }
+
+        /* ── Standard Slide Layout ── */
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 50px;
+        }
+        .slide-title {
+            font-size: 46px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .slide-subtitle {
+            font-size: 20px;
+            color: #64748b;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 22px;
+            color: #4f46e5;
+        }
+        .slide-footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 24px;
+            color: #94a3b8;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        /* ── Slide 2: Why QCMS ── */
+        .why-container {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 50px;
+            flex-grow: 1;
+        }
+        .why-dark-card {
+            background: #0f172a;
+            border-radius: 24px;
+            padding: 50px 45px;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .why-tag {
+            color: #f59e0b;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+        .why-text {
+            font-size: 22px;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+        .why-highlight {
+            border-left: 4px solid #4f46e5;
+            padding-left: 20px;
+            margin: 25px 0;
+            font-size: 22px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        .compare-table {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            justify-content: center;
+        }
+        .compare-row {
+            display: grid;
+            grid-template-columns: 1fr 40px 1fr;
+            align-items: center;
+            gap: 20px;
+        }
+        .box-challenge {
+            background: #fff1f2;
+            border: 1.5px solid #fecdd3;
+            border-radius: 16px;
+            padding: 20px 24px;
+            color: #9f1239;
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .box-solution {
+            background: #f0fdf4;
+            border: 1.5px solid #bbf7d0;
+            border-radius: 16px;
+            padding: 20px 24px;
+            color: #166534;
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .arrow-icon {
+            text-align: center;
+            font-size: 22px;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        /* ── Slide 3: What is QCMS ── */
+        .banner-box {
+            background: #0f172a;
+            border-radius: 18px;
+            padding: 24px 35px;
+            color: #ffffff;
+            font-size: 20px;
+            line-height: 1.5;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .banner-icon {
+            width: 48px;
+            height: 48px;
+            background: #f59e0b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+            color: #000;
+        }
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .pillar-card {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 35px 30px;
+        }
+        .pillar-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .pillar-desc {
+            font-size: 17px;
+            color: #475569;
+            line-height: 1.6;
+        }
+        .workflow-strip {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: stretch;
+        }
+        .workflow-steps {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 20px;
+        }
+        .wf-step {
+            flex: 1;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: #334155;
+        }
+        .stats-dark-box {
+            background: #0f172a;
+            border-radius: 18px;
+            padding: 24px 30px;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .stats-num {
+            font-size: 38px;
+            font-weight: 800;
+            color: #f59e0b;
+        }
+        .stats-lbl {
+            font-size: 15px;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        /* ── Slide 4: Role-Wise Flow ── */
+        .flow-matrix {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex-grow: 1;
+        }
+        .flow-header {
+            display: grid;
+            grid-template-columns: 260px 1fr 340px 340px;
+            padding: 12px 24px;
+            background: #0f172a;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .flow-row {
+            display: grid;
+            grid-template-columns: 260px 1fr 340px 340px;
+            padding: 20px 24px;
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            align-items: center;
+            gap: 20px;
+        }
+        .role-pill {
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 16px;
+            display: inline-block;
+            text-align: center;
+        }
+        .role-super { background: #fee2e2; color: #991b1b; }
+        .role-ceo { background: #dcfce7; color: #166534; }
+        .role-lead { background: #f3e8ff; color: #6b21a8; }
+        .role-member { background: #fef3c7; color: #92400e; }
+        .flow-steps {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .f-box {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* ── Slide 5: System Architecture ── */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 40px;
+            flex-grow: 1;
+        }
+        .arch-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .arch-spec {
+            background: #f8fafc;
+            border-left: 4px solid #4f46e5;
+            border-radius: 12px;
+            padding: 16px 20px;
+        }
+        .spec-title { font-size: 15px; font-weight: 700; color: #4f46e5; text-transform: uppercase; }
+        .spec-val { font-size: 18px; font-weight: 600; color: #0f172a; margin-top: 4px; }
+        .arch-main {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 24px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+        }
+        .mod-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #1e293b;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+        }
+
+        /* ── Slides 6, 7, 8: Dashboards ── */
+        .dash-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 40px;
+            flex-grow: 1;
+            align-items: stretch;
+        }
+        .dash-mockup {
+            background: #0f172a;
+            border-radius: 20px;
+            padding: 30px;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+        }
+        .dash-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+        .dash-cards-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .mock-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .mock-val { font-size: 28px; font-weight: 800; color: #38bdf8; margin: 6px 0; }
+        .mock-lbl { font-size: 12px; color: #94a3b8; text-transform: uppercase; font-weight: 600; }
+        .dash-side-info {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: center;
+        }
+        .side-info-card {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+        }
+        .side-info-title { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .side-info-desc { font-size: 15px; color: #64748b; line-height: 1.5; }
+
+        /* ── Slide 9: Closing ── */
+        .slide-closing {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+            color: #ffffff;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 100px;
+        }
+        .closing-title {
+            font-size: 80px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            background: linear-gradient(to right, #ffffff, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .closing-desc {
+            font-size: 28px;
+            color: #94a3b8;
+            max-width: 800px;
+            line-height: 1.5;
+            margin-bottom: 60px;
+        }
+        .closing-badge {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 14px 36px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── SLIDE 1: COVER ── -->
+    <div class="slide slide-cover">
+        <div class="cover-badge">QCMS Enterprise OS · 8D Quality Platform</div>
+        <h1 class="cover-title">Quality Circle &amp; Continuous<br>Improvement Management System</h1>
+        <p class="cover-subtitle">A unified digital platform to institutionalize 8-stage 8D problem solving, automate 7 QC tools, and accelerate plant excellence every single day.</p>
+        <div class="cover-footer">
+            <div>Accelerating Enterprise Excellence &amp; Compliance</div>
+            <div>Confidential · QCMS Enterprise Solutions</div>
+        </div>
+    </div>
+
+    <!-- ── SLIDE 2: WHY QCMS? ── -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <h2 class="slide-title">Why Quality Circle Management System?</h2>
+                <p class="slide-subtitle">Transforming fragmented shopfloor improvement efforts into a structured, measurable engine.</p>
+            </div>
+            <div class="header-logo">QCMS Enterprise</div>
+        </div>
+        <div class="why-container">
+            <div class="why-dark-card">
+                <div>
+                    <div class="why-tag">Why We Are Doing This</div>
+                    <p class="why-text">Across manufacturing shifts, teams generate thousands of critical quality data points—defects, downtime, root causes, and kaizen ideas. Today, this knowledge remains trapped in paper forms, static Excel sheets, and disconnected presentations.</p>
+                    <div class="why-highlight">The Result: Standardize methodology, eliminate recurring defects 80% faster, and unlock measurable financial ROI.</div>
+                </div>
+                <p style="color:#94a3b8; font-size:16px; font-weight:500;">Objective — Provide seamless end-to-end governance from Operator to Reviewer &amp; CEO.</p>
+            </div>
+            <div class="compare-table">
+                <div style="font-weight:700; font-size:16px; color:#64748b; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">What Changes with QCMS</div>
+                <div class="compare-row">
+                    <div class="box-challenge">✕ Disconnected paper &amp; static Excel A3s</div>
+                    <div class="arrow-icon">→</div>
+                    <div class="box-solution">✓ Centralized 8-Stage Digital Workflow</div>
+                </div>
+                <div class="compare-row">
+                    <div class="box-challenge">✕ Manual, inaccurate QC tool graphing</div>
+                    <div class="arrow-icon">→</div>
+                    <div class="box-solution">✓ Automated Interactive 7 QC Tools Engine</div>
+                </div>
+                <div class="compare-row">
+                    <div class="box-challenge">✕ Delayed review cycles &amp; forgotten actions</div>
+                    <div class="arrow-icon">→</div>
+                    <div class="box-solution">✓ Real-Time Reviewer Stage Gates &amp; SLAs</div>
+                </div>
+                <div class="compare-row">
+                    <div class="box-challenge">✕ Isolated plant knowledge silos</div>
+                    <div class="arrow-icon">→</div>
+                    <div class="box-solution">✓ Enterprise RAG Knowledge Repository</div>
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <div>2 | Why QCMS?</div>
+            <div>Accelerating Enterprise Excellence</div>
+        </div>
+    </div>
+
+    <!-- ── SLIDE 3: WHAT IS QCMS? ── -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <h2 class="slide-title">What is QCMS Enterprise OS?</h2>
+                <p class="slide-subtitle">The foundation for institutional quality: standardizing daily execution and continuous Kaizen.</p>
+            </div>
+            <div class="header-logo">QCMS Enterprise</div>
+        </div>
+        <div class="banner-box">
+            <div class="banner-icon">★</div>
+            <div><strong>QCMS is the enterprise operating system</strong> for managing Quality Circles, 8D Problem Solving, and Six Sigma projects. It bridges the gap between shopfloor operators, facilitators, and executive management.</div>
+        </div>
+        <div class="pillars-grid">
+            <div class="pillar-card">
+                <h3 class="pillar-title">1. Standardize (8 Stages)</h3>
+                <p class="pillar-desc">Enforce rigorous 8D workflows: Problem Definition (5W2H) → Observation → Cause Identification → Root Cause Validation → Countermeasures → Verification → Standardization → Team Recognition.</p>
+            </div>
+            <div class="pillar-card">
+                <h3 class="pillar-title">2. Automate (7 QC Tools)</h3>
+                <p class="pillar-desc">Instant auto-generation of Pareto Charts, Ishikawa Fishbone, Before/After Histograms, Control Charts (SPC), Scatter Correlation, Checksheets, and Stratification.</p>
+            </div>
+            <div class="pillar-card">
+                <h3 class="pillar-title">3. Govern (Review Gates)</h3>
+                <p class="pillar-desc">Multi-tier signoff workflows, stage-level revision requests, immutable audit logs, facilitator assistance channels, and executive ROI dashboards.</p>
+            </div>
+        </div>
+        <div class="workflow-strip">
+            <div class="workflow-steps">
+                <div class="wf-step">1. Identify Problem</div>
+                <div style="color:#94a3b8; font-weight:bold;">›</div>
+                <div class="wf-step">2. Root Cause RCA</div>
+                <div style="color:#94a3b8; font-weight:bold;">›</div>
+                <div class="wf-step">3. Implement Countermeasure</div>
+                <div style="color:#94a3b8; font-weight:bold;">›</div>
+                <div class="wf-step">4. Lock Standard (SOP)</div>
+            </div>
+            <div class="stats-dark-box">
+                <div class="stats-num">85% Faster</div>
+                <div class="stats-lbl">Project Completion vs Manual Paper A3</div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <div>3 | What is QCMS?</div>
+            <div>Accelerating Enterprise Excellence</div>
+        </div>
+    </div>
+
+    <!-- ── SLIDE 4: ROLE-WISE DATA FLOW ── -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <h2 class="slide-title">Role-Wise Data Flow &amp; Governance</h2>
+                <p class="slide-subtitle">Four distinct user tiers with strict role-based access control and tenant isolation.</p>
+            </div>
+            <div class="header-logo">QCMS Enterprise</div>
+        </div>
+        <div class="flow-matrix">
+            <div class="flow-header">
+                <div>User Tier / Role</div>
+                <div>Operational Data Flow</div>
+                <div>Core Data Entry</div>
+                <div>Executive Reports</div>
+            </div>
+            <div class="flow-row">
+                <div><span class="role-pill role-super">Super Admin</span><br><small style="color:#64748b; font-weight:600;">Platform Level</small></div>
+                <div class="flow-steps">
+                    <div class="f-box">Onboard Org</div><span style="color:#94a3b8;">→</span>
+                    <div class="f-box">Assign Plan &amp; Quota</div><span style="color:#94a3b8;">→</span>
+                    <div class="f-box">Global Stage Templates</div>
+                </div>
+                <div style="font-size:15px; font-weight:600; color:#334155;">Tenants · SaaS Plans · Platform Settings</div>
+                <div style="font-size:15px; font-weight:600; color:#475569;">Global Platform Analytics · Audit Logs</div>
+            </div>
+            <div class="flow-row">
+                <div><span class="role-pill role-ceo">Plant Head / CEO</span><br><small style="color:#64748b; font-weight:600;">Executive Level</small></div>
+                <div class="flow-steps">
+                    <div class="f-box">Set Plant KPI Targets</div><span style="color:#94a3b8;">→</span>
+                    <div class="f-box">Review Dept Health</div><span style="color:#94a3b8;">→</span>
+                    <div class="f-box">Approve ROI &amp; Rewards</div>
+                </div>
+                <div style="font-size:15px; font-weight:600; color:#334155;">Plant Config · Department Thresholds</div>
+                <div style="font-size:15px; font-weight:600; color:#166534;">CEO Cockpit · Plant OEE · PDF Export</div>
+            </div>
+            <div class="flow-row">
+                <div><span class="role-pill role-lead">Reviewer &amp; Facilitator</span><br><small style="color:#64748b; font-weight:600;">Governance Level</small></div>
+                <div class="flow-steps">
+                    <div class="f-box">Validate Stage 1-8</div><span style="color:#94a3b8;">→</span>
+                    <div class="f-box">Resolve Assistance</div><span style="color:#94a3b8;">→</span>
+                    <div class="f-box">Signoff Stage Gate</div>
+                </div>
+                <div style="font-size:15px; font-weight:600; color:#334155;">Review Decisions · Comments · Revisions</div>
+                <div style="font-size:15px; font-weight:600; color:#6b21a8;">Stage Gate Tracker · Reviewer Matrix</div>
+            </div>
+            <div class="flow-row">
+                <div><span class="role-pill role-member">Team Leader &amp; Members</span><br><small style="color:#64748b; font-weight:600;">Shopfloor Team Level</small></div>
+                <div class="flow-steps">
+                    <div class="f-box">5W2H Definition</div><span style="color:#94a3b8;">→</span>
+                    <div class="f-box">Interactive 7 QC Tools</div><span style="color:#94a3b8;">→</span>
+                    <div class="f-box">Submit Stage for Approval</div>
+                </div>
+                <div style="font-size:15px; font-weight:600; color:#334155;">7 QC Tools Data · 5-Why · Action 3W1H</div>
+                <div style="font-size:15px; font-weight:600; color:#92400e;">Project Case Study PDF · Kaizen Summary</div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <div>4 | Role-Wise Data Flow</div>
+            <div>Accelerating Enterprise Excellence</div>
+        </div>
+    </div>
+
+    <!-- ── SLIDE 5: SYSTEM ARCHITECTURE ── -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <h2 class="slide-title">High-Level System Architecture</h2>
+                <p class="slide-subtitle">Enterprise-grade multi-tenant stack engineered for high concurrency and audit compliance.</p>
+            </div>
+            <div class="header-logo">QCMS Enterprise</div>
+        </div>
+        <div class="arch-grid">
+            <div class="arch-sidebar">
+                <div class="arch-spec">
+                    <div class="spec-title">Frontend Architecture</div>
+                    <div class="spec-val">Responsive Glass UI + Bootstrap 5 + Lucide + Chart.js</div>
+                </div>
+                <div class="arch-spec">
+                    <div class="spec-title">Backend REST Engine</div>
+                    <div class="spec-val">Flask Python 3 + SQLAlchemy ORM + JWT Auth</div>
+                </div>
+                <div class="arch-spec">
+                    <div class="spec-title">Database &amp; Vector Store</div>
+                    <div class="spec-val">PostgreSQL with pgvector &amp; SQLite RLS Partitioning</div>
+                </div>
+                <div class="arch-spec">
+                    <div class="spec-title">AI &amp; RAG Assistant</div>
+                    <div class="spec-val">SentenceTransformers + MiniLM Local Vector Engine</div>
+                </div>
+                <div class="arch-spec">
+                    <div class="spec-title">Enterprise Security</div>
+                    <div class="spec-val">HTTPS / SSL · Tenant Isolation · AES API Keys</div>
+                </div>
+            </div>
+            <div class="arch-main">
+                <div style="font-weight:800; font-size:20px; color:#0f172a; margin-bottom:20px; text-transform:uppercase; letter-spacing:0.05em;">Core Enterprise Modules</div>
+                <div class="modules-grid">
+                    <div class="mod-card"><div style="font-size:24px; margin-bottom:8px;">📊</div>8-Stage 8D Workflow Engine</div>
+                    <div class="mod-card"><div style="font-size:24px; margin-bottom:8px;">📈</div>Automated 7 QC Tools Suite</div>
+                    <div class="mod-card"><div style="font-size:24px; margin-bottom:8px;">🛡️</div>Multi-Tier Reviewer Signoff</div>
+                    <div class="mod-card"><div style="font-size:24px; margin-bottom:8px;">🏭</div>Multi-Plant Partitioning</div>
+                    <div class="mod-card"><div style="font-size:24px; margin-bottom:8px;">🧠</div>AI Knowledge Repository (RAG)</div>
+                    <div class="mod-card"><div style="font-size:24px; margin-bottom:8px;">🎯</div>CEO &amp; Plant Executive Cockpit</div>
+                    <div class="mod-card"><div style="font-size:24px; margin-bottom:8px;">📜</div>Immutability Audit Logs</div>
+                    <div class="mod-card"><div style="font-size:24px; margin-bottom:8px;">📑</div>Executive PDF Export Engine</div>
+                </div>
+                <div style="background:#ffffff; border:1.5px dashed #cbd5e1; border-radius:14px; padding:20px; display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+                    <div style="font-weight:700; color:#334155; font-size:16px;">Third-Party Integrations:</div>
+                    <div style="font-size:15px; font-weight:600; color:#475569;">ZeptoMail / Resend SMTP · SAP / ERP REST Webhooks · Google Auth SSO · Active Directory</div>
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <div>5 | High-Level Architecture</div>
+            <div>Accelerating Enterprise Excellence</div>
+        </div>
+    </div>
+
+    <!-- ── SLIDE 6: PLANT HEAD & CEO DASHBOARD ── -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <h2 class="slide-title">Executive &amp; Plant Head Dashboard</h2>
+                <p class="slide-subtitle">A single real-time cockpit providing top-floor visibility into plant quality and financial ROI.</p>
+            </div>
+            <div class="header-logo">QCMS Enterprise</div>
+        </div>
+        <div class="dash-layout">
+            <div class="dash-mockup">
+                <div class="dash-topbar">
+                    <span style="font-weight:700; color:#ffffff;">Plant Executive Dashboard · Chennai Plant #1</span>
+                    <span>Date: 2026-08-18 · Export PDF</span>
+                </div>
+                <div class="dash-cards-row">
+                    <div class="mock-card">
+                        <div class="mock-lbl">Active Projects</div>
+                        <div class="mock-val">38</div>
+                        <div style="font-size:11px; color:#22c55e;">+12% vs last month</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">Project Success Rate</div>
+                        <div class="mock-val" style="color:#22c55e;">94.2%</div>
+                        <div style="font-size:11px; color:#94a3b8;">Above target (90%)</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">Cost Savings (YTD)</div>
+                        <div class="mock-val" style="color:#f59e0b;">₹1.42 Cr</div>
+                        <div style="font-size:11px; color:#22c55e;">Validated ROI</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">Avg Stage Cycle Time</div>
+                        <div class="mock-val">8.4d</div>
+                        <div style="font-size:11px; color:#22c55e;">-3.2d acceleration</div>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:14px; font-weight:700; color:#cbd5e1; margin-bottom:12px;">Department Performance &amp; Attention Index</div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+                        <span>Production Line A (96.5% · Active)</span>
+                        <span style="color:#22c55e;">● Optimal</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.05); padding:8px 0;">
+                        <span>Quality Assurance (91.0% · Active)</span>
+                        <span style="color:#22c55e;">● Optimal</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; padding-top:8px;">
+                        <span>Maintenance Unit 2 (68.4% · Stalled Stage 4)</span>
+                        <span style="color:#f59e0b;">▲ Attention Required</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dash-side-info">
+                <div class="side-info-card">
+                    <div class="side-info-title">📊 Real-Time Financial &amp; KPI Metrics</div>
+                    <div class="side-info-desc">Automatically tracks cost savings, KPI improvements, and annualized ROI from Stage 7 validations.</div>
+                </div>
+                <div class="side-info-card">
+                    <div class="side-info-title">⚠️ Automated Attention Flags</div>
+                    <div class="side-info-desc">Identifies stalled stages, SLA breaches, and inactive circles before deadlines are impacted.</div>
+                </div>
+                <div class="side-info-card">
+                    <div class="side-info-title">📑 1-Click Executive PDF Export</div>
+                    <div class="side-info-desc">Generates board-ready audit reports and department benchmark presentations instantly.</div>
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <div>6 | Plant Head Dashboard</div>
+            <div>Accelerating Enterprise Excellence</div>
+        </div>
+    </div>
+
+    <!-- ── SLIDE 7: REVIEWER & FACILITATOR DASHBOARD ── -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <h2 class="slide-title">Reviewer &amp; Facilitator Governance Hub</h2>
+                <p class="slide-subtitle">Rigorous stage-gate approvals, methodological guidance, and statistical validation oversight.</p>
+            </div>
+            <div class="header-logo">QCMS Enterprise</div>
+        </div>
+        <div class="dash-layout">
+            <div class="dash-mockup">
+                <div class="dash-topbar">
+                    <span style="font-weight:700; color:#ffffff;">Reviewer Portal · Governance &amp; Stage Gates</span>
+                    <span>Pending Reviews: 4</span>
+                </div>
+                <div class="dash-cards-row">
+                    <div class="mock-card">
+                        <div class="mock-lbl">Pending Reviews</div>
+                        <div class="mock-val" style="color:#f59e0b;">4</div>
+                        <div style="font-size:11px; color:#94a3b8;">Avg SLA: 24h</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">Approved Stages</div>
+                        <div class="mock-val" style="color:#22c55e;">128</div>
+                        <div style="font-size:11px; color:#22c55e;">96.8% First-time Pass</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">Revisions Requested</div>
+                        <div class="mock-val" style="color:#ef4444;">12</div>
+                        <div style="font-size:11px; color:#94a3b8;">Continuous Feedback</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">Facilitator Requests</div>
+                        <div class="mock-val" style="color:#a855f7;">2 Open</div>
+                        <div style="font-size:11px; color:#a855f7;">Methodology Support</div>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:14px; font-weight:700; color:#cbd5e1; margin-bottom:12px;">Active Stage Gate Reviews</div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+                        <span>PRJ-2026-038 · Stage 4: Root Cause Statistical Validation</span>
+                        <span style="color:#f59e0b;">Review Pending</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.05); padding:8px 0;">
+                        <span>PRJ-2026-032 · Stage 6: Countermeasure Implementation Plan</span>
+                        <span style="color:#22c55e;">Approved</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; padding-top:8px;">
+                        <span>PRJ-2026-029 · Stage 7: Control Chart Stability Verification</span>
+                        <span style="color:#ef4444;">Revision Required</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dash-side-info">
+                <div class="side-info-card">
+                    <div class="side-info-title">🛡️ Strict Stage-Gate Enforcement</div>
+                    <div class="side-info-desc">Teams cannot skip steps or jump to solutions without formal Reviewer approval of root causes.</div>
+                </div>
+                <div class="side-info-card">
+                    <div class="side-info-title">💬 Two-Way Facilitator Assistance</div>
+                    <div class="side-info-desc">Direct messaging and mentoring channels per stage to resolve tool selection and statistical doubts.</div>
+                </div>
+                <div class="side-info-card">
+                    <div class="side-info-title">🔒 Immutability Snapshots</div>
+                    <div class="side-info-desc">Approved stages are permanently snapshotted and locked for regulatory and audit compliance.</div>
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <div>7 | Reviewer Governance</div>
+            <div>Accelerating Enterprise Excellence</div>
+        </div>
+    </div>
+
+    <!-- ── SLIDE 8: TEAM MEMBER & LEADER 8D WORKSPACE ── -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <h2 class="slide-title">Team Leader &amp; Member 8D Workspace</h2>
+                <p class="slide-subtitle">Interactive quality tool workbench designed for high usability and intuitive team collaboration.</p>
+            </div>
+            <div class="header-logo">QCMS Enterprise</div>
+        </div>
+        <div class="dash-layout">
+            <div class="dash-mockup">
+                <div class="dash-topbar">
+                    <span style="font-weight:700; color:#ffffff;">Project #38 · Reduction of Line 1 Defect Rate (Stage 4)</span>
+                    <span>Status: In Progress</span>
+                </div>
+                <div class="dash-cards-row">
+                    <div class="mock-card">
+                        <div class="mock-lbl">Baseline KPI</div>
+                        <div class="mock-val">4.2%</div>
+                        <div style="font-size:11px; color:#94a3b8;">Starting Defect Rate</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">Target KPI</div>
+                        <div class="mock-val" style="color:#22c55e;">&lt; 1.0%</div>
+                        <div style="font-size:11px; color:#22c55e;">76% Reduction</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">P-Value</div>
+                        <div class="mock-val" style="color:#38bdf8;">0.012</div>
+                        <div style="font-size:11px; color:#22c55e;">Statistically Significant</div>
+                    </div>
+                    <div class="mock-card">
+                        <div class="mock-lbl">Projected Savings</div>
+                        <div class="mock-val" style="color:#f59e0b;">₹96k/mo</div>
+                        <div style="font-size:11px; color:#94a3b8;">Annualized ROI</div>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:14px; font-weight:700; color:#cbd5e1; margin-bottom:12px;">Active Interactive 7 QC Tools in Workspace</div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+                        <span>Fishbone (6M Cause Diagram) · 14 root causes mapped</span>
+                        <span style="color:#22c55e;">Completed</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.05); padding:8px 0;">
+                        <span>Pareto 80/20 Analysis · Top 2 defect drivers isolated</span>
+                        <span style="color:#22c55e;">Completed</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#94a3b8; padding-top:8px;">
+                        <span>Control Chart (SPC Before vs After) · UCL/LCL stability</span>
+                        <span style="color:#38bdf8;">In Verification</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dash-side-info">
+                <div class="side-info-card">
+                    <div class="side-info-title">🎯 Guided 8-Stage Progression</div>
+                    <div class="side-info-desc">Step-by-step forms pre-filled with project team metadata, automated dates, and 5W2H problem scoping.</div>
+                </div>
+                <div class="side-info-card">
+                    <div class="side-info-title">📐 Native 7 QC Tools Rendering</div>
+                    <div class="side-info-desc">No third-party drawing software needed—enter raw shopfloor data and instant charts render automatically.</div>
+                </div>
+                <div class="side-info-card">
+                    <div class="side-info-title">🤖 AI Quality Co-Pilot</div>
+                    <div class="side-info-desc">Instant historical suggestions from past archived projects across the enterprise.</div>
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <div>8 | 8D Workspace</div>
+            <div>Accelerating Enterprise Excellence</div>
+        </div>
+    </div>
+
+    <!-- ── SLIDE 9: THANK YOU ── -->
+    <div class="slide slide-closing">
+        <h1 class="closing-title">Thank You</h1>
+        <p class="closing-desc">Institutionalize quality. Empower shopfloor problem solvers. Accelerate enterprise operational excellence with QCMS.</p>
+        <div class="closing-badge">QCMS Enterprise OS · Redefining Operational Excellence</div>
+    </div>
+
+</body>
+</html>

@@ -271,19 +271,13 @@
                                 <div class="ds-card-body p-4">
                                     <div id="corporate-profile-completion-bar" class="mb-4"></div>
                                     <div class="row g-4">
-                                        <div class="col-md-4">
+                                        <div class="col-md-6">
                                             <div class="ds-field">
                                                 <label class="ds-label" data-i18n="settings.profile.legal_name">LEGAL ENTITY NAME <span class="text-danger">*</span></label>
                                                 <input type="text" class="ds-input" id="org_name" required placeholder="e.g. Acme Corp">
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
-                                            <div class="ds-field">
-                                                <label class="ds-label">ORGANIZATION CODE</label>
-                                                <input type="text" class="ds-input" id="org_code" placeholder="e.g. ACME-01">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-6">
                                             <div class="ds-field">
                                                 <label class="ds-label" data-i18n="settings.profile.industry">INDUSTRY SECTOR</label>
                                                 <select class="ds-input ds-select" id="org_industry">
@@ -4190,6 +4184,7 @@ console.log(data);
             }
 
             // Specific tab handlers
+            if (target === 'manual') this.renderDynamic8SUserManual();
             if (target === 'billing') this.loadBillingHistory();
             if (target === 'rbac') this.loadRolePermissions();
             if (target === 'audit') { window.location.href = '/admin/audit-logs.html'; return; }
@@ -4199,6 +4194,168 @@ console.log(data);
                         window.ComplianceEnterprise.init();
                     }
                 }, 50);
+            }
+        },
+
+        async renderDynamic8SUserManual() {
+            const accordion = document.getElementById('manualAccordion');
+            if (!accordion) return;
+
+            accordion.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-xs text-muted mt-2">Loading active 8S stage user manual...</p>
+                </div>
+            `;
+
+            try {
+                const res = await api.get('/admin/stages-template').catch(() => null);
+                const stages = (res && res.stages) ? res.stages : [];
+                
+                if (!stages || stages.length === 0) {
+                    accordion.innerHTML = `
+                        <div class="alert alert-warning p-4 text-center">
+                            <h6>No Stage Template Configured</h6>
+                            <p class="text-xs text-muted mb-0">Please configure your organization's 8D/8S stage template in Stage Settings.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const builtInObjectives = {
+                    1: "Establish cross-functional project charter, define problem with 5W2H framework, document baseline performance metrics, and set containment actions.",
+                    2: "Observe defect on shopfloor (Gemba), collect quantitative process data, analyze defect patterns, and stratify problem occurrence.",
+                    3: "Implement immediate containment measures, verify non-conforming product isolation, and prevent defective shipment.",
+                    4: "Conduct Ishikawa Fishbone analysis and 5-Why root cause verification to identify true technical and systemic root causes.",
+                    5: "Brainstorm, evaluate, and select permanent corrective actions (PCA) based on feasibility, cost, risk, and effectiveness.",
+                    6: "Implement selected PCAs, conduct process validation, measure trial runs, and verify defect elimination.",
+                    7: "Standardize process parameters, update SOPs/Control Plans, deploy error-proofing (Poka-Yoke), and horizontal rollout.",
+                    8: "Recognize team contributions, calculate financial savings, archive project lessons learned, and formally close project charter."
+                };
+
+                accordion.innerHTML = stages.map((stg, stgIdx) => {
+                    const stgNum = stg.stage_id || (stgIdx + 1);
+                    const origId = stg.original_id || stgNum;
+                    const stgTitle = QCMS.escapeHtml(stg.title || `Stage ${stgNum}`);
+                    const collapseId = `collapseStage${stgNum}`;
+
+                    const objectiveText = stg.objective || builtInObjectives[origId] || "Execute process improvement and quality control steps for this stage.";
+                    const sections = stg.sections || [];
+
+                    let sectionsHtml = '';
+                    if (sections.length === 0) {
+                        sectionsHtml = `
+                            <div class="p-3 text-center text-muted text-xs border rounded bg-white">
+                                <em>No sections or fields configured for this stage yet. Add components in Stage Template Editor to populate this manual.</em>
+                            </div>
+                        `;
+                    } else {
+                        sectionsHtml = sections.map((sec, secIdx) => {
+                            const secTitle = QCMS.escapeHtml(sec.label || sec.title || `Section ${stgNum}.${secIdx + 1}`);
+                            const secDesc = QCMS.escapeHtml(sec.description || sec.about || sec.purpose || '');
+                            
+                            // Extract fields
+                            let fieldsList = [];
+                            if (sec.fields && Array.isArray(sec.fields) && sec.fields.length > 0) {
+                                fieldsList = sec.fields;
+                            } else if (sec.predefined_fields && typeof sec.predefined_fields === 'object') {
+                                fieldsList = Object.entries(sec.predefined_fields).map(([fid, fcfg]) => ({
+                                    id: fid,
+                                    label: fcfg.label || fid,
+                                    type: fcfg.type || 'text',
+                                    required: fcfg.required !== false,
+                                    disabled: fcfg.disabled === true,
+                                    manual_description: fcfg.manual_description || fcfg.help_text,
+                                    sample_data: fcfg.sample_data || fcfg.sample
+                                })).filter(f => !f.disabled);
+                            }
+
+                            if (fieldsList.length === 0) {
+                                return `
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold text-primary mb-1 text-sm">${secTitle}</h6>
+                                        ${secDesc ? `<div class="p-2 mb-2 text-xs text-secondary bg-light border rounded"><i data-lucide="info" style="width:13px;height:13px;" class="text-primary me-1"></i>${secDesc}</div>` : ''}
+                                        <div class="p-3 text-xs text-muted border rounded bg-white">Standard input component & section guide for ${secTitle}.</div>
+                                    </div>
+                                `;
+                            }
+
+                            return `
+                                <div class="mb-4">
+                                    <h6 class="fw-bold text-primary mb-1 text-sm">${secTitle}</h6>
+                                    ${secDesc ? `<div class="p-2 mb-2 text-xs text-secondary bg-light border rounded"><i data-lucide="info" style="width:13px;height:13px;" class="text-primary me-1"></i>${secDesc}</div>` : ''}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered text-xs mb-0 align-middle">
+                                            <thead style="background:var(--ds-surface-raised)">
+                                                <tr>
+                                                    <th style="width: 20%">Field / Control</th>
+                                                    <th style="width: 15%">Type</th>
+                                                    <th style="width: 35%">Purpose & How to Use (User Guide)</th>
+                                                    <th style="width: 15%">System Integration</th>
+                                                    <th style="width: 15%">Sample Data</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${fieldsList.map(f => {
+                                                    const fLabel = QCMS.escapeHtml(f.label || f.name || 'Field Component');
+                                                    const isReq = f.required !== false;
+                                                    const fType = QCMS.escapeHtml(f.type || 'text');
+                                                    
+                                                    const desc = QCMS.escapeHtml(
+                                                        f.manual_description || f.help_text || f.purpose || f.placeholder ||
+                                                        `Complete ${fLabel} according to frontline quality guidelines.`
+                                                    );
+                                                    
+                                                    const sample = QCMS.escapeHtml(
+                                                        f.sample_data || f.sample ||
+                                                        (fType === 'number' ? '12.5' : (fType === 'select' ? 'Option 1' : 'Valid Entry'))
+                                                    );
+
+                                                    return `
+                                                        <tr>
+                                                            <td class="fw-semibold">
+                                                                ${fLabel}
+                                                                ${isReq ? '<span class="text-danger ms-0.5">*</span>' : ''}
+                                                            </td>
+                                                            <td><span class="badge bg-secondary-subtle text-dark border-0">${fType}</span></td>
+                                                            <td class="text-secondary">${desc}</td>
+                                                            <td class="text-muted">Saved to Stage ${stgNum}; included in PDF report and project analytics.</td>
+                                                            <td class="fw-medium text-success font-mono">'${sample}'</td>
+                                                        </tr>
+                                                    `;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+
+                    return `
+                        <div class="accordion-item glass-card mb-3 search-item" style="border: 1px solid var(--ds-border-color); border-radius: var(--radius-md); overflow: hidden;">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button ${stgIdx === 0 ? '' : 'collapsed'} fw-bold d-flex align-items-center gap-3 text-primary p-3" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" style="background: transparent; border: none; box-shadow: none;">
+                                    <span class="ds-icon-circle bg-primary-soft text-primary" style="width:28px;height:28px;font-size:.7rem;flex-shrink:0;">${stgNum}</span>
+                                    <span>${stgTitle}</span>
+                                </button>
+                            </h2>
+                            <div id="${collapseId}" class="accordion-collapse collapse ${stgIdx === 0 ? 'show' : ''}" data-bs-parent="#manualAccordion">
+                                <div class="accordion-body p-4 bg-light-subtle">
+                                    <div class="alert alert-primary mb-4 text-xs" style="background:rgba(var(--ds-primary-rgb),.05); border-left:4px solid var(--ds-primary);">
+                                        <strong>Objective</strong>: ${QCMS.escapeHtml(objectiveText)}
+                                    </div>
+                                    ${sectionsHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                console.error('Failed to load dynamic 8S User Manual:', e);
+                accordion.innerHTML = `<div class="alert alert-danger">Failed to load dynamic 8S User Manual.</div>`;
             }
         },
 
@@ -4926,7 +5083,6 @@ ET`;
 
             const payload = {
                 name: getV('org_name'),
-                org_code: getV('org_code'),
                 industry: getV('org_industry'),
                 admin_name: getV('org_admin_name'),
                 website: getV('org_website'),
@@ -4990,7 +5146,6 @@ ET`;
             if (!settings) return;
             const fields = [
                 { k: 'name', l: 'Legal Entity Name' },
-                { k: 'org_code', l: 'Organization Code' },
                 { k: 'industry', l: 'Industry Sector' },
                 { k: 'admin_name', l: 'Primary Admin Name' },
                 { k: 'website', l: 'Website URL' },
@@ -6283,18 +6438,29 @@ ET`;
             formData.append('file', fileInput.files[0]);
 
             try {
-                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                const token = (window.api && window.api.token) || sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+                const currentOrgId = sessionStorage.getItem('current_org_id') || localStorage.getItem('current_org_id') || '';
+                if (currentOrgId) formData.append('org_id', currentOrgId);
                 const res = await fetch('/api/billing/offline-payment/submit', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: formData
                 });
-                const data = await res.json();
+                let data = {};
+                try {
+                    data = await res.json();
+                } catch (_) {}
+
                 btn.disabled = false;
                 btn.innerHTML = 'Submit Proof';
 
                 if (res.ok && data.status === 'success') {
-                    alert(data.message || 'Your plan will be active within 24 hours');
+                    const successMsg = data.message || 'Your payment reference has been submitted successfully! Your plan will be activated within 24 hours after verification.';
+                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                        QCMS.toast(successMsg, 'success');
+                    } else {
+                        alert(successMsg);
+                    }
                     const modalEl = document.getElementById('checkoutModal');
                     if (modalEl) {
                         const modal = bootstrap.Modal.getInstance(modalEl);
@@ -6302,10 +6468,23 @@ ET`;
                     }
                     fetchOfflinePaymentStatus();
                 } else {
-                    alert(data.message || 'Submission failed. Please verify your details.');
+                    const errorMsg = data.message || data.error || (res.statusText ? `Request failed (${res.status}): ${res.statusText}` : 'Submission failed. Please verify your details.');
+                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                        QCMS.toast(errorMsg, 'error');
+                    } else {
+                        alert(errorMsg);
+                    }
+                    if (data.redirect) {
+                        setTimeout(() => { window.location.href = data.redirect; }, 2500);
+                    }
                 }
             } catch (err) {
-                alert('Error submitting payment proof: ' + (err.message || err));
+                const errMsg = err.message || String(err);
+                if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                    QCMS.toast('Error submitting payment proof: ' + errMsg, 'error');
+                } else {
+                    alert('Error submitting payment proof: ' + errMsg);
+                }
                 btn.disabled = false;
                 btn.innerHTML = 'Submit Proof';
             }

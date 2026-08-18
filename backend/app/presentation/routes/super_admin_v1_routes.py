@@ -268,13 +268,36 @@ def get_dashboard_stats():
         active_paid_amount += p_price
 
     arr_val = mrr_val * 12
-    # Paid orgs: only count subscriptions that are truly paid (exclude free trials)
-    paid_orgs_count = len(set(
-        s.org_id for s in active_subs
-        if s.org_id
-        and s.subscription_status not in ['Trialing', 'Trial', 'TRIAL']
-        and float(s.final_amount or s.base_price or 0.0) > 0
-    ))
+    
+    # Paid orgs: aggregate unique organizations with active paid subscriptions or completed payments
+    paid_org_ids = set()
+    for s in active_subs:
+        if not s.org_id or s.subscription_status in ['Trialing', 'Trial', 'TRIAL']:
+            continue
+        p_price = float(s.final_amount or s.base_price or 0.0)
+        if p_price == 0.0:
+            sp = SaaSPlan.query.filter(
+                db.or_(SaaSPlan.name == s.plan_name, SaaSPlan.code == s.plan_name)
+            ).first()
+            if sp:
+                pricing = SaaSPlanPricing.query.filter_by(plan_id=sp.id, is_active=True).first()
+                if pricing:
+                    p_price = float(pricing.price or 0.0)
+        if p_price > 0 or s.subscription_status in ['Active', 'ACTIVE', 'Paid', 'PAID']:
+            paid_org_ids.add(s.org_id)
+
+    pmt_orgs = db.session.query(SubscriptionPayment.org_id).join(
+        Organization, SubscriptionPayment.org_id == Organization.id
+    ).filter(
+        Organization.is_platform_org == False,
+        Organization.is_deleted == False,
+        SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID', 'SUCCESS'])
+    ).distinct().all()
+    for po in pmt_orgs:
+        if po[0]:
+            paid_org_ids.add(po[0])
+
+    paid_orgs_count = len(paid_org_ids)
 
     if revenue_in_period == 0.0 and active_paid_amount > 0.0:
         revenue_in_period = active_paid_amount

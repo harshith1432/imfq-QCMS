@@ -18,6 +18,49 @@
         .efficiency-progress { height: 6px; background: rgba(var(--ds-primary-rgb), 0.05); border-radius: 3px; overflow: hidden; margin-top: 4px; width: 100px; }
         .efficiency-fill { height: 100%; background: var(--ds-accent); }
         .ds-label { font-size: 12px !important; letter-spacing: 0.02em !important; }
+
+        /* Custom Floating Tooltip for Ref Number */
+        .ref-tooltip-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .ref-tooltip-wrapper .ref-tooltip-popup {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            right: -10px;
+            width: 270px;
+            background: #0f172a !important;
+            color: #ffffff !important;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.4) !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+            z-index: 999999 !important;
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+            transform: translateY(6px);
+            pointer-events: none;
+            text-align: left;
+            white-space: normal;
+        }
+        .ref-tooltip-wrapper .ref-tooltip-popup::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 14px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: #0f172a transparent transparent transparent;
+        }
+        .ref-tooltip-wrapper:hover .ref-tooltip-popup,
+        .ref-tooltip-wrapper:focus-within .ref-tooltip-popup {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
@@ -138,7 +181,7 @@
                                 <thead>
                                     <tr>
                                         <th>Project Identity</th>
-                                        <th>Leader / Team</th>
+                                        <th>Team Leader</th>
                                         <th>Current progress</th>
                                         <th>Efficiency</th>
                                         <th>Last Update</th>
@@ -260,8 +303,25 @@
                                 </div>
                                 <div class="col-md-2">
                                     <div class="ds-field">
-                                        <label class="ds-label"><i data-lucide="hash"></i> Ref. Number</label>
-                                        <input type="text" class="ds-input" id="projRefNumber" placeholder="Optional">
+                                        <label class="ds-label d-flex align-items-center justify-content-between mb-1">
+                                            <span class="d-flex align-items-center gap-1"><i data-lucide="hash"></i> Ref. Number</span>
+                                            <div class="ref-tooltip-wrapper" tabindex="0">
+                                                <i data-lucide="help-circle" class="text-primary" style="width:14px; height:14px; cursor:help;"></i>
+                                                <div class="ref-tooltip-popup">
+                                                    <strong class="d-block mb-1 text-white" style="font-size:12px; font-weight:700;">Source / Reference Number</strong>
+                                                    <div style="font-size: 11px; line-height: 1.4; color: #cbd5e1; margin-bottom: 6px;">
+                                                        Where did you get this idea from? If taken from an Idea Bank, Kaizen portal, or audit, enter its identification number.
+                                                    </div>
+                                                    <div style="font-size: 10.5px; color: #94a3b8; line-height: 1.5;">
+                                                        <strong class="text-white">Examples:</strong><br/>
+                                                        • <span class="text-info font-monospace">Idea Bank:</span> IDEA-2026-042 / KZ-102<br/>
+                                                        • <span class="text-warning font-monospace">Audit Log:</span> AUD-Q3-09 / NC-881<br/>
+                                                        • <span class="text-danger font-monospace">Ticket:</span> TKT-4050
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <input type="text" class="ds-input" id="projRefNumber" placeholder="e.g. IDEA-2026-042">
                                     </div>
                                 </div>
                             </div>
@@ -633,6 +693,12 @@
             await this.loadData();
             
             this.setupFilterListeners();
+            if (window.bootstrap && bootstrap.Tooltip) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                    let t = bootstrap.Tooltip.getInstance(el);
+                    if (!t) new bootstrap.Tooltip(el);
+                });
+            }
         },
 
         async handleDepartmentChange(deptId) {
@@ -661,12 +727,29 @@
                     memUrl += `plant_name=${encodeURIComponent(plantName)}&`;
                 }
 
-                // Fetch facilitators, reviewers, and team members for this department & location
-                const [facs, revs, members] = await Promise.all([
+                // Fetch facilitators, reviewers, and team members safely using Promise.allSettled
+                const [facsRes, revsRes, memsRes] = await Promise.allSettled([
                     api.get(facUrl),
                     api.get(revUrl),
                     api.get(memUrl)
                 ]);
+
+                const facs = facsRes.status === 'fulfilled' && Array.isArray(facsRes.value) ? facsRes.value : [];
+                const revs = revsRes.status === 'fulfilled' && Array.isArray(revsRes.value) ? revsRes.value : [];
+                let members = memsRes.status === 'fulfilled' && Array.isArray(memsRes.value) ? memsRes.value : [];
+
+                // Fallback: if department query returns empty or too few members, fetch plant-wide team members
+                if (!members || members.length <= 1) {
+                    try {
+                        const fallbackUrl = `/projects/potential-members?role=Team Member&ignore_dept=true${plantName ? '&plant_name=' + encodeURIComponent(plantName) : ''}`;
+                        const fallbackMems = await api.get(fallbackUrl);
+                        if (Array.isArray(fallbackMems) && fallbackMems.length > members.length) {
+                            members = fallbackMems;
+                        }
+                    } catch (eFb) {
+                        console.warn('Plant-wide team members fallback failed', eFb);
+                    }
+                }
                 
                 const facSel = document.getElementById('projFacilitator');
                 if (facSel) {
@@ -2363,12 +2446,15 @@
                 const leaderId = document.getElementById('govTeamLeaderSelect')?.value || null;
                 const facId = document.getElementById('govFacilitatorSelect')?.value || null;
                 const revId = document.getElementById('govReviewerSelect')?.value || null;
-                const memberIds = this.govDraftMembers.map(m => m.id);
+                const memberIds = (this.govDraftMembers || [])
+                    .map(m => (m && (m.id ?? m.user_id)))
+                    .filter(id => id != null && !isNaN(parseInt(id)))
+                    .map(id => parseInt(id));
 
                 const payload = {
-                    team_leader_id: leaderId ? parseInt(leaderId) : null,
-                    facilitator_id: facId ? parseInt(facId) : null,
-                    reviewer_id: revId ? parseInt(revId) : null,
+                    team_leader_id: (leaderId && !isNaN(parseInt(leaderId))) ? parseInt(leaderId) : null,
+                    facilitator_id: (facId && !isNaN(parseInt(facId))) ? parseInt(facId) : null,
+                    reviewer_id: (revId && !isNaN(parseInt(revId))) ? parseInt(revId) : null,
                     member_ids: memberIds
                 };
 

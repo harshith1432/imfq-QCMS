@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify, request
+import os
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, Subscription, SubscriptionPayment, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
 from app.presentation.middleware.middleware import super_admin_required, sub_role_write_required, sub_role_required, get_sa_permissions, _get_sa_sub_role
@@ -3270,6 +3271,7 @@ def get_global_stages_template():
 @super_admin_required()
 def save_global_stages_template():
     """Save or reset the Super Admin global 8-stage workflow template."""
+    import base64, secrets, os
     ps = PlatformSettings.query.first()
     if not ps:
         ps = PlatformSettings()
@@ -3307,16 +3309,88 @@ def save_global_stages_template():
             return jsonify({"status": "error", "message": "Every stage must have a non-empty title."}), 400
         seen_seq.add(sid)
 
+    release_notes = (data.get('release_notes') or '').strip()
+    preview_image = data.get('preview_image')
+
+    preview_image_url = None
+    preview_image_bytes = None
+    preview_image_mime = None
+    preview_image_filename = None
+
+    if preview_image and isinstance(preview_image, str) and preview_image.startswith('data:image'):
+        try:
+            header, encoded = preview_image.split(',', 1)
+            preview_image_bytes = base64.b64decode(encoded)
+            
+            ext = '.png'
+            if 'image/jpeg' in header or 'image/jpg' in header:
+                ext = '.jpg'
+                preview_image_mime = 'image/jpeg'
+            elif 'image/webp' in header:
+                ext = '.webp'
+                preview_image_mime = 'image/webp'
+            else:
+                preview_image_mime = 'image/png'
+
+            new_v = (ps.global_template_version or 1) + 1
+            preview_image_filename = f"template_v{new_v}_{secrets.token_hex(6)}{ext}"
+            
+            target_sub = 'template_previews'
+            primary_dir = os.path.abspath(os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), target_sub))
+            frontend_dir = os.path.abspath(os.path.join(current_app.root_path, '..', '..', 'frontend', 'uploads', target_sub))
+            
+            os.makedirs(primary_dir, exist_ok=True)
+            os.makedirs(frontend_dir, exist_ok=True)
+
+            with open(os.path.join(primary_dir, preview_image_filename), 'wb') as pf:
+                pf.write(preview_image_bytes)
+            with open(os.path.join(frontend_dir, preview_image_filename), 'wb') as ff:
+                ff.write(preview_image_bytes)
+
+            preview_image_url = f"/uploads/template_previews/{preview_image_filename}"
+        except Exception as img_err:
+            print(f"[QCMS] Error saving template preview image: {img_err}")
+            preview_image_url = None
+    elif preview_image and isinstance(preview_image, str) and not preview_image.startswith('data:'):
+        preview_image_url = preview_image
+
     ps.global_stages_config = stages
     ps.global_template_version = (ps.global_template_version or 1) + 1
     ps.global_template_updated_at = datetime.utcnow()
+    ps.global_template_release_notes = release_notes or None
+    ps.global_template_preview_image = preview_image_url or None
+
+    # Compute structured change highlights
+    change_highlights = []
+    default_map = {d["stage_id"]: d for d in Organization.DEFAULT_STAGES_CONFIG}
+    for s in stages:
+        sid = s.get('stage_id')
+        stitle = s.get('title', f'Stage {sid}')
+        d_stage = default_map.get(sid, {})
+        d_sec_ids = {sec.get('id') for sec in d_stage.get('sections', [])}
+        
+        s_secs = s.get('sections', [])
+        for sec in s_secs:
+            sec_id = str(sec.get('id', ''))
+            sec_label = sec.get('label') or sec.get('title') or 'Section'
+            if sec_id not in d_sec_ids or '_custom_sec_' in sec_id or sec_id.startswith('sec_') or sec.get('type') == 'custom':
+                fields_count = len(sec.get('fields', []))
+                field_names = [f.get('label') or f.get('type') or 'Field' for f in (sec.get('fields') or [])]
+                field_str = f" ({len(field_names)} input elements: {', '.join(field_names)})" if field_names else ""
+                change_highlights.append(f"<strong>Stage {sid} ({stitle})</strong> &rarr; New Section: <strong>{sec_label}</strong>{field_str}")
+            else:
+                d_sec = next((ds for ds in d_stage.get('sections', []) if ds.get('id') == sec_id), None)
+                d_fields = {f.get('id') for f in (d_sec.get('fields') or [])} if d_sec else set()
+                for f in (sec.get('fields') or []):
+                    if f.get('id') not in d_fields:
+                        change_highlights.append(f"<strong>Stage {sid} ({stitle}) &rarr; {sec_label}</strong> &rarr; New element: <strong>{f.get('label', 'Field')}</strong> ({f.get('type', 'text')})")
 
     # Mark all active organizations as having a pending template update
     Organization.query.filter_by(is_deleted=False).update({"has_pending_template_update": True})
     db.session.commit()
 
     # Offload all in-app Notifications & email alerts to background thread for instant HTTP response
-    def _async_notify_and_email(app_obj, version):
+    def _async_notify_and_email(app_obj, version, rel_notes, prev_img_url, prev_img_bytes, prev_img_mime, prev_img_filename, changes):
         with app_obj.app_context():
             try:
                 from app.infrastructure.database.models.models import User, Role, Notification, db
@@ -3327,30 +3401,154 @@ def save_global_stages_template():
                     User.is_active == True
                 ).all()
 
+                app_url = EmailUtils._get_app_url()
+                action_url = f"{app_url}/admin/stage-template.html"
+
+                # Build highlights HTML
+                highlights_html = ""
+                if changes:
+                    items_li = "".join([f"<li style='margin-bottom: 6px; color: #334155;'>{c}</li>" for c in changes])
+                    highlights_html = f"""
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
+                        <div style="font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 10px;">
+                            Summary of What Was Added &amp; Updated
+                        </div>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
+                            {items_li}
+                        </ul>
+                    </div>
+                    """
+
+                # Build release notes HTML
+                notes_html = ""
+                if rel_notes:
+                    notes_html = f"""
+                    <div style="background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 4px 8px 8px 4px; padding: 16px 20px; margin: 20px 0;">
+                        <div style="font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #1d4ed8; margin-bottom: 8px;">
+                            Release Notes &amp; Recommended Use Case
+                        </div>
+                        <div style="color: #1e3a8a; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">{rel_notes}</div>
+                    </div>
+                    """
+
+                # Build preview image HTML & email attachment
+                image_html = ""
+                attachments_list = []
+                if prev_img_url:
+                    full_img_url = prev_img_url if str(prev_img_url).startswith('http') else f"{app_url}{prev_img_url}"
+                    image_html = f"""
+                    <div style="margin: 24px 0; text-align: center;">
+                        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 10px; letter-spacing: 0.05em;">
+                            Feature Layout &amp; Workflow Preview
+                        </div>
+                        <div style="display: inline-block; max-width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 6px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
+                            <img src="{full_img_url}" alt="Global Template Preview" style="max-width: 100%; max-height: 480px; height: auto; border-radius: 6px; display: block; margin: 0 auto;" />
+                        </div>
+                    </div>
+                    """
+                    if prev_img_bytes and prev_img_filename:
+                        attachments_list.append({
+                            "content": prev_img_bytes,
+                            "mime_type": prev_img_mime or "image/png",
+                            "filename": prev_img_filename,
+                            "name": prev_img_filename
+                        })
+
                 for admin in admin_users:
                     try:
                         notif = Notification(
                             org_id=admin.org_id,
                             user_id=admin.id,
                             title="Global Workflow Template Update Available",
-                            message=f"A new Global 8-Stage Workflow Template (v{version}) has been published by Super Admin. Please review and apply the update in Admin Settings.",
+                            message=f"Global 8-Stage Workflow Template (v{version}) published by Super Admin with new capabilities. Review and synchronize in Admin Settings.",
                             link="/admin/stage-template.html"
                         )
                         db.session.add(notif)
                         db.session.commit()
 
+                        html_body = f"""
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="utf-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Global 8-Stage Workflow Template Update</title>
+                        </head>
+                        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;">
+                                <tr>
+                                    <td align="center" style="padding: 30px 15px;">
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+                                            <!-- Header Accent Strip -->
+                                            <tr>
+                                                <td style="background: linear-gradient(135deg, #0ea5e9, #6366f1, #8b5cf6); height: 6px;"></td>
+                                            </tr>
+                                            <!-- Header Bar -->
+                                            <tr>
+                                                <td style="padding: 24px 30px 16px 30px; border-bottom: 1px solid #f1f5f9;">
+                                                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                                        <tr>
+                                                            <td>
+                                                                <div style="font-weight: 800; font-size: 18px; color: #0f172a; letter-spacing: -0.02em;">QCMS <span style="color: #6366f1; font-weight: 500;">ENTERPRISE OS</span></div>
+                                                                <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Global Quality &amp; Continuous Improvement Operating System</div>
+                                                            </td>
+                                                            <td align="right">
+                                                                <span style="background: #e0e7ff; color: #4338ca; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; display: inline-block;">
+                                                                    Template v{version}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                            <!-- Main Content -->
+                                            <tr>
+                                                <td style="padding: 28px 30px 24px 30px; color: #334155; font-size: 15px; line-height: 1.6;">
+                                                    <p style="margin: 0 0 16px 0; font-size: 16px;">Dear <strong>{admin.username}</strong>,</p>
+                                                    <p style="margin: 0 0 16px 0; color: #475569;">
+                                                        Super Admin has published a new <strong>Global 8-Stage Workflow Template (v{version})</strong> update with enhanced sections, structured inputs, and QC tools for all organizations.
+                                                    </p>
+
+                                                    {notes_html}
+                                                    {highlights_html}
+                                                    {image_html}
+
+                                                    <div style="margin: 28px 0 20px 0; text-align: center;">
+                                                        <a href="{action_url}" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; padding: 13px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79,70,229,0.3);">
+                                                            Review &amp; Apply Changes in Portal &rarr;
+                                                        </a>
+                                                    </div>
+
+                                                    <p style="margin: 20px 0 0 0; font-size: 13px; color: #64748b; text-align: center; line-height: 1.5;">
+                                                        <em>Tip: In your Admin Settings, you can choose to <strong>"Merge Updates"</strong> to adopt the new features while safely keeping all your organization's custom cards.</em>
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                            <!-- Footer -->
+                                            <tr>
+                                                <td style="padding: 20px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+                                                    This is an automated system notification sent to Organization Administrators.<br>
+                                                    &copy; 2026 IFQM QCMS Enterprise Operating System. All rights reserved.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </body>
+                        </html>
+                        """
+
                         EmailUtils.send_email(
                             to_email=admin.email,
                             subject=f"Notice: New Global 8-Stage Workflow Template (v{version}) Available",
-                            html_content=f"""<p>Dear <strong>{admin.username}</strong>,</p>
-<p>Super Admin has published a new <strong>Global 8-Stage Workflow Template (v{version})</strong> update.</p>
-<p>To review changes and synchronize your organization template, navigate to <strong>Admin Settings &gt; Stage Configuration Template</strong> and click <em>Review &amp; Apply Global Template Changes</em>.</p>""",
-                            email_type="general",
-                            org_id=admin.org_id
+                            html_content=html_body,
+                            email_type="announcement",
+                            org_id=admin.org_id,
+                            attachments=attachments_list if attachments_list else None
                         )
-                    except Exception as single_err:
+                    except Exception as email_err:
                         db.session.rollback()
-                        print(f"[QCMS] Async notification error for admin {admin.id}: {single_err}")
             except Exception as bg_err:
                 print(f"[QCMS] Global template async notification error: {bg_err}")
 
@@ -3358,11 +3556,24 @@ def save_global_stages_template():
         import threading
         from flask import current_app
         app_obj = current_app._get_current_object()
-        threading.Thread(target=_async_notify_and_email, args=(app_obj, ps.global_template_version), daemon=True).start()
+        threading.Thread(
+            target=_async_notify_and_email,
+            args=(
+                app_obj,
+                ps.global_template_version,
+                release_notes,
+                preview_image_url,
+                preview_image_bytes,
+                preview_image_mime,
+                preview_image_filename,
+                change_highlights
+            ),
+            daemon=True
+        ).start()
     except Exception as t_err:
         print(f"[QCMS] Could not spawn background notification thread: {t_err}")
 
-    log_admin_action("GLOBAL_STAGES_TEMPLATE_PUBLISHED", target_type="GlobalStageTemplate", details={"version": ps.global_template_version, "stages_count": len(stages)})
+    log_admin_action("GLOBAL_STAGES_TEMPLATE_PUBLISHED", target_type="GlobalStageTemplate", details={"version": ps.global_template_version, "stages_count": len(stages), "has_release_notes": bool(release_notes), "has_preview_image": bool(preview_image_url)})
 
     return jsonify({
         "status": "success",

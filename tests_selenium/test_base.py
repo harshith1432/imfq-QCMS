@@ -1,6 +1,5 @@
 """
-Selenium Master Test Suite for QCMS Enterprise OS
-Checks every single module, route, and feature of the platform.
+Base Test Framework and Utilities for QCMS Deep Selenium Testing
 """
 
 import os
@@ -21,57 +20,116 @@ BASE_URL = "http://127.0.0.1:5000"
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "screenshots")
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
-class TestReport:
+# User credentials provided
+TEST_USERS = {
+    "SuperAdmin": {"email": "harshithkd6@gmail.com", "pass": "123456", "role": "SuperAdmin"},
+    "Admin": {"email": "gelala@fxzig.com", "pass": "Himnish@123", "role": "Admin"},
+    "Reviewer": {"email": "sameer.kumar57@example.com", "pass": "Welcome@123", "role": "Reviewer"},
+    "Facilitator": {"email": "priti.trivedi120@example.com", "pass": "Welcome@123", "role": "Facilitator"},
+    "TeamMember1": {"email": "nitin.murthy9@example.com", "pass": "Welcome@123", "role": "Team Member"},
+    "CEO": {"email": "Ajay@gmail.com", "pass": "Welcome@123", "role": "CEO"},
+    "TeamMember2": {"email": "kavya.raghavan174@example.com", "pass": "Welcome@123", "role": "Team Member"},
+}
+
+class DetailedTestReport:
     def __init__(self):
         self.results = []
         self.start_time = time.time()
+        self.category_counts = {}
 
-    def record(self, category, name, status, details="", duration=0.0):
-        self.results.append({
+    def record(self, category, name, route, action, expected, actual, status, screenshot_path=None, duration=0.0, notes=""):
+        res = {
+            "id": len(self.results) + 1,
             "category": category,
             "name": name,
-            "status": status,  # PASS, FAIL, SKIP, WARN
-            "details": details,
+            "route": route,
+            "action": action,
+            "expected": expected,
+            "actual": actual,
+            "status": status,  # PASS, FAIL, WARN, BLOCKED
+            "screenshot": screenshot_path or "",
             "duration": round(duration, 3),
-            "timestamp": datetime.now().isoformat()
-        })
+            "notes": notes,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        self.results.append(res)
+        self.category_counts[category] = self.category_counts.get(category, 0) + 1
+        
         status_symbol = "[PASS]" if status == "PASS" else "[FAIL]" if status == "FAIL" else "[WARN]"
-        print(f"{status_symbol} [{category}] {name} ({round(duration, 2)}s) - {details[:100]}")
+        print(f"{status_symbol} [#{res['id']}] [{category}] {name} ({round(duration, 2)}s) -> {status}", flush=True)
 
     def summary(self):
         total = len(self.results)
         passed = sum(1 for r in self.results if r["status"] == "PASS")
         failed = sum(1 for r in self.results if r["status"] == "FAIL")
         warned = sum(1 for r in self.results if r["status"] == "WARN")
-        skipped = sum(1 for r in self.results if r["status"] == "SKIP")
+        blocked = sum(1 for r in self.results if r["status"] == "BLOCKED")
         total_time = round(time.time() - self.start_time, 2)
+        
+        categories_breakdown = {}
+        for r in self.results:
+            cat = r["category"]
+            if cat not in categories_breakdown:
+                categories_breakdown[cat] = {"total": 0, "passed": 0, "failed": 0, "warned": 0, "blocked": 0}
+            categories_breakdown[cat]["total"] += 1
+            categories_breakdown[cat][r["status"].lower()] += 1
+
         return {
-            "total": total,
+            "total_test_cases": total,
             "passed": passed,
             "failed": failed,
             "warned": warned,
-            "skipped": skipped,
+            "blocked": blocked,
             "pass_rate": f"{(passed / total * 100):.1f}%" if total > 0 else "0%",
             "total_time_seconds": total_time,
+            "categories": categories_breakdown,
             "results": self.results
         }
 
-def create_driver():
+def create_driver(window_size=(1600, 1000)):
     options = ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1600,1000")
+    options.add_argument(f"--window-size={window_size[0]},{window_size[1]}")
     options.add_argument("--log-level=3")
     driver = webdriver.Chrome(options=options)
-    driver.implicitly_wait(4)
+    driver.implicitly_wait(3)
     return driver
 
-def save_screenshot(driver, name):
+def capture_screen(driver, name):
     try:
-        path = os.path.join(SCREENSHOT_DIR, f"{name}_{int(time.time())}.png")
+        clean_name = "".join(c for c in name if c.isalnum() or c in ('_', '-'))
+        filename = f"{clean_name}_{int(time.time()*1000)}.png"
+        path = os.path.join(SCREENSHOT_DIR, filename)
         driver.save_screenshot(path)
         return path
+    except Exception as e:
+        print(f"[!] Screenshot failed: {e}")
+        return ""
+
+def login_as(driver, email, password):
+    driver.get(f"{BASE_URL}/auth/login.html")
+    time.sleep(1.2)
+    user_inp = driver.find_elements(By.CSS_SELECTOR, "#username, input[type='text'], input[type='email']")
+    pass_inp = driver.find_elements(By.CSS_SELECTOR, "#password, input[type='password']")
+    btn = driver.find_elements(By.CSS_SELECTOR, "button[type='submit'], #login-btn, .btn-primary")
+    
+    if user_inp and pass_inp and btn:
+        user_inp[0].clear()
+        user_inp[0].send_keys(email)
+        pass_inp[0].clear()
+        pass_inp[0].send_keys(password)
+        btn[0].click()
+        time.sleep(2)
+        return True
+    return False
+
+def logout(driver):
+    try:
+        driver.execute_script("localStorage.clear(); sessionStorage.clear();")
+        driver.get(f"{BASE_URL}/auth/login.html")
+        time.sleep(1)
     except Exception:
-        return None
+        pass

@@ -7,7 +7,7 @@ const AnnouncementsModule = {
     containerId: null,
     currentTab: 'dashboard', // dashboard, list, wizard, kb, ai
     currentPage: 1,
-    perPage: 20,
+    perPage: 10,
     sortBy: 'created_at',
     sortOrder: 'desc',
     searchQuery: '',
@@ -129,28 +129,28 @@ const AnnouncementsModule = {
                         <!-- Step Indicator Progress Bar -->
                         <div class="px-4 pt-3">
                             <div class="d-flex justify-content-between text-xs text-muted mb-2">
-                                <span class="step-lbl-1 fw-bold text-primary">1. Basic Info</span>
-                                <span class="step-lbl-2">2. Audience Targeting</span>
-                                <span class="step-lbl-3">3. Channels</span>
-                                <span class="step-lbl-4">4. Scheduling</span>
-                                <span class="step-lbl-5">5. Review</span>
+                                <span class="ann-step-lbl-1 fw-bold text-primary">1. Basic Info</span>
+                                <span class="ann-step-lbl-2">2. Audience Targeting</span>
+                                <span class="ann-step-lbl-3">3. Channels</span>
+                                <span class="ann-step-lbl-4">4. Scheduling</span>
+                                <span class="ann-step-lbl-5">5. Review</span>
                             </div>
                             <div class="progress" style="height: 6px; background:rgba(255,255,255,0.06);">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="wizardProgressBar" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="annWizardProgressBar" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
                         </div>
 
-                        <div class="modal-body p-4" id="wizardBodyContent" style="max-height: 65vh; overflow-y: auto;">
+                        <div class="modal-body p-4" id="annWizardBodyContent" style="max-height: 65vh; overflow-y: auto;">
                             <!-- Injected dynamically -->
                         </div>
 
                         <div class="modal-footer d-flex justify-content-between align-items-center px-4 py-3" style="border-top:1px solid var(--ds-border-color); background:rgba(0,0,0,0.1);">
-                            <div class="text-xs text-secondary fw-semibold" id="wizStepIndicatorText">Step 1 of 5</div>
+                            <div class="text-xs text-secondary fw-semibold" id="annWizStepIndicatorText">Step 1 of 5</div>
                             <div class="d-flex align-items-center gap-2">
-                                <button class="ds-btn ds-btn-secondary ds-btn-sm px-3" id="wizPrevBtn" onclick="AnnouncementsModule.prevStep()" style="display:none !important;">
+                                <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm px-3" id="annWizPrevBtn" onclick="AnnouncementsModule.prevStep()">
                                     <i data-lucide="arrow-left" style="width:14px;height:14px;" class="me-1"></i> Back
                                 </button>
-                                <button class="ds-btn ds-btn-primary ds-btn-sm px-4" id="wizNextBtn" onclick="AnnouncementsModule.nextStep()">Next</button>
+                                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm px-4" id="annWizNextBtn" onclick="AnnouncementsModule.nextStep()">Next</button>
                             </div>
                         </div>
                     </div>
@@ -772,11 +772,11 @@ const AnnouncementsModule = {
     },
 
     renderWizardStep() {
-        const body = document.getElementById('wizardBodyContent');
-        const nextBtn = document.getElementById('wizNextBtn');
-        const prevBtn = document.getElementById('wizPrevBtn');
-        const stepText = document.getElementById('wizStepIndicatorText');
-        const progressBar = document.getElementById('wizardProgressBar');
+        const body = document.getElementById('annWizardBodyContent');
+        const nextBtn = document.getElementById('annWizNextBtn');
+        const prevBtn = document.getElementById('annWizPrevBtn');
+        const stepText = document.getElementById('annWizStepIndicatorText');
+        const progressBar = document.getElementById('annWizardProgressBar');
         if (!body) return;
 
         // Progress bar percentage calculation
@@ -786,38 +786,44 @@ const AnnouncementsModule = {
 
         // Update indicator labels
         for (let i = 1; i <= 5; i++) {
-            const lbl = document.querySelector(`.step-lbl-${i}`);
+            const lbl = document.querySelector(`.ann-step-lbl-${i}`);
             if (lbl) {
                 lbl.style.cursor = 'pointer';
                 lbl.onclick = () => {
                     if (i < this.wizardStep) {
+                        this.saveCurrentStepData();
                         this.wizardStep = i;
                         this.renderWizardStep();
                     }
                 };
                 if (i === this.wizardStep) {
-                    lbl.className = `step-lbl-${i} fw-bold text-primary`;
+                    lbl.className = `ann-step-lbl-${i} fw-bold text-primary`;
                 } else if (i < this.wizardStep) {
-                    lbl.className = `step-lbl-${i} text-success fw-semibold`;
+                    lbl.className = `ann-step-lbl-${i} text-success fw-semibold`;
                 } else {
-                    lbl.className = `step-lbl-${i} text-muted`;
+                    lbl.className = `ann-step-lbl-${i} text-muted`;
                 }
             }
         }
 
-        if (this.wizardStep === 1) {
-            if (prevBtn) {
-                prevBtn.style.setProperty('display', 'none', 'important');
+        if (prevBtn) {
+            if (this.wizardStep === 1) {
+                prevBtn.style.display = 'none';
                 prevBtn.classList.add('d-none');
-            }
-        } else {
-            if (prevBtn) {
-                prevBtn.style.setProperty('display', 'inline-flex', 'important');
+            } else {
+                prevBtn.style.display = 'inline-flex';
                 prevBtn.classList.remove('d-none');
             }
         }
         if (nextBtn) {
-            nextBtn.textContent = this.wizardStep === 5 ? 'Finish & Create' : 'Next';
+            nextBtn.disabled = false;
+            if (this.wizardStep === 5) {
+                nextBtn.className = 'ds-btn ds-btn-success ds-btn-sm px-4 fw-bold shadow-sm';
+                nextBtn.innerHTML = '<i data-lucide="send" style="width:14px;height:14px;" class="me-1"></i> Submit Announcement';
+            } else {
+                nextBtn.className = 'ds-btn ds-btn-primary ds-btn-sm px-4 shadow-sm';
+                nextBtn.innerHTML = 'Next <i data-lucide="arrow-right" style="width:14px;height:14px;" class="ms-1"></i>';
+            }
         }
 
         if (this.wizardStep === 1) {
@@ -970,17 +976,55 @@ const AnnouncementsModule = {
                 </div>
             `;
         } else if (this.wizardStep === 5) {
+            const prio = this.wizardData.priority || 'Medium';
+            const cat = this.wizardData.category || 'General';
+            
+            const prioConfig = {
+                'Critical': { style: 'background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);', icon: 'alert-octagon' },
+                'High': { style: 'background: rgba(249, 115, 22, 0.12); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.3);', icon: 'alert-triangle' },
+                'Medium': { style: 'background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);', icon: 'info' },
+                'Low': { style: 'background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);', icon: 'check-circle' }
+            };
+            const pConf = prioConfig[prio] || prioConfig['Medium'];
+
             body.innerHTML = `
                 <div class="d-flex flex-column gap-3">
-                    <span class="text-xs fw-semibold text-secondary">Confirm Details Before Delivery</span>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="text-xs fw-semibold text-secondary text-uppercase tracking-wider">Confirm Details Before Delivery</span>
+                        <span class="badge bg-success-subtle text-success border px-2 py-0.5 text-xxs font-monospace">Ready to Dispatch</span>
+                    </div>
                     
-                    <div class="p-3 border rounded" style="background:rgba(255,255,255,0.01); border-color:var(--ds-border-color)!important;">
-                        <h6 class="fw-bold text-main mb-1">${this.wizardData.title || '[Untitled]'}</h6>
-                        <span class="badge bg-primary bg-opacity-15 text-primary text-xxs mb-3">${this.wizardData.category} · ${this.wizardData.priority}</span>
-                        <p class="text-xs text-muted mb-2">${this.wizardData.body ? (this.wizardData.body.length > 120 ? this.wizardData.body.substring(0, 120) + '...' : this.wizardData.body) : 'No message content configured.'}</p>
-                        <div class="text-xxs text-secondary border-top pt-2">
-                            <span>Status: ${this.wizardData.action.toUpperCase()}</span> ·
-                            <span>Audience: ${this.wizardData.audience_type === 'all' ? 'All Organizations' : `${this.wizardData.audience.length} Criteria rules`}</span>
+                    <div class="p-3.5 border rounded-3" style="background: var(--ds-bg-subtle, rgba(255,255,255,0.02)); border-color: var(--ds-border-color) !important;">
+                        <h6 class="fw-bold text-main mb-2 text-base">${QCMS.escapeHtml(this.wizardData.title || '[Untitled Announcement]')}</h6>
+                        
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge rounded-pill px-2.5 py-1 text-xxs fw-semibold" style="background: rgba(99, 102, 241, 0.12); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.25);">
+                                <i data-lucide="tag" style="width:11px;height:11px;" class="me-1"></i>${QCMS.escapeHtml(cat)}
+                            </span>
+                            <span class="badge rounded-pill px-2.5 py-1 text-xxs fw-semibold" style="${pConf.style}">
+                                <i data-lucide="${pConf.icon}" style="width:11px;height:11px;" class="me-1"></i>${QCMS.escapeHtml(prio)} Priority
+                            </span>
+                        </div>
+
+                        ${this.wizardData.summary ? `<p class="text-xs fw-semibold text-secondary mb-2">${QCMS.escapeHtml(this.wizardData.summary)}</p>` : ''}
+                        
+                        <div class="p-3 rounded-2 text-xs text-muted mb-3" style="background: rgba(0,0,0,0.06); border: 1px solid var(--ds-border-color); line-height: 1.6; max-height: 140px; overflow-y: auto;">
+                            ${this.wizardData.body ? QCMS.escapeHtml(this.wizardData.body).replace(/\n/g, '<br>') : '<em>No message content configured.</em>'}
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 text-xxs text-secondary border-top pt-2.5">
+                            <div>
+                                <span class="fw-semibold text-muted">Status / Action:</span>
+                                <span class="badge bg-secondary-subtle text-main border ms-1 font-monospace">${this.wizardData.action.toUpperCase()}</span>
+                            </div>
+                            <div>
+                                <span class="fw-semibold text-muted">Audience:</span>
+                                <span class="ms-1 fw-bold text-main">${this.wizardData.audience_type === 'all' ? 'All Organizations' : `${this.wizardData.audience.length} Targeted Groups`}</span>
+                            </div>
+                            <div>
+                                <span class="fw-semibold text-muted">Channels:</span>
+                                <span class="ms-1">${this.wizardData.channels.in_app ? '📢 In-App' : ''}${this.wizardData.channels.email ? ' · ✉️ Email' : ''}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1210,7 +1254,28 @@ const AnnouncementsModule = {
         if (window.lucide) lucide.createIcons();
     },
 
+    saveCurrentStepData() {
+        if (this.wizardStep === 1) {
+            const titleEl = document.getElementById('wizTitle');
+            const bodyEl = document.getElementById('wizBody');
+            const catEl = document.getElementById('wizCategory');
+            const prioEl = document.getElementById('wizPriority');
+            if (titleEl) this.wizardData.title = titleEl.value;
+            if (bodyEl) this.wizardData.body = bodyEl.value;
+            if (catEl) this.wizardData.category = catEl.value;
+            if (prioEl) this.wizardData.priority = prioEl.value;
+        } else if (this.wizardStep === 4) {
+            const actionEl = document.getElementById('wizActionType');
+            const pubEl = document.getElementById('wizPublishAt');
+            const expEl = document.getElementById('wizExpiresAt');
+            if (actionEl) this.wizardData.action = actionEl.value;
+            if (pubEl) this.wizardData.publish_at = pubEl.value;
+            if (expEl) this.wizardData.expires_at = expEl.value;
+        }
+    },
+
     prevStep() {
+        this.saveCurrentStepData();
         if (this.wizardStep > 1) {
             this.wizardStep--;
             this.renderWizardStep();
@@ -1218,6 +1283,7 @@ const AnnouncementsModule = {
     },
 
     async nextStep() {
+        this.saveCurrentStepData();
         if (this.wizardStep < 5) {
             if (this.wizardStep === 1) {
                 if (!this.wizardData.title.trim()) {
@@ -1238,6 +1304,19 @@ const AnnouncementsModule = {
     },
 
     async submitWizard() {
+        if (this.isSubmitting) return;
+        this.isSubmitting = true;
+
+        const nextBtn = document.getElementById('annWizNextBtn');
+        const prevBtn = document.getElementById('annWizPrevBtn');
+        if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:14px;height:14px;"></span> Submitting & Broadcasting...';
+        }
+        if (prevBtn) {
+            prevBtn.disabled = true;
+        }
+
         try {
             // Process times into ISO payload
             let payload = { ...this.wizardData };
@@ -1251,22 +1330,43 @@ const AnnouncementsModule = {
             }
 
             const res = await api.post('/announcements/', payload);
-            if (res.status === 'success') {
-                QCMS.toast('Broadcast successfully initialized!', 'success');
+            if (res && res.status === 'success') {
+                QCMS.toast('Announcement successfully broadcasted and published!', 'success');
                 window.dispatchEvent(new CustomEvent('qcms:announcement-published'));
-                if (window.GlobalAnnouncementBanner) {
-                    window.GlobalAnnouncementBanner.fetchActiveAnnouncements();
+                if (window.QCMS && typeof QCMS.loadNotifications === 'function') {
+                    QCMS.loadNotifications();
                 }
-                const modalEl = document.getElementById('annWizardModal');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
                 
-                this.switchTab('list');
+                const modalEl = document.getElementById('annWizardModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                
+                // Immediately navigate to Dashboard view and refresh telemetry
+                await this.switchTab('dashboard');
+                if (typeof this.loadDashboardData === 'function') {
+                    this.loadDashboardData();
+                }
             } else {
-                QCMS.toast(res.message || 'Failure writing broadcast.', 'error');
+                QCMS.toast(res?.message || 'Failure creating broadcast.', 'error');
+                if (nextBtn) {
+                    nextBtn.disabled = false;
+                    nextBtn.innerHTML = '<i data-lucide="send" style="width:14px;height:14px;" class="me-1"></i> Submit Announcement';
+                }
+                if (prevBtn) prevBtn.disabled = false;
+                if (window.lucide) lucide.createIcons();
             }
         } catch (e) {
-            QCMS.toast('Failed to save announcement.', 'error');
+            QCMS.toast('Failed to save announcement: ' + (e.message || e), 'error');
+            if (nextBtn) {
+                nextBtn.disabled = false;
+                nextBtn.innerHTML = '<i data-lucide="send" style="width:14px;height:14px;" class="me-1"></i> Submit Announcement';
+            }
+            if (prevBtn) prevBtn.disabled = false;
+            if (window.lucide) lucide.createIcons();
+        } finally {
+            this.isSubmitting = false;
         }
     },
 
@@ -1568,6 +1668,7 @@ const AnnouncementsModule = {
                 'project_completion': { label: 'Project Completed & Report', color: '#16a34a', bg: 'rgba(22,163,74,0.1)', icon: 'award' },
                 'maintenance': { label: 'System Maintenance', color: '#4f46e5', bg: 'rgba(79,70,229,0.1)', icon: 'wrench' },
                 'welcome': { label: 'Welcome & Onboarding', color: '#16a34a', bg: 'rgba(22,163,74,0.1)', icon: 'sparkles' },
+                'user_welcome': { label: 'User Welcome & Credentials', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'user-check' },
                 'usage_guide': { label: 'Software How-to Guide', color: '#0284c7', bg: 'rgba(2,132,199,0.1)', icon: 'book-open' },
                 'new_feature': { label: 'New Features & Updates', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', icon: 'zap' },
                 'support': { label: 'Customer Support Check-in', color: '#0d9488', bg: 'rgba(13,148,136,0.1)', icon: 'life-buoy' },
@@ -1578,7 +1679,7 @@ const AnnouncementsModule = {
 
             const cardsHtml = rules.length ? rules.map(rule => {
                 const catInfo = categoryMap[rule.category] || categoryMap['custom'];
-                const isInstant = (!rule.trigger_days_before || rule.trigger_days_before === 0 || ['payment_approved', 'payment_rejected', 'project_assigned', 'project_completed', 'new_org_welcome'].includes(rule.event_trigger));
+                const isInstant = (!rule.trigger_days_before || rule.trigger_days_before === 0 || ['payment_approved', 'payment_rejected', 'project_assigned', 'project_completed', 'new_org_welcome', 'new_user_welcome'].includes(rule.event_trigger));
                 const triggerBadge = rule.trigger_type === 'event' 
                     ? (isInstant 
                         ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i data-lucide="zap" style="width:11px;height:11px;" class="me-1"></i>Immediate Dispatch</span>`
@@ -1723,7 +1824,7 @@ const AnnouncementsModule = {
                                     <option value="custom">Custom Broadcast</option>
                                 </select>
                                 <select class="ds-input text-xs py-1.5" id="emailRuleStatusFilter" onchange="AnnouncementsModule.filterEmailRules()" style="max-width: 140px;">
-                                    <option value="">All Statuses</option>
+                                    <option value="">All Status</option>
                                     <option value="active">Active Only</option>
                                     <option value="paused">Paused Only</option>
                                 </select>
@@ -2441,6 +2542,20 @@ const AnnouncementsModule = {
                 channel_key: "onboarding",
                 trigger_type: "event",
                 event_trigger: "new_org_welcome"
+            },
+            'user_welcome': {
+                name: "User Account Welcome & Login Credentials",
+                category: "user_welcome",
+                subject: "Welcome to {{org_name}} – Your {{software_short_name}} Account & Login Credentials",
+                preheader: "Your user account for {{org_name}} has been created. Here are your temporary login credentials.",
+                heading: "Welcome to the Team! Account Credentials",
+                banner_color: "#2563eb",
+                body_html: "<p>Dear <strong>{{user_name}}</strong>,</p>\n<p>Welcome to <strong>{{org_name}}</strong>! An account has been created for you on <strong>{{software_name}}</strong>.</p>\n<div style=\"background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px 20px; margin: 20px 0;\">\n    <div style=\"font-size: 15px; font-weight: bold; color: #0f172a; margin-bottom: 12px;\">🔑 Your Account Credentials &amp; Access Details</div>\n    <table style=\"width: 100%; border-collapse: collapse; font-size: 13px; color: #1e293b;\">\n        <tr><td style=\"padding: 4px 0; width: 40%; color: #64748b;\">• <strong>Organization:</strong></td><td style=\"padding: 4px 0; font-weight: 600;\">{{org_name}}</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Assigned Role:</strong></td><td style=\"padding: 4px 0; font-weight: 600; color: #2563eb;\">{{role_name}}</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Username / Email:</strong></td><td style=\"padding: 4px 0; font-weight: 600;\">{{email}}</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Temporary Password:</strong></td><td style=\"padding: 4px 0;\"><code style=\"background-color: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; font-weight: bold; color: #1e293b;\">{{temp_password}}</code></td></tr>\n    </table>\n</div>\n<p>Please log in and update your password immediately upon your first sign-in.</p>",
+                cta_text: "Log In to Your Account",
+                cta_url: "{{app_url}}/login.html",
+                channel_key: "onboarding",
+                trigger_type: "event",
+                event_trigger: "new_user_welcome"
             },
             'usage_guide': {
                 name: "How to Use QCMS: 8-Stage Quality Workflow Guide",

@@ -338,6 +338,28 @@ def get_user_detail(user_id):
         User.org_id == current_user.org_id,
         Role.name != 'SuperAdmin'
     ).first_or_404()
+
+    # Determine user's effective plant_id and plant_name
+    effective_plant_id = user.plant_id
+    if not effective_plant_id and user.dept and user.dept.plant_id:
+        effective_plant_id = user.dept.plant_id
+    if not effective_plant_id:
+        def_plant = Plant.query.filter_by(org_id=user.org_id).first()
+        if def_plant:
+            effective_plant_id = def_plant.id
+            if not user.plant_id:
+                user.plant_id = def_plant.id
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+    plant_name = "N/A"
+    if user.plant:
+        plant_name = user.plant.name
+    elif user.dept and user.dept.plant:
+        plant_name = user.dept.plant.name
+
     return jsonify({
         "id": user.id,
         "username": user.username,
@@ -345,6 +367,9 @@ def get_user_detail(user_id):
         "email": user.email,
         "role": user.role.name,
         "department": user.dept.name if user.dept else "N/A",
+        "department_id": user.department_id,
+        "plant_id": effective_plant_id,
+        "plant_name": plant_name,
         "is_active": user.is_active,
         "profile_picture": get_profile_picture_url(user),
         "custom_fields": user.custom_fields or {}
@@ -806,11 +831,13 @@ def bulk_upload_users():
 
     added_count = 0
     rejected_count = 0
+    created_user_ids = []
     rejected_rows = []   # detailed list shown to user after import
     valid_roles = {r.name.strip().lower(): r for r in Role.query.all()}
     custom_field_defs = UserCustomField.query.filter_by(org_id=org_id).all()
 
-    row_num = 1
+    start_row_num = request.form.get('start_row_num', type=int) or 2
+    row_num = start_row_num - 1
     for row in csv_reader:
         row_num += 1
         username      = (row.get('username') or row.get('User Name') or '').strip()
@@ -969,6 +996,7 @@ def bulk_upload_users():
                 db.session.commit()
 
             added_count += 1
+            created_user_ids.append(new_user.id)
             try:
                 EmailUtils.send_temp_password_email(new_user, password)
             except Exception as mail_err:
@@ -989,7 +1017,51 @@ def bulk_upload_users():
         "accepted_count": added_count,
         "rejected_count": rejected_count,
         "pending_count": 0,
-        "rejected_rows":  rejected_rows
+        "rejected_rows": rejected_rows,
+        "created_user_ids": created_user_ids
+    }), 200
+
+@admin_bp.route('/users/bulk-rollback', methods=['POST'])
+@admin_required
+def rollback_bulk_users():
+    current_user_id = get_jwt_identity()
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"message": "User not found"}), 404
+
+    org_id = current_user.org_id
+    data = request.get_json() or {}
+    user_ids = data.get('user_ids', [])
+
+    if not isinstance(user_ids, list) or len(user_ids) == 0:
+        return jsonify({"message": "No user IDs provided to rollback", "deleted_count": 0}), 200
+
+    from app.infrastructure.database.models.models import AuditLog, Notification, ProjectMember
+    users_to_delete = User.query.filter(
+        User.id.in_(user_ids),
+        User.org_id == org_id,
+        User.id != current_user.id
+    ).all()
+
+    deleted_count = 0
+    for u in users_to_delete:
+        try:
+            Notification.query.filter_by(user_id=u.id).delete(synchronize_session=False)
+            ProjectMember.query.filter_by(user_id=u.id).delete(synchronize_session=False)
+            AuditLog.query.filter_by(user_id=u.id).delete(synchronize_session=False)
+            db.session.delete(u)
+            deleted_count += 1
+        except Exception as del_err:
+            current_app.logger.warning(f"Error rolling back bulk user {u.id}: {del_err}")
+
+    db.session.commit()
+
+    log_action(current_user.id, "BULK_IMPORT_ROLLBACK", org_id,
+               "users", current_user.id, {"deleted_count": deleted_count, "user_ids": user_ids})
+
+    return jsonify({
+        "message": f"Successfully cancelled import and rolled back {deleted_count} user(s).",
+        "deleted_count": deleted_count
     }), 200
 
 @admin_bp.route('/users/<int:user_id>', methods=['PUT', 'PATCH'])
@@ -1008,14 +1080,14 @@ def update_user(user_id):
     if not data:
         return jsonify({"message": "No data provided"}), 200
     
-    if data.get('username'):
-        user.username = data.get('username')
-    
-    if data.get('full_name'):
-        user.full_name = data.get('full_name')
+    if data.get('username') or data.get('full_name'):
+        val = str(data.get('username') or data.get('full_name')).strip()
+        user.full_name = val
+        if ' ' not in val and val:
+            user.username = val
 
     if data.get('email'):
-        email = data.get('email')
+        email = data.get('email').strip()
         # Check if email is already taken by another user
         existing = User.query.filter(User.email == email, User.id != user_id).first()
         if existing:
@@ -1050,9 +1122,10 @@ def update_user(user_id):
                 if dept.plant_id and not ('plant_id' in data or 'plant' in data):
                     user.plant_id = dept.plant_id
 
-    if 'plant_id' in data or 'plant' in data:
-        pid = data.get('plant_id') or data.get('plant')
-        user.plant_id = int(pid) if pid and str(pid).isdigit() else None
+    if 'plant_id' in data or 'plant' in data or 'plant_location' in data:
+        pid = data.get('plant_id') or data.get('plant') or data.get('plant_location')
+        if pid and str(pid).isdigit():
+            user.plant_id = int(pid)
         
     if 'is_active' in data:
         user.is_active = data.get('is_active')
@@ -1083,11 +1156,8 @@ def update_user(user_id):
         user.is_temp_password = True
         
     custom_field_defs = UserCustomField.query.filter_by(org_id=user.org_id).all()
-    custom_values = user.custom_fields or {}
-    if not isinstance(custom_values, dict):
-        custom_values = {}
+    custom_values = dict(user.custom_fields or {})
         
-    updated_customs = {}
     for fd in custom_field_defs:
         if fd.field_key in ('username', 'role', 'department'):
             continue
@@ -1099,19 +1169,13 @@ def update_user(user_id):
             if err:
                 return jsonify({"message": err}), 400
             custom_values[fd.field_key] = val_str
-            updated_customs[fd.field_key] = val_str
             
     user.custom_fields = custom_values
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(user, "custom_fields")
         
     try:
         db.session.commit()
-        if updated_customs:
-            update_cols = ", ".join(f"{k} = :val_{k}" for k in updated_customs.keys())
-            params = {f"val_{k}": v for k, v in updated_customs.items()}
-            params["user_id"] = user.id
-            from sqlalchemy import text
-            db.session.execute(text(f"UPDATE users SET {update_cols} WHERE id = :user_id"), params)
-            db.session.commit()
         log_action(current_user.id, "UPDATE_USER", current_user.org_id, "users", user.id, data)
         return jsonify({
             "message": "User updated successfully",
@@ -1210,6 +1274,17 @@ def disassociate_and_delete_user(target_user, admin_user_id=None):
         ('Project', 'team_leader_id'),
         ('Project', 'facilitator_id'),
         ('Project', 'reviewer_id'),
+        ('ProjectWorkflow', 'updated_by'),
+        ('Stage1ProblemDefinition', 'facilitator_approver_id'),
+        ('Stage2ObservationDataCollection', 'reviewer_id'),
+        ('Stage3CauseIdentification', 'facilitator_approver_id'),
+        ('Stage4RootCauseAnalysis', 'reviewer_id'),
+        ('Stage5CountermeasurePlanning', 'facilitator_id'),
+        ('Stage5CountermeasurePlanning', 'reviewer_id'),
+        ('Stage6Implementation', 'reviewer_id'),
+        ('Stage7PerformanceVerification', 'reviewer_id'),
+        ('Stage8Standardization', 'approved_by'),
+        ('Stage8Standardization', 'final_approval_by'),
         ('SOP', 'owner_id'),
         ('SOP', 'author_id'),
         ('SOP', 'reviewer_id'),
@@ -1224,7 +1299,13 @@ def disassociate_and_delete_user(target_user, admin_user_id=None):
         ('KnowledgeRepositoryVerification', 'verified_by_id'),
         ('SOPVersionHistory', 'changed_by_id'),
         ('SOPAssignment', 'assigned_by_id'),
-        ('StandardizationDocument', 'uploaded_by_id')
+        ('StandardizationDocument', 'uploaded_by_id'),
+        ('AnnouncementAttachment', 'uploaded_by'),
+        ('AnnouncementAudit', 'user_id'),
+        ('EmailNotificationLog', 'user_id'),
+        ('EmailNotificationLog', 'sent_by_id'),
+        ('UserCustomFieldValue', 'created_by_id'),
+        ('UserCustomFieldValue', 'updated_by_id')
     ]
     for model_name, attr_name in nullify_specs:
         try:
@@ -1237,6 +1318,7 @@ def disassociate_and_delete_user(target_user, admin_user_id=None):
     # 4. Delete user-owned child records (ephemeral / activity logs)
     delete_specs = [
         ('ProjectMember', 'user_id'),
+        ('ProjectWorkflow', 'updated_by'),
         ('EmployeeLeaderboard', 'employee_id'),
         ('EmployeePoints', 'employee_id'),
         ('SaaSUserSession', 'user_id'),
@@ -1248,7 +1330,11 @@ def disassociate_and_delete_user(target_user, admin_user_id=None):
         ('SOPComment', 'user_id'),
         ('SOPFeedback', 'user_id'),
         ('SOPQuizAttempt', 'user_id'),
-        ('SOPCertificate', 'user_id')
+        ('SOPCertificate', 'user_id'),
+        ('AnnouncementDelivery', 'user_id'),
+        ('AnnouncementRead', 'user_id'),
+        ('AnnouncementAudit', 'user_id'),
+        ('EmailNotificationLog', 'user_id')
     ]
     for model_name, attr_name in delete_specs:
         try:
@@ -1736,7 +1822,7 @@ def get_all_projects():
             "stage": p.current_stage,
             "category": p.category,
             "status": p.status
-        } for p in all_org_projects]
+        } for p in all_org_projects if p.status not in ('Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED', 'Stage 8 Approved', 'Rejected', 'Stage 1 Rejected', 'Cancelled')]
     }), 200
 
 # --- Role & Department Lists ---
@@ -1991,7 +2077,6 @@ def get_org_settings():
     # Calculate Corporate Profile completion metrics
     fields_to_check = [
         ('name', org.name, 'Legal Entity Name'),
-        ('org_code', org.org_code, 'Organization Code'),
         ('industry', org.industry, 'Industry Sector'),
         ('admin_name', org.admin_name, 'Primary Admin Name'),
         ('website', org.website, 'Website URL'),
@@ -2726,12 +2811,43 @@ def save_stages_template():
             return jsonify({"message": "Every stage must have a non-empty title."}), 400
         seen_seq.add(sid)
 
+    prev_stages = org.get_stages_config()
+    apply_to_active = bool(data.get('apply_to_active', False))
+
     org.stages_config = stages
+
+    # Apply to projects based on scope
+    org_projects = Project.query.filter_by(org_id=org.id).all()
+    updated_count = 0
+    for p in org_projects:
+        is_closed = p.status in ('Closed', 'Completed', 'Archived') or (p.current_stage == 8 and p.status in ('Stage 8 Approved', 'Completed', 'Closed'))
+        if is_closed:
+            # Freeze closed projects to their previous structure permanently if not already set
+            if p.stages_config is None:
+                p.stages_config = copy.deepcopy(prev_stages)
+                flag_modified(p, 'stages_config')
+        else:
+            # Active/In-Progress project
+            if apply_to_active:
+                p.stages_config = copy.deepcopy(stages)
+                flag_modified(p, 'stages_config')
+                updated_count += 1
+            else:
+                # Keep active project on previous template snapshot so it's not affected
+                if p.stages_config is None:
+                    p.stages_config = copy.deepcopy(prev_stages)
+                    flag_modified(p, 'stages_config')
+
     db.session.commit()
     log_action(user_id, 'STAGES_TEMPLATE_SAVED', user.org_id,
                target_table='organizations', target_id=org.id,
-               details={"stages": [s['title'] for s in stages]})
-    return jsonify({"message": "Stage template saved successfully.", "stages": stages}), 200
+               details={"stages": [s['title'] for s in stages], "apply_to_active": apply_to_active, "updated_active_projects": updated_count})
+    return jsonify({
+        "message": f"Stage template saved successfully. {f'Updated {updated_count} active project(s).' if apply_to_active else 'Applies to upcoming projects.'}",
+        "stages": stages,
+        "apply_to_active": apply_to_active,
+        "updated_projects_count": updated_count
+    }), 200
 
 
 @admin_bp.route('/stages-template/status', methods=['GET'])
@@ -2764,7 +2880,8 @@ def get_global_stages_template_diff():
     org = db.session.get(Organization, user.org_id)
     ps = PlatformSettings.query.first()
 
-    org_stages = org.get_stages_config() or Organization.DEFAULT_STAGES_CONFIG
+    # Use raw org.stages_config if set; otherwise use baseline Organization.DEFAULT_STAGES_CONFIG
+    org_stages = org.stages_config or Organization.DEFAULT_STAGES_CONFIG
     global_stages = (ps and ps.global_stages_config) or Organization.DEFAULT_STAGES_CONFIG
     
     applied_ver = (org and org.applied_template_version) or 1
@@ -2834,15 +2951,30 @@ def get_global_stages_template_diff():
 
         for sec_key, g_sec in glob_secs_map.items():
             g_sec_label = g_sec.get('label') or g_sec.get('title') or str(sec_key)
+            g_fields = [f for f in (g_sec.get('fields') or []) if isinstance(f, dict)]
+
             if sec_key not in org_secs_map:
+                field_names = [f.get('label') or f.get('type') or 'Field' for f in g_fields]
                 diffs.append({
                     "stage_id": stg_id,
                     "stage_title": stg_title,
                     "type": "SECTION_ADDED",
-                    "label": f"Stage {stg_id} → New Section '{g_sec_label}' added",
+                    "label": f"Stage {stg_id} → New Section '{g_sec_label}' added" + (f" ({len(field_names)} elements)" if field_names else ""),
                     "section_id": g_sec.get('id') or sec_key,
+                    "sub_fields": field_names,
                     "details": g_sec
                 })
+                # List each sub-field added inside the new section
+                for gf in g_fields:
+                    gf_label = gf.get('label') or gf.get('type') or 'Input Field'
+                    diffs.append({
+                        "stage_id": stg_id,
+                        "stage_title": stg_title,
+                        "type": "FIELD_ADDED",
+                        "label": f"Stage {stg_id} → '{g_sec_label}': Added element '{gf_label}' ({gf.get('type', 'text')})",
+                        "section_id": g_sec.get('id') or sec_key,
+                        "field_id": gf.get('id')
+                    })
             else:
                 o_sec = org_secs_map[sec_key]
                 o_sec_label = o_sec.get('label') or o_sec.get('title') or str(sec_key)
@@ -2855,9 +2987,8 @@ def get_global_stages_template_diff():
                         "section_id": g_sec.get('id') or sec_key
                     })
 
-                # Compare sub-fields inside section
+                # Compare sub-fields inside existing section
                 o_fields = [f for f in (o_sec.get('fields') or []) if isinstance(f, dict)]
-                g_fields = [f for f in (g_sec.get('fields') or []) if isinstance(f, dict)]
 
                 def get_f_key(f, f_idx):
                     return f.get('id') or f.get('label') or f"f_idx_{f_idx}"
@@ -2933,7 +3064,14 @@ def sync_global_stages_template():
             stg_id = m_stg.get('stage_id')
             o_stg = org_stages_by_id.get(stg_id)
             if o_stg and isinstance(o_stg.get('sections'), list):
-                custom_secs = [sec for sec in o_stg['sections'] if isinstance(sec, dict) and str(sec.get('id', '')).startswith('sec_')]
+                custom_secs = [
+                    sec for sec in o_stg['sections'] 
+                    if isinstance(sec, dict) and (
+                        str(sec.get('id', '')).startswith('sec_') or 
+                        '_custom_sec_' in str(sec.get('id', '')) or 
+                        sec.get('type') == 'custom'
+                    )
+                ]
                 if custom_secs:
                     if 'sections' not in m_stg or not isinstance(m_stg['sections'], list):
                         m_stg['sections'] = []
@@ -2944,19 +3082,46 @@ def sync_global_stages_template():
     else:
         org.stages_config = copy.deepcopy(global_stages)
 
+    prev_stages = org.get_stages_config()
+    apply_to_active = bool(data.get('apply_to_active', True))
+
     org.applied_template_version = global_ver
     org.has_pending_template_update = False
+
+    # Apply to projects based on scope
+    org_projects = Project.query.filter_by(org_id=org.id).all()
+    updated_count = 0
+    for p in org_projects:
+        is_closed = p.status in ('Closed', 'Completed', 'Archived') or (p.current_stage == 8 and p.status in ('Stage 8 Approved', 'Completed', 'Closed'))
+        if is_closed:
+            # Freeze closed projects to their previous structure permanently if not already set
+            if p.stages_config is None:
+                p.stages_config = copy.deepcopy(prev_stages)
+                flag_modified(p, 'stages_config')
+        else:
+            # Active/In-Progress project
+            if apply_to_active:
+                p.stages_config = copy.deepcopy(org.stages_config)
+                flag_modified(p, 'stages_config')
+                updated_count += 1
+            else:
+                if p.stages_config is None:
+                    p.stages_config = copy.deepcopy(prev_stages)
+                    flag_modified(p, 'stages_config')
+
     db.session.commit()
 
     log_action(user_id, 'STAGES_TEMPLATE_SYNCED', user.org_id,
                target_table='organizations', target_id=org.id,
-               details={"applied_version": global_ver, "mode": mode, "stages_count": len(org.stages_config)})
+               details={"applied_version": global_ver, "mode": mode, "stages_count": len(org.stages_config), "apply_to_active": apply_to_active, "updated_active_projects": updated_count})
 
     return jsonify({
         "status": "success",
-        "message": f"Global 8-Stage Workflow Template (v{global_ver}) successfully synchronized to your organization.",
+        "message": f"Global 8-Stage Workflow Template (v{global_ver}) successfully synchronized to your organization. {f'Updated {updated_count} active project(s).' if apply_to_active else 'Applied to upcoming projects.'}",
         "applied_template_version": global_ver,
-        "stages": org.get_stages_config()
+        "stages": org.get_stages_config(),
+        "apply_to_active": apply_to_active,
+        "updated_projects_count": updated_count
     }), 200
 
 

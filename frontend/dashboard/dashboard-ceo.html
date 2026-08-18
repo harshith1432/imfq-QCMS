@@ -1053,13 +1053,11 @@
                 const container = document.getElementById('ceoKpiGrid');
                 container.innerHTML = kpis.map((kpi, idx) => `
                     <div class="ds-card p-3 shadow-sm hover-row" id="ceoKpiCard_${idx}" style="${kpi.isRejected ? 'cursor:pointer;' : ''}">
-                        <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <span class="text-xs text-muted fw-medium">${kpi.title}</span>
-                                <h4 class="fw-bold mb-1 mt-1 ${kpi.isRejected ? 'text-danger' : 'text-primary'}" style="font-size:1.15rem;">${kpi.value}</h4>
-                                <span class="text-${kpi.type} text-xs fw-semibold">${kpi.trend}</span>
+                                <span class="text-xs text-muted fw-semibold text-uppercase tracking-wider">${kpi.title}</span>
+                                <h4 class="fw-bold mb-0 mt-1 ${kpi.isRejected ? 'text-danger' : 'text-primary'}" style="font-size:1.25rem;">${kpi.value}</h4>
                             </div>
-                            <span class="ds-badge ds-badge-sm ${kpi.type}">${kpi.trend}</span>
                         </div>
                         <div id="sparkline-chart-${idx}" class="sparkline-container"></div>
                     </div>
@@ -1350,11 +1348,7 @@
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadDepartmentPerformance(${page - 1})">
                                     <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                 </button>
-                                ${Array.from({ length: actualTotalPages }, (_, idx) => idx + 1).map(p => `
-                                    <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="ceoDash.loadDepartmentPerformance(${p})">
-                                        ${p}
-                                    </button>
-                                `).join('')}
+                                ${this.get3PageWindowHtml(page, actualTotalPages, 'ceoDash.loadDepartmentPerformance', 'min-width: 32px; height: 32px; padding: 0;')}
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === actualTotalPages ? 'disabled' : ''} onclick="ceoDash.loadDepartmentPerformance(${page + 1})">
                                     <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                 </button>
@@ -1398,13 +1392,16 @@
                 const body = document.getElementById('topProjectsBody');
                 const pagContainer = document.getElementById('topProjectsPaginationContainer');
 
-                if (!projects || projects.length === 0) {
-                    body.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No high-priority initiatives found.</td></tr>';
+                const nonInProgress = ['closed', 'completed', 'archived', 'stage 8 approved', 'rejected', 'stage 1 rejected', 'cancelled', 'draft'];
+                const inProgressProjects = (projects || []).filter(p => !nonInProgress.includes((p.status || '').toLowerCase().trim()));
+
+                if (!inProgressProjects || inProgressProjects.length === 0) {
+                    body.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No active in-progress initiatives found.</td></tr>';
                     if (pagContainer) pagContainer.innerHTML = '';
                     return;
                 }
 
-                body.innerHTML = projects.map(p => {
+                body.innerHTML = inProgressProjects.map(p => {
                     const isDone = ['Completed', 'Closed'].includes(p.status) || p.stage >= 8;
                     const stagePct = isDone ? 100 : Math.round((p.stage / 8) * 100);
                     const priorityClass = p.priority === 'High' ? 'danger' : 'warning';
@@ -1447,11 +1444,7 @@
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadTopProjects(${page - 1})">
                                     <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                 </button>
-                                ${Array.from({ length: actualTotalPages }, (_, idx) => idx + 1).map(p => `
-                                    <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 32px; height: 32px; padding: 0;" onclick="ceoDash.loadTopProjects(${p})">
-                                        ${p}
-                                    </button>
-                                `).join('')}
+                                ${this.get3PageWindowHtml(page, actualTotalPages, 'ceoDash.loadTopProjects', 'min-width: 32px; height: 32px; padding: 0;')}
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === actualTotalPages ? 'disabled' : ''} onclick="ceoDash.loadTopProjects(${page + 1})">
                                     <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                 </button>
@@ -1489,6 +1482,33 @@
                 } catch (e) {
                     console.error('[CEO Dash] Leaderboard fetch error:', e);
                 }
+            },
+
+            get3PageWindowHtml(page, totalPages, onClickFnStr, btnStyle = '') {
+                if (!totalPages || totalPages <= 0) return '';
+                let startPage = Math.max(1, page - 1);
+                let endPage = startPage + 2;
+                if (endPage > totalPages) {
+                    endPage = totalPages;
+                    startPage = Math.max(1, endPage - 2);
+                }
+
+                const pageNumbers = [];
+                for (let i = startPage; i <= endPage; i++) {
+                    pageNumbers.push(i);
+                }
+
+                let html = pageNumbers.map(p => `
+                    <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="${btnStyle || 'min-width: 28px; height: 28px; padding: 0; font-size: 0.75rem;'}" onclick="${onClickFnStr}(${p})">
+                        ${p}
+                    </button>
+                `).join('');
+
+                if (endPage < totalPages) {
+                    html += `<span class="text-xs text-muted px-1" style="font-size:0.75rem; align-self:center;">...</span>`;
+                }
+
+                return html;
             },
 
             renderLeaderboard(contributors, page = 1, total = 0, totalPages = 1) {
@@ -1533,11 +1553,7 @@
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" style="padding: 2px 6px;" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadLeaderboard(${page - 1})">
                                     <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                 </button>
-                                ${Array.from({ length: actualTotalPages }, (_, idx) => idx + 1).map(p => `
-                                    <button class="ds-btn ds-btn-sm ${p === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" style="min-width: 26px; height: 26px; padding: 0; font-size: 0.75rem;" onclick="ceoDash.loadLeaderboard(${p})">
-                                        ${p}
-                                    </button>
-                                `).join('')}
+                                ${this.get3PageWindowHtml(page, actualTotalPages, 'ceoDash.loadLeaderboard', 'min-width: 26px; height: 26px; padding: 0; font-size: 0.75rem;')}
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" style="padding: 2px 6px;" ${page === actualTotalPages ? 'disabled' : ''} onclick="ceoDash.loadLeaderboard(${page + 1})">
                                     <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                 </button>

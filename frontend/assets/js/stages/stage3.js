@@ -32,7 +32,21 @@ const Stage3 = {
                             </div>
                             <div class="col-md-6">
                                 <label class="ds-label ds-tooltip-trigger" title="Facilitator: Quality Leader facilitating brainstorming discussion">Facilitator</label>
-                                <input type="text" id="s3_bs_facilitator" class="ds-input" required>
+                                <div class="position-relative" id="s3_bs_facilitator_wrapper">
+                                    <input type="hidden" id="s3_bs_facilitator" style="display:none !important;" required>
+                                    <div class="ds-input d-flex align-items-center justify-content-between cursor-pointer" id="s3_bs_facilitator_btn" style="background:#fff; min-height: 38px; border-radius: var(--radius-md); padding: 0.375rem 0.75rem;">
+                                        <span id="s3_bs_facilitator_selected" class="text-muted text-sm">Select Facilitator...</span>
+                                        <i data-lucide="chevron-down" style="width:16px;height:16px;" class="text-muted ms-2"></i>
+                                    </div>
+                                    <div class="dropdown-menu shadow-lg p-2 w-100" id="s3_bs_facilitator_menu" style="display:none; position:absolute; top:100%; left:0; z-index:1050; max-height:260px; overflow-y:auto; background:#fff; border-radius:10px; border:1px solid var(--ds-border-color);">
+                                        <div class="mb-2 position-relative">
+                                            <input type="text" class="form-control form-control-sm text-xs" id="s3_bs_facilitator_search" placeholder="🔍 Search facilitator..." style="padding-left: 8px;">
+                                        </div>
+                                        <div id="s3_bs_facilitator_list" class="list-group list-group-flush text-sm">
+                                            <div class="text-muted text-xs p-2 text-center">Loading plant facilitators...</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="ds-label ds-tooltip-trigger" title="Participants: QC Circle team members participating in session">Participants</label>
@@ -417,6 +431,8 @@ const Stage3 = {
         this.setVal('s3_bs_participants', bs.participants);
         this.setVal('s3_bs_date', bs.date);
         this.setVal('s3_bs_notes', bs.notes);
+
+        this.initFacilitatorDropdown(projectData, bs.facilitator);
 
         // Fetch Stage 1 Problem Statement for fishbone Effect Head
         const s1 = wf.find(w => w.stage_id === 1)?.data || {};
@@ -1529,8 +1545,145 @@ const Stage3 = {
         });
     },
 
+    async initFacilitatorDropdown(projectData, initialFacilitator = '') {
+        const hiddenInput = document.getElementById('s3_bs_facilitator');
+        const selectedText = document.getElementById('s3_bs_facilitator_selected');
+        const menuEl = document.getElementById('s3_bs_facilitator_menu');
+        const searchEl = document.getElementById('s3_bs_facilitator_search');
+        const listEl = document.getElementById('s3_bs_facilitator_list');
+        const btnEl = document.getElementById('s3_bs_facilitator_btn');
+
+        if (!hiddenInput || !listEl || !btnEl) return;
+
+        let facilitators = [];
+
+        try {
+            const plantParam = projectData.plant_id ? `plant_id=${projectData.plant_id}` : (projectData.plant_name ? `plant_name=${encodeURIComponent(projectData.plant_name)}` : '');
+            const url = `/projects/potential-members?role=facilitator${plantParam ? '&' + plantParam : '&ignore_dept=true'}`;
+            const res = await api.get(url);
+            if (Array.isArray(res)) {
+                facilitators = res;
+            } else if (res && Array.isArray(res.members)) {
+                facilitators = res.members;
+            }
+        } catch (e) {
+            console.error('[Stage 3] Failed to fetch plant facilitators:', e);
+        }
+
+        // Ensure currently assigned project facilitator is present at the top
+        const assignedFacName = projectData.facilitator_name || (projectData.facilitator && (projectData.facilitator.full_name || projectData.facilitator.username)) || '';
+        if (assignedFacName && !facilitators.some(f => (f.full_name || f.username || f.name) === assignedFacName)) {
+            facilitators.unshift({
+                id: projectData.facilitator_id || 'assigned',
+                full_name: assignedFacName,
+                email: projectData.facilitator_email || (projectData.facilitator && projectData.facilitator.email) || '',
+                department: 'Methodological Guide'
+            });
+        }
+
+        if (!facilitators.length && initialFacilitator) {
+            facilitators.push({ id: 'current', full_name: initialFacilitator, email: '', department: 'Facilitator' });
+        }
+
+        // Preselect initial value or assigned facilitator
+        const defaultVal = initialFacilitator || assignedFacName || (facilitators[0] ? (facilitators[0].full_name || facilitators[0].username || facilitators[0].name) : '');
+        if (defaultVal) {
+            hiddenInput.value = defaultVal;
+            const match = facilitators.find(f => (f.full_name || f.username || f.name) === defaultVal);
+            if (match) {
+                const subText = match.email || match.department || 'Facilitator';
+                selectedText.innerHTML = `<strong class="text-dark">${QCMS.escapeHtml(match.full_name || match.username || match.name)}</strong> <span class="text-xs text-muted">(${QCMS.escapeHtml(subText)})</span>`;
+            } else {
+                selectedText.innerHTML = `<strong class="text-dark">${QCMS.escapeHtml(defaultVal)}</strong>`;
+            }
+        } else {
+            selectedText.innerHTML = '<span class="text-muted text-sm">Select Facilitator...</span>';
+        }
+
+        // Render option list function with search filtering
+        const renderList = (filterText = '') => {
+            const query = filterText.toLowerCase().trim();
+            const filtered = facilitators.filter(f => {
+                const name = (f.full_name || f.username || f.name || '').toLowerCase();
+                const email = (f.email || '').toLowerCase();
+                const dept = (f.department || '').toLowerCase();
+                return !query || name.includes(query) || email.includes(query) || dept.includes(query);
+            });
+
+            if (!filtered.length) {
+                listEl.innerHTML = '<div class="text-muted text-xs p-2 text-center">No facilitators found for this plant.</div>';
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(f => {
+                const facName = f.full_name || f.username || f.name || 'Facilitator';
+                const subInfo = f.email || f.department || 'Methodological Guide';
+                const isSelected = hiddenInput.value === facName;
+                return `
+                    <button type="button" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-2 px-3 ${isSelected ? 'active' : ''}" data-name="${QCMS.escapeHtml(facName)}" data-sub="${QCMS.escapeHtml(subInfo)}">
+                        <div>
+                            <div class="fw-bold text-sm mb-0">${QCMS.escapeHtml(facName)}</div>
+                            <div class="text-xs ${isSelected ? 'text-white-50' : 'text-muted'}">${QCMS.escapeHtml(subInfo)}</div>
+                        </div>
+                        ${isSelected ? '<i data-lucide="check" style="width:14px;height:14px;"></i>' : ''}
+                    </button>
+                `;
+            }).join('');
+
+            if (window.lucide) lucide.createIcons();
+
+            listEl.querySelectorAll('.list-group-item-action').forEach(item => {
+                item.addEventListener('click', (ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    const chosenName = item.getAttribute('data-name');
+                    const chosenSub = item.getAttribute('data-sub');
+                    hiddenInput.value = chosenName;
+                    selectedText.innerHTML = `<strong class="text-dark">${QCMS.escapeHtml(chosenName)}</strong> <span class="text-xs text-muted">(${QCMS.escapeHtml(chosenSub)})</span>`;
+                    menuEl.style.display = 'none';
+                });
+            });
+        };
+
+        renderList();
+
+        btnEl.onclick = (e) => {
+            e.stopPropagation();
+            const isOpen = menuEl.style.display === 'block';
+            menuEl.style.display = isOpen ? 'none' : 'block';
+            if (!isOpen && searchEl) {
+                searchEl.value = '';
+                renderList();
+                setTimeout(() => searchEl.focus(), 100);
+            }
+        };
+
+        if (searchEl) {
+            searchEl.oninput = () => {
+                renderList(searchEl.value);
+            };
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!btnEl.contains(e.target) && !menuEl.contains(e.target)) {
+                menuEl.style.display = 'none';
+            }
+        });
+    },
+
     getVal(id) { return (document.getElementById(id) || {}).value || ''; },
-    setVal(id, val) { const el = document.getElementById(id); if (el) el.value = (val !== undefined && val !== null) ? val : ''; }
+    setVal(id, val) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = (val !== undefined && val !== null) ? val : '';
+            if (id === 's3_bs_facilitator') {
+                const selEl = document.getElementById('s3_bs_facilitator_selected');
+                if (selEl) {
+                    selEl.innerHTML = el.value ? `<strong class="text-dark">${QCMS.escapeHtml(el.value)}</strong>` : '<span class="text-muted text-sm">Select Facilitator...</span>';
+                }
+            }
+        }
+    }
 };
 
 window.StageModules = window.StageModules || {};

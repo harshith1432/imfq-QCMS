@@ -47,24 +47,6 @@ const DynamicRenderer = {
                 if (f && !list.some(item => item.id === f.id)) list.push(f);
             });
         }
-        if (sec.predefined_fields && typeof sec.predefined_fields === 'object') {
-            Object.keys(sec.predefined_fields).forEach(pfId => {
-                const pf = sec.predefined_fields[pfId];
-                if (pf && pf.disabled !== true) {
-                    if (!list.some(item => item.id === pfId)) {
-                        list.push({
-                            id: pfId,
-                            label: pf.label || pfId,
-                            type: pf.type || 'text',
-                            placeholder: pf.placeholder || '',
-                            required: pf.required !== false,
-                            col_span: pf.col_span || 'col-md-6',
-                            options: pf.options || ''
-                        });
-                    }
-                }
-            });
-        }
         return list;
     },
 
@@ -284,6 +266,8 @@ const DynamicRenderer = {
                     </button>
                 `;
                 break;
+            case 'file':
+            case 'evidence':
             case 'file_upload':
                 contentHtml = `
                     <div class="border rounded p-3 text-center bg-light" style="border-style: dashed !important; border-color: var(--ds-border-color) !important;">
@@ -415,6 +399,7 @@ const DynamicRenderer = {
                     </div>
                 `;
                 break;
+            case '5why':
             case 'five_why':
                 contentHtml = `
                     <div class="table-responsive">
@@ -712,6 +697,8 @@ const DynamicRenderer = {
                 `;
                 break;
             }
+            case '3w1h':
+            case 'action_plan':
             case 'action_plan_3w1h': {
                 contentHtml = `
                     <div class="table-responsive">
@@ -735,12 +722,50 @@ const DynamicRenderer = {
                 `;
                 break;
             }
+            case 'custom': {
+                let descHtml = '';
+                if (sec.description && sec.description.trim()) {
+                    descHtml = `<div class="text-muted text-xs mb-3 bg-light p-2.5 rounded border-start border-3 border-primary">${this.escapeHtml(sec.description)}</div>`;
+                }
+                const subFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
+                if (subFields.length > 0) {
+                    let fieldsGrid = `<div class="row g-3">`;
+                    subFields.forEach(f => {
+                        if (!f) return;
+                        const fullCol = ['textarea', 'multi_line_text', 'table', 'five_why', '5why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'check_sheet', 'grid_2col', 'grid_3col', 'info_callout', 'action_plan_3w1h', '3w1h', 'action_plan'].includes((f.type || '').toLowerCase());
+                        const colW = f.col_span || f.col || (fullCol ? 'col-12' : 'col-md-6');
+                        fieldsGrid += `
+                            <div class="${colW}">
+                                <div class="ds-field-block p-2.5 rounded border mb-2 bg-white">
+                                    <label class="ds-label text-xs fw-semibold mb-1 d-block text-main">
+                                        ${this.escapeHtml(f.label || 'Field')} ${f.required ? '<span class="text-danger">*</span>' : ''}
+                                    </label>
+                                    ${this.getFieldContentHtml(f, true)}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    fieldsGrid += `</div>`;
+                    contentHtml = descHtml + fieldsGrid;
+                } else {
+                    contentHtml = `
+                        ${descHtml}
+                        <div class="ds-field">
+                            <textarea class="ds-input ds-textarea" id="${sec.id}" rows="3" placeholder="${this.escapeHtml(sec.placeholder || 'Enter notes or details for this custom section...')}"></textarea>
+                        </div>
+                    `;
+                }
+                break;
+            }
             default:
                 contentHtml = `<p class="text-xs text-danger mb-0 py-1">Unsupported field component type: ${this.escapeHtml(type)}</p>`;
         }
 
         if (isSubItem) {
-            return contentHtml;
+            const topDesc = (sec.description && sec.description.trim() && type !== 'custom')
+                ? `<div class="text-muted text-xs mb-3 bg-light p-2.5 rounded border-start border-3 border-primary">${this.escapeHtml(sec.description)}</div>`
+                : '';
+            return topDesc + contentHtml;
         }
 
         const colWidth = (['textarea', 'multi_line_text', 'table', 'five_why', 'verification_table', 'pareto', 'fishbone', 'histogram', 'control_chart', 'scatter', 'stratification', 'check_sheet', 'grid_2col', 'grid_3col', 'info_callout', 'action_plan_3w1h'].includes(type)) ? 'col-12' : 'col-md-6';

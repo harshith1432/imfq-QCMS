@@ -292,9 +292,22 @@
             `).join('');
 
                 let pagHtml = '';
-                for (let i = 1; i <= pages; i++) {
-                    pagHtml += `<button class="ds-btn ${i === this.currentPage ? 'ds-btn-primary' : 'ds-btn-secondary'} ds-btn-sm" 
-                            style="min-width:40px;" onclick="repoApp.search(${i})">${i}</button>`;
+                if (pages > 0) {
+                    let startPage = Math.max(1, this.currentPage - 1);
+                    let endPage = startPage + 2;
+                    if (endPage > pages) {
+                        endPage = pages;
+                        startPage = Math.max(1, endPage - 2);
+                    }
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        pagHtml += `<button class="ds-btn ${i === this.currentPage ? 'ds-btn-primary' : 'ds-btn-secondary'} ds-btn-sm" 
+                                style="min-width:36px;" onclick="repoApp.search(${i})">${i}</button>`;
+                    }
+
+                    if (endPage < pages) {
+                        pagHtml += `<span class="text-xs text-muted px-1" style="font-size:0.85rem; align-self:center;">...</span>`;
+                    }
                 }
                 document.getElementById('pagination').innerHTML = pagHtml;
                 if (window.lucide) lucide.createIcons();
@@ -310,41 +323,20 @@
                 }
             },
 
-            downloadReport(projectId) {
+            async downloadReport(projectId) {
                 if (!projectId) {
                     QCMS.toast('Project ID missing for report generation', 'warning');
                     return;
                 }
-                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                 QCMS.toast('Preparing final summary report PDF...', 'info');
 
-                fetch(`/api/reports/export/pdf/${projectId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                })
-                .then(async res => {
-                    if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        throw new Error(errData.msg || errData.message || 'Failed to download report PDF');
-                    }
-                    return res.blob();
-                })
-                .then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `Project_${projectId}_Summary_Report.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    window.URL.revokeObjectURL(url);
+                try {
+                    await api.downloadFile(`/reports/export/pdf/${projectId}`, `Project_${projectId}_Summary_Report.pdf`);
                     QCMS.toast('Final summary report downloaded successfully!', 'success');
-                })
-                .catch(err => {
+                } catch (err) {
                     console.error('[Repo] Download error:', err);
                     QCMS.toast(err.message || 'Error downloading report PDF', 'danger');
-                });
+                }
             },
 
             async viewDetail(entryId) {

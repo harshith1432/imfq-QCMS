@@ -233,14 +233,14 @@ class Organization(db.Model):
         
         raw = self.stages_config
         if raw and len(raw) > 0:
-            # Back-fill sections from defaults for stages that don't have them yet
+            # Back-fill sections from defaults only for stages that have no sections defined at all
             default_map = {d["original_id"]: d for d in base_defaults}
             result = []
             for stage in raw:
                 s = copy.deepcopy(stage)
                 oid = s.get("original_id", s.get("stage_id", 1))
                 default_stage = default_map.get(oid, {})
-                if not s.get("sections") or len(s.get("sections", [])) < len(default_stage.get("sections", [])):
+                if not s.get("sections"):
                     s["sections"] = copy.deepcopy(
                         default_stage.get("sections", [])
                     )
@@ -361,6 +361,7 @@ class Project(db.Model):
     sponsor = db.Column(db.String(255))
     rejection_reason = db.Column(db.Text, nullable=True)
     
+    stages_config = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     members = db.relationship('User', secondary='project_members', backref='projects')
@@ -1137,6 +1138,8 @@ class PlatformSettings(db.Model):
     system_version = db.Column(db.String(20), default="1.0.0")
     global_template_version = db.Column(db.Integer, default=1, nullable=False)
     global_template_updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    global_template_release_notes = db.Column(db.Text, nullable=True)
+    global_template_preview_image = db.Column(db.Text, nullable=True)
     
     default_plan = db.Column(db.String(50), default="Starter")
     trial_period_days = db.Column(db.Integer, default=14)
@@ -1691,6 +1694,7 @@ class Notification(db.Model):
     title = db.Column(db.String(255), nullable=False)
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
+    is_starred = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     link = db.Column(db.String(500))
     
@@ -2311,7 +2315,7 @@ class AnnouncementDelivery(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     announcement_id = db.Column(db.Integer, db.ForeignKey('announcements.id', ondelete='CASCADE'), nullable=False)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'))
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'))
     channel = db.Column(db.String(30), nullable=False)
     status = db.Column(db.String(20), default='Pending')
     sent_at = db.Column(db.DateTime)
@@ -2324,7 +2328,7 @@ class AnnouncementRead(db.Model):
     __tablename__ = 'announcement_reads'
     id = db.Column(db.Integer, primary_key=True)
     announcement_id = db.Column(db.Integer, db.ForeignKey('announcements.id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'))
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'))
     viewed_at = db.Column(db.DateTime)
     read_at = db.Column(db.DateTime)
@@ -2344,7 +2348,7 @@ class AnnouncementAttachment(db.Model):
     file_url = db.Column(db.String(500), nullable=False)
     file_size = db.Column(db.Integer, default=0)
     file_type = db.Column(db.String(50))
-    uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -2352,7 +2356,7 @@ class AnnouncementAudit(db.Model):
     __tablename__ = 'announcement_audit'
     id = db.Column(db.Integer, primary_key=True)
     announcement_id = db.Column(db.Integer, db.ForeignKey('announcements.id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     action = db.Column(db.String(100), nullable=False)
     details = db.Column(db.JSON)
     ip_address = db.Column(db.String(45))

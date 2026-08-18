@@ -775,6 +775,10 @@ def list_subscriptions():
             Organization.is_platform_org == False
         )
 
+        org_id_param = request.args.get('org_id', type=int)
+        if org_id_param:
+            query = query.filter(Subscription.org_id == org_id_param)
+
         # ── Search ──
         if q:
             term = f'%{q}%'
@@ -1267,7 +1271,13 @@ def upgrade_plan(sub_id):
     if org:
         from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
         calc = calculate_org_storage_realtime(org.id)
-        used_storage_gb = float(calc[0].get('storage_used_gb', 0.0)) if calc else float((org.storage_used_mb or 0.0) / 1024.0)
+        if isinstance(calc, dict):
+            orgs = calc.get('organizations', [])
+            used_storage_gb = float(orgs[0].get('storage_used_gb', 0.0)) if orgs and isinstance(orgs[0], dict) else float(calc.get('storage_used_gb', (org.storage_used_mb or 0.0) / 1024.0))
+        elif isinstance(calc, list) and len(calc) > 0 and isinstance(calc[0], dict):
+            used_storage_gb = float(calc[0].get('storage_used_gb', 0.0))
+        else:
+            used_storage_gb = float((org.storage_used_mb or 0.0) / 1024.0)
         target_storage_gb = float(data.get('storage_limit_gb', plan_info['storage_limit_gb']))
         if target_storage_gb < used_storage_gb:
             return jsonify({
@@ -1324,7 +1334,13 @@ def downgrade_plan(sub_id):
     if org:
         from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
         calc = calculate_org_storage_realtime(org.id)
-        used_storage_gb = float(calc[0].get('storage_used_gb', 0.0)) if calc else float((org.storage_used_mb or 0.0) / 1024.0)
+        if isinstance(calc, dict):
+            orgs = calc.get('organizations', [])
+            used_storage_gb = float(orgs[0].get('storage_used_gb', 0.0)) if orgs and isinstance(orgs[0], dict) else float(calc.get('storage_used_gb', (org.storage_used_mb or 0.0) / 1024.0))
+        elif isinstance(calc, list) and len(calc) > 0 and isinstance(calc[0], dict):
+            used_storage_gb = float(calc[0].get('storage_used_gb', 0.0))
+        else:
+            used_storage_gb = float((org.storage_used_mb or 0.0) / 1024.0)
         target_storage_gb = float(data.get('storage_limit_gb', plan_info['storage_limit_gb']))
         if target_storage_gb < used_storage_gb:
             return jsonify({

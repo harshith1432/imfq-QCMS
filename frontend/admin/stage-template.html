@@ -507,6 +507,7 @@
         }
         .btn-req-optional:hover {
             border-color: var(--ds-accent) !important;
+        }
         @keyframes diffPulse {
             0% { background-color: rgba(59, 130, 246, 0.25); box-shadow: 0 0 16px rgba(59, 130, 246, 0.4); transform: scale(1.01); }
             50% { background-color: rgba(59, 130, 246, 0.45); box-shadow: 0 0 24px rgba(59, 130, 246, 0.6); transform: scale(1.02); }
@@ -524,6 +525,18 @@
         .modal-backdrop.show {
             z-index: 100000 !important;
         }
+        #diffPreviewModal { z-index: 100010 !important; }
+        #saveScopeModal { z-index: 100020 !important; }
+        .scope-option-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .scope-option-card:hover {
+            border-color: var(--ds-primary, #3b82f6) !important;
+            background-color: #f8fafc !important;
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
     </style>
 
 </head>
@@ -719,6 +732,12 @@ const ICON_LIBRARY = [
 
 // Tool options grouped by category
 const TOOL_OPTIONS = [
+    { category: "Sections & Workspaces (Add New Section)", items: [
+        { type: "custom", label: "New Section (Blank Card)", icon: "layout", desc: "Add a new customizable section container to stage" },
+        { type: "table", label: "New Data Table Section", icon: "table", desc: "Add a multi-column data table section" },
+        { type: "textarea", label: "New Narrative / Text Section", icon: "align-left", desc: "Add a text explanation, background, or notes section" },
+        { type: "file_upload", label: "New Evidence Upload Section", icon: "upload", desc: "Add a photo and document proof upload section" }
+    ]},
     { category: "Standard Data Inputs", items: [
         { type: "text", label: "Text Field (Single Line)", icon: "type" },
         { type: "textarea", label: "Text Area (Multi-line)", icon: "align-left" },
@@ -894,8 +913,11 @@ function showToast(msg, type = 'success') {
 }
 
 function esc(s) {
+    if (s === null || s === undefined) return '';
     return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+const escapeHtml = esc;
+window.escapeHtml = esc;
 
 function renumber() {
     stages.forEach((s, i) => { s.stage_id = i + 1; });
@@ -943,6 +965,9 @@ function renderList() {
 
             <!-- stage reorder & delete buttons -->
             <div class="row-actions me-2">
+                <button class="ds-btn ds-btn-primary ds-btn-sm py-1 px-2.5 me-2 text-nowrap d-inline-flex align-items-center gap-1" style="font-size:11px; height:28px;" title="Add New Section to this stage" onclick="addNewSectionDirectly(${i}); event.stopPropagation();">
+                    <i data-lucide="plus-circle" style="width:13px;height:13px;"></i> Add Section
+                </button>
                 <button class="row-btn" title="Move up" onclick="moveStage(${i},-1); event.stopPropagation();" ${i === 0 ? 'disabled' : ''}>
                     <i data-lucide="chevron-up" style="width:13px;height:13px;"></i>
                 </button>
@@ -962,7 +987,7 @@ function renderList() {
 
         // Expand sections toggle on click
         header.addEventListener('click', (e) => {
-            if (e.target.closest('input') || e.target.closest('.stage-icon-bubble') || e.target.closest('.row-btn') || e.target.closest('.drag-handle')) {
+            if (e.target.closest('input') || e.target.closest('.stage-icon-bubble') || e.target.closest('.row-btn') || e.target.closest('.drag-handle') || e.target.closest('.ds-btn')) {
                 return;
             }
             const detail = container.querySelector('.stage-sections-detail');
@@ -1028,9 +1053,12 @@ function renderList() {
         detail.innerHTML = `
             <div class="fw-bold text-xs text-secondary mb-3 uppercase tracking-wider">Stage Content Columns & QC Tools</div>
             <div id="${secListId}" class="mb-3"></div>
-            <div class="d-flex justify-content-start">
-                <button class="ds-btn ds-btn-ghost ds-btn-sm" onclick="openToolPicker(${i})">
-                    <i data-lucide="plus"></i> Add Column / QC Tool
+            <div class="d-flex align-items-center gap-2 flex-wrap pt-2">
+                <button class="ds-btn ds-btn-primary ds-btn-sm d-inline-flex align-items-center gap-1.5" onclick="addNewSectionDirectly(${i})">
+                    <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Add New Section
+                </button>
+                <button class="ds-btn ds-btn-outline ds-btn-sm d-inline-flex align-items-center gap-1.5" onclick="openToolPicker(${i})">
+                    <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Insert QC Tool / Element
                 </button>
             </div>
         `;
@@ -1762,6 +1790,47 @@ document.getElementById('iconPickerConfirm').addEventListener('click', () => {
     renderPreview();
 });
 
+// ── Direct Add New Section Function ──────────────────────────────────────────
+function addNewSectionDirectly(stageIdx) {
+    const stage = stages[stageIdx];
+    if (!stage) return;
+    if (!stage.sections) stage.sections = [];
+    const secNum = stage.sections.length + 1;
+    const newSecId = `s${stage.stage_id || (stageIdx + 1)}_custom_sec_${Date.now()}`;
+    const newSec = {
+        id: newSecId,
+        type: 'custom',
+        label: `New Section ${secNum}`,
+        description: `Guidance notes and instructions for completing Section ${stageIdx + 1}.${secNum}...`,
+        required: true,
+        order: secNum,
+        fields: []
+    };
+    stage.sections.push(newSec);
+    renderList();
+    const cont = document.getElementById('stageList').children[stageIdx];
+    if (cont) {
+        const detail = cont.querySelector('.stage-sections-detail');
+        if (detail) detail.style.display = 'block';
+        const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+        const lastWrapper = wrappers[wrappers.length - 1];
+        if (lastWrapper) {
+            const bc = lastWrapper.querySelector('.card-body-collapse');
+            if (bc) bc.style.display = 'block';
+            const ti = lastWrapper.querySelector('.card-collapse-toggle i');
+            if (ti) ti.setAttribute('data-lucide', 'chevron-up');
+            lastWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const titleInput = lastWrapper.querySelector('.card-title-edit-input');
+            if (titleInput) {
+                titleInput.focus();
+                titleInput.select();
+            }
+        }
+        lucide.createIcons();
+    }
+    showToast(`Added "New Section ${secNum}" to Stage ${stageIdx + 1}`);
+}
+
 // ── Tool Picker Modal ─────────────────────────────────────────────────────────
 let activeSubFieldTarget = null;
 
@@ -2022,27 +2091,45 @@ window.deleteSubField = deleteSubField;
 
 
 
-// ── Save Template ─────────────────────────────────────────────────────────────
-document.getElementById('saveBtn').addEventListener('click', async () => {
+// ── Save Template & Scope Selection ──────────────────────────────────────────
+let pendingSaveScopeAction = 'save';
+let pendingSyncMode = 'overwrite';
+
+function openSaveScopeModal(actionType, syncMode = 'overwrite') {
+    pendingSaveScopeAction = actionType;
+    pendingSyncMode = syncMode;
+
+    const modalTitle = document.getElementById('saveScopeModalTitle');
+    const confirmBtn = document.getElementById('confirmSaveScopeBtn');
+    
+    if (actionType === 'sync') {
+        if (modalTitle) modalTitle.textContent = syncMode === 'merge' ? 'Merge & Apply Global Template' : 'Apply All Global Updates';
+        if (confirmBtn) confirmBtn.innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i> Confirm & Apply Sync';
+    } else {
+        if (modalTitle) modalTitle.textContent = 'Save & Apply Template Changes';
+        if (confirmBtn) confirmBtn.innerHTML = '<i data-lucide="save" style="width:14px;height:14px;"></i> Confirm & Save Template';
+    }
+
+    const modalEl = document.getElementById('saveScopeModal');
+    if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+    let bsModal = bootstrap.Modal.getInstance(modalEl);
+    if (!bsModal) {
+        bsModal = new bootstrap.Modal(modalEl);
+    }
+    bsModal.show();
+    if (window.lucide) lucide.createIcons();
+}
+window.openSaveScopeModal = openSaveScopeModal;
+
+document.getElementById('saveBtn').addEventListener('click', () => {
     const empty = stages.findIndex(s => !s.title.trim());
     if (empty !== -1) {
         showToast(`Stage ${empty + 1} has an empty title — please fill it in.`, 'error');
         return;
     }
-    const btn = document.getElementById('saveBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i data-lucide="loader" class="spin" style="width:14px;height:14px;"></i> Saving…';
-    lucide.createIcons();
-    try {
-        await api.post('/admin/stages-template', { stages });
-        showToast('Stage template saved successfully!');
-    } catch (err) {
-        showToast('Error: ' + (err.message || 'Unknown error'), 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="save"></i> Save Template';
-        lucide.createIcons();
-    }
+    openSaveScopeModal('save');
 });
 
 // ── Reset Template ────────────────────────────────────────────────────────────
@@ -2213,20 +2300,46 @@ async function openGlobalSyncModal(globalVer, appliedVer) {
         pendingGlobalDiffs.forEach((item, i) => {
             let badgeClass = 'bg-primary';
             let badgeText = 'CHANGE';
-            if (item.type.includes('ADDED')) { badgeClass = 'bg-success'; badgeText = 'NEW ADDITION'; }
-            else if (item.type.includes('MODIFIED') || item.type.includes('TITLE')) { badgeClass = 'bg-warning text-dark'; badgeText = 'MODIFIED'; }
-            else if (item.type.includes('REMOVED')) { badgeClass = 'bg-danger'; badgeText = 'REMOVED'; }
+            let iconName = 'refresh-cw';
+            if (item.type.includes('ADDED')) { 
+                badgeClass = 'bg-success text-white'; 
+                badgeText = item.type.includes('SECTION') ? '+ NEW SECTION' : '+ NEW FIELD'; 
+                iconName = 'plus-circle';
+            }
+            else if (item.type.includes('MODIFIED') || item.type.includes('TITLE') || item.type.includes('ICON')) { 
+                badgeClass = 'bg-warning text-dark'; 
+                badgeText = '~ MODIFIED'; 
+                iconName = 'edit-3';
+            }
+            else if (item.type.includes('REMOVED')) { 
+                badgeClass = 'bg-danger text-white'; 
+                badgeText = '- REMOVED'; 
+                iconName = 'trash-2';
+            }
+
+            let subFieldsHtml = '';
+            if (item.sub_fields && item.sub_fields.length > 0) {
+                subFieldsHtml = `
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                        ${item.sub_fields.map(sf => `<span class="badge bg-light text-dark border text-xxs font-normal py-0.5 px-1.5">${esc(sf)}</span>`).join('')}
+                    </div>
+                `;
+            }
 
             html += `
-                <div class="d-flex align-items-center justify-content-between p-3 border rounded-3 bg-white shadow-xs">
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="badge ${badgeClass} text-xxs font-monospace px-2 py-1">${badgeText}</span>
+                <div class="d-flex align-items-center justify-content-between p-3 border rounded-3 bg-white shadow-xs mb-2">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="badge ${badgeClass} text-xxs font-monospace px-2 py-1 mt-0.5 d-inline-flex align-items-center gap-1">
+                            <i data-lucide="${iconName}" style="width:10px;height:10px;"></i>
+                            ${badgeText}
+                        </span>
                         <div>
-                            <span class="fw-bold text-dark text-xs d-block">${escapeHtml(item.label)}</span>
-                            <span class="text-xxs text-muted">Target Location: Stage ${item.stage_id} (${escapeHtml(item.stage_title || '')})</span>
+                            <span class="fw-bold text-dark text-xs d-block">${esc(item.label)}</span>
+                            <span class="text-xxs text-muted d-block mt-0.5">Target Location: <strong>Stage ${item.stage_id}</strong> (${esc(item.stage_title || '')})</span>
+                            ${subFieldsHtml}
                         </div>
                     </div>
-                    <button class="ds-btn ds-btn-ghost ds-btn-xs" onclick="highlightDiffStage(${item.stage_id}, '${item.section_id || ''}')">
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-xs text-nowrap ms-2" onclick="openDiffPreview(${i})">
                         <i data-lucide="eye" style="width:12px;height:12px;"></i> View Stage
                     </button>
                 </div>
@@ -2241,28 +2354,248 @@ async function openGlobalSyncModal(globalVer, appliedVer) {
     }
 }
 
-async function executeGlobalSync(mode) {
-    try {
-        const res = await api.post('/admin/stages-template/sync-global', { mode: mode || 'overwrite' });
-        showToast(res.message || 'Global template synchronized successfully!');
-        
-        const diffModalEl = document.getElementById('globalSyncDiffModal');
-        const bsModal = bootstrap.Modal.getInstance(diffModalEl);
-        if (bsModal) bsModal.hide();
+function renderDiffVisualPreview(diff) {
+    if (!diff) return '<div class="text-muted text-center py-4">No preview available.</div>';
 
-        await checkGlobalTemplateStatus();
-        const stagesRes = await api.get('/admin/stages-template');
-        stages = (stagesRes.stages || []).sort((a, b) => a.stage_id - b.stage_id);
-        renderList();
+    const details = diff.details || {};
+    let out = '';
 
-        if (pendingGlobalDiffs && pendingGlobalDiffs.length > 0) {
-            const firstDiff = pendingGlobalDiffs[0];
-            highlightDiffStage(firstDiff.stage_id, firstDiff.section_id);
+    if (diff.type === 'SECTION_ADDED' || diff.type === 'SECTION_MODIFIED' || (details && details.fields)) {
+        const secTitle = details.label || details.title || diff.label || 'Section';
+        const secDesc = details.description || details.about || details.purpose || '';
+        const fields = details.fields || [];
+
+        out += `
+            <div class="card border border-primary-subtle shadow-sm rounded-3 overflow-hidden mb-3">
+                <div class="card-header bg-primary bg-opacity-10 border-bottom border-primary-subtle d-flex align-items-center justify-content-between py-2.5 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary text-white text-xxs font-monospace px-2 py-1">STAGE ${diff.stage_id}</span>
+                        <h6 class="mb-0 fw-bold text-dark text-sm">${esc(secTitle)}</h6>
+                    </div>
+                    <span class="badge bg-success text-white text-xxs font-monospace px-2 py-0.5">
+                        ${esc(diff.type)}
+                    </span>
+                </div>
+                <div class="card-body p-3 bg-white">
+                    ${secDesc ? `<p class="text-xs text-muted mb-3 fst-italic"><i data-lucide="info" style="width:12px;height:12px;" class="me-1"></i>${esc(secDesc)}</p>` : ''}
+                    
+                    <div class="row g-3">
+        `;
+
+        if (fields.length === 0) {
+            out += `
+                <div class="col-12">
+                    <div class="p-3 border rounded-2 text-center text-muted bg-light text-xs">
+                        <i data-lucide="layers" style="width:18px;height:18px;" class="d-block mx-auto mb-1 opacity-50"></i>
+                        Custom section workspace container
+                    </div>
+                </div>
+            `;
+        } else {
+            fields.forEach((f, fIdx) => {
+                const fLabel = f.label || f.name || `Field ${fIdx + 1}`;
+                const fType = (f.type || 'text').toLowerCase();
+                const fReq = f.required ? '<span class="text-danger">*</span>' : '';
+                const fCol = f.col_width || (fType === 'textarea' || fType === 'table' || fType === 'fishbone' || fType === 'pareto' || fType === 'evidence' ? 'col-12' : 'col-md-6');
+
+                out += `<div class="${fCol}">`;
+                out += `<label class="form-label text-xs fw-semibold text-dark mb-1 d-flex align-items-center justify-content-between">
+                            <span>${esc(fLabel)} ${fReq}</span>
+                            <span class="badge bg-light text-secondary border text-xxs font-monospace">${esc(fType)}</span>
+                        </label>`;
+
+                if (fType === 'textarea') {
+                    out += `<textarea class="form-control form-control-sm text-xs bg-light" rows="3" placeholder="${esc(f.placeholder || 'Enter details...')}" readonly></textarea>`;
+                } else if (fType === 'select' || fType === 'dropdown') {
+                    const opts = f.options || ['Option 1', 'Option 2', 'Option 3'];
+                    out += `<select class="form-select form-select-sm text-xs bg-light" disabled>
+                                ${opts.map(o => `<option>${esc(typeof o === 'object' ? (o.label || o.value) : o)}</option>`).join('')}
+                            </select>`;
+                } else if (fType === 'checkbox' || fType === 'boolean') {
+                    out += `<div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" checked disabled>
+                                <label class="form-check-label text-xs text-muted">${esc(f.help_text || 'Enabled')}</label>
+                            </div>`;
+                } else if (fType === 'evidence' || fType === 'file' || fType === 'photo' || fType === 'image') {
+                    out += `
+                        <div class="border border-dashed rounded-3 p-3 text-center bg-light-subtle">
+                            <i data-lucide="image" style="width:22px;height:22px;" class="text-primary mb-1 d-block mx-auto"></i>
+                            <span class="text-xs fw-semibold text-dark d-block">Evidence &amp; Photo Attachment Box</span>
+                            <span class="text-xxs text-muted">Supports photos, images, and multi-file evidence grid</span>
+                        </div>
+                    `;
+                } else if (fType === 'table' || fType === '3w1h' || fType === '5w2h' || fType === 'action_plan') {
+                    out += `
+                        <div class="border rounded-2 p-2 bg-light-subtle">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered text-xxs mb-0 bg-white">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>What / Action</th>
+                                            <th>Who / Responsible</th>
+                                            <th>When / Target Date</th>
+                                            <th>Status / Verification</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-muted">Sample action item...</td>
+                                            <td class="text-muted">Assigned Member</td>
+                                            <td class="text-muted">YYYY-MM-DD</td>
+                                            <td><span class="badge bg-success bg-opacity-20 text-success">Verified</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                } else if (fType === 'fishbone' || fType === 'pareto' || fType === '5why' || fType === 'cause_effect') {
+                    out += `
+                        <div class="border rounded-3 p-3 text-center bg-light-subtle">
+                            <div class="d-flex align-items-center justify-content-center gap-2 mb-1 text-primary">
+                                <i data-lucide="git-branch" style="width:20px;height:20px;"></i>
+                                <strong class="text-xs text-uppercase">${esc(fType)} Analysis QC Tool</strong>
+                            </div>
+                            <span class="text-xxs text-muted d-block">Interactive quality analysis diagram with data entry table</span>
+                        </div>
+                    `;
+                } else {
+                    out += `<input type="${esc(fType)}" class="form-control form-control-sm text-xs bg-light" placeholder="${esc(f.placeholder || 'Enter ' + fLabel + '...')}" readonly>`;
+                }
+                out += `</div>`;
+            });
         }
-    } catch (err) {
-        showToast('Error syncing template: ' + (err.message || 'Unknown error'), 'error');
+
+        out += `
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (diff.type === 'FIELD_ADDED' || diff.type === 'FIELD_MODIFIED') {
+        const f = details || {};
+        const fLabel = f.label || diff.label || 'Field';
+        const fType = (f.type || 'text').toLowerCase();
+
+        out += `
+            <div class="card border border-success-subtle shadow-sm rounded-3 p-3 mb-3 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                    <span class="badge bg-success text-white text-xxs font-monospace px-2 py-1">+ NEW FIELD ADDITION</span>
+                    <span class="text-xxs text-muted">Target Location: <strong>Stage ${diff.stage_id}</strong> (${esc(diff.stage_title || '')})</span>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label text-xs fw-bold text-dark mb-1">${esc(fLabel)}</label>
+                    <input type="text" class="form-control form-control-sm text-xs bg-light" placeholder="Field Type: ${esc(fType)}" readonly>
+                </div>
+                <div class="text-xxs text-muted mt-2">
+                    This element will be inserted directly into the stage's data collection card upon synchronization.
+                </div>
+            </div>
+        `;
+    } else {
+        out += `
+            <div class="alert alert-secondary text-xs">
+                <strong>Change Summary:</strong> ${esc(diff.label)}
+            </div>
+        `;
     }
+
+    return out;
 }
+
+function openDiffPreview(diffIndex) {
+    if (!pendingGlobalDiffs || !pendingGlobalDiffs[diffIndex]) return;
+    const item = pendingGlobalDiffs[diffIndex];
+
+    const titleEl = document.getElementById('diffPreviewModalTitle');
+    const subEl = document.getElementById('diffPreviewModalSubtitle');
+    const bodyEl = document.getElementById('diffPreviewModalBody');
+
+    if (titleEl) titleEl.textContent = `Stage ${item.stage_id} Preview: ${item.label.replace(/^Stage \d+ [→?] /, '')}`;
+    if (subEl) subEl.textContent = `Target Location: Stage ${item.stage_id} (${item.stage_title || ''})`;
+
+    if (bodyEl) {
+        bodyEl.innerHTML = renderDiffVisualPreview(item);
+    }
+
+    const modalEl = document.getElementById('diffPreviewModal');
+    if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+    let bsModal = bootstrap.Modal.getInstance(modalEl);
+    if (!bsModal) {
+        bsModal = new bootstrap.Modal(modalEl);
+    }
+    bsModal.show();
+    if (window.lucide) lucide.createIcons();
+}
+window.openDiffPreview = openDiffPreview;
+
+function executeGlobalSync(mode) {
+    openSaveScopeModal('sync', mode || 'overwrite');
+}
+
+// ── Confirm Save / Sync Scope Handler ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const confirmBtn = document.getElementById('confirmSaveScopeBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            const applyToActive = document.getElementById('scopeActiveRadio')?.checked ?? true;
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i data-lucide="loader" class="spin" style="width:14px;height:14px;"></i> Applying…';
+            if (window.lucide) lucide.createIcons();
+
+            try {
+                if (pendingSaveScopeAction === 'sync') {
+                    const res = await api.post('/admin/stages-template/sync-global', {
+                        mode: pendingSyncMode || 'overwrite',
+                        apply_to_active: applyToActive
+                    });
+                    showToast(res.message || 'Global template synchronized successfully!');
+
+                    const previewModalEl = document.getElementById('diffPreviewModal');
+                    if (previewModalEl) {
+                        const pModal = bootstrap.Modal.getInstance(previewModalEl);
+                        if (pModal) pModal.hide();
+                    }
+
+                    const diffModalEl = document.getElementById('globalSyncDiffModal');
+                    if (diffModalEl) {
+                        const bsModal = bootstrap.Modal.getInstance(diffModalEl);
+                        if (bsModal) bsModal.hide();
+                    }
+
+                    await checkGlobalTemplateStatus();
+                    const stagesRes = await api.get('/admin/stages-template');
+                    stages = (stagesRes.stages || []).sort((a, b) => a.stage_id - b.stage_id);
+                    renderList();
+
+                    if (pendingGlobalDiffs && pendingGlobalDiffs.length > 0) {
+                        const firstDiff = pendingGlobalDiffs[0];
+                        highlightDiffStage(firstDiff.stage_id, firstDiff.section_id);
+                    }
+                } else {
+                    const res = await api.post('/admin/stages-template', {
+                        stages,
+                        apply_to_active: applyToActive
+                    });
+                    showToast(res.message || 'Stage template saved successfully!');
+                }
+
+                const scopeModalEl = document.getElementById('saveScopeModal');
+                if (scopeModalEl) {
+                    const bsScopeModal = bootstrap.Modal.getInstance(scopeModalEl);
+                    if (bsScopeModal) bsScopeModal.hide();
+                }
+            } catch (err) {
+                showToast('Error: ' + (err.message || 'Unknown error'), 'error');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = `<i data-lucide="${pendingSaveScopeAction === 'sync' ? 'check' : 'save'}" style="width:14px;height:14px;"></i> Confirm`;
+                if (window.lucide) lucide.createIcons();
+            }
+        });
+    }
+});
 
 function highlightDiffStage(stageId, sectionId) {
     const list = document.getElementById('stageList');
@@ -2364,5 +2697,124 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
     </div>
 </div>
+
+<!-- ── Diff Feature Preview Modal (opened by "View Stage" button) ──────────── -->
+<div class="modal fade" id="diffPreviewModal" tabindex="-1" aria-hidden="true" style="z-index: 100010;">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <!-- Accent strip -->
+            <div style="height:5px; background: linear-gradient(90deg,#0ea5e9,#6366f1,#8b5cf6);"></div>
+            <div class="modal-header border-bottom px-4 py-3" style="background: #f8fafc;">
+                <div class="d-flex align-items-center gap-3 flex-grow-1">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10" style="width:40px;height:40px;flex-shrink:0;">
+                        <i data-lucide="layout-panel-top" style="width:20px;height:20px;" class="text-primary"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-dark" id="diffPreviewModalTitle">Stage Preview</h5>
+                        <p class="text-xs text-muted mb-0" id="diffPreviewModalSubtitle">Visual layout of what will be added</p>
+                    </div>
+                    <span class="badge bg-success text-white ms-auto me-2 px-2 py-1 text-xxs font-monospace d-flex align-items-center gap-1">
+                        <i data-lucide="eye" style="width:10px;height:10px;"></i> Live Preview
+                    </span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-light" id="diffPreviewModalBody" style="min-height:300px; max-height:75vh; overflow-y:auto;">
+                <!-- Dynamically populated by openDiffPreview() -->
+                <div class="text-center py-5 text-muted">
+                    <i data-lucide="loader" class="spin d-block mx-auto mb-2" style="width:26px;height:26px;"></i>
+                    Loading preview...
+                </div>
+            </div>
+
+            <div class="modal-footer border-top px-4 py-3 bg-white d-flex justify-content-between align-items-center">
+                <div class="text-xs text-muted d-flex align-items-center gap-1">
+                    <i data-lucide="info" style="width:13px;height:13px;"></i>
+                    This is a live preview of exactly what will appear in your workspace after applying the update.
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Close Preview</button>
+                    <button type="button" class="ds-btn ds-btn-outline-primary ds-btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('diffPreviewModal')).hide(); executeGlobalSync('merge')">
+                        <i data-lucide="git-merge" style="width:13px;height:13px;"></i> Merge This Update
+                    </button>
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('diffPreviewModal')).hide(); executeGlobalSync('overwrite')">
+                        <i data-lucide="check-circle-2" style="width:13px;height:13px;"></i> Apply All Global Updates
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Save / Apply Scope Confirmation Modal ──────────────────────────── -->
+<div class="modal fade" id="saveScopeModal" tabindex="-1" aria-hidden="true" style="z-index: 100020;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div style="height:4px; background: linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6);"></div>
+            <div class="modal-header border-bottom px-4 py-3 bg-light">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="ds-icon-circle bg-primary-soft text-primary" style="width:34px;height:34px;">
+                        <i data-lucide="layers" style="width:18px;height:18px;"></i>
+                    </span>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-dark" id="saveScopeModalTitle">Apply Template Changes</h5>
+                        <p class="text-xs text-muted mb-0">Select project update scope</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-sm text-secondary mb-3">
+                    Choose which projects should receive these template updates:
+                </p>
+                <div class="v-stack gap-3 mb-3">
+                    <!-- Option 1: Active Projects -->
+                    <label class="d-flex align-items-start gap-3 p-3 rounded-3 border bg-light-subtle cursor-pointer position-relative scope-option-card active-scope-card" style="cursor: pointer; border-color: var(--ds-primary, #3b82f6) !important; transition: all 0.2s ease;">
+                        <input class="form-check-input mt-1" type="radio" name="applyScopeRadio" id="scopeActiveRadio" value="active" checked>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-sm text-dark d-flex align-items-center gap-1">
+                                <i data-lucide="refresh-cw" style="width:14px;height:14px;" class="text-primary"></i>
+                                Apply to all Active / Working Projects
+                            </div>
+                            <p class="text-xs text-muted mb-0 mt-1">
+                                Update the stage workflow and custom sections for all currently open/in-progress projects. (Completed stages remain intact).
+                            </p>
+                        </div>
+                    </label>
+
+                    <!-- Option 2: Upcoming Projects Only -->
+                    <label class="d-flex align-items-start gap-3 p-3 rounded-3 border bg-light-subtle cursor-pointer position-relative scope-option-card" style="cursor: pointer; transition: all 0.2s ease;">
+                        <input class="form-check-input mt-1" type="radio" name="applyScopeRadio" id="scopeUpcomingRadio" value="upcoming">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-sm text-dark d-flex align-items-center gap-1">
+                                <i data-lucide="calendar-plus" style="width:14px;height:14px;" class="text-secondary"></i>
+                                Apply ONLY to Upcoming / Future Projects
+                            </div>
+                            <p class="text-xs text-muted mb-0 mt-1">
+                                Keep existing active projects on their current structure. Only new projects created after this update will use the new template.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Audit note for closed projects -->
+                <div class="p-3 rounded-3 bg-warning-subtle border border-warning-subtle d-flex align-items-center gap-2">
+                    <i data-lucide="shield-check" style="width:18px;height:18px;flex-shrink:0;" class="text-warning-emphasis"></i>
+                    <span class="text-xs text-warning-emphasis">
+                        <strong>Historical Protection:</strong> Closed and Completed projects are permanently locked and will never be modified.
+                    </span>
+                </div>
+            </div>
+            <div class="modal-footer border-top px-4 py-3 bg-light d-flex justify-content-between">
+                <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="confirmSaveScopeBtn">
+                    <i data-lucide="check" style="width:14px;height:14px;"></i> Confirm & Save Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

@@ -49,19 +49,8 @@ def _hash_key(key: str) -> str:
     return hashlib.sha256(key.encode('utf-8')).hexdigest()
 
 def _check_rate_limit(org_id: int) -> bool:
-    """Sliding window rate limiter: max 100 requests / minute per org."""
-    now = time.time()
-    cutoff = now - 60.0
-    with _rate_lock:
-        timestamps = _org_rate_buckets.get(org_id, [])
-        # Keep only timestamps within the last 60 seconds
-        valid_ts = [ts for ts in timestamps if ts > cutoff]
-        if len(valid_ts) >= RATE_LIMIT_PER_MINUTE:
-            _org_rate_buckets[org_id] = valid_ts
-            return False
-        valid_ts.append(now)
-        _org_rate_buckets[org_id] = valid_ts
-        return True
+    """Sliding window rate limiter: max 100 requests / minute per org. (Permanently disabled: always returns True)."""
+    return True
 
 def _log_api_request(org_id, ip_address, key_prefix, endpoint, status_code, start_time):
     """Log transaction metrics to integration_api_logs."""
@@ -108,10 +97,8 @@ def require_api_key(f):
             _log_api_request(None, client_ip, raw_key[:12] + "...", request.path, 401, start_time)
             return jsonify({"error": "Unauthorized", "message": "Invalid or disabled API Key."}), 401
 
-        # Check rate limit
-        if not _check_rate_limit(api_key_rec.organization_id):
-            _log_api_request(api_key_rec.organization_id, client_ip, api_key_rec.secret_key_masked, request.path, 429, start_time)
-            return jsonify({"error": "Too Many Requests", "message": "Rate limit exceeded. Maximum 100 requests per minute allowed."}), 429
+        # Rate limit check permanently bypassed - unlimited throughput
+        pass
 
         # Update usage statistics
         api_key_rec.last_used = datetime.utcnow()

@@ -1205,19 +1205,26 @@
                 const canvas = document.getElementById('categoryChart');
                 if (!canvas) return;
                 const chartArea = canvas.parentElement;
-                if (!projects || projects.length === 0) {
+
+                const closedTerminal = ['closed', 'completed', 'archived', 'stage 8 approved', 'rejected', 'stage 1 rejected', 'cancelled', 'discarded'];
+                const activeProjects = (projects || []).filter(p => {
+                    const st = (p.status || '').trim().toLowerCase();
+                    return !closedTerminal.includes(st);
+                });
+
+                if (!activeProjects || activeProjects.length === 0) {
                     chartArea.innerHTML = QCMS.chartPlaceholder('Strategic Distribution');
                     if (window.lucide) lucide.createIcons();
                     return;
                 }
 
                 const cats = {};
-                projects.forEach(p => {
+                activeProjects.forEach(p => {
                     const c = p.category || 'Unassigned';
                     cats[c] = (cats[c] || 0) + 1;
                 });
 
-                const totalProjectsCount = projects.length;
+                const totalProjectsCount = activeProjects.length;
 
                 chartArea.innerHTML = '<canvas id="categoryChart" height="280"></canvas>';
                 const ctx = document.getElementById('categoryChart');
@@ -1292,17 +1299,19 @@
                 const canvas = document.getElementById('stageChart');
                 if (!canvas) return;
                 const chartArea = canvas.parentElement;
-                if (!projects || projects.length === 0) {
+
+                // Filter to running / active projects only (exclude closed, completed, archived, rejected, and cancelled projects)
+                const closedTerminal = ['closed', 'completed', 'archived', 'stage 8 approved', 'rejected', 'stage 1 rejected', 'cancelled', 'discarded'];
+                const runningProjects = (projects || []).filter(p => {
+                    const st = (p.status || '').trim().toLowerCase();
+                    return !closedTerminal.includes(st);
+                });
+
+                if (!runningProjects || runningProjects.length === 0) {
                     chartArea.innerHTML = QCMS.chartPlaceholder('Workflow Metrics');
                     if (window.lucide) lucide.createIcons();
                     return;
                 }
-
-                // Filter to running / active projects only (exclude rejected and cancelled projects)
-                const runningProjects = projects.filter(p => {
-                    const st = (p.status || '').trim().toLowerCase();
-                    return st !== 'rejected' && st !== 'discarded' && st !== 'cancelled' && st !== 'archived';
-                });
 
                 const stageCounts = Array(8).fill(0);
                 runningProjects.forEach(p => {

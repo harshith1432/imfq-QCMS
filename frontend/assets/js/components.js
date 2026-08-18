@@ -370,7 +370,6 @@ const QCMS = {
             if (!comp) {
                 const fields = [
                     { k: 'name', l: 'Legal Entity Name' },
-                    { k: 'org_code', l: 'Organization Code' },
                     { k: 'industry', l: 'Industry Sector' },
                     { k: 'admin_name', l: 'Primary Admin Name' },
                     { k: 'website', l: 'Website URL' },
@@ -2190,12 +2189,18 @@ const QCMS = {
 
         // Mark as read locally & sync backend
         notif.is_read = true;
+        if (notif.id) {
+            api.post(`/notifications/${notif.id}/read`).catch(() => {});
+        }
+
         const badge = document.getElementById('notif-badge');
         if (badge) {
             const hasUnread = (this.notifications || []).some(n => !n.is_read);
             badge.style.display = hasUnread ? 'block' : 'none';
         }
-        api.post('/notifications/read').catch(() => {});
+
+        // Auto-disappear unstarred read notification from list
+        switchNotifTab(currentNotifFilterTab || 'all', currentNotifPage);
 
         // Close notification dropdown panel if open
         const existingOverlay = document.getElementById('notif-panel-overlay');
@@ -2250,11 +2255,11 @@ const QCMS = {
                 <div class="modal-content glass-card border-0" style="background:var(--ds-bg-surface); border:1px solid var(--ds-border-color)!important; border-radius:16px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
                     <div class="modal-header border-bottom p-3" style="border-color:var(--ds-border-color)!important;">
                         <div class="d-flex align-items-center gap-2">
-                            <div class="p-2 rounded-circle" style="background:rgba(var(--ds-primary-rgb), 0.1); color:var(--ds-primary);">
-                                <i data-lucide="bell" style="width:20px;height:20px;"></i>
+                            <div class="p-2 rounded-circle" style="background:${notif.is_announcement ? 'rgba(59,130,246,0.15)' : 'rgba(var(--ds-primary-rgb), 0.1)'}; color:${notif.is_announcement ? '#3b82f6' : 'var(--ds-primary)'};">
+                                <i data-lucide="${notif.is_announcement ? 'megaphone' : 'bell'}" style="width:20px;height:20px;"></i>
                             </div>
                             <div>
-                                <h6 class="modal-title fw-bold mb-0" style="color:var(--ds-text-main); font-size:16px;">${QCMS.escapeHtml(notif.title || 'Notification Details')}</h6>
+                                <h6 class="modal-title fw-bold mb-0" style="color:var(--ds-text-main); font-size:16px;">${QCMS.escapeHtml(notif.title || (notif.is_announcement ? 'Announcement' : 'Notification Details'))}</h6>
                                 <span class="text-xxs text-secondary">${createdDateStr}</span>
                             </div>
                         </div>
@@ -2262,19 +2267,31 @@ const QCMS = {
                     </div>
                     <div class="modal-body p-4" style="max-height:60vh; overflow-y:auto;">
                         <div class="mb-3 d-flex align-items-center gap-2">
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size:11px;">
-                                System Notification
-                            </span>
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size:11px;">
-                                Verified Alert
-                            </span>
+                            ${notif.is_announcement ? `
+                                <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25" style="font-size:11px;">
+                                    📢 Platform Announcement
+                                </span>
+                            ` : `
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size:11px;">
+                                    System Notification
+                                </span>
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size:11px;">
+                                    Verified Alert
+                                </span>
+                            `}
+                            ${notif.is_starred ? `<span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25" style="font-size:11px;">★ Saved</span>` : ''}
                         </div>
                         <div class="p-3 rounded-3 mb-3" style="background:rgba(255,255,255,0.03); border:1px solid var(--ds-border-color); font-size:14px; line-height:1.6; color:var(--ds-text-main); white-space:pre-wrap; word-break:break-word;">
 ${QCMS.escapeHtml(notif.message || 'No detailed description available.')}
                         </div>
                         ${actionButtonHtml}
                     </div>
-                    <div class="modal-footer border-top p-3 d-flex justify-content-end" style="border-color:var(--ds-border-color)!important;">
+                    <div class="modal-footer border-top p-3 d-flex justify-content-between align-items-center" style="border-color:var(--ds-border-color)!important;">
+                        ${notif.is_announcement ? `
+                            <button type="button" class="btn btn-sm btn-link text-primary text-decoration-none fw-bold text-xs p-0" onclick="document.getElementById('notif-detail-modal-container').remove(); UserAnnouncementsModal.open();">
+                                📢 View All Announcements
+                            </button>
+                        ` : '<div></div>'}
                         <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" onclick="document.getElementById('notif-detail-modal-container').remove()">Close</button>
                     </div>
                 </div>
@@ -2311,46 +2328,196 @@ ${QCMS.escapeHtml(notif.message || 'No detailed description available.')}
     }
 };
 
-// Global helper for notifications
+// Global helper for notifications with dedicated Announcement & Alerts tabs
+let currentNotifFilterTab = 'all';
+let currentNotifPage = 1;
+const NOTIFS_PER_PAGE = 10;
+
+QCMS.toggleStarNotification = async function(notifId, e) {
+    if (e) e.stopPropagation();
+    const notifs = window.QCMS.notifications || [];
+    const notif = notifs.find(n => n.id == notifId);
+    if (!notif) return;
+
+    notif.is_starred = !notif.is_starred;
+    switchNotifTab(currentNotifFilterTab || 'all', currentNotifPage);
+
+    try {
+        await api.post(`/notifications/${notifId}/star`);
+    } catch (err) {
+        console.error('Failed to toggle star status:', err);
+    }
+};
+
+QCMS.changeNotifPage = function(delta) {
+    currentNotifPage += delta;
+    if (currentNotifPage < 1) currentNotifPage = 1;
+    switchNotifTab(currentNotifFilterTab || 'all', currentNotifPage);
+};
+
+function switchNotifTab(tab, page) {
+    currentNotifFilterTab = tab;
+    currentNotifPage = page || currentNotifPage || 1;
+    const bodyEl = document.getElementById('notif-items-container');
+    const footerPaginationEl = document.getElementById('notif-pagination-container');
+    if (!bodyEl) return;
+    
+    // Update tab pills active styling
+    document.querySelectorAll('.notif-tab-btn').forEach(btn => {
+        const isActive = btn.getAttribute('data-tab') === tab;
+        btn.style.background = isActive ? 'rgba(var(--ds-primary-rgb), 0.15)' : 'transparent';
+        btn.style.color = isActive ? 'var(--ds-primary)' : 'var(--ds-text-muted, #94a3b8)';
+        btn.style.borderColor = isActive ? 'rgba(var(--ds-primary-rgb), 0.3)' : 'transparent';
+        btn.style.fontWeight = isActive ? '700' : '500';
+    });
+
+    const notifs = window.QCMS.notifications || [];
+    
+    // Active notifications: Only show items that are UNREAD or STARRED!
+    // Unstarred seen/read notifications automatically disappear!
+    const activeNotifs = notifs.filter(n => !n.is_read || n.is_starred);
+
+    let filtered = activeNotifs;
+    if (tab === 'announcements') {
+        filtered = activeNotifs.filter(n => n.is_announcement || (n.title && n.title.startsWith('📢')));
+    } else if (tab === 'alerts') {
+        filtered = activeNotifs.filter(n => !n.is_announcement && !(n.title && n.title.startsWith('📢')));
+    }
+
+    const totalFiltered = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / NOTIFS_PER_PAGE));
+    if (currentNotifPage > totalPages) currentNotifPage = totalPages;
+
+    const startIdx = (currentNotifPage - 1) * NOTIFS_PER_PAGE;
+    const pageItems = filtered.slice(startIdx, startIdx + NOTIFS_PER_PAGE);
+
+    if (totalFiltered === 0) {
+        let emptyMsg = 'No new notifications';
+        let emptyIcon = 'bell-off';
+        if (tab === 'announcements') {
+            emptyMsg = 'No platform announcements yet';
+            emptyIcon = 'megaphone';
+        } else if (tab === 'alerts') {
+            emptyMsg = 'No system alerts';
+            emptyIcon = 'shield-check';
+        }
+        bodyEl.innerHTML = `
+            <div class="p-5 text-center opacity-60">
+                <i data-lucide="${emptyIcon}" class="mb-2" style="width:28px;height:28px;"></i>
+                <div class="text-xs text-secondary">${emptyMsg}</div>
+            </div>
+        `;
+        if (footerPaginationEl) footerPaginationEl.style.display = 'none';
+    } else {
+        bodyEl.innerHTML = pageItems.map((n) => {
+            const originalIdx = notifs.indexOf(n);
+            const isAnn = n.is_announcement || (n.title && n.title.startsWith('📢'));
+            const isStarred = Boolean(n.is_starred);
+            return `
+                <div class="notif-item p-3 mb-2 rounded-2 clickable hover-bg" 
+                     style="background:${isStarred ? 'rgba(234, 179, 8, 0.06)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${isStarred ? 'rgba(234, 179, 8, 0.35)' : 'var(--ds-border-color)'}; cursor:pointer; transition:all 0.15s ease;"
+                     onclick="QCMS.handleNotifClick(${originalIdx})">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <div class="d-flex align-items-center gap-1.5 overflow-hidden">
+                            ${isAnn ? '<span class="badge bg-primary bg-opacity-15 text-primary text-xxs font-monospace px-1.5 py-0.5">📢 Announcement</span>' : ''}
+                            <div class="fw-bold text-sm text-truncate" style="color: var(--ds-text-main);">${QCMS.escapeHtml(n.title || (isAnn ? 'Announcement' : 'Notification'))}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-1.5 flex-shrink-0">
+                            <button type="button" class="btn btn-sm p-0 border-0 ${isStarred ? 'text-warning' : 'text-secondary opacity-60'}" 
+                                    title="${isStarred ? 'Unstar notification' : 'Star & Save notification'}"
+                                    onclick="QCMS.toggleStarNotification(${n.id}, event)" 
+                                    style="font-size:16px; line-height:1; background:transparent; cursor:pointer;">
+                                ${isStarred ? '★' : '☆'}
+                            </button>
+                            ${!n.is_read ? '<span class="badge bg-primary" style="font-size:9px; padding:2px 5px; flex-shrink:0;">New</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="text-xs text-secondary text-truncate">${QCMS.escapeHtml(n.message || '')}</div>
+                    <div class="text-xxs text-muted mt-1.5 d-flex align-items-center justify-content-between">
+                        <span>${QCMS.formatRelative(n.created_at)}</span>
+                        ${isStarred ? '<span class="text-warning fw-semibold text-xxs">★ Saved</span>' : (isAnn ? '<span class="text-primary fw-semibold">Read Details &rarr;</span>' : '')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (footerPaginationEl) {
+            footerPaginationEl.style.display = totalPages > 1 ? 'flex' : 'none';
+            const startItem = totalFiltered > 0 ? startIdx + 1 : 0;
+            const endItem = Math.min(startIdx + NOTIFS_PER_PAGE, totalFiltered);
+            footerPaginationEl.innerHTML = `
+                <span class="text-xxs text-muted">Showing ${startItem}–${endItem} of ${totalFiltered}</span>
+                <div class="d-flex align-items-center gap-1">
+                    <button class="btn btn-xs ds-btn-ghost px-2 py-0.5 text-xxs" ${currentNotifPage <= 1 ? 'disabled' : ''} onclick="QCMS.changeNotifPage(-1)">&larr; Prev</button>
+                    <span class="text-xxs fw-bold px-1" style="color:var(--ds-text-main);">Page ${currentNotifPage}/${totalPages}</span>
+                    <button class="btn btn-xs ds-btn-ghost px-2 py-0.5 text-xxs" ${currentNotifPage >= totalPages ? 'disabled' : ''} onclick="QCMS.changeNotifPage(1)">Next &rarr;</button>
+                </div>
+            `;
+        }
+    }
+
+    if (window.lucide) lucide.createIcons();
+}
+
 function showNotificationsPanel() {
     const existing = document.getElementById('notif-panel-overlay');
     if (existing) { existing.remove(); return; }
 
+    currentNotifPage = 1;
     const notifs = window.QCMS.notifications || [];
-    const hasNotifs = notifs.length > 0;
+    const activeNotifs = notifs.filter(n => !n.is_read || n.is_starred);
 
-    const notifItems = hasNotifs ? notifs.map((n, idx) => `
-        <div class="notif-item p-3 mb-2 rounded-2 clickable hover-bg" 
-             style="background:rgba(255,255,255,0.03); border:1px solid var(--ds-border-color); cursor:pointer;"
-             onclick="QCMS.handleNotifClick(${idx})">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-                <div class="fw-bold text-sm" style="color: var(--ds-text-main);">${n.title || 'Notification'}</div>
-                ${!n.is_read ? '<span class="badge bg-primary" style="font-size:9px; padding:2px 5px;">New</span>' : ''}
-            </div>
-            <div class="text-xs text-secondary text-truncate">${n.message || ''}</div>
-            <div class="text-xxs text-muted mt-1">${QCMS.formatRelative(n.created_at)}</div>
-        </div>
-    `).join('') : '<div class="p-5 text-center opacity-50">No new alerts</div>';
+    const annCount = activeNotifs.filter(n => n.is_announcement || (n.title && n.title.startsWith('📢'))).length;
+    const alertCount = activeNotifs.filter(n => !n.is_announcement && !(n.title && n.title.startsWith('📢'))).length;
 
     const overlay = document.createElement('div');
     overlay.id = 'notif-panel-overlay';
     overlay.style.cssText = 'position:fixed; inset:0; z-index:19999;';
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     overlay.innerHTML = `
-        <div id="notif-panel" style="position:fixed; top:64px; right:16px; width:360px; background:var(--ds-bg-surface); border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,0.1); border: 1px solid var(--ds-glass-border); z-index:20000; overflow:hidden;">
+        <div id="notif-panel" style="position:fixed; top:64px; right:16px; width:380px; background:var(--ds-bg-surface); border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,0.25); border: 1px solid var(--ds-glass-border); z-index:20000; overflow:hidden;">
             <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="border-color: var(--ds-border-color) !important;">
-                <span class="fw-bold" style="color: var(--ds-text-main);">Notifications</span>
-                <button class="btn btn-sm btn-link text-decoration-none" onclick="QCMS.clearNotifications(); document.getElementById('notif-panel-overlay').remove()">Clear All</button>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold" style="color: var(--ds-text-main); font-size:15px;">Notifications</span>
+                    <span class="badge rounded-pill bg-primary bg-opacity-15 text-primary text-xxs font-monospace">${activeNotifs.length}</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-link text-decoration-none text-xs p-0 text-muted" onclick="QCMS.markNotificationsAsRead()">Mark Read</button>
+                    <span class="text-muted opacity-50">&bull;</span>
+                    <button class="btn btn-sm btn-link text-decoration-none text-xs p-0 text-danger" onclick="QCMS.clearNotifications(); switchNotifTab(currentNotifFilterTab, 1);">Clear All</button>
+                </div>
             </div>
-            <div class="p-2" style="max-height:360px; overflow-y:auto; background: var(--ds-bg-surface);">${notifItems}</div>
-            <div class="p-2 border-top text-center" style="border-color: var(--ds-border-color) !important; background:rgba(0,0,0,0.05);">
+
+            <!-- Category Tabs: All / Announcements / System Alerts -->
+            <div class="d-flex gap-1 p-2 border-bottom" style="border-color: var(--ds-border-color) !important; background:rgba(255,255,255,0.02);">
+                <button type="button" class="notif-tab-btn btn btn-sm py-1 px-2.5 text-xs rounded-pill border" data-tab="all" onclick="switchNotifTab('all', 1)">
+                    All <span class="opacity-75">(${activeNotifs.length})</span>
+                </button>
+                <button type="button" class="notif-tab-btn btn btn-sm py-1 px-2.5 text-xs rounded-pill border" data-tab="announcements" onclick="switchNotifTab('announcements', 1)">
+                    📢 Announcements <span class="opacity-75">(${annCount})</span>
+                </button>
+                <button type="button" class="notif-tab-btn btn btn-sm py-1 px-2.5 text-xs rounded-pill border" data-tab="alerts" onclick="switchNotifTab('alerts', 1)">
+                    🔔 Alerts <span class="opacity-75">(${alertCount})</span>
+                </button>
+            </div>
+
+            <div id="notif-items-container" class="p-2" style="max-height:360px; overflow-y:auto; background: var(--ds-bg-surface);">
+                <!-- Loaded dynamically by switchNotifTab -->
+            </div>
+
+            <!-- 10-Item Pagination Controls -->
+            <div id="notif-pagination-container" class="p-2 px-3 border-top d-flex justify-content-between align-items-center" style="border-color: var(--ds-border-color) !important; background:rgba(0,0,0,0.03);">
+            </div>
+
+            <div class="p-2.5 border-top text-center" style="border-color: var(--ds-border-color) !important; background:rgba(0,0,0,0.05);">
                 <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold text-xs" onclick="document.getElementById('notif-panel-overlay').remove(); UserAnnouncementsModal.open();">
-                    📢 View All Announcements
+                    📢 View All Platform Announcements &rarr;
                 </button>
             </div>
         </div>
     `;
     document.body.appendChild(overlay);
+    switchNotifTab(currentNotifFilterTab || 'all', 1);
 }
 
 // Expose QCMS globally
@@ -2759,16 +2926,17 @@ const GlobalAnnouncementBanner = {
     currentIndex: 0,
 
     async init() {
-        if (!document.getElementById('global-announcement-banner-container')) {
-            const container = document.createElement('div');
-            container.id = 'global-announcement-banner-container';
-            container.style.cssText = 'position: relative; z-index: 1040; width: 100%;';
-            document.body.prepend(container);
-        }
+        // Sticky header banner removed per UX requirement — all announcements are routed under the Notifications Tab
+        const existing = document.getElementById('global-announcement-banner-container');
+        if (existing) existing.remove();
+
         await this.fetchActiveAnnouncements();
 
         window.addEventListener('qcms:announcement-published', () => {
             this.fetchActiveAnnouncements();
+            if (window.QCMS && typeof QCMS.loadNotifications === 'function') {
+                QCMS.loadNotifications();
+            }
         });
     },
 
@@ -2777,86 +2945,19 @@ const GlobalAnnouncementBanner = {
             const res = await api.get('/announcements/user-active');
             if (res && res.status === 'success' && Array.isArray(res.data)) {
                 this.activeAnnouncements = res.data.filter(a => !a.is_dismissed);
-                this.render();
+                if (window.QCMS && typeof QCMS.loadNotifications === 'function') {
+                    QCMS.loadNotifications();
+                }
             }
         } catch (e) {
-            console.error('Error loading active announcements', e);
+            // Silently ignore if announcements cannot be loaded
         }
     },
 
     render() {
+        // Top header banner is completely disabled
         const container = document.getElementById('global-announcement-banner-container');
-        if (!container) return;
-
-        if (!this.activeAnnouncements || this.activeAnnouncements.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
-
-        if (this.currentIndex >= this.activeAnnouncements.length) {
-            this.currentIndex = 0;
-        }
-
-        const ann = this.activeAnnouncements[this.currentIndex];
-
-        const priorityStyles = {
-            'Critical': 'background: linear-gradient(90deg, #450a0a, #7f1d1d); border-bottom: 2px solid #ef4444; color: #fecdd3;',
-            'High': 'background: linear-gradient(90deg, #451a03, #78350f); border-bottom: 2px solid #f97316; color: #ffedd5;',
-            'Medium': 'background: linear-gradient(90deg, #0c4a6e, #0369a1); border-bottom: 2px solid #38bdf8; color: #e0f2fe;',
-            'Low': 'background: linear-gradient(90deg, #064e3b, #047857); border-bottom: 2px solid #34d399; color: #d1fae5;'
-        };
-        const priorityIcons = {
-            'Critical': 'alert-octagon',
-            'High': 'alert-triangle',
-            'Medium': 'info',
-            'Low': 'megaphone'
-        };
-
-        const style = priorityStyles[ann.priority] || priorityStyles['Medium'];
-        const icon = priorityIcons[ann.priority] || 'megaphone';
-
-        const cleanSummary = ann.summary || (ann.body ? ann.body.replace(/<[^>]*>?/gm, '').substring(0, 100) : '');
-
-        container.innerHTML = `
-            <div class="global-ann-banner p-2.5 px-4 d-flex align-items-center justify-content-between gap-3 shadow-sm fade-in" style="${style}">
-                <div class="d-flex align-items-center gap-2.5 flex-grow-1 overflow-hidden">
-                    <span class="badge rounded-pill bg-black bg-opacity-25 px-2.5 py-1 text-uppercase font-monospace text-xxs fw-bold d-inline-flex align-items-center gap-1" style="border: 1px solid rgba(255,255,255,0.2);">
-                        <i data-lucide="${icon}" style="width:13px;height:13px;"></i> ${ann.priority} Notice
-                    </span>
-                    <strong class="text-xs text-truncate font-semibold">${QCMS.escapeHtml(ann.title)}:</strong>
-                    <span class="text-xs opacity-90 text-truncate d-none d-md-inline">${QCMS.escapeHtml(cleanSummary)}</span>
-                </div>
-                <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                    <button class="btn btn-sm btn-light py-0.5 px-2.5 text-xxs fw-bold rounded-pill text-dark shadow-sm" onclick="GlobalAnnouncementBanner.openDetailModal(${ann.id})">
-                        View Notice
-                    </button>
-                    ${this.activeAnnouncements.length > 1 ? `
-                        <span class="text-xxs opacity-75 font-monospace">${this.currentIndex + 1}/${this.activeAnnouncements.length}</span>
-                        <button class="btn btn-sm btn-link text-white p-0 m-0" onclick="GlobalAnnouncementBanner.nextAnn()" title="Next Announcement">
-                            <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
-                        </button>
-                    ` : ''}
-                    <button class="btn btn-sm btn-link text-white p-0 m-0 opacity-75 hover-opacity-100" onclick="GlobalAnnouncementBanner.dismiss(${ann.id})" title="Dismiss Banner">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        if (window.lucide) lucide.createIcons();
-    },
-
-    nextAnn() {
-        this.currentIndex = (this.currentIndex + 1) % this.activeAnnouncements.length;
-        this.render();
-    },
-
-    async dismiss(annId) {
-        try {
-            await api.post(`/announcements/${annId}/dismiss`);
-        } catch (e) {}
-        this.activeAnnouncements = this.activeAnnouncements.filter(a => a.id !== annId);
-        this.render();
+        if (container) container.remove();
     },
 
     openDetailModal(annId) {
@@ -2998,31 +3099,66 @@ const UserAnnouncementsModal = {
             }
 
             body.innerHTML = `
-                <div class="d-flex flex-column gap-3">
-                    ${list.map(a => `
-                        <div class="p-3.5 rounded-3 border transition hover-card" style="background:rgba(255,255,255,0.02); border-color:var(--ds-border-color)!important;">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge ${a.priority === 'Critical' ? 'bg-danger' : a.priority === 'High' ? 'bg-warning text-dark' : 'bg-primary bg-opacity-15 text-primary'} text-xxs px-2 py-0.5">
-                                        ${a.priority}
-                                    </span>
-                                    <span class="badge bg-secondary-subtle text-secondary text-xxs px-2 py-0.5">${a.category}</span>
-                                    ${!a.is_read ? '<span class="badge bg-success text-xxs px-2 py-0.5">UNREAD</span>' : ''}
-                                </div>
-                                <span class="text-xxs text-secondary">${a.published_at ? new Date(a.published_at).toLocaleDateString() : 'Recently'}</span>
-                            </div>
-                            <h6 class="fw-bold text-main mb-1.5">${QCMS.escapeHtml(a.title)}</h6>
-                            <p class="text-xs text-secondary mb-3">${QCMS.escapeHtml(a.summary || a.body || '')}</p>
-                            <div class="d-flex align-items-center justify-content-between text-xxs border-top pt-2" style="border-color:var(--ds-border-color)!important;">
-                                <span class="text-muted">By: ${QCMS.escapeHtml(a.created_by)}</span>
-                                ${!a.is_read ? `
-                                    <button class="btn btn-sm btn-link text-primary p-0 text-xxs fw-bold text-decoration-none" onclick="UserAnnouncementsModal.markRead(${a.id})">
-                                        Mark as Read
-                                    </button>
-                                ` : '<span class="text-success"><i data-lucide="check-check" style="width:12px;height:12px;"></i> Read</span>'}
-                            </div>
-                        </div>
-                    `).join('')}
+                <div class="table-responsive">
+                    <table class="ds-table align-middle mb-0" style="width:100%;">
+                        <thead>
+                            <tr class="text-uppercase text-xxs text-secondary border-bottom">
+                                <th style="width:110px; padding:12px 14px;">Priority</th>
+                                <th style="width:130px; padding:12px 14px;">Category</th>
+                                <th style="padding:12px 14px;">Announcement Details</th>
+                                <th style="width:180px; padding:12px 14px;">Author & Date</th>
+                                <th style="width:140px; padding:12px 14px; text-align:right;">Status / Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${list.map(a => {
+                                let priorityStyle = 'background:#2563eb; color:#ffffff;';
+                                const pUpper = (a.priority || '').toUpperCase();
+                                if (pUpper.includes('CRITICAL')) priorityStyle = 'background:#dc2626; color:#ffffff;';
+                                else if (pUpper.includes('HIGH')) priorityStyle = 'background:#ea580c; color:#ffffff;';
+                                else if (pUpper.includes('MEDIUM')) priorityStyle = 'background:#2563eb; color:#ffffff;';
+                                else if (pUpper.includes('LOW')) priorityStyle = 'background:#64748b; color:#ffffff;';
+
+                                const catLabel = QCMS.escapeHtml(a.category || 'General');
+                                const isUnread = !a.is_read;
+
+                                return `
+                                    <tr class="border-bottom hover-bg" style="transition:background 0.15s ease;">
+                                        <td style="padding:12px 14px;">
+                                            <span class="badge rounded-pill px-2.5 py-1 text-xxs font-monospace fw-bold" style="${priorityStyle} display:inline-block; letter-spacing:0.5px; box-shadow:0 1px 2px rgba(0,0,0,0.1);">
+                                                ${QCMS.escapeHtml(a.priority || 'Medium')}
+                                            </span>
+                                        </td>
+                                        <td style="padding:12px 14px;">
+                                            <span class="badge rounded-pill px-2.5 py-1 text-xxs fw-semibold" style="background:rgba(148,163,184,0.12); color:var(--ds-text-main, #334155); border:1px solid rgba(148,163,184,0.3); display:inline-block;">
+                                                ${catLabel}
+                                            </span>
+                                        </td>
+                                        <td style="padding:12px 14px; max-width:340px;">
+                                            <div class="fw-bold text-sm text-main mb-1" style="color:var(--ds-text-main); font-size:13.5px;">${QCMS.escapeHtml(a.title)}</div>
+                                            <div class="text-xs text-secondary text-truncate-2" style="line-height:1.45; color:var(--ds-text-muted, #64748b); font-size:12px;">${QCMS.escapeHtml(a.summary || a.body || '')}</div>
+                                        </td>
+                                        <td style="padding:12px 14px;">
+                                            <div class="text-xs fw-semibold text-main" style="color:var(--ds-text-main);">${QCMS.escapeHtml(a.created_by || 'System Admin')}</div>
+                                            <div class="text-xxs text-muted mt-0.5" style="font-size:11px;">${a.published_at ? new Date(a.published_at).toLocaleDateString() : 'Recently'}</div>
+                                        </td>
+                                        <td style="padding:12px 14px;" class="text-end">
+                                            ${isUnread ? `
+                                                <div class="d-flex flex-column align-items-end gap-1">
+                                                    <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2 py-0.5 text-xxs font-monospace fw-bold">UNREAD</span>
+                                                    <button class="btn btn-sm btn-link text-primary p-0 text-xxs fw-bold text-decoration-none" onclick="UserAnnouncementsModal.markRead(${a.id})">
+                                                        Mark as Read &check;
+                                                    </button>
+                                                </div>
+                                            ` : `
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-0.5 text-xxs font-monospace">READ</span>
+                                            `}
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
                 </div>
             `;
             if (window.lucide) lucide.createIcons();

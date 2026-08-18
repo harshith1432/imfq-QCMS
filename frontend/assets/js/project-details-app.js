@@ -482,7 +482,7 @@ const ProjectApp = {
                                     // Update placeholder
                                     if (cfg.placeholder) el.placeholder = cfg.placeholder;
                                     // Update type
-                                    if (cfg.input_type && el.tagName.toLowerCase() === 'input' && el.type !== 'checkbox' && el.type !== 'radio' && el.type !== 'file') {
+                                    if (cfg.input_type && el.tagName.toLowerCase() === 'input' && el.type !== 'checkbox' && el.type !== 'radio' && el.type !== 'file' && el.type !== 'hidden') {
                                         const validTypes = ['date', 'datetime-local', 'number', 'text', 'time', 'month', 'email', 'tel', 'url'];
                                         if (validTypes.includes(cfg.input_type)) {
                                             el.type = cfg.input_type;
@@ -514,39 +514,45 @@ const ProjectApp = {
             f.classList.remove('is-invalid');
         });
 
+        // Helper to accurately identify custom top-level sections vs built-in predefined cards
+        const _isCustomSec = (sec) => {
+            if (!sec || !sec.id) return false;
+            const s = String(sec.id);
+            return s.startsWith('sec_') || s.includes('_custom_sec_') || s.startsWith('custom_') || sec.type === 'custom';
+        };
+
         // 0. Tag predefined cards BEFORE injecting custom cards to prevent index shift issues
         const predefinedCards = Array.from(container.querySelectorAll('.glass-card.ds-card'));
         try {
             if (stageCfg && stageCfg.sections) {
-                stageCfg.sections.forEach((sec, sIdx) => {
-                    if (sec && sec.id && !sec.id.startsWith('sec_')) {
-                        const cardIdx = sec.card_index !== undefined ? sec.card_index : sIdx;
-                        const cardEl = predefinedCards[cardIdx];
-                        if (cardEl) {
-                            cardEl.dataset.secId = sec.id;
-                            const isMandatory = (sec.required === true);
-                            cardEl.dataset.required = isMandatory ? 'true' : 'false';
-                            const titleEl = cardEl.querySelector('.ds-card-header h5, .ds-card-header h6');
-                            if (titleEl) {
-                                let cleanTitle = titleEl.innerHTML.replace(/\s*<span class="text-danger">\*<\/span>/g, '').replace(/\*+/g, '').trim();
-                                if (isMandatory) {
-                                    titleEl.innerHTML = `${cleanTitle} <span class="text-danger">*</span>`;
-                                } else {
-                                    titleEl.innerHTML = cleanTitle;
-                                }
+                const predefinedSecs = stageCfg.sections.filter(sec => !_isCustomSec(sec));
+                predefinedSecs.forEach((sec, pIdx) => {
+                    const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
+                    const cardEl = predefinedCards[cardIdx];
+                    if (cardEl) {
+                        cardEl.dataset.secId = sec.id;
+                        const isMandatory = (sec.required === true);
+                        cardEl.dataset.required = isMandatory ? 'true' : 'false';
+                        const titleEl = cardEl.querySelector('.ds-card-header h5, .ds-card-header h6');
+                        if (titleEl) {
+                            let cleanTitle = titleEl.innerHTML.replace(/\s*<span class="text-danger">\*<\/span>/g, '').replace(/\*+/g, '').trim();
+                            if (isMandatory) {
+                                titleEl.innerHTML = `${cleanTitle} <span class="text-danger">*</span>`;
+                            } else {
+                                titleEl.innerHTML = cleanTitle;
                             }
+                        }
 
-                            // If the section is NOT mandatory, remove required attributes and asterisks
-                            if (!isMandatory) {
-                                cardEl.querySelectorAll('input, select, textarea').forEach(inp => {
-                                    inp.required = false;
-                                    inp.removeAttribute('required');
-                                    inp.classList.remove('is-invalid');
-                                });
-                                cardEl.querySelectorAll('label').forEach(lbl => {
-                                    lbl.querySelectorAll('.text-danger, .required-star').forEach(s => s.remove());
-                                });
-                            }
+                        // If the section is NOT mandatory, remove required attributes and asterisks
+                        if (!isMandatory) {
+                            cardEl.querySelectorAll('input, select, textarea').forEach(inp => {
+                                inp.required = false;
+                                inp.removeAttribute('required');
+                                inp.classList.remove('is-invalid');
+                            });
+                            cardEl.querySelectorAll('label').forEach(lbl => {
+                                lbl.querySelectorAll('.text-danger, .required-star').forEach(s => s.remove());
+                            });
                         }
                     }
                 });
@@ -560,7 +566,7 @@ const ProjectApp = {
             const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
             if (formEl && stageCfg && stageCfg.sections) {
                 stageCfg.sections.forEach(sec => {
-                    if (sec && sec.id && typeof sec.id === 'string' && sec.id.startsWith('sec_')) {
+                    if (sec && sec.id && _isCustomSec(sec)) {
                         if (container.querySelector(`#card_${sec.id}`)) return; // already exists
 
                         const isMandatory = (sec.required === true);
@@ -579,7 +585,7 @@ const ProjectApp = {
                                 </h5>
                             </div>
                             <div class="ds-card-body p-4">
-                                ${DynamicRenderer.getFieldContentHtml(sec)}
+                                ${DynamicRenderer.getFieldContentHtml(sec, true)}
                             </div>
                         `;
 
@@ -602,18 +608,23 @@ const ProjectApp = {
         try {
             const customElements = [];
             if (stageCfg && stageCfg.sections) {
-                stageCfg.sections.forEach((sec, sIdx) => {
-                    customElements.push(sec);
+                const predefinedSecs = stageCfg.sections.filter(sec => !_isCustomSec(sec));
+                stageCfg.sections.forEach(sec => {
+                    if (_isCustomSec(sec)) {
+                        customElements.push(sec);
+                    }
+                    const subFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
+                    subFields.forEach(f => {
+                        if (f && !customElements.some(item => item.id === f.id)) customElements.push(f);
+                    });
+                });
 
+                predefinedSecs.forEach((sec, pIdx) => {
                     const subFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
                     if (subFields.length > 0) {
-                        subFields.forEach(f => {
-                            if (f && !customElements.some(item => item.id === f.id)) customElements.push(f);
-                        });
-
-                        const cardIdx = sec.card_index !== undefined ? sec.card_index : sIdx;
+                        const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
                         const cardEl = predefinedCards[cardIdx];
-                        if (cardEl && !sec.id.startsWith('sec_')) {
+                        if (cardEl) {
                             const cardBody = cardEl.querySelector('.ds-card-body');
                             if (cardBody) {
                                 subFields.forEach(field => {
@@ -769,14 +780,22 @@ const ProjectApp = {
 
         const predefinedCards = Array.from(container.querySelectorAll('.glass-card.ds-card'));
 
+        const _isCustomSec = (sec) => {
+            if (!sec || !sec.id) return false;
+            const s = String(sec.id);
+            return s.startsWith('sec_') || s.includes('_custom_sec_') || s.startsWith('custom_') || sec.type === 'custom';
+        };
+
+        const predefinedSecs = stageCfg.sections.filter(sec => !_isCustomSec(sec));
         stageCfg.sections.forEach((sec, sIdx) => {
             if (!sec) return;
 
             let cardEl = null;
-            if (sec.id && typeof sec.id === 'string' && sec.id.startsWith('sec_')) {
+            if (_isCustomSec(sec)) {
                 cardEl = container.querySelector(`#card_${sec.id}`);
             } else {
-                const cardIdx = sec.card_index !== undefined ? sec.card_index : sIdx;
+                const pIdx = predefinedSecs.indexOf(sec);
+                const cardIdx = sec.card_index !== undefined ? sec.card_index : (pIdx !== -1 ? pIdx : sIdx);
                 cardEl = predefinedCards[cardIdx];
             }
 

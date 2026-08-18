@@ -2085,7 +2085,7 @@ def export_performance_analytics():
         # 1. Fetch Executive Summary Metrics
         total_projects = Project.query.filter_by(org_id=org_id).count()
         completed_projects = Project.query.filter_by(org_id=org_id, status='Completed').count()
-        active_projects = Project.query.filter(Project.org_id==org_id, Project.status.notin_(['Completed', 'Closed', 'Rejected', 'On Hold'])).count()
+        active_projects = Project.query.filter(Project.org_id==org_id, ~Project.status.in_(['Completed', 'Closed', 'Archived', 'Stage 8 Approved', 'Rejected', 'Stage 1 Rejected', 'Cancelled'])).count()
         completion_rate = round((completed_projects / total_projects * 100), 1) if total_projects > 0 else 0.0
 
         impact_savings = db.session.query(func.sum(Stage8Implementation.cost_savings)).filter_by(org_id=org_id).scalar() or 0.0
@@ -2234,17 +2234,66 @@ def drill_down():
             orgs = orgs.filter_by(id=f['org_id'])
             
         drill_data = []
-        for o in orgs.limit(10).all():
-            subs = Subscription.query.filter_by(org_id=o.id).all()
-            for s in subs:
-                invoices = SubscriptionInvoice.query.filter_by(subscription_id=s.id).all()
+        for o in orgs.order_by(Organization.name.asc()).all():
+            # Fetch subscriptions for this organization
+            subs = Subscription.query.filter_by(org_id=o.id).order_by(Subscription.id.desc()).all()
+            
+            # Fetch completed payments from SubscriptionPayment
+            payments = SubscriptionPayment.query.filter_by(org_id=o.id).filter(
+                SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'SUCCESS'])
+            ).all()
+            
+            # Fetch paid invoices from SubscriptionInvoice
+            invoices = SubscriptionInvoice.query.filter_by(org_id=o.id).filter(
+                SubscriptionInvoice.invoice_status.in_(['Paid', 'Completed', 'PAID'])
+            ).all()
+            
+            # Aggregate total contribution from completed payments or invoices
+            payment_sum = sum((p.final_amount if p.final_amount is not None else p.amount) or 0.0 for p in payments)
+            invoice_sum = sum((inv.total_amount if inv.total_amount is not None else 0.0) for inv in invoices)
+            
+            total_paid = max(payment_sum, invoice_sum)
+            invoice_count = max(len(payments), len(invoices))
+
+            if not subs:
+                # If active plan is Starter or custom without subscription row
+                plan_name = o.subscription_plan or 'Starter'
+                sub_uid = f"SUB-{o.id:04d}"
+                if invoice_count == 0 and total_paid > 0:
+                    invoice_count = 1
                 drill_data.append({
                     "organization": o.name,
-                    "subscription_uid": s.subscription_uid,
-                    "plan": s.plan_name,
-                    "invoice_count": len(invoices),
-                    "total_paid": round(sum(i.total_amount for i in invoices if i.invoice_status == 'Paid'), 2)
+                    "subscription_uid": sub_uid,
+                    "plan": plan_name,
+                    "invoice_count": invoice_count,
+                    "total_paid": round(total_paid, 2)
                 })
+            else:
+                for idx, s in enumerate(subs):
+                    sub_payments = [p for p in payments if p.subscription_id == s.id]
+                    sub_invoices = [inv for inv in invoices if inv.subscription_id == s.id]
+                    
+                    sub_pay_sum = sum((p.final_amount if p.final_amount is not None else p.amount) or 0.0 for p in sub_payments)
+                    sub_inv_sum = sum((inv.total_amount if inv.total_amount is not None else 0.0) for inv in sub_invoices)
+                    
+                    s_total = max(sub_pay_sum, sub_inv_sum)
+                    s_count = max(len(sub_payments), len(sub_invoices))
+                    
+                    # Fallback to total org payments if specific subscription_id is null on legacy payments
+                    if s_total == 0 and idx == 0 and total_paid > 0:
+                        s_total = total_paid
+                        s_count = invoice_count if invoice_count > 0 else 1
+                    elif s_count == 0 and s_total > 0:
+                        s_count = 1
+
+                    drill_data.append({
+                        "organization": o.name,
+                        "subscription_uid": s.subscription_uid or f"SUB-{s.id:04d}",
+                        "plan": s.plan_name or o.subscription_plan or 'Starter',
+                        "invoice_count": s_count,
+                        "total_paid": round(s_total, 2)
+                    })
+
         return jsonify({"status": "success", "drilldown": drill_data})
 
     elif segment == 'users':

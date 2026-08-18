@@ -339,6 +339,16 @@
             overflow: auto !important;
             pointer-events: auto !important;
         }
+
+        /* Back to Dashboard button - Hidden by default (e.g. inside iframe) */
+        #backToSuperAdminBtn {
+            display: none !important;
+        }
+
+        /* Visible only when inside the full page editor */
+        body.is-fullscreen-editor #backToSuperAdminBtn {
+            display: inline-flex !important;
+        }
     </style>
 </head>
 <body>
@@ -350,17 +360,20 @@
 
             <!-- Page header & Navigation Bar -->
             <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom flex-wrap gap-2">
-                <div>
-                    <h4 class="fw-bold mb-0 text-main d-flex align-items-center gap-2">
-                        <i data-lucide="layers" class="text-primary" style="width:22px;height:22px;"></i>
-                        Global 8-Stage Workflow Studio
-                    </h4>
-                    <span class="text-xs text-muted">QCMS Enterprise OS &bull; System-wide Workflow Designer</span>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="/admin/super-admin.html?view=stage-templates" id="backToSuperAdminBtn" class="ds-btn ds-btn-outline ds-btn-sm align-items-center gap-1.5 py-1.5 px-3" style="border-radius:8px; font-weight:600; text-decoration:none;" title="Back to Super Admin Dashboard">
+                        <i data-lucide="arrow-left" style="width:15px;height:15px;"></i>
+                        <span>Back to Dashboard</span>
+                    </a>
+                    <div>
+                        <h4 class="fw-bold mb-0 text-main d-flex align-items-center gap-2">
+                            <i data-lucide="layers" class="text-primary" style="width:22px;height:22px;"></i>
+                            Global 8-Stage Workflow Studio
+                        </h4>
+                        <span class="text-xs text-muted">QCMS Enterprise OS &bull; System-wide Workflow Designer</span>
+                    </div>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
-                    <a href="/admin/super-admin.html?view=stage-templates" target="_top" id="backToSuperAdminBtn" class="ds-btn ds-btn-outline ds-btn-sm d-flex align-items-center gap-1.5 fw-semibold me-1" style="text-decoration:none;">
-                        <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Super Admin Portal
-                    </a>
                     <button type="button" class="ds-btn ds-btn-ghost text-danger" id="resetBtn">
                         <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Reset to Defaults
                     </button>
@@ -466,16 +479,16 @@
     <div class="modal-dialog modal-dialog-centered" style="max-width:550px;">
         <div class="modal-content glass-card ds-card">
             <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="modal-title fw-bold">Add Data Input or QC Tool</h5>
+                <h5 class="modal-title fw-bold">Add Section, Data Input, or QC Tool</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body px-4 pb-0">
-                <p class="text-xs ds-text-secondary mb-3">Select the type of section/QC tool you want to insert into this stage.</p>
+                <p class="text-xs ds-text-secondary mb-3">Select a new section container, standard input, or QC tool to insert into this stage.</p>
                 <div class="tool-picker-grid" id="toolGrid"></div>
             </div>
             <div class="modal-footer border-0 px-4 pb-4 pt-3">
                 <button class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button class="ds-btn ds-btn-primary ds-btn-sm" id="toolPickerConfirm">Add Section</button>
+                <button class="ds-btn ds-btn-primary ds-btn-sm" id="toolPickerConfirm">Add Section / Element</button>
             </div>
         </div>
     </div>
@@ -566,7 +579,35 @@
                 <p class="fw-bold text-xs text-uppercase mb-2" style="color:var(--ds-text-secondary);letter-spacing:.06em;">
                     Changes you are about to publish
                 </p>
-                <div id="saveWarningSummary" style="max-height:290px;overflow-y:auto;border:1px solid var(--ds-border-color);border-radius:10px;padding:12px 14px;background:var(--ds-input-bg);"></div>
+                <div id="saveWarningSummary" style="max-height:220px;overflow-y:auto;border:1px solid var(--ds-border-color);border-radius:10px;padding:12px 14px;background:var(--ds-input-bg);"></div>
+
+                <!-- Release Notes & Use Case Details (Optional) -->
+                <div class="mt-3">
+                    <label class="fw-bold text-xs text-uppercase mb-1 d-flex align-items-center justify-content-between" style="color:var(--ds-text-secondary);letter-spacing:.06em;">
+                        <span><i data-lucide="file-text" style="width:13px;height:13px;" class="me-1 text-primary"></i> Release Notes &amp; Use Case Explanation <small class="text-muted text-lowercase fw-normal">(Optional)</small></span>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size:10px;">Sent in Admin Email</span>
+                    </label>
+                    <textarea id="saveReleaseNotes" class="form-control text-xs" rows="3" placeholder="Describe what was added/updated and its practical use case (e.g. Added Section 1.7 for emergency containment action tracking with 3W1H verification table)..." style="border-radius:8px; resize:vertical;"></textarea>
+                </div>
+
+                <!-- Feature Preview / Screenshot Upload (Optional) -->
+                <div class="mt-3">
+                    <label class="fw-bold text-xs text-uppercase mb-1 d-flex align-items-center justify-content-between" style="color:var(--ds-text-secondary);letter-spacing:.06em;">
+                        <span><i data-lucide="image" style="width:13px;height:13px;" class="me-1 text-primary"></i> Feature Preview / Screenshot Photo <small class="text-muted text-lowercase fw-normal">(Optional)</small></span>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size:10px;">Embedded in Admin Email</span>
+                    </label>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="file" id="savePreviewImageInput" accept="image/png, image/jpeg, image/webp" class="form-control form-control-sm text-xs" style="max-width:340px; border-radius:8px;">
+                        <button type="button" id="clearPreviewImageBtn" class="ds-btn ds-btn-ghost text-danger ds-btn-xs" style="display:none;" onclick="clearSavePreviewImage()">
+                            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Clear Image
+                        </button>
+                    </div>
+                    <div id="savePreviewImageThumbContainer" class="mt-2" style="display:none;">
+                        <div style="position:relative; display:inline-block;">
+                            <img id="savePreviewImageThumb" src="" alt="Feature Preview" style="max-height:120px; max-width:100%; border-radius:8px; border:1.5px solid var(--ds-border-color); box-shadow:0 2px 8px rgba(0,0,0,0.08); object-fit:cover;">
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Checkbox confirmation -->
                 <div class="form-check mt-4" style="user-select:none;">
@@ -616,6 +657,12 @@ const ICON_LIBRARY = [
 
 // Tool options grouped by category
 const TOOL_OPTIONS = [
+    { category: "Sections & Workspaces (Add New Section)", items: [
+        { type: "custom",             label: "New Section (Blank Card)",    icon: "layout",       desc: "Add a new customizable section container to stage" },
+        { type: "table",              label: "New Data Table Section",       icon: "table",        desc: "Add a multi-column data table section" },
+        { type: "textarea",           label: "New Narrative / Text Section", icon: "align-left",   desc: "Add a text explanation, background, or notes section" },
+        { type: "file_upload",        label: "New Evidence Upload Section",  icon: "upload-cloud", desc: "Add a photo and document proof upload section" }
+    ]},
     { category: "Standard Form Inputs", items: [
         { type: "text",         label: "Single-line Text Input",   icon: "type",         desc: "Short text entry field" },
         { type: "textarea",     label: "Multi-line Text Area",     icon: "align-left",   desc: "Detailed notes & background" },
@@ -672,83 +719,83 @@ const STAGE_COLORS = [
 // ── Built-in Default Stages (mirrors backend Organization.DEFAULT_STAGES_CONFIG) ──
 const DEFAULT_STAGES = [
     { stage_id:1, original_id:1, title:'S0/S1 Plan & Establish Team', icon:'target', sections:[
-        {id:'s1_project_team',          type:'table',    label:'Project Team',                   order:1},
-        {id:'s1_problem_background',    type:'textarea', label:'Problem Background (5W2H)',       order:2},
-        {id:'s1_current_performance',   type:'table',    label:'Current Performance',             order:3},
-        {id:'s1_justification',         type:'textarea', label:'Justification',                  order:4},
-        {id:'s1_emergency_response',    type:'textarea', label:'Emergency Response',              order:5},
-        {id:'s1_theme_target_schedule', type:'table',    label:'Theme, Target & Schedule',        order:6},
+        {id:'s1_project_team',          type:'table',    label:'Project Team',                   description:'Document frontline QC circle charter, assigned roles, team sponsor, and project duration.', order:1},
+        {id:'s1_problem_background',    type:'textarea', label:'Problem Background (5W2H)',       description:'Define problem background context using 5W2H framework (What, Where, When, Who, Why, How, How Much).', order:2},
+        {id:'s1_current_performance',   type:'table',    label:'Current Performance',             description:'Record baseline defect rates, historical process capability metrics, and targeted improvement goals.', order:3},
+        {id:'s1_justification',         type:'textarea', label:'Justification',                  description:'Detail business justification, cost of poor quality (COPQ), and financial impact.', order:4},
+        {id:'s1_emergency_response',    type:'textarea', label:'Emergency Response',              description:'Document immediate containment measures, non-conforming inventory quarantine, and risk mitigation.', order:5},
+        {id:'s1_theme_target_schedule', type:'table',    label:'Theme, Target & Schedule',        description:'Set project Kaizen theme name, key milestones, and 8-stage completion schedule.', order:6},
     ]},
     { stage_id:2, original_id:2, title:'S2 Define Problem', icon:'database', sections:[
-        {id:'s2_problem_definition', type:'textarea',      label:'Problem Definition',                  order:1},
-        {id:'s2_std_verification',   type:'table',         label:'Standard Verification',               order:2},
-        {id:'s2_observations',       type:'table',         label:'Data Collection & Observations (Gemba)',order:3},
-        {id:'s2_stratification',     type:'stratification',label:'Stratification',                      order:4},
-        {id:'s2_pareto',             type:'pareto',        label:'Pareto Analysis',                     order:5},
-        {id:'s2_five_g',             type:'table',         label:'5G Verification',                     order:6},
-        {id:'s2_check_sheet',        type:'check_sheet',   label:'Check Sheet',                         order:7},
+        {id:'s2_problem_definition', type:'textarea',      label:'Problem Definition',                  description:'Elaborate detailed problem definition statement with specific shopfloor defect evidence.', order:1},
+        {id:'s2_std_verification',   type:'table',         label:'Standard Verification',               description:'Verify standard operating procedures, baseline tolerance specifications, and process variance.', order:2},
+        {id:'s2_observations',       type:'table',         label:'Data Collection & Observations (Gemba)',description:'Collect Gemba defect data, shift logs, machine readings, and operational observations.', order:3},
+        {id:'s2_stratification',     type:'stratification',label:'Stratification',                      description:'Stratify collected defect data by shift, machine, operator, raw material, and component lot.', order:4},
+        {id:'s2_pareto',             type:'pareto',        label:'Pareto Analysis',                     description:'Identify vital few defect types contributing to 80% of quality losses using Pareto analysis.', order:5},
+        {id:'s2_five_g',             type:'table',         label:'5G Verification',                     description:'Execute 5G Gemba principles (Gemba, Gembutsu, Genjitsu, Genri, Gensoku) on shopfloor.', order:6},
+        {id:'s2_check_sheet',        type:'check_sheet',   label:'Check Sheet',                         description:'Use standardized tally check sheets to record defect occurrence frequency.', order:7},
     ]},
     { stage_id:3, original_id:3, title:'S3 Interim Containment', icon:'git-branch', sections:[
-        {id:'s3_brainstorm',          type:'multi_text',        label:'Brainstormed Causes',                   order:1},
-        {id:'s3_fishbone_pre',        type:'fishbone',          label:'Fishbone Diagram (Pre-Verification)',    order:2},
-        {id:'s3_verification',        type:'verification_table',label:'Cause Verification Table',              order:3},
-        {id:'s3_fishbone_post',       type:'fishbone',          label:'Fishbone Diagram (Post-Verification)',   order:4},
-        {id:'s3_hypothesis',          type:'table',             label:'Hypothesis Testing',                    order:5},
-        {id:'s3_pareto_verification', type:'pareto',            label:'Run-Chart / Pareto Verification',       order:6},
-        {id:'s3_root_cause_ident',    type:'textarea',          label:'Root Cause Identification',             order:7},
-        {id:'s3_verif_checklist',     type:'check_sheet',       label:'Verification Checklist',                order:8},
+        {id:'s3_brainstorm',          type:'multi_text',        label:'Brainstormed Causes',                   description:'Brainstorm potential cause factors across 4M1E (Man, Machine, Material, Method, Environment).', order:1},
+        {id:'s3_fishbone_pre',        type:'fishbone',          label:'Fishbone Diagram (Pre-Verification)',    description:'Construct pre-verification Ishikawa Fishbone diagram categorizing brainstormed cause vectors.', order:2},
+        {id:'s3_verification',        type:'verification_table',label:'Cause Verification Table',              description:'Formulate cause verification tests, hypothesis testing methods, and empirical validation criteria.', order:3},
+        {id:'s3_fishbone_post',       type:'fishbone',          label:'Fishbone Diagram (Post-Verification)',   description:'Refine Fishbone diagram after empirical testing to isolate verified root cause candidates.', order:4},
+        {id:'s3_hypothesis',          type:'table',             label:'Hypothesis Testing',                    description:'Document statistical and physical hypothesis testing results for suspected defect drivers.', order:5},
+        {id:'s3_pareto_verification', type:'pareto',            label:'Run-Chart / Pareto Verification',       description:'Verify defect reduction trend and root cause impact using follow-up Pareto chart.', order:6},
+        {id:'s3_root_cause_ident',    type:'textarea',          label:'Root Cause Identification',             description:'Summarize confirmed primary root cause statements based on empirical evidence.', order:7},
+        {id:'s3_verif_checklist',     type:'check_sheet',       label:'Verification Checklist',                description:'Complete root cause verification checklist prior to stage gate signoff.', order:8},
     ]},
     { stage_id:4, original_id:4, title:'S4 Determine Root Causes', icon:'search', sections:[
-        {id:'s4_verified_causes',       type:'table', label:'Root Causes',                  order:1},
-        {id:'s4_why_why_analysis',      type:'table', label:'Why-Why Analysis (5-Why)',     order:2},
-        {id:'s4_hypothesis_testing',    type:'table', label:'Hypothesis Testing',           order:3},
-        {id:'s4_good_bad_comparison',   type:'table', label:'Good vs Bad Comparison',       order:4},
-        {id:'s4_statistical_validation',type:'table', label:'Statistical Validation',       order:5},
-        {id:'s4_data_reconfirmation',   type:'table', label:'Data Reconfirmation',          order:6},
-        {id:'s4_root_cause_register',   type:'table', label:'Root Cause Register',          order:7},
-        {id:'s4_root_cause_ranking',    type:'table', label:'Root Cause Ranking',           order:8},
+        {id:'s4_verified_causes',       type:'table', label:'Root Causes',                  description:'Register verified root cause factors identified from Stage 3 investigation.', order:1},
+        {id:'s4_why_why_analysis',      type:'table', label:'Why-Why Analysis (5-Why)',     description:'Perform iterative 5-Why root cause analysis to drill down to true root cause and systemic breakdown.', order:2},
+        {id:'s4_hypothesis_testing',    type:'table', label:'Hypothesis Testing',           description:'Validate root cause mechanisms using physical testing, trial runs, or DOE experiments.', order:3},
+        {id:'s4_good_bad_comparison',   type:'table', label:'Good vs Bad Comparison',       description:'Compare process parameter settings between good quality output and defective output.', order:4},
+        {id:'s4_statistical_validation',type:'table', label:'Statistical Validation',       description:'Run statistical hypothesis tests (t-test, ANOVA, Regression) to confirm significance.', order:5},
+        {id:'s4_data_reconfirmation',   type:'table', label:'Data Reconfirmation',          description:'Re-confirm shopfloor data integrity and measurement system analysis (MSA/Gage R&R).', order:6},
+        {id:'s4_root_cause_register',   type:'table', label:'Root Cause Register',          description:'Maintain master register of confirmed technical, managerial, and systemic root causes.', order:7},
+        {id:'s4_root_cause_ranking',    type:'table', label:'Root Cause Ranking',           description:'Rank root causes by severity, occurrence frequency, and ease of corrective action implementation.', order:8},
     ]},
     { stage_id:5, original_id:5, title:'S5 Choose Permanent Corrections', icon:'lightbulb', sections:[
-        {id:'s5_root_cause_mapping',         type:'table', label:'Root Cause Mapping',          order:1},
-        {id:'s5_solution_brainstorming',     type:'table', label:'Solution Brainstorming',      order:2},
-        {id:'s5_solution_evaluation',        type:'table', label:'Solution Evaluation Matrix',  order:3},
-        {id:'s5_cost_benefit_analysis',      type:'table', label:'Cost Benefit Analysis',       order:4},
-        {id:'s5_side_effect_analysis',       type:'table', label:'Side Effect Analysis',        order:5},
-        {id:'s5_pilot_solution_verification',type:'table', label:'Pilot Solution Verification', order:6},
-        {id:'s5_action_plan_3w1h',           type:'table', label:'Action Plan (3W1H)',          order:7},
+        {id:'s5_root_cause_mapping',         type:'table', label:'Root Cause Mapping',          description:'Map confirmed root causes to proposed permanent corrective action (PCA) concepts.', order:1},
+        {id:'s5_solution_brainstorming',     type:'table', label:'Solution Brainstorming',      description:'Brainstorm creative, fool-proof solution options to eliminate root causes permanently.', order:2},
+        {id:'s5_solution_evaluation',        type:'table', label:'Solution Evaluation Matrix',  description:'Evaluate solutions using Decision Matrix based on cost, feasibility, risk, and lead time.', order:3},
+        {id:'s5_cost_benefit_analysis',      type:'table', label:'Cost Benefit Analysis',       description:'Calculate expected Return on Investment (ROI) and cost-benefit ratio for chosen PCAs.', order:4},
+        {id:'s5_side_effect_analysis',       type:'table', label:'Side Effect Analysis',        description:'Assess potential negative side effects or unintended consequences of proposed solutions.', order:5},
+        {id:'s5_pilot_solution_verification',type:'table', label:'Pilot Solution Verification', description:'Plan pilot trial runs on a single line/cell to verify solution effectiveness before full rollout.', order:6},
+        {id:'s5_action_plan_3w1h',           type:'table', label:'Action Plan (3W1H)',          description:'Create detailed 3W1H implementation action plan (What, Who, When, How).', order:7},
     ]},
     { stage_id:6, original_id:6, title:'S6 Implement Corrective Actions', icon:'settings-2', sections:[
-        {id:'s6_countermeasures',          type:'table', label:'Countermeasures',                      order:1},
-        {id:'s6_tasks',                    type:'table', label:'Countermeasure Task Assignments',      order:2},
-        {id:'s6_resource_planning_deployment', type:'table', label:'Resource Planning & Deployment',   order:3},
-        {id:'s6_change_management',        type:'table', label:'Change Management',                   order:4},
-        {id:'s6_risk_resistance',          type:'table', label:'Risk & Resistance Management',        order:5},
-        {id:'s6_side_effect_analysis',     type:'table', label:'Side Effect Analysis',                order:6},
-        {id:'s6_implementation_evidence',  type:'table', label:'Implementation Evidence',             order:7},
-        {id:'s6_communication',            type:'table', label:'Communication Log',                   order:8},
-        {id:'s6_training',                 type:'table', label:'Training & Awareness',                order:9},
-        {id:'s6_readiness_verification',   type:'table', label:'Readiness Verification',              order:10},
+        {id:'s6_countermeasures',          type:'table', label:'Countermeasures',                      description:'Detail technical specification and implementation steps for chosen countermeasures.', order:1},
+        {id:'s6_tasks',                    type:'table', label:'Countermeasure Task Assignments',      description:'Assign specific countermeasure implementation tasks, target completion dates, and responsibilities.', order:2},
+        {id:'s6_resource_planning_deployment', type:'table', label:'Resource Planning & Deployment',   description:'Plan required tooling, equipment budget, manpower, and downtime resources.', order:3},
+        {id:'s6_change_management',        type:'table', label:'Change Management',                   description:'Manage engineering change notices (ECN), drawings, and operational workflow updates.', order:4},
+        {id:'s6_risk_resistance',          type:'table', label:'Risk & Resistance Management',        description:'Identify potential implementation risks and operator resistance mitigation strategies.', order:5},
+        {id:'s6_side_effect_analysis',     type:'table', label:'Side Effect Analysis',                description:'Verify during trial implementation that no secondary defects or bottlenecks are created.', order:6},
+        {id:'s6_implementation_evidence',  type:'table', label:'Implementation Evidence',             description:'Upload photographs, trial test reports, and physical evidence of implemented countermeasures.', order:7},
+        {id:'s6_communication',            type:'table', label:'Communication Log',                   description:'Maintain implementation progress log and communicate updates to shopfloor stakeholders.', order:8},
+        {id:'s6_training',                 type:'table', label:'Training & Awareness',                description:'Train operators, technicians, and supervisors on modified process parameters and tools.', order:9},
+        {id:'s6_readiness_verification',   type:'table', label:'Readiness Verification',              description:'Conduct pre-launch readiness audit before transitioning to full production standardization.', order:10},
     ]},
     { stage_id:7, original_id:7, title:'S7 Take Preventive Measures', icon:'trending-up', sections:[
-        {id:'s7_kpi_verification',         type:'table', label:'KPI Verification',              order:1},
-        {id:'s7_before_vs_after',          type:'table', label:'Before vs After Analysis',      order:2},
-        {id:'s7_statistical_validation',   type:'table', label:'Statistical Validation',        order:3},
-        {id:'s7_benefit_realization',      type:'table', label:'Benefit Realization & Savings', order:4},
-        {id:'s7_roi_validation',           type:'table', label:'ROI Validation',                order:5},
-        {id:'s7_sustainability_check',     type:'table', label:'Sustainability Check',          order:6},
-        {id:'s7_side_effect_verification', type:'table', label:'Side Effect Verification',      order:7},
-        {id:'s7_lessons_implementation',   type:'table', label:'Lessons Implementation',        order:8},
+        {id:'s7_kpi_verification',         type:'table', label:'KPI Verification',              description:'Track key performance indicators (KPIs) post-implementation to verify defect elimination.', order:1},
+        {id:'s7_before_vs_after',          type:'table', label:'Before vs After Analysis',      description:'Compare baseline defect rates against current post-implementation results (Before vs After comparison).', order:2},
+        {id:'s7_statistical_validation',   type:'table', label:'Statistical Validation',        description:'Perform process capability analysis (Cpk / Ppk) to validate statistical process control.', order:3},
+        {id:'s7_benefit_realization',      type:'table', label:'Benefit Realization & Savings', description:'Calculate hard and soft financial savings realized from reduced scrap, rework, and COPQ.', order:4},
+        {id:'s7_roi_validation',           type:'table', label:'ROI Validation',                description:'Validate actual project ROI against initial cost-benefit projections.', order:5},
+        {id:'s7_sustainability_check',     type:'table', label:'Sustainability Check',          description:'Conduct 30/60/90-day sustainability audits to ensure process improvements remain stable.', order:6},
+        {id:'s7_side_effect_verification', type:'table', label:'Side Effect Verification',      description:'Confirm long-term operational stability with zero unintended negative side effects.', order:7},
+        {id:'s7_lessons_implementation',   type:'table', label:'Lessons Implementation',        description:'Document key operational insights gained during countermeasure deployment.', order:8},
     ]},
     { stage_id:8, original_id:8, title:'S8 Congratulate Team & Closure', icon:'award', sections:[
-        {id:'s8_standardization',          type:'table', label:'Standardization & SOP',         order:1},
-        {id:'s8_training_adoption',        type:'table', label:'Training & Adoption',            order:2},
-        {id:'s8_horizontal_deployment',    type:'table', label:'Horizontal Deployment',          order:3},
-        {id:'s8_lessons_learned',          type:'table', label:'Lessons Learned',               order:4},
-        {id:'s8_benefits_summary',         type:'table', label:'Benefits Summary',              order:5},
-        {id:'s8_remaining_opportunities',  type:'table', label:'Remaining Opportunities',       order:6},
-        {id:'s8_knowledge_repository',     type:'table', label:'Knowledge Repository',          order:7},
-        {id:'s8_team_recognition',         type:'table', label:'Team Recognition',              order:8},
-        {id:'s8_project_closure',          type:'table', label:'Project Closure',               order:9},
+        {id:'s8_standardization',          type:'table', label:'Standardization & SOP',         description:'Update Standard Operating Procedures (SOP), Control Plans, Work Instructions, and Poka-Yoke devices.', order:1},
+        {id:'s8_training_adoption',        type:'table', label:'Training & Adoption',            description:'Conduct formal operator training and certify shopfloor adherence to standardized SOPs.', order:2},
+        {id:'s8_horizontal_deployment',    type:'table', label:'Horizontal Deployment',          description:'Replicate standardized solutions across sister plants, parallel production lines, and similar processes.', order:3},
+        {id:'s8_lessons_learned',          type:'table', label:'Lessons Learned',               description:'Archive project lessons learned, best practices, and knowledge base documentation.', order:4},
+        {id:'s8_benefits_summary',         type:'table', label:'Benefits Summary',              description:'Summarize overall project achievements, total financial savings, and quality score improvements.', order:5},
+        {id:'s8_remaining_opportunities',  type:'table', label:'Remaining Opportunities',       description:'Identify residual risks or open opportunities for future Kaizen continuous improvement projects.', order:6},
+        {id:'s8_knowledge_repository',     type:'table', label:'Knowledge Repository',          description:'Store final project dossier, technical drawings, and validation reports in knowledge repository.', order:7},
+        {id:'s8_team_recognition',         type:'table', label:'Team Recognition',              description:'Recognize team member contributions, present Kaizen awards, and celebrate project success.', order:8},
+        {id:'s8_project_closure',          type:'table', label:'Project Closure',               description:'Obtain formal management signoff, sponsor approval, and close project charter.', order:9},
     ]},
 ];
 
@@ -1024,6 +1071,22 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
             </select>
         </div>` : ''}
         ${extraConfigHtml}
+        <!-- 📘 8S User Manual Instructions / Usage Guide -->
+        <div class="mb-3 p-3 rounded-3 border bg-primary bg-opacity-10" style="border-color: rgba(var(--ds-primary-rgb), 0.25) !important;">
+            <div class="fw-bold text-xs text-primary mb-2 d-flex align-items-center gap-1">
+                <i data-lucide="book-open" style="width:14px;height:14px;"></i>
+                8S User Manual Guide & Purpose
+            </div>
+            <div class="mb-2">
+                <label class="ds-label text-xxs text-secondary mb-1 d-block">User Manual Description / How to Use</label>
+                <textarea class="ds-input ds-textarea text-xs" rows="2" placeholder="e.g. Enter frontline quality control circle group name..." oninput="updateInspectorField('manual_description', this.value); updateInspectorField('help_text', this.value);">${esc(cfg.manual_description || cfg.help_text || cfg.purpose || '')}</textarea>
+            </div>
+            <div>
+                <label class="ds-label text-xxs text-secondary mb-1 d-block">Sample Data / Expected Format</label>
+                <input type="text" class="ds-input text-xs" value="${esc(cfg.sample_data || cfg.sample || '')}" placeholder="e.g. 'Quality Avengers' / 'Line-B Kaizen Warriors'" oninput="updateInspectorField('sample_data', this.value)">
+            </div>
+        </div>
+
         <div class="mb-3">
             <label class="ds-label text-xs fw-semibold mb-1">Grid Width (Layout Column)</label>
             <select class="ds-input ds-select text-xs" onchange="updateInspectorField('col_span', this.value)">
@@ -1341,6 +1404,7 @@ function handleCatalogElementDropOnStage(stageIdx, payload) {
         id: newSecId,
         type: payload.type || 'custom',
         label: payload.label || 'Custom Section',
+        description: payload.desc || `Guidance notes and instructions for completing ${payload.label || 'this section'}...`,
         required: true,
         order: (stages[st].sections || []).length + 1,
         fields: [
@@ -1467,6 +1531,9 @@ function renderList() {
             </div>
             <span class="orig-badge">Module D${s.original_id}</span>
             <div class="row-actions me-2">
+                <button class="ds-btn ds-btn-primary ds-btn-sm py-1 px-2.5 me-2 text-nowrap d-inline-flex align-items-center gap-1" style="font-size:11px; height:28px;" title="Add New Section to this stage" onclick="addNewSectionDirectly(${i}); event.stopPropagation();">
+                    <i data-lucide="plus-circle" style="width:13px;height:13px;"></i> Add Section
+                </button>
                 <button class="row-btn" title="Move up"   onclick="moveStage(${i},-1); event.stopPropagation();" ${i===0?'disabled':''}>
                     <i data-lucide="chevron-up"   style="width:13px;height:13px;"></i>
                 </button>
@@ -1484,7 +1551,7 @@ function renderList() {
 
         // Expand toggle
         header.addEventListener('click', (e) => {
-            if (e.target.closest('input') || e.target.closest('.stage-icon-bubble') || e.target.closest('.row-btn') || e.target.closest('.drag-handle')) return;
+            if (e.target.closest('input') || e.target.closest('.stage-icon-bubble') || e.target.closest('.row-btn') || e.target.closest('.drag-handle') || e.target.closest('.ds-btn')) return;
             const detail = container.querySelector('.stage-sections-detail');
             const toggleIcon = header.querySelector('.collapse-toggle i');
             if (detail.style.display === 'none' || !detail.style.display) {
@@ -1528,9 +1595,12 @@ function renderList() {
         detail.innerHTML = `
             <div class="fw-bold text-xs text-secondary mb-3 text-uppercase" style="letter-spacing:.06em;">Stage Content Sections &amp; QC Tools</div>
             <div id="${secListId}" class="mb-3"></div>
-            <div class="d-flex justify-content-start">
-                <button class="ds-btn ds-btn-ghost ds-btn-sm" onclick="openToolPicker(${i})">
-                    <i data-lucide="plus"></i> Add Column / QC Tool
+            <div class="d-flex align-items-center gap-2 flex-wrap pt-2">
+                <button class="ds-btn ds-btn-primary ds-btn-sm d-inline-flex align-items-center gap-1.5" onclick="addNewSectionDirectly(${i})">
+                    <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Add New Section
+                </button>
+                <button class="ds-btn ds-btn-outline ds-btn-sm d-inline-flex align-items-center gap-1.5" onclick="openToolPicker(${i})">
+                    <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Insert QC Tool / Element
                 </button>
             </div>
         `;
@@ -2014,9 +2084,41 @@ function renderList() {
                         }
                         lucide.createIcons();
                     });
-
                     if (existingHeader) existingHeader.replaceWith(editHeader);
                     else cardEl.prepend(editHeader);
+
+                    // ── Backfill default section description if missing ─────────────
+                    if (!sec.description && !sec.about) {
+                        for (const ds of DEFAULT_STAGES) {
+                            if (ds.sections) {
+                                const matchSec = ds.sections.find(s => s.id === sec.id || s.label === sec.label);
+                                if (matchSec && matchSec.description) {
+                                    sec.description = matchSec.description;
+                                    sec.about = matchSec.description;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Section Description / About Section Bar ──────────────────────
+                    const descBar = document.createElement('div');
+                    descBar.className = 'px-3 pb-2 pt-1 border-bottom';
+                    descBar.style.cssText = 'background: rgba(var(--ds-primary-rgb),0.02); display:flex; align-items:center; gap:8px;';
+                    descBar.innerHTML = `
+                        <i data-lucide="info" style="width:13px;height:13px;" class="text-primary flex-shrink-0" title="Section Description / Purpose"></i>
+                        <input type="text" class="sec-description-input ds-input text-xs" 
+                               style="height:26px;font-size:0.75rem;border:1px dashed var(--ds-border-color);background:var(--ds-bg-card);flex-grow:1;cursor:text;pointer-events:auto;"
+                               value="${esc(sec.description || sec.about || '')}"
+                               placeholder="Add one-time description / about this section for end users (e.g. Guidance notes & instructions)..."
+                               onclick="event.stopPropagation();">
+                    `;
+                    descBar.querySelector('.sec-description-input').addEventListener('input', (e) => {
+                        sec.description = e.target.value;
+                        sec.about = e.target.value;
+                    });
+                    if (editHeader.nextSibling) cardEl.insertBefore(descBar, editHeader.nextSibling);
+                    else cardEl.appendChild(descBar);
 
                     // ── Helper: ensure predefined_fields entry exists ─────────────────
                     const ensurePF = (pfid) => {
@@ -2027,7 +2129,7 @@ function renderList() {
                     // ── Disable NON-predefined inputs first (buttons, selects, checkboxes, etc.) ──
                     cardEl.querySelectorAll('input,textarea,select,button').forEach(el => {
                         const isPF = predefinedFieldsList.find(pf => pf.id === el.id);
-                        if (!isPF && !el.classList.contains('card-title-edit-input') && !el.closest('.card-edit-header')) {
+                        if (!isPF && !el.classList.contains('card-title-edit-input') && !el.classList.contains('sec-description-input') && !el.closest('.card-edit-header')) {
                             el.disabled = true; el.style.pointerEvents = 'none';
                         }
                     });
@@ -2704,6 +2806,47 @@ document.getElementById('iconPickerConfirm').addEventListener('click', () => {
     bsIconModal.hide(); renderList(); renderPreview();
 });
 
+// ── Direct Add New Section Function ──────────────────────────────────────────
+function addNewSectionDirectly(stageIdx) {
+    const stage = stages[stageIdx];
+    if (!stage) return;
+    if (!stage.sections) stage.sections = [];
+    const secNum = stage.sections.length + 1;
+    const newSecId = `s${stage.stage_id || (stageIdx + 1)}_custom_sec_${Date.now()}`;
+    const newSec = {
+        id: newSecId,
+        type: 'custom',
+        label: `New Section ${secNum}`,
+        description: `Guidance notes and instructions for completing Section ${stageIdx + 1}.${secNum}...`,
+        required: true,
+        order: secNum,
+        fields: []
+    };
+    stage.sections.push(newSec);
+    renderList();
+    const cont = document.getElementById('stageList').children[stageIdx];
+    if (cont) {
+        const detail = cont.querySelector('.stage-sections-detail');
+        if (detail) detail.style.display = 'block';
+        const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+        const lastWrapper = wrappers[wrappers.length - 1];
+        if (lastWrapper) {
+            const bc = lastWrapper.querySelector('.card-body-collapse');
+            if (bc) bc.style.display = 'block';
+            const ti = lastWrapper.querySelector('.card-collapse-toggle i');
+            if (ti) ti.setAttribute('data-lucide', 'chevron-up');
+            lastWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const titleInput = lastWrapper.querySelector('.card-title-edit-input');
+            if (titleInput) {
+                titleInput.focus();
+                titleInput.select();
+            }
+        }
+        lucide.createIcons();
+    }
+    showToast(`Added "New Section ${secNum}" to Stage ${stageIdx + 1}`);
+}
+
 // ── Tool Picker Modal ─────────────────────────────────────────────────────────
 function openToolPicker(stageIdx, secIdx = null) {
     activeStageSectionTargetIdx = stageIdx;
@@ -2731,7 +2874,7 @@ function buildToolGrid() {
 }
 
 document.getElementById('toolPickerConfirm').addEventListener('click', () => {
-    if (activeStageSectionTargetIdx === null || !selectedToolType) { showToast('Please select a column or QC Tool type to add.', 'error'); return; }
+    if (activeStageSectionTargetIdx === null || !selectedToolType) { showToast('Please select a section type or QC Tool to add.', 'error'); return; }
     if (activeSubFieldTarget) {
         const { stageIdx, secIdx } = activeSubFieldTarget;
         const sec = stages[stageIdx].sections[secIdx];
@@ -2740,7 +2883,16 @@ document.getElementById('toolPickerConfirm').addEventListener('click', () => {
     } else {
         const stage = stages[activeStageSectionTargetIdx];
         if (!stage.sections) stage.sections = [];
-        stage.sections.push({ id:`sec_${Date.now()}_${Math.floor(Math.random()*1000)}`, type:selectedToolType.type, label:selectedToolType.label, required:true, order:stage.sections.length+1 });
+        const isCustomType = selectedToolType.type === 'custom';
+        stage.sections.push({
+            id: `sec_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+            type: selectedToolType.type,
+            label: selectedToolType.label,
+            description: selectedToolType.desc || `Guidance notes and instructions for completing ${selectedToolType.label}...`,
+            required: true,
+            order: stage.sections.length + 1,
+            fields: isCustomType ? [] : undefined
+        });
     }
     bsToolModal.hide();
     renderList();
@@ -2752,6 +2904,17 @@ document.getElementById('toolPickerConfirm').addEventListener('click', () => {
             const wrappers = cont.querySelectorAll('.visual-card-wrapper');
             const cw = wrappers[activeSubFieldTarget.secIdx];
             if (cw) { const bc = cw.querySelector('.card-body-collapse'); if (bc) bc.style.display='block'; const ti = cw.querySelector('.card-collapse-toggle i'); if (ti) ti.setAttribute('data-lucide','chevron-up'); }
+            lucide.createIcons();
+        } else {
+            const wrappers = cont.querySelectorAll('.visual-card-wrapper');
+            const lastWrapper = wrappers[wrappers.length - 1];
+            if (lastWrapper) {
+                const bc = lastWrapper.querySelector('.card-body-collapse');
+                if (bc) bc.style.display = 'block';
+                const ti = lastWrapper.querySelector('.card-collapse-toggle i');
+                if (ti) ti.setAttribute('data-lucide', 'chevron-up');
+                lastWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
             lucide.createIcons();
         }
     }
@@ -2832,12 +2995,59 @@ function buildSaveWarningSummary() {
     return html;
 }
 
+let savePreviewImageBase64 = null;
+
+const previewInput = document.getElementById('savePreviewImageInput');
+if (previewInput) {
+    previewInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) {
+            clearSavePreviewImage();
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image size exceeds 5MB limit.', 'error');
+            this.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            savePreviewImageBase64 = evt.target.result;
+            const thumb = document.getElementById('savePreviewImageThumb');
+            if (thumb) thumb.src = savePreviewImageBase64;
+            const cont = document.getElementById('savePreviewImageThumbContainer');
+            if (cont) cont.style.display = 'block';
+            const clearBtn = document.getElementById('clearPreviewImageBtn');
+            if (clearBtn) clearBtn.style.display = 'inline-flex';
+            if (window.lucide) lucide.createIcons();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function clearSavePreviewImage() {
+    savePreviewImageBase64 = null;
+    const input = document.getElementById('savePreviewImageInput');
+    if (input) input.value = '';
+    const cont = document.getElementById('savePreviewImageThumbContainer');
+    if (cont) cont.style.display = 'none';
+    const clearBtn = document.getElementById('clearPreviewImageBtn');
+    if (clearBtn) clearBtn.style.display = 'none';
+}
+window.clearSavePreviewImage = clearSavePreviewImage;
+
 document.getElementById('saveBtn').addEventListener('click', () => {
     const empty = stages.findIndex(s => !s.title.trim());
     if (empty !== -1) { showToast(`Stage ${empty+1} has an empty title — please fill it in.`, 'error'); return; }
 
     // Populate warning modal
     document.getElementById('saveWarningSummary').innerHTML = buildSaveWarningSummary();
+    
+    // Reset release notes and preview image
+    const relNotes = document.getElementById('saveReleaseNotes');
+    if (relNotes) relNotes.value = '';
+    clearSavePreviewImage();
+    
     lucide.createIcons();
 
     // Reset acknowledgement checkbox and confirm button
@@ -2904,8 +3114,15 @@ document.getElementById('saveWarningConfirmBtn').addEventListener('click', async
         }
     }, 8000);
 
+    const release_notes = document.getElementById('saveReleaseNotes') ? document.getElementById('saveReleaseNotes').value.trim() : '';
+    const preview_image = savePreviewImageBase64 || null;
+
     try {
-        const res = await api.post('/super-admin/global-stages-template', { stages });
+        const res = await api.post('/super-admin/global-stages-template', { 
+            stages,
+            release_notes,
+            preview_image
+        });
         clearTimeout(safetyTimer);
         resetUi();
         if (res && (res.status === 'success' || res.global_template_version)) {
@@ -2940,11 +3157,13 @@ function loadDefaultStages(reason) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 0. Hide Back button if running inside iframe to prevent recursive iframe nesting
+    // 0. Only show Back button when opened as top-level / full-page editor (hide inside iframe)
     try {
-        if (window.self !== window.top) {
-            const backBtn = document.getElementById('backToSuperAdminBtn');
-            if (backBtn) backBtn.style.display = 'none';
+        const isFullscreen = (window.self === window.top);
+        if (isFullscreen) {
+            document.body.classList.add('is-fullscreen-editor');
+        } else {
+            document.body.classList.remove('is-fullscreen-editor');
         }
     } catch (_) {}
 

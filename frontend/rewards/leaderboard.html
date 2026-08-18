@@ -487,13 +487,26 @@
                     </button>
                 `);
 
-                // Page numbers
-                for (let i = 1; i <= pages; i++) {
-                    html.push(`
-                        <button class="ds-btn ${i === page ? 'ds-btn-primary' : 'ds-btn-secondary'} btn-sm px-3 text-xs fw-bold" onclick="rewardsApp.loadLeaderboard(${i})">
-                            ${i}
-                        </button>
-                    `);
+                // 3-Number Window Pagination (1 2 3 ...)
+                if (pages > 0) {
+                    let startPage = Math.max(1, page - 1);
+                    let endPage = startPage + 2;
+                    if (endPage > pages) {
+                        endPage = pages;
+                        startPage = Math.max(1, endPage - 2);
+                    }
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        html.push(`
+                            <button class="ds-btn ${i === page ? 'ds-btn-primary' : 'ds-btn-secondary'} btn-sm px-3 text-xs fw-bold" onclick="rewardsApp.loadLeaderboard(${i})">
+                                ${i}
+                            </button>
+                        `);
+                    }
+
+                    if (endPage < pages) {
+                        html.push(`<span class="text-xs text-muted px-1" style="font-size:0.85rem; align-self:center;">...</span>`);
+                    }
                 }
 
                 // Next button

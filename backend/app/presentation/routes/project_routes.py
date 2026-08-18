@@ -7,6 +7,7 @@ from app.domain.services.feature_engine import feature_module_required
 from app.presentation.middleware.idempotency_middleware import idempotent
 from datetime import datetime
 import uuid
+import copy
 from sqlalchemy.orm.attributes import flag_modified
 
 project_bp = Blueprint('projects', __name__)
@@ -308,7 +309,18 @@ def get_potential_members():
         target_dept_id = user.department_id
 
     if target_dept_id and not ignore_dept:
-        q_dept = q.filter(db.or_(User.department_id == target_dept_id, User.department_id.is_(None)))
+        dept_obj = db.session.get(Department, target_dept_id) if target_dept_id else None
+        if dept_obj:
+            q_dept = q.filter(
+                db.or_(
+                    User.department_id == target_dept_id,
+                    User.dept.has(db.func.lower(Department.name) == dept_obj.name.lower()),
+                    User.department_id.is_(None)
+                )
+            )
+        else:
+            q_dept = q.filter(db.or_(User.department_id == target_dept_id, User.department_id.is_(None)))
+            
         if q_dept.count() > 0:
             q = q_dept
 
@@ -326,8 +338,14 @@ def get_potential_members():
                     db.func.lower(Role.name) == 'reviewer'
                 ).order_by(User.full_name).all()
         elif req_role_lower in ('team member', 'teammember'):
-            q_tm = q.join(Role).filter(db.func.lower(Role.name).in_(['team member', 'team leader', 'teammember', 'teamleader']))
+            q_tm = q.join(Role).filter(db.func.lower(Role.name).in_(['team member', 'team leader', 'teammember', 'teamleader', 'user', 'member', 'employee', 'staff']))
             users = q_tm.order_by(User.full_name).all()
+            if not users:
+                # Fallback: if no users found with exact team member role names, return all active plant users excluding platform admins
+                q_fb = User.query.filter(User.org_id == org_id, User.is_active == True)
+                if plant_id or plant_name:
+                    q_fb = apply_plant_filter_to_user_query(q_fb, org_id, plant_id=plant_id, plant_name=plant_name)
+                users = q_fb.join(Role).filter(~db.func.lower(Role.name).in_(['superadmin'])).order_by(User.full_name).all()
         elif req_role_lower == 'facilitator':
             q_fa = q.join(Role).filter(db.func.lower(Role.name) == 'facilitator')
             users = q_fa.order_by(User.full_name).all()
@@ -508,7 +526,8 @@ def create_project():
             reference_number=data.get('idea_code') or init_data.get('ref_number', ''),
             sponsor=init_data.get('sponsor', ''),
             current_stage=1,
-            status='Draft'
+            status='Draft',
+            stages_config=copy.deepcopy(user.organization.get_stages_config())
         )
         
         db.session.add(new_project)
@@ -546,9 +565,16 @@ def create_project():
             found_users = User.query.filter(User.id.in_(list(all_member_ids))).all()
             users_by_id = {u.id: u for u in found_users}
 
-        # Also pre-fetch facilitator and team leader users
+        # Also pre-fetch facilitator, team leader, and reviewer users
         tl_user = users_by_id.get(team_leader_id) or (db.session.get(User, team_leader_id) if team_leader_id else None)
         fac_user = db.session.get(User, facilitator_id) if facilitator_id else None
+        rev_user = db.session.get(User, reviewer_id) if reviewer_id else None
+
+        # Calculate initial duration string
+        duration_str = ""
+        if parsed_start and parsed_end:
+            days = max(1, abs((parsed_end - parsed_start).days))
+            duration_str = f"{days} days ({parsed_start} → {parsed_end})"
 
         # 3. Insert ProjectMember rows safely under no_autoflush context
         team_members_list = []
@@ -585,21 +611,24 @@ def create_project():
                 "init": {
                     "project_title": data.get('title', 'Untitled Project'),
                     "project_type": data.get('category', 'Quality'),
-                    "work_area": init_data.get('work_area', ''),
-                    "plant": init_data.get('plant', ''),
-                    "source": init_data.get('source', ''),
-                    "ref_number": init_data.get('ref_number', ''),
-                    "sponsor": init_data.get('sponsor', ''),
-                    "planned_start_date": planned_start,
-                    "planned_end_date": planned_end,
-                    "team_leader": tl_user.full_name or tl_user.username if tl_user else '',
+                    "work_area": init_data.get('work_area', '') or new_project.work_area or '',
+                    "plant": init_data.get('plant', '') or new_project.plant or '',
+                    "source": init_data.get('source', '') or new_project.project_source or '',
+                    "ref_number": init_data.get('ref_number', '') or new_project.reference_number or '',
+                    "sponsor": init_data.get('sponsor', '') or new_project.sponsor or (f"{new_project.department.name} Head / Operations Manager" if new_project.department else "Plant Manager / Department Head"),
+                    "planned_start_date": str(parsed_start) if parsed_start else (planned_start or ''),
+                    "planned_end_date": str(parsed_end) if parsed_end else (planned_end or ''),
+                    "duration": duration_str or "90 days (Standard 8D Lifecycle)",
+                    "team_leader": (tl_user.full_name or tl_user.username) if tl_user else '',
                     "team_leader_id": team_leader_id,
-                    "facilitator": fac_user.full_name or fac_user.username if fac_user else '',
+                    "facilitator": (fac_user.full_name or fac_user.username) if fac_user else '',
                     "facilitator_id": facilitator_id,
+                    "reviewer": (rev_user.full_name or rev_user.username) if rev_user else '',
+                    "reviewer_id": reviewer_id,
                     "department_id": dept_id
                 },
                 "team": {
-                    "circle_name": "",
+                    "circle_name": f"{data.get('title', 'Quality')} Circle",
                     "team_members": team_members_list
                 },
                 "background_5w2h": {},
@@ -1508,13 +1537,21 @@ def get_project_details(id):
         "creator": project.creator.username if project.creator else "System",
         "creator_id": project.creator_id,
         "created_at": project.created_at.isoformat() + "Z",
+        "work_area": project.work_area or (f"{project.plant} - {project.department.name}" if (project.plant and project.department) else (project.department.name if project.department else None)),
+        "sponsor": project.sponsor or (f"{project.department.name} Head / Operations Manager" if project.department else "Plant Manager / Department Head"),
         "facilitator_id": fac_user.id if fac_user else None,
         "facilitator_name": (fac_user.full_name or fac_user.username) if fac_user else None,
         "facilitator_email": fac_user.email if fac_user else None,
         "team_leader_id": project.team_leader_id,
-        "team_leader_name": (project.team_leader.full_name or project.team_leader.username) if project.team_leader else None,
+        "team_leader_name": (
+            (project.team_leader.full_name or project.team_leader.username) if project.team_leader
+            else (project.creator.full_name or project.creator.username if project.creator else "Team Leader")
+        ),
         "reviewer_id": project.reviewer_id,
-        "reviewer_name": (db.session.get(User, project.reviewer_id).full_name or db.session.get(User, project.reviewer_id).username) if project.reviewer_id and db.session.get(User, project.reviewer_id) else None,
+        "reviewer_name": (
+            (db.session.get(User, project.reviewer_id).full_name or db.session.get(User, project.reviewer_id).username) if (project.reviewer_id and db.session.get(User, project.reviewer_id))
+            else (User.query.join(Role).filter(User.org_id == user.org_id, Role.name == 'Reviewer', User.is_active == True).first().full_name if User.query.join(Role).filter(User.org_id == user.org_id, Role.name == 'Reviewer', User.is_active == True).first() else "Quality Reviewer")
+        ),
         "department_id": project.department_id,
         "deadline": project.deadline.isoformat() if project.deadline else None,
         "plant_id": (
@@ -1553,7 +1590,7 @@ def get_project_details(id):
         } for r in reviews],
         "stages_config": (lambda: [
             wf_snapshots.get(stg.get('stage_id') or stg.get('original_id')) if ((stg.get('stage_id') or stg.get('original_id')) in completed_stage_numbers and (stg.get('stage_id') or stg.get('original_id')) in wf_snapshots) else stg
-            for stg in project.organization.get_stages_config()
+            for stg in (project.stages_config or project.organization.get_stages_config())
         ])()
     }), 200
 
@@ -1892,15 +1929,31 @@ def update_project(id):
             pass
 
     if 'member_ids' in data:
-        member_ids = data['member_ids']
-        # Clear existing members
-        ProjectMember.query.filter_by(project_id=id).delete()
-        # Ensure creator is always a member
-        if project.creator_id not in member_ids:
-            member_ids.append(project.creator_id)
-        # Add new members
-        for mid in member_ids:
-            db.session.add(ProjectMember(project_id=id, user_id=mid))
+        raw_member_ids = data['member_ids']
+        if isinstance(raw_member_ids, list):
+            cleaned_member_ids = set()
+            for mid in raw_member_ids:
+                if mid is not None:
+                    try:
+                        uid_val = int(mid)
+                        if uid_val > 0:
+                            cleaned_member_ids.add(uid_val)
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Ensure creator is always a member if creator_id exists and is valid
+            if project.creator_id:
+                try:
+                    c_id = int(project.creator_id)
+                    if c_id > 0:
+                        cleaned_member_ids.add(c_id)
+                except (ValueError, TypeError):
+                    pass
+
+            # Clear existing members and re-insert sanitized list
+            ProjectMember.query.filter_by(project_id=id).delete()
+            for uid in cleaned_member_ids:
+                db.session.add(ProjectMember(project_id=id, user_id=uid))
 
     db.session.commit()
     return jsonify({"msg": "Project updated successfully"}), 200

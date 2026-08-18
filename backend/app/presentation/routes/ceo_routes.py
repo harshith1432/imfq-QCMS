@@ -197,7 +197,9 @@ def get_executive_summary():
             proj_base = proj_base.filter(Project.created_at >= timeline_start)
 
         total_projects = proj_base.count()
-        completed_statuses = ['Completed', 'Closed', 'Stage 8 Approved', 'Impact Approved', 'SOP Created', 'Archived']
+        completed_statuses = ['Completed', 'Closed', 'Stage 8 Approved', 'Archived']
+        rejected_statuses = ['Rejected', 'Stage 1 Rejected']
+        inactive_terminal_statuses = completed_statuses + rejected_statuses + ['Cancelled']
         
         completed_projects = proj_base.filter(
             db.or_(
@@ -208,7 +210,7 @@ def get_executive_summary():
         ).count()
         
         active_projects = proj_base.filter(
-            ~Project.status.in_(completed_statuses + ['Rejected', 'Stage 1 Rejected', 'On Hold', 'Draft', 'Cancelled'])
+            ~Project.status.in_(inactive_terminal_statuses)
         ).count()
         on_hold_projects = proj_base.filter(Project.status == 'On Hold').count()
         
@@ -236,7 +238,7 @@ def get_executive_summary():
             db.func.count(Project.id)
         ).filter(
             Project.org_id == org_id,
-            ~Project.status.in_(completed_statuses + ['Rejected', 'Stage 1 Rejected', 'On Hold', 'Draft', 'Cancelled'])
+            ~Project.status.in_(inactive_terminal_statuses)
         ).group_by(Project.current_stage).all()
         pipeline = {f"Stage {s or 1}": count for s, count in stages_count if count > 0}
         for s in range(1, 9):
@@ -438,7 +440,7 @@ def get_executive_summary():
             run_c = Project.query.filter(
                 Project.org_id == org_id,
                 Project.created_at <= tp,
-                ~Project.status.in_(completed_statuses + ['Rejected', 'Stage 1 Rejected', 'On Hold', 'Draft', 'Cancelled'])
+                ~Project.status.in_(completed_statuses + ['Rejected', 'Stage 1 Rejected', 'Cancelled'])
             ).count()
             spark_projects_running.append(run_c)
 
@@ -892,16 +894,16 @@ def get_priority_initiatives():
         per_page = request.args.get('per_page', 4, type=int)
         search = request.args.get('search', '', type=str).strip()
 
-        query = Project.query.filter_by(org_id=org_id)
+        non_in_progress_statuses = ['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED', 'Stage 8 Approved', 'Rejected', 'Stage 1 Rejected', 'Cancelled', 'Draft', 'DRAFT']
+        query = Project.query.filter_by(org_id=org_id).filter(~Project.status.in_(non_in_progress_statuses))
         if search:
             query = query.filter(Project.title.ilike(f'%{search}%'))
 
         all_projects = query.all()
 
-        # Calculate Quality Improvement score for each project to rank them
+        # Calculate Quality Improvement score for each active project to rank them
         def calc_score(p):
             stage_score = (p.current_stage or 1) * 10
-            status_score = 20 if p.status in ['Completed', 'Closed'] else 0
             prio_val = (getattr(p, 'priority', None) or '').lower()
             if not prio_val:
                 prio_val = 'high' if (p.current_stage or 1) >= 6 else 'medium'
@@ -910,7 +912,7 @@ def get_priority_initiatives():
             cat_val = (p.category or '').lower()
             cat_score = 10 if cat_val == 'quality' else (8 if cat_val == 'productivity' else (6 if cat_val == 'cost' else 5))
             
-            return stage_score + status_score + prio_score + cat_score
+            return stage_score + prio_score + cat_score
 
         all_projects.sort(key=lambda p: (calc_score(p), p.current_stage or 1, p.created_at or datetime.min), reverse=True)
 
@@ -970,7 +972,7 @@ def export_ceo_report():
 
         total_projects = Project.query.filter_by(org_id=org_id).count()
         completed_projects = Project.query.filter_by(org_id=org_id, status='Completed').count()
-        active_projects = Project.query.filter(Project.org_id==org_id, Project.status.notin_(['Completed', 'Closed', 'Rejected', 'On Hold'])).count()
+        active_projects = Project.query.filter(Project.org_id==org_id, ~Project.status.in_(['Completed', 'Closed', 'Archived', 'Stage 8 Approved', 'Rejected', 'Stage 1 Rejected', 'Cancelled'])).count()
         completion_rate = round((completed_projects / total_projects * 100), 1) if total_projects > 0 else 0.0
 
         total_departments = Department.query.filter_by(org_id=org_id).count()

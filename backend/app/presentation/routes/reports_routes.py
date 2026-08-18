@@ -1,6 +1,6 @@
 from flask import Blueprint, send_file, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.infrastructure.database.models.models import Project, KPIMetric, db, User, AuditLog
+from app.infrastructure.database.models.models import Project, KPIMetric, db, User, AuditLog, KnowledgeRepository
 from app.utils.report_gen import generate_excel_report, generate_pdf_summary
 import io
 import csv
@@ -194,49 +194,62 @@ def export_pdf(project_id):
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
-    project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
+    # Resolve project by project_id or KnowledgeRepository entry ID
+    project = Project.query.filter_by(id=project_id, org_id=user.org_id).first()
+    if not project:
+        kr = KnowledgeRepository.query.filter_by(id=project_id, org_id=user.org_id).first()
+        if kr:
+            project = Project.query.filter_by(id=kr.project_id, org_id=user.org_id).first()
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
 
-    if project.status not in ('Closed', 'Completed'):
+    closed_statuses = ('Closed', 'Completed', 'Archived', 'Stage 8 Approved')
+    is_closed = project.status in closed_statuses
+
+    if not is_closed:
         return jsonify({"msg": "Project report generation is disabled until Stage 8 completion and project closure."}), 400
 
-    role = user.role.name if user.role else 'Team Member'
-    if role in ('Admin', 'CEO', 'SuperAdmin'):
-        pass
-    elif role == 'Facilitator':
-        if project.facilitator_id != user.id:
+    # For closed / archived projects in the Knowledge Repository, all authenticated users in the organization can download the final summary report.
+    # For active projects (if ever permitted), enforce role-based project membership.
+    if not is_closed:
+        role = user.role.name if user.role else 'Team Member'
+        if role in ('Admin', 'CEO', 'SuperAdmin'):
+            pass
+        elif role == 'Facilitator':
+            if project.facilitator_id != user.id:
+                return jsonify({"msg": "Unauthorized"}), 403
+        elif role == 'Reviewer':
+            if project.reviewer_id != user.id:
+                return jsonify({"msg": "Unauthorized"}), 403
+        elif role == 'Team Leader':
+            from app.infrastructure.database.models.models import ProjectMember
+            is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+            if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
+                return jsonify({"msg": "Unauthorized"}), 403
+        elif role == 'Team Member':
+            from app.infrastructure.database.models.models import ProjectMember
+            is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+            if not is_member:
+                return jsonify({"msg": "Unauthorized"}), 403
+        else:
             return jsonify({"msg": "Unauthorized"}), 403
-    elif role == 'Reviewer':
-        if project.reviewer_id != user.id:
-            return jsonify({"msg": "Unauthorized"}), 403
-    elif role == 'Team Leader':
-        from app.infrastructure.database.models.models import ProjectMember
-        is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-        if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
-            return jsonify({"msg": "Unauthorized"}), 403
-    elif role == 'Team Member':
-        from app.infrastructure.database.models.models import ProjectMember
-        is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-        if not is_member:
-            return jsonify({"msg": "Unauthorized"}), 403
-    else:
-        return jsonify({"msg": "Unauthorized"}), 403
 
     tool_name = request.args.get('tool')
 
     db.session.add(AuditLog(
         org_id=user.org_id,
         user_id=user.id,
-        project_id=project_id,
+        project_id=project.id,
         action=f"EXPORT_PDF_{tool_name.upper()}" if tool_name else "EXPORT_PDF_8D",
         target_table="projects",
-        target_id=project_id,
+        target_id=project.id,
         details={"project_uid": project.project_uid, "ip": request.remote_addr}
     ))
     db.session.commit()
 
     if tool_name:
         from app.utils.report_gen import generate_qc_tool_report
-        pdf_data = generate_qc_tool_report(project_id, tool_name)
+        pdf_data = generate_qc_tool_report(project.id, tool_name)
         if not pdf_data:
             return jsonify({"msg": f"Failed to generate report for tool {tool_name}"}), 400
 
@@ -248,7 +261,7 @@ def export_pdf(project_id):
         )
     else:
         from app.utils.pdf_filler import generate_qc_story_closure_summary_pdf
-        pdf_data = generate_qc_story_closure_summary_pdf(project_id)
+        pdf_data = generate_qc_story_closure_summary_pdf(project.id)
         if not pdf_data:
             return jsonify({"msg": "Failed to generate QC Story report"}), 400
 

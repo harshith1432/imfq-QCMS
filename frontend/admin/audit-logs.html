@@ -564,12 +564,13 @@
                         data_changes: "Data Modifications",
                         critical_events: "Critical Incidents",
                         deleted_records: "Deleted Records",
-                        export_activities: "Compliance Exports",
                         active_sessions: "Active Sessions",
                         failed_logins: "Failed Login Attempts"
                     };
                     
-                    grid.innerHTML = Object.keys(d).map(key => {
+                    grid.innerHTML = Object.keys(d)
+                        .filter(key => key !== 'export_activities' && labels[key])
+                        .map(key => {
                         const kpi = d[key];
                         const growthSign = kpi.growth > 0 ? '+' : '';
                         const growthClass = kpi.growth > 0 ? 'up' : (kpi.growth < 0 ? 'down' : 'neutral');

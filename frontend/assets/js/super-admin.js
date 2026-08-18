@@ -1585,8 +1585,7 @@ const SuperAdmin = {
             { label: 'Total Revenue', value: `₹${(data.total_revenue || 0).toLocaleString('en-IN')}`, icon: 'dollar-sign', color: '#10b981', accent: '#10b981' },
             { label: 'Monthly Rate (MRR)', value: `₹${(data.monthly_revenue || 0).toLocaleString('en-IN')}`, icon: 'trending-up', color: '#3b82f6', accent: '#3b82f6' },
             { label: 'Unpaid Invoices', value: data.overdue_invoices || 0, icon: 'alert-triangle', color: '#ef4444', accent: '#ef4444' },
-            { label: 'Payment Due', value: `₹${(data.outstanding_amount || 0).toLocaleString('en-IN')}`, icon: 'clock', color: '#f59e0b', accent: '#f59e0b' },
-            { label: 'Collection Rate', value: `${(data.collection_rate || 0).toFixed(1)}%`, icon: 'check-square', color: '#8b5cf6', accent: '#8b5cf6' }
+            { label: 'Payment Due', value: `₹${(data.outstanding_amount || 0).toLocaleString('en-IN')}`, icon: 'clock', color: '#f59e0b', accent: '#f59e0b' }
         ];
 
         grid.innerHTML = kpis.map(k => `
@@ -2451,26 +2450,77 @@ const SuperAdmin = {
         if (!orgId) return;
         const subSelect = document.getElementById('biSubSelect');
         const emailInput = document.getElementById('biCustEmail');
+        if (!subSelect) return;
+
+        subSelect.disabled = false;
+        subSelect.innerHTML = `<option value="">Loading subscriptions...</option>`;
         
         try {
-            // Find organization details
-            const res = await api.get(`/super-admin/dashboard`);
-            const org = res.data.active_organizations_list.find(x => x.id == orgId);
-            if (org) {
-                emailInput.value = org.email;
+            // 1. Resolve organization details (email & name)
+            let orgEmail = '';
+            let orgName = '';
+            
+            if (this.biOrgSelectorState && this.biOrgSelectorState.items) {
+                const item = this.biOrgSelectorState.items.find(x => x.id == orgId);
+                if (item) {
+                    orgEmail = item.email || item.admin_email || '';
+                    orgName = item.name || '';
+                }
+            }
+            if (!orgEmail) {
+                const orgRes = await api.get(`/super-admin/organizations/${orgId}`).catch(() => null);
+                if (orgRes && (orgRes.organization || orgRes.data)) {
+                    const target = orgRes.organization || orgRes.data;
+                    orgEmail = target.email || target.admin_email || '';
+                    orgName = target.name || '';
+                }
+            }
+            if (emailInput && orgEmail) {
+                emailInput.value = orgEmail;
             }
 
-            // Fetch subscriptions linked to this org
-            const subRes = await api.get(`/subscriptions?org_id=${orgId}`);
-            if (subRes.status === 'success' && subRes.data.length > 0) {
-                subSelect.innerHTML = subRes.data.map(s => `<option value="${s.id}">${s.subscription_uid} (${s.plan_name})</option>`).join('');
+            // 2. Fetch subscriptions linked to this organization
+            const subRes = await api.get(`/subscriptions?org_id=${orgId}`).catch(() => null);
+            let subsList = [];
+
+            if (subRes) {
+                if (Array.isArray(subRes)) subsList = subRes;
+                else if (subRes.data && Array.isArray(subRes.data)) subsList = subRes.data;
+                else if (subRes.subscriptions && Array.isArray(subRes.subscriptions)) subsList = subRes.subscriptions;
+            }
+
+            if (subsList.length > 0) {
+                let html = subsList.map(s => {
+                    const priceStr = s.final_amount || s.base_price || 0;
+                    const statusStr = s.subscription_status || 'Active';
+                    const uid = s.subscription_uid || `SUB-${s.id}`;
+                    return `<option value="${s.id}" data-price="${priceStr}">${uid} — ${s.plan_name || 'Plan'} (${statusStr} - ₹${priceStr})</option>`;
+                }).join('');
+                
+                html += `<option value="custom">＋ Link Custom Subscription / Billing Entry</option>`;
+                subSelect.innerHTML = html;
                 subSelect.disabled = false;
+                
+                // Automatically select active or primary subscription
+                const activeSub = subsList.find(s => ['Active', 'ACTIVE', 'Trialing', 'Trial', 'Paid', 'PAID'].includes(s.subscription_status)) || subsList[0];
+                if (activeSub) {
+                    subSelect.value = activeSub.id;
+                }
             } else {
-                subSelect.innerHTML = `<option value="1">SUB-2026-MOCK (Mock Link)</option>`;
+                // If no pre-existing subscription record, automatically create & select standard tenant subscription for this org
+                subSelect.innerHTML = `
+                    <option value="auto_org_${orgId}" selected>${orgName || 'Tenant'} Active Subscription (Standard Plan)</option>
+                    <option value="custom">＋ Link Custom Subscription / Billing Entry</option>
+                `;
                 subSelect.disabled = false;
             }
         } catch (e) {
-            console.error("Error loading org details", e);
+            console.error("Error loading org details/subscriptions", e);
+            subSelect.innerHTML = `
+                <option value="auto_org_${orgId}" selected>Active Tenant Subscription</option>
+                <option value="custom">＋ Link Custom Subscription / Billing Entry</option>
+            `;
+            subSelect.disabled = false;
         }
     },
 
@@ -2616,12 +2666,13 @@ const SuperAdmin = {
 
     async biWizSubmit() {
         const orgId = document.getElementById('biOrgSelect').value;
-        const subSelect = document.getElementById('biSubSelect');
-        const subscriptionId = subSelect.value || 1;
+        let subVal = subSelect.value || '1';
+        let parsedSubId = parseInt(subVal);
+        if (isNaN(parsedSubId) || parsedSubId <= 0) parsedSubId = 1;
 
         const payload = {
             org_id: parseInt(orgId),
-            subscription_id: parseInt(subscriptionId),
+            subscription_id: parsedSubId,
             invoice_number: document.getElementById('biInvNum').value,
             currency: document.getElementById('biCurrency').value,
             invoice_date: document.getElementById('biInvDate').value,
@@ -2882,79 +2933,172 @@ const SuperAdmin = {
         }
     },
 
+    _offlinePaymentsState: {
+        page: 1,
+        perPage: 10,
+        statusFilter: 'Pending'
+    },
+
+    setOfflinePaymentsFilter(status) {
+        if (!this._offlinePaymentsState) {
+            this._offlinePaymentsState = { page: 1, perPage: 10, statusFilter: status };
+        } else {
+            this._offlinePaymentsState.statusFilter = status;
+            this._offlinePaymentsState.page = 1;
+        }
+        this.renderOfflinePaymentsTable();
+    },
+
+    setOfflinePaymentsPage(p) {
+        if (!this._offlinePaymentsState) this._offlinePaymentsState = { page: p, perPage: 10, statusFilter: 'Pending' };
+        else this._offlinePaymentsState.page = p;
+        this.renderOfflinePaymentsTable();
+    },
+
     async loadOfflinePayments() {
         const tbody = document.getElementById('offlinePaymentsTableBody');
         if (!tbody) return;
         try {
             const res = await api.get('/billing/offline-payments');
             if (res && res.status === 'success' && res.payments) {
-                if (res.payments.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted text-xs">No offline payment submissions found.</td></tr>`;
-                    return;
-                }
                 this._offlinePaymentsData = res.payments;
-                tbody.innerHTML = res.payments.map((p, index) => {
-                    const isPending = p.status === 'Pending Verification';
-                    const isApproved = p.status === 'Approved';
-                    const isRejected = p.status === 'Rejected';
-                    
-                    const statusBadge = isApproved 
-                        ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i data-lucide="check-circle" style="width:11px;height:11px;" class="me-1"></i>Approved / Active</span>`
-                        : (isRejected 
-                            ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" title="${QCMS.escapeHtml(p.rejection_reason || '')}"><i data-lucide="x-circle" style="width:11px;height:11px;" class="me-1"></i>Rejected</span>` 
-                            : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i>Pending Verification</span>`);
-
-                    const proofBtn = p.screenshot_url 
-                        ? `<button type="button" class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2 text-xxs" onclick="SuperAdmin.viewReceiptModal(${index})"><i data-lucide="image" style="width:11px;height:11px;" class="me-1"></i> View Receipt</button>`
-                        : `<span class="text-secondary text-xxs">No Proof</span>`;
-
-                    const actions = isPending ? `
-                        <div class="d-flex gap-1 justify-content-end">
-                            <button type="button" class="ds-btn ds-btn-primary ds-btn-sm py-1 px-2.5 text-xxs" onclick="SuperAdmin.approveOfflinePayment(${p.id})">
-                                <i data-lucide="check-circle" style="width:12px;height:12px;" class="me-1"></i> Activate Plan
-                            </button>
-                            <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2.5 text-xxs text-danger" onclick="SuperAdmin.openRejectModal(${p.id}, '${QCMS.escapeHtml(p.transaction_id)}')">
-                                <i data-lucide="x-circle" style="width:12px;height:12px;" class="me-1"></i> Reject
-                            </button>
-                        </div>
-                    ` : (isRejected ? `
-                        <div class="text-end">
-                            <span class="text-danger text-xxs fw-bold d-block">Declined</span>
-                            <span class="text-secondary text-xxs cursor-pointer" onclick="SuperAdmin.viewReceiptModal(${index})">View Review</span>
-                        </div>
-                    ` : `<span class="text-success text-xxs fw-bold">Activated ✓</span>`);
-
-                    return `
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center gap-1.5 mb-0.5">
-                                    <strong class="text-main text-xs">${QCMS.escapeHtml(p.org_name)}</strong>
-                                    <span class="badge bg-secondary-subtle text-secondary font-monospace text-xxs">ID: ${p.org_id}</span>
-                                </div>
-                                <div class="text-secondary text-xxs">${QCMS.escapeHtml(p.user_email)}</div>
-                            </td>
-                            <td>
-                                <span class="badge bg-primary-subtle text-primary fw-bold text-xxs">${QCMS.escapeHtml(p.plan_name)}</span>
-                                <span class="text-secondary text-xxs d-block mt-0.5">${QCMS.escapeHtml(p.billing_cycle || 'Monthly')}</span>
-                            </td>
-                            <td class="fw-bold text-xs text-main">₹${(p.amount || 0).toLocaleString('en-IN')}</td>
-                            <td>
-                                <span class="font-monospace text-xs text-main fw-bold d-block">${QCMS.escapeHtml(p.transaction_id)}</span>
-                                ${p.notes ? `<span class="text-secondary text-xxs" title="${QCMS.escapeHtml(p.notes)}">${QCMS.escapeHtml(p.notes.length > 25 ? p.notes.substring(0, 25) + '...' : p.notes)}</span>` : ''}
-                            </td>
-                            <td>${proofBtn}</td>
-                            <td class="text-secondary text-xxs">${p.created_at || '—'}</td>
-                            <td>${statusBadge}</td>
-                            <td class="text-end">${actions}</td>
-                        </tr>
-                    `;
-                }).join('');
-                if (window.lucide) lucide.createIcons();
+                this.renderOfflinePaymentsTable();
             }
         } catch (e) {
             console.warn('loadOfflinePayments error:', e);
             tbody.innerHTML = `<tr><td colspan="8" class="text-center py-3 text-danger text-xs">Failed to load offline payments.</td></tr>`;
         }
+    },
+
+    renderOfflinePaymentsTable() {
+        const tbody = document.getElementById('offlinePaymentsTableBody');
+        const paginationEl = document.getElementById('offlinePaymentsPagination');
+        if (!tbody) return;
+
+        if (!this._offlinePaymentsState) {
+            this._offlinePaymentsState = { page: 1, perPage: 10, statusFilter: 'Pending' };
+        }
+
+        const allPayments = this._offlinePaymentsData || [];
+        const filter = this._offlinePaymentsState.statusFilter || 'Pending';
+
+        const filtered = allPayments.filter(p => {
+            if (filter === 'Pending') {
+                return p.status === 'Pending Verification' || (p.status || '').toLowerCase().includes('pending');
+            }
+            if (filter === 'Approved') {
+                return p.status === 'Approved' || (p.status || '').toLowerCase().includes('approved');
+            }
+            if (filter === 'Rejected') {
+                return p.status === 'Rejected' || (p.status || '').toLowerCase().includes('reject');
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted text-xs">No ${filter === 'All' ? '' : filter} payment submissions found.</td></tr>`;
+            if (paginationEl) paginationEl.innerHTML = `<div class="text-xs text-secondary">Showing 0 submissions</div>`;
+            return;
+        }
+
+        const totalItems = filtered.length;
+        const perPage = this._offlinePaymentsState.perPage || 10;
+        const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+
+        if (this._offlinePaymentsState.page > totalPages) {
+            this._offlinePaymentsState.page = totalPages;
+        }
+        if (this._offlinePaymentsState.page < 1) {
+            this._offlinePaymentsState.page = 1;
+        }
+
+        const page = this._offlinePaymentsState.page;
+        const startIndex = (page - 1) * perPage;
+        const paginated = filtered.slice(startIndex, startIndex + perPage);
+
+        tbody.innerHTML = paginated.map((p, index) => {
+            const globalIndex = allPayments.findIndex(x => x.id === p.id);
+            const isPending = p.status === 'Pending Verification';
+            const isApproved = p.status === 'Approved';
+            const isRejected = p.status === 'Rejected';
+            
+            const statusBadge = isApproved 
+                ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i data-lucide="check-circle" style="width:11px;height:11px;" class="me-1"></i>Approved / Active</span>`
+                : (isRejected 
+                    ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" title="${QCMS.escapeHtml(p.rejection_reason || '')}"><i data-lucide="x-circle" style="width:11px;height:11px;" class="me-1"></i>Rejected</span>` 
+                    : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i>Pending Verification</span>`);
+
+            const proofBtn = p.screenshot_url 
+                ? `<button type="button" class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2 text-xxs" onclick="SuperAdmin.viewReceiptModal(${globalIndex >= 0 ? globalIndex : index})"><i data-lucide="image" style="width:11px;height:11px;" class="me-1"></i> View Receipt</button>`
+                : `<span class="text-secondary text-xxs">No Proof</span>`;
+
+            const actions = `
+                <div class="dropdown d-inline-block">
+                    <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}'>
+                        <i data-lucide="more-vertical" style="width:14px;height:14px;"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border" style="background:var(--ds-surface-secondary); border-color:var(--ds-border-color)!important; z-index: 100000 !important;">
+                        <li>
+                            <a class="dropdown-item text-xs text-primary fw-semibold" href="javascript:void(0)" onclick="SuperAdmin.viewReceiptModal(${globalIndex >= 0 ? globalIndex : index})">
+                                <i data-lucide="eye" style="width:13px;height:13px;" class="me-1.5 text-primary"></i> View Details &amp; Review
+                            </a>
+                        </li>
+                        ${isPending || isRejected ? `
+                            <li><hr class="dropdown-divider" style="border-color:var(--ds-border-color);"></li>
+                            <li>
+                                <a class="dropdown-item text-xs text-success" href="javascript:void(0)" onclick="SuperAdmin.approveOfflinePayment(${p.id})">
+                                    <i data-lucide="check-circle" style="width:13px;height:13px;" class="me-1.5 text-success"></i> Activate Plan
+                                </a>
+                            </li>
+                        ` : ''}
+                        ${isPending ? `
+                            <li>
+                                <a class="dropdown-item text-xs text-danger" href="javascript:void(0)" onclick="SuperAdmin.openRejectModal(${p.id}, '${QCMS.escapeHtml(p.transaction_id)}')">
+                                    <i data-lucide="x-circle" style="width:13px;height:13px;" class="me-1.5 text-danger"></i> Reject Payment
+                                </a>
+                            </li>
+                        ` : ''}
+                    </ul>
+                </div>
+            `;
+
+            return `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-1.5 mb-0.5">
+                            <strong class="text-main text-xs">${QCMS.escapeHtml(p.org_name)}</strong>
+                            <span class="badge bg-secondary-subtle text-secondary font-monospace text-xxs">ID: ${p.org_id}</span>
+                        </div>
+                        <div class="text-secondary text-xxs">${QCMS.escapeHtml(p.user_email)}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary fw-bold text-xxs">${QCMS.escapeHtml(p.plan_name)}</span>
+                        <span class="text-secondary text-xxs d-block mt-0.5">${QCMS.escapeHtml(p.billing_cycle || 'Monthly')}</span>
+                    </td>
+                    <td class="fw-bold text-xs text-main">₹${(p.amount || 0).toLocaleString('en-IN')}</td>
+                    <td>
+                        <span class="font-monospace text-xs text-main fw-bold d-block">${QCMS.escapeHtml(p.transaction_id)}</span>
+                        ${p.notes ? `<span class="text-secondary text-xxs" title="${QCMS.escapeHtml(p.notes)}">${QCMS.escapeHtml(p.notes.length > 25 ? p.notes.substring(0, 25) + '...' : p.notes)}</span>` : ''}
+                    </td>
+                    <td>${proofBtn}</td>
+                    <td class="text-secondary text-xxs">${p.created_at || '—'}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-end">${actions}</td>
+                </tr>
+            `;
+        }).join('');
+
+        if (paginationEl) {
+            paginationEl.innerHTML = `
+                <div class="text-xs text-secondary">Showing page ${page} of ${totalPages} (${totalItems} items)</div>
+                <div class="h-stack gap-2">
+                    <button class="ds-btn ds-btn-outline ds-btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="SuperAdmin.setOfflinePaymentsPage(${page - 1})">Prev</button>
+                    <button class="ds-btn ds-btn-outline ds-btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="SuperAdmin.setOfflinePaymentsPage(${page + 1})">Next</button>
+                </div>
+            `;
+        }
+
+        if (window.lucide) lucide.createIcons();
     },
 
     async approveOfflinePayment(id) {
@@ -3306,14 +3450,13 @@ const SuperAdmin = {
             const res = await api.get(`/admin/audit/dashboard${orgParam}`);
             const d = res.data || {};
 
-            // Retain 6 essential, high-value, non-redundant audit KPI metrics
+            // Retain 5 essential, high-value, non-redundant audit KPI metrics
             const essentialKpis = [
                 { key: 'total_events',       label: 'Total Audit Events',        icon: 'activity',      bg: 'rgba(99, 102, 241, 0.12)', color: '#6366f1' },
                 { key: 'data_changes',       label: 'Data Modifications',        icon: 'database',      bg: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' },
                 { key: 'active_sessions',    label: 'Active User Sessions',      icon: 'users',         bg: 'rgba(16, 185, 129, 0.12)', color: '#10b981' },
                 { key: 'security_events',    label: 'Security Alerts & Warnings',icon: 'shield-alert',  bg: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' },
-                { key: 'critical_events',    label: 'Critical Incidents',        icon: 'alert-triangle',bg: 'rgba(239, 68, 68, 0.12)',  color: '#ef4444' },
-                { key: 'export_activities',  label: 'Compliance Exports',        icon: 'file-text',     bg: 'rgba(14, 165, 233, 0.12)', color: '#0ea5e9' }
+                { key: 'critical_events',    label: 'Critical Incidents',        icon: 'alert-triangle',bg: 'rgba(239, 68, 68, 0.12)',  color: '#ef4444' }
             ];
 
             grid.innerHTML = essentialKpis.map(item => {

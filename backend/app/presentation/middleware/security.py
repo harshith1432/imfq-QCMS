@@ -178,18 +178,8 @@ def _ip_in_list(ip_str: str, networks: list) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _check_rate_limit(client_ip: str, limit_per_minute: int) -> bool:
-    """Returns True if the IP is over the rate limit."""
-    if limit_per_minute <= 0:
-        return False
-    now = time.time()
-    with _lock:
-        bucket = _rate_limit_buckets.get(client_ip, {'count': 0, 'window_start': now})
-        if now - bucket['window_start'] >= 60:
-            bucket = {'count': 1, 'window_start': now}
-        else:
-            bucket['count'] += 1
-        _rate_limit_buckets[client_ip] = bucket
-        return bucket['count'] > limit_per_minute
+    """Returns True if the IP is over the rate limit. (Permanently disabled: always returns False)."""
+    return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -275,17 +265,8 @@ def register_security_middleware(app):
                 }), 403
 
         # ── 3. API Rate Limiting ─────────────────────────────────────────────
-        # Bypass or scale up rate limit for local loopback (127.0.0.1 / ::1 / localhost) and raise default to 300
-        is_loopback = client_ip in ('127.0.0.1', '::1', 'localhost')
-        if not is_loopback:
-            rate_limit = sec.get('api_rate_limit_per_minute', 300)
-            if _check_rate_limit(client_ip, rate_limit):
-                _log_threat(client_ip, 'RateLimit')
-                return jsonify({
-                    'status': 'error',
-                    'message': f'Too many requests. Limit is {rate_limit} per minute.',
-                    'code': 'RATE_LIMIT_EXCEEDED'
-                }), 429
+        # Rate limiting permanently disabled - unlimited throughput for all requests
+        pass
 
         # ── 4. WAF ───────────────────────────────────────────────────────────
         waf_mode = sec.get('waf_mode', 'medium')  # default: medium

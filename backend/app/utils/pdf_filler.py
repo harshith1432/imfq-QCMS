@@ -3,6 +3,9 @@ import os
 import tempfile
 import subprocess
 import html
+import base64
+import mimetypes
+import urllib.parse
 from app import db
 from app.infrastructure.database.models.models import (
     Project, ProjectWorkflow, Department, ProjectMeeting, Stage1ProblemDefinitionProjectInitiation, Stage2ObservationDataCollection, 
@@ -466,6 +469,212 @@ def generate_histogram_comparison_svg(d2, d4, d7):
     </svg>
     '''
 
+def is_image_file(url_or_path):
+    if not url_or_path or not isinstance(url_or_path, str):
+        return False
+    u = url_or_path.lower().split('?')[0].strip()
+    if u.startswith('data:image/'):
+        return True
+    img_exts = ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.svg', '.tiff')
+    return any(u.endswith(ext) for ext in img_exts)
+
+def resolve_image_to_data_uri(url_or_path):
+    if not url_or_path or not isinstance(url_or_path, str):
+        return None
+    url_or_path = url_or_path.strip()
+    if url_or_path.startswith('data:image/'):
+        return url_or_path
+        
+    clean_path = url_or_path.replace('\\', '/')
+    filename = urllib.parse.unquote(os.path.basename(clean_path.split('?')[0]))
+    
+    candidate_paths = [
+        clean_path,
+        os.path.join(os.getcwd(), 'uploads', filename),
+        os.path.join(os.getcwd(), 'backend', 'uploads', filename),
+        os.path.join(os.getcwd(), 'frontend', 'uploads', filename),
+        os.path.join(os.path.dirname(__file__), '..', '..', 'uploads', filename),
+        os.path.join(os.path.dirname(__file__), '..', '..', '..', 'frontend', 'uploads', filename),
+    ]
+    
+    try:
+        from flask import current_app
+        if current_app:
+            up_folder = current_app.config.get('UPLOAD_FOLDER')
+            if up_folder:
+                candidate_paths.insert(0, os.path.join(up_folder, filename))
+    except Exception:
+        pass
+        
+    resolved_file = None
+    for cp in candidate_paths:
+        if cp and os.path.isfile(cp):
+            resolved_file = cp
+            break
+            
+    if resolved_file:
+        try:
+            mime_type, _ = mimetypes.guess_type(resolved_file)
+            if not mime_type:
+                ext = os.path.splitext(resolved_file)[1].lower()
+                if ext in ('.jpg', '.jpeg'):
+                    mime_type = 'image/jpeg'
+                elif ext == '.png':
+                    mime_type = 'image/png'
+                elif ext == '.webp':
+                    mime_type = 'image/webp'
+                elif ext == '.gif':
+                    mime_type = 'image/gif'
+                elif ext == '.svg':
+                    mime_type = 'image/svg+xml'
+                else:
+                    mime_type = 'image/png'
+            with open(resolved_file, 'rb') as f:
+                encoded = base64.b64encode(f.read()).decode('utf-8')
+                return f"data:{mime_type};base64,{encoded}"
+        except Exception as e:
+            print(f"[PDF_FILLER] Error reading image file {resolved_file}: {e}")
+            
+    return url_or_path
+
+def extract_evidence_photos(d2, d6):
+    photos = []
+    
+    # 1. Stage 2 (Section 2.7 Current State Evidence)
+    cs = d2.get('current_state') if isinstance(d2, dict) else {}
+    if not isinstance(cs, dict):
+        cs = {}
+    
+    s2_media = cs.get('media_files') or d2.get('media_files') or d2.get('evidence_files') or []
+    if isinstance(s2_media, list):
+        for item in s2_media:
+            url = ""
+            name = ""
+            if isinstance(item, dict):
+                url = item.get('url') or item.get('link') or item.get('path') or ''
+                name = item.get('name') or item.get('filename') or item.get('document_name') or ''
+            elif isinstance(item, str):
+                url = item
+                name = os.path.basename(item)
+            
+            if url and is_image_file(url):
+                photos.append({
+                    'stage': 'Stage 2.7',
+                    'stage_label': 'Stage 2.7: Before Evidence',
+                    'badge_bg': '#dbeafe',
+                    'badge_color': '#1e40af',
+                    'badge_border': '#bfdbfe',
+                    'url': url,
+                    'name': name or 'Current State Photo',
+                    'tag': 'Before'
+                })
+                
+    # 2. Stage 6 (Section 6.6 Implementation Evidence)
+    s6_evidence = d6.get('implementation_evidence') or d6.get('evidence') or d6.get('evidence_files') or []
+    if isinstance(s6_evidence, list):
+        for item in s6_evidence:
+            url = ""
+            name = ""
+            uploaded_by = ""
+            if isinstance(item, dict):
+                url = item.get('link') or item.get('url') or item.get('path') or ''
+                name = item.get('document_name') or item.get('name') or item.get('filename') or ''
+                uploaded_by = item.get('uploaded_by') or ''
+            elif isinstance(item, str):
+                url = item
+                name = os.path.basename(item)
+                
+            if url and is_image_file(url):
+                caption = name or 'Implementation Proof'
+                if uploaded_by and str(uploaded_by).strip():
+                    caption += f" (by {str(uploaded_by).strip()})"
+                photos.append({
+                    'stage': 'Stage 6.6',
+                    'stage_label': 'Stage 6.6: Implementation Proof',
+                    'badge_bg': '#dcfce7',
+                    'badge_color': '#15803d',
+                    'badge_border': '#bbf7d0',
+                    'url': url,
+                    'name': caption,
+                    'tag': 'After'
+                })
+                
+    return photos
+
+def generate_evidence_collage_html(project_id, d2, d6):
+    photos = extract_evidence_photos(d2, d6)
+    
+    if not photos:
+        return '''
+        <!-- EVIDENCE PHOTO GALLERY (EMPTY STATE) -->
+        <div class="evidence-collage-box" style="margin-top: 4px; margin-bottom: 3px;">
+          <div class="section-title" style="background-color: #1e3a8a; color: #ffffff; font-weight: 700; padding: 2px 6px; font-size: 7.5pt; margin-top: 4px; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; border-radius: 1px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Project Evidence Photos (Stage 2.7 &amp; Stage 6.6)</span>
+            <span style="font-size: 6.2pt; font-weight: normal; opacity: 0.9; text-transform: none;">Before (Current State) vs After (Implementation Proof)</span>
+          </div>
+          <div style="border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 3px; padding: 4px 6px; text-align: center; color: #64748b; font-size: 6.8pt; font-style: italic;">
+            No photographic evidence attached in Stage 2.7 (Current State) or Stage 6.6 (Implementation Proof).
+          </div>
+        </div>
+        '''
+        
+    num_photos = len(photos)
+    
+    # Dynamic grid configuration based on photo count
+    if num_photos == 1:
+        grid_cols_css = "grid-template-columns: 1fr; max-width: 240px; margin: 0 auto;"
+        img_height_px = 75
+    elif num_photos == 2:
+        grid_cols_css = "grid-template-columns: 1fr 1fr; gap: 6px;"
+        img_height_px = 70
+    elif num_photos == 3:
+        grid_cols_css = "grid-template-columns: 1fr 1fr 1fr; gap: 5px;"
+        img_height_px = 65
+    elif num_photos == 4:
+        grid_cols_css = "grid-template-columns: repeat(4, 1fr); gap: 4px;"
+        img_height_px = 60
+    elif num_photos in (5, 6):
+        grid_cols_css = "grid-template-columns: repeat(3, 1fr); gap: 4px;"
+        img_height_px = 55
+    else:
+        grid_cols_css = "grid-template-columns: repeat(4, 1fr); gap: 4px;"
+        img_height_px = 50
+
+    cards_html = []
+    for p in photos:
+        src = resolve_image_to_data_uri(p['url'])
+        caption = html.escape(p['name'])
+        badge_html = f'''<span style="background-color: {p['badge_bg']}; color: {p['badge_color']}; border: 1px solid {p['badge_border']}; font-size: 5.5pt; font-weight: 800; padding: 1px 4px; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.3px;">{html.escape(p['stage_label'])}</span>'''
+        
+        cards_html.append(f'''
+        <div style="border: 1px solid #cbd5e1; border-radius: 3px; background: #ffffff; padding: 2px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            {badge_html}
+          </div>
+          <div style="width: 100%; height: {img_height_px}px; background-color: #f8fafc; border-radius: 2px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0;">
+            <img src="{src}" alt="{caption}" style="width: 100%; height: 100%; object-fit: contain; display: block;" />
+          </div>
+          <div style="font-size: 6pt; font-weight: 600; color: #334155; margin-top: 1px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px;" title="{caption}">
+            {caption}
+          </div>
+        </div>
+        ''')
+        
+    cards_joined = "\n".join(cards_html)
+    
+    return f'''
+    <!-- EVIDENCE PHOTO GALLERY COLLAGE (STAGE 2.7 & 6.6) -->
+    <div class="evidence-collage-box" style="margin-top: 4px; margin-bottom: 3px;">
+      <div class="section-title" style="background-color: #1e3a8a; color: #ffffff; font-weight: 700; padding: 2px 6px; font-size: 7.5pt; margin-top: 4px; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; border-radius: 1px; display: flex; justify-content: space-between; align-items: center;">
+        <span>Project Evidence Photos &amp; Verification (Stage 2.7 &amp; Stage 6.6)</span>
+        <span style="font-size: 6.2pt; font-weight: normal; opacity: 0.9; text-transform: none;">Total Evidence Photos: {num_photos} | Dynamic Collage Layout</span>
+      </div>
+      <div style="display: grid; {grid_cols_css}">
+        {cards_joined}
+      </div>
+    </div>
+    '''
+
 def build_qc_story_html(project_id):
     project = db.session.get(Project, project_id)
     if not project:
@@ -904,6 +1113,7 @@ def build_qc_story_html(project_id):
 
     control_chart_svg_html = generate_control_chart_comparison_svg(d4, d7)
     histogram_svg_html = generate_histogram_comparison_svg(d2, d4, d7)
+    evidence_collage_html = generate_evidence_collage_html(project_id, d2, d6)
 
     # Section 9 Sign-Off Table data extraction
     saved_signoff = d8.get('signoff_table') if isinstance(d8.get('signoff_table'), list) else []
@@ -1020,7 +1230,7 @@ def build_qc_story_html(project_id):
     
     .page {{
       width: 100%;
-      height: 277mm;
+      min-height: 277mm;
       page-break-after: always;
       position: relative;
       display: flex;
@@ -1100,13 +1310,20 @@ def build_qc_story_html(project_id):
       align-items: center;
     }}
 
+    .evidence-collage-box {{
+      margin-top: 4px;
+      margin-bottom: 4px;
+      page-break-inside: avoid;
+    }}
+
     .manual-entry-group-box {{
       border: 2px dashed #64748b;
       background-color: #f8fafc;
-      padding: 8px;
-      margin-top: 15px;
+      padding: 6px 8px;
+      margin-top: 6px;
       margin-bottom: 4px;
       border-radius: 4px;
+      page-break-inside: avoid;
     }}
 
     .manual-group-header {{
@@ -1377,6 +1594,8 @@ def build_qc_story_html(project_id):
           <td colspan="5" style="font-size: 7pt; color: #334155;">{html.escape(calc_basis)}</td>
         </tr>
       </table>
+
+      {evidence_collage_html}
 
       <!-- MANUAL ENTRY BLOCK -->
       <div class="manual-entry-group-box">

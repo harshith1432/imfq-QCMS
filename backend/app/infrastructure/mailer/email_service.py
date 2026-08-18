@@ -359,13 +359,64 @@ class EmailUtils:
 
     @staticmethod
     def send_temp_password_email(user, temp_password):
-        """Sends an email with a temporary password to a newly created user."""
-        ctx = DocumentBrandingService.get_branding_context(user.org_id)
-        subject = f"Your {ctx['software_short_name']} Account Credentials"
+        """Sends an email with a temporary password to a newly created user using the Email Notification Rule from DB if available."""
+        from sqlalchemy import or_
+        from app.infrastructure.database.models.models import EmailNotificationRule
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+
+        branding_ctx = DocumentBrandingService.get_branding_context(user.org_id)
+        org_name = user.organization.name if user.organization else branding_ctx.get('organization_name', 'QCMS Enterprise')
+        user_name = user.full_name or user.username or user.email
+        role_name = user.role.name if user.role else 'User'
+
+        user_ctx = {
+            'user_name': user_name,
+            'username': user.username or user.email,
+            'user_email': user.email,
+            'email': user.email,
+            'temp_password': temp_password,
+            'password': temp_password,
+            'org_name': org_name,
+            'role_name': role_name,
+            'assigned_role': role_name,
+            'app_url': EmailUtils._get_app_url(),
+            'software_name': branding_ctx.get('software_name', 'QCMS Enterprise OS'),
+            'software_short_name': branding_ctx.get('software_short_name', 'QCMS'),
+            'support_email': branding_ctx.get('support_email', 'support@ifqm.org.in')
+        }
+
+        try:
+            # STRICT GATE: Look up the welcome rule for new_user_welcome / user_welcome regardless of active state.
+            # If rule exists and toggle is OFF (is_active == False), IMMEDIATELY CANCEL & RETURN FALSE — do NOT send any email!
+            rule = EmailNotificationRule.query.filter(
+                or_(
+                    EmailNotificationRule.event_trigger == 'new_user_welcome',
+                    EmailNotificationRule.category == 'user_welcome'
+                )
+            ).first()
+
+            if rule:
+                if not rule.is_active:
+                    print(f"[EmailUtils] User welcome notification rule '{rule.name}' is PAUSED/DISABLED in Set Email Notifications dashboard. Cancelling email generation and dispatch completely.")
+                    return False
+
+                rule_dict = rule.to_dict()
+                subject = EmailNotificationEngine.replace_variables(rule.subject, user_ctx)
+                html = EmailNotificationEngine.generate_html_email(rule_dict, user_ctx)
+                branding_sender = EmailNotificationEngine.get_sender_from_branding(rule.category)
+                sender_email = rule.sender_email if (rule.sender_email and not rule.sender_email.endswith('@qcms.com')) else branding_sender['email']
+                sender_name = rule.sender_name if (rule.sender_name and not rule.sender_name.startswith('QCMS ')) else branding_sender['name']
+                reply_to = rule.reply_to if (rule.reply_to and not rule.reply_to.endswith('@qcms.com')) else branding_sender['reply_to']
+                return EmailUtils.send_email(user.email, subject, html, sender_email=sender_email, sender_name=sender_name, reply_to=reply_to, email_type='onboarding', org_id=user.org_id)
+        except Exception as e:
+            print(f"[EmailUtils] Error loading custom welcome email rule: {e}")
+
+        # Fallback to default template if no rule is found
+        subject = f"Your {branding_ctx.get('software_short_name', 'QCMS')} Account Credentials"
         body = f"""
             <h2 style="color: #2563eb; margin-top:0;">Welcome to the Team!</h2>
-            <p>Hello {user.username or user.email},</p>
-            <p>An account has been created for you at {ctx['software_name']} for <strong>{user.organization.name if user.organization else ctx['organization_name']}</strong>.</p>
+            <p>Hello {user_name},</p>
+            <p>An account has been created for you at {branding_ctx.get('software_name', 'QCMS Enterprise OS')} for <strong>{org_name}</strong>.</p>
             <div style="background-color: #f8fafc; border:1px solid #e2e8f0; padding: 16px; border-radius: 6px; margin: 20px 0;">
                 <p style="margin: 0;"><strong>Username:</strong> {user.email or user.username}</p>
                 <p style="margin: 10px 0 0 0;"><strong>Temporary Password:</strong> <code style="background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family:monospace;">{temp_password}</code></p>

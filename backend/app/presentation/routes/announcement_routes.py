@@ -103,12 +103,18 @@ def ann_to_dict(a, include_body=False):
 
 def deliver_in_app(announcement, user_ids):
     """Create in-app notifications for each user."""
+    default_org_id = None
+    first_org = Organization.query.first()
+    if first_org:
+        default_org_id = first_org.id
+
     for uid in user_ids:
         user = db.session.get(User, uid)
         if not user:
             continue
+        effective_org_id = user.org_id or default_org_id or 1
         notif = Notification(
-            org_id=user.org_id,
+            org_id=effective_org_id,
             user_id=uid,
             title=f"📢 {announcement.title}",
             message=announcement.summary or announcement.body or "",
@@ -117,7 +123,7 @@ def deliver_in_app(announcement, user_ids):
         db.session.add(notif)
         delivery = AnnouncementDelivery(
             announcement_id=announcement.id,
-            org_id=user.org_id,
+            org_id=effective_org_id,
             user_id=uid,
             channel='in_app',
             status='Sent',
@@ -135,12 +141,18 @@ def deliver_email(announcement, user_ids):
     if isinstance(announcement.channels, dict):
         email_provider = announcement.channels.get('email_provider')
 
+    default_org_id = None
+    first_org = Organization.query.first()
+    if first_org:
+        default_org_id = first_org.id
+
     success_count = 0
     for uid in user_ids:
         user = db.session.get(User, uid)
         if not user or not user.email:
             continue
 
+        effective_org_id = user.org_id or default_org_id or 1
         try:
             subject = f"📢 [{announcement.category or 'Announcement'}] {announcement.title}"
             body_html = f"""
@@ -166,7 +178,7 @@ def deliver_email(announcement, user_ids):
 
         delivery = AnnouncementDelivery(
             announcement_id=announcement.id,
-            org_id=user.org_id,
+            org_id=effective_org_id,
             user_id=uid,
             channel='email',
             status=status,
@@ -391,7 +403,7 @@ def list_announcements():
         return jsonify({"message": "Unauthorized"}), 403
 
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
     q = request.args.get('q', '').strip()
     status = request.args.get('status', '')
     priority = request.args.get('priority', '')

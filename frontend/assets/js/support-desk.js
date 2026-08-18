@@ -6,6 +6,10 @@ const SupportDesk = {
     currentTab: 'dashboard', // dashboard, tickets, create, kb, csat
     currentPage: 1,
     perPage: 10,
+    trialExtensionsPage: 1,
+    trialExtensionsPerPage: 5,
+    trialExtensionsSearch: '',
+    _trialExtensionsData: [],
     sortBy: 'created_at',
     sortOrder: 'desc',
     filters: {
@@ -475,75 +479,14 @@ const SupportDesk = {
         try {
             const res = await api.get('/super-admin/trial-extensions');
             const data = (res && Array.isArray(res.data)) ? res.data : [];
+            this._trialExtensionsData = data;
 
             const totalRequests = data.reduce((acc, o) => acc + (o.total_trial_requests || 0), 0);
             const autoApproved = data.reduce((acc, o) => acc + (o.auto_approved_trial_extensions || 0), 0);
             const manualApproved = data.reduce((acc, o) => acc + (o.manual_approved_trial_extensions || 0), 0);
             const pendingReqs = data.filter(o => o.pending_request && o.pending_request.status === 'Pending');
 
-            let hasActiveAutoApproving = false;
-
-            let rows = data.map(o => {
-                const pending = o.pending_request || {};
-                const isPending = pending.status === 'Pending';
-                const isAutoApproving = Boolean(o.is_auto_approving && o.seconds_remaining > 0);
-                if (isAutoApproving) hasActiveAutoApproving = true;
-
-                let statusBadge = '';
-                let actionButton = '';
-
-                if (isAutoApproving) {
-                    const m = Math.floor(o.seconds_remaining / 60);
-                    const s = o.seconds_remaining % 60;
-                    const timerStr = `${m}m ${s < 10 ? '0' : ''}${s}s`;
-                    statusBadge = `<span class="badge bg-info-subtle text-info font-semibold px-2 py-1 text-nowrap d-inline-flex align-items-center"><span class="spinner-border spinner-border-sm me-1" style="width:10px;height:10px;"></span> Auto-Approving (<span id="timer-span-org-${o.id}" data-countdown-sec="${o.seconds_remaining}">${timerStr}</span>)</span>`;
-                    actionButton = `<button class="ds-btn ds-btn-secondary ds-btn-sm text-nowrap" disabled style="opacity: 0.65; cursor: not-allowed; font-size:11px; padding: 4px 8px;" title="Auto-approval in progress (5 min timer active). Super Admin action is frozen."><i data-lucide="lock" style="width:11px;height:11px;" class="me-1"></i> Frozen</button>`;
-                } else if (isPending) {
-                    statusBadge = `<span class="badge bg-warning-subtle text-warning font-semibold px-2 py-1 text-nowrap">Pending Review</span>`;
-                    actionButton = `<button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap" style="font-size:11px; padding: 4px 10px;" onclick="SupportDesk.openExtendTrialModal(${o.id}, '${(o.name || '').replace(/'/g, "\\'")}', ${pending.days || 14})"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i> Extend Trial</button>`;
-                } else {
-                    statusBadge = (o.auto_approved_trial_extensions > 0 || o.manual_approved_trial_extensions > 0)
-                        ? `<span class="badge bg-success-subtle text-success font-semibold px-2 py-1 text-nowrap">Extended (${o.total_trial_requests}x)</span>`
-                        : `<span class="badge bg-secondary-subtle text-secondary font-semibold px-2 py-1 text-nowrap">Standard Trial</span>`;
-                    actionButton = `<button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap" style="font-size:11px; padding: 4px 10px;" onclick="SupportDesk.openExtendTrialModal(${o.id}, '${(o.name || '').replace(/'/g, "\\'")}', ${pending.days || 14})"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i> Extend Trial</button>`;
-                }
-
-                const requestedDays = pending.days ? `+${pending.days} Days` : '—';
-                const reasonText = pending.reason ? pending.reason : (o.total_trial_requests > 0 ? `${o.total_trial_requests} extension(s) granted` : 'No extension requests');
-                const reqDate = pending.requested_at ? QCMS.formatDate(pending.requested_at) : '—';
-                const expiryDate = o.trial_ends_at ? QCMS.formatDate(o.trial_ends_at) : '—';
-
-                return `
-                    <tr>
-                        <td>
-                            <div class="fw-bold text-main text-truncate" style="max-width: 140px;">${o.name}</div>
-                            <div class="text-xxs text-muted">ID: ${o.id} • ${o.org_code}</div>
-                        </td>
-                        <td>
-                            <div class="text-xs text-secondary text-truncate" style="max-width: 150px;">${o.admin_email || '—'}</div>
-                        </td>
-                        <td>
-                            <span class="badge bg-primary-subtle text-primary fw-semibold">${requestedDays}</span>
-                        </td>
-                        <td style="max-width:180px;">
-                            <div class="text-xs text-secondary text-truncate" title="${reasonText}">${reasonText}</div>
-                        </td>
-                        <td>
-                            <div class="text-xs text-muted text-nowrap">${reqDate}</div>
-                        </td>
-                        <td>
-                            <div class="fw-semibold text-xs text-primary text-nowrap">${expiryDate}</div>
-                            <div class="text-xxs text-muted text-nowrap">${o.trial_days_left !== null ? o.trial_days_left + ' days left' : ''}</div>
-                        </td>
-                        <td>${statusBadge}</td>
-                        <td class="text-end">${actionButton}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            if (data.length === 0) {
-                rows = `<tr><td colspan="8" class="text-center py-5 text-muted"><i data-lucide="clock" style="width:32px;height:32px;" class="mb-2 text-muted"></i><br>No trial extension requests found.</td></tr>`;
-            }
+            let hasActiveAutoApproving = data.some(o => Boolean(o.is_auto_approving && o.seconds_remaining > 0));
 
             if (this._trialCountdownTimer) clearInterval(this._trialCountdownTimer);
             if (hasActiveAutoApproving) {
@@ -623,12 +566,18 @@ const SupportDesk = {
                         </div>
                     </div>
 
-                    <!-- Main Table -->
+                    <!-- Main Table with Pagination and Search -->
                     <div class="glass-card p-4 rounded-3 border">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
                             <div>
                                 <h5 class="fw-bold text-main mb-1">Trial Extension Management</h5>
                                 <p class="text-xs text-muted mb-0">View all organization extension requests and grant instant trial period extensions.</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="input-group input-group-sm" style="max-width: 240px;">
+                                    <span class="input-group-text bg-transparent border-end-0 text-muted"><i data-lucide="search" style="width:13px;height:13px;"></i></span>
+                                    <input type="text" class="form-control form-control-sm border-start-0 text-xs" placeholder="Search organization / email..." value="${this.trialExtensionsSearch || ''}" oninput="SupportDesk.filterTrialExtensions(this.value)">
+                                </div>
                             </div>
                         </div>
                         <div class="table-responsive">
@@ -645,17 +594,183 @@ const SupportDesk = {
                                         <th class="text-end" style="min-width:90px;">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody>${rows}</tbody>
+                                <tbody id="sdTrialExtensionsTableBody"></tbody>
                             </table>
                         </div>
+                        <div id="sdTrialExtensionsPaginationFooter"></div>
                     </div>
                 </div>
             `;
+
+            this.renderTrialExtensionsTable();
             if (window.lucide) lucide.createIcons();
         } catch (e) {
             console.error('Failed to load trial extensions', e);
             view.innerHTML = `<div class="alert alert-danger p-3 text-xs">Failed to load trial extensions tab.</div>`;
         }
+    },
+
+    filterTrialExtensions(query) {
+        this.trialExtensionsSearch = (query || '').toLowerCase().trim();
+        this.trialExtensionsPage = 1;
+        this.renderTrialExtensionsTable();
+    },
+
+    setTrialExtensionsPage(page) {
+        this.trialExtensionsPage = page;
+        this.renderTrialExtensionsTable();
+    },
+
+    setTrialExtensionsPerPage(perPage) {
+        this.trialExtensionsPerPage = parseInt(perPage, 10) || 5;
+        this.trialExtensionsPage = 1;
+        this.renderTrialExtensionsTable();
+    },
+
+    renderTrialExtensionsTable() {
+        const tbody = document.getElementById('sdTrialExtensionsTableBody');
+        const footer = document.getElementById('sdTrialExtensionsPaginationFooter');
+        if (!tbody) return;
+
+        let allData = this._trialExtensionsData || [];
+        if (this.trialExtensionsSearch) {
+            const q = this.trialExtensionsSearch;
+            allData = allData.filter(o => {
+                const name = (o.name || '').toLowerCase();
+                const email = (o.admin_email || '').toLowerCase();
+                const code = (o.org_code || '').toLowerCase();
+                return name.includes(q) || email.includes(q) || code.includes(q);
+            });
+        }
+
+        const total = allData.length;
+        const perPage = parseInt(this.trialExtensionsPerPage, 10) || 5;
+        const totalPages = Math.ceil(total / perPage) || 1;
+
+        if (this.trialExtensionsPage > totalPages) this.trialExtensionsPage = totalPages;
+        if (this.trialExtensionsPage < 1) this.trialExtensionsPage = 1;
+
+        const page = this.trialExtensionsPage;
+        const startIdx = (page - 1) * perPage;
+        const endIdx = Math.min(startIdx + perPage, total);
+        const pageSlice = allData.slice(startIdx, endIdx);
+
+        let rows = pageSlice.map(o => {
+            const pending = o.pending_request || {};
+            const isPending = pending.status === 'Pending';
+            const isAutoApproving = Boolean(o.is_auto_approving && o.seconds_remaining > 0);
+
+            let statusBadge = '';
+            let actionButton = '';
+
+            if (isAutoApproving) {
+                const m = Math.floor(o.seconds_remaining / 60);
+                const s = o.seconds_remaining % 60;
+                const timerStr = `${m}m ${s < 10 ? '0' : ''}${s}s`;
+                statusBadge = `<span class="badge bg-info-subtle text-info font-semibold px-2 py-1 text-nowrap d-inline-flex align-items-center"><span class="spinner-border spinner-border-sm me-1" style="width:10px;height:10px;"></span> Auto-Approving (<span id="timer-span-org-${o.id}" data-countdown-sec="${o.seconds_remaining}">${timerStr}</span>)</span>`;
+                actionButton = `<button class="ds-btn ds-btn-secondary ds-btn-sm text-nowrap" disabled style="opacity: 0.65; cursor: not-allowed; font-size:11px; padding: 4px 8px;" title="Auto-approval in progress (5 min timer active). Super Admin action is frozen."><i data-lucide="lock" style="width:11px;height:11px;" class="me-1"></i> Frozen</button>`;
+            } else if (isPending) {
+                statusBadge = `<span class="badge bg-warning-subtle text-warning font-semibold px-2 py-1 text-nowrap">Pending Review</span>`;
+                actionButton = `<button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap" style="font-size:11px; padding: 4px 10px;" onclick="SupportDesk.openExtendTrialModal(${o.id}, '${(o.name || '').replace(/'/g, "\\'")}', ${pending.days || 14})"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i> Extend Trial</button>`;
+            } else {
+                statusBadge = (o.auto_approved_trial_extensions > 0 || o.manual_approved_trial_extensions > 0)
+                    ? `<span class="badge bg-success-subtle text-success font-semibold px-2 py-1 text-nowrap">Extended (${o.total_trial_requests}x)</span>`
+                    : `<span class="badge bg-secondary-subtle text-secondary font-semibold px-2 py-1 text-nowrap">Standard Trial</span>`;
+                actionButton = `<button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap" style="font-size:11px; padding: 4px 10px;" onclick="SupportDesk.openExtendTrialModal(${o.id}, '${(o.name || '').replace(/'/g, "\\'")}', ${pending.days || 14})"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i> Extend Trial</button>`;
+            }
+
+            const requestedDays = pending.days ? `+${pending.days} Days` : '—';
+            const reasonText = pending.reason ? pending.reason : (o.total_trial_requests > 0 ? `${o.total_trial_requests} extension(s) granted` : 'No extension requests');
+            const reqDate = pending.requested_at ? QCMS.formatDate(pending.requested_at) : '—';
+            const expiryDate = o.trial_ends_at ? QCMS.formatDate(o.trial_ends_at) : '—';
+
+            return `
+                <tr>
+                    <td>
+                        <div class="fw-bold text-main text-truncate" style="max-width: 140px;">${o.name}</div>
+                        <div class="text-xxs text-muted">ID: ${o.id} • ${o.org_code}</div>
+                    </td>
+                    <td>
+                        <div class="text-xs text-secondary text-truncate" style="max-width: 150px;">${o.admin_email || '—'}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary fw-semibold">${requestedDays}</span>
+                    </td>
+                    <td style="max-width:180px;">
+                        <div class="text-xs text-secondary text-truncate" title="${reasonText}">${reasonText}</div>
+                    </td>
+                    <td>
+                        <div class="text-xs text-muted text-nowrap">${reqDate}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-xs text-primary text-nowrap">${expiryDate}</div>
+                        <div class="text-xxs text-muted text-nowrap">${o.trial_days_left !== null ? o.trial_days_left + ' days left' : ''}</div>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td class="text-end">${actionButton}</td>
+                </tr>
+            `;
+        }).join('');
+
+        if (total === 0) {
+            rows = `<tr><td colspan="8" class="text-center py-5 text-muted"><i data-lucide="clock" style="width:32px;height:32px;" class="mb-2 text-muted"></i><br>${this.trialExtensionsSearch ? 'No organizations match search criteria.' : 'No trial extension requests found.'}</td></tr>`;
+        }
+
+        tbody.innerHTML = rows;
+
+        if (footer) {
+            const startItem = total > 0 ? startIdx + 1 : 0;
+            const endItem = endIdx;
+
+            let pageBtns = '';
+            if (totalPages <= 7) {
+                for (let p = 1; p <= totalPages; p++) {
+                    pageBtns += `<button class="ds-btn ${p === page ? 'ds-btn-primary' : 'ds-btn-outline'} ds-btn-sm py-1 px-3 fw-bold" onclick="SupportDesk.setTrialExtensionsPage(${p})">${p}</button>`;
+                }
+            } else {
+                const pagesToShow = [];
+                pagesToShow.push(1);
+                if (page > 3) pagesToShow.push('...');
+                for (let p = Math.max(2, page - 1); p <= Math.min(totalPages - 1, page + 1); p++) {
+                    pagesToShow.push(p);
+                }
+                if (page < totalPages - 2) pagesToShow.push('...');
+                pagesToShow.push(totalPages);
+
+                pageBtns = pagesToShow.map(p => {
+                    if (p === '...') return `<span class="text-muted px-1 text-xs">...</span>`;
+                    return `<button class="ds-btn ${p === page ? 'ds-btn-primary' : 'ds-btn-outline'} ds-btn-sm py-1 px-3 fw-bold" onclick="SupportDesk.setTrialExtensionsPage(${p})">${p}</button>`;
+                }).join('');
+            }
+
+            footer.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 pt-3 border-top">
+                    <div class="text-xs text-secondary">
+                        ${total > 0 ? `Showing <strong>${startItem}–${endItem}</strong> of <strong>${total}</strong> requests` : 'Showing 0 of 0 requests'}
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-xs text-muted me-1 mb-0 d-none d-sm-inline">Show per page:</label>
+                        <select class="ds-input text-xs py-1 px-2" style="width: auto; height: 32px; border-radius: 6px;" onchange="SupportDesk.setTrialExtensionsPerPage(this.value)">
+                            <option value="5" ${perPage == 5 ? 'selected' : ''}>5 per page</option>
+                            <option value="10" ${perPage == 10 ? 'selected' : ''}>10 per page</option>
+                            <option value="20" ${perPage == 20 ? 'selected' : ''}>20 per page</option>
+                            <option value="30" ${perPage == 30 ? 'selected' : ''}>30 per page</option>
+                            <option value="50" ${perPage == 50 ? 'selected' : ''}>50 per page</option>
+                            <option value="100" ${perPage == 100 ? 'selected' : ''}>100 per page</option>
+                        </select>
+                        <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5 d-inline-flex align-items-center justify-content-center" ${page <= 1 ? 'disabled' : ''} onclick="SupportDesk.setTrialExtensionsPage(${page - 1})" title="Previous Page">
+                            <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                        </button>
+                        ${pageBtns}
+                        <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5 d-inline-flex align-items-center justify-content-center" ${page >= totalPages ? 'disabled' : ''} onclick="SupportDesk.setTrialExtensionsPage(${page + 1})" title="Next Page">
+                            <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (window.lucide) lucide.createIcons();
     },
 
     openExtendTrialModal(orgId, orgName, defaultDays = 14) {
@@ -1016,8 +1131,7 @@ const SupportDesk = {
                     <span class="text-xs fw-bold ${this.wizards.step === 1 ? 'text-primary' : 'text-secondary'}">1. Requester</span>
                     <span class="text-xs fw-bold ${this.wizards.step === 2 ? 'text-primary' : 'text-secondary'}">2. Details</span>
                     <span class="text-xs fw-bold ${this.wizards.step === 3 ? 'text-primary' : 'text-secondary'}">3. Files</span>
-                    <span class="text-xs fw-bold ${this.wizards.step === 4 ? 'text-primary' : 'text-secondary'}">4. Ingestion & Assignment</span>
-                    <span class="text-xs fw-bold ${this.wizards.step === 5 ? 'text-primary' : 'text-secondary'}">5. Review</span>
+                    <span class="text-xs fw-bold ${this.wizards.step === 4 ? 'text-primary' : 'text-secondary'}">4. Review</span>
                 </div>
 
                 <div id="sdWizardStepContent">
@@ -1026,7 +1140,7 @@ const SupportDesk = {
 
                 <div class="d-flex justify-content-between mt-4 pt-3 border-top" style="border-color:rgba(255,255,255,0.06)!important;">
                     <button class="ds-btn ds-btn-outline ds-btn-sm" onclick="SupportDesk.prevStep()" ${this.wizards.step === 1 ? 'disabled' : ''}>Back</button>
-                    <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="SupportDesk.nextStep()">${this.wizards.step === 5 ? 'Create Ticket' : 'Continue'}</button>
+                    <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="SupportDesk.nextStep()">${this.wizards.step === 4 ? 'Create Ticket' : 'Continue'}</button>
                 </div>
             </div>
         `;
@@ -1149,26 +1263,6 @@ const SupportDesk = {
             `;
             if (window.lucide) lucide.createIcons();
         } else if (this.wizards.step === 4) {
-            stepView.innerHTML = `
-                <div class="v-stack gap-3">
-                    <div class="ds-field">
-                        <label class="ds-label">Expected SLA Plan</label>
-                        <div class="p-3 rounded bg-dark-50" style="border: 1px solid rgba(255,255,255,0.06);">
-                            <div class="text-xs text-main fw-bold">First Response Limit: 4 Hours</div>
-                            <div class="text-xs text-secondary mt-0.5">Resolution Limit: 24 Hours</div>
-                        </div>
-                    </div>
-                    <div class="ds-field">
-                        <label class="ds-label">Assign Group / Tier <span class="text-danger">*</span></label>
-                        <select class="ds-input ds-select" id="wizTeam" onchange="SupportDesk.wizards.data.assigned_team = this.value">
-                            <option value="Tier 1 Support" ${data.assigned_team === 'Tier 1 Support' ? 'selected' : ''}>Tier 1 Support</option>
-                            <option value="Tier 2 Technical Support" ${data.assigned_team === 'Tier 2 Technical Support' ? 'selected' : ''}>Tier 2 Technical Support</option>
-                            <option value="DevOps / Infrastructure" ${data.assigned_team === 'DevOps / Infrastructure' ? 'selected' : ''}>DevOps / Infrastructure</option>
-                        </select>
-                    </div>
-                </div>
-            `;
-        } else if (this.wizards.step === 5) {
             stepView.innerHTML = `
                 <div class="v-stack gap-3 bg-dark-50 p-3 rounded" style="border: 1px solid rgba(255,255,255,0.06);">
                     <h6 class="fw-bold border-bottom pb-2 text-main" style="color:var(--ds-text-main);">Confirm Details</h6>
@@ -1412,7 +1506,7 @@ const SupportDesk = {
     },
 
     async nextStep() {
-        if (this.wizards.step < 5) {
+        if (this.wizards.step < 4) {
             // Validation
             const data = this.wizards.data;
             if (this.wizards.step === 1 && (!data.organization_id || !data.requester_email)) {
@@ -2050,7 +2144,7 @@ const SupportDesk = {
                             </div>
                             <div class="col-md-4">
                                 <select class="ds-input text-xs" onchange="SupportDesk.filterEnquiriesStatus(this.value)">
-                                    <option value="All" ${this.enquiryFilters.status === 'All' ? 'selected' : ''}>All Statuses</option>
+                                    <option value="All" ${this.enquiryFilters.status === 'All' ? 'selected' : ''}>All Status</option>
                                     <option value="New" ${this.enquiryFilters.status === 'New' ? 'selected' : ''}>New</option>
                                     <option value="Contacted" ${this.enquiryFilters.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
                                     <option value="In Progress" ${this.enquiryFilters.status === 'In Progress' ? 'selected' : ''}>In Progress</option>

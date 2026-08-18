@@ -208,11 +208,15 @@ def list_repository_projects():
     if dept_id and str(dept_id).isdigit():
         query = query.filter_by(department_id=int(dept_id))
 
+    # STRICT RULE: Closed / Completed / Archived projects belong in Knowledge Base ONLY.
+    # They MUST NEVER be visible in Project Repository.
+    closed_statuses = ['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED', 'Stage 8 Approved']
+
     if status and str(status).lower() != 'all':
         if status == 'Active':
-            query = query.filter(~Project.status.in_(['Closed', 'Completed', 'Archived', 'Rejected', 'On Hold', 'Cancelled']))
+            query = query.filter(~Project.status.in_(closed_statuses + ['Rejected', 'On Hold', 'Cancelled']))
         elif status in ['Closed', 'Completed', 'Archived']:
-            query = query.filter(Project.status.in_(['Closed', 'Completed', 'Archived']))
+            query = query.filter(Project.status.in_(closed_statuses))
         elif status in ['Inactive', 'Stalled']:
             three_days_ago = datetime.utcnow() - timedelta(days=3)
             recent_active_pids = db.session.query(AuditLog.project_id).filter(
@@ -220,7 +224,7 @@ def list_repository_projects():
                 AuditLog.project_id.isnot(None)
             ).subquery()
             query = query.filter(
-                ~Project.status.in_(['Closed', 'Completed', 'Archived']),
+                ~Project.status.in_(closed_statuses),
                 db.or_(
                     Project.created_at < three_days_ago,
                     ~Project.id.in_(recent_active_pids)
@@ -266,7 +270,7 @@ def list_repository_projects():
             ).scalar_subquery()
 
             query = query.filter(
-                ~Project.status.in_(['Closed', 'Completed', 'Archived']),
+                ~Project.status.in_(closed_statuses),
                 db.or_(
                     Project.status.ilike('%Pending%'),
                     Project.status.ilike('%Submitted%'),
@@ -279,7 +283,10 @@ def list_repository_projects():
                 )
             )
         else:
-            query = query.filter_by(status=status)
+            query = query.filter(Project.status == status)
+    else:
+        # STRICT DEFAULT: Exclude closed/completed/archived projects from Project Repository
+        query = query.filter(~Project.status.in_(closed_statuses))
 
     if stage and str(stage).isdigit():
         query = query.filter_by(current_stage=int(stage))
@@ -654,10 +661,12 @@ def search_repository():
     
     user = User.query.get(get_jwt_identity())
 
+    closed_statuses = ['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED', 'Stage 8 Approved']
+
     # 1. Clean up KnowledgeRepository table: Remove entries for projects that are NOT Closed/Completed/Archived
     open_project_ids = [p.id for p in Project.query.filter(
         Project.org_id == user.org_id,
-        ~Project.status.in_(['Closed', 'Completed', 'Archived'])
+        ~Project.status.in_(closed_statuses)
     ).all()]
     if open_project_ids:
         KnowledgeRepository.query.filter(
@@ -669,7 +678,7 @@ def search_repository():
     # 2. Auto-sync ONLY closed/completed projects into KnowledgeRepository
     closed_projects = Project.query.filter(
         Project.org_id == user.org_id,
-        Project.status.in_(['Closed', 'Completed', 'Archived'])
+        Project.status.in_(closed_statuses)
     ).all()
 
     for p in closed_projects:

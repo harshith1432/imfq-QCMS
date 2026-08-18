@@ -722,47 +722,28 @@ const EnterpriseAnalytics = {
                         <div class="col-lg-7">
                             <div class="glass-card h-100 p-4 d-flex flex-column justify-content-between">
                                 <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-                                    <h6 class="card-title mb-0">Helpdesk Resolution &amp; SLA Performance</h6>
-                                    <span class="text-xxs text-muted">Live telemetry</span>
+                                    <h6 class="card-title mb-0">Helpdesk Resolution Performance</h6>
                                 </div>
 
-                                <!-- 4-Stat Metric Grid -->
-                                <div class="row g-3 text-center mb-3">
-                                    <div class="col-6 col-md-3">
-                                        <div class="p-2.5 rounded border" style="background: rgba(59, 130, 246, 0.04); border-color: rgba(59, 130, 246, 0.18) !important;">
+                                <!-- 3-Stat Metric Grid -->
+                                <div class="row g-3 text-center my-auto">
+                                    <div class="col-4">
+                                        <div class="p-3 rounded border" style="background: rgba(59, 130, 246, 0.04); border-color: rgba(59, 130, 246, 0.18) !important;">
                                             <h4 class="fw-bold text-primary mb-0" id="openTickets">0</h4>
                                             <div class="text-xxs uppercase text-secondary fw-semibold mt-1">Open Issues</div>
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="p-2.5 rounded border" style="background: rgba(139, 92, 246, 0.04); border-color: rgba(139, 92, 246, 0.18) !important;">
+                                    <div class="col-4">
+                                        <div class="p-3 rounded border" style="background: rgba(139, 92, 246, 0.04); border-color: rgba(139, 92, 246, 0.18) !important;">
                                             <h4 class="fw-bold mb-0" style="color: #8b5cf6;" id="inProgTickets">0</h4>
                                             <div class="text-xxs uppercase text-secondary fw-semibold mt-1">In Progress</div>
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="p-2.5 rounded border" style="background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.18) !important;">
+                                    <div class="col-4">
+                                        <div class="p-3 rounded border" style="background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.18) !important;">
                                             <h4 class="fw-bold text-success mb-0" id="closedTickets">0</h4>
                                             <div class="text-xxs uppercase text-secondary fw-semibold mt-1">Resolved</div>
                                         </div>
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="p-2.5 rounded border" style="background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.18) !important;">
-                                            <h4 class="fw-bold text-success mb-0" id="slaCompliance">100%</h4>
-                                            <div class="text-xxs uppercase text-secondary fw-semibold mt-1">SLA Target</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Resolution Velocity Details -->
-                                <div class="p-3 rounded border mt-auto" style="background: var(--ds-bg-subtle, rgba(0,0,0,0.02)); border-color: var(--ds-border-color, rgba(0,0,0,0.08)) !important;">
-                                    <div class="d-flex justify-content-between align-items-center mb-2 text-xs">
-                                        <span class="fw-semibold text-secondary">Average Resolution Time:</span>
-                                        <span class="fw-bold text-main" id="avgResTime">0 hrs</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center text-xs">
-                                        <span class="fw-semibold text-secondary">Active SLA Health:</span>
-                                        <span class="badge bg-success-subtle text-success fw-semibold" id="slaStatusBadge">Within Target</span>
                                     </div>
                                 </div>
                             </div>
@@ -774,27 +755,13 @@ const EnterpriseAnalytics = {
                 document.getElementById('openTickets').textContent = supRes.open || 0;
                 if (document.getElementById('inProgTickets')) document.getElementById('inProgTickets').textContent = supRes.in_progress || 0;
                 if (document.getElementById('closedTickets')) document.getElementById('closedTickets').textContent = (supRes.resolved || 0) + (supRes.closed || 0);
-                document.getElementById('slaCompliance').textContent = `${supRes.sla_compliance_rate ?? 100}%`;
+                if (document.getElementById('slaCompliance')) document.getElementById('slaCompliance').textContent = `${supRes.sla_compliance_rate ?? 100}%`;
                 
                 if (document.getElementById('totalTicketsBadge')) {
                     document.getElementById('totalTicketsBadge').textContent = `${supRes.total || 0} Ticket${(supRes.total || 0) === 1 ? '' : 's'}`;
                 }
                 if (document.getElementById('avgResTime')) {
                     document.getElementById('avgResTime').textContent = supRes.average_resolution_time_hrs > 0 ? `${supRes.average_resolution_time_hrs} hrs` : '< 24 hrs';
-                }
-                if (document.getElementById('slaStatusBadge')) {
-                    const rate = supRes.sla_compliance_rate ?? 100;
-                    const badge = document.getElementById('slaStatusBadge');
-                    if (rate >= 90) {
-                        badge.className = 'badge bg-success-subtle text-success fw-semibold';
-                        badge.textContent = '100% Within SLA';
-                    } else if (rate >= 75) {
-                        badge.className = 'badge bg-warning-subtle text-warning fw-semibold';
-                        badge.textContent = `${rate}% (SLA Warning)`;
-                    } else {
-                        badge.className = 'badge bg-danger-subtle text-danger fw-semibold';
-                        badge.textContent = `${rate}% (SLA Breached)`;
-                    }
                 }
                 
                 const prioCtx = document.getElementById('ticketPriorityChart')?.getContext('2d');

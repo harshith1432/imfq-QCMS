@@ -451,6 +451,55 @@ DEFAULT_NOTIFICATION_PRESETS = [
         "target_roles": ["All"],
         "is_active": True,
         "is_system_preset": True
+    },
+    {
+        "name": "User Account Welcome & Login Credentials",
+        "category": "user_welcome",
+        "description": "Sent automatically to newly created or invited organization users, providing their login credentials, assigned role, and quickstart portal access link.",
+        "subject": "Welcome to {{org_name}} – Your {{software_short_name}} Account & Login Credentials",
+        "preheader": "Your user account for {{org_name}} has been created. Here are your temporary login credentials.",
+        "heading": "Welcome to the Team! Account Credentials",
+        "banner_color": "#2563eb",
+        "body_html": """<p>Dear <strong>{{user_name}}</strong>,</p>
+
+<p>Welcome to <strong>{{org_name}}</strong>! An account has been created for you on <strong>{{software_name}}</strong>.</p>
+
+<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px 20px; margin: 20px 0;">
+    <div style="font-size: 15px; font-weight: bold; color: #0f172a; margin-bottom: 12px;">
+        🔑 Your Account Credentials &amp; Access Details
+    </div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #1e293b;">
+        <tr>
+            <td style="padding: 4px 0; width: 40%; color: #64748b;">• <strong>Organization:</strong></td>
+            <td style="padding: 4px 0; font-weight: 600;">{{org_name}}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 0; color: #64748b;">• <strong>Assigned Role:</strong></td>
+            <td style="padding: 4px 0; font-weight: 600; color: #2563eb;">{{role_name}}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 0; color: #64748b;">• <strong>Username / Email:</strong></td>
+            <td style="padding: 4px 0; font-weight: 600;">{{email}}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 0; color: #64748b;">• <strong>Temporary Password:</strong></td>
+            <td style="padding: 4px 0;"><code style="background-color: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; font-weight: bold; color: #1e293b;">{{temp_password}}</code></td>
+        </tr>
+    </table>
+</div>
+
+<p style="font-size: 13px; color: #475569; line-height: 1.5;">
+    Please log in and update your password immediately upon your first sign-in.
+</p>""",
+        "cta_text": "Log In to Your Account",
+        "cta_url": "{{app_url}}/login.html",
+        "trigger_type": "event",
+        "event_trigger": "new_user_welcome",
+        "trigger_days_before": 0,
+        "target_audience_type": "all",
+        "target_roles": ["All"],
+        "is_active": True,
+        "is_system_preset": True
     }
 ]
 

@@ -2,7 +2,7 @@ import uuid
 import secrets
 import shutil
 from datetime import datetime, timedelta
-from flask import Blueprint, jsonify, request, send_from_directory, abort, current_app
+from flask import Blueprint, jsonify, request, send_from_directory, abort, current_app, has_request_context
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func, or_, and_, text
 import os
@@ -20,7 +20,62 @@ billing_bp = Blueprint('billing', __name__)
 
 def _get_current_user():
     user_id = get_jwt_identity()
-    return User.query.get(user_id)
+    if user_id is None:
+        return None
+    try:
+        uid = int(user_id)
+    except (ValueError, TypeError):
+        uid = user_id
+    return db.session.get(User, uid) or User.query.get(uid)
+
+
+def _get_effective_org_id(user):
+    """Determine effective org_id from user model, JWT claims, headers, or request payload."""
+    if not user:
+        return None
+    if user.org_id:
+        return user.org_id
+    if has_request_context():
+        try:
+            from flask_jwt_extended import get_jwt
+            claims = get_jwt() or {}
+            claim_org = claims.get('org_id')
+            if claim_org:
+                return int(claim_org)
+        except Exception:
+            pass
+        header_org = request.headers.get('X-Org-Id')
+        if header_org:
+            try:
+                return int(header_org)
+            except ValueError:
+                pass
+        req_org = request.args.get('org_id') or (request.form.get('org_id') if request.form else None) or (request.json.get('org_id') if request.is_json and request.json else None)
+        if req_org:
+            try:
+                return int(req_org)
+            except ValueError:
+                pass
+    if user.role and user.role.name == 'SuperAdmin':
+        first_org = Organization.query.filter(Organization.is_platform_org != True).first() or Organization.query.first()
+        if first_org:
+            return first_org.id
+    return None
+
+
+def _extract_storage_used_gb(calc, org_record):
+    """Safely extract used storage in GB from calculator result or org record."""
+    if isinstance(calc, dict):
+        orgs = calc.get('organizations', [])
+        if orgs and isinstance(orgs[0], dict) and 'storage_used_gb' in orgs[0]:
+            return float(orgs[0].get('storage_used_gb', 0.0))
+        if 'storage_used_gb' in calc:
+            return float(calc.get('storage_used_gb', 0.0))
+    elif isinstance(calc, list) and len(calc) > 0 and isinstance(calc[0], dict):
+        return float(calc[0].get('storage_used_gb', 0.0))
+    if org_record and getattr(org_record, 'storage_used_mb', None):
+        return float((org_record.storage_used_mb or 0.0) / 1024.0)
+    return 0.0
 
 
 def _require_gst_pan(org):
@@ -32,7 +87,7 @@ def _require_gst_pan(org):
         missing.append("PAN Number")
     if missing:
         fields = " and ".join(missing)
-        return False, jsonify({
+        return False, (jsonify({
             "message": (
                 f"Your organisation's {fields} {'are' if len(missing) > 1 else 'is'} required to "
                 "purchase a plan and generate a GST invoice. "
@@ -41,7 +96,7 @@ def _require_gst_pan(org):
             ),
             "missing_fields": missing,
             "redirect": "/admin/settings.html?tab=personal"
-        }), 422
+        }), 422)
     return True, None
 
 
@@ -736,18 +791,20 @@ def create_razorpay_order():
 
     # GST / PAN guard — required for invoice generation
     user = _get_current_user()
-    if user and user.org_id:
-        org_check = Organization.query.get(user.org_id)
+    org_id = _get_effective_org_id(user)
+    if user and org_id:
+        org_check = Organization.query.get(org_id)
         if org_check:
             ok, err = _require_gst_pan(org_check)
             if not ok:
                 return err
 
     # Storage Check: Ensure plan storage accommodates existing organization data
-    if user and user.org_id:
+    if user and org_id:
         from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
-        calc = calculate_org_storage_realtime(user.org_id)
-        used_storage_gb = float(calc[0].get('storage_used_gb', 0.0)) if calc else float((user.organization.storage_used_mb or 0.0) / 1024.0) if user.organization else 0.0
+        calc = calculate_org_storage_realtime(org_id)
+        org_for_calc = Organization.query.get(org_id)
+        used_storage_gb = _extract_storage_used_gb(calc, org_for_calc)
         
         plan_storage_gb = 10.0
         sp = SaaSPlan.query.filter(or_(SaaSPlan.name == resolved_name, SaaSPlan.code == resolved_name)).first()
@@ -780,7 +837,8 @@ def create_razorpay_order():
 def verify_razorpay_payment():
     """Verify Razorpay payment and immediately upgrade subscription plan"""
     user = _get_current_user()
-    if not user or not user.org_id:
+    org_id = _get_effective_org_id(user)
+    if not user or not org_id:
         return jsonify({"message": "User organization not found"}), 404
 
     data = request.json or {}
@@ -792,7 +850,7 @@ def verify_razorpay_payment():
     if not is_valid:
         return jsonify({"message": "Invalid plan name"}), 400
 
-    org = Organization.query.get(user.org_id)
+    org = Organization.query.get(org_id)
     if not org:
         return jsonify({"message": "Organization not found"}), 404
 
@@ -828,7 +886,7 @@ def verify_razorpay_payment():
 
     # Add notification for org admin
     notif = Notification(
-        org_id=user.org_id,
+        org_id=org_id,
         user_id=user.id,
         title="Subscription Plan Upgraded",
         message=f"Your subscription plan has been successfully upgraded to {resolved_name} via Razorpay."
@@ -863,7 +921,8 @@ def verify_razorpay_payment():
 def submit_offline_payment_proof():
     """Submit Dynamic QR payment proof with UTR and screenshot upload"""
     user = _get_current_user()
-    if not user or not user.org_id:
+    org_id = _get_effective_org_id(user)
+    if not user or not org_id:
         return jsonify({"message": "User organization not found"}), 404
 
     plan_name = request.form.get('plan_name')
@@ -875,7 +934,7 @@ def submit_offline_payment_proof():
         return jsonify({"message": "Invalid or missing plan_name"}), 400
 
     # GST / PAN guard — required for invoice generation
-    org_for_check = Organization.query.get(user.org_id)
+    org_for_check = Organization.query.get(org_id)
     if org_for_check:
         ok, err = _require_gst_pan(org_for_check)
         if not ok:
@@ -883,8 +942,9 @@ def submit_offline_payment_proof():
 
     # Storage Check: Ensure selected plan storage accommodates existing data
     from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
-    calc = calculate_org_storage_realtime(user.org_id)
-    used_storage_gb = float(calc[0].get('storage_used_gb', 0.0)) if calc else float((user.organization.storage_used_mb or 0.0) / 1024.0) if user.organization else 0.0
+    calc = calculate_org_storage_realtime(org_id)
+    org_record = Organization.query.get(org_id)
+    used_storage_gb = _extract_storage_used_gb(calc, org_record)
     
     plan_storage_gb = 10.0
     sp = SaaSPlan.query.filter(or_(SaaSPlan.name == resolved_plan_name, SaaSPlan.code == resolved_plan_name)).first()
@@ -907,7 +967,7 @@ def submit_offline_payment_proof():
         if file and file.filename:
             fname = secure_filename(file.filename)
             ext = fname.rsplit('.', 1)[-1].lower() if '.' in fname else 'png'
-            saved_name = f"payment_proof_org_{user.org_id}_{secrets.token_hex(6)}.{ext}"
+            saved_name = f"payment_proof_org_{org_id}_{secrets.token_hex(6)}.{ext}"
             
             primary_dir = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads'))
             os.makedirs(primary_dir, exist_ok=True)
@@ -924,7 +984,7 @@ def submit_offline_payment_proof():
             screenshot_url = f"/uploads/{saved_name}"
 
     proof = OfflinePaymentProof(
-        org_id=user.org_id,
+        org_id=org_id,
         user_id=user.id,
         plan_name=resolved_plan_name,
         billing_cycle=cycle,
@@ -941,10 +1001,10 @@ def submit_offline_payment_proof():
     super_admins = User.query.join(User.role).filter(User.role.has(name='SuperAdmin')).all()
     for sa in super_admins:
         db.session.add(Notification(
-            org_id=sa.org_id or user.org_id,
+            org_id=sa.org_id or org_id,
             user_id=sa.id,
             title="New Offline Payment Submitted",
-            message=f"Org ID {user.org_id} submitted payment proof for {resolved_plan_name} (UTR: {transaction_id}). Please verify in SuperAdmin portal."
+            message=f"Org ID {org_id} submitted payment proof for {resolved_plan_name} (UTR: {transaction_id}). Please verify in SuperAdmin portal."
         ))
 
     db.session.commit()
@@ -960,10 +1020,11 @@ def submit_offline_payment_proof():
 def get_offline_payment_status():
     """Get latest offline payment proof status for the authenticated user's organization"""
     user = _get_current_user()
-    if not user or not user.org_id:
+    org_id = _get_effective_org_id(user)
+    if not user or not org_id:
         return jsonify({"message": "User organization not found"}), 404
 
-    proof = OfflinePaymentProof.query.filter_by(org_id=user.org_id).order_by(OfflinePaymentProof.created_at.desc()).first()
+    proof = OfflinePaymentProof.query.filter_by(org_id=org_id).order_by(OfflinePaymentProof.created_at.desc()).first()
     if not proof:
         return jsonify({"status": "none", "proof": None}), 200
 
