@@ -14,6 +14,72 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* 5-Column KPI Cards Layout across 2 lines */
+        .analytics-5col-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 1400px) {
+            .analytics-5col-grid {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 10px;
+            }
+        }
+        @media (max-width: 1100px) {
+            .analytics-5col-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 768px) {
+            .analytics-5col-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 480px) {
+            .analytics-5col-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .analytics-5col-grid .kpi-card-item {
+            height: 100%;
+            min-height: 98px;
+            padding: 14px 10px !important;
+        }
+
+        .glass-card {
+            padding: 1.25rem !important;
+            border-radius: 14px !important;
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+        }
+        .team-member-item {
+            transition: all 0.2s ease;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 10px 14px !important;
+            border-radius: 10px !important;
+            margin-bottom: 8px !important;
+        }
+        .team-member-item:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transform: translateY(-1px);
+        }
+        .governance-item {
+            transition: all 0.2s ease;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 12px 14px !important;
+            border-radius: 10px !important;
+        }
+        .governance-item:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+
         /* Print styles */
         @media print {
             .app-sidebar, #app-sidebar, .app-navbar, #app-navbar, .ds-header-layout,
@@ -48,18 +114,60 @@
                             <p class="ds-text-secondary mb-0">Real-time KPI tracking and project performance metrics.</p>
                         </div>
                         <div class="h-stack gap-2">
-                            <!-- Date Range Dropdown -->
-                            <div class="dropdown">
-                                <button class="ds-btn ds-btn-outline ds-btn-sm px-3 dropdown-toggle" type="button" id="dateRangeBtn" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">
-                                    <i data-lucide="calendar" class="me-2" style="width:14px;"></i>
-                                    <span id="dateRangeBtnLabel">Last 30 Days</span>
+                            <!-- Date & Financial Year Dropdown -->
+                            <div class="dropdown" id="dateRangeDropdownWrapper">
+                                <button class="ds-btn ds-btn-outline ds-btn-sm px-3 dropdown-toggle shadow-sm d-flex align-items-center gap-2" type="button" id="dateRangeBtn" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">
+                                    <i data-lucide="calendar" class="text-primary" style="width:14px;height:14px;"></i>
+                                    <span id="dateRangeBtnLabel" class="fw-bold">FY 2026-27</span>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-2" style="min-width: 200px; border-radius: 12px; z-index: 100050 !important;">
-                                    <li><a class="dropdown-item rounded-2 py-2 px-3 text-xs" href="#" onclick="Analytics.setDateRange(7,'Last 7 Days'); return false;">Last 7 Days</a></li>
-                                    <li><a class="dropdown-item rounded-2 py-2 px-3 text-xs active" href="#" onclick="Analytics.setDateRange(30,'Last 30 Days'); return false;">Last 30 Days</a></li>
-                                    <li><a class="dropdown-item rounded-2 py-2 px-3 text-xs" href="#" onclick="Analytics.setDateRange(90,'Last 90 Days'); return false;">Last 90 Days</a></li>
-                                    <li><a class="dropdown-item rounded-2 py-2 px-3 text-xs" href="#" onclick="Analytics.setDateRange(180,'Last 6 Months'); return false;">Last 6 Months</a></li>
-                                    <li><a class="dropdown-item rounded-2 py-2 px-3 text-xs" href="#" onclick="Analytics.setDateRange(0,'All Time'); return false;">All Time</a></li>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border p-2" style="min-width: 260px; border-radius: 12px; z-index: 100050 !important;" id="dateRangeDropdownMenu">
+                                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-2 pb-1"><i data-lucide="briefcase" style="width:12px;height:12px;" class="me-1"></i> Financial Years (FY)</li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center active" href="#" onclick="Analytics.setFinancialYear(2026, 'FY 2026-27 (Current FY)', this); return false;">
+                                        <span><i data-lucide="landmark" class="me-2 text-primary" style="width:13px;height:13px;"></i><strong>FY 2026-27</strong> <span class="badge bg-primary-soft text-primary ms-1 text-xxs">Current</span></span>
+                                        <span class="text-xxs text-muted">Apr 26 - Mar 27</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center" href="#" onclick="Analytics.setFinancialYear(2025, 'FY 2025-26', this); return false;">
+                                        <span><i data-lucide="landmark" class="me-2 text-muted" style="width:13px;height:13px;"></i>FY 2025-26</span>
+                                        <span class="text-xxs text-muted">Apr 25 - Mar 26</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center" href="#" onclick="Analytics.setFinancialYear(2024, 'FY 2024-25', this); return false;">
+                                        <span><i data-lucide="landmark" class="me-2 text-muted" style="width:13px;height:13px;"></i>FY 2024-25</span>
+                                        <span class="text-xxs text-muted">Apr 24 - Mar 25</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center" href="#" onclick="Analytics.setFinancialYear(2023, 'FY 2023-24', this); return false;">
+                                        <span><i data-lucide="landmark" class="me-2 text-muted" style="width:13px;height:13px;"></i>FY 2023-24</span>
+                                        <span class="text-xxs text-muted">Apr 23 - Mar 24</span>
+                                    </a></li>
+                                    
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-1 pb-1"><i data-lucide="pie-chart" style="width:12px;height:12px;" class="me-1"></i> FY 2026-27 Quarters</li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" href="#" onclick="Analytics.setQuarter(2026, 1, 'Q1 FY 26-27', this); return false;">
+                                        <span>Q1 (Apr – Jun 2026)</span><span class="text-xxs text-muted">Q1</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" href="#" onclick="Analytics.setQuarter(2026, 2, 'Q2 FY 26-27', this); return false;">
+                                        <span>Q2 (Jul – Sep 2026)</span><span class="text-xxs text-muted">Q2</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" href="#" onclick="Analytics.setQuarter(2026, 3, 'Q3 FY 26-27', this); return false;">
+                                        <span>Q3 (Oct – Dec 2026)</span><span class="text-xxs text-muted">Q3</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" href="#" onclick="Analytics.setQuarter(2027, 4, 'Q4 FY 26-27', this); return false;">
+                                        <span>Q4 (Jan – Mar 2027)</span><span class="text-xxs text-muted">Q4</span>
+                                    </a></li>
+
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-1 pb-1"><i data-lucide="clock" style="width:12px;height:12px;" class="me-1"></i> Quick Intervals</li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(7, 'Last 7 Days', this); return false;">Last 7 Days</a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(30, 'Last 30 Days', this); return false;">Last 30 Days</a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(90, 'Last 90 Days', this); return false;">Last 90 Days</a></li>
+                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(0, 'All Time', this); return false;">All Time</a></li>
+
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <a class="dropdown-item rounded-2 py-2 px-3 text-xs text-primary fw-bold d-flex align-items-center gap-2 bg-primary-soft" href="#" onclick="Analytics.openCustomDateModal(); return false;">
+                                            <i data-lucide="calendar-range" style="width:14px;height:14px;"></i>
+                                            <span>Custom Date Range...</span>
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </div>
@@ -128,7 +236,7 @@
                     </div>
 
                     <div>
-                        <button id="downloadPdfBtn" class="ds-btn ds-btn-xs ds-btn-outline d-flex align-items-center gap-1" onclick="Analytics.downloadProjectPdf()">
+                        <button id="downloadPdfBtn" class="ds-btn ds-btn-xs ds-btn-outline align-items-center gap-1" onclick="Analytics.downloadProjectPdf()" style="display: none !important;">
                             <i data-lucide="file-text" class="text-danger" style="width: 14px;"></i>
                             <span id="downloadPdfBtnLabel">Download Reports</span>
                         </button>
@@ -137,16 +245,32 @@
 
                 <!-- OVERALL PROJECTS MODE VIEW -->
                 <div id="overallModeView">
-                    <!-- 8 Executive KPI Cards Grid -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-xl-3 col-md-6"><div id="kpi-total"></div></div>
-                        <div class="col-xl-3 col-md-6"><div id="kpi-completed"></div></div>
-                        <div class="col-xl-3 col-md-6"><div id="kpi-inprogress"></div></div>
-                        <div class="col-xl-3 col-md-6"><div id="kpi-delayed"></div></div>
-                        <div class="col-xl-3 col-md-6"><div id="kpi-completion-rate"></div></div>
-                        <div class="col-xl-3 col-md-6"><div id="kpi-employees"></div></div>
-                        <div class="col-xl-3 col-md-6"><div id="kpi-savings"></div></div>
-                        <div class="col-xl-3 col-md-6"><div id="kpi-delivery-time"></div></div>
+                    <!-- Active Period & Financial Progress Banner -->
+                    <div id="activePeriodBanner" class="alert bg-primary-soft border border-primary-subtle text-primary py-2.5 px-3 mb-3 d-flex align-items-center justify-content-between text-xs rounded-3 shadow-xs">
+                        <div class="d-flex align-items-center gap-2">
+                            <i data-lucide="calendar-check" style="width:16px;height:16px;" class="text-primary flex-shrink-0"></i>
+                            <span>Period Filter: <strong id="activePeriodLabel" class="text-dark">FY 2026-27</strong> <span id="activePeriodDateRange" class="text-muted ms-1">(Apr 01, 2026 – Mar 31, 2027)</span> • Progress & Savings Scoped</span>
+                        </div>
+                        <button class="btn btn-link btn-xs text-primary text-decoration-none p-0 fw-bold d-flex align-items-center gap-1" onclick="Analytics.setDateRange(0, 'All Time')">
+                            <i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i> Reset to All Time
+                        </button>
+                    </div>
+
+                    <!-- Executive KPI Cards Grid: 2 Lines x 5 Cards per Line -->
+                    <div class="analytics-5col-grid mb-4">
+                        <!-- Row 1: 5 Project Status & Lifecycle Cards -->
+                        <div id="kpi-total"></div>
+                        <div id="kpi-completed"></div>
+                        <div id="kpi-inprogress"></div>
+                        <div id="kpi-stopped"></div>
+                        <div id="kpi-delayed"></div>
+
+                        <!-- Row 2: 5 Performance, Workforce & Business Value Cards -->
+                        <div id="kpi-completion-rate"></div>
+                        <div id="kpi-employees"></div>
+                        <div id="kpi-qc-workforce"></div>
+                        <div id="kpi-savings"></div>
+                        <div id="kpi-delivery-time"></div>
                     </div>
 
                     <!-- Project Performance Roster Table -->
@@ -221,43 +345,57 @@
                     </div>
 
                     <!-- Stakeholders & Team Roster Row -->
-                    <div class="row g-3 mb-4">
-                        <!-- Facilitator & Reviewer Column -->
+                    <div class="row g-3 mb-4 align-items-stretch">
+                        <!-- Project Governance Column -->
                         <div class="col-lg-4">
-                            <div class="glass-card p-3 h-100">
-                                <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-                                    <i data-lucide="shield-check" class="text-success" style="width:18px;"></i> Project Governance
-                                </h6>
-                                <!-- Team Leader -->
-                                <div class="p-3 mb-3 rounded-3 border bg-light-soft">
-                                    <div class="text-xxs text-uppercase fw-bold text-muted mb-2">Assigned Team Leader</div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <img id="indLeaderAvatar" src="https://ui-avatars.com/api/?name=Team+Leader" class="rounded-circle" style="width:38px;height:38px;" alt="Leader">
-                                        <div>
-                                            <div id="indLeaderName" class="fw-bold text-dark text-xs">Assigned Team Leader</div>
-                                            <div id="indLeaderEmail" class="text-xxs text-muted">leader@qcms.internal</div>
+                            <div class="glass-card p-4 h-100 d-flex flex-column" style="padding: 1.35rem !important;">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-dark">
+                                        <i data-lucide="shield-check" class="text-success" style="width:18px;"></i> Project Governance
+                                    </h6>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle text-xxs px-2 py-0.5">Leadership</span>
+                                </div>
+                                <div class="d-flex flex-column gap-2.5 flex-grow-1 justify-content-between">
+                                    <!-- Team Leader -->
+                                    <div class="governance-item rounded-3">
+                                        <div class="text-xxs text-uppercase fw-bold text-muted mb-1.5 d-flex align-items-center justify-content-between">
+                                            <span>Team Leader</span>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-xxs px-1.5 py-0">Core Lead</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2.5">
+                                            <img id="indLeaderAvatar" src="https://ui-avatars.com/api/?name=Team+Leader" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Leader">
+                                            <div class="min-w-0">
+                                                <div id="indLeaderName" class="fw-bold text-dark text-xs text-truncate">Assigned Team Leader</div>
+                                                <div id="indLeaderEmail" class="text-xxs text-muted text-truncate">leader@qcms.internal</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <!-- Facilitator -->
-                                <div class="p-3 mb-3 rounded-3 border bg-light-soft">
-                                    <div class="text-xxs text-uppercase fw-bold text-muted mb-2">Assigned Facilitator</div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <img id="indFacilAvatar" src="https://ui-avatars.com/api/?name=Facilitator" class="rounded-circle" style="width:38px;height:38px;" alt="Facil">
-                                        <div>
-                                            <div id="indFacilName" class="fw-bold text-dark text-xs">Assigned Facilitator</div>
-                                            <div id="indFacilEmail" class="text-xxs text-muted">facilitator@qcms.internal</div>
+                                    <!-- Facilitator -->
+                                    <div class="governance-item rounded-3">
+                                        <div class="text-xxs text-uppercase fw-bold text-muted mb-1.5 d-flex align-items-center justify-content-between">
+                                            <span>Quality Facilitator</span>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle text-xxs px-1.5 py-0">QA Guide</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2.5">
+                                            <img id="indFacilAvatar" src="https://ui-avatars.com/api/?name=Facilitator" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Facil">
+                                            <div class="min-w-0">
+                                                <div id="indFacilName" class="fw-bold text-dark text-xs text-truncate">Assigned Facilitator</div>
+                                                <div id="indFacilEmail" class="text-xxs text-muted text-truncate">facilitator@qcms.internal</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <!-- Reviewer -->
-                                <div class="p-3 rounded-3 border bg-light-soft">
-                                    <div class="text-xxs text-uppercase fw-bold text-muted mb-2">Assigned Reviewer</div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <img id="indRevAvatar" src="https://ui-avatars.com/api/?name=Reviewer" class="rounded-circle" style="width:38px;height:38px;" alt="Rev">
-                                        <div>
-                                            <div id="indRevName" class="fw-bold text-dark text-xs">Assigned Reviewer</div>
-                                            <div id="indRevEmail" class="text-xxs text-muted">reviewer@qcms.internal</div>
+                                    <!-- Reviewer -->
+                                    <div class="governance-item rounded-3">
+                                        <div class="text-xxs text-uppercase fw-bold text-muted mb-1.5 d-flex align-items-center justify-content-between">
+                                            <span>Project Reviewer</span>
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle text-xxs px-1.5 py-0">Gatekeeper</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2.5">
+                                            <img id="indRevAvatar" src="https://ui-avatars.com/api/?name=Reviewer" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Rev">
+                                            <div class="min-w-0">
+                                                <div id="indRevName" class="fw-bold text-dark text-xs text-truncate">Assigned Reviewer</div>
+                                                <div id="indRevEmail" class="text-xxs text-muted text-truncate">reviewer@qcms.internal</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -266,14 +404,14 @@
 
                         <!-- Team Members List Column -->
                         <div class="col-lg-5">
-                            <div class="glass-card p-3 h-100">
+                            <div class="glass-card p-4 h-100 d-flex flex-column" style="padding: 1.35rem !important;">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-dark">
                                         <i data-lucide="users" class="text-primary" style="width:18px;"></i> Team Members & Contributors
                                     </h6>
-                                    <span id="indTeamCountBadge" class="badge bg-primary-soft text-primary">1 Active</span>
+                                    <span id="indTeamCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 text-xxs">1 Active Member</span>
                                 </div>
-                                <div id="indTeamList" class="v-stack gap-2" style="max-height: 200px; overflow-y: auto;">
+                                <div id="indTeamList" class="custom-scroll d-flex flex-column gap-2 flex-grow-1" style="max-height: 295px; overflow-y: auto; padding-right: 4px;">
                                     <!-- Rendered via JS -->
                                 </div>
                             </div>
@@ -281,13 +419,19 @@
 
                         <!-- Meetings & Engagement Column -->
                         <div class="col-lg-3">
-                            <div class="glass-card p-3 h-100">
-                                <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-                                    <i data-lucide="video" class="text-info" style="width:18px;"></i> Meetings & Engagement
-                                </h6>
-                                <div class="p-3 rounded-3 border bg-light-soft mb-3 text-center">
-                                    <div id="indTotalMeetings" class="text-3xl fw-bold text-primary">5</div>
-                                    <div class="text-xs text-muted">Meetings Attended / Held</div>
+                            <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between" style="padding: 1.35rem !important;">
+                                <div>
+                                    <h6 class="fw-bold mb-3 d-flex align-items-center gap-2 text-dark">
+                                        <i data-lucide="video" class="text-info" style="width:18px;"></i> Meetings & Engagement
+                                    </h6>
+                                    <div class="p-3 rounded-3 border bg-white shadow-xs mb-3 text-center">
+                                        <div id="indTotalMeetings" class="text-3xl fw-bold text-primary">0</div>
+                                        <div class="text-xs text-muted mt-1">Meetings Attended / Held</div>
+                                    </div>
+                                    <div class="p-2.5 rounded-3 border bg-light-soft text-center">
+                                        <div class="text-xxs text-muted">Last Activity Recorded</div>
+                                        <div id="indLastActivityDate" class="fw-bold text-xs text-dark mt-0.5">--</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -309,6 +453,29 @@
                             <!-- Rendered via JS -->
                         </div>
                     </div>
+
+                    <!-- Full Project Audit Trail & Lifecycle Activity Section -->
+                    <div class="glass-card p-4 mb-4" id="indAuditSection">
+                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                            <div>
+                                <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                    <i data-lucide="history" class="text-primary" style="width:20px;"></i> Project Audit Trail & Lifecycle Activity
+                                </h5>
+                                <p class="text-xs text-secondary mb-0">Complete historical log of team member transitions (joined / left in middle), data entries, stage submissions, and approvals.</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="btn-group btn-group-sm" role="group" id="auditLogFilterGroup">
+                                    <button type="button" class="btn btn-outline-secondary active btn-xs" onclick="Analytics.filterProjectLogs('all', this)">All Events</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="Analytics.filterProjectLogs('member_lifecycle', this)">Member Lifecycle</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="Analytics.filterProjectLogs('data_entry', this)">Data Entries</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="Analytics.filterProjectLogs('governance', this)">Approvals</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="indProjectLogsContainer" class="custom-scroll border rounded-3 p-3 bg-light-soft" style="max-height: 380px; overflow-y: auto;">
+                            <!-- Loaded via JS -->
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -327,13 +494,21 @@
             selectedProjectId: null,
             projects: [],
             currentDashboardData: null,
+            currentFilter: {
+                days: 0,
+                fromDate: '2026-04-01',
+                toDate: '2027-03-31',
+                label: 'FY 2026-27',
+                subLabel: '(Apr 01, 2026 – Mar 31, 2027)'
+            },
             rosterPage: 1,
             rosterPerPage: 5,
             rosterTotalPages: 1,
 
             async init() {
                 if (window.QCMS) QCMS.init();
-                await this.loadDashboardData();
+                // Default to Financial Year 2026-27 (Current FY)
+                await this.loadDashboardData(0, this.currentFilter.fromDate, this.currentFilter.toDate);
                 await this.loadProjectsList();
                 this.loadProjectRoster(1);
 
@@ -387,10 +562,13 @@
                 summary = summary || {};
                 const total = summary.total_projects || 0;
                 const closed = summary.closed_projects || 0;
-                const inProg = summary.in_progress_projects || (total - closed);
+                const inProg = summary.in_progress_projects || 0;
+                const stopped = summary.stopped_projects !== undefined ? summary.stopped_projects : (summary.rejected_projects || 0);
                 const delayed = summary.delayed_projects || 0;
                 const compRate = summary.success_rate || (total > 0 ? Math.round((closed / total) * 100) : 0);
-                const activeEmp = summary.active_employees || 12;
+                const totalEmp = summary.total_employees !== undefined ? summary.total_employees : (summary.active_employees || 0);
+                const qcEmp = summary.qc_employees !== undefined ? summary.qc_employees : (summary.qc_project_employees || 0);
+                const qcRate = summary.qc_participation_rate !== undefined ? summary.qc_participation_rate : (totalEmp > 0 ? Math.round((qcEmp / totalEmp) * 100) : 0);
                 const totalSav = summary.total_savings || 0;
                 const avgVel = (summary && summary.avg_velocity !== undefined && summary.avg_velocity !== null) ? summary.avg_velocity : 0;
 
@@ -402,9 +580,42 @@
                 setKpi('kpi-total', 'Total Projects', total, 'briefcase', 'blue');
                 setKpi('kpi-completed', 'Completed Projects', closed, 'check-circle', 'green');
                 setKpi('kpi-inprogress', 'Active Projects', inProg, 'clock', 'purple');
+                setKpi('kpi-stopped', 'Stopped Projects', stopped, 'x-circle', 'red');
                 setKpi('kpi-delayed', 'Delayed Projects', delayed, 'alert-triangle', 'orange');
                 setKpi('kpi-completion-rate', 'Completion Rate', `${compRate}%`, 'pie-chart', 'cyan');
-                setKpi('kpi-employees', 'Active Employees', activeEmp, 'users', 'blue');
+
+                // Total Employees Card
+                const empEl = document.getElementById('kpi-employees');
+                if (empEl) {
+                    empEl.innerHTML = `
+                    <div class="glass-card kpi-card-item p-3" style="padding: 14px 10px !important; text-align: center; border-radius: 12px; min-height: 98px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;" title="Total registered employees in organization: ${totalEmp}">
+                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(37,99,235,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">
+                            <i data-lucide="users" style="width:16px;height:16px;color:#2563eb;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main); font-size: 1.35rem; line-height: 1.1;">${totalEmp}</div>
+                        <div class="text-xs text-muted mt-1" style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">Total Employees</div>
+                        <div class="mt-1 text-truncate" style="font-size: 10px; font-weight: 600; color: #10b981; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px; max-width: 100%;">
+                            <i data-lucide="user-check" style="width:10px;height:10px;flex-shrink:0;"></i> <span>${qcEmp} in QC Projects</span>
+                        </div>
+                    </div>`;
+                }
+
+                // Dedicated QC Project Workforce Card
+                const qcWorkforceEl = document.getElementById('kpi-qc-workforce');
+                if (qcWorkforceEl) {
+                    qcWorkforceEl.innerHTML = `
+                    <div class="glass-card kpi-card-item p-3" style="padding: 14px 10px !important; text-align: center; border-radius: 12px; min-height: 98px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;" title="Employees actively assigned to QC project teams (${qcEmp} of ${totalEmp})">
+                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">
+                            <i data-lucide="award" style="width:16px;height:16px;color:#8b5cf6;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main); font-size: 1.35rem; line-height: 1.1;">${qcEmp} <span style="font-size: 0.85rem; font-weight: 500; color: var(--ds-text-muted);">/ ${totalEmp}</span></div>
+                        <div class="text-xs text-muted mt-1" style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">QC Workforce</div>
+                        <div class="mt-1 text-truncate" style="font-size: 10px; font-weight: 600; color: #8b5cf6; background: rgba(139,92,246,0.12); padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px; max-width: 100%;">
+                            <i data-lucide="activity" style="width:10px;height:10px;flex-shrink:0;"></i> <span>${qcRate}% Assigned</span>
+                        </div>
+                    </div>`;
+                }
+
                 setKpi('kpi-savings', 'Total Cost Savings', (window.QCMS && QCMS.formatINR ? QCMS.formatINR(totalSav) : ('₹' + totalSav)), 'indian-rupee', 'green');
                 setKpi('kpi-delivery-time', 'Avg Delivery Time', `${avgVel} Days`, 'zap', 'purple');
 
@@ -425,6 +636,9 @@
                     if (search) queryParams.append('search', search);
                     if (status) queryParams.append('status', status);
                     if (priority) queryParams.append('priority', priority);
+                    if (this.currentFilter?.days > 0) queryParams.append('days', this.currentFilter.days);
+                    if (this.currentFilter?.fromDate) queryParams.append('from_date', this.currentFilter.fromDate);
+                    if (this.currentFilter?.toDate) queryParams.append('to_date', this.currentFilter.toDate);
 
                     const res = await api.get(`/analytics/project-roster?${queryParams.toString()}`);
                     const items = (res && res.items) ? res.items : (Array.isArray(res) ? res : []);
@@ -493,21 +707,36 @@
                 const container = document.getElementById('rosterPagination');
                 if (!container) return;
                 container.innerHTML = `
-                    <div class="d-flex align-items-center justify-content-between p-3 border-top">
-                        <div class="text-xs text-muted">
-                            Page <strong>${this.rosterPage}</strong> of <strong>${this.rosterTotalPages}</strong>
+                    <div class="d-flex align-items-center justify-content-between p-3 border-top flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="text-xs text-muted">
+                                Page <strong>${this.rosterPage}</strong> of <strong>${this.rosterTotalPages}</strong>
+                            </div>
+                            <div class="d-flex align-items-center gap-1.5">
+                                <select class="form-select form-select-sm text-xs py-0.5 px-2" style="width: auto; height: 28px; border-radius: 6px; cursor: pointer;" onchange="Analytics.setRosterPerPage(this.value)">
+                                    <option value="5" ${this.rosterPerPage == 5 ? 'selected' : ''}>5 per page</option>
+                                    <option value="10" ${this.rosterPerPage == 10 ? 'selected' : ''}>10 per page</option>
+                                    <option value="20" ${this.rosterPerPage == 20 ? 'selected' : ''}>20 per page</option>
+                                    <option value="50" ${this.rosterPerPage == 50 ? 'selected' : ''}>50 per page</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-xs btn-outline-secondary" ${this.rosterPage <= 1 ? 'disabled' : ''} onclick="Analytics.loadProjectRoster(${this.rosterPage - 1})">
-                                <i data-lucide="chevron-left" style="width:14px;"></i> Prev
+                        <div class="d-flex align-items-center gap-1">
+                            <button class="btn btn-xs btn-outline-secondary d-inline-flex align-items-center gap-1" ${this.rosterPage <= 1 ? 'disabled' : ''} onclick="Analytics.loadProjectRoster(${this.rosterPage - 1})">
+                                <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Prev
                             </button>
-                            <button class="btn btn-xs btn-outline-secondary" ${this.rosterPage >= this.rosterTotalPages ? 'disabled' : ''} onclick="Analytics.loadProjectRoster(${this.rosterPage + 1})">
-                                Next <i data-lucide="chevron-right" style="width:14px;"></i>
+                            <button class="btn btn-xs btn-outline-secondary d-inline-flex align-items-center gap-1" ${this.rosterPage >= this.rosterTotalPages ? 'disabled' : ''} onclick="Analytics.loadProjectRoster(${this.rosterPage + 1})">
+                                Next <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                             </button>
                         </div>
                     </div>
                 `;
                 if (window.lucide) lucide.createIcons();
+            },
+
+            setRosterPerPage(val) {
+                this.rosterPerPage = parseInt(val, 10) || 5;
+                this.loadProjectRoster(1);
             },
 
             filterRosterTable() {
@@ -531,6 +760,7 @@
                     if (overallView) overallView.classList.remove('d-none');
                     if (indView) indView.classList.add('d-none');
                     this.selectedProjectId = null;
+                    this.updatePdfDownloadVisibility();
                     await this.loadDashboardData();
                 } else {
                     if (overallOpt) overallOpt.classList.remove('active');
@@ -546,8 +776,30 @@
                     } else if (this.projects && this.projects.length > 0) {
                         this.selectProjectFromDropdown(this.projects[0].id);
                     }
+                    this.updatePdfDownloadVisibility();
                 }
                 if (window.lucide) lucide.createIcons();
+            },
+
+            updatePdfDownloadVisibility() {
+                const btn = document.getElementById('downloadPdfBtn');
+                if (!btn) return;
+
+                if (this.currentScope === 'individual' && this.selectedProjectId) {
+                    const proj = (this.projects || []).find(p => String(p.id) === String(this.selectedProjectId));
+                    const status = ((proj ? proj.status : '') || (this.currentProjectStatus || '')).toLowerCase();
+                    
+                    // Show download report ONLY if project is closed/completed
+                    const isClosed = ['closed', 'completed', 'archived', 'sop created', 'stage 8 approved'].some(s => status.includes(s));
+                    
+                    if (isClosed) {
+                        btn.style.setProperty('display', 'inline-flex', 'important');
+                    } else {
+                        btn.style.setProperty('display', 'none', 'important');
+                    }
+                } else {
+                    btn.style.setProperty('display', 'none', 'important');
+                }
             },
 
             async onProjectSelect(projectId) {
@@ -556,6 +808,7 @@
                 const selector = document.getElementById('projectSelector');
                 if (selector) selector.value = projectId;
                 this.updateSelectedProjectLabel(projectId);
+                this.updatePdfDownloadVisibility();
 
                 try {
                     const data = await api.get(`/analytics/dashboard?project_id=${projectId}`);
@@ -570,6 +823,8 @@
             renderIndividualMode(indData) {
                 if (!indData) return;
                 const details = indData.project_details || {};
+                this.currentProjectStatus = details.status || '';
+                this.updatePdfDownloadVisibility();
                 const kpis = indData.project_kpis || {};
                 const facil = indData.facilitator || {};
                 const rev = indData.reviewer || {};
@@ -604,28 +859,73 @@
                 if (document.getElementById('indRevEmail')) document.getElementById('indRevEmail').textContent = rev.email || 'reviewer@qcms.internal';
                 if (document.getElementById('indRevAvatar')) document.getElementById('indRevAvatar').src = rev.avatar || `https://ui-avatars.com/api/?name=${(rev.name || 'R').replace(/ /g, '+')}&background=f59e0b&color=fff`;
 
-                // Team members list
+                // Team members list with user data entry inspection & lifecycle status
                 const teamContainer = document.getElementById('indTeamList');
+                const userContribs = indData.user_contributions || [];
+                const membersToRender = userContribs.length > 0 ? userContribs : (team || []);
+                
+                this.currentUserContributions = userContribs;
+                this.currentProjectLogs = indData.full_project_logs || [];
+
                 if (teamContainer) {
-                    if (team && team.length > 0) {
-                        teamContainer.innerHTML = team.map(m => `
-                            <div class="d-flex align-items-center justify-content-between p-2 rounded-2 border bg-light-soft text-xs">
-                                <div class="d-flex align-items-center gap-2">
-                                    <img src="${m.avatar || `https://ui-avatars.com/api/?name=${(m.name || 'M').replace(/ /g, '+')}`}" class="rounded-circle" style="width:28px;height:28px;" alt="M">
-                                    <div>
-                                        <div class="fw-bold text-dark">${m.name || 'Team Member'}</div>
-                                        <div class="text-xxs text-muted">${m.role || 'Contributor'} • ${m.email || ''}</div>
+                    if (membersToRender && membersToRender.length > 0) {
+                        teamContainer.innerHTML = membersToRender.map(m => {
+                            const isLead = m.membership_status === 'Team Leader' || m.role === 'Team Leader';
+                            const isFacil = m.membership_status === 'Facilitator' || m.role === 'Facilitator' || m.role === 'Quality Facilitator';
+                            const isRev = m.membership_status === 'Reviewer' || m.role === 'Reviewer' || m.role === 'Project Reviewer';
+                            
+                            let badgeClass = 'bg-info-subtle text-info border border-info-subtle';
+                            if (isLead) {
+                                badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+                            } else if (isFacil) {
+                                badgeClass = 'bg-success-subtle text-success border border-success-subtle';
+                            } else if (isRev) {
+                                badgeClass = 'bg-warning-subtle text-warning border border-warning-subtle';
+                            }
+
+                            const statusLabel = m.membership_status || (m.role || 'Active Member');
+                            const entriesCount = m.total_entries_count || m.activities_count || 0;
+                            const uId = m.user_id || m.id || 0;
+                            const mName = m.name || 'Team Member';
+                            const mEmail = m.email || '';
+                            const mRole = m.role || 'Contributor';
+                            const mAvatar = m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(mName)}&background=6366f1&color=fff`;
+
+                            return `
+                                <div class="team-member-item d-flex align-items-center justify-content-between p-2.5 rounded-3 shadow-xs mb-2">
+                                    <div class="d-flex align-items-center gap-2.5 min-w-0" style="flex: 1 1 auto; max-width: calc(100% - 110px);">
+                                        <img src="${mAvatar}" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="${QCMS.escapeHtml(mName)}">
+                                        <div class="min-w-0 flex-grow-1">
+                                            <div class="d-flex align-items-center gap-1.5 mb-0.5 flex-wrap">
+                                                <span class="fw-bold text-dark text-xs text-truncate" title="${QCMS.escapeHtml(mName)}">${QCMS.escapeHtml(mName)}</span>
+                                                <span class="badge ${badgeClass} text-xxs flex-shrink-0 px-2 py-0.5">${QCMS.escapeHtml(statusLabel)}</span>
+                                            </div>
+                                            <div class="text-xxs text-muted text-truncate" title="${QCMS.escapeHtml(mEmail)}">
+                                                <span class="fw-medium text-secondary">${QCMS.escapeHtml(mRole)}</span>
+                                                ${mEmail ? `<span class="opacity-75"> &bull; ${QCMS.escapeHtml(mEmail)}</span>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex-shrink-0 ms-2">
+                                        <button class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 text-xxs d-inline-flex align-items-center gap-1 text-nowrap fw-medium" onclick="Analytics.openUserEntriesModal(${uId})" title="View logs & entries by ${QCMS.escapeHtml(mName)}">
+                                            <i data-lucide="file-text" style="width:12px;height:12px;"></i> View Data (${entriesCount})
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                        `).join('');
+                            `;
+                        }).join('');
+
+                        const activeCount = membersToRender.length;
                         if (document.getElementById('indTeamCountBadge')) {
-                            document.getElementById('indTeamCountBadge').textContent = `${team.length} Active Member${team.length > 1 ? 's' : ''}`;
+                            document.getElementById('indTeamCountBadge').textContent = `${activeCount} Active Member${activeCount !== 1 ? 's' : ''}`;
                         }
                     } else {
                         teamContainer.innerHTML = '<div class="text-xs text-muted p-2">No team members assigned.</div>';
                     }
                 }
+
+                // Render Project Audit Trail & Lifecycle Activity
+                this.renderProjectLogs('all');
 
                 // Engagement
                 if (document.getElementById('indTotalMeetings')) {
@@ -772,46 +1072,419 @@
                 }
             },
 
-            setDateRange(days, label) {
-                const labelEl = document.getElementById('dateRangeBtnLabel');
-                if (labelEl) labelEl.textContent = label;
-                this.loadDashboardData(days, null, null);
+            renderProjectLogs(filterType = 'all') {
+                const container = document.getElementById('indProjectLogsContainer');
+                if (!container) return;
+
+                let logs = this.currentProjectLogs || [];
+                if (filterType !== 'all') {
+                    logs = logs.filter(l => l.event_type === filterType);
+                }
+
+                if (!logs || logs.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i data-lucide="info" class="mb-2 opacity-50" style="width:24px;height:24px;"></i>
+                            <div class="text-xs">No project audit events recorded under this filter.</div>
+                        </div>
+                    `;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                const getBadge = (eventType, badgeColor) => {
+                    if (eventType === 'member_lifecycle') return `<span class="badge bg-purple-soft text-purple border border-purple-subtle text-xxs"><i data-lucide="user-check" style="width:11px;height:11px;" class="me-1"></i>Member Transition</span>`;
+                    if (eventType === 'data_entry') return `<span class="badge bg-primary-soft text-primary border border-primary-subtle text-xxs"><i data-lucide="edit-3" style="width:11px;height:11px;" class="me-1"></i>Data Entered</span>`;
+                    if (eventType === 'governance') return `<span class="badge bg-success-soft text-success border border-success-subtle text-xxs"><i data-lucide="shield-check" style="width:11px;height:11px;" class="me-1"></i>Approval / Closure</span>`;
+                    if (eventType === 'meeting') return `<span class="badge bg-info-soft text-info border border-info-subtle text-xxs"><i data-lucide="video" style="width:11px;height:11px;" class="me-1"></i>Meeting</span>`;
+                    return `<span class="badge bg-secondary-soft text-secondary border text-xxs">Activity</span>`;
+                };
+
+                container.innerHTML = `
+                    <div class="v-stack gap-2">
+                        ${logs.map(log => `
+                            <div class="p-3 bg-white rounded-3 border shadow-xs d-flex align-items-start justify-content-between flex-wrap gap-2 hover-row">
+                                <div class="d-flex align-items-start gap-3">
+                                    <img src="${log.user_avatar || `https://ui-avatars.com/api/?name=${(log.user_name || 'U').replace(/ /g, '+')}&background=2563eb&color=fff`}" class="rounded-circle mt-0.5" style="width:34px;height:34px;" alt="User">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="fw-bold text-dark text-xs">${QCMS.escapeHtml(log.user_name || 'User')}</span>
+                                            <span class="text-xxs text-muted">(${QCMS.escapeHtml(log.user_role || 'Member')})</span>
+                                            ${getBadge(log.event_type, log.badge_color)}
+                                        </div>
+                                        <div class="text-xs fw-semibold text-main mt-0.5">${QCMS.escapeHtml(log.action || '')}</div>
+                                        <div class="text-xxs text-secondary mt-1" style="white-space:pre-wrap; max-width: 650px;">${QCMS.escapeHtml(log.details || '')}</div>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="text-xxs text-muted d-flex align-items-center gap-1">
+                                        <i data-lucide="clock" style="width:11px;height:11px;"></i> ${QCMS.escapeHtml(log.timestamp || '')}
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+            },
+
+            filterProjectLogs(filterType, btnEl) {
+                if (btnEl) {
+                    const group = document.getElementById('auditLogFilterGroup');
+                    if (group) {
+                        group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    }
+                    btnEl.classList.add('active');
+                }
+                this.renderProjectLogs(filterType);
+            },
+
+            openUserEntriesModal(userId) {
+                const userContrib = (this.currentUserContributions || []).find(u => String(u.user_id) === String(userId));
+                if (!userContrib) return;
+
+                const nameEl = document.getElementById('modalUserName');
+                const avatarEl = document.getElementById('modalUserAvatar');
+                const subtextEl = document.getElementById('modalUserSubtext');
+                const badgeEl = document.getElementById('modalUserStatusBadge');
+                const stagesEl = document.getElementById('modalUserStagesBadges');
+                const listEl = document.getElementById('modalUserEntriesList');
+
+                if (nameEl) nameEl.textContent = userContrib.name || 'User';
+                if (avatarEl) avatarEl.src = userContrib.avatar || `https://ui-avatars.com/api/?name=${(userContrib.name || 'U').replace(/ /g, '+')}&background=6366f1&color=fff`;
+                if (subtextEl) subtextEl.textContent = `${userContrib.role || 'Team Member'} • ${userContrib.email || 'N/A'}`;
+                
+                if (badgeEl) {
+                    badgeEl.className = `badge bg-${userContrib.status_badge || 'primary'}-soft text-${userContrib.status_badge || 'primary'} border border-${userContrib.status_badge || 'primary'}-subtle`;
+                    badgeEl.textContent = userContrib.membership_status || 'Member';
+                }
+
+                if (stagesEl) {
+                    const stages = userContrib.stages_contributed || [];
+                    stagesEl.innerHTML = stages.map(s => `<span class="badge bg-primary-soft text-primary text-xxs font-mono">${QCMS.escapeHtml(s)}</span>`).join('');
+                }
+
+                if (listEl) {
+                    const entries = userContrib.data_entries || [];
+                    if (entries.length === 0) {
+                        listEl.innerHTML = '<div class="text-center py-4 text-muted text-xs">No specific form entries recorded yet for this contributor.</div>';
+                    } else {
+                        listEl.innerHTML = `
+                            <div class="v-stack gap-2">
+                                ${entries.map(entry => `
+                                    <div class="p-2.5 bg-white rounded-2 border shadow-xs">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <span class="badge bg-primary-soft text-primary fw-bold text-xxs">${QCMS.escapeHtml(entry.stage || 'Stage Data')}</span>
+                                            <span class="text-xxs text-muted"><i data-lucide="clock" style="width:10px;height:10px;"></i> ${QCMS.escapeHtml(entry.date || '')}</span>
+                                        </div>
+                                        <div class="text-xs text-dark">${QCMS.escapeHtml(entry.summary || '')}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                }
+
+                const modalEl = document.getElementById('userDataEntriesModal');
+                if (modalEl && window.bootstrap) {
+                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+                if (window.lucide) lucide.createIcons();
+            },
+
+            setFinancialYear(startYear, label, el) {
+                const fromDate = `${startYear}-04-01`;
+                const toDate = `${startYear + 1}-03-31`;
+                const subLabel = `(Apr 01, ${startYear} – Mar 31, ${startYear + 1})`;
+                const shortLabel = `FY ${startYear}-${String(startYear + 1).slice(-2)}`;
+                
+                this.updateDateDropdownActive(el, shortLabel);
+                this.currentFilter = { days: 0, fromDate, toDate, label: shortLabel, subLabel };
+                this.updateActivePeriodBanner(shortLabel, subLabel);
+                this.loadDashboardData(0, fromDate, toDate);
+                this.loadProjectRoster(1);
+            },
+
+            setQuarter(year, quarterNum, label, el) {
+                let fromDate, toDate, subLabel;
+                if (quarterNum === 1) {
+                    fromDate = `${year}-04-01`;
+                    toDate = `${year}-06-30`;
+                    subLabel = `(Apr 01, ${year} – Jun 30, ${year})`;
+                } else if (quarterNum === 2) {
+                    fromDate = `${year}-07-01`;
+                    toDate = `${year}-09-30`;
+                    subLabel = `(Jul 01, ${year} – Sep 30, ${year})`;
+                } else if (quarterNum === 3) {
+                    fromDate = `${year}-10-01`;
+                    toDate = `${year}-12-31`;
+                    subLabel = `(Oct 01, ${year} – Dec 31, ${year})`;
+                } else {
+                    fromDate = `${year}-01-01`;
+                    toDate = `${year}-03-31`;
+                    subLabel = `(Jan 01, ${year} – Mar 31, ${year})`;
+                }
+
+                this.updateDateDropdownActive(el, label);
+                this.currentFilter = { days: 0, fromDate, toDate, label, subLabel };
+                this.updateActivePeriodBanner(label, subLabel);
+                this.loadDashboardData(0, fromDate, toDate);
+                this.loadProjectRoster(1);
+            },
+
+            setDateRange(days, label, el) {
+                this.updateDateDropdownActive(el, label);
+                let subLabel = '';
+                let fromDate = null;
+                let toDate = null;
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+                if (days > 0) {
+                    const past = new Date(now.getTime() - (days * 86400000));
+                    fromDate = fmt(past);
+                    toDate = fmt(now);
+                    subLabel = `(${fmt(past)} – ${fmt(now)})`;
+                } else {
+                    subLabel = '(All recorded projects & history)';
+                }
+
+                this.currentFilter = { days, fromDate, toDate, label, subLabel };
+                this.updateActivePeriodBanner(label, subLabel);
+                this.loadDashboardData(days, fromDate, toDate);
+                this.loadProjectRoster(1);
+            },
+
+            openCustomDateModal() {
+                const modalEl = document.getElementById('customDateRangeModal');
+                if (modalEl && window.bootstrap) {
+                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+                if (window.lucide) lucide.createIcons();
+            },
+
+            fillCustomDates(preset) {
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+                let from = '', to = fmt(now);
+                if (preset === 'today') {
+                    from = fmt(now);
+                } else if (preset === 'this_month') {
+                    from = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`;
+                } else if (preset === 'cur_fy') {
+                    from = '2026-04-01';
+                    to = '2027-03-31';
+                } else if (preset === 'prev_fy') {
+                    from = '2025-04-01';
+                    to = '2026-03-31';
+                } else if (preset === 'ytd') {
+                    from = `${now.getFullYear()}-01-01`;
+                }
+
+                const fromInput = document.getElementById('customDateFrom');
+                const toInput = document.getElementById('customDateTo');
+                if (fromInput) fromInput.value = from;
+                if (toInput) toInput.value = to;
+
+                const group = document.getElementById('customPresetGroup');
+                if (group && window.event && window.event.target) {
+                    group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    window.event.target.classList.add('active');
+                }
             },
 
             applyCustomDateRange() {
                 const from = document.getElementById('customDateFrom')?.value;
                 const to = document.getElementById('customDateTo')?.value;
-                if (!from || !to) return;
-                const label = `${from} – ${to}`;
+                if (!from || !to) {
+                    if (window.QCMS && QCMS.toast) QCMS.toast('Please select both Start and End dates.', 'warning');
+                    return;
+                }
+                const label = `${from} to ${to}`;
+                const subLabel = `(${from} to ${to})`;
+
                 const labelEl = document.getElementById('dateRangeBtnLabel');
                 if (labelEl) labelEl.textContent = label;
+
+                this.currentFilter = { days: 0, fromDate: from, toDate: to, label, subLabel };
+                this.updateActivePeriodBanner(`Custom: ${label}`, subLabel);
+
+                const modalEl = document.getElementById('customDateRangeModal');
+                if (modalEl && window.bootstrap) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+
                 this.loadDashboardData(0, from, to);
+                this.loadProjectRoster(1);
+            },
+
+            updateDateDropdownActive(el, label) {
+                const labelEl = document.getElementById('dateRangeBtnLabel');
+                if (labelEl) labelEl.textContent = label;
+                const menu = document.getElementById('dateRangeDropdownMenu');
+                if (menu) {
+                    menu.querySelectorAll('.dropdown-item').forEach(item => item.classList.remove('active'));
+                }
+                if (el) el.classList.add('active');
+            },
+
+            updateActivePeriodBanner(label, subLabel) {
+                const labelEl = document.getElementById('activePeriodLabel');
+                const subEl = document.getElementById('activePeriodDateRange');
+                if (labelEl) labelEl.textContent = label;
+                if (subEl) subEl.textContent = subLabel;
             },
 
             async exportReport(type) {
                 if (type === 'excel') {
                     try {
+                        QCMS.toast('Exporting Excel report...', 'info');
                         await api.downloadFile('/reports/export/excel', 'QCMS_Projects_Report.xlsx');
-                    } catch (e) {}
+                        QCMS.toast('Excel report downloaded successfully.', 'success');
+                    } catch (e) {
+                        QCMS.toast(e.message || 'Failed to export Excel report', 'danger');
+                    }
                 } else if (type === 'csv') {
                     try {
+                        QCMS.toast('Exporting CSV report...', 'info');
                         await api.downloadFile('/reports/export/csv', 'QCMS_Analytics_Report.csv');
-                    } catch (e) {}
+                        QCMS.toast('CSV report downloaded successfully.', 'success');
+                    } catch (e) {
+                        QCMS.toast(e.message || 'Failed to export CSV report', 'danger');
+                    }
                 } else if (type === 'print') {
                     window.print();
                 }
             },
 
             async downloadProjectPdf() {
-                if (this.selectedProjectId) {
-                    await api.downloadFile('/reports/export/pdf/' + this.selectedProjectId, `QC_Report_${this.selectedProjectId}.pdf`);
-                } else {
-                    await api.downloadFile('/reports/export/pdf/all', 'QCMS_All_Project_Reports.zip');
+                const btn = document.getElementById('downloadPdfBtn');
+                const originalHtml = btn ? btn.innerHTML : '';
+                try {
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = `<span class="spinner-border spinner-border-sm text-danger" role="status" style="width:12px;height:12px;"></span> <span class="text-xs">Generating Report...</span>`;
+                    }
+                    if (window.QCMS && QCMS.toast) {
+                        QCMS.toast('Generating comprehensive QC Story PDF report...', 'info');
+                    }
+
+                    if (this.selectedProjectId) {
+                        const proj = (this.projects || []).find(p => String(p.id) === String(this.selectedProjectId));
+                        const safeUid = proj ? (proj.project_uid || `PRJ-${proj.id}`) : `Project_${this.selectedProjectId}`;
+                        await api.downloadFile('/reports/export/pdf/' + this.selectedProjectId, `${safeUid}_QC_Story_Report.pdf`);
+                    } else {
+                        await api.downloadFile('/reports/export/pdf/all', 'QCMS_All_Project_Reports.zip');
+                    }
+
+                    if (window.QCMS && QCMS.toast) {
+                        QCMS.toast('Report downloaded successfully!', 'success');
+                    }
+                } catch (err) {
+                    console.error('[Analytics] PDF download failed:', err);
+                    if (window.QCMS && QCMS.toast) {
+                        QCMS.toast(err.message || 'Failed to download report', 'danger');
+                    } else {
+                        alert('Failed to download report: ' + (err.message || 'Unknown error'));
+                    }
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                        if (window.lucide) lucide.createIcons();
+                    }
                 }
             }
         };
 
         document.addEventListener('DOMContentLoaded', () => Analytics.init());
     </script>
+
+    <!-- User Data Entries & Contribution Modal -->
+    <div class="modal fade" id="userDataEntriesModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card ds-card border-0">
+                <div class="modal-header border-bottom p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <img id="modalUserAvatar" src="" class="rounded-circle" style="width:44px;height:44px;" alt="User">
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold mb-0" id="modalUserName">User Name</h5>
+                                <span class="badge" id="modalUserStatusBadge">Active Member</span>
+                            </div>
+                            <p class="text-xs text-muted mb-0" id="modalUserSubtext">Role • email@company.com</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <div class="text-xs fw-bold text-uppercase text-muted mb-1">Stages Contributed</div>
+                        <div id="modalUserStagesBadges" class="d-flex flex-wrap gap-1"></div>
+                    </div>
+                    <div class="text-xs fw-bold text-uppercase text-muted mb-2">Detailed Data Entries & Activity History</div>
+                    <div id="modalUserEntriesList" class="custom-scroll border rounded-3 p-3 bg-light-soft" style="max-height: 320px; overflow-y: auto;">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4">
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Date Range Modal -->
+    <div class="modal fade" id="customDateRangeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card ds-card border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header border-bottom p-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i data-lucide="calendar-range" class="text-primary" style="width:20px;height:20px;"></i>
+                        <h5 class="modal-title fw-bold mb-0">Select Custom Date Range</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="text-xs fw-bold text-uppercase text-muted mb-2 d-block">Quick Range Presets</label>
+                        <div class="d-flex flex-wrap gap-1.5" id="customPresetGroup">
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="Analytics.fillCustomDates('today')">Today</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="Analytics.fillCustomDates('this_month')">This Month</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary active" onclick="Analytics.fillCustomDates('cur_fy')">Current FY (26-27)</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="Analytics.fillCustomDates('prev_fy')">Previous FY (25-26)</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="Analytics.fillCustomDates('ytd')">YTD 2026</button>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label text-xs fw-bold text-dark mb-1">From Date (Start)</label>
+                            <input type="date" class="form-control form-control-sm text-xs font-mono" id="customDateFrom" value="2026-04-01">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-xs fw-bold text-dark mb-1">To Date (End)</label>
+                            <input type="date" class="form-control form-control-sm text-xs font-mono" id="customDateTo" value="2027-03-31">
+                        </div>
+                    </div>
+                    <div class="mt-3 p-2.5 rounded-2 bg-light-soft border text-xxs text-secondary d-flex align-items-center gap-2">
+                        <i data-lucide="info" style="width:14px;height:14px;" class="text-info flex-shrink-0"></i>
+                        <span>Filters all overall project performance KPIs, progress tracking, and financial cost savings to this custom time window.</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm d-flex align-items-center gap-1" onclick="Analytics.applyCustomDateRange()">
+                        <i data-lucide="check" style="width:14px;height:14px;"></i> Apply Range Filter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

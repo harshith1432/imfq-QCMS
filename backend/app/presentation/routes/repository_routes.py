@@ -5,7 +5,7 @@ GET /api/repository/search, /api/repository/<id>, /api/repository/archive
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
-    User, Project, KnowledgeRepository, Stage3RCA, Stage7Impact,
+    User, Project, Organization, KnowledgeRepository, Stage3RCA, Stage7Impact,
     Stage8Standardization, ProjectWorkflow, AuditLog,
     Stage7PerformanceVerificationBenefitsRealization as Stage7Verification,
     Stage8StandardizationKnowledgeSharingProjectClosure as Stage8Implementation
@@ -46,6 +46,21 @@ def parse_clean_float(val):
         except ValueError:
             return None
     return None
+
+def calculate_weighted_progress(current_stage, weights=None):
+    """
+    Calculate cumulative progress percentage based on SuperAdmin-configured stage weightages.
+    weights: list of 8 floats summing to 100.0
+    If weights is None, defaults to equal weights (12.5% per stage).
+    """
+    if not weights or not isinstance(weights, list) or len(weights) < 8:
+        weights = [12.5] * 8
+    
+    stage = max(1, min(8, int(current_stage or 1)))
+    # Sum weights of completed/current stages (1 to stage)
+    cum_pct = sum(weights[:stage])
+    return min(100.0, max(0.0, cum_pct))
+
 
 def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
     """
@@ -296,7 +311,13 @@ def list_repository_projects():
         
     projects = query.order_by(Project.created_at.desc()).all()
     
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    inactivity_days = 30
+    if user and hasattr(user, 'org_id') and user.org_id:
+        org = db.session.get(Organization, user.org_id)
+        if org and getattr(org, 'project_inactivity_days', None):
+            inactivity_days = org.project_inactivity_days
+            
+    inactivity_cutoff = datetime.utcnow() - timedelta(days=inactivity_days)
     
     results = []
     total_count = len(projects)
@@ -307,19 +328,26 @@ def list_repository_projects():
     from app.infrastructure.database.models.models import (
         ProjectStageTracker, ProjectReview,
         Stage1ProblemDefinitionProjectInitiation,
-        Stage8StandardizationKnowledgeSharingProjectClosure
+        Stage8StandardizationKnowledgeSharingProjectClosure,
+        PlatformSettings
     )
+
+    ps = PlatformSettings.query.first()
+    stage_weights = (ps and ps.stage_weightage_config) or None
 
     for p in projects:
         # Efficiency: calculate real-time KPI improvement % from all active workflow stages (Stage 7 & Stage 8)
         efficiency = calculate_project_realtime_efficiency(p.id, p.current_stage)
         
-        # Detect stalled/inactive status: no AuditLog activity in 7 days
+        # Calculate weighted progress percentage
+        progress_pct = round(calculate_weighted_progress(p.current_stage, stage_weights), 1)
+        
+        # Detect stalled/inactive status based on organization's configured inactivity threshold (days)
         last_log = AuditLog.query.filter_by(project_id=p.id).order_by(AuditLog.created_at.desc()).first()
         last_activity = last_log.created_at if last_log else p.created_at
         
         is_stalled = False
-        if last_activity and last_activity < seven_days_ago:
+        if last_activity and last_activity < inactivity_cutoff:
             is_stalled = True
             stalled_count += 1
         else:
@@ -358,7 +386,8 @@ def list_repository_projects():
             "department": p.department.name if p.department else "N/A",
             "team_leader": p.team_leader.full_name if p.team_leader else "N/A",
             "current_stage": p.current_stage,
-            "progress": round((p.current_stage / 8) * 100),
+            "progress": progress_pct,
+            "progress_pct": progress_pct,
             "efficiency": efficiency,
             "status": display_status,
             "is_stalled": is_stalled,

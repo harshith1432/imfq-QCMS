@@ -690,10 +690,32 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
             commit=False
         )
 
+    # When Stage 8 is approved by Reviewer, notify CEO for final closure sign-off
+    if pending_stage == 8 and decision_lower in ('approve', 'approved'):
+        ceo_role = Role.query.filter_by(name='CEO').first()
+        if ceo_role:
+            ceo_users = User.query.filter_by(org_id=user.org_id, role_id=ceo_role.id, is_active=True).all()
+            for c_u in ceo_users:
+                create_notification(
+                    user.org_id, c_u.id,
+                    "Executive Sign-Off Required",
+                    f"Project '{project.title}' ({project.project_uid}) has been approved by Reviewer {user.full_name or user.username} and awaits your final sign-off.",
+                    f"/dashboard/dashboard-ceo.html?view=executive-approvals",
+                    commit=False
+                )
+
     from app.presentation.routes.workflow_routes import log_action
     log_action(user.org_id, user.id, f"Stage {pending_stage} Reviewer Decision: {decision}", project_id, comments)
     
     db.session.commit()
+
+    # Trigger CEO Email Notification for Stage 8 Reviewer Approval
+    if pending_stage == 8 and decision_lower in ('approve', 'approved'):
+        try:
+            from app.domain.services.email_notification_engine import EmailNotificationEngine
+            EmailNotificationEngine.trigger_project_forwarded_to_ceo_notification(project.id, reviewer_id=user.id, comments=comments)
+        except Exception as e:
+            print(f"[EmailEngine] CEO review notification error: {e}")
     return jsonify({
         "msg": f"Decision '{decision}' for Stage {pending_stage} processed successfully",
         "project_id": project_id,

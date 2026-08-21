@@ -67,14 +67,14 @@ const SupportDesk = {
         container.innerHTML = `
             <div class="support-desk-wrapper v-stack gap-4 px-3">
                 <!-- Navigation -->
-                <div class="d-flex align-items-center justify-content-between pb-2" style="border-bottom:1px solid rgba(255,255,255,0.08);">
-                    <div class="ds-tab-group scroll-x">
-                        <button class="ds-tab active" id="sd-tab-dashboard" onclick="SupportDesk.switchTab('dashboard')"><i data-lucide="gauge" class="me-1" style="width:14px;"></i> Dashboard</button>
-                        <button class="ds-tab" id="sd-tab-tickets" onclick="SupportDesk.switchTab('tickets')"><i data-lucide="list" class="me-1" style="width:14px;"></i> Tickets List</button>
-                        <button class="ds-tab" id="sd-tab-enquiry" onclick="SupportDesk.switchTab('enquiry')"><i data-lucide="phone-call" class="me-1" style="width:14px;"></i> Sales Enquiries</button>
-                        <button class="ds-tab" id="sd-tab-trial-extensions" onclick="SupportDesk.switchTab('trial-extensions')"><i data-lucide="clock" class="me-1" style="width:14px;"></i> Trial Extensions</button>
-                        <button class="ds-tab" id="sd-tab-create" onclick="SupportDesk.switchTab('create')"><i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Create Ticket</button>
-                        <button class="ds-tab" id="sd-tab-kb" onclick="SupportDesk.switchTab('kb')"><i data-lucide="book-open" class="me-1" style="width:14px;"></i> Knowledge Base</button>
+                <div class="d-flex align-items-center justify-content-between pb-2" style="border-bottom:1px solid rgba(255,255,255,0.08); overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch;">
+                    <div class="ds-tab-group scroll-x" style="display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; gap: 6px; padding-bottom: 2px;">
+                        <button class="ds-tab active text-nowrap" id="sd-tab-dashboard" onclick="SupportDesk.switchTab('dashboard')"><i data-lucide="gauge" class="me-1" style="width:14px;"></i> Dashboard</button>
+                        <button class="ds-tab text-nowrap" id="sd-tab-tickets" onclick="SupportDesk.switchTab('tickets')"><i data-lucide="list" class="me-1" style="width:14px;"></i> Tickets List</button>
+                        <button class="ds-tab text-nowrap" id="sd-tab-enquiry" onclick="SupportDesk.switchTab('enquiry')"><i data-lucide="phone-call" class="me-1" style="width:14px;"></i> Sales Enquiries</button>
+                        <button class="ds-tab text-nowrap" id="sd-tab-trial-extensions" onclick="SupportDesk.switchTab('trial-extensions')"><i data-lucide="clock" class="me-1" style="width:14px;"></i> Trial Extensions</button>
+                        <button class="ds-tab text-nowrap" id="sd-tab-create" onclick="SupportDesk.switchTab('create')"><i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Create Ticket</button>
+                        <button class="ds-tab text-nowrap" id="sd-tab-kb" onclick="SupportDesk.switchTab('kb')"><i data-lucide="book-open" class="me-1" style="width:14px;"></i> Knowledge Base</button>
                     </div>
                 </div>
 
@@ -527,40 +527,40 @@ const SupportDesk = {
             view.innerHTML = `
                 <div class="fade-in v-stack gap-4">
                     <!-- KPI Cards -->
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <div class="glass-card p-3 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
-                                <div class="p-2.5 rounded-circle bg-primary-subtle text-primary"><i data-lucide="file-text" style="width:20px;height:20px;"></i></div>
-                                <div>
-                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold">Total Requests</div>
-                                    <h4 class="fw-bold mb-0 text-main">${totalRequests}</h4>
+                    <div class="row g-2 g-md-3">
+                        <div class="col-6 col-md-3">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                                <div class="p-2 p-md-2.5 rounded-circle bg-primary-subtle text-primary flex-shrink-0"><i data-lucide="file-text" style="width:18px;height:18px;"></i></div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold text-truncate">Total Requests</div>
+                                    <h4 class="fw-bold mb-0 text-main fs-5 fs-md-4 lh-1 mt-1">${totalRequests}</h4>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="glass-card p-3 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
-                                <div class="p-2.5 rounded-circle bg-warning-subtle text-warning"><i data-lucide="alert-circle" style="width:20px;height:20px;"></i></div>
-                                <div>
-                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold">Pending Review</div>
-                                    <h4 class="fw-bold mb-0 text-main">${pendingReqs.length}</h4>
+                        <div class="col-6 col-md-3">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                                <div class="p-2 p-md-2.5 rounded-circle bg-warning-subtle text-warning flex-shrink-0"><i data-lucide="alert-circle" style="width:18px;height:18px;"></i></div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold text-truncate">Pending Review</div>
+                                    <h4 class="fw-bold mb-0 text-main fs-5 fs-md-4 lh-1 mt-1">${pendingReqs.length}</h4>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="glass-card p-3 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
-                                <div class="p-2.5 rounded-circle bg-success-subtle text-success"><i data-lucide="zap" style="width:20px;height:20px;"></i></div>
-                                <div>
-                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold">Auto-Approved</div>
-                                    <h4 class="fw-bold mb-0 text-main">${autoApproved}</h4>
+                        <div class="col-6 col-md-3">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                                <div class="p-2 p-md-2.5 rounded-circle bg-success-subtle text-success flex-shrink-0"><i data-lucide="zap" style="width:18px;height:18px;"></i></div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold text-truncate">Auto-Approved</div>
+                                    <h4 class="fw-bold mb-0 text-main fs-5 fs-md-4 lh-1 mt-1">${autoApproved}</h4>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="glass-card p-3 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
-                                <div class="p-2.5 rounded-circle bg-info-subtle text-info"><i data-lucide="check-circle" style="width:20px;height:20px;"></i></div>
-                                <div>
-                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold">Manually Granted</div>
-                                    <h4 class="fw-bold mb-0 text-main">${manualApproved}</h4>
+                        <div class="col-6 col-md-3">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                                <div class="p-2 p-md-2.5 rounded-circle bg-info-subtle text-info flex-shrink-0"><i data-lucide="check-circle" style="width:18px;height:18px;"></i></div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold text-truncate">Manually Granted</div>
+                                    <h4 class="fw-bold mb-0 text-main fs-5 fs-md-4 lh-1 mt-1">${manualApproved}</h4>
                                 </div>
                             </div>
                         </div>
@@ -2054,6 +2054,10 @@ const SupportDesk = {
     },
     currentEnquiryId: null,
     currentEnquiryData: null,
+    salesSettings: {
+        sales_notification_email: '',
+        sales_notification_enabled: false
+    },
 
     async renderEnquiryTab() {
         await this.loadEnquiriesList();
@@ -2068,11 +2072,19 @@ const SupportDesk = {
             const q = encodeURIComponent(this.enquiryFilters.q || '');
             const status = encodeURIComponent(this.enquiryFilters.status || 'All');
             const perPage = this.enquiryPerPage || 10;
-            const res = await api.get(`/support/enquiries?page=${this.enquiryPage}&per_page=${perPage}&status=${status}&q=${q}`);
+            
+            const [res, settingsRes] = await Promise.all([
+                api.get(`/support/enquiries?page=${this.enquiryPage}&per_page=${perPage}&status=${status}&q=${q}`),
+                api.get('/support/enquiries/settings').catch(() => ({ status: 'success', data: { sales_notification_email: '', sales_notification_enabled: false } }))
+            ]);
             
             if (!res || res.status !== 'success') {
                 view.innerHTML = `<div class="alert alert-danger">Failed to load sales enquiries.</div>`;
                 return;
+            }
+
+            if (settingsRes && settingsRes.data) {
+                this.salesSettings = settingsRes.data;
             }
 
             const items = res.data || [];
@@ -2082,52 +2094,98 @@ const SupportDesk = {
 
             const startItem = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
             const endItem = Math.min(pag.page * pag.per_page, pag.total);
+            const isForwardingActive = this.salesSettings.sales_notification_enabled && this.salesSettings.sales_notification_email;
 
             view.innerHTML = `
                 <div class="v-stack gap-4 fade-in">
                     <!-- KPI Stat Row -->
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <div class="glass-card p-3 d-flex align-items-center gap-3">
-                                <div class="p-2.5 rounded-3" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
-                                    <i data-lucide="phone-call" style="width:22px;height:22px;"></i>
+                    <div class="row g-2 g-md-3">
+                        <div class="col-6 col-md-3">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100">
+                                <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
+                                    <i data-lucide="phone-call" style="width:18px;height:18px;"></i>
                                 </div>
-                                <div>
-                                    <div class="text-xs text-muted fw-semibold uppercase">Total Enquiries</div>
-                                    <div class="fs-4 fw-extrabold text-main">${m.total}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="glass-card p-3 d-flex align-items-center gap-3">
-                                <div class="p-2.5 rounded-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
-                                    <i data-lucide="bell" style="width:22px;height:22px;"></i>
-                                </div>
-                                <div>
-                                    <div class="text-xs text-muted fw-semibold uppercase">New Prospects</div>
-                                    <div class="fs-4 fw-extrabold text-main">${m.new}</div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">Total Enquiries</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.total}</div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="glass-card p-3 d-flex align-items-center gap-3">
-                                <div class="p-2.5 rounded-3" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
-                                    <i data-lucide="message-square" style="width:22px;height:22px;"></i>
+                        <div class="col-6 col-md-3">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100">
+                                <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                                    <i data-lucide="bell" style="width:18px;height:18px;"></i>
                                 </div>
-                                <div>
-                                    <div class="text-xs text-muted fw-semibold uppercase">Contacted</div>
-                                    <div class="fs-4 fw-extrabold text-main">${m.contacted}</div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">New Prospects</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.new}</div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="glass-card p-3 d-flex align-items-center gap-3">
-                                <div class="p-2.5 rounded-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
-                                    <i data-lucide="check-circle-2" style="width:22px;height:22px;"></i>
+                        <div class="col-6 col-md-3">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100">
+                                <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                                    <i data-lucide="message-square" style="width:18px;height:18px;"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">Contacted</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.contacted}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100">
+                                <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                    <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">Converted</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.converted}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sales Leads Email Forwarding & Notification Settings Card -->
+                    <div class="glass-card p-3 p-md-3.5" style="border-left: 4px solid #6366f1; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%);">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div class="d-flex align-items-start gap-3" style="max-width: 520px;">
+                                <div class="p-2.5 rounded-3 mt-0.5" style="background: rgba(99, 102, 241, 0.12); color: #6366f1;">
+                                    <i data-lucide="mail" style="width: 20px; height: 20px;"></i>
                                 </div>
                                 <div>
-                                    <div class="text-xs text-muted fw-semibold uppercase">Converted</div>
-                                    <div class="fs-4 fw-extrabold text-main">${m.converted}</div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <h6 class="fw-bold mb-0 text-main fs-6">Sales Leads Email Redirection</h6>
+                                        <span id="salesNotificationStatusBadge" class="badge rounded-pill text-xxs px-2.5 py-1 ${isForwardingActive ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'}">
+                                            <i data-lucide="${isForwardingActive ? 'check-circle' : 'slash'}" style="width:10px;height:10px;display:inline;" class="me-1"></i>
+                                            ${isForwardingActive ? `Forwarding to: ${QCMS.escapeHtml(this.salesSettings.sales_notification_email)}` : 'Dashboard Only (Email Off)'}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-muted mb-0 mt-1" style="line-height: 1.4;">
+                                        Enter an email address to automatically forward all incoming <strong>Talk to Sales</strong> leads. When disabled or left blank, enquiries will remain stored solely inside this dashboard.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap align-items-center gap-3 ms-auto mt-2 mt-lg-0">
+                                <!-- Toggle Switch -->
+                                <div class="d-flex align-items-center me-2" title="Toggle automatic email forwarding on or off">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center gap-2 ps-0">
+                                        <input class="form-check-input ms-0" type="checkbox" id="toggleSalesNotification" role="switch" style="cursor: pointer; width: 40px; height: 20px; float: none; margin-top: 0;" ${this.salesSettings.sales_notification_enabled ? 'checked' : ''} onchange="SupportDesk.onToggleSalesNotification(this.checked)">
+                                        <label class="form-check-label text-xs fw-bold cursor-pointer text-nowrap mb-0" for="toggleSalesNotification" style="user-select: none; color: var(--ds-text-main);">
+                                            Send to Email
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Email Address Input & Save Button Group -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width: 250px;">
+                                        <input type="email" class="ds-input text-xs" style="padding-left: 12px; padding-right: 12px; height: 36px; border-radius: 8px;" id="salesNotificationEmailInput" placeholder="sales-team@company.com" value="${QCMS.escapeHtml(this.salesSettings.sales_notification_email || '')}" onkeydown="if(event.key==='Enter') SupportDesk.saveSalesNotificationSettings()">
+                                    </div>
+                                    <button class="ds-btn ds-btn-primary ds-btn-sm d-flex align-items-center gap-1.5 text-nowrap" id="btnSaveSalesNotificationSettings" onclick="SupportDesk.saveSalesNotificationSettings()" style="height: 36px; background: #6366f1; border-color: #6366f1; border-radius: 8px; font-weight: 600; padding: 0 14px;">
+                                        <i data-lucide="save" style="width: 14px; height: 14px;"></i> Save Email
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2171,18 +2229,17 @@ const SupportDesk = {
                                         <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">WORK EMAIL</th>
                                         <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">PHONE NUMBER</th>
                                         <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">COMPANY NAME</th>
-                                        <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">SOURCE</th>
                                         <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider">STATUS</th>
                                         <th class="py-3 px-3 fw-bold text-xs uppercase tracking-wider text-end">ACTIONS</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${items.length === 0 ? `
-                                        <tr><td colspan="8" class="text-center p-5 text-muted">No sales enquiries found matching filter criteria.</td></tr>
+                                        <tr><td colspan="7" class="text-center p-5 text-muted">No sales enquiries found matching filter criteria.</td></tr>
                                     ` : items.map(item => {
                                         let statusMarkup = '';
                                         if (item.status === 'New') {
-                                            statusMarkup = `<span class="badge rounded-pill text-xs px-2.5 py-1 fw-bold" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);">NEW</span>`;
+                                             statusMarkup = `<span class="badge rounded-pill text-xs px-2.5 py-1 fw-bold" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);">NEW</span>`;
                                         } else if (item.status === 'Contacted') {
                                             statusMarkup = `<span class="badge rounded-pill text-xs px-2.5 py-1 fw-bold" style="background: rgba(245, 158, 11, 0.12); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.25);">CONTACTED</span>`;
                                         } else if (item.status === 'In Progress') {
@@ -2210,19 +2267,35 @@ const SupportDesk = {
                                                     </a>
                                                 </td>
                                                 <td class="py-2.5 px-3"><span class="fw-semibold text-main">${item.company_name}</span></td>
-                                                <td class="py-2.5 px-3"><span class="badge rounded-pill fw-medium text-xs px-2.5 py-1" style="background: rgba(99, 102, 241, 0.08); color: var(--ds-primary, #6366f1); border: 1px solid rgba(99, 102, 241, 0.2);">${item.source || 'Talk to Sales'}</span></td>
                                                 <td class="py-2.5 px-3">${statusMarkup}</td>
                                                 <td class="py-2.5 px-3 text-end">
-                                                    <div class="d-flex align-items-center gap-1.5 justify-content-end">
-                                                        <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" style="border-radius:6px;" onclick="SupportDesk.openComposeEmailModal(${item.id})" title="Send In-App Email">
-                                                            <i data-lucide="mail" style="width:12px;height:12px;" class="text-primary"></i> Email
+                                                    <div class="dropdown d-inline-block">
+                                                        <button class="btn btn-link p-0 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}' style="width:30px; height:30px; border-radius:6px; border:none; background:transparent; text-decoration:none; color: var(--ds-text-secondary, #64748b); transition: background 0.15s ease;" onmouseover="this.style.background='rgba(0,0,0,0.06)'" onmouseout="this.style.background='transparent'" title="Actions">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle><circle cx="5" cy="12" r="1.5"></circle></svg>
                                                         </button>
-                                                        <button class="ds-btn ds-btn-primary ds-btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1" style="border-radius:6px;" onclick="SupportDesk.openEnquiryDetailModal(${item.id})">
-                                                            <i data-lucide="eye" style="width:12px;height:12px;"></i> View &amp; Action
-                                                        </button>
-                                                        <button class="ds-btn ds-btn-ghost ds-btn-sm py-1 px-2 text-xs text-danger" style="border-radius:6px;" title="Delete Enquiry" onclick="SupportDesk.deleteEnquiryRecord(${item.id})">
-                                                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
-                                                        </button>
+                                                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border text-xs" style="min-width: 175px; z-index: 100050 !important;">
+                                                            <li>
+                                                                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="javascript:void(0);" onclick="SupportDesk.openEnquiryDetailModal(${item.id})">
+                                                                    <i data-lucide="eye" style="width:14px;height:14px; color: #6366f1;"></i> View &amp; Action
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="javascript:void(0);" onclick="SupportDesk.openComposeEmailModal(${item.id})">
+                                                                    <i data-lucide="mail" style="width:14px;height:14px; color: #0284c7;"></i> Compose Email
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="tel:${item.phone}">
+                                                                    <i data-lucide="phone" style="width:14px;height:14px; color: #10b981;"></i> Call Phone
+                                                                </a>
+                                                            </li>
+                                                            <li><hr class="dropdown-divider my-1"></li>
+                                                            <li>
+                                                                <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="javascript:void(0);" onclick="SupportDesk.deleteEnquiryRecord(${item.id})">
+                                                                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete Enquiry
+                                                                </a>
+                                                            </li>
+                                                        </ul>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -2501,6 +2574,80 @@ const SupportDesk = {
             await this.loadEnquiriesList();
         } catch (e) {
             QCMS.toast(e.message || 'Failed to delete enquiry', 'error');
+        }
+    },
+
+    async onToggleSalesNotification(checked) {
+        const emailInput = document.getElementById('salesNotificationEmailInput');
+        const emailVal = (emailInput?.value || '').trim();
+        
+        if (checked && !emailVal) {
+            QCMS.toast('Please enter a destination sales email address before enabling forwarding.', 'warning');
+            if (emailInput) emailInput.focus();
+            return;
+        }
+
+        await this.saveSalesNotificationSettings();
+    },
+
+    async saveSalesNotificationSettings() {
+        const emailInput = document.getElementById('salesNotificationEmailInput');
+        const toggleInput = document.getElementById('toggleSalesNotification');
+        const btn = document.getElementById('btnSaveSalesNotificationSettings');
+
+        const emailVal = (emailInput?.value || '').trim();
+        let isEnabled = toggleInput ? toggleInput.checked : false;
+
+        // Validate email format if provided
+        if (emailVal) {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                QCMS.toast('Please enter a valid email address format (e.g. sales@company.com).', 'warning');
+                if (emailInput) emailInput.focus();
+                return;
+            }
+        } else if (isEnabled) {
+            // Cannot be enabled without an email
+            isEnabled = false;
+            if (toggleInput) toggleInput.checked = false;
+        }
+
+        const origBtnHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Saving...`;
+        }
+
+        try {
+            const res = await api.post('/support/enquiries/settings', {
+                sales_notification_email: emailVal,
+                sales_notification_enabled: isEnabled
+            });
+
+            if (res && res.status === 'success') {
+                this.salesSettings = res.data || { sales_notification_email: emailVal, sales_notification_enabled: isEnabled };
+                
+                if (emailInput) emailInput.value = this.salesSettings.sales_notification_email || '';
+                if (toggleInput) toggleInput.checked = Boolean(this.salesSettings.sales_notification_enabled);
+
+                const badge = document.getElementById('salesNotificationStatusBadge');
+                if (badge) {
+                    const isForwarding = this.salesSettings.sales_notification_enabled && this.salesSettings.sales_notification_email;
+                    badge.className = `badge rounded-pill text-xxs px-2.5 py-1 ${isForwarding ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'}`;
+                    badge.innerHTML = `<i data-lucide="${isForwarding ? 'check-circle' : 'slash'}" style="width:10px;height:10px;display:inline;" class="me-1"></i> ${isForwarding ? `Forwarding to: ${QCMS.escapeHtml(this.salesSettings.sales_notification_email)}` : 'Dashboard Only (Email Off)'}`;
+                }
+
+                QCMS.toast(res.message || 'Sales lead notification email settings saved!', 'success');
+                if (window.lucide) lucide.createIcons();
+            } else {
+                throw new Error((res && res.message) || 'Failed to update settings');
+            }
+        } catch (e) {
+            QCMS.toast(e.message || 'Failed to save sales notification settings.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origBtnHtml;
+            }
         }
     }
 };

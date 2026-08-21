@@ -238,7 +238,7 @@ class DocumentBrandingService:
         }
 
     @staticmethod
-    def wrap_email_html(body_html, title="QCMS Notification", org_id=None):
+    def wrap_email_html(body_html, title="QCMS Notification", org_id=None, include_header=True, include_footer=False):
         """Wrap email content with centralized corporate email branding header/footer."""
         ctx = DocumentBrandingService.get_branding_context(org_id)
         legal = (ctx.get('legal_company_name') or '').strip()
@@ -248,6 +248,26 @@ class DocumentBrandingService:
         else:
             company_footer_hdr = legal or org_name or 'QCMS Solutions'
 
+        header_block = ""
+        if include_header:
+            header_block = f"""
+                <div class="email-header">
+                    <h1>{ctx['software_display_name']}</h1>
+                    <p>{title}</p>
+                </div>
+            """
+
+        footer_block = ""
+        if include_footer:
+            footer_block = f"""
+                <div class="email-footer">
+                    <p style="margin:0 0 6px 0; font-weight:600;">{company_footer_hdr}</p>
+                    <p style="margin:0 0 6px 0;">{ctx['registered_office']}</p>
+                    <p style="margin:0;">Support: <a href="mailto:{ctx['support_email']}">{ctx['support_email']}</a> | <a href="{ctx['website']}">{ctx['website']}</a></p>
+                    <p style="margin:10px 0 0 0; font-size:11px; color:#94a3b8;">{ctx['copyright_text']}</p>
+                </div>
+            """
+
         return f"""
         <!DOCTYPE html>
         <html>
@@ -255,30 +275,22 @@ class DocumentBrandingService:
             <meta charset="utf-8">
             <style>
                 body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #1e293b; }}
-                .email-container {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
+                .email-container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
                 .email-header {{ background: #1e293b; color: #ffffff; padding: 24px; text-align: center; border-bottom: 3px solid #2563eb; }}
                 .email-header h1 {{ margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 0.5px; }}
                 .email-header p {{ margin: 4px 0 0 0; font-size: 12px; color: #94a3b8; }}
-                .email-body {{ padding: 32px 24px; font-size: 15px; line-height: 1.6; color: #334155; }}
+                .email-body {{ padding: 0; font-size: 15px; line-height: 1.6; color: #334155; }}
                 .email-footer {{ background: #f8fafc; padding: 20px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }}
                 .email-footer a {{ color: #2563eb; text-decoration: none; }}
             </style>
         </head>
         <body>
             <div class="email-container">
-                <div class="email-header">
-                    <h1>{ctx['software_display_name']}</h1>
-                    <p>{title}</p>
-                </div>
+                {header_block}
                 <div class="email-body">
                     {body_html}
                 </div>
-                <div class="email-footer">
-                    <p style="margin:0 0 6px 0; font-weight:600;">{company_footer_hdr}</p>
-                    <p style="margin:0 0 6px 0;">{ctx['registered_office']}</p>
-                    <p style="margin:0;">Support: <a href="mailto:{ctx['support_email']}">{ctx['support_email']}</a> | <a href="{ctx['website']}">{ctx['website']}</a></p>
-                    <p style="margin:10px 0 0 0; font-size:11px; color:#94a3b8;">{ctx['copyright_text']}</p>
-                </div>
+                {footer_block}
             </div>
         </body>
         </html>

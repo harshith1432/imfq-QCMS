@@ -3,8 +3,12 @@ import os
 import secrets
 import re
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 from flask import current_app
 from app.domain.services.document_branding_service import DocumentBrandingService
+
+# Global dedicated thread pool for non-blocking asynchronous email processing
+email_executor = ThreadPoolExecutor(max_workers=10, thread_name_prefix="qcms_email_worker")
 
 
 # Email Utility to handle all system notifications
@@ -14,6 +18,91 @@ class EmailUtils:
         """Returns the base app URL formatted correctly."""
         url = os.getenv("APP_URL", "http://localhost:5000")
         return url.rstrip("/")
+
+    @staticmethod
+    def send_email_async(to_email, subject, html_content, provider_override=None, email_type='general', org_id=None, sender_email=None, sender_name=None, reply_to=None, attachments=None, app=None):
+        """Dispatches an email asynchronously in a background worker thread with full Flask app context without blocking the HTTP request."""
+        if not app:
+            try:
+                app = current_app._get_current_object()
+            except Exception:
+                app = None
+
+        def _async_worker(target_app):
+            if target_app:
+                with target_app.app_context():
+                    try:
+                        EmailUtils.send_email(
+                            to_email=to_email,
+                            subject=subject,
+                            html_content=html_content,
+                            provider_override=provider_override,
+                            email_type=email_type,
+                            org_id=org_id,
+                            sender_email=sender_email,
+                            sender_name=sender_name,
+                            reply_to=reply_to,
+                            attachments=attachments
+                        )
+                    except Exception as err:
+                        target_app.logger.error(f"[AsyncEmail] Error sending background email to {to_email}: {err}")
+            else:
+                try:
+                    EmailUtils.send_email(
+                        to_email=to_email,
+                        subject=subject,
+                        html_content=html_content,
+                        provider_override=provider_override,
+                        email_type=email_type,
+                        org_id=org_id,
+                        sender_email=sender_email,
+                        sender_name=sender_name,
+                        reply_to=reply_to,
+                        attachments=attachments
+                    )
+                except Exception as err:
+                    print(f"[AsyncEmail] Error sending background email to {to_email}: {err}")
+
+        email_executor.submit(_async_worker, app)
+        return True
+
+    @staticmethod
+    def send_bulk_welcome_emails_async(user_credentials_list, app=None):
+        """
+        Asynchronously sends welcome/credentials emails for a batch of newly imported users in the background.
+        user_credentials_list format: [{'user_id': 123, 'temp_password': 'xyz'}, ...]
+        """
+        if not app:
+            try:
+                app = current_app._get_current_object()
+            except Exception:
+                app = None
+
+        def _bulk_worker(target_app, creds):
+            if target_app:
+                with target_app.app_context():
+                    from app.infrastructure.database.models.models import User, db
+                    for item in creds:
+                        try:
+                            user_id = item.get('user_id')
+                            temp_pass = item.get('temp_password')
+                            user = db.session.get(User, user_id)
+                            if user and user.email:
+                                EmailUtils.send_temp_password_email(user, temp_pass)
+                        except Exception as err:
+                            target_app.logger.error(f"[BulkEmail] Error in async welcome email for user {item.get('user_id')}: {err}")
+            else:
+                for item in creds:
+                    try:
+                        user = item.get('user')
+                        temp_pass = item.get('temp_password')
+                        if user and user.email:
+                            EmailUtils.send_temp_password_email(user, temp_pass)
+                    except Exception as err:
+                        print(f"[BulkEmail] Error in async welcome email: {err}")
+
+        email_executor.submit(_bulk_worker, app, user_credentials_list)
+        return True
 
     @staticmethod
     def construct_sender_email(base_sender, email_type='general', org_id=None):
@@ -334,7 +423,7 @@ class EmailUtils:
         return secrets.token_urlsafe(32)
 
     @staticmethod
-    def send_verification_email(user):
+    def send_verification_email(user, is_async=True):
         """Sends an email verification link to the user."""
         token = EmailUtils.generate_token()
         user.verification_token = token
@@ -355,10 +444,12 @@ class EmailUtils:
             <p style="font-size:13px; color:#64748b;">This link will expire in 24 hours.</p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Account Verification", org_id=user.org_id)
+        if is_async:
+            return EmailUtils.send_email_async(user.email, subject, html, email_type='otp', org_id=user.org_id)
         return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=user.org_id)
 
     @staticmethod
-    def send_temp_password_email(user, temp_password):
+    def send_temp_password_email(user, temp_password, is_async=False):
         """Sends an email with a temporary password to a newly created user using the Email Notification Rule from DB if available."""
         from sqlalchemy import or_
         from app.infrastructure.database.models.models import EmailNotificationRule
@@ -407,6 +498,8 @@ class EmailUtils:
                 sender_email = rule.sender_email if (rule.sender_email and not rule.sender_email.endswith('@qcms.com')) else branding_sender['email']
                 sender_name = rule.sender_name if (rule.sender_name and not rule.sender_name.startswith('QCMS ')) else branding_sender['name']
                 reply_to = rule.reply_to if (rule.reply_to and not rule.reply_to.endswith('@qcms.com')) else branding_sender['reply_to']
+                if is_async:
+                    return EmailUtils.send_email_async(user.email, subject, html, sender_email=sender_email, sender_name=sender_name, reply_to=reply_to, email_type='onboarding', org_id=user.org_id)
                 return EmailUtils.send_email(user.email, subject, html, sender_email=sender_email, sender_name=sender_name, reply_to=reply_to, email_type='onboarding', org_id=user.org_id)
         except Exception as e:
             print(f"[EmailUtils] Error loading custom welcome email rule: {e}")
@@ -427,10 +520,12 @@ class EmailUtils:
             </div>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Account Credentials", org_id=user.org_id)
+        if is_async:
+            return EmailUtils.send_email_async(user.email, subject, html, email_type='onboarding', org_id=user.org_id)
         return EmailUtils.send_email(user.email, subject, html, email_type='onboarding', org_id=user.org_id)
 
     @staticmethod
-    def send_password_change_notification(user):
+    def send_password_change_notification(user, is_async=True):
         """Sends a notification that the password was changed."""
         ctx = DocumentBrandingService.get_branding_context(user.org_id)
         subject = f"Your {ctx['software_short_name']} Password Was Changed"
@@ -441,10 +536,12 @@ class EmailUtils:
             <p><strong>If you did not perform this action, please contact your organization administrator or <a href="mailto:{ctx['support_email']}">{ctx['support_email']}</a> immediately to secure your account.</strong></p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Security Alert", org_id=user.org_id)
+        if is_async:
+            return EmailUtils.send_email_async(user.email, subject, html, email_type='security', org_id=user.org_id)
         return EmailUtils.send_email(user.email, subject, html, email_type='security', org_id=user.org_id)
 
     @staticmethod
-    def send_reset_password_email(user):
+    def send_reset_password_email(user, is_async=True):
         """Sends a password reset link."""
         token = EmailUtils.generate_token()
         user.reset_token = token
@@ -465,10 +562,12 @@ class EmailUtils:
             <p style="font-size:13px; color:#64748b;">This link will expire in 1 hour.</p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Password Reset", org_id=user.org_id)
+        if is_async:
+            return EmailUtils.send_email_async(user.email, subject, html, email_type='otp', org_id=user.org_id)
         return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=user.org_id)
 
     @staticmethod
-    def send_registration_otp(email, otp):
+    def send_registration_otp(email, otp, is_async=True):
         """Sends a 6-digit OTP specifically for new organization registration."""
         ctx = DocumentBrandingService.get_branding_context(None)
         subject = f"Your {ctx['software_short_name']} Registration Verification Code"
@@ -481,10 +580,12 @@ class EmailUtils:
             <p style="color: #64748b; font-size: 13px; text-align: center;">This code will expire in <strong>10 minutes</strong> for security reasons.</p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Email Verification", org_id=None)
+        if is_async:
+            return EmailUtils.send_email_async(email, subject, html, email_type='otp')
         return EmailUtils.send_email(email, subject, html, email_type='otp')
 
     @staticmethod
-    def send_otp_email(user, otp):
+    def send_otp_email(user, otp, is_async=True):
         """Sends a 2FA / Login OTP email to a user."""
         org_id = getattr(user, 'org_id', None)
         ctx = DocumentBrandingService.get_branding_context(org_id)
@@ -499,4 +600,6 @@ class EmailUtils:
             <p style="color: #64748b; font-size: 13px; text-align: center;">This code will expire in <strong>10 minutes</strong>. If you did not request this code, please contact <a href="mailto:{ctx.get('otp_email', 'otp-auth@qcms.com')}">{ctx.get('otp_email', 'otp-auth@qcms.com')}</a> immediately.</p>
         """
         html = DocumentBrandingService.wrap_email_html(body, title="Security OTP", org_id=org_id)
+        if is_async:
+            return EmailUtils.send_email_async(user.email, subject, html, email_type='otp', org_id=org_id)
         return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=org_id)

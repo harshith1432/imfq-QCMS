@@ -1,75 +1,88 @@
+"""
+QCMS Enterprise Idempotency & Concurrency Middleware
+===================================================
+Prevents duplicate POST, PUT, PATCH, and DELETE request executions.
+Reads Idempotency-Key / X-Idempotency-Key headers and returns:
+- HTTP 409 Conflict if an identical request is currently PROCESSING.
+- Cached JSON response & status code if key status is COMPLETED.
+"""
+
+import time
+from threading import Lock
 from functools import wraps
-from flask import request, jsonify
-from app.domain.services.idempotency_service import IdempotencyService
+from flask import request, jsonify, make_response
 
-def idempotent(ttl=60):
-    """
-    Route decorator ensuring single execution per request fingerprint or X-Idempotency-Key header.
-    Ignores duplicate clicks, parallel API triggers, and retry spam.
-    """
-    def decorator(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            if request.method not in ['POST', 'PUT', 'PATCH', 'DELETE']:
+def idempotent(f=None):
+    """Decorator alias for explicit route-level idempotency protection."""
+    if f is None:
+        def decorator(fn):
+            @wraps(fn)
+            def decorated_function(*args, **kwargs):
                 return fn(*args, **kwargs)
+            return decorated_function
+        return decorator
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        return f(*args, **kwargs)
+    return decorated_function
 
-            # Extract identity if available
-            user_id = None
-            org_id = None
-            try:
-                from flask_jwt_extended import get_jwt_identity
-                user_id = get_jwt_identity()
-                if user_id:
-                    from app.infrastructure.database.models.models import User
-                    from app import db
-                    user = db.session.get(User, user_id)
-                    if user:
-                        org_id = user.org_id
-            except Exception:
-                pass
+# Thread-safe in-memory cache for idempotency keys
+IDEMPOTENCY_CACHE = {}
+CACHE_LOCK = Lock()
+CACHE_TTL_SECONDS = 120  # 2-minute TTL
 
-            # Read custom header or generate body hash fingerprint
-            custom_key = request.headers.get('X-Idempotency-Key')
-            if custom_key:
-                lock_key = f"hdr:{custom_key}:{user_id or 'anon'}"
-            else:
-                raw_body = request.get_data() or b''
-                lock_key = IdempotencyService.generate_key(user_id, org_id, request.method, request.path, raw_body)
+def init_idempotency_middleware(app):
+    @app.before_request
+    def handle_idempotency_before_request():
+        if request.method not in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            return None
 
-            status, cached = IdempotencyService.check_and_lock(lock_key)
+        # Ignore public login/auth endpoints
+        if request.path and ('/auth/login' in request.path or '/auth/register' in request.path):
+            return None
 
-            if status == 'PROCESSING':
-                return jsonify({
-                    "msg": "A request for this action is already processing. Duplicate ignored.",
-                    "error_code": "DUPLICATE_REQUEST_BLOCKED"
-                }), 429
+        idempotency_key = request.headers.get('Idempotency-Key') or request.headers.get('X-Idempotency-Key')
+        if not idempotency_key:
+            return None
 
-            if status == 'COMPLETED':
-                data, code = cached
-                return jsonify(data), code
+        now = time.time()
 
-            try:
-                res = fn(*args, **kwargs)
-                
-                # Extract payload & status code
-                data = None
-                code = 200
+        with CACHE_LOCK:
+            # Purge expired cache entries
+            expired_keys = [k for k, v in IDEMPOTENCY_CACHE.items() if now - v.get('timestamp', 0) > CACHE_TTL_SECONDS]
+            for k in expired_keys:
+                del IDEMPOTENCY_CACHE[k]
 
-                if isinstance(res, tuple):
-                    data = res[0].get_json() if hasattr(res[0], 'get_json') else res[0]
-                    code = res[1]
-                elif hasattr(res, 'get_json'):
-                    data = res.get_json()
-                    code = getattr(res, 'status_code', 200)
-                else:
-                    data = res
-                    code = 200
+            entry = IDEMPOTENCY_CACHE.get(idempotency_key)
+            if entry:
+                if entry.get('status') == 'PROCESSING':
+                    return jsonify({
+                        "status": "error",
+                        "message": "Action currently in-flight. Please wait.",
+                        "idempotency_key": idempotency_key
+                    }), 409
+                elif entry.get('status') == 'COMPLETED':
+                    res = make_response(entry['response_body'], entry['status_code'])
+                    res.headers['Content-Type'] = 'application/json'
+                    res.headers['X-Idempotent-Replay'] = 'true'
+                    return res
 
-                IdempotencyService.complete(lock_key, data, code)
-                return res
-            except Exception as e:
-                IdempotencyService.release(lock_key)
-                raise e
+            # Register key as PROCESSING
+            IDEMPOTENCY_CACHE[idempotency_key] = {
+                'status': 'PROCESSING',
+                'timestamp': now
+            }
+            request._idempotency_key = idempotency_key
 
-        return wrapper
-    return decorator
+    @app.after_request
+    def handle_idempotency_after_request(response):
+        idempotency_key = getattr(request, '_idempotency_key', None)
+        if idempotency_key and response.status_code < 500:
+            with CACHE_LOCK:
+                IDEMPOTENCY_CACHE[idempotency_key] = {
+                    'status': 'COMPLETED',
+                    'response_body': response.get_data(as_text=True),
+                    'status_code': response.status_code,
+                    'timestamp': time.time()
+                }
+        return response

@@ -235,6 +235,58 @@
         .palette-item-card .item-label { font-size: 0.78rem; font-weight: 600; color: var(--ds-text-main); line-height: 1.2; }
         .palette-item-card .item-desc { font-size: 0.65rem; color: var(--ds-text-tertiary); }
         
+        @media (max-width: 991px) {
+            .poster-workspace,
+            .poster-workspace.with-inspector {
+                grid-template-columns: 1fr !important;
+                gap: 16px !important;
+            }
+            .palette-sidebar {
+                position: static !important;
+                max-height: 380px !important;
+                overflow-y: auto !important;
+                width: 100% !important;
+                margin-bottom: 1rem !important;
+            }
+            .inspector-panel {
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                max-height: 80vh !important;
+                z-index: 1050 !important;
+                border-radius: 16px 16px 0 0 !important;
+                box-shadow: 0 -4px 24px rgba(0,0,0,0.3) !important;
+            }
+            .stage-row-header {
+                grid-template-columns: 24px 38px 1fr auto !important;
+                gap: 8px !important;
+                padding: 10px 12px !important;
+            }
+            .orig-badge {
+                display: none !important;
+            }
+            .row-actions {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 3px !important;
+            }
+            .row-actions .ds-btn {
+                padding: 2px 6px !important;
+                font-size: 10.5px !important;
+                height: 26px !important;
+            }
+            .palette-item-card {
+                padding: 8px 10px !important;
+                cursor: pointer !important;
+            }
+            .palette-item-card:active {
+                background: rgba(var(--ds-accent-rgb), 0.15) !important;
+                transform: scale(0.98);
+            }
+        }
+        
         .drop-target-zone {
             border: 2px dashed var(--ds-border-color);
             border-radius: 12px;
@@ -423,7 +475,7 @@
                         <h7 class="fw-bold text-xs text-uppercase text-main mb-0 d-flex align-items-center gap-2">
                             <i data-lucide="layers" style="width:15px;height:15px;" class="text-primary"></i> Element Catalog
                         </h7>
-                        <span class="badge bg-primary-soft text-primary text-xxs">Drag to Stage</span>
+                        <span class="badge bg-primary-soft text-primary text-xxs">Drag or Tap to Add</span>
                     </div>
                     <div id="paletteCatalogContainer"></div>
                 </aside>
@@ -855,21 +907,46 @@ function renderPaletteSidebar() {
 
             itemCard.innerHTML = `
                 <i data-lucide="${item.icon || 'box'}" style="width:16px;height:16px;"></i>
-                <div>
+                <div style="flex:1; min-width:0;">
                     <div class="item-label">${esc(item.label)}</div>
                     <div class="item-desc">${esc(item.desc || '')}</div>
                 </div>
+                <button type="button" class="btn btn-sm btn-primary-subtle text-primary p-1 rounded-circle add-item-btn" title="Tap to add to active stage" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:none;flex-shrink:0;background:rgba(37,99,235,0.12);">
+                    <i data-lucide="plus" style="width:13px;height:13px;"></i>
+                </button>
             `;
 
+            // Desktop Drag support
             itemCard.addEventListener('dragstart', (e) => {
                 e.dataTransfer.effectAllowed = 'copy';
                 const payload = JSON.stringify({
                     type: item.type,
                     label: item.label,
-                    icon: item.icon
+                    icon: item.icon,
+                    desc: item.desc
                 });
                 e.dataTransfer.setData('application/json', payload);
                 e.dataTransfer.setData('text/plain', payload);
+            });
+
+            // Tap / Click to Add (Mobile touchscreens & desktop quick add)
+            itemCard.addEventListener('click', (e) => {
+                e.preventDefault();
+                let targetStage = 0;
+                const openDetail = document.querySelector('.stage-sections-detail[style*="display: block"]');
+                if (openDetail) {
+                    const rowCont = openDetail.closest('.stage-row-container');
+                    if (rowCont && rowCont.dataset.idx !== undefined) {
+                        targetStage = parseInt(rowCont.dataset.idx) || 0;
+                    }
+                }
+
+                handleCatalogElementDropOnStage(targetStage, {
+                    type: item.type,
+                    label: item.label,
+                    icon: item.icon,
+                    desc: item.desc
+                });
             });
 
             container.appendChild(itemCard);

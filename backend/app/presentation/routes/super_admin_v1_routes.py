@@ -1,10 +1,15 @@
 import os
 import json
+import csv
+import io
 from datetime import datetime, timedelta
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.infrastructure.database.models.models import db, User, Organization, SupportTicket, SubscriptionPayment, SuperAdminLog, Subscription, SaaSPlan, SaaSPlanPricing
-from sqlalchemy import func
+from app.infrastructure.database.models.models import (
+    db, User, Organization, SupportTicket, SubscriptionPayment, SuperAdminLog, 
+    Subscription, SaaSPlan, SaaSPlanPricing, Project, KnowledgeRepository, 
+    ProjectWorkflow, Department, Stage8Implementation, Stage7Impact, Plant, ProjectMember
+)
 from sqlalchemy import func, text
 
 super_admin_v1_bp = Blueprint('super_admin_v1', __name__)
@@ -390,6 +395,79 @@ def get_dashboard_stats():
             trend_mrr.append(val_rounded)
             trend_arr.append(round(val_rounded * 12, 2))
 
+    # 13. Month-wise Organization Onboarding & Adoption Trend
+    ob_labels = []
+    ob_new = []
+    ob_cumulative = []
+    ob_adopted = []
+
+    if range_str in ['all', 'all time', 'alltime']:
+        earliest_org = Organization.query.filter(
+            Organization.is_deleted == False,
+            Organization.is_platform_org == False
+        ).order_by(Organization.created_at.asc()).first()
+        if earliest_org and earliest_org.created_at:
+            earliest_dt = _to_naive_utc(earliest_org.created_at)
+            months_diff = (now.year - earliest_dt.year) * 12 + (now.month - earliest_dt.month) + 1
+            ob_num_months = max(6, min(36, months_diff))
+        else:
+            ob_num_months = 12
+    elif range_str in ['6m', '6months', 'last 6 months']:
+        ob_num_months = 6
+    elif range_str in ['ytd', 'year to date']:
+        ob_num_months = now.month
+    else:
+        ob_num_months = 12
+
+    for i in range(ob_num_months - 1, -1, -1):
+        m_year = now.year
+        m_month = now.month - i
+        while m_month <= 0:
+            m_month += 12
+            m_year -= 1
+        m_date = datetime(m_year, m_month, 1)
+        next_m_month = m_month + 1
+        next_m_year = m_year
+        if next_m_month > 12:
+            next_m_month = 1
+            next_m_year += 1
+        m_next = datetime(next_m_year, next_m_month, 1)
+
+        ob_labels.append(m_date.strftime('%b %y'))
+
+        # New Organizations onboarded in this month
+        new_cnt = Organization.query.filter(
+            Organization.is_deleted == False,
+            Organization.is_platform_org == False,
+            Organization.created_at >= m_date,
+            Organization.created_at < m_next
+        ).count()
+        ob_new.append(new_cnt)
+
+        # Cumulative Organizations onboarded up to end of this month
+        cum_cnt = Organization.query.filter(
+            Organization.is_deleted == False,
+            Organization.is_platform_org == False,
+            Organization.created_at < m_next
+        ).count()
+        ob_cumulative.append(cum_cnt)
+
+        # Adopted/Active/Paid Organizations created up to end of this month
+        adp_cnt = Organization.query.filter(
+            Organization.is_deleted == False,
+            Organization.is_platform_org == False,
+            Organization.created_at < m_next,
+            Organization.subscription_status.in_(['Active', 'ACTIVE', 'Paid', 'PAID', 'Trialing', 'Trial', 'TRIAL'])
+        ).count()
+        ob_adopted.append(adp_cnt)
+
+    period_new_total = sum(ob_new)
+    avg_monthly = period_new_total / max(1, len(ob_new))
+    adoption_rate_pct = round((active_orgs / max(1, total_orgs)) * 100, 1)
+    
+    peak_idx = ob_new.index(max(ob_new)) if ob_new else 0
+    peak_month_str = ob_labels[peak_idx] if ob_labels else 'N/A'
+
     return jsonify({
         "status": "success",
         "data": {
@@ -416,8 +494,253 @@ def get_dashboard_stats():
                 "mrr": trend_mrr,
                 "arr": trend_arr
             },
+            "onboarding_trend": {
+                "labels": ob_labels,
+                "new_onboarded": ob_new,
+                "cumulative_onboarded": ob_cumulative,
+                "adopted_orgs": ob_adopted,
+                "period_new_total": period_new_total,
+                "avg_monthly": round(avg_monthly, 1),
+                "adoption_rate_pct": adoption_rate_pct,
+                "peak_month": peak_month_str
+            },
+            "realized_project_value": calculate_org_realized_project_value(range_str),
             "timestamp": now.isoformat()
         }
+    })
+
+
+def calculate_org_realized_project_value(range_str='all'):
+    """
+    Calculates verified economic revenue and tangible cost savings realized by customer organizations
+    STRICTLY from CLOSED / COMPLETED / ARCHIVED QC projects.
+    """
+    from app.presentation.routes.repository_routes import extract_project_kpi_and_savings
+
+    now = datetime.utcnow()
+    
+    # 1. Query all non-deleted customer tenant organizations
+    orgs = Organization.query.filter(
+        Organization.is_deleted == False,
+        Organization.is_platform_org == False
+    ).order_by(Organization.name.asc()).all()
+
+    total_platform_savings = 0.0
+    total_closed_projects_count = 0
+    all_kpi_improvements = []
+    orgs_data = []
+    
+    # Monthly timeline of value realized from closed projects
+    monthly_impact_map = {}
+
+    for org in orgs:
+        # Strictly closed / completed / archived projects
+        closed_projects = Project.query.filter(
+            Project.org_id == org.id,
+            Project.status.in_(['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED'])
+        ).order_by(Project.created_at.desc()).all()
+
+        kr_entries = KnowledgeRepository.query.filter_by(org_id=org.id).all()
+        kr_map = {kr.project_id: kr for kr in kr_entries if kr.project_id}
+
+        seen_project_ids = set()
+        org_projects_list = []
+        org_total_savings = 0.0
+        org_kpi_list = []
+
+        for p in closed_projects:
+            seen_project_ids.add(p.id)
+            kr = kr_map.get(p.id)
+            savings = 0.0
+            kpi_imp = 0.0
+
+            if kr and kr.cost_savings is not None and float(kr.cost_savings) > 0:
+                savings = float(kr.cost_savings)
+                kpi_imp = float(kr.kpi_improvement_pct or 0.0)
+            else:
+                try:
+                    kpi_imp, savings = extract_project_kpi_and_savings(p.id, org.id)
+                except Exception:
+                    savings = 0.0
+                    kpi_imp = 0.0
+
+            org_total_savings += savings
+            if kpi_imp > 0:
+                org_kpi_list.append(kpi_imp)
+                all_kpi_improvements.append(kpi_imp)
+
+            dept_name = p.department.name if p.department else "General"
+            closed_dt = p.created_at or now
+            if kr and kr.archived_at:
+                closed_dt = kr.archived_at
+
+            m_key = closed_dt.strftime('%b %y')
+            m_sort_key = closed_dt.strftime('%Y-%m')
+            
+            if m_sort_key not in monthly_impact_map:
+                monthly_impact_map[m_sort_key] = {
+                    "label": m_key,
+                    "savings": 0.0,
+                    "closed_count": 0
+                }
+            monthly_impact_map[m_sort_key]["savings"] += savings
+            monthly_impact_map[m_sort_key]["closed_count"] += 1
+
+            cat_str = p.category if isinstance(p.category, str) else (", ".join(p.category) if p.category else "Process Improvement")
+
+            org_projects_list.append({
+                "project_id": p.id,
+                "title": p.title,
+                "ref_number": getattr(p, 'ref_number', '') or f"QC-{p.id:04d}",
+                "category": cat_str,
+                "department": dept_name,
+                "status": p.status,
+                "closed_date": closed_dt.strftime('%d %b %Y'),
+                "cost_savings": round(savings, 2),
+                "cost_savings_fmt": f"₹{savings:,.2f}",
+                "kpi_improvement_pct": round(kpi_imp, 1),
+                "problem_summary": kr.problem_summary if kr else (p.description or '—'),
+                "solution_summary": kr.solution_summary if kr else '—'
+            })
+
+        # Process any KnowledgeRepository entries not caught above
+        for p_id, kr in kr_map.items():
+            if p_id not in seen_project_ids:
+                p = Project.query.get(p_id)
+                if p and p.status in ['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED']:
+                    seen_project_ids.add(p_id)
+                    savings = float(kr.cost_savings or 0.0)
+                    kpi_imp = float(kr.kpi_improvement_pct or 0.0)
+                    org_total_savings += savings
+                    if kpi_imp > 0:
+                        org_kpi_list.append(kpi_imp)
+                        all_kpi_improvements.append(kpi_imp)
+                    dept_name = p.department.name if p.department else "General"
+                    closed_dt = kr.archived_at or p.created_at or now
+                    
+                    m_key = closed_dt.strftime('%b %y')
+                    m_sort_key = closed_dt.strftime('%Y-%m')
+                    if m_sort_key not in monthly_impact_map:
+                        monthly_impact_map[m_sort_key] = {
+                            "label": m_key,
+                            "savings": 0.0,
+                            "closed_count": 0
+                        }
+                    monthly_impact_map[m_sort_key]["savings"] += savings
+                    monthly_impact_map[m_sort_key]["closed_count"] += 1
+
+                    org_projects_list.append({
+                        "project_id": p.id,
+                        "title": p.title,
+                        "ref_number": getattr(p, 'ref_number', '') or f"QC-{p.id:04d}",
+                        "category": kr.category or "Process Improvement",
+                        "department": dept_name,
+                        "status": p.status,
+                        "closed_date": closed_dt.strftime('%d %b %Y'),
+                        "cost_savings": round(savings, 2),
+                        "cost_savings_fmt": f"₹{savings:,.2f}",
+                        "kpi_improvement_pct": round(kpi_imp, 1),
+                        "problem_summary": kr.problem_summary or (p.description or '—'),
+                        "solution_summary": kr.solution_summary or '—'
+                    })
+
+        total_platform_savings += org_total_savings
+        closed_cnt = len(org_projects_list)
+        total_closed_projects_count += closed_cnt
+
+        avg_org_savings = org_total_savings / closed_cnt if closed_cnt > 0 else 0.0
+        avg_org_kpi = sum(org_kpi_list) / len(org_kpi_list) if org_kpi_list else 0.0
+
+        orgs_data.append({
+            "org_id": org.id,
+            "org_name": org.name,
+            "logo_url": getattr(org, 'logo_url', None),
+            "subscription_status": org.subscription_status or 'Active',
+            "plan_name": org.subscription_plan or 'Enterprise',
+            "created_at": org.created_at.strftime('%d %b %Y') if org.created_at else '—',
+            "closed_projects_count": closed_cnt,
+            "total_savings": round(org_total_savings, 2),
+            "total_savings_fmt": f"₹{org_total_savings:,.2f}",
+            "avg_savings_per_project": round(avg_org_savings, 2),
+            "avg_savings_per_project_fmt": f"₹{avg_org_savings:,.2f}",
+            "avg_kpi_improvement": round(avg_org_kpi, 1),
+            "projects": org_projects_list
+        })
+
+    # Sort organizations by total savings descending
+    orgs_data.sort(key=lambda x: (x['total_savings'], x['closed_projects_count']), reverse=True)
+
+    avg_platform_savings = total_platform_savings / total_closed_projects_count if total_closed_projects_count > 0 else 0.0
+    avg_platform_kpi = sum(all_kpi_improvements) / len(all_kpi_improvements) if all_kpi_improvements else 0.0
+    orgs_with_savings = len([o for o in orgs_data if o['closed_projects_count'] > 0])
+
+    # Generate timeline labels and points (sorted chronologically)
+    sorted_months = sorted(monthly_impact_map.keys())
+    # Ensure at least 6 months are shown in the trend chart
+    if len(sorted_months) < 6:
+        # Fill missing trailing months
+        for i in range(5, -1, -1):
+            m_year = now.year
+            m_month = now.month - i
+            while m_month <= 0:
+                m_month += 12
+                m_year -= 1
+            m_dt = datetime(m_year, m_month, 1)
+            sk = m_dt.strftime('%Y-%m')
+            if sk not in monthly_impact_map:
+                monthly_impact_map[sk] = {
+                    "label": m_dt.strftime('%b %y'),
+                    "savings": 0.0,
+                    "closed_count": 0
+                }
+        sorted_months = sorted(monthly_impact_map.keys())
+
+    timeline_labels = [monthly_impact_map[k]["label"] for k in sorted_months]
+    timeline_savings = [round(monthly_impact_map[k]["savings"], 2) for k in sorted_months]
+    
+    # Cumulative savings
+    cum_savings = []
+    curr_cum = 0.0
+    for s in timeline_savings:
+        curr_cum += s
+        cum_savings.append(round(curr_cum, 2))
+
+    return {
+        "summary": {
+            "total_realized_savings": round(total_platform_savings, 2),
+            "total_realized_savings_fmt": f"₹{total_platform_savings:,.2f}",
+            "total_closed_projects": total_closed_projects_count,
+            "avg_savings_per_project": round(avg_platform_savings, 2),
+            "avg_savings_per_project_fmt": f"₹{avg_platform_savings:,.2f}",
+            "avg_kpi_improvement_pct": round(avg_platform_kpi, 1),
+            "total_orgs_with_closed_projects": orgs_with_savings,
+            "total_customer_orgs": len(orgs)
+        },
+        "organizations": orgs_data,
+        "timeline": {
+            "labels": timeline_labels,
+            "monthly_savings": timeline_savings,
+            "cumulative_savings": cum_savings
+        }
+    }
+
+
+@super_admin_v1_bp.route('/dashboard/realized-project-value', methods=['GET'])
+@jwt_required()
+def get_realized_project_value():
+    """
+    Super Admin endpoint for organization-wise verified project revenue & cost savings
+    from strictly CLOSED / COMPLETED / ARCHIVED QC projects.
+    """
+    user = get_super_admin_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    range_str = request.args.get('range', 'all')
+    data = calculate_org_realized_project_value(range_str)
+    return jsonify({
+        "status": "success",
+        "data": data
     })
 
 
@@ -938,3 +1261,266 @@ def update_org_storage_limit():
         "org_id": org.id,
         "storage_limit_gb": float(storage_limit_gb)
     })
+
+AVAILABLE_EXPORT_FIELDS = {
+    "id": {"label": "Organization ID", "category": "Identity & Contact"},
+    "name": {"label": "Organization Name", "category": "Identity & Contact"},
+    "org_code": {"label": "Organization Code", "category": "Identity & Contact"},
+    "industry": {"label": "Industry / Sector", "category": "Identity & Contact"},
+    "admin_name": {"label": "Admin Name", "category": "Identity & Contact"},
+    "email": {"label": "Admin Email", "category": "Identity & Contact"},
+    "phone": {"label": "Contact Phone", "category": "Identity & Contact"},
+    "website": {"label": "Website URL", "category": "Identity & Contact"},
+    "gst_number": {"label": "GST / Tax Number", "category": "Identity & Contact"},
+    "created_at": {"label": "Registration Date", "category": "Identity & Contact"},
+
+    "plants_count": {"label": "Plant Locations Count", "category": "Locations & Departments"},
+    "departments_count": {"label": "Departments Count", "category": "Locations & Departments"},
+
+    "total_users": {"label": "Total Registered Users", "category": "User & Capacity Metrics"},
+    "max_users": {"label": "Max User Seat Limit", "category": "User & Capacity Metrics"},
+    "active_users": {"label": "Active Users Count", "category": "User & Capacity Metrics"},
+    "inactive_users": {"label": "Inactive / Deactivated Users Count", "category": "User & Capacity Metrics"},
+    "qc_users_count": {"label": "Users Working in QC Projects", "category": "User & Capacity Metrics"},
+
+    "total_projects": {"label": "Total QC Projects", "category": "QC Projects & Quality"},
+    "in_progress_projects": {"label": "In-Progress Projects Count", "category": "QC Projects & Quality"},
+    "closed_projects": {"label": "Completed / Closed Projects Count", "category": "QC Projects & Quality"},
+
+    "subscription_plan": {"label": "Subscription Plan", "category": "Financial Savings & Subscription"},
+    "subscription_status": {"label": "Subscription Status", "category": "Financial Savings & Subscription"},
+    "license_expiry_date": {"label": "Renewal / Expiry Date", "category": "Financial Savings & Subscription"},
+    "mrr": {"label": "Monthly Recurring Revenue (MRR, INR)", "category": "Financial Savings & Subscription"},
+    "realized_savings": {"label": "Total Project Savings / Value Realized (INR)", "category": "Financial Savings & Subscription"},
+    "project_investment": {"label": "Total Project Investment Spent (INR)", "category": "Financial Savings & Subscription"},
+    "net_value_created": {"label": "Net Financial ROI Created (INR)", "category": "Financial Savings & Subscription"},
+    "storage_used_mb": {"label": "Storage Used (MB)", "category": "System Usage"}
+}
+
+@super_admin_v1_bp.route('/organizations/export-custom', methods=['POST'])
+@super_admin_v1_bp.route('/super-admin/organizations/export-custom', methods=['POST'])
+@jwt_required()
+def export_organizations_custom():
+    user = get_super_admin_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    selected_fields = payload.get('fields') or []
+
+    if not selected_fields:
+        selected_fields = ["id", "name", "admin_name", "email", "subscription_plan", "subscription_status", "total_users", "plants_count", "departments_count", "total_projects", "qc_users_count", "realized_savings"]
+
+    valid_fields = [f for f in selected_fields if f in AVAILABLE_EXPORT_FIELDS]
+    if not valid_fields:
+        valid_fields = ["id", "name", "admin_name", "email", "total_users"]
+
+    search_q = payload.get('search', '').strip()
+    status_filter = payload.get('status', '').strip()
+    plan_filter = payload.get('plan', '').strip()
+
+    query = Organization.query.filter(
+        Organization.is_deleted == False,
+        Organization.is_platform_org == False
+    )
+
+    if search_q:
+        query = query.filter(
+            (Organization.name.ilike(f'%{search_q}%')) |
+            (Organization.admin_name.ilike(f'%{search_q}%')) |
+            (Organization.email.ilike(f'%{search_q}%')) |
+            (Organization.org_code.ilike(f'%{search_q}%')) |
+            (Organization.gst_number.ilike(f'%{search_q}%'))
+        )
+
+    if status_filter:
+        s_lower = status_filter.lower()
+        if s_lower == 'active':
+            query = query.filter(Organization.subscription_status.in_(['Active', 'ACTIVE']))
+        elif 'trial' in s_lower:
+            query = query.filter(Organization.subscription_status.in_(['Trialing', 'Trial', 'TRIAL']))
+        elif 'expired' in s_lower:
+            query = query.filter(Organization.subscription_status.in_(['Expired', 'EXPIRED']))
+        elif 'suspended' in s_lower or 'hold' in s_lower:
+            query = query.filter(Organization.subscription_status.in_(['Suspended', 'SUSPENDED', 'Canceled', 'CANCELED']))
+
+    if plan_filter:
+        query = query.filter(Organization.subscription_plan.ilike(f'%{plan_filter}%'))
+
+    orgs = query.order_by(Organization.created_at.desc()).all()
+
+    from app.presentation.routes.repository_routes import extract_project_kpi_and_savings
+
+    csv_output = io.StringIO()
+    writer = csv.writer(csv_output)
+
+    # Header Row
+    headers = [AVAILABLE_EXPORT_FIELDS[f]["label"] for f in valid_fields]
+    writer.writerow(headers)
+
+    for org in orgs:
+        row_data = []
+
+        plants_cnt = None
+        depts_cnt = None
+        total_users_cnt = None
+        active_users_cnt = None
+        inactive_users_cnt = None
+        qc_users_cnt = None
+        total_proj_cnt = None
+        in_prog_proj_cnt = None
+        closed_proj_cnt = None
+        savings_val = None
+        investment_val = None
+        net_val = None
+        mrr_val = None
+
+        for field in valid_fields:
+            if field == "id":
+                row_data.append(org.id)
+            elif field == "name":
+                row_data.append(org.name or "")
+            elif field == "org_code":
+                row_data.append(org.org_code or f"ORG-{org.id:04d}")
+            elif field == "industry":
+                row_data.append(org.industry or "Manufacturing")
+            elif field == "admin_name":
+                row_data.append(org.admin_name or "—")
+            elif field == "email":
+                row_data.append(org.email or "—")
+            elif field == "phone":
+                row_data.append(org.phone or "—")
+            elif field == "website":
+                row_data.append(org.website or "—")
+            elif field == "gst_number":
+                row_data.append(org.gst_number or "—")
+            elif field == "created_at":
+                row_data.append(org.created_at.strftime('%Y-%m-%d %H:%M') if org.created_at else "—")
+            elif field == "subscription_plan":
+                row_data.append(org.subscription_plan or "Professional")
+            elif field == "subscription_status":
+                row_data.append(org.subscription_status or "Active")
+            elif field == "license_expiry_date":
+                row_data.append(org.license_expiry_date.strftime('%Y-%m-%d') if org.license_expiry_date else "—")
+            elif field == "max_users":
+                row_data.append(org.max_users or 500)
+            elif field == "storage_used_mb":
+                row_data.append(round(org.storage_used_mb or 0.0, 2))
+
+            elif field == "plants_count":
+                if plants_cnt is None:
+                    plants_cnt = Plant.query.filter_by(org_id=org.id).count()
+                row_data.append(plants_cnt)
+
+            elif field == "departments_count":
+                if depts_cnt is None:
+                    depts_cnt = Department.query.filter_by(org_id=org.id).count()
+                row_data.append(depts_cnt)
+
+            elif field == "total_users":
+                if total_users_cnt is None:
+                    total_users_cnt = User.query.filter_by(org_id=org.id).count()
+                row_data.append(total_users_cnt)
+
+            elif field == "active_users":
+                if active_users_cnt is None:
+                    active_users_cnt = User.query.filter_by(org_id=org.id, is_active=True).count()
+                row_data.append(active_users_cnt)
+
+            elif field == "inactive_users":
+                if inactive_users_cnt is None:
+                    inactive_users_cnt = User.query.filter_by(org_id=org.id, is_active=False).count()
+                row_data.append(inactive_users_cnt)
+
+            elif field == "qc_users_count":
+                if qc_users_cnt is None:
+                    pm_users = db.session.query(ProjectMember.user_id).join(Project, ProjectMember.project_id == Project.id).filter(Project.org_id == org.id).distinct().all()
+                    cr_users = db.session.query(Project.creator_id).filter(Project.org_id == org.id).distinct().all()
+                    tl_users = db.session.query(Project.team_leader_id).filter(Project.org_id == org.id).distinct().all()
+                    fc_users = db.session.query(Project.facilitator_id).filter(Project.org_id == org.id).distinct().all()
+                    rv_users = db.session.query(Project.reviewer_id).filter(Project.org_id == org.id).distinct().all()
+                    u_set = (
+                        {u[0] for u in pm_users if u[0]} | 
+                        {u[0] for u in cr_users if u[0]} | 
+                        {u[0] for u in tl_users if u[0]} | 
+                        {u[0] for u in fc_users if u[0]} | 
+                        {u[0] for u in rv_users if u[0]}
+                    )
+                    qc_users_cnt = len(u_set)
+                row_data.append(qc_users_cnt)
+
+            elif field == "total_projects":
+                if total_proj_cnt is None:
+                    total_proj_cnt = Project.query.filter_by(org_id=org.id).count()
+                row_data.append(total_proj_cnt)
+
+            elif field == "in_progress_projects":
+                if in_prog_proj_cnt is None:
+                    in_prog_proj_cnt = Project.query.filter(
+                        Project.org_id == org.id,
+                        Project.status.in_(['Draft', 'Submitted', 'In Progress', 'IN_PROGRESS', 'Open', 'OPEN'])
+                    ).count()
+                row_data.append(in_prog_proj_cnt)
+
+            elif field == "closed_projects":
+                if closed_proj_cnt is None:
+                    closed_proj_cnt = Project.query.filter(
+                        Project.org_id == org.id,
+                        Project.status.in_(['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED'])
+                    ).count()
+                row_data.append(closed_proj_cnt)
+
+            elif field in ["realized_savings", "project_investment", "net_value_created"]:
+                if savings_val is None:
+                    savings_val = 0.0
+                    investment_val = 0.0
+                    closed_projs = Project.query.filter(
+                        Project.org_id == org.id,
+                        Project.status.in_(['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED'])
+                    ).all()
+                    all_projs = Project.query.filter_by(org_id=org.id).all()
+                    
+                    for p in all_projs:
+                        if hasattr(p, 'budget') and p.budget:
+                            try: investment_val += float(p.budget)
+                            except: pass
+
+                    kr_entries = KnowledgeRepository.query.filter_by(org_id=org.id).all()
+                    kr_map = {kr.project_id: kr for kr in kr_entries if kr.project_id}
+                    for p in closed_projs:
+                        kr = kr_map.get(p.id)
+                        s = 0.0
+                        if kr and kr.cost_savings is not None and float(kr.cost_savings) > 0:
+                            s = float(kr.cost_savings)
+                        else:
+                            try:
+                                _, s = extract_project_kpi_and_savings(p.id, org.id)
+                            except Exception:
+                                s = 0.0
+                        savings_val += s
+                    net_val = savings_val - investment_val
+
+                if field == "realized_savings":
+                    row_data.append(round(savings_val, 2))
+                elif field == "project_investment":
+                    row_data.append(round(investment_val, 2))
+                elif field == "net_value_created":
+                    row_data.append(round(net_val, 2))
+
+            elif field == "mrr":
+                if mrr_val is None:
+                    sub = Subscription.query.filter_by(org_id=org.id).first()
+                    mrr_val = float(sub.final_amount or sub.base_price or 0.0) if sub else 0.0
+                row_data.append(round(mrr_val, 2))
+            else:
+                row_data.append("—")
+
+        writer.writerow(row_data)
+
+    csv_bytes = csv_output.getvalue().encode('utf-8')
+    filename = f"qcms_organizations_custom_export_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

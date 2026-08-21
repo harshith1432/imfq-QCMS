@@ -19,6 +19,8 @@ from app.infrastructure.database.models.models import (
     SaaSPlan, SaaSPlanPricing, SaaSPlanLimits, SaaSPlanModules, SaaSPlanVersion, SaaSPlanAnalytics, PlatformSettings
 )
 
+from app.presentation.middleware.middleware import super_admin_required
+
 import threading
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -2235,12 +2237,13 @@ def get_plan_catalogue():
                 mrr_total = 0.0
                 subs = Subscription.query.filter_by(plan_name=plan.name, subscription_status='Active').all()
                 for s in subs:
+                    bp = float(s.base_price or 0.0)
                     if s.billing_cycle == 'Monthly':
-                        mrr_total += s.base_price
+                        mrr_total += bp
                     elif s.billing_cycle == 'Quarterly':
-                        mrr_total += s.base_price / 3.0
+                        mrr_total += bp / 3.0
                     elif s.billing_cycle == 'Yearly':
-                        mrr_total += s.base_price / 12.0
+                        mrr_total += bp / 12.0
                 plan.analytics.mrr = mrr_total
                 plan.analytics.arr = mrr_total * 12.0
                 try:
@@ -2263,7 +2266,7 @@ def get_plan_catalogue():
                 primary_pricing = pricing_list[0]
             
             cycle = primary_pricing.billing_cycle if primary_pricing else (billing_cycle or 'Yearly')
-            price_val = primary_pricing.price if primary_pricing else 0.0
+            price_val = float(primary_pricing.price if primary_pricing else 0.0)
 
             if price_filter:
                 if price_filter == 'Free' and price_val > 0:
@@ -2297,6 +2300,8 @@ def get_plan_catalogue():
                 'enabled_modules': enabled_modules,
                 'features': [m.module_name for m in plan.modules],
                 'subscriber_count': subscriber_count,
+                'pricing_model': getattr(plan, 'pricing_model', 'fixed'),
+                'payg_rules': getattr(plan, 'payg_rules', None),
                 'is_custom': plan.is_custom,
                 'is_default_trial': getattr(plan, 'is_default_trial', False),
                 'trial_duration_days': getattr(plan, 'trial_duration_days', 14),
@@ -2313,10 +2318,6 @@ def get_plan_catalogue():
             'min_required_storage_gb': round(current_storage_gb, 2),
             'storage_filtered': bool(target_org and current_storage_gb > 0)
         })
-    except Exception as e:
-        from flask import current_app
-        current_app.logger.error(f"[GET PLAN CATALOGUE ERROR] {e}")
-        return jsonify({'status': 'success', 'data': [], 'billing_cycle': billing_cycle or 'Yearly'})
     except Exception as e:
         from flask import current_app
         current_app.logger.error(f"[GET PLAN CATALOGUE ERROR] {e}")
@@ -2350,8 +2351,8 @@ def get_plan_detail(plan_id):
 
     limits = {
         'max_users': plan.limits.max_users if plan.limits else 100,
+        'max_locations': getattr(plan.limits, 'max_locations', 5) if plan.limits else 5,
         'max_departments': plan.limits.max_departments if plan.limits else 10,
-
         'max_projects': plan.limits.max_projects if plan.limits else 25,
         'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0,
         'api_limit': plan.limits.api_limit if plan.limits else 10000,
@@ -2398,6 +2399,8 @@ def get_plan_detail(plan_id):
             'modules': modules,
             'versions': versions,
             'subscriber_count': subscriber_count,
+            'pricing_model': getattr(plan, 'pricing_model', 'fixed'),
+            'payg_rules': getattr(plan, 'payg_rules', None),
             'revenue': revenue
         }
     })
@@ -2409,6 +2412,8 @@ def _clean_plan_type(val):
     v = str(val).strip()
     if v.lower().startswith('trial') or 'trial' in v.lower():
         return 'Trial'
+    if 'pay' in v.lower() and 'go' in v.lower():
+        return 'Pay-As-You-Go'
     return v[:100]
 
 
@@ -2432,6 +2437,10 @@ def create_plan():
     if SaaSPlan.query.filter(SaaSPlan.code == code).first():
         return jsonify({'error': f"Plan with code '{code}' already exists"}), 400
 
+    resolved_plan_type = _clean_plan_type(data.get('plan_type', 'Professional'))
+    pricing_model_val = data.get('pricing_model', 'pay_as_you_go' if resolved_plan_type == 'Pay-As-You-Go' else 'fixed')
+    payg_rules_val = data.get('payg_rules')
+
     plan = SaaSPlan(
         name=name,
         code=code,
@@ -2440,11 +2449,13 @@ def create_plan():
         icon=data.get('icon', 'layers'),
         color=data.get('color', '#3b82f6'),
         status=data.get('status', 'Active'),
-        plan_type=_clean_plan_type(data.get('plan_type', 'Professional')),
+        plan_type=resolved_plan_type,
+        pricing_model=pricing_model_val,
+        payg_rules=payg_rules_val,
         currency=data.get('currency', 'INR'),
         is_custom=data.get('is_custom', False),
         is_default_trial=bool(data.get('is_default_trial', False)) or ('trial' in str(data.get('plan_type', '')).lower()),
-        trial_duration_days=int(data.get('trial_duration_days', 14)),
+        trial_duration_days=int(data.get('trial_duration_days', 180)),
         auto_approve_extensions_limit=int(data.get('auto_approve_extensions_limit', 2)),
         version=1
     )
@@ -2476,8 +2487,8 @@ def create_plan():
     limits = SaaSPlanLimits(
         plan_id=plan.id,
         max_users=int(lim.get('max_users', 100)),
+        max_locations=int(lim.get('max_locations', 5)),
         max_departments=int(lim.get('max_departments', 10)),
-
         max_projects=int(lim.get('max_projects', 25)),
         storage_limit_gb=float(lim.get('storage_limit_gb', 10.0)),
         api_limit=int(lim.get('api_limit', 10000)),
@@ -2591,6 +2602,15 @@ def update_plan(plan_id):
             plan.is_default_trial = bool(data['is_default_trial'])
         elif 'trial' in plan.plan_type.lower():
             plan.is_default_trial = True
+    
+    if 'pricing_model' in data:
+        plan.pricing_model = data['pricing_model']
+    elif plan.plan_type == 'Pay-As-You-Go':
+        plan.pricing_model = 'pay_as_you_go'
+
+    if 'payg_rules' in data:
+        plan.payg_rules = data['payg_rules']
+
     plan.is_custom = data.get('is_custom', plan.is_custom)
 
     if 'trial_duration_days' in data:
@@ -2624,6 +2644,8 @@ def update_plan(plan_id):
     if 'limits' in data and plan.limits:
         lim = data['limits']
         plan.limits.max_users = int(lim.get('max_users', plan.limits.max_users))
+        plan.limits.max_locations = int(lim.get('max_locations', getattr(plan.limits, 'max_locations', 5)))
+        plan.limits.max_departments = int(lim.get('max_departments', getattr(plan.limits, 'max_departments', 10)))
         plan.limits.max_projects = int(lim.get('max_projects', plan.limits.max_projects))
         plan.limits.storage_limit_gb = float(lim.get('storage_limit_gb', plan.limits.storage_limit_gb))
         plan.limits.api_limit = int(lim.get('api_limit', plan.limits.api_limit))
@@ -2752,8 +2774,8 @@ def duplicate_plan(plan_id):
         limits = SaaSPlanLimits(
             plan_id=clone.id,
             max_users=parent.limits.max_users,
+            max_locations=getattr(parent.limits, 'max_locations', 5),
             max_departments=parent.limits.max_departments,
-
             max_projects=parent.limits.max_projects,
             storage_limit_gb=parent.limits.storage_limit_gb,
             api_limit=parent.limits.api_limit,
@@ -2918,6 +2940,7 @@ def compare_plans():
             'plan_type': plan.plan_type,
             'pricing': pricing,
             'max_users': limits.max_users if limits else 100,
+            'max_locations': getattr(limits, 'max_locations', 5) if limits else 5,
             'storage_limit_gb': limits.storage_limit_gb if limits else 10.0,
             'api_limit': limits.api_limit if limits else 10000,
             'support_level': plan.limits.support_level if (limits and hasattr(limits, 'support_level')) else 'Standard',
@@ -3146,4 +3169,39 @@ def get_plans_insights():
             'recommendations': recommendations
         }
     })
+
+
+# ── PAYG Fallback / Forwarding Endpoints under /api/subscriptions ──
+@subscription_bp.route('/billing/payg/preview-all', methods=['GET', 'POST'])
+@jwt_required()
+@super_admin_required()
+def sub_payg_preview_all():
+    from app.presentation.routes.billing_routes import preview_all_payg_bills
+    return preview_all_payg_bills()
+
+
+@subscription_bp.route('/billing/payg/rules', methods=['GET', 'POST'])
+@jwt_required()
+@super_admin_required()
+def sub_payg_rules():
+    from app.presentation.routes.billing_routes import payg_rules_endpoint
+    return payg_rules_endpoint()
+
+
+@subscription_bp.route('/billing/payg/preview-single', methods=['POST'])
+@jwt_required()
+@super_admin_required()
+def sub_payg_preview_single():
+    from app.presentation.routes.billing_routes import preview_single_payg_bill
+    return preview_single_payg_bill()
+
+
+@subscription_bp.route('/billing/payg/generate-bills', methods=['POST'])
+@jwt_required()
+@super_admin_required()
+def sub_payg_generate_bills():
+    from app.presentation.routes.billing_routes import generate_payg_monthly_bills
+    return generate_payg_monthly_bills()
+
+
 

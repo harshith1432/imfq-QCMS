@@ -50,6 +50,9 @@
                         <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.openBulkModal()">
                             <i data-lucide="upload" style="width:14px;height:14px;"></i> Bulk Import
                         </button>
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.exportCSV()" id="btnBulkExport" title="Export member registry to CSV spreadsheet">
+                            <i data-lucide="download" style="width:14px;height:14px;"></i> Bulk Export
+                        </button>
                         <button class="ds-btn ds-btn-primary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.openAddModal()">
                             <i data-lucide="user-plus" style="width:14px;height:14px;"></i> Add Member
                         </button>
@@ -69,14 +72,12 @@
                         <select class="ds-input ds-select ds-input-sm" id="userPlantFilter" onchange="Users.loadUsers()" style="height: 38px !important; font-size: 0.82rem; border: 1.5px solid rgba(120, 120, 120, 0.35) !important; background: var(--ds-input-bg) !important; color: var(--ds-text-main) !important; border-radius: 8px; width: 190px;">
                             <option value="">All Plant Locations</option>
                         </select>
+                        <select class="ds-input ds-select ds-input-sm" id="userDepartmentFilter" onchange="Users.loadUsers()" style="height: 38px !important; font-size: 0.82rem; border: 1.5px solid rgba(120, 120, 120, 0.35) !important; background: var(--ds-input-bg) !important; color: var(--ds-text-main) !important; border-radius: 8px; width: 190px;">
+                            <option value="">All Departments</option>
+                        </select>
                     </div>
+                </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="ds-tab-group">
-                            <button class="ds-btn-tab active" onclick="Users.filter('all')">All</button>
-                            <button class="ds-btn-tab" onclick="Users.filter('active')">Active</button>
-                        </div>
-                    </div>
                 <!-- 3. Bulk Actions Toolbar -->
                 <div id="bulkActionsBar" class="p-3 px-4 d-none align-items-center justify-content-between flex-wrap gap-3" style="background: rgba(99, 102, 241, 0.08); border-bottom: 1.5px solid var(--ds-primary, #6366f1); transition: all 0.2s ease;">
                     <div class="d-flex align-items-center gap-3">
@@ -84,6 +85,9 @@
                         <span class="text-xs ds-text-secondary fw-medium">Execute bulk operations on selected members:</span>
                     </div>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.exportCSV(true)">
+                            <i data-lucide="download" style="width:14px;height:14px;" class="text-primary"></i> Export Selected (CSV)
+                        </button>
                         <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1.5" onclick="Users.bulkAction('activate')">
                             <i data-lucide="check-circle" style="width:14px;height:14px;" class="text-success"></i> Activate Selected
                         </button>
@@ -112,14 +116,13 @@
                                     <th>Plant Location</th>
                                     <th data-i18n="dashboards.common.department">Department</th>
                                     <!-- custom field columns injected here by JS -->
-                                    <th data-i18n="dashboards.admin.access_status">State</th>
                                     <th data-i18n="dashboards.admin.last_active">Last Active</th>
                                     <th class="text-end" data-i18n="common.actions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="usersBody">
                                 <!-- Loaded via script -->
-                                <tr><td colspan="8" class="p-5 text-center text-muted" data-i18n="dashboards.admin.sync_directory">Synchronizing directory...</td></tr>
+                                <tr><td colspan="7" class="p-5 text-center text-muted" data-i18n="dashboards.admin.sync_directory">Synchronizing directory...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -127,7 +130,8 @@
                 </div>
             </div>
         </div>
-    </main>
+        </main>
+    </div>
 
     <!-- Actions consolidated into table row for single-init reliability -->
 
@@ -147,8 +151,12 @@
                             <input type="text" class="ds-input" id="username" placeholder="e.g. John Doe" required>
                         </div>
                         <div class="ds-field">
-                            <label class="ds-label">ENTERPRISE EMAIL <span class="text-danger">*</span></label>
-                            <input type="email" class="ds-input" id="email" placeholder="john@company.com" required>
+                            <label class="ds-label">PHONE NUMBER <span class="text-danger">*</span></label>
+                            <input type="tel" class="ds-input" id="phone" placeholder="e.g. 9876543210 or +919876543210" required>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label">ENTERPRISE EMAIL <span class="text-muted font-normal text-xxs" style="font-size: 0.65rem; opacity: 0.75;">(Optional)</span></label>
+                            <input type="email" class="ds-input" id="email" placeholder="john@company.com (Optional)">
                         </div>
                         <div class="ds-field mb-3">
                             <label class="ds-label">PLANT LOCATION <span class="text-danger">*</span></label>
@@ -587,6 +595,86 @@
                 }
             },
 
+            async exportCSV(onlySelected = false) {
+                const btn = document.getElementById('btnBulkExport');
+                const origHtml = btn ? btn.innerHTML : '';
+                try {
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Exporting...';
+                    }
+
+                    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                    const memberSearch = document.getElementById('memberSearchInput')?.value || '';
+                    const globalSearch = document.getElementById('globalSearchInput')?.value || '';
+                    const query = (memberSearch || globalSearch).trim();
+                    const filter = this.currentFilter || 'all';
+                    const plantVal = document.getElementById('userPlantFilter')?.value || '';
+                    const deptVal = document.getElementById('userDepartmentFilter')?.value || '';
+
+                    const payload = {};
+                    if (onlySelected || (this.selectedUserIds && this.selectedUserIds.size > 0)) {
+                        payload.user_ids = Array.from(this.selectedUserIds);
+                    } else {
+                        if (query) payload.q = query;
+                        if (filter && filter !== 'all') payload.filter = filter;
+                        if (plantVal) payload.plant_id = plantVal;
+                        if (deptVal) payload.department_id = deptVal;
+                    }
+
+                    const res = await fetch('/api/admin/users/export', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.message || `Export failed with HTTP ${res.status}`);
+                    }
+
+                    const blob = await res.blob();
+                    const disposition = res.headers.get('Content-Disposition') || '';
+                    let filename = 'QCMS_Users_Directory.csv';
+                    const match = disposition.match(/filename=([^;]+)/);
+                    if (match && match[1]) {
+                        filename = match[1].trim().replace(/^["']|["']$/g, '');
+                    }
+
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+
+                    const countText = (payload.user_ids && payload.user_ids.length > 0) 
+                        ? `${payload.user_ids.length} selected member(s)` 
+                        : 'member directory';
+                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                        QCMS.toast(`Successfully exported ${countText} to CSV!`, 'success');
+                    }
+                } catch (e) {
+                    console.error('Export CSV error:', e);
+                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
+                        QCMS.toast(e.message || 'Failed to export users CSV', 'error');
+                    } else {
+                        alert(e.message || 'Failed to export users CSV');
+                    }
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = origHtml;
+                        if (window.lucide) lucide.createIcons({ container: btn });
+                    }
+                }
+            },
+
             renderPaginationButtons(page, totalPages) {
                 if (totalPages <= 1) return '';
                 let pages = [];
@@ -679,6 +767,16 @@
                 } catch (e) { console.error('Init failed:', e); }
             },
 
+            renderRoleBadge(role) {
+                const r = role || 'Team Member';
+                const color = r === 'Admin' ? 'red' 
+                            : r === 'SuperAdmin' ? 'purple'
+                            : r === 'Facilitator' ? 'amber'
+                            : r === 'Reviewer' ? 'indigo'
+                            : 'blue';
+                return QCMS.badge(r, color);
+            },
+
             customFields: [],
 
             async loadCustomFields() {
@@ -759,25 +857,26 @@
                 const saveBtn   = document.getElementById('saveLoginOptionsBtn');
                 if (!container) return;
 
-                const activeOptions = data.login_options || ['email'];
+                const activeOptions = data.login_options || ['phone', 'email', 'username'];
                 const availFields   = data.available_fields || [];
 
                 container.innerHTML = availFields.map(f => {
                     const isChecked  = activeOptions.includes(f.key);
-                    const isDisabled = !f.can_disable;  // email cannot be unchecked
+                    const isDisabled = !f.can_disable;  // phone cannot be unchecked
                     return `
-                        <label class="d-flex align-items-center justify-content-between p-2 rounded cursor-pointer mb-1 text-xs" style="border:1px solid rgba(255,255,255,0.04); background:rgba(255,255,255,0.015); cursor:pointer;" for="lo_${f.key}">
+                        <label class="d-flex align-items-center justify-content-between p-2.5 rounded-2 cursor-pointer mb-1.5 text-xs border" style="background:var(--ds-card-bg, #ffffff); cursor:pointer;" for="lo_${f.key}">
                             <div class="d-flex align-items-center gap-2">
-                                <input type="checkbox" class="login-option-cb" id="lo_${f.key}" data-key="${f.key}"
+                                <input type="checkbox" class="login-option-cb form-check-input m-0" id="lo_${f.key}" data-key="${f.key}"
                                     ${isChecked  ? 'checked' : ''}
                                     ${isDisabled ? 'disabled' : ''}
-                                    style="width:14px;height:14px;accent-color:var(--ds-accent);">
+                                    onchange="Users.toggleLoginOptionBadge(this)"
+                                    style="width:16px;height:16px;cursor:pointer;">
                                 <span class="fw-semibold ds-text-main">${f.label}</span>
                                 <span class="text-muted text-xxs font-mono" style="opacity:0.75;">(${f.key})</span>
                             </div>
-                            <div>
+                            <div class="login-opt-status">
                                 ${isDisabled 
-                                    ? `<span class="text-muted text-xxs" style="opacity:0.5; font-size: 0.65rem;">Required</span>` 
+                                    ? `<span class="text-muted text-xxs" style="opacity:0.6; font-size: 0.65rem;">Platform Default</span>` 
                                     : isChecked 
                                         ? `<span class="badge bg-success-subtle text-success" style="font-size:0.65rem; padding:1px 6px; border-radius:999px;">Enabled</span>` 
                                         : `<span class="text-muted text-xxs" style="font-size: 0.65rem;">Disabled</span>`
@@ -790,14 +889,26 @@
                 if (window.lucide) lucide.createIcons();
             },
 
+            toggleLoginOptionBadge(cb) {
+                const label = cb.closest('label');
+                if (!label) return;
+                const badgeContainer = label.querySelector('.login-opt-status');
+                if (!badgeContainer) return;
+                if (cb.checked) {
+                    badgeContainer.innerHTML = `<span class="badge bg-success-subtle text-success" style="font-size:0.65rem; padding:1px 6px; border-radius:999px;">Enabled</span>`;
+                } else {
+                    badgeContainer.innerHTML = `<span class="text-muted text-xxs" style="font-size: 0.65rem;">Disabled</span>`;
+                }
+            },
+
             async saveLoginOptions() {
                 const checkboxes = document.querySelectorAll('.login-option-cb');
                 const selected = [];
                 checkboxes.forEach(cb => {
                     if (cb.checked) selected.push(cb.getAttribute('data-key'));
                 });
-                // Ensure email is always in there
-                if (!selected.includes('email')) selected.unshift('email');
+                // Ensure phone is always present if nothing else is selected
+                if (!selected.includes('phone') && selected.length === 0) selected.push('phone');
 
                 const btn = document.getElementById('saveLoginOptionsBtn');
                 if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
@@ -955,27 +1066,39 @@
             async fetchDepartments() {
                 try {
                     const depts = await api.get('/admin/departments');
-                    this.departments = depts;
-                    this.populateDepartmentSelects(depts);
+                    this.departments = depts || [];
+                    this.populateDepartmentSelects(this.departments);
+
+                    const deptFilter = document.getElementById('userDepartmentFilter');
+                    if (deptFilter) {
+                        deptFilter.innerHTML = '<option value="">All Departments</option>' +
+                            this.departments.map(d => `<option value="${d.id}">${QCMS.escapeHtml(d.name)}${d.plant_name ? ' (' + QCMS.escapeHtml(d.plant_name) + ')' : ''}</option>`).join('');
+                    }
                 } catch (e) {
                     console.error('Failed to fetch departments:', e);
                 }
             },
 
-            populateDepartmentSelects(depts) {
-                this.onPlantChange(document.getElementById('userPlantSelect')?.value || '');
+            setPerPage(val) {
+                const num = parseInt(val, 10);
+                if (!num || isNaN(num)) return;
+                this.perPage = num;
+                this.loadUsers(1);
             },
 
             async loadUsers(page = 1) {
                 try {
                     this.currentPage = page;
+                    if (!this.perPage) this.perPage = 10;
+                    const perPage = this.perPage;
                     const memberSearch = document.getElementById('memberSearchInput')?.value || '';
                     const globalSearch = document.getElementById('globalSearchInput')?.value || '';
                     const query = (memberSearch || globalSearch).trim();
                     const filter = this.currentFilter || 'all';
                     const plantVal = document.getElementById('userPlantFilter')?.value || '';
+                    const deptVal = document.getElementById('userDepartmentFilter')?.value || '';
 
-                    const res = await api.get(`/admin/users?page=${page}&per_page=10&q=${encodeURIComponent(query)}&filter=${filter}&plant_id=${plantVal}&t=` + Date.now());
+                    const res = await api.get(`/admin/users?page=${page}&per_page=${perPage}&q=${encodeURIComponent(query)}&filter=${filter}&plant_id=${plantVal}&department_id=${deptVal}&t=` + Date.now());
 
                     let users = [];
                     let total = 0;
@@ -987,8 +1110,8 @@
                         totalPages = res.total_pages;
                     } else if (Array.isArray(res)) {
                         total = res.length;
-                        totalPages = Math.ceil(total / 10) || 1;
-                        users = res.slice((page - 1) * 10, page * 10);
+                        totalPages = Math.ceil(total / perPage) || 1;
+                        users = res.slice((page - 1) * perPage, page * perPage);
                     }
 
                     const badge = document.getElementById('memberCountBadge');
@@ -997,7 +1120,25 @@
                     const tbody = document.getElementById('usersBody');
                     const pagContainer = document.getElementById('usersPaginationContainer');
 
-                    const totalCols = 8 + ((this.customFields || []).filter(f => !f.is_system).length);
+                    const extraCustomFields = (this.customFields || []).filter(f => !f.is_system && !['email', 'phone', 'username', 'role', 'department', 'plant_location'].includes(f.field_key));
+
+                    const theadRow = document.getElementById('usersTheadRow');
+                    if (theadRow) {
+                        theadRow.innerHTML = `
+                            <th style="width: 44px;" class="text-center">
+                                <input type="checkbox" class="form-check-input" id="selectAllUsersCheckbox" onchange="Users.toggleSelectAll(this)" style="cursor: pointer;">
+                            </th>
+                            <th data-i18n="dashboards.admin.stakeholder">Stakeholder</th>
+                            <th data-i18n="dashboards.admin.corporate_role">Corporate Role</th>
+                            <th>Plant Location</th>
+                            <th data-i18n="dashboards.common.department">Department</th>
+                            ${extraCustomFields.map(f => `<th>${QCMS.escapeHtml(f.display_name)}</th>`).join('')}
+                            <th data-i18n="dashboards.admin.last_active">Last Active</th>
+                            <th class="text-end" data-i18n="common.actions">Actions</th>
+                        `;
+                    }
+
+                    const totalCols = 7 + extraCustomFields.length;
                     if (!users || users.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="${totalCols}" class="py-5">
                             ${QCMS.emptyState('No Members Found', `We couldn't find any stakeholders matching "${query}".`, 'search-x')}
@@ -1007,68 +1148,44 @@
                         return;
                     }
 
-                    // --- Build dynamic custom field header columns ---
-                    const theadRow = document.getElementById('usersTheadRow');
-                    if (theadRow) {
-                        theadRow.querySelectorAll('.custom-field-th').forEach(el => el.remove());
-                        const staticThs = theadRow.querySelectorAll('th:not(.custom-field-th)');
-                        const insertBeforeTh = staticThs[5]; // State is index 5 (0: checkbox, 1: Identity, 2: Role, 3: Plant Location, 4: Department, 5: State)
-                        const visibleCustomFields = (this.customFields || []).filter(f => !f.is_system);
-                        visibleCustomFields.forEach(f => {
-                            const th = document.createElement('th');
-                            th.className = 'custom-field-th';
-                            th.style.whiteSpace = 'nowrap';
-                            th.textContent = f.display_name.toUpperCase();
-                            theadRow.insertBefore(th, insertBeforeTh);
-                        });
-                    }
-
-                    const visibleCustomFields = (this.customFields || []).filter(f => !f.is_system);
-
                     tbody.innerHTML = users.map(u => `
-                        <tr class="fade-in ${this.selectedUserIds.has(u.id) ? 'table-active' : ''}">
-                            <td class="text-center align-middle" onclick="event.stopPropagation();">
-                                <input type="checkbox" class="form-check-input user-select-checkbox" value="${u.id}" ${this.selectedUserIds.has(u.id) ? 'checked' : ''} onchange="Users.onCheckboxChange(this, ${u.id})" style="cursor: pointer;">
+                        <tr class="fade-in">
+                            <td class="text-center">
+                                <input type="checkbox" class="ds-checkbox user-row-checkbox" value="${u.id}" onchange="Users.updateBulkBar()">
                             </td>
                             <td>
-                                <div class="h-stack gap-3">
-                                    <div class="ds-avatar" style="background: ${u.profile_picture ? 'transparent' : this.getAvatarColor(u.username)}">
-                                        ${u.profile_picture ? `<img src="${u.profile_picture}">` : u.username.substring(0,2).toUpperCase()}
-                                    </div>
-                                    <div class="v-stack">
-                                        <div class="fw-bold text-sm ds-text-main">${u.username}</div>
-                                        <div class="text-xs ds-text-secondary">${u.email}</div>
+                                <div class="d-flex align-items-center gap-3">
+                                    ${QCMS.renderAvatar(u, 36)}
+                                    <div>
+                                        <div class="fw-bold text-sm text-main">${QCMS.escapeHtml(u.full_name || u.username)}</div>
+                                        <div class="text-xs text-muted font-mono">${QCMS.escapeHtml(u.email || (u.username ? '@' + u.username : ''))}</div>
                                     </div>
                                 </div>
                             </td>
-                            <td>${this.roleBadge(u.role)}</td>
+                            <td>${this.renderRoleBadge(u.role)}</td>
                             <td>
-                                <span class="badge ${u.plant_id ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'} rounded-pill px-2.5 py-1 text-xs">
-                                    <i data-lucide="factory" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(u.plant_name || 'N/A')}
+                                <span class="text-xs font-medium text-main d-inline-flex align-items-center gap-1">
+                                    <i data-lucide="building-2" style="width:13px;height:13px;" class="text-primary"></i>
+                                    ${QCMS.escapeHtml(u.plant_name || u.plant_location || 'All Plants')}
                                 </span>
                             </td>
-                            <td><span class="text-sm fw-medium ds-text-main">${QCMS.escapeHtml(u.department || 'N/A')}</span></td>
-                            ${visibleCustomFields.map(f => {
-                                const cf = (u.custom_fields && u.custom_fields[f.field_key]) || (u[f.field_key]) || '';
-                                return `<td><span class="text-sm ds-text-main">${cf || '<span class="text-muted text-xs">—</span>'}</span></td>`;
+                            <td><span class="text-xs font-medium">${QCMS.escapeHtml(u.department || 'General')}</span></td>
+
+                            ${extraCustomFields.map(f => {
+                                const val = (u.custom_fields || {})[f.field_key] || '-';
+                                return `<td><span class="text-xs">${QCMS.escapeHtml(String(val))}</span></td>`;
                             }).join('')}
+
                             <td>
-                                <div class="h-stack gap-2">
-                                    <span class="ds-badge-dot ${u.is_active ? 'green' : 'gray'}"></span>
-                                    <span class="text-xs fw-bold uppercase opacity-70">${u.is_active ? 'Active' : 'Offline'}</span>
-                                </div>
+                                <span class="text-xs text-muted">${u.last_login ? QCMS.formatRelative(u.last_login) : (u.last_active ? QCMS.formatRelative(u.last_active) : '-')}</span>
                             </td>
-                            <td><span class="text-xs ds-text-secondary">${(u.last_active || u.last_login) ? QCMS.formatRelative(u.last_active || u.last_login) : 'Never'}</span></td>
                             <td class="text-end">
-                                <div class="dropdown d-inline-block">
-                                    <button class="ds-btn ds-btn-outline ds-btn-icon ds-btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i data-lucide="more-horizontal" style="width:18px;"></i>
+                                <div class="dropdown">
+                                    <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" data-bs-toggle="dropdown">
+                                        <i data-lucide="more-vertical" style="width:14px;height:14px;"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end ds-dropdown-premium shadow-lg">
-                                        <li><h6 class="dropdown-header text-xxs uppercase opacity-50 pb-1">Management</h6></li>
-                                        <li><a class="dropdown-item" href="#" onclick="Users.edit(${u.id})"><i data-lucide="edit-2"></i> Edit Member</a></li>
-                                        <li><a class="dropdown-item" href="/auth/profile.html?id=${u.id}"><i data-lucide="user"></i> View Profile</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="Users.reassign(${u.id})"><i data-lucide="refresh-cw"></i> Reassign Dept</a></li>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 text-xs">
+                                        <li><a class="dropdown-item" href="#" onclick="Users.openEditModal(${u.id})"><i data-lucide="edit-3"></i> Edit Stakeholder</a></li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li><h6 class="dropdown-header text-xxs uppercase opacity-50 pb-1">Security</h6></li>
                                         <li><a class="dropdown-item" href="#" onclick="Users.regenerate(${u.id})"><i data-lucide="key"></i> Regenerate Access</a></li>
@@ -1081,35 +1198,41 @@
                     `).join('');
 
                     if (pagContainer) {
-                        const startIndex = Math.min((page - 1) * 10 + 1, total);
-                        const endIndex = Math.min(page * 10, total);
+                        const startIndex = Math.min((page - 1) * perPage + 1, total);
+                        const endIndex = Math.min(page * perPage, total);
+                        const isPrevDisabled = page <= 1;
+                        const isNextDisabled = page >= totalPages;
 
-                        if (totalPages > 1) {
-                            pagContainer.innerHTML = `
-                                <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
-                                    <div class="text-xs text-muted">
-                                        Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${total}</span> members
+                        pagContainer.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                                <div class="text-xs text-muted">
+                                    Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${total}</span> members
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="d-flex align-items-center gap-2 me-2">
+                                        <select class="ds-input ds-select text-xs font-semibold py-1 px-2"
+                                                style="width: 72px; height: 32px; border-radius: 16px; text-align: center; border: 1.5px solid var(--ds-border-color); background: var(--ds-input-bg); cursor: pointer; color: var(--ds-text-main);"
+                                                onchange="Users.setPerPage(this.value)">
+                                            <option value="5" ${this.perPage == 5 ? 'selected' : ''}>5</option>
+                                            <option value="10" ${this.perPage == 10 ? 'selected' : ''}>10</option>
+                                            <option value="25" ${this.perPage == 25 ? 'selected' : ''}>25</option>
+                                            <option value="50" ${this.perPage == 50 ? 'selected' : ''}>50</option>
+                                            <option value="100" ${this.perPage == 100 ? 'selected' : ''}>100</option>
+                                        </select>
+                                        <span class="text-xs text-muted font-medium">per page</span>
                                     </div>
                                     <div class="pagination-buttons d-flex gap-1 align-items-center">
-                                        <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="Users.loadUsers(${page - 1})">
+                                        <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${isPrevDisabled ? 'disabled' : ''} onclick="Users.loadUsers(${page - 1})">
                                             <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                         </button>
                                         ${this.renderPaginationButtons(page, totalPages)}
-                                        <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="Users.loadUsers(${page + 1})">
+                                        <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${isNextDisabled ? 'disabled' : ''} onclick="Users.loadUsers(${page + 1})">
                                             <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                         </button>
                                     </div>
                                 </div>
-                            `;
-                        } else {
-                            pagContainer.innerHTML = `
-                                <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
-                                    <div class="text-xs text-muted">
-                                        Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${total}</span> members
-                                    </div>
-                                </div>
-                            `;
-                        }
+                            </div>
+                        `;
                     }
 
                     this.updateBulkBar();
@@ -1119,7 +1242,7 @@
                     QCMS.toast('Failed to synchronize member directory.', 'error');
                     const tbody = document.getElementById('usersBody');
                     if (tbody) {
-                        const colspanErr = 8 + ((this.customFields || []).filter(f => !f.is_system).length);
+                        const colspanErr = 7 + ((this.customFields || []).filter(f => !f.is_system).length);
                         tbody.innerHTML = `<tr><td colspan="${colspanErr}" class="py-5">
                             ${QCMS.emptyState('Connection Error', 'Unable to reach the server. Please check your network connection.', 'wifi-off')}
                         </td></tr>`;
@@ -1205,8 +1328,12 @@
                             <input type="text" class="ds-input" id="username" placeholder="e.g. John Doe" required>
                         </div>
                         <div class="ds-field">
-                            <label class="ds-label">ENTERPRISE EMAIL <span class="text-danger">*</span></label>
-                            <input type="email" class="ds-input" id="email" placeholder="john@company.com" required>
+                            <label class="ds-label">PHONE NUMBER <span class="text-danger">*</span></label>
+                            <input type="tel" class="ds-input" id="phone" placeholder="e.g. 9876543210 or +919876543210" required>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label">ENTERPRISE EMAIL <span class="text-muted font-normal text-xxs" style="font-size: 0.65rem; opacity: 0.75;">(Optional)</span></label>
+                            <input type="email" class="ds-input" id="email" placeholder="john@company.com (Optional)">
                         </div>
                         <div class="ds-field mb-3">
                             <label class="ds-label">PLANT LOCATION <span class="text-danger">*</span></label>
@@ -1251,6 +1378,7 @@
                 }
 
                 document.getElementById('userForm').reset();
+                if (document.getElementById('phone')) document.getElementById('phone').value = '';
                 document.getElementById('password').value = 'Welcome@123';
                 document.getElementById('passwordFieldContainer').style.display = 'block';
                 document.querySelector('#userModal .modal-title').textContent = 'Provision Access';
@@ -1268,6 +1396,7 @@
                 this.onPlantChange(plantFilterVal);
 
                 document.getElementById('username').disabled = false;
+                if (document.getElementById('phone')) document.getElementById('phone').disabled = false;
                 document.getElementById('email').disabled = false;
 
                 this.renderDynamicFields({});
@@ -1297,6 +1426,7 @@
                     const user = await api.get(`/admin/users/${id}`);
                     
                     document.getElementById('username').value = user.full_name || user.username || '';
+                    if (document.getElementById('phone')) document.getElementById('phone').value = user.phone || '';
                     document.getElementById('email').value = user.email || '';
                     document.getElementById('role').value = user.role || 'Team Member';
                     
@@ -1321,6 +1451,7 @@
                     
                     // Enable fields for full edit
                     document.getElementById('username').disabled = false;
+                    if (document.getElementById('phone')) document.getElementById('phone').disabled = false;
                     document.getElementById('email').disabled = false;
                     
                     document.querySelector('#userModal .modal-title').textContent = 'Edit Stakeholder';
@@ -1343,6 +1474,7 @@
                     const user = await api.get(`/admin/users/${id}`);
                     
                     document.getElementById('username').value = user.full_name || user.username || '';
+                    if (document.getElementById('phone')) document.getElementById('phone').value = user.phone || '';
                     document.getElementById('email').value = user.email || '';
                     document.getElementById('role').value = user.role || 'Team Member';
 
@@ -1376,15 +1508,30 @@
             },
 
             async save() {
-                const username = document.getElementById('username').value;
-                const email = document.getElementById('email').value;
-                const role = document.getElementById('role').value;
-                const department = document.getElementById('department').value;
+                const username = (document.getElementById('username')?.value || '').trim();
+                const phone = (document.getElementById('phone')?.value || '').trim();
+                const email = (document.getElementById('email')?.value || '').trim();
+                const role = document.getElementById('role')?.value || '';
+                const department = document.getElementById('department')?.value || '';
                 const plant_id = document.getElementById('userPlantSelect')?.value || '';
-                const password = document.getElementById('password').value;
+                const password = document.getElementById('password')?.value || '';
                 
-                if (!username || !email) {
-                    return QCMS.toast('Please enter name and email', 'warning');
+                if (!username) {
+                    return QCMS.toast('Please enter display name / identity', 'warning');
+                }
+                if (!phone) {
+                    return QCMS.toast('Please enter phone number (compulsory)', 'warning');
+                }
+                
+                const cleanPhone = phone.replace(/[\s\-]/g, '');
+                if (!/^(\+?[0-9]{7,15})$/.test(cleanPhone)) {
+                    return QCMS.toast('Please enter a valid phone number (e.g. 9876543210 or +919876543210)', 'warning');
+                }
+
+                if (email) {
+                    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+                        return QCMS.toast('Please enter a valid email address', 'warning');
+                    }
                 }
 
                 const customInputs = document.querySelectorAll('.dynamic-custom-input');
@@ -1409,10 +1556,9 @@
                         } else if (dataType === 'character' && !/^[a-zA-Z\s]+$/.test(val)) {
                             validationError = `Field '${name}' must contain letters only.`;
                         } else if (dataType === 'phone') {
-                            // Accept: 10 digits OR +91 followed by 10 digits (spaces/dashes stripped)
-                            const cleanPhone = val.replace(/[\s\-]/g, '');
-                            if (!/^(\+91)?\d{10}$/.test(cleanPhone)) {
-                                validationError = `Field '${name}' must be a valid 10-digit phone number (e.g. 9876543210 or +919876543210).`;
+                            const cp = val.replace(/[\s\-]/g, '');
+                            if (!/^(\+?[0-9]{7,15})$/.test(cp)) {
+                                validationError = `Field '${name}' must be a valid phone number.`;
                             }
                         } else if (dataType === 'email') {
                             if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val)) {
@@ -1444,7 +1590,8 @@
                     }
                     if (this.modalMode !== 'REASSIGN') {
                         payload.username = username;
-                        payload.email = email;
+                        payload.phone = phone;
+                        payload.email = email || '';
                     } else {
                         payload.role = document.getElementById('role').value;
                     }
@@ -1770,7 +1917,7 @@
                                 <td class="px-2 py-1.5 fw-bold text-secondary">${r.row}</td>
                                 <td class="px-2 py-1.5 fw-semibold text-main">
                                     <div>${QCMS.escapeHtml(r.username || '—')}</div>
-                                    <div class="text-xxs text-muted">${QCMS.escapeHtml(r.email || '')}</div>
+                                    <div class="text-xxs text-muted">${QCMS.escapeHtml(r.phone || '')}</div>
                                 </td>
                                 <td class="px-2 py-1.5">
                                     <div>${QCMS.escapeHtml(r.plant_location || '—')}</div>
@@ -2064,6 +2211,5 @@
             }
         });
     </script>
-    </div>
 </body>
 </html>

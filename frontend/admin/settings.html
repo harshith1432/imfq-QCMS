@@ -83,6 +83,14 @@
                                         <i class="link-icon" data-lucide="shield-check"></i>
                                         <span>Role Access Control</span>
                                     </button>
+                                    <button type="button" class="sidebar-link" data-target="timeline" onclick="settingsManager.switchTab('timeline', this)">
+                                        <i class="link-icon" data-lucide="clock"></i>
+                                        <span>Project Timeline & Inactivity</span>
+                                    </button>
+                                    <button type="button" class="sidebar-link" data-target="signoff-hierarchy" onclick="settingsManager.switchTab('signoff-hierarchy', this)">
+                                        <i class="link-icon" data-lucide="file-check-2"></i>
+                                        <span>Sign-Off Hierarchy</span>
+                                    </button>
                                 </nav>
                             </div>
 
@@ -501,6 +509,133 @@
                                                 </table>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Project Timeline & Inactivity Section -->
+                        <div class="settings-pane" id="pane-timeline">
+                            <div class="glass-card ds-card mb-4">
+                                <div class="ds-card-header p-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h5 class="mb-1 fw-bold text-main">Configuring Timeline of Projects</h5>
+                                        <p class="text-xs text-muted mb-0">Define organization-wide thresholds for project activity. Projects exceeding this idle day limit will automatically fall back to Inactive stage status.</p>
+                                    </div>
+                                    <button class="ds-btn ds-btn-primary ds-btn-sm" type="button" onclick="settingsManager.saveTimelineSettings()">
+                                        <i data-lucide="save" style="width:14px;height:14px;" class="me-1"></i> Save Timeline Settings
+                                    </button>
+                                </div>
+                                <div class="ds-card-body p-4">
+                                    <div class="v-stack gap-4">
+                                        <div class="row g-4 align-items-center">
+                                            <div class="col-md-7">
+                                                <label class="fw-bold text-sm text-main mb-1 d-block">Project Inactivity Threshold (Days) <span class="text-danger">*</span></label>
+                                                <p class="text-xs text-muted mb-0">If a project receives no updates, stage submissions, or activity log entries for this number of days, it will automatically fall back to the <strong>Inactive / Stalled</strong> status across organization dashboards and project repository metrics.</p>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <input type="number" class="ds-input font-bold" id="project_inactivity_days" min="1" max="365" value="30" style="max-width: 140px; text-align: center; font-size: 15px; font-weight: 700;">
+                                                    <span class="text-xs fw-semibold text-secondary">Days Limit</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Quick Presets -->
+                                        <div class="pt-3 border-top">
+                                            <label class="text-xs fw-bold text-secondary uppercase tracking-wider mb-2 d-block">Quick Threshold Presets</label>
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <button type="button" class="ds-btn ds-btn-sm ds-btn-outline" onclick="settingsManager.setInactivityPreset(15)">15 Days</button>
+                                                <button type="button" class="ds-btn ds-btn-sm ds-btn-outline" onclick="settingsManager.setInactivityPreset(30)">30 Days (Default)</button>
+                                                <button type="button" class="ds-btn ds-btn-sm ds-btn-outline" onclick="settingsManager.setInactivityPreset(60)">60 Days</button>
+                                                <button type="button" class="ds-btn ds-btn-sm ds-btn-outline" onclick="settingsManager.setInactivityPreset(90)">90 Days</button>
+                                                <button type="button" class="ds-btn ds-btn-sm ds-btn-outline" onclick="settingsManager.setInactivityPreset(180)">180 Days</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Summary Info Banner -->
+                                        <div class="alert alert-primary py-3 px-4 rounded-3 text-xs mb-0 d-flex align-items-center gap-3" style="background: rgba(37, 99, 235, 0.06); border: 1px solid rgba(37, 99, 235, 0.18);">
+                                            <i data-lucide="clock" style="width: 22px; height: 22px; color: var(--ds-primary);" class="flex-shrink-0"></i>
+                                            <div>
+                                                <strong class="d-block text-main">Organization Level Automation</strong>
+                                                <span>Projects idle for longer than this set day limit will be categorized as <strong>Inactive Projects</strong> in real-time KPI cards across the Project Repository (`/projects/projects-repository.html`) and Facilitator Dashboards.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Report Sign-Off Hierarchy & Approvers Section -->
+                        <div class="settings-pane" id="pane-signoff-hierarchy">
+                            <div class="glass-card ds-card mb-4">
+                                <div class="ds-card-header p-4 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div style="width:36px;height:36px;border-radius:10px;background:rgba(37,99,235,0.1);display:flex;align-items:center;justify-content:center;">
+                                                <i data-lucide="file-check-2" style="width:18px;height:18px;color:#2563eb;"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="mb-0 fw-bold">Report Sign-Off Hierarchy & Management Approvers</h5>
+                                                <p class="text-xs text-muted mb-0">Configure the signatory roles that appear in Section 9 ("Closure Approval & Quality Gate Sign-Off") of exported QC Story PDF reports.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button class="ds-btn ds-btn-outline ds-btn-sm" type="button" onclick="settingsManager.addSignoffRole()">
+                                            <i data-lucide="plus" style="width:14px;height:14px;" class="me-1"></i> Add Sign-Off Role
+                                        </button>
+                                        <button class="ds-btn ds-btn-secondary ds-btn-sm" type="button" onclick="settingsManager.resetSignoffHierarchyDefaults()">
+                                            <i data-lucide="rotate-ccw" style="width:14px;height:14px;" class="me-1"></i> Reset Defaults
+                                        </button>
+                                        <button class="ds-btn ds-btn-primary ds-btn-sm px-3" type="button" onclick="settingsManager.saveSignoffHierarchy()">
+                                            <i data-lucide="check" style="width:14px;height:14px;" class="me-1"></i> Save Hierarchy
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="ds-card-body p-4">
+                                    <!-- Informational Notice -->
+                                    <div class="alert alert-info py-3 px-4 rounded-3 text-xs mb-4 d-flex align-items-center gap-3" style="background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.18);">
+                                        <i data-lucide="info" style="width: 22px; height: 22px; color: var(--ds-primary);" class="flex-shrink-0"></i>
+                                        <div>
+                                            <strong class="d-block text-main">Multi-Department Quality Gate Sign-Off</strong>
+                                            <span>The roles configured below will automatically populate the sign-off table at the end of the QC Story Closure PDF report. Project Core Roles (Team Leader, Facilitator, Reviewer, and Team Members) are automatically linked to active project personnel, while Custom Management Roles (e.g. HR, Finance, Plant Head) provide dedicated approval blocks for organizational sign-off.</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Hierarchy Table / List -->
+                                    <div class="table-responsive border rounded-3 mb-3">
+                                        <table class="table table-hover align-middle mb-0" id="signoffHierarchyTable">
+                                            <thead class="table-light text-xs text-uppercase text-secondary">
+                                                <tr>
+                                                    <th style="width: 50px;" class="text-center">#</th>
+                                                    <th style="width: 240px;">Signatory Role</th>
+                                                    <th style="width: 200px;">Department / Section</th>
+                                                    <th style="width: 220px;">Designated Assignee / Name (Optional)</th>
+                                                    <th style="width: 120px;" class="text-center">Role Type</th>
+                                                    <th style="width: 90px;" class="text-center">Active</th>
+                                                    <th style="width: 60px;" class="text-center">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="signoffHierarchyTableBody">
+                                                <tr>
+                                                    <td colspan="7" class="text-center py-4 text-muted">
+                                                        <div class="spinner-border spinner-border-sm text-primary mb-1"></div>
+                                                        <div class="text-xs">Loading sign-off hierarchy...</div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 border-top">
+                                        <div class="text-xs text-muted">
+                                            <i data-lucide="shield-check" style="width:14px;height:14px;" class="text-success me-1"></i>
+                                            All active roles will be formatted onto Page 2 of the standardized QC Story report.
+                                        </div>
+                                        <button class="ds-btn ds-btn-primary" type="button" onclick="settingsManager.saveSignoffHierarchy()">
+                                            <i data-lucide="check" style="width:14px;height:14px;" class="me-1"></i> Save Sign-Off Hierarchy
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -4187,6 +4322,7 @@ console.log(data);
             if (target === 'manual') this.renderDynamic8SUserManual();
             if (target === 'billing') this.loadBillingHistory();
             if (target === 'rbac') this.loadRolePermissions();
+            if (target === 'signoff-hierarchy') this.loadSignoffHierarchy();
             if (target === 'audit') { window.location.href = '/admin/audit-logs.html'; return; }
             if (target === 'compliance') {
                 setTimeout(() => {
@@ -4194,6 +4330,160 @@ console.log(data);
                         window.ComplianceEnterprise.init();
                     }
                 }, 50);
+            }
+        },
+
+        signoffHierarchy: [],
+
+        async loadSignoffHierarchy() {
+            const tbody = document.getElementById('signoffHierarchyTableBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary mb-1"></div>
+                        <div class="text-xs">Loading sign-off hierarchy...</div>
+                    </td>
+                </tr>`;
+
+            try {
+                const res = await api.get('/admin/signoff-hierarchy');
+                if (res && Array.isArray(res.hierarchy)) {
+                    this.signoffHierarchy = res.hierarchy;
+                } else {
+                    this.signoffHierarchy = this.getDefaultSignoffHierarchy();
+                }
+            } catch (err) {
+                console.warn('[SignoffHierarchy] Failed to load hierarchy from API:', err);
+                this.signoffHierarchy = this.getDefaultSignoffHierarchy();
+            }
+
+            this.renderSignoffHierarchy();
+        },
+
+        getDefaultSignoffHierarchy() {
+            return [
+                { id: "team_leader", role: "Team Leader", type: "system", enabled: true, name: "", department: "", notes: "Auto-filled from assigned Project Team Leader" },
+                { id: "facilitator", role: "QCC Facilitator", type: "system", enabled: true, name: "", department: "", notes: "Auto-filled from assigned QCC Facilitator" },
+                { id: "reviewer", role: "Project Reviewer", type: "system", enabled: true, name: "", department: "", notes: "Auto-filled from assigned Reviewer / Technical Lead" },
+                { id: "team_members", role: "Team Members", type: "system", enabled: true, name: "", department: "", notes: "Auto-filled from registered project team roster" },
+                { id: "custom_hr", role: "HR Manager / Representative", type: "custom", enabled: true, name: "", department: "Human Resources", notes: "Mandatory sign-off for attendance, rewards & recognition" },
+                { id: "custom_fin", role: "Finance / Costing Head", type: "custom", enabled: true, name: "", department: "Finance & Accounts", notes: "Cost saving validation & ROI sign-off" },
+                { id: "custom_qa", role: "Plant / Quality Head", type: "custom", enabled: true, name: "", department: "Quality Assurance", notes: "Final quality gate & operational sign-off" }
+            ];
+        },
+
+        renderSignoffHierarchy() {
+            const tbody = document.getElementById('signoffHierarchyTableBody');
+            if (!tbody) return;
+
+            if (!this.signoffHierarchy || this.signoffHierarchy.length === 0) {
+                this.signoffHierarchy = this.getDefaultSignoffHierarchy();
+            }
+
+            tbody.innerHTML = this.signoffHierarchy.map((item, idx) => {
+                const isSystem = item.type === 'system';
+                const isEnabled = item.enabled !== false;
+                const badge = isSystem 
+                    ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 text-xxs font-monospace">Core System</span>` 
+                    : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 text-xxs font-monospace">Custom Role</span>`;
+
+                const roleInput = isSystem 
+                    ? `<div class="fw-bold text-xs text-main">${QCMS.escapeHtml(item.role)}</div><div class="text-xxs text-muted">${QCMS.escapeHtml(item.notes || '')}</div>` 
+                    : `<input type="text" class="form-control form-control-sm text-xs fw-semibold" placeholder="e.g. HR Manager" value="${QCMS.escapeHtml(item.role || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'role', this.value)">`;
+
+                const deptInput = isSystem 
+                    ? `<span class="text-xs text-muted">Auto (Project Dept)</span>` 
+                    : `<input type="text" class="form-control form-control-sm text-xs" placeholder="e.g. Human Resources" value="${QCMS.escapeHtml(item.department || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'department', this.value)">`;
+
+                const nameInput = isSystem 
+                    ? `<span class="text-xs text-muted">Auto (Project Assignee)</span>` 
+                    : `<input type="text" class="form-control form-control-sm text-xs" placeholder="Optional: Designated Person" value="${QCMS.escapeHtml(item.name || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'name', this.value)">`;
+
+                const deleteBtn = isSystem 
+                    ? `<button class="btn btn-sm btn-ghost p-1 text-muted" disabled title="System Core Role cannot be removed"><i data-lucide="lock" style="width:14px;height:14px;"></i></button>` 
+                    : `<button class="btn btn-sm btn-ghost text-danger p-1" onclick="settingsManager.removeSignoffRole(${idx})" title="Remove Sign-off Role"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>`;
+
+                return `
+                    <tr class="${isEnabled ? '' : 'opacity-50'}">
+                        <td class="text-center fw-bold text-xs text-muted">${idx + 1}</td>
+                        <td>${roleInput}</td>
+                        <td>${deptInput}</td>
+                        <td>${nameInput}</td>
+                        <td class="text-center">${badge}</td>
+                        <td class="text-center">
+                            <div class="form-check form-switch d-inline-block m-0">
+                                <input class="form-check-input" type="checkbox" ${isEnabled ? 'checked' : ''} onchange="settingsManager.toggleSignoffActive(${idx}, this.checked)">
+                            </div>
+                        </td>
+                        <td class="text-center">${deleteBtn}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (window.lucide) lucide.createIcons({ container: tbody });
+        },
+
+        updateSignoffField(idx, field, val) {
+            if (this.signoffHierarchy[idx]) {
+                this.signoffHierarchy[idx][field] = val;
+            }
+        },
+
+        toggleSignoffActive(idx, isChecked) {
+            if (this.signoffHierarchy[idx]) {
+                this.signoffHierarchy[idx].enabled = isChecked;
+                this.renderSignoffHierarchy();
+            }
+        },
+
+        addSignoffRole() {
+            if (!this.signoffHierarchy) this.signoffHierarchy = this.getDefaultSignoffHierarchy();
+            this.signoffHierarchy.push({
+                id: `custom_${Date.now()}`,
+                role: "New Sign-Off Approver",
+                department: "General Management",
+                name: "",
+                type: "custom",
+                enabled: true,
+                notes: "Custom organizational sign-off block"
+            });
+            this.renderSignoffHierarchy();
+        },
+
+        removeSignoffRole(idx) {
+            if (!this.signoffHierarchy || !this.signoffHierarchy[idx]) return;
+            if (this.signoffHierarchy[idx].type === 'system') {
+                if (window.QCMS && QCMS.toast) QCMS.toast('Core system roles cannot be deleted', 'warning');
+                return;
+            }
+            this.signoffHierarchy.splice(idx, 1);
+            this.renderSignoffHierarchy();
+        },
+
+        async resetSignoffHierarchyDefaults() {
+            if (!confirm('Reset sign-off hierarchy configuration back to default system roles & approvers?')) return;
+            try {
+                const res = await api.put('/admin/signoff-hierarchy', { reset: true });
+                this.signoffHierarchy = (res && res.hierarchy) ? res.hierarchy : this.getDefaultSignoffHierarchy();
+                this.renderSignoffHierarchy();
+                if (window.QCMS && QCMS.toast) QCMS.toast('Sign-off hierarchy reset to system defaults', 'success');
+            } catch (err) {
+                if (window.QCMS && QCMS.toast) QCMS.toast(err.message || 'Failed to reset hierarchy', 'error');
+            }
+        },
+
+        async saveSignoffHierarchy() {
+            try {
+                const res = await api.put('/admin/signoff-hierarchy', { hierarchy: this.signoffHierarchy });
+                if (window.QCMS && QCMS.toast) {
+                    QCMS.toast(res.message || 'Sign-off hierarchy configuration saved successfully!', 'success');
+                }
+            } catch (err) {
+                if (window.QCMS && QCMS.toast) {
+                    QCMS.toast(err.message || 'Failed to save sign-off hierarchy', 'error');
+                }
             }
         },
 
@@ -4530,6 +4820,23 @@ console.log(data);
             }
         },
 
+        setInactivityPreset(days) {
+            const el = document.getElementById('project_inactivity_days');
+            if (el) el.value = days;
+            const badge = document.getElementById('unsaved-badge');
+            if (badge) badge.style.display = 'block';
+        },
+
+        async saveTimelineSettings() {
+            const val = parseInt(document.getElementById('project_inactivity_days')?.value, 10) || 30;
+            try {
+                await api.put('/admin/org-settings', { project_inactivity_days: val });
+                QCMS.toast(`Project inactivity threshold set to ${val} days`, 'success');
+            } catch (e) {
+                QCMS.toast('Failed to save timeline settings', 'error');
+            }
+        },
+
         async saveAllSecuritySettings() {
             const secPayload = {
                 maintenance_mode: document.getElementById('maintenance_mode')?.checked || false
@@ -4604,6 +4911,9 @@ console.log(data);
                     
                     // Security & Privacy
                     const mm = document.getElementById('maintenance_mode'); if (mm) mm.checked = !!settings.maintenance_mode;
+                    
+                    // Project Timeline & Inactivity
+                    const pid = document.getElementById('project_inactivity_days'); if (pid) pid.value = settings.project_inactivity_days || 30;
                     
                     // Compliance
                     const standards = settings.compliance_standards || [];
@@ -4960,26 +5270,37 @@ ET`;
             const table = document.getElementById('billing-history-table');
             try {
                 const history = await api.get('/admin/billing-history');
-                if (history.length === 0) {
+                if (!Array.isArray(history) || history.length === 0) {
                     table.innerHTML = '<tr><td colspan="6" class="text-center py-4 ds-text-secondary">No payment history found.</td></tr>';
                     return;
                 }
                 
-                table.innerHTML = history.map(p => `
-                    <tr>
-                        <td class="text-sm">${new Date(p.date).toLocaleDateString()}</td>
-                        <td class="text-sm font-mono">${p.transaction_id || 'N/A'}</td>
-                        <td class="text-sm fw-bold">${p.currency} ${p.amount.toFixed(2)}</td>
-                        <td class="text-sm">${p.plan}</td>
-                        <td><span class="badge bg-success-subtle text-success">${p.status}</span></td>
-                        <td>
-                            <button class="ds-btn ds-btn-sm ds-btn-outline" onclick="settingsManager.downloadInvoice('${p.transaction_id || 'TXN-001'}', '${p.amount || 0}', '${p.currency || 'INR'}', '${p.plan || 'Professional'}', '${new Date(p.date).toLocaleDateString()}')" title="Download Invoice PDF">
-                                <i data-lucide="download" style="width:14px;"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-                lucide.createIcons();
+                table.innerHTML = history.map(p => {
+                    const isPayable = p.is_payable || ['Sent', 'SENT', 'Overdue', 'OVERDUE', 'Issued'].includes(p.status);
+                    const statusBadge = isPayable 
+                        ? `<span class="badge bg-warning-subtle text-warning border border-warning-subtle">Unpaid (${p.status})</span>`
+                        : `<span class="badge bg-success-subtle text-success">${p.status}</span>`;
+
+                    const actionBtn = isPayable
+                        ? `<button class="ds-btn ds-btn-sm ds-btn-primary fw-bold py-1 px-2.5 text-xs text-white shadow-sm" onclick="openCheckoutModal('${p.invoice_id || ''}', ${p.amount})" title="Pay Outstanding Invoice">
+                               <i data-lucide="credit-card" style="width:13px;height:13px;" class="me-1"></i> Pay Now
+                           </button>`
+                        : `<button class="ds-btn ds-btn-sm ds-btn-outline" onclick="settingsManager.downloadInvoice('${p.transaction_id || 'TXN-001'}', '${p.amount || 0}', '${p.currency || 'INR'}', '${p.plan || 'Professional'}', '${new Date(p.date).toLocaleDateString()}')" title="Download Invoice PDF">
+                               <i data-lucide="download" style="width:14px;"></i>
+                           </button>`;
+
+                    return `
+                        <tr>
+                            <td class="text-sm">${new Date(p.date).toLocaleDateString()}</td>
+                            <td class="text-sm font-mono">${p.transaction_id || 'N/A'}</td>
+                            <td class="text-sm fw-bold">${p.currency || 'INR'} ${p.amount.toFixed(2)}</td>
+                            <td class="text-sm">${p.plan || 'Pay-As-You-Go'}</td>
+                            <td>${statusBadge}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                }).join('');
+                if (window.lucide) lucide.createIcons();
             } catch (e) {
                 table.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Failed to load history.</td></tr>';
             }
@@ -6037,9 +6358,11 @@ ET`;
 
             html += plans.map((p, idx) => {
                 const planKey = String(p.id || p.name);
-                const priceNum = parseFloat(p.base_price ?? p.price ?? 0);
+                const isPayg = (p.plan_type && p.plan_type.toLowerCase().includes('pay')) || p.pricing_model === 'pay_as_you_go';
+                const priceNum = isPayg ? parseFloat(p.payg_rules?.base_fee ?? 999) : parseFloat(p.base_price ?? p.price ?? 0);
                 const priceFmt = priceNum ? priceNum.toLocaleString('en-IN') : '0';
-                const usersFmt = p.max_users >= 99999 ? 'Unlimited Users (∞)' : `Up to ${p.max_users} Users`;
+                const usersFmt = isPayg ? `Metered (${p.payg_rules?.user_free_tier || 0} Free Seats)` : (p.max_users >= 99999 ? 'Unlimited Users (∞)' : `Up to ${p.max_users} Users`);
+                const storageFmt = isPayg ? `Metered (${p.payg_rules?.storage_free_tier_gb || 0} GB Free)` : `${p.storage_limit_gb || 10} GB Storage`;
                 const isChecked = idx === 0 ? 'checked' : '';
                 const initialClass = idx === 0 ? 'border-primary bg-primary-subtle' : '';
 
@@ -6049,13 +6372,14 @@ ET`;
                         <div class="fw-bold d-flex align-items-center gap-2 text-main">
                             ${QCMS.escapeHtml(p.name || p.plan_name)}
                             ${p.code ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size:10px;padding:1px 5px;font-family:monospace;">${QCMS.escapeHtml(p.code)}</span>` : ''}
+                            ${isPayg ? `<span class="badge" style="background:rgba(139,92,246,0.15);color:#7c3aed;font-size:10px;font-weight:700;">Pay-As-You-Go</span>` : ''}
                         </div>
                         <div class="text-xs text-muted mt-1">
-                            ${usersFmt} · ${p.storage_limit_gb || 10} GB Storage
+                            ${usersFmt} · ${storageFmt}
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-3">
-                        <div class="fw-bold fs-5 text-main">₹${priceFmt}<span class="text-xs text-muted">/${p.billing_cycle || 'mo'}</span></div>
+                        <div class="fw-bold fs-5 text-main">₹${priceFmt}<span class="text-xs text-muted">/${isPayg ? 'mo base' : (p.billing_cycle || 'mo')}</span></div>
                         <input class="form-check-input" type="radio" name="planSelect" id="planRadio_${planKey}" value="${QCMS.escapeHtml(p.name || p.plan_name)}" ${isChecked}>
                     </div>
                 </div>`;
@@ -6075,6 +6399,7 @@ ET`;
 
             selectedPlanObj = plan;
             const planKey = String(plan.id || plan.name);
+            const isPayg = (plan.plan_type && plan.plan_type.toLowerCase().includes('pay')) || plan.pricing_model === 'pay_as_you_go';
 
             // Update UI card highlight & radio button
             document.querySelectorAll('#checkoutPlanListContainer .plan-card-item').forEach(card => {
@@ -6087,7 +6412,7 @@ ET`;
             if (radio) radio.checked = true;
 
             // Calculate details & totals
-            const price = parseFloat(plan.base_price ?? plan.price ?? 0);
+            const price = isPayg ? parseFloat(plan.payg_rules?.base_fee ?? 999) : parseFloat(plan.base_price ?? plan.price ?? 0);
             currentPlanPrice = price;
             const tax = price * 0.18;
             paymentTotal = price + tax;
@@ -6098,7 +6423,7 @@ ET`;
                 document.getElementById('summaryPlanCode').innerText = plan.code ? `(${plan.code})` : '';
             }
             if (document.getElementById('summaryBillingCycle')) {
-                document.getElementById('summaryBillingCycle').innerText = plan.billing_cycle || 'Monthly';
+                document.getElementById('summaryBillingCycle').innerText = isPayg ? 'Monthly (Usage-Based)' : (plan.billing_cycle || 'Monthly');
             }
             document.getElementById('summaryAmount').innerText = `₹${price.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             document.getElementById('summaryTax').innerText = `₹${tax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
@@ -6106,13 +6431,13 @@ ET`;
 
             // Update Full Details (Users, Storage, Modules, Description) in Summary Panel
             if (document.getElementById('summaryUsers')) {
-                document.getElementById('summaryUsers').innerText = plan.max_users >= 99999 ? 'Unlimited (∞)' : `${plan.max_users} users`;
+                document.getElementById('summaryUsers').innerText = isPayg ? `Metered (₹${plan.payg_rules?.user_rate || 50}/user, ${plan.payg_rules?.user_free_tier || 0} free)` : (plan.max_users >= 99999 ? 'Unlimited (∞)' : `${plan.max_users} users`);
             }
             if (document.getElementById('summaryStorage')) {
-                document.getElementById('summaryStorage').innerText = `${plan.storage_limit_gb || 10} GB`;
+                document.getElementById('summaryStorage').innerText = isPayg ? `Metered (₹${plan.payg_rules?.storage_rate_per_gb || 20}/GB, ${plan.payg_rules?.storage_free_tier_gb || 0} GB free)` : `${plan.storage_limit_gb || 10} GB`;
             }
             if (document.getElementById('summaryDesc')) {
-                document.getElementById('summaryDesc').innerText = plan.description || 'Configured enterprise SaaS tier.';
+                document.getElementById('summaryDesc').innerText = isPayg ? 'Usage-based monthly metered billing with itemized invoice delivery.' : (plan.description || 'Configured enterprise SaaS tier.');
             }
 
             const modulesContainer = document.getElementById('summaryModulesList');
@@ -6343,10 +6668,13 @@ ET`;
             });
         }
 
-        async function openCheckoutModal() {
+        async function openCheckoutModal(invoiceId = null, prefilledAmount = null) {
             if (!await _checkGstPanBeforeCheckout()) return;
             selectedGateway = null;
             activeGateways = {};
+            window._checkoutTargetInvoiceId = invoiceId;
+            window._checkoutPrefilledAmount = prefilledAmount;
+
             const pmContainer = document.getElementById('paymentMethodsContainer');
             if (pmContainer) pmContainer.innerHTML = '<div class="text-muted text-sm py-3"><i data-lucide="loader-2" class="me-2 spinner"></i>Loading available payment gateways...</div>';
             hideProofSubmissionForm();
@@ -6354,6 +6682,11 @@ ET`;
             modal.show();
             await fetchDynamicCheckoutPlans();
             await fetchPaymentGateways();
+
+            if (prefilledAmount) {
+                const totalEl = document.getElementById('summaryTotal');
+                if (totalEl) totalEl.innerText = '₹' + Number(prefilledAmount).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            }
         }
 
         async function initiatePayment() {
@@ -6492,9 +6825,35 @@ ET`;
         
         async function fetchOfflinePaymentStatus() {
             try {
-                const res = await api.get('/billing/offline-payment/status');
                 const alertBox = document.getElementById('offlinePaymentStatusAlert');
                 if (!alertBox) return;
+
+                // 1. Check for Pending Pay-As-You-Go Bill / Unpaid Invoice
+                const paygBill = await api.get('/admin/pending-payg-bill').catch(() => null);
+                if (paygBill && paygBill.has_pending) {
+                    alertBox.innerHTML = `
+                        <div class="p-4 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 mb-4 text-dark shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="fw-bold text-sm text-primary">
+                                    <i data-lucide="receipt" class="me-1.5"></i> Outstanding Monthly Pay-As-You-Go Bill
+                                </div>
+                                <span class="badge bg-danger text-white text-xxs px-2 py-1">Payment Required</span>
+                            </div>
+                            <div class="text-xs text-secondary mb-3">
+                                Your monthly metered invoice <strong>${QCMS.escapeHtml(paygBill.invoice_number)}</strong> for <strong>₹${paygBill.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong> (${paygBill.period_start || ''} to ${paygBill.period_end || ''}) has been generated and is ready for payment.
+                            </div>
+                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm py-2 px-4 fw-bold text-white shadow-sm" onclick="openCheckoutModal('${paygBill.invoice_id}', ${paygBill.amount})">
+                                    <i data-lucide="credit-card" class="me-1.5"></i> Pay Invoice Now (₹${paygBill.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})})
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                const res = await api.get('/billing/offline-payment/status');
 
                 if (res && res.status === 'success' && res.proof) {
                     const p = res.proof;

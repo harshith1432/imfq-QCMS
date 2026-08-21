@@ -119,8 +119,10 @@ const api = {
             const headers = { ...options.headers };
 
             // Attach Idempotency-Key for write operations
-            if (isWriteMethod && !headers['X-Idempotency-Key']) {
-                headers['X-Idempotency-Key'] = options.idempotencyKey || this.generateIdempotencyKey();
+            if (isWriteMethod) {
+                const key = options.idempotencyKey || this.generateIdempotencyKey();
+                if (!headers['Idempotency-Key']) headers['Idempotency-Key'] = key;
+                if (!headers['X-Idempotency-Key']) headers['X-Idempotency-Key'] = key;
             }
 
             // Only set Content-Type if not provided and not FormData
@@ -470,3 +472,88 @@ window.printElementContent = function(elementId, title = 'Document') {
     `);
     doc.close();
 };
+
+/**
+ * Universal QCMS Pagination Component
+ */
+if (typeof window !== 'undefined') {
+    window.createStandardPagination = function({
+        containerId,
+        entityName = 'records',
+        totalItems = 0,
+        currentPage = 1,
+        pageSize = 5,
+        pageSizeOptions = [5, 10, 25, 50, 100],
+        onPageChange,
+        onPageSizeChange
+    }) {
+        const container = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
+        if (!container) return;
+
+        const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const endItem = Math.min(currentPage * pageSize, totalItems);
+        const isPrevDisabled = currentPage <= 1;
+        const isNextDisabled = currentPage >= totalPages;
+
+        const elementId = typeof containerId === 'string' ? containerId : (container.id || 'qcms_pag');
+
+        container.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 pb-2 px-3 border-top mt-2" style="font-size: 13px; color: var(--ds-text-secondary, #64748b);">
+                <!-- Left: Showing Info -->
+                <div class="text-muted fw-medium text-xs">
+                    Showing <strong class="text-dark fw-bold">${startItem.toLocaleString()}-${endItem.toLocaleString()}</strong> of <strong class="text-dark fw-bold">${totalItems.toLocaleString()}</strong> ${entityName}
+                </div>
+
+                <!-- Right: Controls Group -->
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <!-- Page Size Dropdown -->
+                    <div class="d-flex align-items-center gap-1">
+                        <select class="form-select form-select-sm shadow-none border rounded-2 px-2 py-1" style="width: auto; font-size: 12.5px; height: 32px; font-weight: 500; cursor: pointer; background-color: var(--ds-input-bg, #fff);" id="${elementId}_pageSize">
+                            ${pageSizeOptions.map(size => `<option value="${size}" ${size === pageSize ? 'selected' : ''}>${size}</option>`).join('')}
+                        </select>
+                        <span class="text-muted text-xs ms-1">per page</span>
+                    </div>
+
+                    <!-- Prev / Page / Next Buttons -->
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                                id="${elementId}_prevBtn" ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+                            <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev
+                        </button>
+                        
+                        <span class="fw-semibold text-dark text-xs px-1" style="white-space: nowrap;">
+                            Page ${currentPage} of ${totalPages}
+                        </span>
+
+                        <button class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                                id="${elementId}_nextBtn" ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+                            Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (window.lucide) window.lucide.createIcons();
+
+        // Event Bindings
+        document.getElementById(`${elementId}_pageSize`)?.addEventListener('change', (e) => {
+            if (typeof onPageSizeChange === 'function') {
+                onPageSizeChange(parseInt(e.target.value, 10));
+            }
+        });
+
+        document.getElementById(`${elementId}_prevBtn`)?.addEventListener('click', () => {
+            if (currentPage > 1 && typeof onPageChange === 'function') {
+                onPageChange(currentPage - 1);
+            }
+        });
+
+        document.getElementById(`${elementId}_nextBtn`)?.addEventListener('click', () => {
+            if (currentPage < totalPages && typeof onPageChange === 'function') {
+                onPageChange(currentPage + 1);
+            }
+        });
+    };
+}

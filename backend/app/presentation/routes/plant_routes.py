@@ -27,12 +27,33 @@ def get_plants():
         if not current_user:
             return jsonify({"status": "error", "message": "User context not found"}), 404
 
+        from app.infrastructure.database.models.models import Project, ProjectMember
         plants = Plant.query.filter_by(org_id=current_user.org_id).order_by(Plant.name).all()
+        all_org_users = User.query.filter_by(org_id=current_user.org_id).all()
+        all_depts = Department.query.filter_by(org_id=current_user.org_id).all()
+
+        # Collect distinct user IDs participating in QC projects
+        projects = Project.query.filter_by(org_id=current_user.org_id).all()
+        project_ids = [pr.id for pr in projects]
+        qc_user_ids = set()
+        for pr in projects:
+            if pr.creator_id: qc_user_ids.add(pr.creator_id)
+            if pr.team_leader_id: qc_user_ids.add(pr.team_leader_id)
+            if pr.facilitator_id: qc_user_ids.add(pr.facilitator_id)
+            if pr.reviewer_id: qc_user_ids.add(pr.reviewer_id)
+
+        if project_ids:
+            members = ProjectMember.query.filter(ProjectMember.project_id.in_(project_ids)).all()
+            for m in members:
+                qc_user_ids.add(m.user_id)
+
+        total_org_qc_users = len([u for u in all_org_users if u.id in qc_user_ids])
         
         result = []
         for p in plants:
-            dept_count = Department.query.filter_by(plant_id=p.id, org_id=current_user.org_id).count()
-            user_count = User.query.filter_by(plant_id=p.id, org_id=current_user.org_id).count()
+            p_depts = [d for d in all_depts if d.plant_id == p.id]
+            p_users = [u for u in all_org_users if u.plant_id == p.id]
+            p_qc_users = [u for u in p_users if u.id in qc_user_ids]
             result.append({
                 "id": p.id,
                 "org_id": p.org_id,
@@ -40,11 +61,19 @@ def get_plants():
                 "code": p.code or "",
                 "location": p.location or "",
                 "created_at": p.created_at.strftime('%Y-%m-%d %H:%M:%S') if p.created_at else "",
-                "department_count": dept_count,
-                "user_count": user_count
+                "department_count": len(p_depts),
+                "user_count": len(p_users),
+                "employee_count": len(p_users),
+                "qc_user_count": len(p_qc_users),
+                "qc_employee_count": len(p_qc_users)
             })
             
-        return jsonify({"status": "success", "plants": result}), 200
+        return jsonify({
+            "status": "success", 
+            "plants": result,
+            "total_employees": len(all_org_users),
+            "total_qc_employees": total_org_qc_users
+        }), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -67,6 +96,16 @@ def create_plant():
 
         if not name:
             return jsonify({"status": "error", "message": "Plant location name is required"}), 400
+
+        # Check SaaS Subscription Plan Location Limit
+        from app.domain.services.subscription_service import SubscriptionManager
+        can_add, limit_msg = SubscriptionManager.check_location_limit(current_user.org_id)
+        if not can_add:
+            return jsonify({
+                "status": "error",
+                "message": limit_msg,
+                "error_code": "LOCATION_LIMIT_REACHED"
+            }), 403
 
         # Case-insensitive duplicate name check within the same organisation
         from sqlalchemy import func as sqlfunc

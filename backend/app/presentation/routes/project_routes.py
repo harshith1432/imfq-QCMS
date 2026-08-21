@@ -927,6 +927,14 @@ def submit_stage1(id):
         target_table="project_stage_tracker", target_id=tracker.id if tracker else None
     ))
     db.session.commit()
+
+    # Trigger Reviewer Email Notification
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.trigger_project_review_requested_notification(project.id, 1, user_id)
+    except Exception as e:
+        print(f"[EmailEngine] Stage 1 review notification error: {e}")
+
     return jsonify({
         "msg": "Stage 1 submitted for review successfully.",
         "message": "Stage 1 submitted for review successfully.",
@@ -1307,6 +1315,14 @@ def submit_stage_generic(id, stage_id):
         target_table="project_stage_tracker", target_id=tracker.id if tracker else None
     ))
     db.session.commit()
+
+    # Trigger Reviewer Email Notification for Stage 8
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.trigger_project_review_requested_notification(project.id, 8, user_id)
+    except Exception as e:
+        print(f"[EmailEngine] Stage 8 review notification error: {e}")
+
     return jsonify({"msg": "Stage 8 submitted for Reviewer review."}), 200
 
 @project_bp.route('/<int:id>/request-facilitator-assistance', methods=['POST'])
@@ -1375,6 +1391,13 @@ def request_facilitator_assistance(id):
         ip_address=request.remote_addr, user_agent=request.user_agent.string
     ))
     db.session.commit()
+
+    # Trigger Facilitator Email Notification
+    try:
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+        EmailNotificationEngine.trigger_facilitator_guidance_notification(project.id, user_id, message, stage_id)
+    except Exception as e:
+        print(f"[EmailEngine] Facilitator guidance notification error: {e}")
 
     return jsonify({"msg": "Assistance request sent to facilitator successfully."}), 200
 

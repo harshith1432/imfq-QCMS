@@ -27,11 +27,20 @@ def get_user_org_filter(user, model=AuditLog):
         else:
             return model.org_id == -1
 
+def _get_user_from_jwt():
+    current_user_id = get_jwt_identity()
+    if current_user_id is None:
+        return None
+    try:
+        current_user_id = int(current_user_id)
+    except Exception:
+        pass
+    return db.session.get(User, current_user_id)
+
 def audit_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        current_user_id = get_jwt_identity()
-        user = db.session.get(User, current_user_id)
+        user = _get_user_from_jwt()
         if not user or not user.role:
             return jsonify({"message": "Audit or compliance administrator permissions required"}), 403
         role_name = user.role.name
@@ -307,8 +316,7 @@ def log_audit_event(org_id, user_id, action, target_table=None, target_id=None, 
 @jwt_required()
 @audit_required
 def get_audit_dashboard():
-    current_user_id = get_jwt_identity()
-    user = db.session.get(User, current_user_id)
+    user = _get_user_from_jwt()
     
     # Basic filters
     org_filter = get_user_org_filter(user, AuditLog)
@@ -422,19 +430,158 @@ def get_audit_dashboard():
     
     return jsonify({"status": "success", "data": kpis}), 200
 
+
+def extract_audit_diff_and_summary(log):
+    """
+    Extracts past data (before/old) vs current data (after/new) along with a human-readable change summary.
+    Handles before_data/after_data JSON, details with 'old'/'new'/'previous'/'current',
+    CREATE events, DELETE events, and custom admin update payloads.
+    """
+    diffs = {}
+    summary = ""
+    has_diff = False
+    
+    # 1. Direct before_data and after_data columns
+    b = log.before_data
+    a = log.after_data
+    if (b not in (None, 'null', {})) or (a not in (None, 'null', {})):
+        try:
+            b_dict = b if isinstance(b, dict) else (json.loads(b) if isinstance(b, str) and b != 'null' else {})
+            a_dict = a if isinstance(a, dict) else (json.loads(a) if isinstance(a, str) and a != 'null' else {})
+            if b_dict or a_dict:
+                all_keys = set(list((b_dict or {}).keys()) + list((a_dict or {}).keys()))
+                for k in all_keys:
+                    b_val = (b_dict or {}).get(k)
+                    a_val = (a_dict or {}).get(k)
+                    if b_val != a_val:
+                        if k in ('password', 'hashed_password', 'secret', 'token', 'access_token'):
+                            diffs[k] = {"before": "********", "after": "********"}
+                        else:
+                            diffs[k] = {
+                                "before": b_val if b_val is not None else "(None)",
+                                "after": a_val if a_val is not None else "(Deleted)"
+                            }
+                if diffs:
+                    has_diff = True
+                    summary = f"{len(diffs)} field{'s' if len(diffs) > 1 else ''} modified"
+        except Exception:
+            pass
+
+    # 2. Check details dictionary for old/new, before/after, or action-specific payloads
+    details = log.details
+    if isinstance(details, str):
+        try:
+            details = json.loads(details)
+        except Exception:
+            details = None
+
+    if isinstance(details, dict) and not diffs:
+        # Case A: details contains 'old'/'before' and 'new'/'after'
+        old_data = details.get('old') or details.get('before') or details.get('previous')
+        new_data = details.get('new') or details.get('after') or details.get('current')
+        changed_fields_list = details.get('changed_fields')
+
+        if isinstance(old_data, dict) and isinstance(new_data, dict):
+            target_keys = changed_fields_list if isinstance(changed_fields_list, list) and len(changed_fields_list) > 0 else set(list(old_data.keys()) + list(new_data.keys()))
+            for k in target_keys:
+                o_val = old_data.get(k)
+                n_val = new_data.get(k)
+                if k in ('password', 'hashed_password', 'secret', 'token', 'access_token'):
+                    diffs[k] = {"before": "********", "after": "********"}
+                else:
+                    diffs[k] = {
+                        "before": o_val if o_val is not None else "(None)",
+                        "after": n_val if n_val is not None else "(None)"
+                    }
+            if diffs:
+                has_diff = True
+                summary = f"{len(diffs)} setting{'s' if len(diffs) > 1 else ''} modified"
+
+        # Case B: CREATE_* actions
+        elif log.action and ('CREATE' in log.action or 'REGISTER' in log.action or 'ADD' in log.action):
+            has_diff = True
+            created_name = details.get('username') or details.get('name') or details.get('email') or (f"Record #{log.target_id}" if log.target_id else "")
+            summary = f"Created: {created_name}" if created_name else f"Created new {log.target_table or 'entity'}"
+            for k, v in details.items():
+                if k not in ('password', 'hashed_password', 'token'):
+                    diffs[k] = {"before": "(None - New Record)", "after": v}
+
+        # Case C: DELETE_* actions
+        elif log.action and ('DELETE' in log.action or 'REMOVE' in log.action or 'TERMINAT' in log.action):
+            has_diff = True
+            del_name = details.get('deleted_username') or details.get('username') or details.get('deleted_email') or details.get('user_affected') or details.get('name') or (f"Record #{log.target_id}" if log.target_id else "")
+            summary = f"Deleted: {del_name}" if del_name else f"Deleted {log.target_table or 'entity'}"
+            for k, v in details.items():
+                diffs[k] = {"before": v, "after": "(Permanently Deleted)"}
+
+        # Case D: UPDATE_ROLE_PERMISSIONS
+        elif log.action == 'UPDATE_ROLE_PERMISSIONS' and 'permissions' in details:
+            has_diff = True
+            summary = "Role permissions updated"
+            perms = details['permissions']
+            if isinstance(perms, dict):
+                for r_name, p_map in perms.items():
+                    enabled_modules = [m for m, v in p_map.items() if v] if isinstance(p_map, dict) else []
+                    diffs[f"Role: {r_name}"] = {
+                        "before": "(Previous Matrix)",
+                        "after": f"Enabled: {', '.join(enabled_modules) if enabled_modules else 'None'}"
+                    }
+
+        # Case E: Generic details dict with custom changes map
+        elif any(k in ('changes', 'delta', 'modified') for k in details.keys()):
+            changes = details.get('changes') or details.get('delta') or details.get('modified')
+            if isinstance(changes, dict):
+                for k, v in changes.items():
+                    if isinstance(v, dict) and ('before' in v or 'after' in v):
+                        diffs[k] = {"before": v.get('before', '(None)'), "after": v.get('after', '(None)')}
+                    else:
+                        diffs[k] = {"before": "(Previous)", "after": v}
+                if diffs:
+                    has_diff = True
+                    summary = f"{len(diffs)} field{'s' if len(diffs) > 1 else ''} modified"
+
+        # Case F: Any other descriptive details dictionary
+        if isinstance(details, dict) and not diffs:
+            for k, v in details.items():
+                if k not in ('password', 'hashed_password', 'secret', 'token', 'access_token', 'session_id', 'request_id'):
+                    if isinstance(v, dict) and ('before' in v or 'after' in v):
+                        diffs[k] = {"before": v.get('before', '(None)'), "after": v.get('after', '(None)')}
+                    elif isinstance(v, dict) and ('old' in v or 'new' in v):
+                        diffs[k] = {"before": v.get('old', '(None)'), "after": v.get('new', '(None)')}
+                    else:
+                        diffs[k] = {"before": "(Previous Value)", "after": v}
+            if diffs:
+                has_diff = True
+                if not summary:
+                    summary = f"{len(diffs)} detail field{'s' if len(diffs) > 1 else ''} recorded"
+
+    # Default fallback summary if action is modification but diffs is empty
+    if not summary:
+        if log.action.startswith('CREATE_'):
+            summary = f"Created {log.target_table or 'record'}"
+            has_diff = True
+        elif log.action.startswith('UPDATE_') or 'UPDATE' in log.action or 'MODIFY' in log.action:
+            summary = f"Updated {log.target_table or 'record'}"
+            has_diff = True
+        elif log.action.startswith('DELETE_') or 'DELETE' in log.action:
+            summary = f"Deleted {log.target_table or 'record'}"
+            has_diff = True
+
+    return diffs, has_diff, summary
+
+
 @audit_bp.route('/logs', methods=['GET'])
 @jwt_required()
 @audit_required
 def get_audit_logs():
-    current_user_id = get_jwt_identity()
-    user = db.session.get(User, current_user_id)
+    user = _get_user_from_jwt()
     
     # Query parameters
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     q = request.args.get('q', '').strip()
     status = request.args.get('status', '') # Success, Failed, Warning, Critical
-    action_type = request.args.get('action_type', '') # Create, Update, Delete, View, Export, Import, etc.
+    action_type = request.args.get('action_type', '') # DATA_CHANGES, SECURITY, CRITICAL, SESSIONS, Create, Update, Delete, Export, etc.
     risk_level = request.args.get('risk_level', '')
     module = request.args.get('module', '') # target_table name
     user_role = request.args.get('user_role', '')
@@ -466,12 +613,42 @@ def get_audit_logs():
         types = [t.strip().upper() for t in action_type.split(',')]
         type_filters = []
         for t in types:
-            if t == 'CREATE':
+            if t in ('DATA_CHANGES', 'DATA_MODIFICATIONS', 'DATA'):
+                type_filters.append(AuditLog.action.like("CREATE_%"))
+                type_filters.append(AuditLog.action.like("UPDATE_%"))
+                type_filters.append(AuditLog.action.like("DELETE_%"))
+                type_filters.append(AuditLog.action.like("%MODIFY%"))
+                type_filters.append(AuditLog.action.like("%EDIT%"))
+                type_filters.append(AuditLog.action.like("%CHANGE%"))
+                type_filters.append(AuditLog.action.like("%SAVED%"))
+                type_filters.append(AuditLog.action.like("%SYNCED%"))
+                type_filters.append(AuditLog.action.in_([
+                    "USER_UPDATE", "PROJECT_UPDATE", "ORGANIZATION_UPDATE", "PROJECT_CREATE",
+                    "BULK_DELETE_USERS", "BULK_IMPORT_ROLLBACK", "STAGE_PROGRESS_UPDATE",
+                    "WORKFLOW_UPDATE", "SOP_UPDATE", "SOP_CREATE", "SOP_DELETE"
+                ]))
+            elif t in ('SECURITY', 'SECURITY_ALERTS', 'SECURITY_WARNINGS'):
+                type_filters.append(AuditLog.action.in_([
+                    "USER_LOGIN_FAILED", "FAILED_LOGIN", "SUSPICIOUS_ACTIVITY",
+                    "ROLE_ESCALATION", "PERMISSION_CHANGE", "BRUTE_FORCE",
+                    "TAMPER_DETECTED", "ACCESS_DENIED", "SECURITY_ALERT",
+                    "PASSWORD_RESET_FAILED", "USER_DELETE_ATTEMPT", "USER_LOGIN_LOCKED"
+                ]))
+                type_filters.append(AuditLog.risk_level.in_(['High', 'Critical']))
+            elif t in ('CRITICAL', 'CRITICAL_INCIDENTS'):
+                type_filters.append(AuditLog.risk_level == 'Critical')
+                type_filters.append(AuditLog.action.in_(["TAMPER_DETECTED", "USER_LOGIN_LOCKED", "ROLE_ESCALATION", "SECURITY_ALERT"]))
+            elif t in ('SESSIONS', 'AUTH_SESSIONS', 'LOGIN_EVENTS'):
+                type_filters.append(AuditLog.action.in_(["USER_LOGIN", "USER_LOGOUT", "SESSION_FORCE_TERMINATION", "USER_LOGIN_FAILED"]))
+            elif t in ('DELETED_RECORDS', 'DELETE'):
+                type_filters.append(AuditLog.action.like("DELETE_%"))
+                type_filters.append(AuditLog.action.in_(["BULK_DELETE_USERS", "USER_DELETE", "PROJECT_DELETE"]))
+            elif t in ('FAILED_LOGINS', 'USER_LOGIN_FAILED'):
+                type_filters.append(AuditLog.action == "USER_LOGIN_FAILED")
+            elif t == 'CREATE':
                 type_filters.append(AuditLog.action.like("CREATE_%"))
             elif t == 'UPDATE':
                 type_filters.append(AuditLog.action.like("UPDATE_%"))
-            elif t == 'DELETE':
-                type_filters.append(AuditLog.action.like("DELETE_%"))
             elif t == 'EXPORT':
                 type_filters.append(AuditLog.action.like("%EXPORT%"))
                 type_filters.append(AuditLog.action.like("%DOWNLOAD%"))
@@ -537,9 +714,10 @@ def get_audit_logs():
     pagination = query.order_by(AuditLog.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     logs = pagination.items
     
-    return jsonify({
-        "status": "success",
-        "data": [{
+    data_items = []
+    for log in logs:
+        diffs, has_diff, summary = extract_audit_diff_and_summary(log)
+        data_items.append({
             "id": log.id,
             "timestamp": log.created_at.isoformat() + "Z" if log.created_at else datetime.utcnow().isoformat() + "Z",
             "action": log.action,
@@ -556,8 +734,16 @@ def get_audit_logs():
             "session_id": log.session_id or "—",
             "risk_level": log.risk_level or "Low",
             "status": "Failed" if ((log.response_code and log.response_code >= 400) or any(k in (log.action or '').upper() for k in ('FAILED', 'DENIED', 'BLOCKED', 'LOCKED', 'ERROR', 'REVOKED', 'REJECTED'))) else ("Critical" if log.risk_level == 'Critical' else ("Warning" if log.risk_level == 'High' else "Success")),
-            "response_code": log.response_code or 200
-        } for log in logs],
+            "response_code": log.response_code or 200,
+            "has_diff": has_diff,
+            "change_summary": summary,
+            "changed_fields": diffs,
+            "details": log.details or {}
+        })
+
+    return jsonify({
+        "status": "success",
+        "data": data_items,
         "pagination": {
             "total": pagination.total,
             "pages": pagination.pages,
@@ -570,8 +756,7 @@ def get_audit_logs():
 @jwt_required()
 @audit_required
 def get_audit_log_detail(log_id):
-    current_user_id = get_jwt_identity()
-    user = db.session.get(User, current_user_id)
+    user = _get_user_from_jwt()
     
     org_filter = get_user_org_filter(user, AuditLog)
     log = AuditLog.query.filter(org_filter, AuditLog.id == log_id).first_or_404()
@@ -600,22 +785,8 @@ def get_audit_log_detail(log_id):
             "status": "Failed" if (sl.response_code and sl.response_code >= 400) else "Success"
         } for sl in sess_logs]
 
-    # Calculate differences in fields for Update actions
-    diffs = {}
-    if log.before_data and log.after_data:
-        try:
-            b = log.before_data if isinstance(log.before_data, dict) else json.loads(log.before_data)
-            a = log.after_data if isinstance(log.after_data, dict) else json.loads(log.after_data)
-            for k in a.keys():
-                b_val = b.get(k)
-                a_val = a.get(k)
-                if b_val != a_val:
-                    if k in ('password', 'hashed_password', 'secret', 'token', 'access_token'):
-                        diffs[k] = {"before": "********", "after": "********"}
-                    else:
-                        diffs[k] = {"before": b_val, "after": a_val}
-        except Exception:
-            pass
+    # Extract differences in fields for Update/Create/Delete/Modify actions
+    diffs, has_diff, summary = extract_audit_diff_and_summary(log)
 
     return jsonify({
         "status": "success",
@@ -640,7 +811,10 @@ def get_audit_log_detail(log_id):
             "risk_level": log.risk_level or "Low",
             "before_data": log.before_data,
             "after_data": log.after_data,
+            "has_diff": has_diff,
+            "change_summary": summary,
             "changed_fields": diffs,
+            "details": log.details or {},
             "hash_signature": log.hash_signature,
             "is_tampered": log.is_tampered,
             "related_logs": [{
@@ -982,20 +1156,39 @@ def get_audit_storage_info():
     d180 = now - timedelta(days=180)
     d365 = now - timedelta(days=365)
     
+    d730 = now - timedelta(days=730)
+    d1095 = now - timedelta(days=1095)
+    d1825 = now - timedelta(days=1825)
+    d2555 = now - timedelta(days=2555)
+    d2920 = now - timedelta(days=2920)
+    
     older_than_30 = AuditLog.query.filter(org_filter, AuditLog.created_at < d30).count()
     older_than_60 = AuditLog.query.filter(org_filter, AuditLog.created_at < d60).count()
     older_than_90 = AuditLog.query.filter(org_filter, AuditLog.created_at < d90).count()
     older_than_180 = AuditLog.query.filter(org_filter, AuditLog.created_at < d180).count()
     older_than_365 = AuditLog.query.filter(org_filter, AuditLog.created_at < d365).count()
+    older_than_730 = AuditLog.query.filter(org_filter, AuditLog.created_at < d730).count()
+    older_than_1095 = AuditLog.query.filter(org_filter, AuditLog.created_at < d1095).count()
+    older_than_1825 = AuditLog.query.filter(org_filter, AuditLog.created_at < d1825).count()
+    older_than_2555 = AuditLog.query.filter(org_filter, AuditLog.created_at < d2555).count()
+    older_than_2920 = AuditLog.query.filter(org_filter, AuditLog.created_at < d2920).count()
     
     oldest_log = AuditLog.query.filter(org_filter).order_by(AuditLog.created_at.asc()).first()
     oldest_date = oldest_log.created_at.isoformat() + "Z" if (oldest_log and oldest_log.created_at) else None
     
     retention_days = 0 # Default: 0 = Never auto-delete (Keep all logs)
-    if user.org_id:
-        org = db.session.get(Organization, user.org_id)
+    retention_years = 0
+    org_id = user.org_id if user else None
+    if not org_id:
+        first_org = Organization.query.first()
+        if first_org:
+            org_id = first_org.id
+
+    if org_id:
+        org = db.session.get(Organization, org_id)
         if org and org.security_settings and isinstance(org.security_settings, dict):
             retention_days = org.security_settings.get('audit_retention_days', 0)
+            retention_years = org.security_settings.get('audit_retention_years', 0)
             
     return jsonify({
         "status": "success",
@@ -1007,127 +1200,237 @@ def get_audit_storage_info():
         "older_than_90d": older_than_90,
         "older_than_180d": older_than_180,
         "older_than_365d": older_than_365,
-        "retention_days": retention_days
+        "older_than_730d": older_than_730,
+        "older_than_1095d": older_than_1095,
+        "older_than_1825d": older_than_1825,
+        "older_than_2555d": older_than_2555,
+        "older_than_2920d": older_than_2920,
+        "retention_days": retention_days,
+        "retention_years": retention_years
     }), 200
 
 
-@audit_bp.route('/purge', methods=['POST'])
+@audit_bp.route('/retention-policy', methods=['POST', 'PUT'])
+@jwt_required()
+@audit_required
+def update_audit_retention_policy():
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    if not user:
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    
+    org_id = user.org_id or (data.get('org_id') if isinstance(data, dict) else None)
+    if not org_id:
+        first_org = Organization.query.first()
+        if first_org:
+            org_id = first_org.id
+
+    if not org_id:
+        return jsonify({"message": "Organization context required"}), 400
+
+    retention_days = data.get('retention_days')
+    retention_years = data.get('retention_years')
+
+    if retention_years is not None and str(retention_years).strip() != '':
+        try:
+            years = float(retention_years)
+            if years <= 0:
+                retention_days = 0
+                retention_years = 0
+            else:
+                retention_days = int(round(years * 365.25))
+                retention_years = years
+        except Exception:
+            return jsonify({"message": "Invalid retention_years value"}), 400
+    elif retention_days is not None:
+        try:
+            retention_days = int(retention_days)
+            retention_years = round(retention_days / 365.25, 2) if retention_days > 0 else 0
+        except Exception:
+            return jsonify({"message": "Invalid retention_days value"}), 400
+    else:
+        retention_days = 0
+        retention_years = 0
+
+    org = db.session.get(Organization, org_id)
+    if not org:
+        return jsonify({"message": "Organization not found"}), 404
+
+    sec = dict(org.security_settings or {})
+    sec['audit_retention_days'] = retention_days
+    sec['audit_retention_years'] = retention_years
+    org.security_settings = sec
+    db.session.commit()
+
+    try:
+        log_audit_event(
+            org_id=org.id,
+            user_id=user.id,
+            action="UPDATE_RETENTION_POLICY",
+            target_table="organizations",
+            target_id=org.id,
+            details={
+                "retention_days": retention_days,
+                "retention_years": retention_years
+            }
+        )
+    except Exception:
+        pass
+
+    if retention_days == 0:
+        msg = "Automatic storage retention policy updated: Keep all logs indefinitely (Never auto-delete)."
+    elif retention_years and retention_years >= 1:
+        msg = f"Automatic storage retention policy updated: Auto-purge logs older than {retention_years} year(s) ({retention_days} days)."
+    else:
+        msg = f"Automatic storage retention policy updated: Auto-purge logs older than {retention_days} day(s)."
+
+    return jsonify({
+        "status": "success",
+        "message": msg,
+        "retention_days": retention_days,
+        "retention_years": retention_years
+    }), 200
+
+
+@audit_bp.route('/purge-preview', methods=['GET', 'POST'])
+@jwt_required()
+@audit_required
+def preview_audit_log_purge():
+    user = _get_user_from_jwt()
+    if not user:
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or request.args
+    retention_years = data.get('retention_years')
+    custom_before_date = data.get('before_date') or data.get('start_date')
+
+    role_name = user.role.name if (user and user.role) else ''
+    is_super = (role_name in ('SuperAdmin', 'Super Admin')) or getattr(user, 'is_super_admin', False)
+
+    now = datetime.utcnow()
+    cutoff_date = None
+
+    if custom_before_date:
+        try:
+            cutoff_date = datetime.fromisoformat(str(custom_before_date).replace('Z', ''))
+        except Exception:
+            return jsonify({"message": "Invalid custom cutoff date format. Use YYYY-MM-DD."}), 400
+    elif retention_years is not None:
+        try:
+            years = float(retention_years)
+            if not is_super and years > 8:
+                years = 8.0
+            cutoff_date = now - timedelta(days=int(years * 365.25))
+        except Exception:
+            return jsonify({"message": "Invalid retention_years value."}), 400
+    else:
+        default_years = 7.0 if is_super else 8.0
+        cutoff_date = now - timedelta(days=int(default_years * 365.25))
+
+    query = AuditLog.query.filter(AuditLog.created_at < cutoff_date)
+
+    if not is_super:
+        if not user.org_id:
+            return jsonify({"message": "Organization context required"}), 400
+        query = query.filter(AuditLog.org_id == user.org_id)
+    else:
+        req_org_id = data.get('org_id')
+        if req_org_id:
+            query = query.filter(AuditLog.org_id == int(req_org_id))
+
+    match_count = query.count()
+    return jsonify({
+        "status": "success",
+        "cutoff_date": cutoff_date.strftime('%Y-%m-%d'),
+        "match_count": match_count,
+        "is_super_admin": is_super,
+        "max_retention_years": 8 if not is_super else 7
+    }), 200
+
+
+@audit_bp.route('/purge', methods=['POST', 'DELETE'])
 @jwt_required()
 @audit_required
 def purge_audit_logs():
-    current_user_id = get_jwt_identity()
-    user = db.session.get(User, current_user_id)
-    
-    data = request.get_json(silent=True) or {}
-    mode = data.get('mode', 'older_than_days') # 'older_than_days', 'custom_range', 'all'
-    days = data.get('days', None) # 30, 60, 90, 180, 365
-    start_date_str = data.get('start_date', '')
-    end_date_str = data.get('end_date', '')
-    
-    # Base filter strictly scoped to user's organization
-    base_filter = get_user_org_filter(user, AuditLog)
-    query = AuditLog.query.filter(base_filter)
-    
+    user = _get_user_from_jwt()
+    if not user:
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or request.args
+    retention_years = data.get('retention_years')
+    custom_before_date = data.get('before_date') or data.get('start_date')
+    mode = data.get('mode')
+    days = data.get('days')
+
+    role_name = user.role.name if (user and user.role) else ''
+    is_super = (role_name in ('SuperAdmin', 'Super Admin')) or getattr(user, 'is_super_admin', False)
+
     now = datetime.utcnow()
-    purge_summary = ""
-    
-    if mode == 'all':
-        purge_summary = "All historical organization audit logs"
-    elif mode == 'older_than_days' and days is not None:
-        cutoff_date = now - timedelta(days=int(days))
-        query = query.filter(AuditLog.created_at < cutoff_date)
-        purge_summary = f"Audit logs older than {days} days (created before {cutoff_date.strftime('%Y-%m-%d')})"
-    elif mode == 'custom_range':
-        if start_date_str and end_date_str:
-            try:
-                s_date = datetime.fromisoformat(start_date_str.replace('Z', ''))
-                e_date = datetime.fromisoformat(end_date_str.replace('Z', '')) + timedelta(days=1)
-                query = query.filter(AuditLog.created_at >= s_date, AuditLog.created_at < e_date)
-                purge_summary = f"Audit logs between {start_date_str} and {end_date_str}"
-            except ValueError:
-                return jsonify({"status": "error", "message": "Invalid date range format"}), 400
-        elif start_date_str:
-            try:
-                s_date = datetime.fromisoformat(start_date_str.replace('Z', ''))
-                query = query.filter(AuditLog.created_at < s_date)
-                purge_summary = f"Audit logs created before {start_date_str}"
-            except ValueError:
-                return jsonify({"status": "error", "message": "Invalid date format"}), 400
-        else:
-            return jsonify({"status": "error", "message": "Date parameter required for custom range"}), 400
+    cutoff_date = None
+
+    if custom_before_date:
+        try:
+            cutoff_date = datetime.fromisoformat(str(custom_before_date).replace('Z', ''))
+        except Exception:
+            return jsonify({"message": "Invalid custom cutoff date format."}), 400
+    elif retention_years is not None:
+        try:
+            years = float(retention_years)
+            if not is_super and years > 8:
+                years = 8.0
+            cutoff_date = now - timedelta(days=int(years * 365.25))
+        except Exception:
+            return jsonify({"message": "Invalid retention_years value."}), 400
+    elif days is not None:
+        try:
+            cutoff_date = now - timedelta(days=int(days))
+        except Exception:
+            return jsonify({"message": "Invalid days value."}), 400
     else:
-        return jsonify({"status": "error", "message": "Invalid purge criteria"}), 400
+        default_years = 7.0 if is_super else 8.0
+        cutoff_date = now - timedelta(days=int(default_years * 365.25))
 
-    deleted_count = query.count()
-    if deleted_count == 0:
-        return jsonify({
-            "status": "info",
-            "message": "No matching audit log records found for the selected purge criteria.",
-            "deleted_count": 0
-        }), 200
+    # Enforce auto-purge for org logs older than 8 years
+    if not is_super and user.org_id:
+        max_8yr_cutoff = now - timedelta(days=int(8 * 365.25))
+        AuditLog.query.filter(AuditLog.org_id == user.org_id, AuditLog.created_at < max_8yr_cutoff).delete(synchronize_session=False)
 
-    # Delete matching logs
-    query.delete(synchronize_session=False)
+    query = AuditLog.query.filter(AuditLog.created_at < cutoff_date)
+
+    if not is_super:
+        if not user.org_id:
+            return jsonify({"message": "Organization context required"}), 400
+        query = query.filter(AuditLog.org_id == user.org_id)
+    else:
+        req_org_id = data.get('org_id')
+        if req_org_id:
+            query = query.filter(AuditLog.org_id == int(req_org_id))
+
+    deleted_count = query.delete(synchronize_session=False)
     db.session.commit()
-    
-    # Log permanent audit trail event for the purge operation
-    log_audit_event(
-        org_id=user.org_id,
-        user_id=user.id,
-        action="PURGE_AUDIT_LOGS",
-        target_table="audit_logs",
-        target_id=None,
-        details={
-            "deleted_count": deleted_count,
-            "mode": mode,
-            "days": days,
-            "summary": purge_summary
-        }
-    )
-    
+
+    try:
+        log_audit_event(
+            org_id=user.org_id,
+            user_id=user.id,
+            action="PURGE_AUDIT_LOGS",
+            target_table="audit_logs",
+            target_id=0,
+            details={
+                "deleted_count": deleted_count,
+                "cutoff_date": cutoff_date.strftime('%Y-%m-%d'),
+                "retention_years": retention_years or "custom"
+            }
+        )
+    except Exception:
+        pass
+
     return jsonify({
         "status": "success",
-        "message": f"Successfully deleted {deleted_count} audit log record(s) ({purge_summary}). Database storage freed.",
-        "deleted_count": deleted_count
-    }), 200
-
-
-@audit_bp.route('/retention-policy', methods=['POST'])
-@jwt_required()
-@audit_required
-def set_audit_retention_policy():
-    current_user_id = get_jwt_identity()
-    user = db.session.get(User, current_user_id)
-    
-    if not user.org_id:
-        return jsonify({"status": "error", "message": "Organization context required"}), 400
-        
-    data = request.get_json(silent=True) or {}
-    retention_days = int(data.get('retention_days', 0)) # 0 = Never/Keep All (default)
-    
-    org = db.session.get(Organization, user.org_id)
-    if not org:
-        return jsonify({"status": "error", "message": "Organization not found"}), 404
-        
-    sec_settings = dict(org.security_settings or {})
-    sec_settings['audit_retention_days'] = retention_days
-    org.security_settings = sec_settings
-    db.session.commit()
-    
-    policy_name = "Never auto-delete (Keep all logs indefinitely - Default)" if retention_days == 0 else f"Auto-purge logs older than {retention_days} days"
-    
-    log_audit_event(
-        org_id=user.org_id,
-        user_id=user.id,
-        action="UPDATE_AUDIT_RETENTION_POLICY",
-        target_table="organizations",
-        target_id=org.id,
-        details={"retention_days": retention_days, "policy": policy_name}
-    )
-    
-    return jsonify({
-        "status": "success",
-        "message": f"Audit log retention policy updated to: {policy_name}.",
-        "retention_days": retention_days
+        "message": f"Successfully purged {deleted_count} audit log(s) created prior to {cutoff_date.strftime('%Y-%m-%d')}.",
+        "deleted_count": deleted_count,
+        "cutoff_date": cutoff_date.strftime('%Y-%m-%d')
     }), 200
 

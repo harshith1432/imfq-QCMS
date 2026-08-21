@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.presentation.middleware.middleware import feature_required
 from app.infrastructure.vector_db import vector_service as rag_chat, vector_ingest as rag_ingestion
-from app.infrastructure.database.models.models import KnowledgeRepository, User
+from app.infrastructure.database.models.models import KnowledgeRepository, User, Organization
 from app import db
 from sqlalchemy import text
 
@@ -14,7 +14,16 @@ rag_bp = Blueprint('rag', __name__)
 def chat():
     current_user_id = get_jwt_identity()
     user = db.session.get(User, current_user_id) if current_user_id else None
-    if not user or not user.org_id:
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    org_id = user.org_id
+    if not org_id:
+        first_org = Organization.query.first()
+        if first_org:
+            org_id = first_org.id
+
+    if not org_id:
         return jsonify({"error": "Organization context required"}), 403
 
     data = request.get_json() or {}
@@ -24,7 +33,8 @@ def chat():
         return jsonify({"error": "Query is required"}), 400
         
     try:
-        result = rag_chat.get_chat_response(query, org_id=user.org_id)
+        from app.domain.services.quality_ai_assistant import QualityAIAssistant
+        result = QualityAIAssistant.get_response(query, user_id=user.id, org_id=org_id)
         return jsonify(result), 200
     except Exception as e:
         print(f"[RAG ROUTE] Chat error: {e}")

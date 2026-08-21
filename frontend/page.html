@@ -94,10 +94,35 @@
         .cta-banner h2, .cta-banner p, .cta-banner span {
             color: #ffffff !important;
         }
+        .cta-banner .ds-btn-ghost,
+        #lp-cta-banner-btn2 {
+            color: #ffffff !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(8px);
+            font-weight: 600;
+        }
+        .cta-banner .ds-btn-ghost:hover,
+        #lp-cta-banner-btn2:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+            border-color: #ffffff !important;
+        }
 
         @media (max-width: 991px) {
             .hero-title {
                 font-size: 3rem;
+            }
+        }
+        @media (max-width: 576px) {
+            .cta-banner {
+                padding: 40px 20px;
+                margin: 40px 0;
+            }
+            .cta-banner .ds-btn {
+                width: 100%;
+                text-align: center;
+                justify-content: center;
             }
         }
     </style>

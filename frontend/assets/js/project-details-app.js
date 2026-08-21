@@ -1484,27 +1484,27 @@ const ProjectApp = {
             const submitLabel = isReviewStage ? `Stage ${stageId} for Review` : `Stage ${stageId}`;
 
             modalEl.innerHTML = `
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                        <div class="modal-header border-0 bg-warning-subtle py-3 px-4">
-                            <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;">
-                                <span class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink:0;">
-                                    <i data-lucide="alert-triangle" style="width: 18px; height: 18px;"></i>
-                                </span>
-                                Confirm Stage ${stageId} Submission
-                            </h5>
+                <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: var(--ds-bg-card, #ffffff);">
+                        <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink:0;">
+                                    <i data-lucide="send" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.1rem;">
+                                    Confirm Stage ${stageId} Submission
+                                </h5>
+                            </div>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body p-4">
-                            <div class="alert alert-warning border-0 p-3 mb-0 rounded-3" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b !important;">
-                                <p class="mb-0 text-sm fw-bold text-dark d-flex align-items-start gap-2">
-                                    <span>⚠️ <strong>Warning:</strong> Once submitted, all inputs, attachments, and changes made in Stage ${stageId} will be locked and sent for review.</span>
-                                </p>
-                            </div>
+                        <div class="modal-body px-4 py-3">
+                            <p class="text-secondary text-sm mb-0" style="line-height: 1.6;">
+                                Ready to submit <strong>Stage ${stageId}</strong>? Your inputs and attachments will be saved and forwarded for review.
+                            </p>
                         </div>
-                        <div class="modal-footer border-0 bg-light-subtle py-3 px-4 d-flex justify-content-end gap-2">
+                        <div class="modal-footer border-0 pt-2 pb-4 px-4 d-flex justify-content-end gap-2">
                             <button type="button" class="ds-btn ds-btn-ghost text-xs" data-bs-dismiss="modal">
-                                <i data-lucide="x" style="width: 14px; height: 14px; margin-right: 4px;"></i> Cancel &amp; Edit
+                                Cancel &amp; Edit
                             </button>
                             <button type="button" class="ds-btn ds-btn-primary text-xs" id="confirmStageSubmitBtn">
                                 <i data-lucide="send" style="width: 14px; height: 14px; margin-right: 4px;"></i> Confirm &amp; Submit

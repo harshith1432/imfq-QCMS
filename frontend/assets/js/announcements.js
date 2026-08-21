@@ -104,6 +104,9 @@ const AnnouncementsModule = {
                         <button class="sd-tab-btn" id="tab-email-notifications" onclick="AnnouncementsModule.switchTab('email-notifications')">
                             <i data-lucide="mail" class="me-1.5" style="width:14px;height:14px;"></i> Set Email Notifications
                         </button>
+                        <button class="sd-tab-btn" id="tab-sms-notifications" onclick="AnnouncementsModule.switchTab('sms-notifications')">
+                            <i data-lucide="smartphone" class="me-1.5" style="width:14px;height:14px;"></i> Set SMS Notifications
+                        </button>
                         <button class="sd-tab-btn" id="tab-wizard" onclick="AnnouncementsModule.openWizard()">
                             <i data-lucide="plus-circle" class="me-1.5" style="width:14px;height:14px;"></i> Compose Broadcast
                         </button>
@@ -203,6 +206,8 @@ const AnnouncementsModule = {
             await this.renderList(contentArea);
         } else if (tabId === 'email-notifications') {
             await this.renderEmailNotificationsHub(contentArea);
+        } else if (tabId === 'sms-notifications') {
+            await this.renderSmsNotificationsHub(contentArea);
         }
 
         if (window.lucide) lucide.createIcons();
@@ -466,20 +471,20 @@ const AnnouncementsModule = {
 
             <!-- Table Card -->
             <div class="glass-card p-0 overflow-hidden">
-                <div class="table-responsive px-2">
-                    <table class="ds-table mb-0" style="font-size: 11.5px; width: 100%;">
+                <div class="table-responsive px-2" style="overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100%;">
+                    <table class="ds-table mb-0 align-middle" style="font-size: 11.5px; width: 100%; min-width: 960px;">
                         <thead>
                             <tr style="font-size: 10.5px;">
-                                <th style="width: 125px;">Announcement #</th>
-                                <th>Title</th>
-                                <th style="width: 90px;">Category</th>
-                                <th style="width: 80px;">Priority</th>
-                                <th style="width: 90px;">Audience</th>
-                                <th style="width: 85px;">Status</th>
-                                <th style="width: 75px;">Delivered</th>
-                                <th style="width: 85px;">Read Rate</th>
-                                <th style="max-width: 140px;">Created By</th>
-                                <th style="width: 80px;" class="text-center pe-3">Actions</th>
+                                <th style="min-width: 140px;">Announcement #</th>
+                                <th style="min-width: 180px;">Title</th>
+                                <th style="min-width: 100px;">Category</th>
+                                <th style="min-width: 80px;">Priority</th>
+                                <th style="min-width: 90px;">Audience</th>
+                                <th style="min-width: 85px;">Status</th>
+                                <th style="min-width: 80px;">Delivered</th>
+                                <th style="min-width: 95px;">Read Rate</th>
+                                <th style="min-width: 130px;">Created By</th>
+                                <th style="min-width: 80px;" class="text-center pe-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="annRegistryTableBody">
@@ -499,7 +504,7 @@ const AnnouncementsModule = {
         const tbody = document.getElementById('annRegistryTableBody');
         if (!tbody) return;
 
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><div class="spinner-border spinner-border-sm text-primary"></div></div></td></tr>`;
 
         let params = new URLSearchParams();
         params.append('page', this.currentPage);
@@ -567,7 +572,7 @@ const AnnouncementsModule = {
                         </div>
                     </td>
                 </tr>
-            `).join('') || '<tr><td colspan="10" class="text-center py-4 text-secondary">No broadcasts recorded.</td></tr>';
+            `).join('') || '<tr><td colspan="10" class="py-4 text-secondary"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">No broadcasts recorded.</div></td></tr>';
 
             const pagination = document.getElementById('annRegistryPagination');
             if (pagination && meta) {
@@ -583,7 +588,7 @@ const AnnouncementsModule = {
             if (window.lucide) lucide.createIcons();
 
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Error fetching list.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="py-4 text-danger"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">Error fetching list.</div></td></tr>`;
         }
     },
 
@@ -988,49 +993,249 @@ const AnnouncementsModule = {
             const pConf = prioConfig[prio] || prioConfig['Medium'];
 
             body.innerHTML = `
-                <div class="d-flex flex-column gap-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <span class="text-xs fw-semibold text-secondary text-uppercase tracking-wider">Confirm Details Before Delivery</span>
-                        <span class="badge bg-success-subtle text-success border px-2 py-0.5 text-xxs font-monospace">Ready to Dispatch</span>
-                    </div>
-                    
-                    <div class="p-3.5 border rounded-3" style="background: var(--ds-bg-subtle, rgba(255,255,255,0.02)); border-color: var(--ds-border-color) !important;">
-                        <h6 class="fw-bold text-main mb-2 text-base">${QCMS.escapeHtml(this.wizardData.title || '[Untitled Announcement]')}</h6>
-                        
-                        <div class="d-flex align-items-center gap-2 mb-3">
-                            <span class="badge rounded-pill px-2.5 py-1 text-xxs fw-semibold" style="background: rgba(99, 102, 241, 0.12); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.25);">
-                                <i data-lucide="tag" style="width:11px;height:11px;" class="me-1"></i>${QCMS.escapeHtml(cat)}
-                            </span>
-                            <span class="badge rounded-pill px-2.5 py-1 text-xxs fw-semibold" style="${pConf.style}">
-                                <i data-lucide="${pConf.icon}" style="width:11px;height:11px;" class="me-1"></i>${QCMS.escapeHtml(prio)} Priority
-                            </span>
+                    <!-- ── Step 5: Clean Unified Review & Recipient Preview ── -->
+                    <!-- Broadcast Summary Card -->
+                    <div class="p-3 border rounded-3" style="background: var(--ds-surface, #ffffff); border-color: var(--ds-border-color) !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="fw-bold text-main mb-0 text-sm">${QCMS.escapeHtml(this.wizardData.title || '[Untitled Announcement]')}</h6>
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="badge rounded-pill px-2 py-0.5 text-xxs fw-semibold" style="background: rgba(99, 102, 241, 0.12); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.25);">
+                                    <i data-lucide="tag" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(cat)}
+                                </span>
+                                <span class="badge rounded-pill px-2 py-0.5 text-xxs fw-semibold" style="${pConf.style}">
+                                    <i data-lucide="${pConf.icon}" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(prio)}
+                                </span>
+                            </div>
                         </div>
 
-                        ${this.wizardData.summary ? `<p class="text-xs fw-semibold text-secondary mb-2">${QCMS.escapeHtml(this.wizardData.summary)}</p>` : ''}
+                        ${this.wizardData.summary ? `<p class="text-xs text-secondary mb-2">${QCMS.escapeHtml(this.wizardData.summary)}</p>` : ''}
                         
-                        <div class="p-3 rounded-2 text-xs text-muted mb-3" style="background: rgba(0,0,0,0.06); border: 1px solid var(--ds-border-color); line-height: 1.6; max-height: 140px; overflow-y: auto;">
+                        <div class="p-2.5 rounded-2 text-xs text-muted mb-2.5" style="background: rgba(0,0,0,0.03); border: 1px solid var(--ds-border-color); line-height: 1.5; max-height: 90px; overflow-y: auto;">
                             ${this.wizardData.body ? QCMS.escapeHtml(this.wizardData.body).replace(/\n/g, '<br>') : '<em>No message content configured.</em>'}
                         </div>
 
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 text-xxs text-secondary border-top pt-2.5">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 text-xxs text-secondary pt-2 border-top" style="border-color: var(--ds-border-color) !important;">
                             <div>
-                                <span class="fw-semibold text-muted">Status / Action:</span>
+                                <span class="text-muted fw-semibold">Action:</span>
                                 <span class="badge bg-secondary-subtle text-main border ms-1 font-monospace">${this.wizardData.action.toUpperCase()}</span>
                             </div>
                             <div>
-                                <span class="fw-semibold text-muted">Audience:</span>
-                                <span class="ms-1 fw-bold text-main">${this.wizardData.audience_type === 'all' ? 'All Organizations' : `${this.wizardData.audience.length} Targeted Groups`}</span>
+                                <span class="text-muted fw-semibold">Target Pool:</span>
+                                <span class="ms-1 fw-bold text-main">${this.wizardData.audience_type === 'all' ? 'All Organizations' : `${this.wizardData.audience.length} Criteria Rules`}</span>
                             </div>
                             <div>
-                                <span class="fw-semibold text-muted">Channels:</span>
-                                <span class="ms-1">${this.wizardData.channels.in_app ? '📢 In-App' : ''}${this.wizardData.channels.email ? ' · ✉️ Email' : ''}</span>
+                                <span class="text-muted fw-semibold">Channels:</span>
+                                <span class="ms-1 fw-medium text-main">${this.wizardData.channels.in_app ? '📢 In-App' : ''}${this.wizardData.channels.email ? ' · ✉️ Email' : ''}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Email Recipients Preview Section -->
+                    <div class="p-3 border rounded-3" style="background: var(--ds-surface, #ffffff); border-color: var(--ds-border-color) !important;">
+                        <!-- Top Header & Search Bar -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2.5 pb-2 border-bottom" style="border-color: var(--ds-border-color) !important;">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="p-1 rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width:26px;height:26px;">
+                                    <i data-lucide="mail-check" style="width:15px;height:15px;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-main" style="font-size:12.5px; line-height: 1.2;">Target Email Recipients</div>
+                                    <div class="text-xxs text-muted mt-0.5" id="annRecipientsCountBadge">Resolving recipient list...</div>
+                                </div>
+                            </div>
+                            <div class="position-relative" style="width: 220px;">
+                                <i data-lucide="search" class="position-absolute top-50 start-0 translate-middle-y ms-2.5 text-muted" style="width:12px;height:12px;pointer-events:none;"></i>
+                                <input type="text" class="ds-input text-xs ps-4 py-1 w-100" id="annRecipientSearchInput" placeholder="Search email, name, org..." onkeyup="AnnouncementsModule.filterRecipientList(this.value)" style="height: 32px; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <!-- Role-Based Email Distribution Filter Section -->
+                        <div class="my-3 py-2 px-3 rounded-3" id="annRoleBreakdownSection" style="display:none; background: rgba(0,0,0,0.025); border: 1px solid var(--ds-border-color);">
+                            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                                <div class="text-xxs fw-bold text-muted text-uppercase tracking-wider d-flex align-items-center gap-1.5 flex-shrink-0">
+                                    <i data-lucide="filter" style="width:12px;height:12px;" class="text-primary"></i> Filter by Role:
+                                </div>
+                                <div class="d-flex flex-wrap gap-2" id="annRoleBreakdownPills"></div>
+                            </div>
+                        </div>
+
+                        <!-- Scrollable Recipients Table / List -->
+                        <div class="border rounded-3 overflow-hidden mt-3" style="border-color: var(--ds-border-color) !important; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                            <div id="annRecipientsListContainer" style="max-height: 220px; overflow-y: auto; background: var(--ds-surface, #ffffff);">
+                                <div class="text-center py-5 text-muted text-xs">
+                                    <span class="spinner-border spinner-border-sm me-2 text-primary"></span> Resolving target email addresses...
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             `;
+            // Trigger background fetching of recipient email addresses
+            setTimeout(() => this.loadRecipientPreview(), 50);
         }
         if (window.lucide) lucide.createIcons();
+    },
+
+    cachedRecipients: [],
+    cachedRoleBreakdown: [],
+    selectedRoleFilter: null,
+
+    async loadRecipientPreview() {
+        const container = document.getElementById('annRecipientsListContainer');
+        const badge = document.getElementById('annRecipientsCountBadge');
+        if (!container) return;
+
+        try {
+            const res = await api.post('/announcements/preview-recipients', {
+                audience_type: this.wizardData.audience_type,
+                audience: this.wizardData.audience
+            });
+
+            if (res && res.status === 'success' && res.data) {
+                const d = res.data;
+                this.cachedRecipients = d.recipients || [];
+                this.cachedRoleBreakdown = d.role_breakdown || [];
+                this.selectedRoleFilter = null;
+                
+                if (badge) {
+                    badge.innerHTML = `<span class="badge bg-primary-subtle text-primary border px-2 py-0.5 rounded-pill font-semibold">${d.total_emails} Emails</span> to send across <strong>${d.total_users} Users</strong> in <strong>${d.total_orgs} Orgs</strong>`;
+                }
+
+                this.renderRoleBreakdown(d.role_breakdown || [], d.total_emails || 0);
+                this.renderRecipientList(this.cachedRecipients);
+            } else {
+                throw new Error('Failed to resolve audience');
+            }
+        } catch(e) {
+            if (container) {
+                container.innerHTML = `<div class="p-4 text-center text-xs text-danger">Unable to load recipient email list preview.</div>`;
+            }
+        }
+    },
+
+    renderRoleBreakdown(roles, totalEmails) {
+        const sec = document.getElementById('annRoleBreakdownSection');
+        const pills = document.getElementById('annRoleBreakdownPills');
+        if (!sec || !pills) return;
+
+        if (!roles || roles.length === 0) {
+            sec.style.display = 'none';
+            return;
+        }
+
+        sec.style.display = 'block';
+
+        const allActive = this.selectedRoleFilter === null;
+        let html = `
+            <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-2 py-1 px-3 rounded-pill text-xs transition-all ${
+                allActive 
+                    ? 'btn-primary text-white shadow-sm font-semibold' 
+                    : 'btn-outline-secondary text-main border'
+            }" onclick="AnnouncementsModule.filterByRole(null)" style="font-size: 12px; height: 30px; ${allActive ? '' : 'background: var(--ds-surface, #fff); border-color: var(--ds-border-color);'}">
+                <span>All Roles</span>
+                <span class="badge ${allActive ? 'bg-white text-primary' : 'bg-primary-subtle text-primary'} rounded-pill px-2 py-0.5 font-bold" style="font-size: 11px;">${totalEmails}</span>
+            </button>
+        `;
+
+        html += roles.map(r => {
+            const isActive = this.selectedRoleFilter === r.role;
+            return `
+                <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-2 py-1 px-3 rounded-pill text-xs transition-all ${
+                    isActive 
+                        ? 'btn-primary text-white shadow-sm font-semibold' 
+                        : 'btn-outline-secondary text-main border'
+                }" onclick="AnnouncementsModule.filterByRole('${QCMS.escapeHtml(r.role).replace(/'/g, "\\'")}')" style="font-size: 12px; height: 30px; ${isActive ? '' : 'background: var(--ds-surface, #fff); border-color: var(--ds-border-color);'}">
+                    <span class="d-inline-block rounded-circle flex-shrink-0" style="width: 8px; height: 8px; background: ${r.color || '#6366f1'};"></span>
+                    <span>${QCMS.escapeHtml(r.role)}</span>
+                    <span class="badge ${isActive ? 'bg-white text-primary' : 'bg-secondary-subtle text-secondary'} rounded-pill px-2 py-0.5 font-bold" style="font-size: 11px;">${r.email_count}</span>
+                </button>
+            `;
+        }).join('');
+
+        pills.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+    },
+
+    filterByRole(roleName) {
+        this.selectedRoleFilter = roleName;
+        this.renderRoleBreakdown(this.cachedRoleBreakdown, this.cachedRecipients ? this.cachedRecipients.filter(r => r.has_valid_email).length : 0);
+        
+        const searchInput = document.getElementById('annRecipientSearchInput');
+        const q = searchInput ? searchInput.value : '';
+        this.filterRecipientList(q);
+    },
+
+    renderRecipientList(list) {
+        const container = document.getElementById('annRecipientsListContainer');
+        if (!container) return;
+
+        if (!list || list.length === 0) {
+            container.innerHTML = `
+                <div class="p-5 text-center text-muted">
+                    <i data-lucide="mail-x" style="width:36px;height:36px;opacity:0.3;display:block;margin:0 auto 12px;"></i>
+                    <div class="text-xs fw-semibold text-main mb-1">No matching recipient emails found.</div>
+                    <div class="text-xxs text-muted mb-3">Check your audience rules in Step 2 to ensure users or organizations are included.</div>
+                    <button type="button" class="ds-btn ds-btn-xs ds-btn-outline" onclick="AnnouncementsModule.wizardStep=2;AnnouncementsModule.renderWizardStep();">
+                        <i data-lucide="arrow-left" style="width:12px;height:12px;" class="me-1"></i> Edit Audience Rules in Step 2
+                    </button>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+            return;
+        }
+
+        const itemsHtml = list.map((r, idx) => `
+            <div class="d-flex align-items-center justify-content-between px-3.5 py-3 border-bottom recipient-item" style="font-size: 12.5px; border-color: var(--ds-border-color) !important; background: ${idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)'};">
+                <div class="d-flex align-items-center gap-3 min-w-0 me-3">
+                    <span class="text-muted text-xxs font-monospace fw-semibold" style="width:22px;">#${idx + 1}</span>
+                    <span class="avatar-initials bg-primary-subtle text-primary fw-bold rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 30px; height: 30px; font-size: 11.5px;">
+                        ${(r.name || 'U').charAt(0).toUpperCase()}
+                    </span>
+                    <div class="min-w-0">
+                        <div class="fw-bold text-main text-truncate" style="font-size: 13px; line-height: 1.3;">
+                            ${QCMS.escapeHtml(r.name)}
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            ${r.has_valid_email 
+                                ? `<span class="text-primary font-monospace fw-medium text-truncate" style="font-size: 12px;">${QCMS.escapeHtml(r.email)}</span>
+                                   <button type="button" class="btn btn-link p-0 text-muted hover-text-primary" onclick="navigator.clipboard.writeText('${QCMS.escapeHtml(r.email).replace(/'/g, "\\'")}');QCMS.toast('Copied email: ${QCMS.escapeHtml(r.email)}', 'info');" title="Copy Email ID" style="font-size:11px;"><i data-lucide="copy" style="width:12px;height:12px;"></i></button>`
+                                : `<span class="text-danger text-xxs fw-semibold"><i data-lucide="alert-circle" style="width:12px;height:12px;" class="me-1"></i>No email address configured</span>`
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    <span class="badge bg-purple-subtle text-purple border border-purple-subtle text-xxs px-2.5 py-1 rounded-pill font-semibold" style="font-size:11px;">${QCMS.escapeHtml(r.role)}</span>
+                    <span class="badge bg-secondary-subtle text-secondary border text-xxs px-2.5 py-1 rounded-pill" title="Organization" style="font-size:11px;">${QCMS.escapeHtml(r.org_name)}</span>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = itemsHtml;
+        if (window.lucide) lucide.createIcons();
+    },
+
+    filterRecipientList(q) {
+        const query = (q || '').toLowerCase().trim();
+        if (!this.cachedRecipients) return;
+        
+        let filtered = this.cachedRecipients;
+        
+        if (this.selectedRoleFilter) {
+            filtered = filtered.filter(r => (r.role || '').toLowerCase() === this.selectedRoleFilter.toLowerCase());
+        }
+
+        if (query) {
+            filtered = filtered.filter(r => 
+                (r.name || '').toLowerCase().includes(query) ||
+                (r.username || '').toLowerCase().includes(query) ||
+                (r.email || '').toLowerCase().includes(query) ||
+                (r.org_name || '').toLowerCase().includes(query) ||
+                (r.role || '').toLowerCase().includes(query)
+            );
+        }
+
+        this.renderRecipientList(filtered);
     },
 
     setAudienceType(val) {
@@ -1703,6 +1908,7 @@ const AnnouncementsModule = {
                                     </span>
                                     ${triggerBadge}
                                     ${rule.is_system_preset ? `<span class="badge bg-secondary bg-opacity-10 text-muted px-2 py-0.5" style="font-size:10px;">System Preset</span>` : ''}
+                                    ${rule.sms_enabled ? `<span class="badge px-2 py-0.5 d-inline-flex align-items-center gap-1" style="font-size:10px;background:rgba(99,102,241,0.1);color:#6366f1;border:1px solid rgba(99,102,241,0.25);" title="SMS via Gio DLT enabled"><i data-lucide="smartphone" style="width:10px;height:10px;"></i>SMS</span>` : ''}
                                 </div>
                                 <div class="form-check form-switch m-0" title="Toggle Active / Paused">
                                     <input class="form-check-input" type="checkbox" role="switch" ${rule.is_active ? 'checked' : ''} onchange="AnnouncementsModule.toggleEmailRule(${rule.id}, this)">
@@ -1803,14 +2009,15 @@ const AnnouncementsModule = {
                     </div>
 
                     <!-- Filter & Action Controls -->
-                    <div class="glass-card ds-card p-3 border">
-                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                <div class="position-relative" style="min-width: 220px; max-width: 320px;">
+                    <div class="glass-card ds-card p-2.5 p-md-3 border">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2.5">
+                            <!-- Left Group: Search & Dropdowns in single line -->
+                            <div class="d-flex align-items-center gap-2 flex-wrap flex-md-nowrap flex-grow-1">
+                                <div class="position-relative flex-grow-1" style="min-width: 180px; max-width: 300px;">
                                     <i data-lucide="search" class="position-absolute top-50 start-0 translate-middle-y ms-2.5 text-muted" style="width:14px;height:14px;"></i>
-                                    <input type="text" class="ds-input text-xs ps-4 py-1.5 w-100" id="emailRuleSearchInput" placeholder="Search notification rules..." onkeyup="AnnouncementsModule.filterEmailRules()">
+                                    <input type="text" class="ds-input text-xs ps-4 py-1.5 w-100" id="emailRuleSearchInput" placeholder="Search notification rules..." onkeyup="AnnouncementsModule.filterEmailRules()" style="height: 36px; border-radius: 8px;">
                                 </div>
-                                <select class="ds-input text-xs py-1.5" id="emailRuleCategoryFilter" onchange="AnnouncementsModule.filterEmailRules()" style="max-width: 190px;">
+                                <select class="ds-input text-xs py-1.5" id="emailRuleCategoryFilter" onchange="AnnouncementsModule.filterEmailRules()" style="width: 150px; height: 36px; border-radius: 8px;">
                                     <option value="">All Categories</option>
                                     <option value="project_assignment">Project Assignment</option>
                                     <option value="project_completion">Project Completed & Report</option>
@@ -1823,18 +2030,19 @@ const AnnouncementsModule = {
                                     <option value="support">Customer Support Check-in</option>
                                     <option value="custom">Custom Broadcast</option>
                                 </select>
-                                <select class="ds-input text-xs py-1.5" id="emailRuleStatusFilter" onchange="AnnouncementsModule.filterEmailRules()" style="max-width: 140px;">
+                                <select class="ds-input text-xs py-1.5" id="emailRuleStatusFilter" onchange="AnnouncementsModule.filterEmailRules()" style="width: 120px; height: 36px; border-radius: 8px;">
                                     <option value="">All Status</option>
                                     <option value="active">Active Only</option>
                                     <option value="paused">Paused Only</option>
                                 </select>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-xs py-1.5 px-3" onclick="AnnouncementsModule.openEmailLogsModal()">
-                                    <i data-lucide="scroll-text" style="width:14px;height:14px;" class="me-1"></i> Delivery Logs
+                            <!-- Right Group: Action Buttons -->
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-xs py-1.5 px-3 justify-content-center text-nowrap" onclick="AnnouncementsModule.openEmailLogsModal()" style="height: 36px; border-radius: 8px;">
+                                    <i data-lucide="scroll-text" style="width:14px;height:14px;" class="me-1.5"></i> Delivery Logs
                                 </button>
-                                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm text-xs py-1.5 px-3" onclick="AnnouncementsModule.openEmailRuleModal()">
-                                    <i data-lucide="plus-circle" style="width:14px;height:14px;" class="me-1"></i> Set Email Notification
+                                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm text-xs py-1.5 px-3 justify-content-center text-nowrap" onclick="AnnouncementsModule.openEmailRuleModal()" style="height: 36px; border-radius: 8px; font-weight: 600;">
+                                    <i data-lucide="plus-circle" style="width:14px;height:14px;" class="me-1.5"></i> Set Email Notification
                                 </button>
                             </div>
                         </div>
@@ -1995,21 +2203,35 @@ const AnnouncementsModule = {
             </div>`;
         }).join('');
 
+        const isAllRolesTargeted = !ruleData.target_roles || ruleData.target_roles.length === 0 || ruleData.target_roles.includes('All');
+
         const roleCheckboxesHtml = (meta.roles || []).map(r => {
-            const isChecked = ruleData.target_roles && ruleData.target_roles.includes(r) ? 'checked' : '';
+            let isChecked = '';
+            if (r === 'All') {
+                isChecked = isAllRolesTargeted || (ruleData.target_roles && meta.roles.filter(x => x !== 'All').every(x => ruleData.target_roles.includes(x))) ? 'checked' : '';
+            } else {
+                isChecked = isAllRolesTargeted || (ruleData.target_roles && ruleData.target_roles.includes(r)) ? 'checked' : '';
+            }
             return `
             <div class="form-check form-check-inline text-xs me-3">
-                <input class="form-check-input en-role-checkbox" type="checkbox" value="${r}" id="enRole_${r}" ${isChecked}>
-                <label class="form-check-label" for="enRole_${r}">${r}</label>
+                <input class="form-check-input en-role-checkbox" type="checkbox" value="${r}" id="enRole_${r}" ${isChecked} onchange="AnnouncementsModule.onRoleCheckboxChange(this)">
+                <label class="form-check-label fw-medium" for="enRole_${r}">${r}</label>
             </div>`;
         }).join('');
 
+        const isAllStatusesTargeted = !ruleData.target_statuses || ruleData.target_statuses.length === 0 || ruleData.target_statuses.includes('All');
+
         const statusCheckboxesHtml = (meta.subscription_statuses || []).map(s => {
-            const isChecked = ruleData.target_statuses && ruleData.target_statuses.includes(s) ? 'checked' : '';
+            let isChecked = '';
+            if (s === 'All') {
+                isChecked = isAllStatusesTargeted || (ruleData.target_statuses && meta.subscription_statuses.filter(x => x !== 'All').every(x => ruleData.target_statuses.includes(x))) ? 'checked' : '';
+            } else {
+                isChecked = isAllStatusesTargeted || (ruleData.target_statuses && ruleData.target_statuses.includes(s)) ? 'checked' : '';
+            }
             return `
             <div class="form-check form-check-inline text-xs me-3">
-                <input class="form-check-input en-status-checkbox" type="checkbox" value="${s}" id="enStatus_${s}" ${isChecked}>
-                <label class="form-check-label" for="enStatus_${s}">${s}</label>
+                <input class="form-check-input en-status-checkbox" type="checkbox" value="${s}" id="enStatus_${s}" ${isChecked} onchange="AnnouncementsModule.onStatusCheckboxChange(this)">
+                <label class="form-check-label fw-medium" for="enStatus_${s}">${s}</label>
             </div>`;
         }).join('');
 
@@ -2321,6 +2543,80 @@ const AnnouncementsModule = {
                                 </div>
                             </div>
 
+                            <!-- ═══ SMS Notification Configuration (Gio DLT) ═══ -->
+                            <div class="mt-4 p-3 rounded border" style="background: rgba(99,102,241,0.03); border-color: rgba(99,102,241,0.25)!important;">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="p-1.5 rounded" style="background:rgba(99,102,241,0.12);">
+                                            <i data-lucide="smartphone" style="width:15px;height:15px;color:#6366f1;"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-sm text-main">📱 SMS Notification Configuration <span class="badge bg-indigo-subtle text-indigo ms-1" style="font-size:10px;background:rgba(99,102,241,0.12);color:#6366f1;">Gio DLT</span></div>
+                                            <div class="text-xxs text-secondary">Send SMS alongside this email using the Gio DLT (Kaleyra) gateway — requires pre-approved DLT template.</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-xxs text-secondary fw-semibold" id="enSmsToggleLabel">${ruleData.sms_enabled ? 'SMS: ON' : 'SMS: OFF'}</span>
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="enSmsEnabled" ${ruleData.sms_enabled ? 'checked' : ''} onchange="AnnouncementsModule.onSmsPanelToggle(this.checked)" style="cursor:pointer;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SMS Fields (shown when SMS is toggled ON) -->
+                                <div id="enSmsConfigFields" style="display:${ruleData.sms_enabled ? 'block' : 'none'};">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold">DLT Entity ID (PE ID) <span class="text-danger">*</span></label>
+                                            <input type="text" class="ds-input text-xs font-monospace" id="enSmsEntityId" placeholder="e.g. 1301XXXXXXXXX" value="${QCMS.escapeHtml(ruleData.sms_entity_id || '')}">
+                                            <div class="text-xxs text-muted mt-0.5">Your Gio DLT Principal Entity ID</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold">DLT Template ID <span class="text-danger">*</span></label>
+                                            <input type="text" class="ds-input text-xs font-monospace" id="enSmsTemplateId" placeholder="e.g. 1307XXXXXXXXX" value="${QCMS.escapeHtml(ruleData.sms_template_id || '')}">
+                                            <div class="text-xxs text-muted mt-0.5">Gio DLT approved Template ID</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold">Sender ID (Header) <span class="text-danger">*</span></label>
+                                            <input type="text" class="ds-input text-xs font-monospace text-uppercase" id="enSmsSenderId" placeholder="e.g. IFQMSK" maxlength="6" value="${QCMS.escapeHtml(ruleData.sms_sender_id || '')}" oninput="this.value=this.value.toUpperCase()">
+                                            <div class="text-xxs text-muted mt-0.5">6-char DLT-approved sender header</div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                                <label class="ds-label text-xxs fw-semibold m-0">SMS Body Text <span class="text-danger">*</span></label>
+                                                <span class="text-xxs text-muted">Must exactly match your DLT-approved template. Use <code class="text-indigo">{{variable}}</code> for dynamic parts.</span>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-1 mb-2 p-2 rounded border" style="background:rgba(99,102,241,0.03);">
+                                                <span class="text-xxs text-muted fw-semibold me-1 align-self-center">Insert:</span>
+                                                ${['{{org_name}}','{{user_name}}','{{plan_name}}','{{expiry_date}}','{{days_left}}','{{app_url}}'].map(v =>
+                                                    `<button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-1.5 text-xxs font-monospace rounded" onclick="AnnouncementsModule.insertSmsVariableChip('${v}')">${v}</button>`
+                                                ).join('')}
+                                            </div>
+                                            <textarea class="ds-input text-xs font-monospace" id="enSmsBody" rows="3" placeholder="e.g. Dear {{org_name}}, your {{plan_name}} subscription expires on {{expiry_date}}. Renew at {{app_url}}. -IFQMSK">${QCMS.escapeHtml(ruleData.sms_body || '')}</textarea>
+                                            <div class="d-flex justify-content-between mt-1">
+                                                <div class="text-xxs text-muted">Character count: <span id="enSmsBodyCount" class="fw-semibold">${(ruleData.sms_body || '').length}</span>/160</div>
+                                                <div class="text-xxs text-warning">⚠️ SMS body must be DLT-registered. Do NOT change approved wording.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- DLT Compliance Notice -->
+                                    <div class="mt-3 p-2.5 rounded border d-flex align-items-start gap-2" style="background:rgba(245,158,11,0.06); border-color:rgba(245,158,11,0.3)!important;">
+                                        <i data-lucide="shield-alert" style="width:14px;height:14px;color:#d97706;flex-shrink:0;margin-top:1px;"></i>
+                                        <div class="text-xxs" style="color:#92400e;">
+                                            <strong>Indian DLT Regulatory Compliance:</strong> All commercial SMS in India require Telecom Regulatory Authority (TRAI) DLT registration. The Entity ID, Template ID, and Sender ID must be pre-approved on the <strong>Gio DLT / Airtel DLT / JIO DLT</strong> portal before activating SMS. Unregistered SMS will be blocked by telecom operators.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Collapsed placeholder when SMS is OFF -->
+                                <div id="enSmsOffPlaceholder" style="display:${ruleData.sms_enabled ? 'none' : 'block'};">
+                                    <div class="text-xxs text-secondary text-center py-2" style="background:rgba(0,0,0,0.02); border-radius:6px;">
+                                        Toggle SMS ON above to configure Gio DLT template, Entity ID, Template ID, Sender ID and SMS body for this notification.
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="modal-footer mt-4 pt-3 border-top d-flex justify-content-between align-items-center px-0 pb-0">
                                 <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
                                 <div class="d-flex align-items-center gap-2">
@@ -2355,6 +2651,38 @@ const AnnouncementsModule = {
         setTimeout(() => this.updateLiveFormPreview(), 300);
     },
 
+    onRoleCheckboxChange(clickedCb) {
+        if (!clickedCb) return;
+        const allCb = document.getElementById('enRole_All');
+        const roleCbs = Array.from(document.querySelectorAll('.en-role-checkbox')).filter(cb => cb.value !== 'All');
+
+        if (clickedCb.value === 'All') {
+            const isChecked = clickedCb.checked;
+            roleCbs.forEach(cb => {
+                cb.checked = isChecked;
+            });
+        } else if (allCb) {
+            const allChecked = roleCbs.length > 0 && roleCbs.every(cb => cb.checked);
+            allCb.checked = allChecked;
+        }
+    },
+
+    onStatusCheckboxChange(clickedCb) {
+        if (!clickedCb) return;
+        const allCb = document.getElementById('enStatus_All');
+        const statusCbs = Array.from(document.querySelectorAll('.en-status-checkbox')).filter(cb => cb.value !== 'All');
+
+        if (clickedCb.value === 'All') {
+            const isChecked = clickedCb.checked;
+            statusCbs.forEach(cb => {
+                cb.checked = isChecked;
+            });
+        } else if (allCb) {
+            const allChecked = statusCbs.length > 0 && statusCbs.every(cb => cb.checked);
+            allCb.checked = allChecked;
+        }
+    },
+
     insertVariableChip(tag) {
         const textarea = document.getElementById('enBodyHtml');
         if (!textarea) return;
@@ -2365,6 +2693,851 @@ const AnnouncementsModule = {
         textarea.value = text.substring(0, start) + tag + text.substring(end);
         textarea.focus();
         textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    },
+
+    insertSmsVariableChip(tag) {
+        const textarea = document.getElementById('enSmsBody');
+        if (!textarea) return;
+        const start = textarea.selectionStart || 0;
+        const end = textarea.selectionEnd || 0;
+        const text = textarea.value;
+        textarea.value = text.substring(0, start) + tag + text.substring(end);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+        // Update char count
+        const countEl = document.getElementById('enSmsBodyCount');
+        if (countEl) countEl.textContent = textarea.value.length;
+    },
+
+    onSmsPanelToggle(checked) {
+        const fieldsEl = document.getElementById('enSmsConfigFields');
+        const placeholderEl = document.getElementById('enSmsOffPlaceholder');
+        const labelEl = document.getElementById('enSmsToggleLabel');
+        if (fieldsEl) fieldsEl.style.display = checked ? 'block' : 'none';
+        if (placeholderEl) placeholderEl.style.display = checked ? 'none' : 'block';
+        if (labelEl) labelEl.textContent = checked ? 'SMS: ON' : 'SMS: OFF';
+        // Live char count wiring on first enable
+        if (checked) {
+            const smsBodyEl = document.getElementById('enSmsBody');
+            const countEl = document.getElementById('enSmsBodyCount');
+            if (smsBodyEl && countEl) {
+                countEl.textContent = smsBodyEl.value.length;
+                smsBodyEl.addEventListener('input', () => { countEl.textContent = smsBodyEl.value.length; });
+            }
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SMS NOTIFICATION & DLT SYSTEM TEMPLATES HUB
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    _smsTemplates: [],
+
+    async renderSmsNotificationsHub(container) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;"></div>
+                <p class="text-xs text-muted mt-2">Loading SMS notification templates & DLT registries...</p>
+            </div>
+        `;
+
+        try {
+            const res = await api.get('/email-notifications/sms-templates');
+            const templates = (res && res.data) ? res.data : [];
+            this._smsTemplates = templates;
+
+            const totalCount = templates.length;
+            const activeCount = templates.filter(t => t.is_active).length;
+
+            const categoryMap = {
+                'phone_otp_verification': { label: 'Auth & Verification', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'shield-check' },
+                'subscription_reminder_7d': { label: 'Subscription Expiry', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'clock' },
+                'subscription_urgent_1d': { label: 'Urgent Expiry Notice', color: '#dc2626', bg: 'rgba(220,38,38,0.1)', icon: 'alert-octagon' },
+                'trial_ending_3d': { label: 'Trial Ending Alert', color: '#d97706', bg: 'rgba(217,119,6,0.1)', icon: 'hourglass' },
+                'system_maintenance_notice': { label: 'System Maintenance', color: '#4f46e5', bg: 'rgba(79,70,229,0.1)', icon: 'wrench' },
+                'new_org_welcome': { label: 'Organization Welcome', color: '#16a34a', bg: 'rgba(22,163,74,0.1)', icon: 'sparkles' },
+                'workflow_usage_guide': { label: 'Workflow Guide', color: '#0284c7', bg: 'rgba(2,132,199,0.1)', icon: 'book-open' },
+                'new_features_release': { label: 'Release Notes', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', icon: 'zap' },
+                'customer_support_checkin': { label: 'Customer Success', color: '#0d9488', bg: 'rgba(13,148,136,0.1)', icon: 'life-buoy' },
+                'payment_approved_receipt': { label: 'Payment Receipt', color: '#16a34a', bg: 'rgba(22,163,74,0.1)', icon: 'receipt' },
+                'payment_declined_notice': { label: 'Payment Notice', color: '#dc2626', bg: 'rgba(220,38,38,0.1)', icon: 'alert-triangle' },
+                'project_assignment_kickoff': { label: 'Project Kickoff', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'user-plus' },
+                'project_completion_report': { label: 'Project Completed', color: '#16a34a', bg: 'rgba(22,163,74,0.1)', icon: 'award' },
+                'user_welcome_credentials': { label: 'User Credentials', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'user-check' },
+                'payg_metered_invoice': { label: 'PAYG Tax Invoice', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)', icon: 'file-text' },
+                'project_stage_review_required': { label: 'Reviewer Review Alert', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'check-square' },
+                'executive_closure_signoff': { label: 'CEO Closure Sign-Off', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)', icon: 'shield-alert' },
+                'facilitator_guidance_requested': { label: 'Facilitator Guidance', color: '#0d9488', bg: 'rgba(13,148,136,0.1)', icon: 'help-circle' }
+            };
+
+            const cardsHtml = templates.map(tmpl => {
+                const cat = categoryMap[tmpl.template_key] || { label: 'System SMS', color: '#64748b', bg: 'rgba(100,116,139,0.1)', icon: 'smartphone' };
+                const bodyLen = (tmpl.body || '').length;
+                const segments = Math.ceil(bodyLen / 160) || 1;
+
+                return `
+                <div class="col-12 col-xl-6 sms-tmpl-card-wrapper" data-key="${tmpl.template_key}" data-category="${tmpl.category || 'custom'}" data-status="${tmpl.is_active ? 'active' : 'paused'}" data-name="${(tmpl.display_name || '').toLowerCase()} ${(tmpl.body || '').toLowerCase()}">
+                    <div class="glass-card ds-card p-3.5 h-100 d-flex flex-column justify-content-between position-relative border" style="border-color: var(--ds-border-color); border-radius: 12px; transition: all 0.2s ease;">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="badge font-semibold text-xxs px-2 py-1 d-inline-flex align-items-center" style="background: ${cat.bg}; color: ${cat.color}; border: 1px solid ${cat.color}33;">
+                                        <i data-lucide="${cat.icon}" style="width:11px;height:11px;" class="me-1"></i> ${cat.label}
+                                    </span>
+                                    <span class="badge bg-light text-dark border px-2 py-0.5 text-xxs font-monospace">${tmpl.template_key}</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5 text-xxs">
+                                        <i data-lucide="zap" style="width:10px;height:10px;" class="me-0.5"></i> Auto Dispatch
+                                    </span>
+                                </div>
+                                <div class="form-check form-switch m-0" title="Toggle Active / Paused">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="smsHub_Active_${tmpl.template_key}" ${tmpl.is_active ? 'checked' : ''} onchange="AnnouncementsModule.toggleSmsTemplateStatus('${tmpl.template_key}', this)">
+                                </div>
+                            </div>
+
+                            <h6 class="fw-bold text-main mb-1 text-truncate" title="${QCMS.escapeHtml(tmpl.display_name)}">${QCMS.escapeHtml(tmpl.display_name)}</h6>
+                            <p class="text-xs text-secondary mb-2.5" style="min-height: 28px; line-height: 1.4;">${QCMS.escapeHtml(tmpl.description || '')}</p>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label class="ds-label text-xxs fw-semibold mb-1">DLT Entity ID (PE ID)</label>
+                                    <input type="text" class="ds-input text-xs font-monospace py-1" id="smsHub_EI_${tmpl.template_key}" placeholder="e.g. 1301XXXXXXXXX" value="${QCMS.escapeHtml(tmpl.entity_id || '')}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="ds-label text-xxs fw-semibold mb-1">DLT Template ID</label>
+                                    <input type="text" class="ds-input text-xs font-monospace py-1" id="smsHub_TI_${tmpl.template_key}" placeholder="e.g. 1307XXXXXXXXX" value="${QCMS.escapeHtml(tmpl.template_id || '')}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="ds-label text-xxs fw-semibold mb-1">Sender ID (6-char)</label>
+                                    <input type="text" class="ds-input text-xs font-monospace text-uppercase py-1" id="smsHub_SI_${tmpl.template_key}" placeholder="e.g. IFQMSK" maxlength="6" value="${QCMS.escapeHtml(tmpl.sender_id || '')}" oninput="this.value=this.value.toUpperCase()">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="ds-label text-xxs fw-semibold mb-0">SMS Body Text <span class="text-muted fw-normal">(Variables supported)</span></label>
+                                    <span class="text-xxs text-muted" id="smsHub_Len_${tmpl.template_key}">${bodyLen} chars • ${segments} segment${segments > 1 ? 's' : ''}</span>
+                                </div>
+                                <textarea class="ds-input text-xs font-monospace" id="smsHub_BD_${tmpl.template_key}" rows="3" oninput="AnnouncementsModule.updateSmsCharCount('${tmpl.template_key}', this)">${QCMS.escapeHtml(tmpl.body || '')}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-color: var(--ds-border-color)!important;">
+                            <div class="text-xxs text-muted d-flex align-items-center gap-1">
+                                <i data-lucide="shield-check" style="width:12px;height:12px;" class="text-success"></i>
+                                <span>TRAI DLT Verified</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1.5">
+                                <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-xs py-1 px-2.5" onclick="AnnouncementsModule.sendTestSmsFromHub('${tmpl.template_key}')" title="Send Test SMS">
+                                    <i data-lucide="send" style="width:12px;height:12px;" class="me-1"></i> Test SMS
+                                </button>
+                                <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm text-xs py-1 px-2.5" onclick="AnnouncementsModule.openSmsRuleModal('${tmpl.template_key}')" title="Configure Audience, Schedule & Targeting">
+                                    <i data-lucide="edit-3" style="width:12px;height:12px;" class="me-1"></i> Edit
+                                </button>
+                                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm text-xs py-1 px-3" onclick="AnnouncementsModule.saveSmsTemplateFromHub('${tmpl.template_key}')" title="Save Inline Changes">
+                                    <i data-lucide="save" style="width:12px;height:12px;" class="me-1"></i> Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <!-- 1. Top Metrics KPI Summary Grid -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-md-4">
+                        <div class="glass-card ds-card p-3 h-100 d-flex flex-column justify-content-between border" style="border-color: var(--ds-border-color);">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-xs text-muted fw-semibold text-uppercase tracking-wider">Active SMS Templates</span>
+                                <div class="p-2 rounded bg-primary bg-opacity-10 text-primary">
+                                    <i data-lucide="smartphone" style="width: 16px; height: 16px;"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="fw-bold mb-0 text-main mt-2">${activeCount} <span class="text-xs text-muted fw-normal">/ ${totalCount} Total</span></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="glass-card ds-card p-3 h-100 d-flex flex-column justify-content-between border" style="border-color: var(--ds-border-color);">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-xs text-muted fw-semibold text-uppercase tracking-wider">Event Triggers</span>
+                                <div class="p-2 rounded bg-warning bg-opacity-10 text-warning">
+                                    <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="fw-bold mb-0 text-warning mt-2">${totalCount} <span class="text-xs text-muted fw-normal">Automations</span></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="glass-card ds-card p-3 h-100 d-flex flex-column justify-content-between border hover-shadow" style="border-color: var(--ds-border-color); cursor: pointer; transition: all 0.2s;" onclick="AnnouncementsModule.openSmsLogsModal()" title="Click to view SMS delivery audit logs">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-xs text-muted fw-semibold text-uppercase tracking-wider">Delivery Audit Logs</span>
+                                <div class="p-2 rounded bg-info bg-opacity-10 text-info">
+                                    <i data-lucide="scroll-text" style="width: 16px; height: 16px;"></i>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-2">
+                                <h4 class="fw-bold mb-0 text-info">Audit History</h4>
+                                <span class="text-xs text-info fw-semibold">View Logs &rarr;</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Controls & Search Filter Bar in a Single Sleek Row -->
+                <div class="glass-card ds-card p-2.5 p-md-3 mb-4 border">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2.5">
+                        <!-- Left Group: Search & Dropdowns in single line -->
+                        <div class="d-flex align-items-center gap-2 flex-wrap flex-md-nowrap flex-grow-1">
+                            <div class="position-relative flex-grow-1" style="min-width: 180px; max-width: 320px;">
+                                <i data-lucide="search" class="position-absolute top-50 start-0 translate-middle-y ms-2.5 text-muted" style="width:14px;height:14px;"></i>
+                                <input type="text" class="ds-input text-xs ps-4 py-1.5 w-100" id="smsHubFilterInput" placeholder="Search SMS notification templates..." onkeyup="AnnouncementsModule.filterSmsHubCards()" style="height: 36px; border-radius: 8px;">
+                            </div>
+                            <select class="ds-input text-xs py-1.5" id="smsHubCategoryFilter" onchange="AnnouncementsModule.filterSmsHubCards()" style="width: 160px; height: 36px; border-radius: 8px;">
+                                <option value="">All Categories</option>
+                                <option value="subscription_reminder">Subscription Expiry</option>
+                                <option value="trial_reminder">Trial Ending Alert</option>
+                                <option value="project_review">Stage Review Request</option>
+                                <option value="executive_closure_review">CEO Final Sign-Off</option>
+                                <option value="facilitator_assistance">Facilitator Guidance</option>
+                                <option value="project_assignment">Project Assignment</option>
+                                <option value="project_completion">Project Completed</option>
+                                <option value="payment_approved">Payment Approved</option>
+                                <option value="payment_rejected">Payment Declined</option>
+                                <option value="welcome">Organization Welcome</option>
+                                <option value="user_welcome">User Credentials</option>
+                                <option value="usage_guide">Workflow Guide</option>
+                                <option value="new_feature">Release Notes</option>
+                                <option value="maintenance">Maintenance Notice</option>
+                                <option value="support">Customer Support</option>
+                                <option value="billing">PAYG Invoice</option>
+                                <option value="auth">Auth & OTP</option>
+                                <option value="custom">Custom Broadcast</option>
+                            </select>
+                            <select class="ds-input text-xs py-1.5" id="smsHubStatusFilter" onchange="AnnouncementsModule.filterSmsHubCards()" style="width: 120px; height: 36px; border-radius: 8px;">
+                                <option value="">All Status</option>
+                                <option value="active">Active Only</option>
+                                <option value="paused">Paused Only</option>
+                            </select>
+                        </div>
+
+                        <!-- Right Group: Delivery Logs & Set SMS Notification Button -->
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                            <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-xs py-1.5 px-3 justify-content-center text-nowrap" onclick="AnnouncementsModule.openSmsLogsModal()" style="height: 36px; border-radius: 8px;">
+                                <i data-lucide="scroll-text" style="width:14px;height:14px;" class="me-1.5"></i> Delivery Logs
+                            </button>
+                            <button type="button" class="ds-btn ds-btn-primary ds-btn-sm text-xs py-1.5 px-3 justify-content-center text-nowrap" onclick="AnnouncementsModule.openSmsRuleModal()" style="height: 36px; border-radius: 8px; font-weight: 600;">
+                                <i data-lucide="plus-circle" style="width:14px;height:14px;" class="me-1.5"></i> Set SMS Notification
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Cards Grid -->
+                <div class="row g-3.5" id="smsHubCardsGrid">
+                    ${cardsHtml}
+                </div>
+            `;
+
+            if (window.lucide) lucide.createIcons();
+        } catch (e) {
+            container.innerHTML = `
+                <div class="alert alert-danger p-4 text-center">
+                    <p class="mb-0">Failed to load SMS notification templates: ${e.message}</p>
+                </div>
+            `;
+        }
+    },
+
+    updateSmsCharCount(key, el) {
+        const len = (el.value || '').length;
+        const segments = Math.ceil(len / 160) || 1;
+        const countBadge = document.getElementById(`smsHub_Len_${key}`);
+        if (countBadge) {
+            countBadge.textContent = `${len} chars • ${segments} segment${segments > 1 ? 's' : ''}`;
+        }
+    },
+
+    filterSmsHubCards() {
+        const query = (document.getElementById('smsHubFilterInput')?.value || '').toLowerCase().trim();
+        const category = (document.getElementById('smsHubCategoryFilter')?.value || '').toLowerCase().trim();
+        const status = (document.getElementById('smsHubStatusFilter')?.value || '').toLowerCase().trim();
+        const cards = document.querySelectorAll('#smsHubCardsGrid .sms-tmpl-card-wrapper');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const cardName = (card.getAttribute('data-name') || '').toLowerCase();
+            const cardCategory = (card.getAttribute('data-category') || '').toLowerCase();
+            const cardStatus = (card.getAttribute('data-status') || '').toLowerCase();
+            const cardKey = (card.getAttribute('data-key') || '').toLowerCase();
+
+            const matchesQuery = !query || cardName.includes(query) || cardKey.includes(query);
+            const matchesCategory = !category || cardCategory.includes(category) || cardKey.includes(category);
+            const matchesStatus = !status || cardStatus === status;
+
+            const isVisible = matchesQuery && matchesCategory && matchesStatus;
+            card.style.display = isVisible ? 'block' : 'none';
+            if (isVisible) visibleCount++;
+        });
+
+        const badge = document.getElementById('smsHubTotalCountBadge');
+        if (badge) badge.textContent = `${visibleCount} SMS Templates`;
+    },
+
+    async saveSmsTemplateFromHub(templateKey) {
+        const payload = {
+            template_id: document.getElementById(`smsHub_TI_${templateKey}`)?.value.trim() || null,
+            entity_id: document.getElementById(`smsHub_EI_${templateKey}`)?.value.trim() || null,
+            sender_id: (document.getElementById(`smsHub_SI_${templateKey}`)?.value.trim() || '').toUpperCase() || null,
+            body: document.getElementById(`smsHub_BD_${templateKey}`)?.value.trim() || null,
+            is_active: document.getElementById(`smsHub_Active_${templateKey}`)?.checked ?? true,
+        };
+        try {
+            const res = await api.put(`/email-notifications/sms-templates/${templateKey}`, payload);
+            if (res && res.status === 'success') {
+                QCMS.toast(res.message || `SMS template '${templateKey}' saved successfully!`, 'success');
+            }
+        } catch(e) {
+            QCMS.toast('Failed to save SMS template: ' + (e.message || e.msg), 'error');
+        }
+    },
+
+    async toggleSmsTemplateStatus(templateKey, checkboxEl) {
+        const isActive = checkboxEl.checked;
+        try {
+            const res = await api.put(`/email-notifications/sms-templates/${templateKey}`, { is_active: isActive });
+            if (res && res.status === 'success') {
+                const card = checkboxEl.closest('.sms-tmpl-card-wrapper');
+                if (card) card.setAttribute('data-status', isActive ? 'active' : 'paused');
+                QCMS.toast(`SMS template is now ${isActive ? 'Active' : 'Paused'}.`, 'success');
+            }
+        } catch (e) {
+            checkboxEl.checked = !isActive;
+            QCMS.toast('Failed to update status: ' + (e.message || e.msg), 'error');
+        }
+    },
+
+    async sendTestSmsFromHub(templateKey) {
+        const phone = prompt("Enter mobile phone number to send a test SMS (e.g. 9876543210):");
+        if (!phone || !phone.trim()) return;
+
+        try {
+            QCMS.toast("Dispatching test SMS...", "info");
+            const res = await api.post(`/email-notifications/sms-templates/${templateKey}/send-test`, { phone: phone.trim() });
+            if (res && res.status === 'success') {
+                QCMS.toast(res.message || "Test SMS sent successfully!", "success");
+            }
+        } catch (e) {
+            QCMS.toast("Failed to send test SMS: " + (e.message || e.msg), "error");
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SMS NOTIFICATION RULE CONFIGURATION & AUDIENCE TARGETING MODAL
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    async openSmsRuleModal(templateKey = null) {
+        let meta = await this.fetchEmailMeta();
+        if (!meta) meta = { organizations: [], plans: [], roles: ["All", "Admin", "CEO", "Reviewer", "Facilitator", "Team Member"], subscription_statuses: ["Active", "Trial", "Expiring", "Suspended"], available_variables: [] };
+
+        let tmplData = {
+            template_key: templateKey || 'custom_sms_broadcast',
+            display_name: 'Custom SMS Notification',
+            category: 'custom',
+            description: '',
+            entity_id: '',
+            template_id: '',
+            sender_id: 'IFQMSK',
+            body: '',
+            trigger_type: 'event',
+            event_trigger: 'subscription_expiring_soon',
+            trigger_days_before: 0,
+            scheduled_at: '',
+            target_audience_type: 'all',
+            target_org_ids: [],
+            target_roles: ['All'],
+            target_plans: [],
+            target_statuses: ['Active'],
+            is_active: true
+        };
+
+        if (templateKey) {
+            try {
+                const res = await api.get(`/email-notifications/sms-templates/${templateKey}`);
+                if (res && res.status === 'success' && res.data) {
+                    tmplData = { ...tmplData, ...res.data };
+                }
+            } catch (e) {
+                QCMS.toast('Failed to load SMS template details: ' + (e.message || e.msg), 'error');
+                return;
+            }
+        }
+
+        let modalEl = document.getElementById('smsRuleModal');
+        if (!modalEl) {
+            const div = document.createElement('div');
+            div.id = 'smsRuleModalContainer';
+            document.body.appendChild(div);
+        }
+
+        const orgCheckboxesHtml = (meta.organizations || []).map(o => {
+            const isChecked = tmplData.target_org_ids && tmplData.target_org_ids.includes(o.id) ? 'checked' : '';
+            return `
+            <div class="col-6 col-md-4 mb-1">
+                <div class="form-check text-xs">
+                    <input class="form-check-input sms-org-checkbox" type="checkbox" value="${o.id}" id="smsOrg_${o.id}" ${isChecked}>
+                    <label class="form-check-label text-truncate" for="smsOrg_${o.id}" title="${QCMS.escapeHtml(o.name)}">${QCMS.escapeHtml(o.name)}</label>
+                </div>
+            </div>`;
+        }).join('');
+
+        const isAllRolesTargeted = !tmplData.target_roles || tmplData.target_roles.length === 0 || tmplData.target_roles.includes('All');
+        const roleCheckboxesHtml = (meta.roles || ["All", "Admin", "CEO", "Reviewer", "Facilitator", "Team Member"]).map(r => {
+            let isChecked = '';
+            if (r === 'All') {
+                isChecked = isAllRolesTargeted ? 'checked' : '';
+            } else {
+                isChecked = isAllRolesTargeted || (tmplData.target_roles && tmplData.target_roles.includes(r)) ? 'checked' : '';
+            }
+            return `
+            <div class="form-check form-check-inline text-xs me-3">
+                <input class="form-check-input sms-role-checkbox" type="checkbox" value="${r}" id="smsRole_${r}" ${isChecked} onchange="AnnouncementsModule.onSmsRoleCheckboxChange(this)">
+                <label class="form-check-label fw-medium" for="smsRole_${r}">${r}</label>
+            </div>`;
+        }).join('');
+
+        const isAllStatusesTargeted = !tmplData.target_statuses || tmplData.target_statuses.length === 0 || tmplData.target_statuses.includes('All');
+        const statusCheckboxesHtml = (meta.subscription_statuses || ["Active", "Trial", "Expiring", "Suspended"]).map(s => {
+            let isChecked = '';
+            if (s === 'All') {
+                isChecked = isAllStatusesTargeted ? 'checked' : '';
+            } else {
+                isChecked = isAllStatusesTargeted || (tmplData.target_statuses && tmplData.target_statuses.includes(s)) ? 'checked' : '';
+            }
+            return `
+            <div class="form-check form-check-inline text-xs me-3">
+                <input class="form-check-input sms-status-checkbox" type="checkbox" value="${s}" id="smsStatus_${s}" ${isChecked} onchange="AnnouncementsModule.onSmsStatusCheckboxChange(this)">
+                <label class="form-check-label fw-medium" for="smsStatus_${s}">${s}</label>
+            </div>`;
+        }).join('');
+
+        const variableChipsHtml = (meta.available_variables || []).map(v => {
+            return `
+            <button type="button" class="ds-btn ds-btn-outline ds-btn-sm py-0.5 px-2 text-xxs font-monospace" style="font-size:11px;" title="Insert ${v.label} (e.g. ${v.example})" onclick="AnnouncementsModule.insertSmsVariableChip('${v.tag}')">
+                + ${v.tag}
+            </button>`;
+        }).join('');
+
+        const presetOptionsHtml = (this._smsTemplates || []).map(t => {
+            const isSel = (t.template_key === tmplData.template_key) ? 'selected' : '';
+            return `<option value="${t.template_key}" ${isSel}>${QCMS.escapeHtml(t.display_name)} (${t.template_key})</option>`;
+        }).join('');
+
+        const bodyLen = (tmplData.body || '').length;
+        const segments = Math.ceil(bodyLen / 160) || 1;
+
+        const modalMarkup = `
+        <div class="modal fade" id="smsRuleModalInner" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content" style="background:var(--ds-bg-card); border: 1px solid var(--ds-border-color); border-radius: var(--ds-radius-lg);">
+                    <div class="modal-header" style="border-bottom:1px solid var(--ds-border-color);">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="p-2 rounded bg-primary bg-opacity-10 text-primary">
+                                <i data-lucide="smartphone" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-bold mb-0">Edit SMS Notification Rule</h5>
+                                <div class="text-xxs text-secondary">Set SMS message, DLT sender identity, automated triggers, and target audience organizations.</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <!-- Top Preset Selector -->
+                        <div class="p-3 mb-4 rounded border d-flex align-items-center justify-content-between flex-wrap gap-3" style="background:rgba(99,102,241,0.04); border-color:rgba(99,102,241,0.25)!important;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i data-lucide="sparkles" style="width:16px;height:16px;color:#6366f1;"></i>
+                                <span class="text-xs fw-semibold text-main">Load Standard Preset Template:</span>
+                            </div>
+                            <div style="min-width: 280px;">
+                                <select class="ds-input text-xs py-1.5" id="smsModalPresetSelect" onchange="AnnouncementsModule.onSmsPresetSelect(this.value)">
+                                    <option value="">-- Choose Template Preset --</option>
+                                    ${presetOptionsHtml}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-4">
+                            <!-- Left Column: Content & DLT Identity Configuration -->
+                            <div class="col-12 col-lg-7">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-7">
+                                        <label class="ds-label text-xs fw-semibold mb-1">Campaign / Rule Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="ds-input text-xs" id="smsRule_Name" value="${QCMS.escapeHtml(tmplData.display_name || '')}" placeholder="e.g. Project Review Required: Stage Review Request">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="ds-label text-xs fw-semibold mb-1">Category <span class="text-danger">*</span></label>
+                                        <select class="ds-input text-xs" id="smsRule_Category">
+                                            <option value="subscription_reminder" ${tmplData.category === 'subscription_reminder' ? 'selected' : ''}>Subscription Expiry</option>
+                                            <option value="trial_reminder" ${tmplData.category === 'trial_reminder' ? 'selected' : ''}>Trial Ending Alert</option>
+                                            <option value="project_review" ${tmplData.category === 'project_review' ? 'selected' : ''}>Stage Review Request</option>
+                                            <option value="executive_closure_review" ${tmplData.category === 'executive_closure_review' ? 'selected' : ''}>CEO Final Sign-Off</option>
+                                            <option value="facilitator_assistance" ${tmplData.category === 'facilitator_assistance' ? 'selected' : ''}>Facilitator Guidance</option>
+                                            <option value="project_assignment" ${tmplData.category === 'project_assignment' ? 'selected' : ''}>Project Assignment</option>
+                                            <option value="project_completion" ${tmplData.category === 'project_completion' ? 'selected' : ''}>Project Completion</option>
+                                            <option value="payment_approved" ${tmplData.category === 'payment_approved' ? 'selected' : ''}>Payment Approved & Receipt</option>
+                                            <option value="payment_rejected" ${tmplData.category === 'payment_rejected' ? 'selected' : ''}>Payment Declined Notice</option>
+                                            <option value="welcome" ${tmplData.category === 'welcome' ? 'selected' : ''}>Organization Welcome</option>
+                                            <option value="user_welcome" ${tmplData.category === 'user_welcome' ? 'selected' : ''}>User Welcome & Credentials</option>
+                                            <option value="usage_guide" ${tmplData.category === 'usage_guide' ? 'selected' : ''}>Software Workflow Guide</option>
+                                            <option value="new_feature" ${tmplData.category === 'new_feature' ? 'selected' : ''}>New Features & Updates</option>
+                                            <option value="maintenance" ${tmplData.category === 'maintenance' ? 'selected' : ''}>System Maintenance</option>
+                                            <option value="support" ${tmplData.category === 'support' ? 'selected' : ''}>Customer Support</option>
+                                            <option value="billing" ${tmplData.category === 'billing' ? 'selected' : ''}>Billing & Metered Invoice</option>
+                                            <option value="auth" ${tmplData.category === 'auth' ? 'selected' : ''}>Auth & OTP Verification</option>
+                                            <option value="custom" ${tmplData.category === 'custom' ? 'selected' : ''}>Custom Broadcast</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- DLT SENDER IDENTITY -->
+                                <div class="p-3 rounded border mb-3" style="border-color:var(--ds-border-color); background:rgba(0,0,0,0.015);">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="text-xs fw-bold text-uppercase tracking-wider text-muted d-flex align-items-center gap-1.5">
+                                            <i data-lucide="shield-check" style="width:13px;height:13px;" class="text-success"></i> SENDER ID & DLT REGISTRATION
+                                        </div>
+                                        <span class="badge text-xxs" style="background:rgba(99,102,241,0.1);color:#6366f1;">Gio DLT Portal</span>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold mb-1">DLT Entity ID (PE ID)</label>
+                                            <input type="text" class="ds-input text-xs font-monospace py-1" id="smsModal_EntityId" value="${QCMS.escapeHtml(tmplData.entity_id || '')}" placeholder="e.g. 1301XXXXXXXXX">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold mb-1">DLT Template ID</label>
+                                            <input type="text" class="ds-input text-xs font-monospace py-1" id="smsModal_TemplateId" value="${QCMS.escapeHtml(tmplData.template_id || '')}" placeholder="e.g. 1307XXXXXXXXX">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold mb-1">Sender ID (6-char)</label>
+                                            <input type="text" class="ds-input text-xs font-monospace text-uppercase py-1" id="smsModal_SenderId" value="${QCMS.escapeHtml(tmplData.sender_id || '')}" placeholder="e.g. IFQMSK" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SMS Body & Variables -->
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                        <label class="ds-label text-xs fw-semibold mb-0">SMS Body Text <span class="text-danger">*</span></label>
+                                        <span class="text-xxs text-muted" id="smsModal_CharCount">${bodyLen} chars • ${segments} segment${segments > 1 ? 's' : ''}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1.5 flex-wrap mb-2 p-2 rounded border bg-light-subtle" style="border-color:var(--ds-border-color)!important;">
+                                        <span class="text-xxs text-muted fw-semibold me-1">Insert Dynamic Tags:</span>
+                                        ${variableChipsHtml}
+                                    </div>
+                                    <textarea class="ds-input text-xs font-monospace" id="smsModal_Body" rows="5" placeholder="Enter TRAI approved SMS message text..." oninput="AnnouncementsModule.onSmsModalBodyInput(this)">${QCMS.escapeHtml(tmplData.body || '')}</textarea>
+                                </div>
+
+                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="smsModal_IsActive" ${tmplData.is_active ? 'checked' : ''}>
+                                    <label class="form-check-label text-xs fw-semibold text-main" for="smsModal_IsActive">Enable Automated SMS Dispatching</label>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Trigger Schedule & Audience Targeting -->
+                            <div class="col-12 col-lg-5">
+                                <!-- Trigger Schedule Box -->
+                                <div class="p-3 rounded border mb-3" style="border-color:var(--ds-border-color); background:rgba(0,0,0,0.015);">
+                                    <div class="text-xs fw-bold text-uppercase tracking-wider text-muted mb-2 d-flex align-items-center gap-1.5">
+                                        <i data-lucide="clock" style="width:13px;height:13px;" class="text-primary"></i> TRIGGER & DISPATCH SCHEDULE
+                                    </div>
+                                    <div class="mb-2.5">
+                                        <label class="ds-label text-xxs fw-semibold mb-1">Trigger Mode</label>
+                                        <select class="ds-input text-xs py-1" id="smsModal_TriggerType" onchange="AnnouncementsModule.onSmsTriggerTypeChange(this.value)">
+                                            <option value="event" ${tmplData.trigger_type === 'event' ? 'selected' : ''}>Automated Event (Expiry / Signups / Reviews)</option>
+                                            <option value="scheduled" ${tmplData.trigger_type === 'scheduled' ? 'selected' : ''}>Scheduled Date & Time</option>
+                                            <option value="manual" ${tmplData.trigger_type === 'manual' ? 'selected' : ''}>Manual Send Only</option>
+                                        </select>
+                                    </div>
+
+                                    <div id="smsModal_EventConfig" style="display: ${tmplData.trigger_type === 'event' ? 'block' : 'none'};">
+                                        <div class="row g-2">
+                                            <div class="col-8">
+                                                <label class="ds-label text-xxs fw-semibold mb-1">Automated Event Trigger</label>
+                                                <select class="ds-input text-xs py-1" id="smsModal_EventTrigger">
+                                                    <option value="phone_otp_verification" ${tmplData.event_trigger === 'phone_otp_verification' ? 'selected' : ''}>Phone OTP Verification</option>
+                                                    <option value="subscription_expiring_soon" ${tmplData.event_trigger === 'subscription_expiring_soon' ? 'selected' : ''}>Subscription Expiring Soon</option>
+                                                    <option value="trial_expiring_soon" ${tmplData.event_trigger === 'trial_expiring_soon' ? 'selected' : ''}>Trial Plan Ending Soon</option>
+                                                    <option value="project_review_requested" ${tmplData.event_trigger === 'project_review_requested' ? 'selected' : ''}>Stage Submitted for Review</option>
+                                                    <option value="project_forwarded_to_ceo" ${tmplData.event_trigger === 'project_forwarded_to_ceo' ? 'selected' : ''}>Stage 8 Approved - CEO Sign-Off</option>
+                                                    <option value="facilitator_guidance_requested" ${tmplData.event_trigger === 'facilitator_guidance_requested' ? 'selected' : ''}>Facilitator Guidance Assistance</option>
+                                                    <option value="project_assigned" ${tmplData.event_trigger === 'project_assigned' ? 'selected' : ''}>Project Assigned & Kickoff</option>
+                                                    <option value="project_completed" ${tmplData.event_trigger === 'project_completed' ? 'selected' : ''}>Project Completed & Final Approval</option>
+                                                    <option value="payment_approved" ${tmplData.event_trigger === 'payment_approved' ? 'selected' : ''}>Subscription Payment Approved</option>
+                                                    <option value="payment_rejected" ${tmplData.event_trigger === 'payment_rejected' ? 'selected' : ''}>Payment Verification Declined</option>
+                                                    <option value="new_org_welcome" ${tmplData.event_trigger === 'new_org_welcome' ? 'selected' : ''}>New Organization Workspace</option>
+                                                    <option value="new_user_welcome" ${tmplData.event_trigger === 'new_user_welcome' ? 'selected' : ''}>New User Welcome & Credentials</option>
+                                                    <option value="payg_invoice_generated" ${tmplData.event_trigger === 'payg_invoice_generated' ? 'selected' : ''}>Monthly PAYG Metered Invoice</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="ds-label text-xxs fw-semibold mb-1">Days Before</label>
+                                                <input type="number" class="ds-input text-xs py-1" id="smsModal_TriggerDays" value="${tmplData.trigger_days_before || 0}" min="0" max="90">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Audience Targeting Box -->
+                                <div class="p-3 rounded border mb-3" style="border-color:var(--ds-border-color); background:rgba(0,0,0,0.015);">
+                                    <div class="text-xs fw-bold text-uppercase tracking-wider text-muted mb-2 d-flex align-items-center gap-1.5">
+                                        <i data-lucide="users" style="width:13px;height:13px;" class="text-primary"></i> AUDIENCE & RECIPIENT TARGETING
+                                    </div>
+
+                                    <div class="mb-2.5">
+                                        <label class="ds-label text-xxs fw-semibold mb-1">Target Scope</label>
+                                        <select class="ds-input text-xs py-1" id="smsModal_TargetAudience" onchange="AnnouncementsModule.onSmsTargetAudienceChange(this.value)">
+                                            <option value="all" ${tmplData.target_audience_type === 'all' ? 'selected' : ''}>All Organizations (Platform-Wide)</option>
+                                            <option value="specific_orgs" ${tmplData.target_audience_type === 'specific_orgs' ? 'selected' : ''}>Specific Organizations</option>
+                                        </select>
+                                    </div>
+
+                                    <div id="smsModal_SpecificOrgsBox" class="mb-2.5 p-2 rounded border" style="display: ${tmplData.target_audience_type === 'specific_orgs' ? 'block' : 'none'}; max-height: 140px; overflow-y: auto;">
+                                        <div class="row g-1">
+                                            ${orgCheckboxesHtml}
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-2.5">
+                                        <label class="ds-label text-xxs fw-semibold mb-1">Target User Roles in Organization</label>
+                                        <div class="p-2 rounded border bg-light-subtle">
+                                            ${roleCheckboxesHtml}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="ds-label text-xxs fw-semibold mb-1">Target Subscription Status</label>
+                                        <div class="p-2 rounded border bg-light-subtle">
+                                            ${statusCheckboxesHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer d-flex justify-content-between align-items-center px-4 py-3" style="border-top:1px solid var(--ds-border-color);">
+                        <button type="button" class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="ds-btn ds-btn-outline" onclick="AnnouncementsModule.sendTestSmsFromModal('${tmplData.template_key}')">
+                                <i data-lucide="send" style="width:13px;height:13px;" class="me-1"></i> Send Test SMS
+                            </button>
+                            <button type="button" class="ds-btn ds-btn-primary" onclick="AnnouncementsModule.saveSmsRuleFromModal('${tmplData.template_key}')">
+                                <i data-lucide="save" style="width:13px;height:13px;" class="me-1"></i> Save SMS Notification Rule
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        const containerDiv = document.getElementById('smsRuleModalContainer');
+        if (containerDiv) containerDiv.innerHTML = modalMarkup;
+
+        const modal = new bootstrap.Modal(document.getElementById('smsRuleModalInner'));
+        modal.show();
+        if (window.lucide) lucide.createIcons();
+    },
+
+    onSmsModalBodyInput(textareaEl) {
+        const len = (textareaEl.value || '').length;
+        const segments = Math.ceil(len / 160) || 1;
+        const badge = document.getElementById('smsModal_CharCount');
+        if (badge) {
+            badge.textContent = `${len} chars • ${segments} segment${segments > 1 ? 's' : ''}`;
+        }
+    },
+
+    insertSmsVariableChip(tag) {
+        const bodyEl = document.getElementById('smsModal_Body');
+        if (!bodyEl) return;
+        const start = bodyEl.selectionStart || 0;
+        const end = bodyEl.selectionEnd || 0;
+        const text = bodyEl.value;
+        bodyEl.value = text.substring(0, start) + tag + text.substring(end);
+        bodyEl.focus();
+        bodyEl.selectionStart = bodyEl.selectionEnd = start + tag.length;
+        this.onSmsModalBodyInput(bodyEl);
+    },
+
+    onSmsTriggerTypeChange(val) {
+        const eventBox = document.getElementById('smsModal_EventConfig');
+        if (eventBox) eventBox.style.display = (val === 'event') ? 'block' : 'none';
+    },
+
+    onSmsTargetAudienceChange(val) {
+        const orgsBox = document.getElementById('smsModal_SpecificOrgsBox');
+        if (orgsBox) orgsBox.style.display = (val === 'specific_orgs') ? 'block' : 'none';
+    },
+
+    onSmsRoleCheckboxChange(el) {
+        const allCheckbox = document.getElementById('smsRole_All');
+        const roleCheckboxes = document.querySelectorAll('.sms-role-checkbox:not(#smsRole_All)');
+        if (el.value === 'All') {
+            if (el.checked) {
+                roleCheckboxes.forEach(cb => cb.checked = true);
+            } else {
+                roleCheckboxes.forEach(cb => cb.checked = false);
+            }
+        } else {
+            if (!el.checked && allCheckbox) {
+                allCheckbox.checked = false;
+            } else if (allCheckbox) {
+                const allChecked = Array.from(roleCheckboxes).every(cb => cb.checked);
+                allCheckbox.checked = allChecked;
+            }
+        }
+    },
+
+    onSmsStatusCheckboxChange(el) {
+        const allCheckbox = document.getElementById('smsStatus_All');
+        const statusCheckboxes = document.querySelectorAll('.sms-status-checkbox:not(#smsStatus_All)');
+        if (el.value === 'All') {
+            if (el.checked) {
+                statusCheckboxes.forEach(cb => cb.checked = true);
+            } else {
+                statusCheckboxes.forEach(cb => cb.checked = false);
+            }
+        } else {
+            if (!el.checked && allCheckbox) {
+                allCheckbox.checked = false;
+            } else if (allCheckbox) {
+                const allChecked = Array.from(statusCheckboxes).every(cb => cb.checked);
+                allCheckbox.checked = allChecked;
+            }
+        }
+    },
+
+    onSmsPresetSelect(key) {
+        if (!key) return;
+        const tmpl = (this._smsTemplates || []).find(t => t.template_key === key);
+        if (!tmpl) return;
+
+        const nameEl = document.getElementById('smsRule_Name');
+        const catEl = document.getElementById('smsRule_Category');
+        const entityEl = document.getElementById('smsModal_EntityId');
+        const tmplIdEl = document.getElementById('smsModal_TemplateId');
+        const senderEl = document.getElementById('smsModal_SenderId');
+        const bodyEl = document.getElementById('smsModal_Body');
+        const triggerEl = document.getElementById('smsModal_EventTrigger');
+
+        if (nameEl) nameEl.value = tmpl.display_name || '';
+        if (catEl && tmpl.category) catEl.value = tmpl.category;
+        if (entityEl) entityEl.value = tmpl.entity_id || '';
+        if (tmplIdEl) tmplIdEl.value = tmpl.template_id || '';
+        if (senderEl) senderEl.value = tmpl.sender_id || 'IFQMSK';
+        if (bodyEl) {
+            bodyEl.value = tmpl.body || '';
+            this.onSmsModalBodyInput(bodyEl);
+        }
+        if (triggerEl && tmpl.event_trigger) triggerEl.value = tmpl.event_trigger;
+    },
+
+    async saveSmsRuleFromModal(templateKey) {
+        const displayName = (document.getElementById('smsRule_Name')?.value || '').trim();
+        const body = (document.getElementById('smsModal_Body')?.value || '').trim();
+
+        if (!displayName) {
+            QCMS.toast('Rule name is required', 'warning');
+            return;
+        }
+        if (!body) {
+            QCMS.toast('SMS body text is required', 'warning');
+            return;
+        }
+
+        const targetScope = document.getElementById('smsModal_TargetAudience')?.value || 'all';
+        const selectedOrgIds = [];
+        if (targetScope === 'specific_orgs') {
+            document.querySelectorAll('.sms-org-checkbox:checked').forEach(cb => {
+                const val = parseInt(cb.value, 10);
+                if (!isNaN(val)) selectedOrgIds.push(val);
+            });
+        }
+
+        const selectedRoles = [];
+        const allRolesChecked = document.getElementById('smsRole_All')?.checked;
+        if (allRolesChecked) {
+            selectedRoles.push('All');
+        } else {
+            document.querySelectorAll('.sms-role-checkbox:checked').forEach(cb => {
+                if (cb.value !== 'All') selectedRoles.push(cb.value);
+            });
+        }
+
+        const selectedStatuses = [];
+        const allStatusesChecked = document.getElementById('smsStatus_All')?.checked;
+        if (allStatusesChecked) {
+            selectedStatuses.push('All');
+        } else {
+            document.querySelectorAll('.sms-status-checkbox:checked').forEach(cb => {
+                if (cb.value !== 'All') selectedStatuses.push(cb.value);
+            });
+        }
+
+        const payload = {
+            display_name: displayName,
+            category: document.getElementById('smsRule_Category')?.value || 'custom',
+            entity_id: (document.getElementById('smsModal_EntityId')?.value || '').trim() || null,
+            template_id: (document.getElementById('smsModal_TemplateId')?.value || '').trim() || null,
+            sender_id: (document.getElementById('smsModal_SenderId')?.value || '').trim().toUpperCase() || 'IFQMSK',
+            body: body,
+            trigger_type: document.getElementById('smsModal_TriggerType')?.value || 'event',
+            event_trigger: document.getElementById('smsModal_EventTrigger')?.value || null,
+            trigger_days_before: parseInt(document.getElementById('smsModal_TriggerDays')?.value || '0', 10) || 0,
+            target_audience_type: targetScope,
+            target_org_ids: selectedOrgIds,
+            target_roles: selectedRoles,
+            target_statuses: selectedStatuses,
+            is_active: document.getElementById('smsModal_IsActive')?.checked ?? true,
+        };
+
+        try {
+            const res = await api.put(`/email-notifications/sms-templates/${templateKey}`, payload);
+            if (res && res.status === 'success') {
+                QCMS.toast(`SMS Notification Rule '${displayName}' saved successfully!`, 'success');
+                const modalInner = document.getElementById('smsRuleModalInner');
+                if (modalInner) {
+                    const bsModal = bootstrap.Modal.getInstance(modalInner);
+                    if (bsModal) bsModal.hide();
+                }
+                const contentArea = document.getElementById('announcementContentArea');
+                if (contentArea && this.currentTab === 'sms-notifications') {
+                    await this.renderSmsNotificationsHub(contentArea);
+                }
+            }
+        } catch (e) {
+            QCMS.toast('Failed to save SMS rule: ' + (e.message || e.msg), 'error');
+        }
+    },
+
+    async sendTestSmsFromModal(templateKey) {
+        const phone = prompt("Enter mobile phone number to send a test SMS (e.g. 9876543210):");
+        if (!phone || !phone.trim()) return;
+
+        try {
+            QCMS.toast("Dispatching test SMS...", "info");
+            const res = await api.post(`/email-notifications/sms-templates/${templateKey}/send-test`, { phone: phone.trim() });
+            if (res && res.status === 'success') {
+                QCMS.toast(res.message || "Test SMS sent successfully!", "success");
+            }
+        } catch (e) {
+            QCMS.toast("Failed to send test SMS: " + (e.message || e.msg), "error");
+        }
     },
 
     onTriggerTypeChange(val) {
@@ -2617,12 +3790,25 @@ const AnnouncementsModule = {
                 preheader: "Project {{project_title}} has achieved final Stage 8 approval and closure.",
                 heading: "Congratulations! Project Officially Completed & Approved",
                 banner_color: "#16a34a",
-                body_html: "<p>Dear <strong>{{user_name}}</strong>,</p>\n<p>Congratulations to you and the entire project team! The quality improvement project <strong>{{project_title}}</strong> ({{project_code}}) has successfully received <strong>Final Reviewer Approval &amp; Official Closure</strong> across all 8 stages.</p>\n<div style=\"background: rgba(22,163,74,0.06); border: 1px solid rgba(22,163,74,0.25); border-radius: 6px; padding: 16px; margin: 18px 0;\">\n    <strong>Executive Summary &amp; Key Improvements:</strong><br>\n    • <strong>Project:</strong> {{project_title}} ({{project_code}})<br>\n    • <strong>Organization:</strong> {{org_name}}<br>\n    • <strong>Problem Addressed:</strong> {{problem_statement}}<br>\n    • <strong>Root Causes Resolved:</strong> Ishikawa &amp; 5-Why analysis verified.<br>\n    • <strong>Standardization:</strong> SOPs deployed and horizontal rollout established.<br>\n    • <strong>Final Status:</strong> Approved &amp; Archived in QCMS Knowledge Repository\n</div>\n<p>Your team's dedication to continuous quality improvement and rigorous compliance has delivered measurable impact. The complete approved project dossier is available in your Knowledge Repository.</p>",
                 cta_text: "View Final Approved Project Report",
                 cta_url: "{{app_url}}/auth/login.html?redirect=/projects/repository.html?project_id={{project_id}}",
                 channel_key: "general",
                 trigger_type: "event",
                 event_trigger: "project_completed"
+            },
+            'payg_invoice': {
+                name: "Monthly Pay-As-You-Go Metered Tax Invoice",
+                category: "billing",
+                subject: "Monthly Pay-As-You-Go Tax Invoice #{{invoice_number}} - {{org_name}}",
+                preheader: "Your monthly metered usage statement for {{org_name}} is ready for review and online payment.",
+                heading: "Monthly Pay-As-You-Go Tax Invoice",
+                banner_color: "#7c3aed",
+                body_html: "<p>Dear <strong>{{admin_name}}</strong>,</p>\n<p>Your monthly metered usage statement for <strong>{{org_name}}</strong> ({{org_code}}) for billing window <strong>{{period_start}} to {{period_end}}</strong> has been generated and is ready for payment.</p>\n<div style=\"background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 18px 0;\">\n    <strong>Invoice Summary:</strong><br>\n    • <strong>Invoice Number:</strong> {{invoice_number}}<br>\n    • <strong>Billed Organization:</strong> {{org_name}} ({{org_code}})<br>\n    • <strong>Billing Period:</strong> {{period_start}} to {{period_end}}<br>\n    • <strong>Total Amount Payable:</strong> {{total_amount_fmt}}\n</div>\n<p>You can view the itemized breakdown of active seats, storage metering, and projects directly in your tenant billing dashboard.</p>",
+                cta_text: "View & Pay Invoice in Tenant Dashboard",
+                cta_url: "{{app_url}}/admin/subscriptions.html",
+                channel_key: "billing",
+                trigger_type: "event",
+                event_trigger: "payg_invoice_generated"
             }
         };
 
@@ -2719,12 +3905,26 @@ const AnnouncementsModule = {
             target_org_ids: targetOrgIds,
             target_roles: targetRoles,
             target_statuses: targetStatuses,
-            is_active: true
+            is_active: true,
+            // SMS Configuration (Gio DLT)
+            sms_enabled: document.getElementById('enSmsEnabled')?.checked || false,
+            sms_template_id: document.getElementById('enSmsTemplateId')?.value.trim() || null,
+            sms_entity_id: document.getElementById('enSmsEntityId')?.value.trim() || null,
+            sms_sender_id: document.getElementById('enSmsSenderId')?.value.trim().toUpperCase() || null,
+            sms_body: document.getElementById('enSmsBody')?.value.trim() || null,
         };
 
         if (!payload.name || !payload.subject || !payload.body_html) {
             QCMS.toast('Please fill in Rule Name, Subject, and Body HTML.', 'warning');
             return;
+        }
+
+        // Validate SMS fields when SMS is enabled
+        if (payload.sms_enabled) {
+            if (!payload.sms_template_id) { QCMS.toast('DLT Template ID is required when SMS is enabled.', 'warning'); return; }
+            if (!payload.sms_entity_id) { QCMS.toast('DLT Entity ID (PE ID) is required when SMS is enabled.', 'warning'); return; }
+            if (!payload.sms_sender_id) { QCMS.toast('Sender ID (Header) is required when SMS is enabled.', 'warning'); return; }
+            if (!payload.sms_body) { QCMS.toast('SMS Body text is required when SMS is enabled.', 'warning'); return; }
         }
 
         try {
@@ -3496,8 +4696,322 @@ const AnnouncementsModule = {
         </div>`;
 
         if (window.lucide) lucide.createIcons();
+    },
+
+    /* =========================================================================
+       SMS DELIVERY LOGS & AUDIT SUITE
+       ========================================================================= */
+    _smsLogPage: 1,
+    _smsLogPerPage: 10,
+    _smsLogSearch: '',
+    _cachedSmsLogsData: [],
+
+    async openSmsLogsModal() {
+        this._smsLogPage = 1;
+        this._smsLogSearch = '';
+
+        let modalEl = document.getElementById('smsLogsModal');
+        if (!modalEl) {
+            const div = document.createElement('div');
+            div.id = 'smsLogsModalContainer';
+            document.body.appendChild(div);
+        }
+
+        const container = document.getElementById('smsLogsModalContainer') || document.body;
+        container.innerHTML = `
+        <div class="modal fade" id="smsLogsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content" style="background:var(--ds-bg-card); border: 1px solid var(--ds-border-color); border-radius: var(--ds-radius-lg);">
+                    <div class="modal-header border-bottom d-flex align-items-center justify-content-between pb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="p-2 rounded bg-info-subtle text-info">
+                                <i data-lucide="scroll-text" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-bold mb-0">SMS Delivery Logs & Audit History</h5>
+                                <div class="text-xxs text-secondary">Complete audit history of automated SMS campaigns, OTP dispatches, target phone numbers, and delivery statuses.</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body p-4" id="smsLogsModalBody">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-info" role="status" style="width:2rem;height:2rem;"></div>
+                            <p class="text-xs text-muted mt-2">Loading SMS delivery audit logs...</p>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-top d-flex justify-content-between align-items-center p-3" id="smsLogsModalFooter">
+                        <div class="text-xs text-secondary" id="smsLogsPaginationInfo">Loading...</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" id="btnSmsLogsPrevPage" onclick="AnnouncementsModule.changeSmsLogsPage(-1)" disabled>
+                                &larr; Previous
+                            </button>
+                            <span class="text-xs fw-bold px-2" id="smsLogsPageIndicator">Page 1</span>
+                            <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" id="btnSmsLogsNextPage" onclick="AnnouncementsModule.changeSmsLogsPage(1)" disabled>
+                                Next &rarr;
+                            </button>
+                            <button class="ds-btn ds-btn-secondary ds-btn-sm ms-2" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        const modal = new bootstrap.Modal(document.getElementById('smsLogsModal'));
+        modal.show();
+        if (window.lucide) lucide.createIcons();
+
+        await this.loadSmsLogsPage(1);
+    },
+
+    async loadSmsLogsPage(page = 1, preserveFocus = false) {
+        this._smsLogPage = page;
+        const body = document.getElementById('smsLogsModalBody');
+        if (!body) return;
+
+        if (!preserveFocus) {
+            body.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-info" role="status" style="width:2rem;height:2rem;"></div>
+                <p class="text-xs text-muted mt-2">Loading page ${page} of SMS delivery logs...</p>
+            </div>`;
+        }
+
+        try {
+            const searchParam = encodeURIComponent(this._smsLogSearch || '');
+            const res = await api.get(`/email-notifications/sms-logs?page=${page}&per_page=${this._smsLogPerPage}&q=${searchParam}`);
+            
+            const logs = (res && res.data) ? res.data : [];
+            this._cachedSmsLogsData = logs;
+            const total = res.total || 0;
+            const totalPages = Math.max(1, res.pages || Math.ceil(total / this._smsLogPerPage));
+
+            // Update footer pagination controls
+            const infoEl = document.getElementById('smsLogsPaginationInfo');
+            const prevBtn = document.getElementById('btnSmsLogsPrevPage');
+            const nextBtn = document.getElementById('btnSmsLogsNextPage');
+            const pageIndicator = document.getElementById('smsLogsPageIndicator');
+
+            if (infoEl) {
+                const startIdx = total > 0 ? (page - 1) * this._smsLogPerPage + 1 : 0;
+                const endIdx = Math.min(page * this._smsLogPerPage, total);
+                infoEl.innerHTML = `Showing <b>${startIdx}–${endIdx}</b> of <b>${total}</b> SMS delivery log(s) &bull; 10 logs per page`;
+            }
+            if (prevBtn) prevBtn.disabled = page <= 1;
+            if (nextBtn) nextBtn.disabled = page >= totalPages;
+            if (pageIndicator) pageIndicator.textContent = `Page ${page} of ${totalPages}`;
+
+            const unifiedSearchBoxHtml = `
+                <div class="position-relative" style="min-width: 260px; max-width: 380px; width: 100%;">
+                    <i data-lucide="search" class="position-absolute text-muted" style="width: 14px; height: 14px; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
+                    <input type="text" class="form-control text-xs w-100" id="smsLogsSearchInput" placeholder="Search by recipient, phone, template, body..." value="${QCMS.escapeHtml(this._smsLogSearch)}" oninput="AnnouncementsModule.onSmsLogsSearchInput(this.value)" style="padding-left: 34px; padding-top: 6px; padding-bottom: 6px; border-radius: 8px; border: 1px solid var(--ds-border-color); background: #ffffff;">
+                </div>
+            `;
+
+            if (!logs.length) {
+                body.innerHTML = `
+                <div class="mb-3 d-flex align-items-center justify-content-between gap-2">
+                    ${unifiedSearchBoxHtml}
+                </div>
+                <div class="text-center py-5 text-muted border rounded bg-light-subtle">
+                    <i data-lucide="inbox" style="width:36px;height:36px;" class="mb-2 text-secondary opacity-50"></i>
+                    <p class="text-sm fw-semibold mb-1">No SMS delivery logs found</p>
+                    <p class="text-xs text-muted">When automated SMS triggers fire or test messages are dispatched, audit records will appear here.</p>
+                </div>`;
+            } else {
+                const rowsHtml = logs.map((l, idx) => {
+                    const statusBadge = l.status === 'Delivered' 
+                        ? `<span class="badge bg-success-subtle text-success font-semibold px-2 py-1"><i data-lucide="check-circle-2" style="width:10px;height:10px;" class="me-1"></i>Delivered</span>`
+                        : (l.status === 'Sent' 
+                            ? `<span class="badge bg-primary-subtle text-primary font-semibold px-2 py-1"><i data-lucide="send" style="width:10px;height:10px;" class="me-1"></i>Sent</span>`
+                            : `<span class="badge bg-danger-subtle text-danger font-semibold px-2 py-1"><i data-lucide="x-circle" style="width:10px;height:10px;" class="me-1"></i>Failed</span>`);
+
+                    const categoryBadge = `<span class="badge bg-secondary-subtle text-secondary font-normal text-xxs text-uppercase">${QCMS.escapeHtml((l.category || 'CUSTOM').replace('_', ' '))}</span>`;
+
+                    return `
+                    <tr style="cursor: pointer; transition: background 0.15s ease;" class="log-row-hover" onclick="AnnouncementsModule.openSmsLogDetail(${l.id})" title="Click to view detailed SMS dispatch parameters and message content">
+                        <td class="py-3 px-3">
+                            <div>
+                                <div class="fw-bold text-main text-xs">${QCMS.escapeHtml(l.template_name)}</div>
+                                <div class="mt-0.5 d-flex align-items-center gap-1.5 flex-wrap">
+                                    ${categoryBadge}
+                                    <span class="badge bg-light text-dark border px-1.5 py-0.5 text-xxs font-monospace">${QCMS.escapeHtml(l.template_key)}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="text-xs fw-semibold text-main">${QCMS.escapeHtml(l.recipient_name || 'User')}</div>
+                            <div class="text-xxs text-primary font-monospace mt-0.5"><i data-lucide="phone" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(l.phone_number)}</div>
+                            <div class="text-xxs text-muted">${QCMS.escapeHtml(l.org_name || 'Organization')}</div>
+                        </td>
+                        <td class="py-3 px-3" style="max-width:280px;">
+                            <div class="text-xs text-secondary font-monospace text-truncate" title="${QCMS.escapeHtml(l.message_body)}">${QCMS.escapeHtml(l.message_body)}</div>
+                            <div class="text-xxs text-muted mt-0.5">Sender: <b>${QCMS.escapeHtml(l.sender_id || 'IFQMSK')}</b> &bull; ${l.message_body.length} chars</div>
+                        </td>
+                        <td class="py-3 px-3 text-center">${statusBadge}</td>
+                        <td class="py-3 px-3">
+                            <div class="text-xs text-secondary">${new Date(l.sent_at).toLocaleString()}</div>
+                            <div class="text-xxs text-muted"><i data-lucide="user-check" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(l.sent_by)}</div>
+                        </td>
+                        <td class="py-3 px-3 text-end">
+                            <button type="button" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xxs" onclick="event.stopPropagation(); AnnouncementsModule.openSmsLogDetail(${l.id})">
+                                <i data-lucide="eye" style="width:11px;height:11px;" class="me-1"></i> View SMS
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                body.innerHTML = `
+                <div class="d-flex flex-column gap-3">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        ${unifiedSearchBoxHtml}
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-dark border text-xs px-2.5 py-1.5"><i data-lucide="table" style="width:12px;height:12px;" class="me-1 text-info"></i> 10 Logs / Page</span>
+                            <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-xs py-1 px-2.5" onclick="AnnouncementsModule.loadSmsLogsPage(${page})" title="Refresh SMS logs list">
+                                <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive rounded border">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light-subtle border-bottom">
+                                <tr class="text-xxs text-uppercase text-secondary font-semibold">
+                                    <th class="py-2.5 px-3">Template / Campaign</th>
+                                    <th class="py-2.5 px-3">Recipient & Mobile</th>
+                                    <th class="py-2.5 px-3">SMS Message Body</th>
+                                    <th class="py-2.5 px-3 text-center">Status</th>
+                                    <th class="py-2.5 px-3">Dispatch Date</th>
+                                    <th class="py-2.5 px-3 text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+            }
+
+            if (window.lucide) lucide.createIcons();
+
+            if (preserveFocus) {
+                const searchInput = document.getElementById('smsLogsSearchInput');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+                }
+            }
+        } catch (e) {
+            body.innerHTML = `
+            <div class="alert alert-danger p-4 text-center">
+                <i data-lucide="alert-circle" style="width:24px;height:24px;" class="mb-2"></i>
+                <p class="mb-0 text-xs">Failed to load SMS delivery logs: ${QCMS.escapeHtml(e.message)}</p>
+                <button class="ds-btn ds-btn-outline ds-btn-sm mt-3" onclick="AnnouncementsModule.loadSmsLogsPage(1)">Retry</button>
+            </div>`;
+            if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    changeSmsLogsPage(delta) {
+        const target = this._smsLogPage + delta;
+        if (target >= 1) {
+            this.loadSmsLogsPage(target);
+        }
+    },
+
+    onSmsLogsSearchInput(val) {
+        this._smsLogSearch = val;
+        clearTimeout(this._smsLogSearchTimeout);
+        this._smsLogSearchTimeout = setTimeout(() => {
+            this.loadSmsLogsPage(1, true);
+        }, 300);
+    },
+
+    openSmsLogDetail(logId) {
+        const log = (this._cachedSmsLogsData || []).find(l => l.id === logId);
+        if (!log) return;
+
+        const modalEl = document.getElementById('smsLogsModal');
+        const body = document.getElementById('smsLogsModalBody');
+        if (!body) return;
+
+        const segments = Math.ceil((log.message_body || '').length / 160) || 1;
+
+        body.innerHTML = `
+        <div class="d-flex flex-column gap-3">
+            <div class="d-flex align-items-center justify-content-between pb-2 border-bottom">
+                <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-xs py-1 px-2.5" onclick="AnnouncementsModule.loadSmsLogsPage(${this._smsLogPage})">
+                    &larr; Back to SMS Logs
+                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success-subtle text-success text-xs px-2.5 py-1">
+                        <i data-lucide="check-circle-2" style="width:11px;height:11px;" class="me-1"></i>${QCMS.escapeHtml(log.status)}
+                    </span>
+                    <span class="badge bg-light text-dark border text-xs px-2.5 py-1 font-monospace">
+                        ID #${log.id}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Detail Grid Info Box -->
+            <div class="p-3 rounded border bg-light-subtle">
+                <div class="row g-3 text-xs">
+                    <div class="col-md-6">
+                        <div class="text-secondary text-xxs font-semibold text-uppercase">Template / Campaign</div>
+                        <div class="fw-bold text-main fs-6">${QCMS.escapeHtml(log.template_name)}</div>
+                        <div class="text-xxs text-muted mt-0.5">Key: <span class="font-monospace">${QCMS.escapeHtml(log.template_key)}</span> &bull; Category: <span class="text-uppercase">${QCMS.escapeHtml(log.category)}</span></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-secondary text-xxs font-semibold text-uppercase">Target Recipient &amp; Mobile</div>
+                        <div class="fw-bold text-primary">${QCMS.escapeHtml(log.recipient_name)} &bull; ${QCMS.escapeHtml(log.phone_number)}</div>
+                        <div class="text-xxs text-muted mt-0.5">Organization: <b>${QCMS.escapeHtml(log.org_name)}</b></div>
+                    </div>
+                    <div class="col-12 pt-2 border-top">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="text-secondary text-xxs font-semibold text-uppercase">Sender ID</div>
+                                <div class="font-monospace fw-bold text-main">${QCMS.escapeHtml(log.sender_id || 'IFQMSK')}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-secondary text-xxs font-semibold text-uppercase">DLT Template ID</div>
+                                <div class="font-monospace text-muted text-xxs">${QCMS.escapeHtml(log.dlt_template_id || '1307XXXXXXXXX')}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-secondary text-xxs font-semibold text-uppercase">DLT Entity ID</div>
+                                <div class="font-monospace text-muted text-xxs">${QCMS.escapeHtml(log.dlt_entity_id || '1301XXXXXXXXX')}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rendered SMS Body Box -->
+            <div class="p-3.5 rounded border" style="background: #f8fafc;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="fw-bold text-xs text-uppercase text-secondary d-flex align-items-center gap-1.5">
+                        <i data-lucide="message-square" style="width:13px;height:13px;"></i> Rendered SMS Message Body
+                    </div>
+                    <span class="badge bg-secondary-subtle text-secondary text-xxs px-2 py-1 font-monospace">
+                        ${log.message_body.length} characters &bull; ${segments} GSM segment${segments > 1 ? 's' : ''}
+                    </span>
+                </div>
+                <div class="p-3 rounded border bg-white font-monospace text-xs text-dark" style="line-height: 1.6; white-space: pre-wrap; word-break: break-word;">
+                    ${QCMS.escapeHtml(log.message_body)}
+                </div>
+            </div>
+
+            <!-- Metadata Footer -->
+            <div class="d-flex align-items-center justify-content-between text-xxs text-muted px-1">
+                <div>SMS Gateway Router: <b>${QCMS.escapeHtml(log.gateway || 'Fast2SMS / Resend')}</b></div>
+                <div>Dispatched at: <b>${new Date(log.sent_at).toLocaleString()}</b> by <b>${QCMS.escapeHtml(log.sent_by)}</b></div>
+            </div>
+        </div>`;
+
+        if (window.lucide) lucide.createIcons();
     }
 };
 
 window.AnnouncementsModule = AnnouncementsModule;
+
 

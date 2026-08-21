@@ -36,7 +36,7 @@ def _get_user_projects(user):
 
 @reports_bp.route('/export/excel', methods=['GET'])
 @jwt_required()
-@feature_module_required('reports.export_excel')
+@feature_module_required('reports.excel')
 def export_excel():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
@@ -55,7 +55,7 @@ def export_excel():
 
 @reports_bp.route('/export/csv', methods=['GET'])
 @jwt_required()
-@feature_module_required('reports.export_excel')
+@feature_module_required('reports.csv')
 def export_csv():
     """Export all accessible projects as a CSV executive summary."""
     user_id = int(get_jwt_identity())
@@ -136,7 +136,7 @@ def export_csv():
 
 @reports_bp.route('/export/pdf/all', methods=['GET'])
 @jwt_required()
-@feature_module_required('reports.export_pdf')
+@feature_module_required('reports.pdf')
 def export_all_pdfs():
     """Generate PDF for every accessible project and return as a ZIP archive."""
     user_id = int(get_jwt_identity())
@@ -144,10 +144,16 @@ def export_all_pdfs():
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
-    projects = [p for p in _get_user_projects(user).all() if p.status in ('Closed', 'Completed')]
+    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+    closed_statuses = ('Closed', 'Completed', 'Archived', 'Stage 8 Approved', 'Stage 8 Submitted', 'Pending Closure', 'SOP Created')
+
+    if is_super_admin:
+        projects = [p for p in Project.query.all() if p.status in closed_statuses]
+    else:
+        projects = [p for p in _get_user_projects(user).all() if p.status in closed_statuses]
 
     if not projects:
-        return jsonify({"msg": "No closed projects available for report download"}), 404
+        return jsonify({"msg": "No closed or completed projects available for bulk report download"}), 404
 
     from app.utils.pdf_filler import generate_qc_story_closure_summary_pdf
 
@@ -157,6 +163,14 @@ def export_all_pdfs():
         for p in projects:
             try:
                 pdf_data = generate_qc_story_closure_summary_pdf(p.id)
+                if not pdf_data:
+                    from app.utils.report_gen import generate_pdf_summary
+                    from app.infrastructure.database.models.models import KPIMetric
+                    kpi = KPIMetric.query.filter_by(project_id=p.id).first()
+                    pdf_out = generate_pdf_summary(p, kpi, p.org_id)
+                    if pdf_out:
+                        pdf_data = pdf_out.encode('latin-1') if isinstance(pdf_out, str) else bytes(pdf_out)
+
                 if pdf_data:
                     safe_uid = (p.project_uid or f'PRJ_{p.id}').replace('/', '_')
                     zf.writestr(f"{safe_uid}_QC_Story_Report.pdf", pdf_data)
@@ -187,31 +201,40 @@ def export_all_pdfs():
 
 @reports_bp.route('/export/pdf/<int:project_id>', methods=['GET'])
 @jwt_required()
-@feature_module_required('reports.export_pdf')
+@feature_module_required('reports.pdf')
 def export_pdf(project_id):
     user_id = int(get_jwt_identity())
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
+    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+
     # Resolve project by project_id or KnowledgeRepository entry ID
-    project = Project.query.filter_by(id=project_id, org_id=user.org_id).first()
-    if not project:
-        kr = KnowledgeRepository.query.filter_by(id=project_id, org_id=user.org_id).first()
-        if kr:
-            project = Project.query.filter_by(id=kr.project_id, org_id=user.org_id).first()
+    if is_super_admin:
+        project = Project.query.filter_by(id=project_id).first()
+        if not project:
+            kr = KnowledgeRepository.query.filter_by(id=project_id).first()
+            if kr:
+                project = Project.query.filter_by(id=kr.project_id).first()
+    else:
+        project = Project.query.filter_by(id=project_id, org_id=user.org_id).first()
+        if not project:
+            kr = KnowledgeRepository.query.filter_by(id=project_id, org_id=user.org_id).first()
+            if kr:
+                project = Project.query.filter_by(id=kr.project_id, org_id=user.org_id).first()
+    
     if not project:
         return jsonify({"msg": "Project not found"}), 404
 
-    closed_statuses = ('Closed', 'Completed', 'Archived', 'Stage 8 Approved')
-    is_closed = project.status in closed_statuses
+    closed_statuses = ('Closed', 'Completed', 'Archived', 'Stage 8 Approved', 'Stage 8 Submitted', 'Pending Closure', 'SOP Created')
+    is_closed = (project.status in closed_statuses) or is_super_admin or (user.role and user.role.name in ('Admin', 'CEO'))
 
     if not is_closed:
         return jsonify({"msg": "Project report generation is disabled until Stage 8 completion and project closure."}), 400
 
-    # For closed / archived projects in the Knowledge Repository, all authenticated users in the organization can download the final summary report.
-    # For active projects (if ever permitted), enforce role-based project membership.
-    if not is_closed:
+    # Enforce role-based membership for non-admin active projects
+    if not is_closed and not is_super_admin:
         role = user.role.name if user.role else 'Team Member'
         if role in ('Admin', 'CEO', 'SuperAdmin'):
             pass
@@ -237,7 +260,7 @@ def export_pdf(project_id):
     tool_name = request.args.get('tool')
 
     db.session.add(AuditLog(
-        org_id=user.org_id,
+        org_id=user.org_id or project.org_id,
         user_id=user.id,
         project_id=project.id,
         action=f"EXPORT_PDF_{tool_name.upper()}" if tool_name else "EXPORT_PDF_8D",
@@ -261,7 +284,24 @@ def export_pdf(project_id):
         )
     else:
         from app.utils.pdf_filler import generate_qc_story_closure_summary_pdf
-        pdf_data = generate_qc_story_closure_summary_pdf(project.id)
+        pdf_data = None
+        try:
+            pdf_data = generate_qc_story_closure_summary_pdf(project.id)
+        except Exception as err:
+            print(f"[PDF Export] generate_qc_story_closure_summary_pdf error: {err}")
+
+        # Fallback to FPDF summary if needed
+        if not pdf_data:
+            try:
+                from app.utils.report_gen import generate_pdf_summary
+                from app.infrastructure.database.models.models import KPIMetric
+                kpi = KPIMetric.query.filter_by(project_id=project.id).first()
+                pdf_out = generate_pdf_summary(project, kpi, project.org_id)
+                if pdf_out:
+                    pdf_data = pdf_out.encode('latin-1') if isinstance(pdf_out, str) else bytes(pdf_out)
+            except Exception as fpdf_err:
+                print(f"[PDF Export] FPDF summary fallback error: {fpdf_err}")
+
         if not pdf_data:
             return jsonify({"msg": "Failed to generate QC Story report"}), 400
 

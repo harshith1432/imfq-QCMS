@@ -1,10 +1,11 @@
-from app.infrastructure.database.models.models import Organization, Project, User
+from app.infrastructure.database.models.models import Organization, Project, User, Plant
 from app import db
 from datetime import datetime, timedelta
 
 PLAN_LIMITS = {
     'Trial': {
         'max_users': 50,
+        'max_locations': 5,
         'max_active_projects': 25,
         'features': ['basic_workflow', 'standard_reports', 'full_workflow', 'advanced_analytics'],
         'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
@@ -15,6 +16,7 @@ PLAN_LIMITS = {
     },
     'Starter': {
         'max_users': 50,
+        'max_locations': 1,
         'max_active_projects': 1,
         'features': ['basic_workflow', 'standard_reports', 'full_workflow'],
         'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
@@ -25,6 +27,7 @@ PLAN_LIMITS = {
     },
     'Professional': {
         'max_users': 500,
+        'max_locations': 5,
         'max_active_projects': 5,
         'features': ['full_workflow', 'advanced_analytics', 'repository', 'ai_assistant', 'audit_logs'],
         'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
@@ -35,6 +38,7 @@ PLAN_LIMITS = {
     },
     'Enterprise': {
         'max_users': 1000000, # Unlimited
+        'max_locations': 1000000, # Unlimited
         'max_active_projects': 1000000, # Unlimited
         'features': ['full_workflow', 'advanced_analytics', 'repository', 'ai_assistant', 'audit_logs', 'white_label', 'multi_plant', 'api_access'],
         'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
@@ -87,6 +91,7 @@ class SubscriptionManager:
           dict: {
              'plan_name': str,
              'max_users': int,
+             'max_locations': int,
              'max_projects': int,
              'storage_limit_gb': float
           }
@@ -99,6 +104,7 @@ class SubscriptionManager:
             return {
                 'plan_name': 'Trial',
                 'max_users': 50,
+                'max_locations': 5,
                 'max_projects': 25,
                 'storage_limit_gb': 10.0
             }
@@ -130,6 +136,7 @@ class SubscriptionManager:
 
         max_projects = None
         max_users = None
+        max_locations = None
         storage_gb = 10.0
         plan_name = raw_plan_name or 'Trial'
 
@@ -137,6 +144,7 @@ class SubscriptionManager:
             limits = plan_obj.limits
             max_projects = limits.max_projects
             max_users = limits.max_users
+            max_locations = getattr(limits, 'max_locations', 5)
             storage_gb = getattr(limits, 'storage_limit_gb', 10.0)
             plan_name = plan_obj.name.strip()
 
@@ -146,11 +154,13 @@ class SubscriptionManager:
 
         final_max_projects = max_projects if max_projects is not None else fallback.get('max_active_projects', 25)
         final_max_users = max_users if max_users is not None else fallback.get('max_users', 50)
+        final_max_locations = max_locations if max_locations is not None else fallback.get('max_locations', 5)
 
         return {
             'plan_name': plan_name,
             'max_projects': final_max_projects,
             'max_users': final_max_users,
+            'max_locations': final_max_locations,
             'storage_limit_gb': storage_gb
         }
 
@@ -164,6 +174,7 @@ class SubscriptionManager:
             base = PLAN_LIMITS.get(limits['plan_name'], PLAN_LIMITS.get(fallback_key, PLAN_LIMITS['Trial'])).copy()
             base['max_active_projects'] = limits['max_projects']
             base['max_users'] = limits['max_users']
+            base['max_locations'] = limits.get('max_locations', 5)
             return base
 
         clean_name = (plan_name or '').strip()
@@ -178,12 +189,12 @@ class SubscriptionManager:
             if db_plan and db_plan.limits:
                 base = PLAN_LIMITS.get(db_plan.plan_type, PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
                 base['max_users'] = db_plan.limits.max_users
+                base['max_locations'] = getattr(db_plan.limits, 'max_locations', 5)
                 base['max_active_projects'] = db_plan.limits.max_projects
                 base['storage_limit_gb'] = db_plan.limits.storage_limit_gb
                 return base
 
         base = PLAN_LIMITS.get(clean_name, PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
-        return base
         return base
 
     @staticmethod
@@ -191,6 +202,9 @@ class SubscriptionManager:
         limits = SubscriptionManager.get_organization_plan_limits(org_id)
         plan_name = limits['plan_name']
         max_users = limits['max_users']
+
+        if max_users >= 99999: # Unlimited
+            return True, "Unlimited"
 
         current_users = User.query.filter_by(org_id=org_id).count()
 
@@ -200,10 +214,32 @@ class SubscriptionManager:
         return True, "Success"
 
     @staticmethod
+    def check_location_limit(org_id):
+        """
+        Check if the organization has reached its maximum plant locations allowance under its active SaaS plan.
+        """
+        limits = SubscriptionManager.get_organization_plan_limits(org_id)
+        plan_name = limits['plan_name']
+        max_locations = limits.get('max_locations', 5)
+
+        if max_locations >= 99999: # Unlimited
+            return True, "Unlimited"
+
+        current_locations = Plant.query.filter_by(org_id=org_id).count()
+
+        if current_locations >= max_locations:
+            return False, f"Plant location limit reached for {plan_name} plan (Max allowed: {max_locations}). Please upgrade your subscription plan to add more plant locations."
+
+        return True, "Success"
+
+    @staticmethod
     def check_project_limit(org_id):
         limits = SubscriptionManager.get_organization_plan_limits(org_id)
         plan_name = limits['plan_name']
         max_projects = limits['max_projects']
+
+        if max_projects >= 99999: # Unlimited
+            return True, "Unlimited"
 
         # Count active/in-progress projects for this organization
         active_projects = Project.query.filter_by(org_id=org_id).filter(Project.status != 'Completed').count()

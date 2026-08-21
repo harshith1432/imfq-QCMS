@@ -22,8 +22,9 @@ const SuperAdmin = {
         // 3. Dynamically populate plan select dropdowns across app
         this.populateAllPlanDropdowns();
 
-        // 4. Event Listeners
+        // 4. Event Listeners & Real-Time Sync
         this.initEventListeners();
+        this.initFinancialSyncListener();
 
         // 4. Wizard & Table features
         this.initWizard();
@@ -258,6 +259,7 @@ const SuperAdmin = {
             'doc-identity':   { title: 'Document Identity & Branding', subtitle: 'Centralized branding engine — configure platform identity, company info, document templates, and trace all setting dependencies.' },
             'storage':        { title: 'Organization Storage Analytics', subtitle: 'Real-time data storage consumption across all organizations, tier allocations, and usage alerts.' },
             'stage-templates': { title: 'Global Stage Templates',      subtitle: 'Design global default 8-stage workflow templates, custom section cards, and mandatory rules applied to all organizations.' },
+            'stage-weightage': { title: 'Stage Weightage Configuration', subtitle: 'Configure percentage weight distribution across the 8 QC stages to calculate project completion accurately.' },
             'settings':       { title: 'System Configuration',     subtitle: 'Manage global platform parameters and maintenance states.' }
         };
 
@@ -465,6 +467,11 @@ const SuperAdmin = {
                         UsageExplorerSA.init();
                     }
                     break;
+                case 'stage-weightage':
+                    if (window.StageWeightageManager) {
+                        await window.StageWeightageManager.load();
+                    }
+                    break;
             }
         } catch (error) {
             console.error(`Error loading ${viewId} data:`, error);
@@ -496,6 +503,24 @@ const SuperAdmin = {
     },
 
     renderOverviewCharts(data) {
+        if (window.Chart && Chart.Tooltip && Chart.Tooltip.positioners && !Chart.Tooltip.positioners.topFixed) {
+            Chart.Tooltip.positioners.topFixed = function(items, eventPosition) {
+                if (!items || !items.length) return false;
+                const chart = this.chart;
+                const chartArea = chart.chartArea;
+                if (!chartArea) return false;
+                
+                let x = items[0].element.x;
+                const halfWidth = 75;
+                x = Math.max(chartArea.left + halfWidth, Math.min(chartArea.right - halfWidth, x));
+                
+                return {
+                    x: x,
+                    y: chartArea.top + 4
+                };
+            };
+        }
+
         if (this.charts.orgStatus) this.charts.orgStatus.destroy();
         if (this.charts.mrrTrend) this.charts.mrrTrend.destroy();
 
@@ -608,17 +633,649 @@ const SuperAdmin = {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: { top: 6, bottom: 8, left: 4, right: 8 }
+                    },
+                    plugins: {
+                        tooltip: {
+                            position: 'topFixed',
+                            yAlign: 'top',
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#f1f5f9',
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            borderWidth: 1,
+                            padding: 8,
+                            boxPadding: 4
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
                             grid: { color: 'rgba(255,255,255,0.05)' }
                         },
                         x: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: { font: { size: 10.5 }, padding: 4 }
                         }
                     }
                 }
             });
+        }
+
+        // 3. Combo Bar + Line Chart: Organization Onboarding & Adoption Trend
+        if (this.charts.onboardingTrend) this.charts.onboardingTrend.destroy();
+
+        const obCtx = document.getElementById('onboardingTrendChart')?.getContext('2d');
+        if (obCtx) {
+            let obLabels = [];
+            let obNew = [];
+            let obCumulative = [];
+            let obAdopted = [];
+
+            if (data.onboarding_trend && data.onboarding_trend.labels) {
+                obLabels = data.onboarding_trend.labels;
+                obNew = data.onboarding_trend.new_onboarded || [];
+                obCumulative = data.onboarding_trend.cumulative_onboarded || [];
+                obAdopted = data.onboarding_trend.adopted_orgs || [];
+
+                const totalPill = document.getElementById('dashOnboardedTotal');
+                if (totalPill) totalPill.textContent = (data.onboarding_trend.period_new_total || 0).toLocaleString();
+
+                const avgPill = document.getElementById('dashOnboardedAvg');
+                if (avgPill) avgPill.textContent = (data.onboarding_trend.avg_monthly || 0).toLocaleString();
+
+                const adoptPill = document.getElementById('dashAdoptionRate');
+                if (adoptPill) adoptPill.textContent = `${data.onboarding_trend.adoption_rate_pct || 0}%`;
+
+                const peakPill = document.getElementById('dashPeakMonth');
+                if (peakPill) peakPill.textContent = data.onboarding_trend.peak_month || '—';
+            }
+
+            this.charts.onboardingTrend = new Chart(obCtx, {
+                type: 'bar',
+                data: {
+                    labels: obLabels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'New Organizations Onboarded',
+                            data: obNew,
+                            backgroundColor: 'rgba(59, 130, 246, 0.85)',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                            barPercentage: 0.45,
+                            categoryPercentage: 0.7,
+                            order: 3
+                        },
+                        {
+                            type: 'line',
+                            label: 'Cumulative Total Organizations',
+                            data: obCumulative,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.35,
+                            pointStyle: 'circle',
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            order: 2
+                        },
+                        {
+                            type: 'line',
+                            label: 'Adopted / Active Organizations',
+                            data: obAdopted,
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            fill: false,
+                            tension: 0.35,
+                            pointStyle: 'rectRot',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: '#f59e0b',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: { top: 4, bottom: 8, left: 4, right: 8 }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                boxWidth: 10,
+                                usePointStyle: true,
+                                pointStyleWidth: 8,
+                                font: { size: 10, weight: '500' },
+                                padding: 8
+                            }
+                        },
+                        tooltip: {
+                            position: 'topFixed',
+                            yAlign: 'top',
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#f1f5f9',
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            borderWidth: 1,
+                            padding: 8,
+                            boxPadding: 4,
+                            usePointStyle: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const val = Number(context.raw || 0);
+                                    const idx = context.dataIndex;
+                                    const cumTotal = context.chart.data.datasets[1]?.data[idx] || 0;
+                                    
+                                    if (context.dataset.label.includes('New')) {
+                                        return ` New Onboarded: ${val} ${val === 1 ? 'org' : 'orgs'}`;
+                                    } else if (context.dataset.label.includes('Cumulative')) {
+                                        return ` Cumulative Total: ${val} ${val === 1 ? 'org' : 'orgs'}`;
+                                    } else if (context.dataset.label.includes('Adopted')) {
+                                        const pct = cumTotal > 0 ? Math.round((val / cumTotal) * 100) : 0;
+                                        return ` Adopted / Active: ${val} ${val === 1 ? 'org' : 'orgs'} (${pct}% adoption)`;
+                                    }
+                                    return ` ${context.dataset.label}: ${val}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, font: { size: 10 } },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10.5 }, padding: 4 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 4. Customer Business Value & Realized Project Savings Charts
+        const rpv = data.realized_project_value;
+        if (rpv) {
+            this.realizedValueData = rpv;
+            const summary = rpv.summary || {};
+            
+            const savPill = document.getElementById('dashRealizedSavings');
+            if (savPill) savPill.textContent = summary.total_realized_savings_fmt || '₹0.00';
+
+            const projPill = document.getElementById('dashClosedProjects');
+            if (projPill) projPill.textContent = (summary.total_closed_projects || 0).toLocaleString();
+
+            const avgPill = document.getElementById('dashAvgSavingsProject');
+            if (avgPill) avgPill.textContent = summary.avg_savings_per_project_fmt || '₹0.00';
+
+            const kpiPill = document.getElementById('dashAvgKpiImp');
+            if (kpiPill) kpiPill.textContent = `${summary.avg_kpi_improvement_pct || 0}%`;
+
+            const orgsPill = document.getElementById('dashOrgsWithSavings');
+            if (orgsPill) orgsPill.textContent = `${summary.total_orgs_with_closed_projects || 0} / ${summary.total_customer_orgs || 0}`;
+
+            // 4a. Timeline Chart
+            if (this.charts.realizedValueTrend) this.charts.realizedValueTrend.destroy();
+            const rpvCtx = document.getElementById('realizedValueTrendChart')?.getContext('2d');
+            if (rpvCtx && rpv.timeline) {
+                this.charts.realizedValueTrend = new Chart(rpvCtx, {
+                    type: 'line',
+                    data: {
+                        labels: rpv.timeline.labels || [],
+                        datasets: [
+                            {
+                                label: 'Cumulative Realized Savings (₹)',
+                                data: rpv.timeline.cumulative_savings || [],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                borderWidth: 2.5,
+                                fill: true,
+                                tension: 0.35,
+                                pointBackgroundColor: '#10b981',
+                                pointRadius: 3.5,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                type: 'bar',
+                                label: 'Monthly Closed Project Savings (₹)',
+                                data: rpv.timeline.monthly_savings || [],
+                                backgroundColor: 'rgba(59, 130, 246, 0.65)',
+                                borderRadius: 4,
+                                barThickness: 16
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: { top: 4, bottom: 8, left: 4, right: 8 }
+                        },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: { boxWidth: 10, font: { size: 10 }, padding: 8 }
+                            },
+                            tooltip: {
+                                position: 'topFixed',
+                                yAlign: 'top',
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#f1f5f9',
+                                borderColor: 'rgba(255, 255, 255, 0.15)',
+                                borderWidth: 1,
+                                padding: 8,
+                                boxPadding: 4,
+                                usePointStyle: true,
+                                callbacks: {
+                                    label: function(ctx) {
+                                        const val = Number(ctx.raw || 0);
+                                        return ` ${ctx.dataset.label}: ₹${val.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(val) {
+                                        if (val >= 10000000) return '₹' + (val / 10000000).toFixed(1) + ' Cr';
+                                        if (val >= 100000) return '₹' + (val / 100000).toFixed(1) + ' L';
+                                        if (val >= 1000) return '₹' + (val / 1000).toFixed(0) + ' k';
+                                        return '₹' + val;
+                                    },
+                                    font: { size: 10 }
+                                },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { size: 10.5 }, padding: 4 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 4b. Top Organizations Bar Chart
+            if (this.charts.topOrgValue) this.charts.topOrgValue.destroy();
+            const topOrgCtx = document.getElementById('topOrgValueChart')?.getContext('2d');
+            if (topOrgCtx) {
+                const topOrgs = (rpv.organizations || []).slice(0, 5);
+                const orgLabels = topOrgs.map(o => o.org_name.length > 14 ? o.org_name.substring(0, 12) + '...' : o.org_name);
+                const orgSavings = topOrgs.map(o => o.total_savings || 0);
+
+                this.charts.topOrgValue = new Chart(topOrgCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: orgLabels.length > 0 ? orgLabels : ['No Data'],
+                        datasets: [
+                            {
+                                label: 'Realized Savings (₹)',
+                                data: orgSavings.length > 0 ? orgSavings : [0],
+                                backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#06b6d4'],
+                                borderRadius: 6,
+                                barThickness: 18
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(items) {
+                                        const idx = items[0]?.dataIndex;
+                                        return topOrgs[idx]?.org_name || '';
+                                    },
+                                    label: function(ctx) {
+                                        const idx = ctx.dataIndex;
+                                        const o = topOrgs[idx];
+                                        return [
+                                            `Total Savings: ₹${Number(ctx.raw || 0).toLocaleString('en-IN')}`,
+                                            `Closed Projects: ${o?.closed_projects_count || 0}`,
+                                            `Avg KPI Imp.: ${o?.avg_kpi_improvement || 0}%`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(val) {
+                                        if (val >= 100000) return '₹' + (val / 100000).toFixed(1) + 'L';
+                                        if (val >= 1000) return '₹' + (val / 1000).toFixed(0) + 'k';
+                                        return '₹' + val;
+                                    }
+                                },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    },
+
+    // ── Organization Realized Value & Closed Projects Modal ──
+    realizedValueData: null,
+    currentSelectedOrgRevenue: null,
+    orgRevenueCurrentPage: 1,
+    orgRevenuePageSize: 10,
+
+    async openOrgRevenueModal() {
+        if (!this.realizedValueData) {
+            try {
+                const res = await api.get('/v1/dashboard/realized-project-value');
+                if (res && res.status === 'success' && res.data) {
+                    this.realizedValueData = res.data;
+                }
+            } catch (e) {
+                console.error('Failed to fetch realized project value:', e);
+            }
+        }
+
+        const data = this.realizedValueData || {};
+        const summary = data.summary || {};
+
+        const mTotal = document.getElementById('modalTotalRealizedVal');
+        if (mTotal) mTotal.textContent = summary.total_realized_savings_fmt || '₹0.00';
+
+        const mCount = document.getElementById('modalTotalClosedProjects');
+        if (mCount) mCount.textContent = (summary.total_closed_projects || 0).toLocaleString();
+
+        const mAvg = document.getElementById('modalAvgSavingsPerProj');
+        if (mAvg) mAvg.textContent = summary.avg_savings_per_project_fmt || '₹0.00';
+
+        const mKpi = document.getElementById('modalAvgKpiImp');
+        if (mKpi) mKpi.textContent = `${summary.avg_kpi_improvement_pct || 0}%`;
+
+        this.orgRevenueCurrentPage = 1;
+        const sizeSelect = document.getElementById('orgRevenuePageSize');
+        if (sizeSelect) sizeSelect.value = String(this.orgRevenuePageSize);
+
+        this.backToOrgRevenueList();
+        this.filterOrgRevenueTable(true);
+
+        const modalEl = document.getElementById('orgProjectRevenueModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+            if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    changeOrgRevenuePageSize(size) {
+        this.orgRevenuePageSize = parseInt(size, 10) || 10;
+        this.orgRevenueCurrentPage = 1;
+        this.filterOrgRevenueTable(false);
+    },
+
+    prevOrgRevenuePage() {
+        if (this.orgRevenueCurrentPage > 1) {
+            this.orgRevenueCurrentPage--;
+            this.filterOrgRevenueTable(false);
+        }
+    },
+
+    nextOrgRevenuePage() {
+        const orgs = this.realizedValueData?.organizations || [];
+        const query = (document.getElementById('orgRevenueSearchInput')?.value || '').toLowerCase().trim();
+        const statusFilter = document.getElementById('orgRevenueStatusFilter')?.value || 'all';
+
+        const filtered = orgs.filter(o => {
+            const matchQuery = !query || o.org_name.toLowerCase().includes(query) || (o.plan_name && o.plan_name.toLowerCase().includes(query));
+            if (!matchQuery) return false;
+            if (statusFilter === 'with_savings') return o.closed_projects_count > 0;
+            if (statusFilter === 'zero_savings') return o.closed_projects_count === 0;
+            return true;
+        });
+
+        const totalPages = Math.ceil(filtered.length / this.orgRevenuePageSize) || 1;
+        if (this.orgRevenueCurrentPage < totalPages) {
+            this.orgRevenueCurrentPage++;
+            this.filterOrgRevenueTable(false);
+        }
+    },
+
+    filterOrgRevenueTable(resetPage = false) {
+        if (resetPage) {
+            this.orgRevenueCurrentPage = 1;
+        }
+
+        const query = (document.getElementById('orgRevenueSearchInput')?.value || '').toLowerCase().trim();
+        const statusFilter = document.getElementById('orgRevenueStatusFilter')?.value || 'all';
+
+        const orgs = this.realizedValueData?.organizations || [];
+        const tbody = document.getElementById('orgRevenueTableBody');
+        if (!tbody) return;
+
+        const filtered = orgs.filter(o => {
+            const matchQuery = !query || o.org_name.toLowerCase().includes(query) || (o.plan_name && o.plan_name.toLowerCase().includes(query));
+            if (!matchQuery) return false;
+
+            if (statusFilter === 'with_savings') return o.closed_projects_count > 0;
+            if (statusFilter === 'zero_savings') return o.closed_projects_count === 0;
+            return true;
+        });
+
+        const totalItems = filtered.length;
+        const totalPages = Math.ceil(totalItems / this.orgRevenuePageSize) || 1;
+
+        if (this.orgRevenueCurrentPage > totalPages) {
+            this.orgRevenueCurrentPage = totalPages;
+        }
+        if (this.orgRevenueCurrentPage < 1) {
+            this.orgRevenueCurrentPage = 1;
+        }
+
+        const startIndex = (this.orgRevenueCurrentPage - 1) * this.orgRevenuePageSize;
+        const endIndex = Math.min(startIndex + this.orgRevenuePageSize, totalItems);
+        const pageItems = filtered.slice(startIndex, endIndex);
+
+        // Update Pagination Footer UI
+        const infoEl = document.getElementById('orgRevenuePaginationInfo');
+        if (infoEl) {
+            infoEl.textContent = totalItems > 0 
+                ? `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} organizations`
+                : `Showing 0 to 0 of 0 organizations`;
+        }
+
+        const pageIndicatorEl = document.getElementById('orgRevenuePageIndicator');
+        if (pageIndicatorEl) {
+            pageIndicatorEl.textContent = `Page ${this.orgRevenueCurrentPage} of ${totalPages}`;
+        }
+
+        const prevBtn = document.getElementById('orgRevenuePrevBtn');
+        if (prevBtn) {
+            prevBtn.disabled = this.orgRevenueCurrentPage <= 1;
+        }
+
+        const nextBtn = document.getElementById('orgRevenueNextBtn');
+        if (nextBtn) {
+            nextBtn.disabled = this.orgRevenueCurrentPage >= totalPages || totalItems === 0;
+        }
+
+        if (pageItems.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        <i data-lucide="inbox" style="width:24px;height:24px;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto;opacity:0.4;"></i>
+                        No customer organizations found matching criteria.
+                    </td>
+                </tr>
+            `;
+            if (window.lucide) lucide.createIcons();
+            return;
+        }
+
+        tbody.innerHTML = pageItems.map(o => {
+            const hasProjects = o.closed_projects_count > 0;
+            const badgeClass = o.subscription_status === 'Active' ? 'bg-success-subtle text-success' : (o.subscription_status === 'Trialing' ? 'bg-warning-subtle text-warning' : 'bg-secondary-subtle text-secondary');
+
+            return `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:30px;height:30px;border-radius:8px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--ds-primary);flex-shrink:0;">
+                                ${o.org_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="fw-bold text-main">${o.org_name}</div>
+                                <div class="text-xxs text-muted">Onboarded: ${o.created_at || '—'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge ${badgeClass} text-xxs font-monospace">${o.plan_name || 'Enterprise'} (${o.subscription_status})</span>
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="badge ${hasProjects ? 'bg-primary-subtle text-primary' : 'bg-light text-muted border'} px-2 py-1 font-monospace" ${hasProjects ? `style="cursor:pointer;" onclick="SuperAdmin.viewOrgClosedProjects(${o.org_id})" title="Click to view closed projects"` : ''}>
+                            ${o.closed_projects_count} ${o.closed_projects_count === 1 ? 'Project' : 'Projects'}
+                        </span>
+                    </td>
+                    <td style="text-align: right;" class="fw-bold ${hasProjects ? 'text-success' : 'text-muted'}">
+                        ${o.total_savings_fmt || '₹0.00'}
+                    </td>
+                    <td style="text-align: right;" class="text-secondary">
+                        ${hasProjects ? o.avg_savings_per_project_fmt : '—'}
+                    </td>
+                    <td style="text-align: center;">
+                        ${hasProjects && o.avg_kpi_improvement > 0 ? `<span class="badge bg-info-subtle text-info font-monospace">+${o.avg_kpi_improvement}%</span>` : '<span class="text-muted">—</span>'}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
+    },
+
+    viewOrgClosedProjects(orgId) {
+        const orgs = this.realizedValueData?.organizations || [];
+        const org = orgs.find(o => o.org_id === orgId);
+        if (!org) return;
+
+        this.currentSelectedOrgRevenue = org;
+
+        document.getElementById('orgRevenueListView').style.display = 'none';
+        document.getElementById('orgClosedProjectsDetailView').style.display = 'block';
+
+        const nameEl = document.getElementById('detailOrgName');
+        if (nameEl) nameEl.textContent = org.org_name;
+
+        const subEl = document.getElementById('detailOrgSubText');
+        if (subEl) subEl.textContent = `Plan: ${org.plan_name || 'Enterprise'} (${org.subscription_status}) | Onboarded: ${org.created_at || '—'}`;
+
+        const badgeEl = document.getElementById('detailOrgBadge');
+        if (badgeEl) badgeEl.textContent = `Org ID: #${org.org_id}`;
+
+        const countEl = document.getElementById('detailOrgClosedCount');
+        if (countEl) countEl.textContent = org.closed_projects_count;
+
+        const savEl = document.getElementById('detailOrgTotalSavings');
+        if (savEl) savEl.textContent = org.total_savings_fmt || '₹0.00';
+
+        const tbody = document.getElementById('detailOrgProjectsTableBody');
+        if (!tbody) return;
+
+        const projects = org.projects || [];
+        if (projects.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        No closed projects found for this organization.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = projects.map(p => `
+            <tr>
+                <td>
+                    <div class="fw-bold text-main">${p.title}</div>
+                    <div class="text-xxs text-muted font-monospace">${p.ref_number || ('QC-' + p.project_id)} • Closed on ${p.closed_date}</div>
+                    ${p.solution_summary && p.solution_summary !== '—' ? `<div class="text-xxs text-secondary mt-1"><i data-lucide="check-circle" style="width:10px;height:10px;display:inline-block;color:#10b981;"></i> ${p.solution_summary.substring(0, 100)}...</div>` : ''}
+                </td>
+                <td><span class="badge bg-light text-secondary border font-monospace">${p.department || 'General'}</span></td>
+                <td><span class="text-xs text-muted">${p.category || 'Improvement'}</span></td>
+                <td class="text-muted text-xxs font-monospace">${p.closed_date}</td>
+                <td style="text-align: right;" class="fw-bold text-success">
+                    ${p.cost_savings_fmt || '₹0.00'}
+                </td>
+                <td style="text-align: center;">
+                    ${p.kpi_improvement_pct > 0 ? `<span class="badge bg-success-subtle text-success font-monospace">+${p.kpi_improvement_pct}%</span>` : '<span class="text-muted">—</span>'}
+                </td>
+            </tr>
+        `).join('');
+
+        if (window.lucide) lucide.createIcons();
+    },
+
+    backToOrgRevenueList() {
+        document.getElementById('orgRevenueListView').style.display = 'block';
+        document.getElementById('orgClosedProjectsDetailView').style.display = 'none';
+        this.currentSelectedOrgRevenue = null;
+        if (window.lucide) lucide.createIcons();
+    },
+
+    exportRealizedValueData(type) {
+        const orgs = this.realizedValueData?.organizations || [];
+        if (type === 'csv') {
+            let csv = 'Organization Name,Plan,Status,Onboarded Date,Closed Projects Count,Total Tangible Savings (INR),Avg Savings Per Project (INR),Avg Quality Improvement (%)\n';
+            orgs.forEach(o => {
+                csv += `"${o.org_name}","${o.plan_name}","${o.subscription_status}","${o.created_at}",${o.closed_projects_count},${o.total_savings},${o.avg_savings_per_project},${o.avg_kpi_improvement}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.download = 'Customer_Organizations_Realized_Value_Report.csv';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            api.showNotification('Organization business value data exported as CSV successfully!', 'success');
+        }
+    },
+
+    exportRealizedValueChart(type) {
+        if (!this.charts.realizedValueTrend) return;
+        if (type === 'png') {
+            const link = document.createElement('a');
+            link.download = 'Customer_Business_Value_Realization_Trend.png';
+            link.href = this.charts.realizedValueTrend.toBase64Image();
+            link.click();
+            api.showNotification('Realized value chart exported as PNG', 'success');
         }
     },
 
@@ -642,6 +1299,52 @@ const SuperAdmin = {
             link.href = URL.createObjectURL(blob);
             link.click();
             api.showNotification('Chart data exported as CSV', 'success');
+        }
+    },
+
+    selectedOnboardingRange: '12m',
+    async setOnboardingRange(range) {
+        this.selectedOnboardingRange = range;
+        const btnGroup = document.getElementById('onboardingRangeGroup');
+        if (btnGroup) {
+            btnGroup.querySelectorAll('button').forEach(btn => {
+                const match = btn.getAttribute('onclick')?.includes(`'${range}'`);
+                btn.classList.toggle('active-range', !!match);
+            });
+        }
+        try {
+            const statsRes = await api.get(`/v1/dashboard/stats?range=${range}`);
+            if (statsRes && statsRes.status === 'success' && statsRes.data) {
+                this.renderOverviewCharts(statsRes.data);
+            }
+        } catch (e) {
+            console.error('Failed to update onboarding range:', e);
+        }
+    },
+
+    exportOnboardingChart(type) {
+        if (!this.charts.onboardingTrend) return;
+        if (type === 'png') {
+            const link = document.createElement('a');
+            link.download = 'organization_onboarding_adoption_chart.png';
+            link.href = this.charts.onboardingTrend.toBase64Image();
+            link.click();
+            api.showNotification('Onboarding chart exported as PNG', 'success');
+        } else if (type === 'csv') {
+            const data = this.charts.onboardingTrend.data;
+            let csv = 'Month,New Onboarded,Cumulative Total,Adopted Active Orgs\n';
+            data.labels.forEach((lbl, idx) => {
+                const newOrgs = data.datasets[0]?.data[idx] ?? 0;
+                const cumOrgs = data.datasets[1]?.data[idx] ?? 0;
+                const adpOrgs = data.datasets[2]?.data[idx] ?? 0;
+                csv += `"${lbl}",${newOrgs},${cumOrgs},${adpOrgs}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.download = 'organization_onboarding_adoption_data.csv';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            api.showNotification('Onboarding chart data exported as CSV', 'success');
         }
     },
 
@@ -978,7 +1681,7 @@ const SuperAdmin = {
                             <i data-lucide="x-circle" style="width:18px;height:18px;color:#ef4444;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.expired_licenses || 0}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Expired Organizations</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Expired Plans</div>
                     </div>
 
                     <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('storage')">
@@ -1491,30 +2194,20 @@ const SuperAdmin = {
     },
 
     renderPagination(pg) {
-        const info = document.getElementById('paginationInfo');
-        const controls = document.getElementById('paginationControls');
-        if (!pg || !info || !controls) return;
-        const start = pg.total > 0 ? ((pg.page - 1) * pg.per_page) + 1 : 0;
-        const end = Math.min(pg.page * pg.per_page, pg.total);
-        info.textContent = pg.total > 0 ? `Showing ${start}–${end} of ${pg.total}` : 'No results';
-
-        const perPageSelect = document.getElementById('orgPerPageSelect');
-        if (perPageSelect) {
-            perPageSelect.value = pg.per_page || this.orgPerPage || 5;
+        if (!pg) return;
+        const container = document.getElementById('tenantsPaginationContainer') || document.getElementById('paginationControls')?.parentElement;
+        if (container) {
+            window.createStandardPagination({
+                containerId: container,
+                entityName: 'organizations',
+                totalItems: pg.total || 0,
+                currentPage: pg.page || 1,
+                pageSize: pg.per_page || this.orgPerPage || 5,
+                pageSizeOptions: [5, 10, 25, 50, 100],
+                onPageChange: (p) => SuperAdmin.goToPage(p),
+                onPageSizeChange: (s) => SuperAdmin.orgSetPerPage(s)
+            });
         }
-
-        let btns = '';
-        btns += `<button class="ds-btn ds-btn-sm ds-btn-ghost" ${pg.page <= 1 ? 'disabled' : ''} onclick="SuperAdmin.goToPage(${pg.page - 1})"><i data-lucide="chevron-left" style="width:14px;height:14px;"></i></button>`;
-        const maxBtns = 5;
-        let startPage = Math.max(1, pg.page - 2);
-        let endPage = Math.min(pg.pages, startPage + maxBtns - 1);
-        if (endPage - startPage < maxBtns - 1) startPage = Math.max(1, endPage - maxBtns + 1);
-        for (let i = startPage; i <= endPage; i++) {
-            btns += `<button class="ds-btn ds-btn-sm ${i === pg.page ? 'ds-btn-primary' : 'ds-btn-ghost'}" onclick="SuperAdmin.goToPage(${i})">${i}</button>`;
-        }
-        btns += `<button class="ds-btn ds-btn-sm ds-btn-ghost" ${pg.page >= pg.pages ? 'disabled' : ''} onclick="SuperAdmin.goToPage(${pg.page + 1})"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></button>`;
-        controls.innerHTML = btns;
-        if (window.lucide) lucide.createIcons();
     },
 
     orgSetPerPage(v) {
@@ -1570,6 +2263,7 @@ const SuperAdmin = {
             });
             const invRes = await api.get('/billing/invoices?' + queryParams.toString());
             if (invRes && invRes.status === 'success') {
+                if (invRes.pagination) this._bill.totalPages = invRes.pagination.pages || 1;
                 this.renderBillInvoices(invRes.data, invRes.pagination);
             }
         } catch (e) {
@@ -1651,16 +2345,38 @@ const SuperAdmin = {
             `;
         }).join('');
 
-        // Update pagination numbers
+        // Update pagination numbers & controls
         const start = (pagination.page - 1) * pagination.per_page + 1;
         const end = Math.min(start + pagination.per_page - 1, pagination.total);
-        document.getElementById('billPagInfo').textContent = `Showing ${start}-${end} of ${pagination.total}`;
+        const infoEl = document.getElementById('billPagInfo');
+        if (infoEl) infoEl.textContent = `Showing ${start}-${end} of ${pagination.total}`;
 
-        let pagHtml = '';
-        for (let i = 1; i <= pagination.pages; i++) {
-            pagHtml += `<button class="ds-btn ds-btn-sm ${pagination.page === i ? 'ds-btn-primary' : 'ds-btn-outline'}" onclick="SuperAdmin.goToBillPage(${i})">${i}</button>`;
+        const perPageSelect = document.getElementById('billPerPage');
+        if (perPageSelect) {
+            perPageSelect.value = String(pagination.per_page || 10);
         }
-        document.getElementById('billPagBtns').innerHTML = pagHtml;
+
+        const curPage = pagination.page;
+        const totalPages = pagination.pages || 1;
+
+        let pagHtml = `
+            <button class="ds-btn ds-btn-sm ds-btn-outline px-2" ${curPage <= 1 ? 'disabled' : ''} onclick="SuperAdmin.goToBillPage(${curPage - 1})">
+                <i data-lucide="chevron-left" style="width:13px;height:13px;"></i>
+            </button>
+        `;
+
+        for (let i = 1; i <= totalPages; i++) {
+            pagHtml += `<button class="ds-btn ds-btn-sm ${curPage === i ? 'ds-btn-primary' : 'ds-btn-outline'}" onclick="SuperAdmin.goToBillPage(${i})">${i}</button>`;
+        }
+
+        pagHtml += `
+            <button class="ds-btn ds-btn-sm ds-btn-outline px-2" ${curPage >= totalPages ? 'disabled' : ''} onclick="SuperAdmin.goToBillPage(${curPage + 1})">
+                <i data-lucide="chevron-right" style="width:13px;height:13px;"></i>
+            </button>
+        `;
+
+        const btnsEl = document.getElementById('billPagBtns');
+        if (btnsEl) btnsEl.innerHTML = pagHtml;
 
         this.updateBillColumnVisibility();
 
@@ -1668,7 +2384,52 @@ const SuperAdmin = {
     },
 
     goToBillPage(page) {
+        if (!this._bill) return;
+        const maxPages = this._bill.totalPages || 1;
+        if (page < 1 || page > maxPages) return;
         this._bill.page = page;
+        this.loadRevenue();
+    },
+
+    notifyFinancialSync() {
+        if (window.BroadcastChannel) {
+            try {
+                if (!this._financialSyncChannel) {
+                    this._financialSyncChannel = new BroadcastChannel('qcms_financial_sync');
+                }
+                this._financialSyncChannel.postMessage({ event: 'FINANCIAL_UPDATE', timestamp: Date.now() });
+            } catch(e) {}
+        }
+    },
+
+    initFinancialSyncListener() {
+        if (window.BroadcastChannel && !this._financialSyncListenerInitialized) {
+            try {
+                this._financialSyncListener = new BroadcastChannel('qcms_financial_sync');
+                this._financialSyncListener.onmessage = (msg) => {
+                    if (msg && msg.data && msg.data.event === 'FINANCIAL_UPDATE') {
+                        console.log('[QCMS Realtime Sync] Financial update broadcast received.');
+                        if (this.activeView === 'billing' || this.activeView === 'revenue') {
+                            this.loadRevenue();
+                        } else if (this.activeView === 'overview' || this.activeView === 'dashboard') {
+                            this.loadOverview();
+                        } else if (this.activeView === 'analytics') {
+                            this.loadAnalytics();
+                        }
+                        if (window.EnterpriseAnalytics && typeof EnterpriseAnalytics.refreshData === 'function') {
+                            EnterpriseAnalytics.refreshData();
+                        }
+                    }
+                };
+                this._financialSyncListenerInitialized = true;
+            } catch(e) {}
+        }
+    },
+
+    setBillPerPage(val) {
+        if (!this._bill) return;
+        this._bill.perPage = parseInt(val) || 10;
+        this._bill.page = 1;
         this.loadRevenue();
     },
 
@@ -2706,6 +3467,7 @@ const SuperAdmin = {
                 api.showNotification('Invoice paid successfully', 'success');
                 this.closeBillDrawer();
                 this.loadRevenue();
+                this.notifyFinancialSync();
             }
         } catch (e) {
             api.showNotification('Payment action failed: ' + e.message, 'error');
@@ -2997,12 +3759,26 @@ const SuperAdmin = {
 
         if (filtered.length === 0) {
             tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted text-xs">No ${filter === 'All' ? '' : filter} payment submissions found.</td></tr>`;
-            if (paginationEl) paginationEl.innerHTML = `<div class="text-xs text-secondary">Showing 0 submissions</div>`;
+            if (paginationEl) {
+                window.createStandardPagination({
+                    containerId: 'offlinePaymentsPagination',
+                    entityName: 'submissions',
+                    totalItems: 0,
+                    currentPage: 1,
+                    pageSize: this._offlinePaymentsState.perPage || 5,
+                    pageSizeOptions: [5, 10, 25, 50, 100],
+                    onPageChange: (p) => SuperAdmin.setOfflinePaymentsPage(p),
+                    onPageSizeChange: (s) => {
+                        SuperAdmin._offlinePaymentsState.perPage = s;
+                        SuperAdmin.renderOfflinePaymentsTable();
+                    }
+                });
+            }
             return;
         }
 
         const totalItems = filtered.length;
-        const perPage = this._offlinePaymentsState.perPage || 10;
+        const perPage = this._offlinePaymentsState.perPage || 5;
         const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
 
         if (this._offlinePaymentsState.page > totalPages) {
@@ -3089,13 +3865,23 @@ const SuperAdmin = {
         }).join('');
 
         if (paginationEl) {
-            paginationEl.innerHTML = `
-                <div class="text-xs text-secondary">Showing page ${page} of ${totalPages} (${totalItems} items)</div>
-                <div class="h-stack gap-2">
-                    <button class="ds-btn ds-btn-outline ds-btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="SuperAdmin.setOfflinePaymentsPage(${page - 1})">Prev</button>
-                    <button class="ds-btn ds-btn-outline ds-btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="SuperAdmin.setOfflinePaymentsPage(${page + 1})">Next</button>
-                </div>
-            `;
+            window.createStandardPagination({
+                containerId: 'offlinePaymentsPagination',
+                entityName: 'submissions',
+                totalItems: totalItems,
+                currentPage: page,
+                pageSize: perPage,
+                pageSizeOptions: [5, 10, 25, 50, 100],
+                onPageChange: (p) => SuperAdmin.setOfflinePaymentsPage(p),
+                onPageSizeChange: (s) => {
+                    if (!SuperAdmin._offlinePaymentsState) SuperAdmin._offlinePaymentsState = { page: 1, perPage: s, statusFilter: 'Pending' };
+                    else {
+                        SuperAdmin._offlinePaymentsState.perPage = s;
+                        SuperAdmin._offlinePaymentsState.page = 1;
+                    }
+                    SuperAdmin.renderOfflinePaymentsTable();
+                }
+            });
         }
 
         if (window.lucide) lucide.createIcons();
@@ -3108,6 +3894,7 @@ const SuperAdmin = {
             if (res && res.status === 'success') {
                 QCMS.toast(res.message || 'Payment proof approved and plan activated!', 'success');
                 this.loadOfflinePayments();
+                this.notifyFinancialSync();
                 const m = bootstrap.Modal.getInstance(document.getElementById('receiptPreviewModal'));
                 if (m) m.hide();
             } else {
@@ -3395,8 +4182,14 @@ const SuperAdmin = {
     auditLogs: [],
     auditSessions: [],
     auditInsights: {},
-    auditFilters: { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', org_id: '' },
+    // --- Audit Registry & Activity Trail Module ---
+    auditCurrentTab: 'logs',
+    auditLogs: [],
+    auditSessions: [],
+    auditInsights: {},
+    auditFilters: { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', org_id: '', action_type: '' },
     sessionFilters: { page: 1, per_page: 10 },
+    activeAuditKpi: null,
     auditSearchTimer: null,
 
     async initSuperAudit() {
@@ -3431,6 +4224,103 @@ const SuperAdmin = {
         await this.loadAuditTab();
     },
 
+    openPurgeAuditLogsModal() {
+        const selectEl = document.getElementById('superPurgeRetentionSelect');
+        if (selectEl) selectEl.value = '7';
+        const dateBox = document.getElementById('superPurgeCustomDateBox');
+        if (dateBox) dateBox.style.display = 'none';
+        
+        const modalEl = document.getElementById('superPurgeAuditLogsModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            if (window.lucide) lucide.createIcons();
+            this.updatePurgePreview();
+        }
+    },
+
+    onPurgeRetentionChange(val) {
+        const dateBox = document.getElementById('superPurgeCustomDateBox');
+        if (dateBox) {
+            dateBox.style.display = (val === 'custom') ? 'block' : 'none';
+        }
+        this.updatePurgePreview();
+    },
+
+    async updatePurgePreview() {
+        const summaryText = document.getElementById('superPurgeSummaryText');
+        if (!summaryText) return;
+
+        const val = document.getElementById('superPurgeRetentionSelect')?.value || '7';
+        let params = {};
+        if (val === 'custom') {
+            const customDate = document.getElementById('superPurgeCustomDate')?.value;
+            if (!customDate) {
+                summaryText.innerText = 'Please select a custom cutoff date above.';
+                return;
+            }
+            params.before_date = customDate;
+        } else {
+            params.retention_years = val;
+        }
+
+        summaryText.innerHTML = '<i data-lucide="loader-2" class="me-1 spinner"></i>Calculating matching logs count...';
+        if (window.lucide) lucide.createIcons();
+
+        try {
+            const res = await api.get('/admin/audit/purge-preview', { params });
+            if (res && res.status === 'success') {
+                summaryText.innerHTML = `<strong>${res.match_count.toLocaleString()}</strong> audit logs created prior to <strong>${res.cutoff_date}</strong> will be permanently deleted.`;
+            } else {
+                summaryText.innerText = 'Unable to estimate log count.';
+            }
+        } catch (e) {
+            summaryText.innerText = 'Error calculating purge estimate: ' + (e.message || e);
+        }
+    },
+
+    async executePurgeAuditLogs() {
+        const val = document.getElementById('superPurgeRetentionSelect')?.value || '7';
+        let payload = {};
+        if (val === 'custom') {
+            const customDate = document.getElementById('superPurgeCustomDate')?.value;
+            if (!customDate) {
+                QCMS.toast('Please select a custom cutoff date.', 'warning');
+                return;
+            }
+            payload.before_date = customDate;
+        } else {
+            payload.retention_years = val;
+        }
+
+        const btn = document.getElementById('btnConfirmPurgeLogs');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Purging...';
+        }
+
+        try {
+            const res = await api.post('/admin/audit/purge', payload);
+            QCMS.toast(res.message || 'Audit logs purged successfully.', 'success');
+            
+            const modalEl = document.getElementById('superPurgeAuditLogsModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            await this.loadAuditTab();
+        } catch (err) {
+            QCMS.toast('Failed to purge audit logs: ' + (err.message || err), 'danger');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;" class="me-1"></i> Confirm & Purge Logs';
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    },
+
     async loadAuditTab() {
         if (this.auditCurrentTab === 'logs') {
             await this.loadLogs();
@@ -3450,7 +4340,7 @@ const SuperAdmin = {
             const res = await api.get(`/admin/audit/dashboard${orgParam}`);
             const d = res.data || {};
 
-            // Retain 5 essential, high-value, non-redundant audit KPI metrics
+            // 5 essential, high-value, interactive audit KPI metrics
             const essentialKpis = [
                 { key: 'total_events',       label: 'Total Audit Events',        icon: 'activity',      bg: 'rgba(99, 102, 241, 0.12)', color: '#6366f1' },
                 { key: 'data_changes',       label: 'Data Modifications',        icon: 'database',      bg: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' },
@@ -3461,8 +4351,9 @@ const SuperAdmin = {
 
             grid.innerHTML = essentialKpis.map(item => {
                 const kpi = d[item.key] || { value: 0 };
+                const isActive = this.activeAuditKpi === item.key;
                 return `
-                <div class="audit-kpi-card" onclick="SuperAdmin.filterAuditByKpi('${item.key}')" title="${kpi.tooltip || item.label}">
+                <div class="audit-kpi-card ${isActive ? 'active' : ''}" onclick="SuperAdmin.filterAuditByKpi('${item.key}')" title="Click to filter logs by ${item.label}">
                     <div class="audit-kpi-icon" style="background:${item.bg};">
                         <i data-lucide="${item.icon}" style="width:16px;height:16px;color:${item.color};"></i>
                     </div>
@@ -3519,22 +4410,46 @@ const SuperAdmin = {
         tbody.innerHTML = this.auditLogs.map(log => {
             const statusClass = log.status === 'Success' ? 'success' : (log.status === 'Critical' ? 'critical' : 'failed');
             const riskClass = (log.risk_level || 'Low').toLowerCase();
+            const hasDiff = log.has_diff || (log.changed_fields && Object.keys(log.changed_fields).length > 0);
             
+            // Action badge color
+            let badgeClass = 'blue';
+            if (log.action && (log.action.includes('CREATE') || log.action.includes('REGISTER'))) badgeClass = 'green';
+            else if (log.action && (log.action.includes('UPDATE') || log.action.includes('MODIFY') || log.action.includes('EDIT'))) badgeClass = 'purple';
+            else if (log.action && (log.action.includes('DELETE') || log.action.includes('REMOVE') || log.action.includes('LOCKED') || log.action.includes('FAILED'))) badgeClass = 'red';
+
+            const summaryHtml = log.change_summary 
+                ? `<div class="text-xxs text-secondary mt-0.5 text-truncate" style="max-width:220px;" title="${QCMS.escapeHtml(log.change_summary)}"><i data-lucide="git-commit" style="width:10px;height:10px;display:inline;"></i> ${QCMS.escapeHtml(log.change_summary)}</div>`
+                : '';
+
             return `
             <tr class="fade-in">
                 <td class="text-xs font-mono text-secondary" style="white-space:nowrap;">${new Date(log.timestamp).toLocaleString('en-IN')}</td>
-                <td><strong>${highlight(log.user)}</strong></td>
+                <td>
+                    <div class="fw-semibold text-xs">${highlight(log.user)}</div>
+                    <div class="text-xxs text-muted text-truncate" style="max-width:140px;" title="${log.user_email || ''}">${log.user_email || '—'}</div>
+                </td>
                 <td><span class="text-xs text-muted">${log.role}</span></td>
-                <td><span class="ds-badge blue">${highlight(log.action)}</span></td>
+                <td>
+                    <span class="ds-badge ${badgeClass}">${highlight(log.action)}</span>
+                    ${summaryHtml}
+                </td>
                 <td class="font-mono text-xs">${highlight(log.ip_address)}</td>
                 <td class="text-xs text-secondary">${highlight(log.location)}</td>
                 <td class="text-xs" title="${log.browser || ''} on ${log.os || ''}"><span class="text-muted">${highlight(log.device)}</span></td>
                 <td><span class="audit-risk-badge ${riskClass}">${log.risk_level}</span></td>
                 <td><span class="plan-status-badge ${statusClass}">${log.status}</span></td>
                 <td class="text-end">
-                    <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" onclick="SuperAdmin.openAuditDrawer(${log.id})">
-                        <i data-lucide="eye" style="width:14px;"></i>
-                    </button>
+                    <div class="d-inline-flex align-items-center gap-1">
+                        ${hasDiff ? `
+                            <button class="ds-btn ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="background:rgba(99,102,241,0.1); color:#6366f1; border:1px solid rgba(99,102,241,0.25);" onclick="SuperAdmin.openAuditDiffModal(${log.id})" title="View Past vs Current Modified Data">
+                                <i data-lucide="git-compare" style="width:12px;height:12px;"></i> Diff
+                            </button>
+                        ` : ''}
+                        <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" onclick="SuperAdmin.openAuditDrawer(${log.id})" title="View Full Audit Telemetry">
+                            <i data-lucide="eye" style="width:14px;"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>`;
         }).join('');
@@ -3693,20 +4608,39 @@ const SuperAdmin = {
             document.getElementById('superDTime').textContent = `${execTime} ms`;
             document.getElementById('superDSession').textContent = log.session_id || '—';
             
-            // Diffs
+            // Diffs (Past Data vs Current Data)
             const diffBox = document.getElementById('superDiffBox');
             const diffData = document.getElementById('superDiffData');
-            if (log.changed_fields && Object.keys(log.changed_fields).length > 0) {
+            const diffBadge = document.getElementById('superDiffCountBadge');
+            const diffs = log.changed_fields || {};
+            const diffKeys = Object.keys(diffs);
+
+            if (diffKeys.length > 0) {
                 diffBox.classList.remove('d-none');
-                diffData.innerHTML = Object.keys(log.changed_fields).map(key => {
-                    const val = log.changed_fields[key];
-                    return `
-                    <div class="mb-2">
-                        <strong class="text-indigo" style="font-size:11px;">• ${key}:</strong>
-                        <div class="diff-removed">- Before: ${val.before}</div>
-                        <div class="diff-added">+ After: ${val.after}</div>
-                    </div>`;
-                }).join('');
+                if (diffBadge) diffBadge.textContent = `${diffKeys.length} changes`;
+                let tableHtml = `
+                <table class="diff-split-table mb-2">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;"><i data-lucide="tag" style="width:11px;height:11px;" class="me-1"></i> Field</th>
+                            <th style="width: 35%; color:#ef4444;"><i data-lucide="minus-circle" style="width:11px;height:11px;" class="me-1"></i> Past Data (Old)</th>
+                            <th style="width: 35%; color:#10b981;"><i data-lucide="plus-circle" style="width:11px;height:11px;" class="me-1"></i> Current Data (New)</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                diffKeys.forEach(k => {
+                    const item = diffs[k];
+                    const bVal = typeof item.before === 'object' ? JSON.stringify(item.before) : String(item.before !== undefined ? item.before : '(None)');
+                    const aVal = typeof item.after === 'object' ? JSON.stringify(item.after) : String(item.after !== undefined ? item.after : '(None)');
+                    tableHtml += `
+                    <tr>
+                        <td class="fw-bold font-mono text-xxs text-secondary">${QCMS.escapeHtml(k)}</td>
+                        <td class="diff-past-cell text-xxs">${QCMS.escapeHtml(bVal)}</td>
+                        <td class="diff-current-cell text-xxs">${QCMS.escapeHtml(aVal)}</td>
+                    </tr>`;
+                });
+                tableHtml += `</tbody></table>`;
+                diffData.innerHTML = tableHtml;
             } else {
                 diffBox.classList.add('d-none');
             }
@@ -3747,6 +4681,93 @@ const SuperAdmin = {
             if (window.lucide) lucide.createIcons();
         } catch (e) {
             QCMS.toast('Error retrieving audit telemetry detail', 'error');
+        }
+    },
+
+    async openAuditDiffModal(logId) {
+        const modalEl = document.getElementById('superAuditDiffModal');
+        if (!modalEl) return;
+        
+        try {
+            const res = await api.get(`/admin/audit/logs/${logId}`);
+            const log = res.data || {};
+            
+            const actionEl = document.getElementById('superDiffModalAction');
+            if (actionEl) actionEl.textContent = log.action || 'DATA_MODIFICATION';
+            
+            const riskEl = document.getElementById('superDiffModalRisk');
+            if (riskEl) {
+                riskEl.textContent = (log.risk_level || 'Low').toUpperCase();
+                riskEl.className = `audit-risk-badge ${(log.risk_level || 'low').toLowerCase()}`;
+            }
+            const idEl = document.getElementById('superDiffModalId');
+            if (idEl) idEl.textContent = `Log #${log.id}`;
+            
+            const opEl = document.getElementById('superDiffModalOperator');
+            if (opEl) opEl.textContent = `${log.user || 'System'} (${log.role || '—'}) · Module: ${log.module || 'Global'}`;
+            
+            const timeEl = document.getElementById('superDiffModalTime');
+            if (timeEl) timeEl.textContent = new Date(log.timestamp).toLocaleString('en-IN');
+            
+            const sumEl = document.getElementById('superDiffModalSummary');
+            if (sumEl) sumEl.textContent = log.change_summary || 'Data modifications recorded';
+
+            const container = document.getElementById('superDiffModalTableContainer');
+            const diffs = log.changed_fields || {};
+            const diffKeys = Object.keys(diffs);
+
+            if (diffKeys.length > 0) {
+                let tableHtml = `
+                <table class="diff-split-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 28%;"><i data-lucide="tag" style="width:12px;height:12px;" class="me-1"></i> Field / Attribute</th>
+                            <th style="width: 36%; color:#ef4444;"><i data-lucide="minus-circle" style="width:12px;height:12px;" class="me-1"></i> Past Data (Old / Before)</th>
+                            <th style="width: 36%; color:#10b981;"><i data-lucide="plus-circle" style="width:12px;height:12px;" class="me-1"></i> Current Data (New / After)</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                diffKeys.forEach(k => {
+                    const item = diffs[k];
+                    const beforeVal = typeof item.before === 'object' ? JSON.stringify(item.before, null, 2) : String(item.before !== undefined ? item.before : '(None)');
+                    const afterVal = typeof item.after === 'object' ? JSON.stringify(item.after, null, 2) : String(item.after !== undefined ? item.after : '(None)');
+
+                    tableHtml += `
+                    <tr>
+                        <td class="fw-bold text-main">
+                            <span class="badge bg-light text-dark font-mono text-xxs border">${QCMS.escapeHtml(k)}</span>
+                        </td>
+                        <td class="diff-past-cell text-xs">${QCMS.escapeHtml(beforeVal)}</td>
+                        <td class="diff-current-cell text-xs">${QCMS.escapeHtml(afterVal)}</td>
+                    </tr>`;
+                });
+
+                tableHtml += `</tbody></table>`;
+                container.innerHTML = tableHtml;
+            } else {
+                container.innerHTML = `<div class="p-4 text-center text-muted border rounded" style="background:var(--audit-box-bg);">No specific field-level delta keys captured for this audit record.</div>`;
+            }
+
+            const rawEl = document.getElementById('superDiffModalRaw');
+            if (rawEl) {
+                const rawObj = {
+                    action: log.action,
+                    module: log.module,
+                    record_id: log.record_id,
+                    before_data: log.before_data,
+                    after_data: log.after_data,
+                    details: log.details,
+                    changed_fields: log.changed_fields
+                };
+                rawEl.textContent = JSON.stringify(rawObj, null, 2);
+            }
+
+            if (window.lucide) lucide.createIcons();
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        } catch (e) {
+            QCMS.toast('Failed to load modification diff details', 'error');
         }
     },
 
@@ -3837,48 +4858,101 @@ const SuperAdmin = {
 
     setAuditFilter(key, val) {
         this.auditFilters[key] = val;
+        
+        // Sync active KPI card if category changed
+        if (key === 'action_type') {
+            if (val === 'DATA_CHANGES') this.activeAuditKpi = 'data_changes';
+            else if (val === 'SECURITY') this.activeAuditKpi = 'security_events';
+            else if (val === 'CRITICAL') this.activeAuditKpi = 'critical_events';
+            else if (val === 'SESSIONS') this.activeAuditKpi = 'active_sessions';
+            else if (!val) this.activeAuditKpi = 'total_events';
+            else this.activeAuditKpi = null;
+        } else if (key === 'risk_level' && val === 'Critical') {
+            this.activeAuditKpi = 'critical_events';
+        }
+        
         this.auditFilters.page = 1;
         this.loadLogs();
         this.loadAuditKPIs();
     },
 
     filterAuditByKpi(kpiType) {
-        this.resetAuditFilters();
+        // Toggle if clicked same active card
+        if (this.activeAuditKpi === kpiType && kpiType !== 'total_events') {
+            this.resetAuditFilters();
+            return;
+        }
+
+        this.activeAuditKpi = kpiType;
         
-        if (kpiType === 'failed_actions') {
-            this.auditFilters.status = 'Failed';
-        } else if (kpiType === 'security_events') {
-            this.auditFilters.risk_level = 'High';
-        } else if (kpiType === 'critical_events') {
-            this.auditFilters.risk_level = 'Critical';
-        } else if (kpiType === 'login_events') {
-            this.auditFilters.action_type = 'LOGIN,LOGOUT';
-        } else if (kpiType === 'deleted_records') {
-            this.auditFilters.action_type = 'DELETE';
-        } else if (kpiType === 'export_activities') {
-            this.auditFilters.action_type = 'EXPORT';
+        // Reset specific filter fields
+        this.auditFilters.page = 1;
+        this.auditFilters.action_type = '';
+        this.auditFilters.status = '';
+        this.auditFilters.risk_level = '';
+
+        if (kpiType === 'total_events') {
+            // Show all events
+            if (this.auditCurrentTab !== 'logs') {
+                const btn = document.getElementById('super-stream-tab');
+                if (btn) btn.click();
+            }
+        } else if (kpiType === 'data_changes') {
+            this.auditFilters.action_type = 'DATA_CHANGES';
+            if (this.auditCurrentTab !== 'logs') {
+                const btn = document.getElementById('super-stream-tab');
+                if (btn) btn.click();
+            }
         } else if (kpiType === 'active_sessions') {
             const btn = document.getElementById('super-sessions-tab');
             if (btn) btn.click();
+            this.loadAuditKPIs();
             return;
+        } else if (kpiType === 'security_events') {
+            this.auditFilters.action_type = 'SECURITY';
+            if (this.auditCurrentTab !== 'logs') {
+                const btn = document.getElementById('super-stream-tab');
+                if (btn) btn.click();
+            }
+        } else if (kpiType === 'critical_events') {
+            this.auditFilters.action_type = 'CRITICAL';
+            this.auditFilters.risk_level = 'Critical';
+            if (this.auditCurrentTab !== 'logs') {
+                const btn = document.getElementById('super-stream-tab');
+                if (btn) btn.click();
+            }
         }
         
+        // Sync Dropdowns in UI
+        const catSelect = document.getElementById('superAuditFilterCategory');
+        if (catSelect) catSelect.value = this.auditFilters.action_type || '';
+        
         const statusSelect = document.getElementById('superAuditFilterStatus');
-        if (statusSelect && this.auditFilters.status) statusSelect.value = this.auditFilters.status;
+        if (statusSelect) statusSelect.value = this.auditFilters.status || '';
+        
         const riskSelect = document.getElementById('superAuditFilterRisk');
-        if (riskSelect && this.auditFilters.risk_level) riskSelect.value = this.auditFilters.risk_level;
+        if (riskSelect) riskSelect.value = this.auditFilters.risk_level || '';
         
         this.loadLogs();
+        this.loadAuditKPIs();
     },
 
     resetAuditFilters() {
-        this.auditFilters = { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', org_id: '' };
+        this.activeAuditKpi = null;
+        this.auditFilters = { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', org_id: '', action_type: '' };
         
+        const sC = document.getElementById('superAuditFilterCategory'); if (sC) sC.value = '';
         const sQ = document.getElementById('superAuditSearchQ'); if (sQ) sQ.value = '';
         const sO = document.getElementById('superAuditOrgFilter'); if (sO) sO.value = '';
         const sD = document.getElementById('superAuditFilterDate'); if (sD) sD.value = '';
         const sS = document.getElementById('superAuditFilterStatus'); if (sS) sS.value = '';
         const sR = document.getElementById('superAuditFilterRisk'); if (sR) sR.value = '';
+        
+        if (this.auditCurrentTab !== 'logs') {
+            const btn = document.getElementById('super-stream-tab');
+            if (btn) btn.click();
+        }
+        
         this.loadLogs();
         this.loadAuditKPIs();
     },
@@ -4538,24 +5612,207 @@ const SuperAdmin = {
         if (window.lucide) lucide.createIcons();
     },
 
-    exportCompanies() {
-        if (!this.allCompanies || !this.allCompanies.length) {
-            api.showNotification('No data to export', 'info');
+    openExportModal() {
+        const modalEl = document.getElementById('orgExportModal');
+        if (!modalEl) {
+            this.exportCompanies();
             return;
         }
-        const headers = ['Name','Industry','Admin','Email','Plan','Status','Users','Max Users','White Label','API Access','Created'];
-        const rows = this.allCompanies.map(o => [
-            o.name, o.industry, o.admin_name, o.email, o.plan, o.status,
-            o.user_count, o.max_users, o.is_white_label ? 'Yes' : 'No',
-            o.api_access ? 'Yes' : 'No', o.created_at
-        ]);
-        const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `organizations_export_${new Date().toISOString().slice(0,10)}.csv`;
-        a.click();
-        api.showNotification('CSV exported successfully', 'success');
+        this.updateExportBadgeCount();
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            } else {
+                modalEl.classList.add('show');
+                modalEl.style.display = 'block';
+            }
+        } catch(e) {
+            console.error('Modal toggle error:', e);
+            modalEl.classList.add('show');
+            modalEl.style.display = 'block';
+        }
+        if (window.lucide) lucide.createIcons();
+    },
+
+    toggleAllExportFields(checked) {
+        document.querySelectorAll('.export-field-cb').forEach(cb => {
+            cb.checked = checked;
+        });
+        this.updateExportBadgeCount();
+    },
+
+    applyExportPreset(preset) {
+        const presets = {
+            executive: ['id', 'name', 'org_code', 'admin_name', 'email', 'created_at', 'total_users', 'total_projects', 'closed_projects', 'realized_savings', 'subscription_plan', 'subscription_status'],
+            qc_operations: ['id', 'name', 'plants_count', 'departments_count', 'total_users', 'qc_users_count', 'total_projects', 'in_progress_projects', 'closed_projects'],
+            financial: ['id', 'name', 'subscription_plan', 'subscription_status', 'mrr', 'realized_savings', 'project_investment', 'net_value_created'],
+            user_capacity: ['id', 'name', 'admin_name', 'email', 'total_users', 'max_users', 'active_users', 'inactive_users', 'qc_users_count']
+        };
+
+        const fieldList = presets[preset] || presets.executive;
+        document.querySelectorAll('.export-field-cb').forEach(cb => {
+            cb.checked = fieldList.includes(cb.value);
+        });
+
+        ['Exec', 'QC', 'Finance', 'User'].forEach(p => {
+            const btn = document.getElementById(`btnPreset${p}`);
+            if (btn) btn.classList.remove('active-preset', 'btn-primary');
+        });
+        const activeBtnMap = { executive: 'Exec', qc_operations: 'QC', financial: 'Finance', user_capacity: 'User' };
+        const activeBtn = document.getElementById(`btnPreset${activeBtnMap[preset] || 'Exec'}`);
+        if (activeBtn) activeBtn.classList.add('active-preset');
+
+        this.updateExportBadgeCount();
+    },
+
+    updateExportBadgeCount() {
+        const allCbs = document.querySelectorAll('.export-field-cb');
+        const checkedCbs = document.querySelectorAll('.export-field-cb:checked');
+        const badge = document.getElementById('exportSelectedCountBadge');
+        if (badge) {
+            badge.textContent = `${checkedCbs.length} of ${allCbs.length} fields selected`;
+        }
+    },
+
+    async processCustomExport() {
+        const selectedCbs = document.querySelectorAll('.export-field-cb:checked');
+        const selectedFields = Array.from(selectedCbs).map(cb => cb.value);
+
+        if (selectedFields.length === 0) {
+            api.showNotification('Please select at least one field to export', 'warning');
+            return;
+        }
+
+        const submitBtn = document.getElementById('btnSubmitCustomExport');
+        const origText = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Generating CSV...`;
+        }
+
+        const searchVal = document.getElementById('companySearch')?.value || '';
+        const planVal = document.getElementById('filterPlan')?.value || '';
+        const statusVal = document.getElementById('filterStatus')?.value || '';
+        const token = api.token || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+
+        let downloadSuccess = false;
+
+        // 1. Try Backend Custom Export Endpoint
+        const exportUrls = [
+            '/api/v1/organizations/export-custom',
+            '/api/v1/super-admin/organizations/export-custom'
+        ];
+
+        for (const url of exportUrls) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    },
+                    body: JSON.stringify({
+                        fields: selectedFields,
+                        search: searchVal,
+                        plan: planVal,
+                        status: statusVal
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = `qcms_organizations_custom_export_${new Date().toISOString().slice(0,10)}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(link.href);
+                    downloadSuccess = true;
+                    break;
+                }
+            } catch (e) {
+                console.warn(`Export failed on ${url}:`, e);
+            }
+        }
+
+        // 2. Client-side Fallback Exporter (if backend API fails or offline)
+        if (!downloadSuccess) {
+            try {
+                const fieldLabelsMap = {
+                    id: "Organization ID", name: "Organization Name", org_code: "Organization Code",
+                    industry: "Industry / Sector", admin_name: "Admin Name", email: "Admin Email",
+                    phone: "Contact Phone", website: "Website URL", gst_number: "GST / Tax Number",
+                    created_at: "Registration Date", plants_count: "Plant Locations Count",
+                    departments_count: "Departments Count", total_users: "Total Registered Users",
+                    max_users: "Max User Seat Limit", active_users: "Active Users Count",
+                    inactive_users: "Inactive Users Count", qc_users_count: "Users Working in QC Projects",
+                    total_projects: "Total QC Projects", in_progress_projects: "In-Progress Projects Count",
+                    closed_projects: "Completed / Closed Projects Count", subscription_plan: "Subscription Plan",
+                    subscription_status: "Subscription Status", license_expiry_date: "Renewal Date",
+                    mrr: "MRR (INR)", realized_savings: "Realized Project Savings (INR)",
+                    project_investment: "Project Investment Spent (INR)", net_value_created: "Net Financial ROI Created (INR)",
+                    storage_used_mb: "Storage Used (MB)"
+                };
+
+                const headers = selectedFields.map(f => fieldLabelsMap[f] || f);
+                const rows = (this.allCompanies || []).map(o => {
+                    return selectedFields.map(f => {
+                        if (f === 'id') return o.id || '';
+                        if (f === 'name') return o.name || '';
+                        if (f === 'org_code') return o.org_code || `ORG-${o.id}`;
+                        if (f === 'industry') return o.industry || 'Manufacturing';
+                        if (f === 'admin_name') return o.admin_name || '';
+                        if (f === 'email') return o.email || '';
+                        if (f === 'subscription_plan') return o.plan || o.subscription_plan || 'Professional';
+                        if (f === 'subscription_status') return o.status || o.subscription_status || 'Active';
+                        if (f === 'total_users') return o.user_count || o.total_users || 1;
+                        if (f === 'max_users') return o.max_users || 500;
+                        if (f === 'plants_count') return o.plants_count || 0;
+                        if (f === 'departments_count') return o.departments_count || 0;
+                        if (f === 'qc_users_count') return o.qc_users_count || 0;
+                        if (f === 'total_projects') return o.total_projects || 0;
+                        if (f === 'closed_projects') return o.closed_projects || 0;
+                        if (f === 'realized_savings') return o.realized_savings || 0.0;
+                        return o[f] !== undefined ? o[f] : '—';
+                    });
+                });
+
+                const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `qcms_organizations_custom_export_${new Date().toISOString().slice(0,10)}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                downloadSuccess = true;
+            } catch (fallbackErr) {
+                console.error('Fallback export error:', fallbackErr);
+            }
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origText;
+        }
+
+        const modalEl = document.getElementById('orgExportModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+
+        if (downloadSuccess) {
+            api.showNotification(`Successfully exported ${selectedFields.length} selected fields to CSV`, 'success');
+        } else {
+            api.showNotification('Failed to export CSV file', 'error');
+        }
+    },
+
+    exportCompanies() {
+        this.openExportModal();
     },
 
     exportPayments() {
@@ -4975,7 +6232,7 @@ const SuperAdmin = {
             const kpis = [
                 { icon:'activity',      bg:'rgba(16,185,129,.12)', color:'#10b981', label:'Active Organizations',    val: d.active_subscriptions,    accent:'#10b981', filter:'Active' },
                 { icon:'flask-conical', bg:'rgba(245,158,11,.12)', color:'#f59e0b', label:'Trial Organizations',     val: d.trial_subscriptions,     accent:'#f59e0b', filter:'Trial' },
-                { icon:'alert-circle',  bg:'rgba(239,68,68,.12)',  color:'#ef4444', label:'Expired Organizations',   val: d.expired_subscriptions,   accent:'#ef4444', filter:'Expired' },
+                { icon:'alert-circle',  bg:'rgba(239,68,68,.12)',  color:'#ef4444', label:'Expired Plans',           val: d.expired_subscriptions,   accent:'#ef4444', filter:'Expired' },
                 { icon:'x-circle',      bg:'rgba(107,114,128,.12)',color:'#6b7280', label:'Cancelled Organizations', val: d.cancelled_subscriptions, accent:'#6b7280', filter:'Cancelled' },
                 { icon:'calendar-clock',bg:'rgba(59,130,246,.12)', color:'#3b82f6', label:'Renewal Due This Month',  val: d.renewal_due_this_month,  accent:'#3b82f6', filter:'30d' },
                 { icon:'trending-up',   bg:'rgba(16,185,129,.12)', color:'#10b981', label:'Monthly Revenue (MRR)',   val: this._subFmt(d.mrr),       accent:'#10b981' },
@@ -6573,7 +7830,13 @@ const SuperAdmin = {
         grid.innerHTML = `<div style="height:80px;background:var(--ds-border-color);border-radius:12px;animation:shimmer 1.4s infinite;grid-column:1/-1;"></div>`;
         try {
             const res = await this._planGet('/plans');
-            const data = res.data || [];
+            const rawPlans = res.data || [];
+            // Exclude Pay-As-You-Go plans from the Plan Definitions KPIs
+            const data = rawPlans.filter(p => {
+                const pt = (p.plan_type || '').toLowerCase();
+                const pm = (p.pricing_model || '').toLowerCase();
+                return !pt.includes('pay') && pm !== 'pay_as_you_go';
+            });
             
             // Compute KPIs
             const total = data.length;
@@ -6626,7 +7889,7 @@ const SuperAdmin = {
         const tbody = document.getElementById('plansBody');
         const countEl = document.getElementById('plansCount');
         if (!tbody) return;
-        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading plans catalogue…</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="py-5"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span><span class="text-muted text-xs">Loading plans catalogue…</span></div></td></tr>`;
 
         const s = this._plan;
         const params = new URLSearchParams({
@@ -6639,7 +7902,13 @@ const SuperAdmin = {
 
         try {
             const res = await this._planGet(`/plans?${params}`);
-            const data = res.data || [];
+            const rawData = res.data || [];
+            // Exclude Pay-As-You-Go plans from the Plan Definitions table
+            const data = rawData.filter(p => {
+                const pt = (p.plan_type || '').toLowerCase();
+                const pm = (p.pricing_model || '').toLowerCase();
+                return !pt.includes('pay') && pm !== 'pay_as_you_go';
+            });
             this._plan._cachedPlans = data;
             if (countEl) countEl.textContent = `${data.length} plans`;
 
@@ -6674,7 +7943,7 @@ const SuperAdmin = {
             }
             if (window.lucide) lucide.createIcons();
         } catch(e) {
-            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-5 text-danger text-xs">${e.message} — Verify backend is running.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="py-5 text-danger text-xs"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">${e.message} — Verify backend is running.</div></td></tr>`;
         }
     },
 
@@ -6691,10 +7960,10 @@ const SuperAdmin = {
 
     _planRenderTable(plans, tbody) {
         if (!plans.length) {
-            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-5 text-muted">
-                <i data-lucide="inbox" style="width:28px;height:28px;opacity:.3;"></i>
+            tbody.innerHTML = `<tr><td colspan="10" class="py-5 text-muted"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">
+                <i data-lucide="inbox" style="width:28px;height:28px;opacity:.3;display:block;margin:0 auto 8px;"></i>
                 <div class="mt-2 text-xs">No plans found. Click <strong>New Plan</strong> to create one.</div>
-            </td></tr>`;
+            </div></td></tr>`;
             if(window.lucide) lucide.createIcons();
             return;
         }
@@ -6703,7 +7972,8 @@ const SuperAdmin = {
         const activeTrialCount = allCached.filter(pl => (pl.is_default_trial || (pl.plan_type && pl.plan_type.toLowerCase().includes('trial'))) && pl.status === 'Active').length;
 
         tbody.innerHTML = plans.map(p => {
-            const isTrial = p.is_default_trial || (p.plan_type && p.plan_type.toLowerCase().includes('trial')) || (p.code && p.code.toLowerCase() === 't1');
+            const isTrial = p.is_default_trial || (p.plan_type && p.plan_type.toLowerCase().includes('trial')) || (p.name && p.name.toLowerCase() === 'trial');
+            const isPayg = (p.plan_type && p.plan_type.toLowerCase().includes('pay')) || p.pricing_model === 'pay_as_you_go';
             const highlight = (txt) => {
                 if (!txt) return '—';
                 if (!this._plan.q) return txt;
@@ -6731,14 +8001,29 @@ const SuperAdmin = {
                 deleteBtnHtml = `<li><a class="dropdown-item text-danger" href="#" onclick="SuperAdmin._planAction(${p.id}, 'delete');return false;"><i data-lucide="trash-2" style="width:13px;height:13px;" class="me-2"></i>Delete</a></li>`;
             }
 
+            const priceDisplay = isPayg
+                ? `<strong class="text-dark font-monospace">${this._planFmt(p.payg_rules?.base_fee || 999)}</strong><span class="text-xxs text-muted d-block">+ Metered Rates</span>`
+                : `<strong class="text-dark">${this._planFmt(priceVal)}</strong>`;
+
+            const usersDisplay = isPayg
+                ? `<span>Metered</span><span class="text-xxs text-muted d-block">(${p.payg_rules?.user_free_tier || 0} free)</span>`
+                : `<strong>${p.max_users >= 99999 ? 'Unlimited' : p.max_users}</strong>`;
+
+            const storageDisplay = isPayg
+                ? `<span>Metered</span><span class="text-xxs text-muted d-block">(${p.payg_rules?.storage_free_tier_gb || 0} GB free)</span>`
+                : `${p.storage_limit_gb} GB`;
+
             return `<tr>
-                <td style="${colStyle}"><i data-lucide="${p.icon || 'layers'}" style="width:14px;height:14px;color:${p.color || '#3b82f6'};" class="me-2"></i><strong>${highlight(p.name)}</strong> ${isTrial ? '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 ms-1" style="font-size:10px;">System Default Trial</span>' : ''}</td>
+                <td style="${colStyle}"><i data-lucide="${p.icon || 'layers'}" style="width:14px;height:14px;color:${p.color || '#3b82f6'};" class="me-2"></i><strong>${highlight(p.name)}</strong> 
+                    ${isTrial ? '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 ms-1" style="font-size:10px;">System Default Trial</span>' : ''}
+                    ${isPayg ? '<span class="badge ms-1" style="background:rgba(139,92,246,0.15);color:#7c3aed;font-size:10px;font-weight:700;">Pay-As-You-Go</span>' : ''}
+                </td>
                 <td><code class="text-xs font-monospace">${highlight(p.code)}</code></td>
                 <td class="text-xs text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${highlight(p.description)}</td>
-                <td><strong class="text-dark">${this._planFmt(priceVal)}</strong></td>
-                <td><span class="badge bg-secondary bg-opacity-10 text-dark font-monospace">${p.billing_cycle || 'Yearly'}</span></td>
-                <td><strong>${p.max_users >= 99999 ? 'Unlimited' : p.max_users}</strong></td>
-                <td>${p.storage_limit_gb} GB</td>
+                <td>${priceDisplay}</td>
+                <td><span class="badge bg-secondary bg-opacity-10 text-dark font-monospace">${p.billing_cycle || 'Monthly'}</span></td>
+                <td>${usersDisplay}</td>
+                <td>${storageDisplay}</td>
                 <td><span class="badge bg-primary bg-opacity-10 fw-bold border border-primary border-opacity-20" style="cursor:pointer; color: var(--ds-primary) !important;" onclick="SuperAdmin.openPlanDetailDrawer(${p.id})">${p.subscriber_count || 0} orgs</span></td>
                 <td><span class="plan-status-badge ${p.status.toLowerCase().replace(' ','-')}">${p.status}</span></td>
                 <td class="text-end">
@@ -6849,6 +8134,9 @@ const SuperAdmin = {
     },
     _planDrawerHtml(p) {
         const m = v => this._planFmt(v);
+        const isPayg = (p.plan_type && p.plan_type.toLowerCase().includes('pay')) || p.pricing_model === 'pay_as_you_go';
+        const rules = p.payg_rules || {};
+
         return `
         <div class="pd-section">
             <div class="pd-section-title">Overview</div>
@@ -6857,6 +8145,19 @@ const SuperAdmin = {
                 <strong class="d-block mt-2">Long Description:</strong> <span class="text-muted">${p.long_description || 'No detailed description.'}</span>
             </div>
         </div>
+        ${isPayg ? `
+        <div class="pd-section">
+            <div class="pd-section-title">Pay-As-You-Go Metered Rules Matrix</div>
+            <div class="pd-grid mb-3">
+                <div class="pd-item"><div class="di-l">Base Fee / Month</div><div class="di-v fw-bold text-primary">${m(rules.base_fee || 999)}</div></div>
+                <div class="pd-item"><div class="di-l">Tax Rate</div><div class="di-v fw-bold">${rules.tax_percent || 18}% GST</div></div>
+                <div class="pd-item"><div class="di-l">User Unit Rate</div><div class="di-v fw-bold">${m(rules.user_rate || 50)}/user <span class="text-xs text-muted">(${rules.user_free_tier || 0} free)</span></div></div>
+                <div class="pd-item"><div class="di-l">Storage Rate</div><div class="di-v fw-bold">${m(rules.storage_rate_per_gb || 20)}/GB <span class="text-xs text-muted">(${rules.storage_free_tier_gb || 0} GB free)</span></div></div>
+                <div class="pd-item"><div class="di-l">Project Rate</div><div class="di-v fw-bold">${m(rules.project_rate || 100)}/proj <span class="text-xs text-muted">(${rules.project_free_tier || 0} free)</span></div></div>
+                <div class="pd-item"><div class="di-l">API Rate</div><div class="di-v fw-bold">${m(rules.api_rate_per_1k || 10)}/1k <span class="text-xs text-muted">(${rules.api_free_tier_1k || 0}k free)</span></div></div>
+            </div>
+        </div>
+        ` : `
         <div class="pd-section">
             <div class="pd-section-title">Pricing matrix</div>
             <div class="pd-grid mb-3">
@@ -6875,13 +8176,16 @@ const SuperAdmin = {
                 })()}
             </div>
         </div>
+        `}
         <div class="pd-section">
             <div class="pd-section-title">Limits &amp; Caps</div>
             <div class="pd-grid">
-                <div class="pd-item"><div class="di-l">Max Users</div><div class="di-v fw-bold">${p.limits.max_users >= 99999 ? 'Unlimited' : p.limits.max_users}</div></div>
-                <div class="pd-item"><div class="di-l">Storage Limit</div><div class="di-v fw-bold">${p.limits.storage_limit_gb} GB</div></div>
-                <div class="pd-item"><div class="di-l">API Limit/mo</div><div class="di-v fw-bold">${(p.limits.api_limit||0).toLocaleString()}</div></div>
-                <div class="pd-item"><div class="di-l">Max Projects</div><div class="di-v fw-bold">${p.limits.max_projects}</div></div>
+                <div class="pd-item"><div class="di-l">Max Users</div><div class="di-v fw-bold">${isPayg ? 'Metered on usage' : (p.limits.max_users >= 99999 ? 'Unlimited' : p.limits.max_users)}</div></div>
+                <div class="pd-item"><div class="di-l">Max Locations</div><div class="di-v fw-bold">${isPayg ? 'Metered on usage' : (!p.limits.max_locations || p.limits.max_locations >= 99999 ? 'Unlimited' : p.limits.max_locations)}</div></div>
+                <div class="pd-item"><div class="di-l">Storage Limit</div><div class="di-v fw-bold">${isPayg ? 'Metered on usage' : p.limits.storage_limit_gb + ' GB'}</div></div>
+                <div class="pd-item"><div class="di-l">API Limit/mo</div><div class="di-v fw-bold">${isPayg ? 'Metered on usage' : (p.limits.api_limit||0).toLocaleString()}</div></div>
+                <div class="pd-item"><div class="di-l">Max Projects</div><div class="di-v fw-bold">${isPayg ? 'Metered on usage' : p.limits.max_projects}</div></div>
+                <div class="pd-item"><div class="di-l">Max Departments</div><div class="di-v fw-bold">${isPayg ? 'Metered on usage' : p.limits.max_departments}</div></div>
             </div>
         </div>
         <div class="pd-section">
@@ -6939,6 +8243,7 @@ const SuperAdmin = {
                 { label: 'Monthly Price', field: 'pricing', fmt: p=>this._planFmt(p.Monthly) },
                 { label: 'Yearly Price', field: 'pricing', fmt: p=>this._planFmt(p.Yearly) },
                 { label: 'Max Users', field: 'max_users', fmt: u=>u>=99999?'Unlimited':u },
+                { label: 'Max Locations', field: 'max_locations', fmt: l=>!l||l>=99999?'Unlimited':l },
                 { label: 'Storage Cap', field: 'storage_limit_gb', fmt: s=>s+' GB' },
                 { label: 'API limit/mo', field: 'api_limit', fmt: a=>a.toLocaleString() },
                 { label: 'Support Level', field: 'support_level' },
@@ -7208,6 +8513,32 @@ const SuperAdmin = {
         if (window.lucide) lucide.createIcons();
     },
 
+    toggleUnlimitedLocations(isUnlimited, customValue) {
+        const input = document.getElementById('pwMaxLocations');
+        const notice = document.getElementById('pwUnlimitedLocationsNotice');
+        const toggle = document.getElementById('pwUnlimitedLocationsToggle');
+        if (!input) return;
+
+        if (isUnlimited) {
+            if (toggle) toggle.checked = true;
+            input.value = 99999;
+            input.disabled = true;
+            input.classList.add('bg-light');
+            if (notice) notice.classList.remove('d-none');
+        } else {
+            if (toggle) toggle.checked = false;
+            input.disabled = false;
+            input.classList.remove('bg-light');
+            if (notice) notice.classList.add('d-none');
+            if (customValue !== undefined && customValue !== null && customValue < 99999) {
+                input.value = customValue;
+            } else if (input.value == '99999') {
+                input.value = '5';
+            }
+        }
+        if (window.lucide) lucide.createIcons();
+    },
+
     async openPlanCreateWizard(editId=null) {
         this._plan.editPlanId = editId;
         this._plan.wizStep = 1;
@@ -7236,15 +8567,18 @@ const SuperAdmin = {
 
         document.getElementById('pwTax').value = '18';
         this.toggleUnlimitedUsers(false, '100');
+        this.toggleUnlimitedLocations(false, '5');
         document.getElementById('pwStorage').value = '10';
         document.getElementById('pwMaxProjects').value = '25';
+        if (document.getElementById('pwMaxLocations')) document.getElementById('pwMaxLocations').value = '5';
         document.getElementById('pwMaxDepts').value = '10';
 
         if (document.getElementById('pwSupport')) document.getElementById('pwSupport').value = 'Standard';
         if (document.getElementById('pwIsCustom')) document.getElementById('pwIsCustom').checked = false;
-        if (document.getElementById('pwTrialDays')) document.getElementById('pwTrialDays').value = '14';
+        if (document.getElementById('pwTrialDays')) document.getElementById('pwTrialDays').value = '180';
         if (document.getElementById('pwTrialAutoApproveLimit')) document.getElementById('pwTrialAutoApproveLimit').value = '2';
         if (document.getElementById('pwIsDefaultTrial')) document.getElementById('pwIsDefaultTrial').checked = true;
+        this.updateTrialMonthsLabel('180');
 
         if (document.getElementById('pwTaxExclusive')) document.getElementById('pwTaxExclusive').checked = true;
         if (document.getElementById('pwTaxInclusiveOpt')) document.getElementById('pwTaxInclusiveOpt').checked = false;
@@ -7268,21 +8602,42 @@ const SuperAdmin = {
                 document.getElementById('pwIcon').value = p.icon;
                 document.getElementById('pwColor').value = p.color;
 
-                const isTrialPlan = p.is_default_trial || (p.plan_type && p.plan_type.toLowerCase().includes('trial')) || (p.code && p.code.toLowerCase() === 't1');
+                const isTrialPlan = p.is_default_trial || (p.plan_type && p.plan_type.toLowerCase().includes('trial')) || (p.name && p.name.toLowerCase() === 'trial');
+                const isPaygPlan = (p.plan_type && p.plan_type.toLowerCase().includes('pay')) || p.pricing_model === 'pay_as_you_go';
                 if (pwTierEl) {
-                    pwTierEl.value = isTrialPlan ? 'Trial Plan (Free Onboarding Trial)' : p.plan_type;
                     if (isTrialPlan) {
+                        pwTierEl.value = 'Trial Plan (Free Onboarding Trial)';
                         pwTierEl.disabled = true;
                         pwTierEl.title = 'System default trial plan must always remain a Trial plan type.';
+                    } else if (isPaygPlan) {
+                        pwTierEl.value = 'Pay-As-You-Go';
+                        pwTierEl.disabled = false;
+                        pwTierEl.title = '';
                     } else {
+                        pwTierEl.value = p.plan_type;
                         pwTierEl.disabled = false;
                         pwTierEl.title = '';
                     }
                 }
                 document.getElementById('pwIsCustom').checked = p.is_custom;
 
-                if (document.getElementById('pwTrialDays') && p.trial_duration_days) {
-                    document.getElementById('pwTrialDays').value = p.trial_duration_days;
+                if (p.payg_rules) {
+                    const pr = p.payg_rules;
+                    if (document.getElementById('pwPaygBaseFee')) document.getElementById('pwPaygBaseFee').value = pr.base_fee ?? 999;
+                    if (document.getElementById('pwPaygTax')) document.getElementById('pwPaygTax').value = pr.tax_percent ?? 18;
+                    if (document.getElementById('pwPaygUserRate')) document.getElementById('pwPaygUserRate').value = pr.user_rate ?? 50;
+                    if (document.getElementById('pwPaygUserFree')) document.getElementById('pwPaygUserFree').value = pr.user_free_tier ?? 5;
+                    if (document.getElementById('pwPaygStorageRate')) document.getElementById('pwPaygStorageRate').value = pr.storage_rate_per_gb ?? 20;
+                    if (document.getElementById('pwPaygStorageFree')) document.getElementById('pwPaygStorageFree').value = pr.storage_free_tier_gb ?? 5;
+                    if (document.getElementById('pwPaygProjectRate')) document.getElementById('pwPaygProjectRate').value = pr.project_rate ?? 100;
+                    if (document.getElementById('pwPaygProjectFree')) document.getElementById('pwPaygProjectFree').value = pr.project_free_tier ?? 2;
+                    if (document.getElementById('pwPaygApiRate')) document.getElementById('pwPaygApiRate').value = pr.api_rate_per_1k ?? 10;
+                    if (document.getElementById('pwPaygApiFree')) document.getElementById('pwPaygApiFree').value = pr.api_free_tier_1k ?? 10;
+                }
+
+                if (document.getElementById('pwTrialDays')) {
+                    document.getElementById('pwTrialDays').value = p.trial_duration_days || 180;
+                    this.updateTrialMonthsLabel(p.trial_duration_days || 180);
                 }
                 if (document.getElementById('pwTrialAutoApproveLimit') && p.auto_approve_extensions_limit !== undefined) {
                     document.getElementById('pwTrialAutoApproveLimit').value = p.auto_approve_extensions_limit;
@@ -7326,8 +8681,16 @@ const SuperAdmin = {
                 } else {
                     this.toggleUnlimitedUsers(false, maxU || 100);
                 }
+
+                const maxL = parseInt(p.limits.max_locations);
+                if (maxL >= 99999 || p.limits.max_locations === 'Unlimited' || p.limits.max_locations === 'unlimited') {
+                    this.toggleUnlimitedLocations(true);
+                } else {
+                    this.toggleUnlimitedLocations(false, maxL || 5);
+                }
                 document.getElementById('pwStorage').value = p.limits.storage_limit_gb;
                 document.getElementById('pwMaxProjects').value = p.limits.max_projects;
+                if (document.getElementById('pwMaxLocations')) document.getElementById('pwMaxLocations').value = (maxL && maxL < 99999) ? maxL : 5;
                 document.getElementById('pwMaxDepts').value = p.limits.max_departments;
 
                 document.getElementById('pwSupport').value = p.limits.support_level;
@@ -7342,6 +8705,41 @@ const SuperAdmin = {
     syncTrialDaysInputs(val) {
         const el = document.getElementById('pwTrialDays');
         if (el && el.value !== val) el.value = val;
+        this.updateTrialMonthsLabel(val);
+    },
+    updateTrialMonthsLabel(daysVal) {
+        const days = parseInt(daysVal) || 0;
+        const lbl = document.getElementById('pwTrialMonthsLabel');
+        if (lbl) {
+            if (days === 180) {
+                lbl.textContent = '6 Months (Default)';
+            } else if (days % 30 === 0 && days > 0) {
+                const months = Math.round(days / 30);
+                lbl.textContent = months === 1 ? '1 Month' : `${months} Months`;
+            } else if (days === 365) {
+                lbl.textContent = '1 Year';
+            } else {
+                lbl.textContent = `${days} Days`;
+            }
+        }
+
+        // Dynamically shift active state highlight to the selected preset button
+        const btns = document.querySelectorAll('.trial-preset-btn');
+        btns.forEach(btn => {
+            const btnDays = parseInt(btn.getAttribute('data-days')) || 0;
+            if (btnDays === days) {
+                btn.className = 'btn btn-xs btn-primary trial-preset-btn py-1 px-2 text-xxs rounded fw-bold shadow-sm';
+            } else {
+                btn.className = 'btn btn-xs btn-outline-secondary trial-preset-btn py-1 px-2 text-xxs rounded';
+            }
+        });
+    },
+    setTrialDaysPreset(days) {
+        const el = document.getElementById('pwTrialDays');
+        if (el) {
+            el.value = days;
+            this.updateTrialMonthsLabel(days);
+        }
     },
     syncTrialLimitInputs(val) {
         const el = document.getElementById('pwTrialAutoApproveLimit');
@@ -7354,15 +8752,30 @@ const SuperAdmin = {
 
     togglePlanWizardTrialConfig() {
         const tier = document.getElementById('pwTier')?.value || '';
-        const container = document.getElementById('pwTrialConfigContainer');
+        const trialContainer = document.getElementById('pwTrialConfigContainer');
+        const paygContainer = document.getElementById('pwPaygConfigContainer');
+        const fixedFields = document.querySelectorAll('.pw-fixed-pricing-field');
+
         const isTrial = tier.toLowerCase().includes('trial');
-        if (container) container.style.display = isTrial ? 'block' : 'none';
+        const isPayg = tier.toLowerCase().includes('pay') || tier.toLowerCase().includes('metered');
+
+        if (trialContainer) trialContainer.style.display = isTrial ? 'block' : 'none';
+        if (paygContainer) paygContainer.style.display = isPayg ? 'block' : 'none';
+
+        fixedFields.forEach(el => {
+            el.style.display = (isTrial || isPayg) ? 'none' : '';
+        });
+
         if (isTrial) {
             const priceInput = document.getElementById('pwPriceAmount');
             if (priceInput) priceInput.value = '0';
             const cycleInput = document.getElementById('pwBillingCycle');
             if (cycleInput) cycleInput.value = 'Trial Duration';
+        } else if (isPayg) {
+            const cycleInput = document.getElementById('pwBillingCycle');
+            if (cycleInput) cycleInput.value = 'Monthly';
         }
+        if (window.lucide) lucide.createIcons();
     },
 
     _planWizGoStep(n) {
@@ -7402,6 +8815,8 @@ const SuperAdmin = {
         const cycleText = (cycle === 'Custom') ? `${customYears} Years (Custom Multi-Year)` : cycle;
         const isUnlimitedUsers = document.getElementById('pwUnlimitedUsersToggle')?.checked;
         const maxUsers = isUnlimitedUsers ? 'Unlimited (∞)' : `${document.getElementById('pwMaxUsers').value} users`;
+        const isUnlimitedLocs = document.getElementById('pwUnlimitedLocationsToggle')?.checked;
+        const maxLocations = isUnlimitedLocs ? 'Unlimited (∞)' : `${document.getElementById('pwMaxLocations')?.value || 5} locations`;
         const storage = document.getElementById('pwStorage').value;
 
         const isInclusive = document.getElementById('pwTaxInclusiveOpt')?.checked || false;
@@ -7417,8 +8832,18 @@ const SuperAdmin = {
         }
 
         const isTrialTier = tier.toLowerCase().includes('trial');
+        const isPaygTier = tier.toLowerCase().includes('pay');
         const trialDays = document.getElementById('pwTrialDays')?.value || '14';
         const autoLimit = document.getElementById('pwTrialAutoApproveLimit')?.value || '2';
+
+        const paygBase = parseFloat(document.getElementById('pwPaygBaseFee')?.value) || 999;
+        const paygTax = parseFloat(document.getElementById('pwPaygTax')?.value) || 18;
+        const paygUser = parseFloat(document.getElementById('pwPaygUserRate')?.value) || 50;
+        const paygUserFree = parseInt(document.getElementById('pwPaygUserFree')?.value) || 5;
+        const paygStorage = parseFloat(document.getElementById('pwPaygStorageRate')?.value) || 20;
+        const paygStorageFree = parseFloat(document.getElementById('pwPaygStorageFree')?.value) || 5;
+        const paygProj = parseFloat(document.getElementById('pwPaygProjectRate')?.value) || 100;
+        const paygProjFree = parseInt(document.getElementById('pwPaygProjectFree')?.value) || 2;
 
         document.getElementById('pwReview').innerHTML = `
         <div class="row g-2 text-sm">
@@ -7428,13 +8853,23 @@ const SuperAdmin = {
             <div class="col-6"><div class="text-muted text-xs">Initial Trial Duration</div><strong class="text-primary">${trialDays} Days</strong></div>
             <div class="col-6"><div class="text-muted text-xs">Trial Extension Auto-Approve</div><strong>Max ${autoLimit} Times</strong></div>
             ` : ''}
+            ${isPaygTier ? `
+            <div class="col-6"><div class="text-muted text-xs">Base Monthly Platform Fee</div><strong class="text-primary">${this._planFmt(paygBase)}</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Tax Rate</div><strong>${paygTax}% GST</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Per User Rate</div><strong>${this._planFmt(paygUser)} / user (${paygUserFree} free)</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Per GB Storage Rate</div><strong>${this._planFmt(paygStorage)} / GB (${paygStorageFree} GB free)</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Per Project Rate</div><strong>${this._planFmt(paygProj)} / project (${paygProjFree} free)</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Billing Method</div><strong class="text-purple font-bold">Monthly Metered Telemetry</strong></div>
+            ` : `
             <div class="col-6"><div class="text-muted text-xs">Plan Base Amount</div><strong>${this._planFmt(baseCalc)}</strong></div>
             <div class="col-6"><div class="text-muted text-xs">Billing Duration</div><strong>${cycleText}</strong></div>
             <div class="col-6"><div class="text-muted text-xs">GST Tax Mode</div><strong>${isInclusive ? 'Include GST (Inclusive)' : 'Without GST (+ 18% Tax)'}</strong></div>
             <div class="col-6"><div class="text-muted text-xs">GST (${taxRate}%) Amount</div><strong>${this._planFmt(taxCalc)}</strong></div>
             <div class="col-6"><div class="text-muted text-xs">Final Payable Total</div><strong class="text-primary font-bold">${this._planFmt(totalCalc)}</strong></div>
-            <div class="col-6"><div class="text-muted text-xs">Max Users Cap</div><strong>${maxUsers}</strong></div>
-            <div class="col-6"><div class="text-muted text-xs">Storage Limit</div><strong>${storage} GB</strong></div>
+            `}
+            <div class="col-6"><div class="text-muted text-xs">Max Users Cap</div><strong>${isPaygTier ? 'Metered on usage' : maxUsers}</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Max Locations Cap</div><strong>${isPaygTier ? 'Metered on usage' : maxLocations}</strong></div>
+            <div class="col-6"><div class="text-muted text-xs">Storage Limit</div><strong>${isPaygTier ? 'Metered on usage' : storage + ' GB'}</strong></div>
         </div>`;
     },
 
@@ -7469,19 +8904,42 @@ const SuperAdmin = {
         const btn = document.getElementById('pwSubmitBtn');
         btn.disabled = true; btn.textContent = 'Saving Plan…';
 
+        const tierVal = document.getElementById('pwTier').value;
+        const isTrialTier = tierVal.toLowerCase().includes('trial');
+        const isPaygTier = tierVal.toLowerCase().includes('pay');
+
         const amount = parseFloat(document.getElementById('pwPriceAmount').value) || 0.0;
         const cycle = document.getElementById('pwBillingCycle').value;
         const customYears = document.getElementById('pwCustomYearsSelect')?.value || '2';
-        const cycleKey = (cycle === 'Custom') ? `${customYears} Years` : cycle;
+        const cycleKey = (cycle === 'Custom') ? `${customYears} Years` : (isPaygTier ? 'Monthly' : cycle);
         const taxVal = parseFloat(document.getElementById('pwTax').value) || 18.0;
         const isTaxInclusive = document.getElementById('pwTaxInclusiveOpt')?.checked || false;
 
-        const pricing = [
+        let paygRules = null;
+        let pricingModel = 'fixed';
+        if (isPaygTier) {
+            pricingModel = 'pay_as_you_go';
+            paygRules = {
+                base_fee: parseFloat(document.getElementById('pwPaygBaseFee')?.value) || 999.0,
+                tax_percent: parseFloat(document.getElementById('pwPaygTax')?.value) || 18.0,
+                user_rate: parseFloat(document.getElementById('pwPaygUserRate')?.value) || 50.0,
+                user_free_tier: parseInt(document.getElementById('pwPaygUserFree')?.value) || 5,
+                storage_rate_per_gb: parseFloat(document.getElementById('pwPaygStorageRate')?.value) || 20.0,
+                storage_free_tier_gb: parseFloat(document.getElementById('pwPaygStorageFree')?.value) || 5.0,
+                project_rate: parseFloat(document.getElementById('pwPaygProjectRate')?.value) || 100.0,
+                project_free_tier: parseInt(document.getElementById('pwPaygProjectFree')?.value) || 2,
+                api_rate_per_1k: parseFloat(document.getElementById('pwPaygApiRate')?.value) || 10.0,
+                api_free_tier_1k: parseFloat(document.getElementById('pwPaygApiFree')?.value) || 10.0,
+                billing_cycle: 'Monthly',
+                currency: 'INR'
+            };
+        }
+
+        const pricing = isPaygTier ? [
+            { billing_cycle: 'Monthly', price: paygRules.base_fee, discount: 0.0, tax: paygRules.tax_percent, is_tax_inclusive: false }
+        ] : [
             { billing_cycle: cycleKey, price: amount, discount: 0.0, tax: taxVal, is_tax_inclusive: isTaxInclusive }
         ];
-
-        const tierVal = document.getElementById('pwTier').value;
-        const isTrialTier = tierVal.toLowerCase().includes('trial');
 
         const payload = {
             name: document.getElementById('pwName').value,
@@ -7491,6 +8949,8 @@ const SuperAdmin = {
             icon: document.getElementById('pwIcon').value,
             color: document.getElementById('pwColor').value,
             plan_type: tierVal,
+            pricing_model: pricingModel,
+            payg_rules: paygRules,
             is_custom: document.getElementById('pwIsCustom').checked,
             is_default_trial: isTrialTier && (document.getElementById('pwIsDefaultTrial')?.checked ?? true),
             trial_duration_days: parseInt(document.getElementById('pwTrialDays')?.value) || 14,
@@ -7499,6 +8959,7 @@ const SuperAdmin = {
             pricing: pricing,
             limits: {
                 max_users: document.getElementById('pwUnlimitedUsersToggle')?.checked ? 99999 : (parseInt(document.getElementById('pwMaxUsers').value)||100),
+                max_locations: document.getElementById('pwUnlimitedLocationsToggle')?.checked ? 99999 : (parseInt(document.getElementById('pwMaxLocations')?.value)||5),
                 max_projects: parseInt(document.getElementById('pwMaxProjects').value)||25,
                 storage_limit_gb: parseFloat(document.getElementById('pwStorage').value)||10.0,
                 api_limit: document.getElementById('pwApiLimit') ? (parseInt(document.getElementById('pwApiLimit').value)||10000) : 10000,
@@ -7520,6 +8981,463 @@ const SuperAdmin = {
             this.loadPlans();
         } catch(e) { this._planNotify(e.message, 'error'); }
         finally { btn.disabled = false; btn.textContent = 'Save Plan Configuration'; }
+    },
+
+    // ── PAYG Operations Modal & Batch Actions ──
+    async openPaygOperationsModal() {
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('paygOperationsModal'));
+        modal.show();
+        await this.loadPaygBillingPreviews();
+    },
+
+    togglePaygRulesPanel(forceState) {
+        const panel = document.getElementById('paygRulesPanel');
+        if (!panel) return;
+        const isHidden = panel.style.display === 'none' || !panel.style.display;
+        const show = forceState !== undefined ? forceState : isHidden;
+        panel.style.display = show ? 'block' : 'none';
+        if (show) {
+            this.loadPaygRules();
+        }
+        if (window.lucide) lucide.createIcons();
+    },
+
+    async loadPaygRules() {
+        try {
+            const res = await api.get('/billing/payg/rules');
+            const r = res.rules || {};
+            
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val !== undefined) el.value = val;
+            };
+
+            setVal('paygRuleBaseFee', r.base_fee ?? 999);
+            setVal('paygRuleTaxPercent', r.tax_percent ?? 18);
+            setVal('paygRuleUserFree', r.user_free_tier ?? 5);
+            setVal('paygRuleUserRate', r.user_rate ?? 50);
+            setVal('paygRuleStorageFree', r.storage_free_tier_gb ?? 5);
+            setVal('paygRuleStorageRate', r.storage_rate_per_gb ?? 20);
+            setVal('paygRuleProjectFree', r.project_free_tier ?? 2);
+            setVal('paygRuleProjectRate', r.project_rate ?? 100);
+            setVal('paygRuleDeptFree', r.department_free_tier ?? 2);
+            setVal('paygRuleDeptRate', r.department_rate ?? 50);
+            setVal('paygRuleLocFree', r.location_free_tier ?? 1);
+            setVal('paygRuleLocRate', r.location_rate ?? 100);
+        } catch(e) {
+            console.error('Failed to load PAYG rules:', e);
+        }
+    },
+
+    async savePaygRules() {
+        const btn = document.getElementById('savePaygRulesBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...'; }
+
+        const getVal = (id, fallback) => {
+            const el = document.getElementById(id);
+            return el ? parseFloat(el.value) || fallback : fallback;
+        };
+
+        const payload = {
+            base_fee: getVal('paygRuleBaseFee', 999),
+            tax_percent: getVal('paygRuleTaxPercent', 18),
+            user_free_tier: parseInt(getVal('paygRuleUserFree', 5)),
+            user_rate: getVal('paygRuleUserRate', 50),
+            storage_free_tier_gb: getVal('paygRuleStorageFree', 5),
+            storage_rate_per_gb: getVal('paygRuleStorageRate', 20),
+            project_free_tier: parseInt(getVal('paygRuleProjectFree', 2)),
+            project_rate: getVal('paygRuleProjectRate', 100),
+            department_free_tier: parseInt(getVal('paygRuleDeptFree', 2)),
+            department_rate: getVal('paygRuleDeptRate', 50),
+            location_free_tier: parseInt(getVal('paygRuleLocFree', 1)),
+            location_rate: getVal('paygRuleLocRate', 100)
+        };
+
+        try {
+            const res = await api.post('/billing/payg/rules', payload);
+            this._planNotify(res.message || 'PAYG rules saved & telemetry recalculated!', 'success');
+            await this.loadPaygBillingPreviews();
+        } catch(e) {
+            this._planNotify('Failed to save rules: ' + e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i> Save Rules &amp; Recalculate'; }
+            if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    async resetPaygRulesToDefault() {
+        const ok = await this._planConfirm(
+            'Reset Metered Rules to Defaults',
+            'This will reset all seat, storage, project, department, and plant site rates to standard system defaults. Proceed?',
+            'Reset Rules'
+        );
+        if (!ok) return;
+
+        const defaultRules = {
+            base_fee: 999,
+            tax_percent: 18,
+            user_free_tier: 5,
+            user_rate: 50,
+            storage_free_tier_gb: 5,
+            storage_rate_per_gb: 20,
+            project_free_tier: 2,
+            project_rate: 100,
+            department_free_tier: 2,
+            department_rate: 50,
+            location_free_tier: 1,
+            location_rate: 100
+        };
+
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+        };
+
+        Object.keys(defaultRules).forEach(k => {
+            if (k === 'base_fee') setVal('paygRuleBaseFee', defaultRules[k]);
+            if (k === 'tax_percent') setVal('paygRuleTaxPercent', defaultRules[k]);
+            if (k === 'user_free_tier') setVal('paygRuleUserFree', defaultRules[k]);
+            if (k === 'user_rate') setVal('paygRuleUserRate', defaultRules[k]);
+            if (k === 'storage_free_tier_gb') setVal('paygRuleStorageFree', defaultRules[k]);
+            if (k === 'storage_rate_per_gb') setVal('paygRuleStorageRate', defaultRules[k]);
+            if (k === 'project_free_tier') setVal('paygRuleProjectFree', defaultRules[k]);
+            if (k === 'project_rate') setVal('paygRuleProjectRate', defaultRules[k]);
+            if (k === 'department_free_tier') setVal('paygRuleDeptFree', defaultRules[k]);
+            if (k === 'department_rate') setVal('paygRuleDeptRate', defaultRules[k]);
+            if (k === 'location_free_tier') setVal('paygRuleLocFree', defaultRules[k]);
+            if (k === 'location_rate') setVal('paygRuleLocRate', defaultRules[k]);
+        });
+
+        await this.savePaygRules();
+    },
+
+    async loadPaygBillingPreviews() {
+        const tbody = document.getElementById('paygOperationsBody');
+        const projEl = document.getElementById('paygTotalProjected');
+        const badgeEl = document.getElementById('paygOrgCountBadge');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span>Loading metered usage telemetry...</div></td></tr>';
+        
+        try {
+            const res = await api.post('/billing/payg/preview-all');
+            const data = res.data || [];
+            if (projEl) projEl.textContent = this._planFmt(res.total_projected_revenue || 0);
+            if (badgeEl) badgeEl.textContent = `${data.length} Organizations`;
+
+            if (!data.length) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">No organizations found on metered billing.</div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(d => `
+                <tr>
+                    <td>
+                        <strong class="d-block text-main">${d.org_name}</strong>
+                        <span class="text-xxs text-muted">Window: ${d.period_start} to ${d.period_end}</span>
+                    </td>
+                    <td>
+                        <span class="fw-bold">${d.metrics.active_users}</span> <span class="text-xxs text-muted">(${d.rules.user_free_tier || 0} free)</span>
+                    </td>
+                    <td>
+                        <span class="fw-bold">${d.metrics.storage_used_gb} GB</span> <span class="text-xxs text-muted">(${d.rules.storage_free_tier_gb || 0} GB free)</span>
+                    </td>
+                    <td>
+                        <span class="fw-bold">${d.metrics.projects_count}</span> <span class="text-xxs text-muted">(${d.rules.project_free_tier || 0} free)</span>
+                    </td>
+                    <td>
+                        <div><span class="fw-bold">${d.metrics.departments_count || 0}</span> <span class="text-xxs text-muted">depts (${d.rules.department_free_tier || 0} free)</span></div>
+                        <div class="text-xxs text-muted"><span class="fw-bold text-dark">${d.metrics.plants_count || 0}</span> sites (${d.rules.location_free_tier || 0} free)</div>
+                    </td>
+                    <td>${this._planFmt(d.rules.base_fee || 999)}</td>
+                    <td>${this._planFmt(d.gst_amount || 0)}</td>
+                    <td><strong class="text-primary font-bold">${this._planFmt(d.total_amount || 0)}</strong></td>
+                    <td class="text-end">
+                        <button class="ds-btn ds-btn-sm ds-btn-secondary text-nowrap" onclick="SuperAdmin.executeSinglePaygBill(${d.org_id}, '${d.org_name.replace(/'/g, "\\'")}')">
+                            <i data-lucide="send" style="width:12px;height:12px;"></i> Send Bill
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            if (window.lucide) lucide.createIcons();
+        } catch(e) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-danger text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">${e.message}</div></td></tr>`;
+        }
+    },
+
+    async executePaygBatchBilling() {
+        const ok = await this._planConfirm(
+            'Generate & Dispatch All PAYG Invoices',
+            'This will compute month-end metered usage, generate official tax invoices, and email all tenant organization admins. Proceed?',
+            'Generate & Send Invoices'
+        );
+        if (!ok) return;
+
+        const btn = document.getElementById('paygBatchDispatchBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processing batch invoices...'; }
+
+        try {
+            const res = await api.post('/billing/payg/generate-bills', { send_email: true });
+            this._planNotify(res.message || 'All PAYG invoices generated and dispatched successfully!', 'success');
+            await this.loadPaygBillingPreviews();
+        } catch(e) {
+            this._planNotify(e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send" style="width:13px;height:13px;"></i> Generate &amp; Dispatch All Monthly Bills'; }
+            if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    async executeSinglePaygBill(orgId, orgName) {
+        this.openPaygInvoiceDispatchModal(orgId, orgName);
+    },
+
+    currentPaygTargetOrgId: null,
+    async openPaygInvoiceDispatchModal(orgId, orgName) {
+        this.currentPaygTargetOrgId = orgId;
+        const modalEl = document.getElementById('paygInvoiceDispatchModal');
+        if (!modalEl) {
+            console.error('paygInvoiceDispatchModal element not found');
+            return;
+        }
+
+        const titleEl = document.getElementById('paygDispatchModalTitle');
+        if (titleEl) titleEl.textContent = `Generate & Send Monthly Invoice for "${orgName}"`;
+
+        const recipientInput = document.getElementById('paygDispatchRecipientEmail');
+        const subjectInput = document.getElementById('paygDispatchSubject');
+        const totalEl = document.getElementById('paygDispatchModalTotal');
+        const emailBodyContainer = document.getElementById('paygLiveEmailBodyContainer');
+        const invoiceDocContainer = document.getElementById('paygLiveInvoiceDocContainer');
+        const telemetryBody = document.getElementById('paygTelemetryTableBody');
+
+        if (recipientInput) recipientInput.value = 'Loading recipient email...';
+        if (subjectInput) subjectInput.value = `Monthly Metered Invoice - ${orgName} (QCMS Platform)`;
+        if (emailBodyContainer) emailBodyContainer.innerHTML = `<div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading live email body preview for ${orgName}...</div>`;
+        if (invoiceDocContainer) invoiceDocContainer.innerHTML = `<div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading official tax invoice document...</div>`;
+
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            } else {
+                modalEl.classList.add('show');
+                modalEl.style.display = 'block';
+            }
+        } catch(e) {
+            modalEl.classList.add('show');
+            modalEl.style.display = 'block';
+        }
+        if (window.lucide) lucide.createIcons();
+
+        try {
+            const token = api.token || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+            const previewUrls = [
+                '/api/billing/payg/preview-single',
+                '/api/v1/billing/payg/preview-single'
+            ];
+            let result = null;
+            for (const url of previewUrls) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': token ? `Bearer ${token}` : ''
+                        },
+                        body: JSON.stringify({ org_id: orgId })
+                    });
+                    if (res.ok) {
+                        result = await res.json();
+                        break;
+                    }
+                } catch(e) {}
+            }
+
+            if (!result || result.status !== 'success' || !result.data) {
+                throw new Error('Failed to fetch invoice preview telemetry');
+            }
+
+            const d = result.data;
+            if (recipientInput) recipientInput.value = d.recipient_email || `${orgName.toLowerCase().replace(/\s+/g, '')}@qcms-tenant.com`;
+            if (subjectInput) subjectInput.value = d.subject || `Monthly Metered Invoice - ${orgName}`;
+            if (totalEl) totalEl.textContent = d.estimated_total_fmt || `₹${d.estimated_total}`;
+
+            const windowEl = document.getElementById('paygEmailHeaderWindow');
+            if (windowEl) windowEl.textContent = `Billing Period: ${d.period_start} to ${d.period_end}`;
+
+            const footerBadge = document.getElementById('paygDispatchFooterBadge');
+            if (footerBadge) footerBadge.textContent = `Sending email to: ${d.recipient_email || orgName}`;
+
+            let lineItemsHtml = (d.line_items || []).map(item => `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:10px 12px;font-size:13px;color:#1e293b;">
+                        <strong>${item.metric}</strong><br>
+                        <span style="font-size:11px;color:#64748b;">${item.description}</span>
+                    </td>
+                    <td style="padding:10px 12px;text-align:center;font-size:13px;color:#475569;">${item.units_used} ${item.unit_label}</td>
+                    <td style="padding:10px 12px;text-align:center;font-size:13px;color:#10b981;font-weight:600;">${item.free_allowance}</td>
+                    <td style="padding:10px 12px;text-align:center;font-size:13px;color:#1e293b;font-weight:600;">${item.billable_units}</td>
+                    <td style="padding:10px 12px;text-align:right;font-size:13px;color:#475569;">₹${item.unit_price}</td>
+                    <td style="padding:10px 12px;text-align:right;font-size:13px;font-weight:700;color:#0f172a;">₹${item.line_total}</td>
+                </tr>
+            `).join('');
+
+            const liveEmailHtml = `
+            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                <div style="background:linear-gradient(135deg,#312e81 0%,#4f46e5 100%);padding:24px;color:#ffffff;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <h3 style="margin:0;font-size:20px;font-weight:800;letter-spacing:-0.5px;">QCMS Enterprise OS</h3>
+                            <div style="font-size:12px;opacity:0.85;margin-top:2px;">Official Monthly Pay-As-You-Go Statement</div>
+                        </div>
+                        <span style="background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;">OFFICIAL INVOICE</span>
+                    </div>
+                </div>
+
+                <div style="padding:24px;">
+                    <p style="font-size:14px;color:#1e293b;margin:0 0 16px 0;">Hello <strong>${d.admin_name || orgName + ' Admin'}</strong>,</p>
+                    <p style="font-size:13px;color:#475569;margin:0 0 20px 0;line-height:1.5;">
+                        Your monthly metered usage statement for <strong>${orgName}</strong> for billing window <strong>${d.period_start} to ${d.period_end}</strong> has been generated and is ready for payment.
+                    </p>
+
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:20px;">
+                        <table style="width:100%;font-size:12.5px;color:#334155;border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:4px 0;"><strong>Billed Organization:</strong> ${d.org_name} (${d.org_code})</td>
+                                <td style="padding:4px 0;text-align:right;"><strong>Recipient Email:</strong> ${d.recipient_email}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:4px 0;"><strong>Billing Period:</strong> ${d.period_start} - ${d.period_end}</td>
+                                <td style="padding:4px 0;text-align:right;"><strong>Payment Terms:</strong> Due in 15 Days</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+                        <table style="width:100%;border-collapse:collapse;text-align:left;">
+                            <thead>
+                                <tr style="background:#f1f5f9;border-bottom:1px solid #cbd5e1;font-size:11px;color:#475569;text-transform:uppercase;">
+                                    <th style="padding:8px 12px;">Metered Metric</th>
+                                    <th style="padding:8px 12px;text-align:center;">Used</th>
+                                    <th style="padding:8px 12px;text-align:center;">Free Tier</th>
+                                    <th style="padding:8px 12px;text-align:center;">Billable</th>
+                                    <th style="padding:8px 12px;text-align:right;">Rate</th>
+                                    <th style="padding:8px 12px;text-align:right;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${lineItemsHtml}
+                            </tbody>
+                        </table>
+                        <div style="background:#f8fafc;padding:14px 16px;border-top:1px solid #e2e8f0;text-align:right;">
+                            <div style="font-size:12px;color:#64748b;margin-bottom:3px;">Subtotal (Excl. Tax): ${d.subtotal_fmt}</div>
+                            <div style="font-size:12px;color:#64748b;margin-bottom:6px;">GST (18% Standard): ${d.tax_amount_fmt}</div>
+                            <div style="font-size:16px;font-weight:800;color:#4f46e5;">Total Amount Payable: ${d.estimated_total_fmt}</div>
+                        </div>
+                    </div>
+
+                    <div style="text-align:center;padding-top:10px;">
+                        <a href="#" onclick="return false;" style="background:#4f46e5;color:#ffffff;padding:10px 24px;border-radius:6px;font-weight:700;font-size:13px;text-decoration:none;display:inline-block;box-shadow:0 4px 12px rgba(79,70,229,0.3);">
+                            View & Pay Invoice in Tenant Dashboard →
+                        </a>
+                    </div>
+                </div>
+            </div>
+            `;
+
+            if (emailBodyContainer) emailBodyContainer.innerHTML = liveEmailHtml;
+            if (invoiceDocContainer) invoiceDocContainer.innerHTML = d.invoice_html || liveEmailHtml;
+
+            if (telemetryBody) {
+                telemetryBody.innerHTML = (d.line_items || []).map(item => `
+                    <tr>
+                        <td class="fw-semibold text-dark">${item.metric}<div class="text-xs text-muted fw-normal">${item.description}</div></td>
+                        <td class="text-center">${item.units_used} ${item.unit_label}</td>
+                        <td class="text-center text-success fw-semibold">${item.free_allowance}</td>
+                        <td class="text-center fw-bold">${item.billable_units}</td>
+                        <td class="text-end">₹${item.unit_price}</td>
+                        <td class="text-end fw-bold text-dark">₹${item.line_total}</td>
+                    </tr>
+                `).join('');
+            }
+        } catch(err) {
+            console.error('Failed to load PAYG preview telemetry:', err);
+            if (emailBodyContainer) emailBodyContainer.innerHTML = `<div class="alert alert-danger m-3">Failed to load preview telemetry: ${err.message}</div>`;
+        }
+    },
+
+    async confirmSendPaygInvoice() {
+        const orgId = this.currentPaygTargetOrgId;
+        if (!orgId) {
+            api.showNotification('No organization selected for invoice dispatch', 'error');
+            return;
+        }
+
+        const recipientEmail = document.getElementById('paygDispatchRecipientEmail')?.value || '';
+        const ccEmail = document.getElementById('paygDispatchCcEmail')?.value || '';
+        const subject = document.getElementById('paygDispatchSubject')?.value || '';
+
+        const btn = document.getElementById('btnConfirmSendPaygInvoice');
+        const origText = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Sending Email...`;
+        }
+
+        try {
+            const token = api.token || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+            const dispatchUrls = [
+                '/api/billing/payg/generate-bills',
+                '/api/v1/billing/payg/generate-bills'
+            ];
+            let successResult = null;
+
+            for (const url of dispatchUrls) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': token ? `Bearer ${token}` : ''
+                        },
+                        body: JSON.stringify({
+                            org_id: orgId,
+                            recipient_email: recipientEmail,
+                            cc_email: ccEmail,
+                            subject: subject,
+                            send_email: true
+                        })
+                    });
+                    if (res.ok) {
+                        successResult = await res.json();
+                        break;
+                    }
+                } catch(e) {}
+            }
+
+            if (successResult && successResult.status === 'success') {
+                const modalEl = document.getElementById('paygInvoiceDispatchModal');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+
+                api.showNotification(successResult.message || `Monthly metered invoice sent successfully to ${recipientEmail || 'tenant admin'}!`, 'success');
+                await this.loadPaygBillingPreviews();
+            } else {
+                throw new Error('Failed to dispatch invoice');
+            }
+        } catch(e) {
+            console.error('Send invoice error:', e);
+            api.showNotification('Failed to dispatch invoice: ' + e.message, 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origText;
+            }
+        }
     },
 
     // ── Client-side Excel/CSV Exporter ──
@@ -9192,7 +11110,7 @@ const SuperAdmin = {
     async loadRecycleBin() {
         const tbody = document.getElementById('recycleBinBody');
         if (!tbody) return;
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span><span class="text-muted text-xs">Loading Recycle Bin…</span></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-5"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span><span class="text-muted text-xs">Loading Recycle Bin…</span></div></td></tr>`;
         const paginationEl = document.getElementById('recycleBinPagination');
         if (paginationEl) paginationEl.innerHTML = '';
 
@@ -9202,7 +11120,7 @@ const SuperAdmin = {
             this._binPage  = 1;
             this._renderBinPage();
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger text-xs">Failed to load Recycle Bin data.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="py-5 text-danger text-xs"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">Failed to load Recycle Bin data.</div></td></tr>`;
         }
     },
 
@@ -9220,7 +11138,7 @@ const SuperAdmin = {
         if (countEl) countEl.textContent = `${items.length} deleted organization${items.length !== 1 ? 's' : ''}`;
 
         if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted text-xs"><i data-lucide="trash-2" style="width:32px;height:32px;opacity:0.3;display:block;margin:0 auto 8px;"></i>Recycle Bin is empty. No soft-deleted organizations.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="py-5 text-muted text-xs"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><i data-lucide="trash-2" style="width:32px;height:32px;opacity:0.3;display:block;margin:0 auto 8px;"></i>Recycle Bin is empty. No soft-deleted organizations.</div></td></tr>`;
             if (window.lucide) lucide.createIcons();
             this._renderBinPagination(0, 1, PAGE_SIZE);
             return;
@@ -9452,6 +11370,242 @@ const SuperAdmin = {
         }
     }
 };
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STAGE WEIGHTAGE CONFIGURATION MANAGER
+// ─────────────────────────────────────────────────────────────────────────────
+
+const StageWeightageManager = {
+    weights: [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5],
+    stageLabels: [
+        { id: 1, name: "S1 Plan & Establish Team", icon: "users", color: "#3b82f6", desc: "Team formation, problem background (5W2H) & schedule targets" },
+        { id: 2, name: "S2 Define Problem", icon: "search", color: "#6366f1", desc: "Stratification, Pareto analysis & Gemba data collection" },
+        { id: 3, name: "S3 Interim Containment", icon: "shield", color: "#8b5cf6", desc: "Brainstorming, Fishbone analysis & Containment actions" },
+        { id: 4, name: "S4 Determine Root Causes", icon: "git-branch", color: "#ec4899", desc: "5-Why analysis, Hypothesis verification & RCA register" },
+        { id: 5, name: "S5 Choose Permanent Corrections", icon: "sliders", color: "#f59e0b", desc: "Solution matrix, Cost-benefit analysis & 3W1H plan" },
+        { id: 6, name: "S6 Implement Corrective Actions", icon: "wrench", color: "#10b981", desc: "Countermeasure tasks, training, change & deployment" },
+        { id: 7, name: "S7 Take Preventive Measures", icon: "shield-check", color: "#06b6d4", desc: "Before vs after analysis, statistical & ROI verification" },
+        { id: 8, name: "S8 Congratulate Team & Closure", icon: "award", color: "#84cc16", desc: "Standardization, SOP adoption & Final project closure" }
+    ],
+
+    async load() {
+        const container = document.getElementById('stageWeightageList');
+        if (!container) return;
+
+        try {
+            const res = await api.get('/super-admin/stage-weightage');
+            if (res && Array.isArray(res.weights) && res.weights.length === 8) {
+                this.weights = res.weights.map(w => Number(w));
+            } else {
+                this.weights = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5];
+            }
+        } catch (e) {
+            console.warn('[StageWeightage] Failed to fetch weightage, using defaults:', e);
+            this.weights = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5];
+        }
+
+        this.render();
+    },
+
+    render() {
+        const container = document.getElementById('stageWeightageList');
+        if (!container) return;
+
+        let cumulative = 0;
+        container.innerHTML = this.stageLabels.map((stg, idx) => {
+            const val = this.weights[idx] ?? 12.5;
+            cumulative += val;
+            const cumStr = (cumulative % 1 === 0) ? cumulative.toFixed(0) : cumulative.toFixed(1);
+
+            return `
+            <div class="p-3 rounded-3" style="background: var(--ds-card-bg, #fff); border: 1px solid var(--ds-border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <div class="row align-items-center g-3">
+                    <!-- Stage Info -->
+                    <div class="col-lg-4 col-md-5 col-12">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div style="width:34px;height:34px;border-radius:8px;background:${stg.color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="${stg.icon}" style="width:16px;height:16px;color:${stg.color};"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="fw-bold text-sm text-truncate" style="color:var(--ds-text-main);">${stg.name}</div>
+                                <div class="text-xs text-muted text-truncate">${stg.desc}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slider Control -->
+                    <div class="col-lg-4 col-md-4 col-7">
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="range" class="form-range" min="0" max="50" step="0.5" 
+                                   value="${val}" 
+                                   id="rangeStage_${idx}" 
+                                   oninput="StageWeightageManager.onSliderChange(${idx}, this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Number Input & Cumulative Progress -->
+                    <div class="col-lg-4 col-md-3 col-5">
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            <!-- Unified Single Box for Weightage Number & % -->
+                            <div class="position-relative" style="width: 85px;">
+                                <input type="number" class="form-control form-control-sm text-start fw-bold text-xs" 
+                                       style="padding-right: 22px; height: 32px; border-radius: 8px; font-weight: 700; background: var(--ds-surface-secondary, #fff);" 
+                                       min="0" max="100" step="0.1" 
+                                       value="${val}" 
+                                       id="numStage_${idx}" 
+                                       oninput="StageWeightageManager.onNumberChange(${idx}, this.value)">
+                                <span class="position-absolute text-muted fw-bold" 
+                                      style="right: 8px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 11px;">%</span>
+                            </div>
+                            <span class="badge bg-light text-secondary text-xxs border px-2 py-1" id="cumStage_${idx}" title="Cumulative progress when completing this stage">
+                                Cum: ${cumStr}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        this.updateTotalAndBar();
+        if (window.lucide) lucide.createIcons({ container });
+    },
+
+    onSliderChange(idx, val) {
+        const numVal = Math.max(0, Math.min(100, parseFloat(val) || 0));
+        this.weights[idx] = numVal;
+        const numInput = document.getElementById(`numStage_${idx}`);
+        if (numInput) numInput.value = numVal;
+        this.updateTotalAndBar();
+    },
+
+    onNumberChange(idx, val) {
+        const numVal = Math.max(0, Math.min(100, parseFloat(val) || 0));
+        this.weights[idx] = numVal;
+        const slider = document.getElementById(`rangeStage_${idx}`);
+        if (slider) slider.value = Math.min(50, numVal);
+        this.updateTotalAndBar();
+    },
+
+    updateTotalAndBar() {
+        let sum = 0;
+        let cumulative = 0;
+        const segmentsHtml = [];
+
+        this.weights.forEach((w, idx) => {
+            const val = parseFloat(w) || 0;
+            sum += val;
+            cumulative += val;
+            const cumStr = (cumulative % 1 === 0) ? cumulative.toFixed(0) : cumulative.toFixed(1);
+
+            const cumEl = document.getElementById(`cumStage_${idx}`);
+            if (cumEl) cumEl.textContent = `Cum: ${cumStr}%`;
+
+            const color = this.stageLabels[idx]?.color || '#3b82f6';
+            if (val > 0) {
+                segmentsHtml.push(`<div class="progress-bar" style="width: ${val}%; background-color: ${color};" title="${this.stageLabels[idx]?.name}: ${val}%"></div>`);
+            }
+        });
+
+        sum = Math.round(sum * 10) / 10;
+        const totalBadge = document.getElementById('weightTotalBadge');
+        const validMsg = document.getElementById('weightageValidationMsg');
+        const saveBtn = document.getElementById('saveStageWeightageBtn');
+        const barContainer = document.getElementById('weightProgressBar');
+
+        if (barContainer) {
+            barContainer.innerHTML = segmentsHtml.join('');
+        }
+
+        const isValid = Math.abs(sum - 100.0) <= 0.2;
+
+        if (totalBadge) {
+            if (isValid) {
+                totalBadge.className = 'badge bg-success-subtle text-success px-3 py-1 fw-bold fs-6';
+                totalBadge.innerHTML = `<i data-lucide="check" style="width:14px;height:14px;" class="me-1"></i> Total: ${sum.toFixed(1)}% (Balanced)`;
+            } else if (sum < 100) {
+                totalBadge.className = 'badge bg-warning-subtle text-warning px-3 py-1 fw-bold fs-6';
+                totalBadge.innerHTML = `<i data-lucide="alert-circle" style="width:14px;height:14px;" class="me-1"></i> Total: ${sum.toFixed(1)}% (${(100 - sum).toFixed(1)}% remaining)`;
+            } else {
+                totalBadge.className = 'badge bg-danger-subtle text-danger px-3 py-1 fw-bold fs-6';
+                totalBadge.innerHTML = `<i data-lucide="alert-triangle" style="width:14px;height:14px;" class="me-1"></i> Total: ${sum.toFixed(1)}% (${(sum - 100).toFixed(1)}% excess)`;
+            }
+            if (window.lucide) lucide.createIcons({ container: totalBadge });
+        }
+
+        if (validMsg) {
+            if (isValid) {
+                validMsg.className = 'text-xs text-success fw-medium';
+                validMsg.textContent = '✓ Weights sum up to 100.0%. Ready to save.';
+            } else {
+                validMsg.className = 'text-xs text-danger fw-medium';
+                validMsg.textContent = `⚠ Total must equal 100.0%. Current sum: ${sum.toFixed(1)}%.`;
+            }
+        }
+
+        if (saveBtn) {
+            saveBtn.disabled = !isValid;
+        }
+    },
+
+    applyPreset(preset) {
+        if (preset === 'equal') {
+            this.weights = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5];
+        } else if (preset === 'rca_heavy') {
+            this.weights = [15.0, 20.0, 20.0, 15.0, 10.0, 10.0, 5.0, 5.0];
+        } else if (preset === 'execution_heavy') {
+            this.weights = [10.0, 10.0, 10.0, 15.0, 20.0, 20.0, 10.0, 5.0];
+        }
+        this.render();
+    },
+
+    async resetDefaults() {
+        if (!confirm('Reset stage weights to equal system defaults (12.5% for each stage)?')) return;
+        try {
+            const res = await api.post('/super-admin/stage-weightage', { reset: true });
+            if (res && res.status === 'success') {
+                this.weights = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5];
+                this.render();
+                api.showNotification('Stage weightage reset to equal defaults (12.5% per stage).', 'success');
+            }
+        } catch (e) {
+            api.showNotification(e.message || 'Failed to reset stage weightage', 'error');
+        }
+    },
+
+    async save() {
+        const sum = this.weights.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+        if (Math.abs(sum - 100.0) > 0.5) {
+            api.showNotification(`Weights must sum to 100.0%. Current total: ${sum.toFixed(1)}%`, 'error');
+            return;
+        }
+
+        const btn = document.getElementById('saveStageWeightageBtn');
+        const orig = btn ? btn.innerHTML : '';
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+            }
+            const res = await api.post('/super-admin/stage-weightage', { weights: this.weights });
+            if (res && res.status === 'success') {
+                api.showNotification('Stage weightage configuration saved successfully!', 'success');
+            } else {
+                throw new Error(res.message || 'Failed to save');
+            }
+        } catch (e) {
+            api.showNotification(e.message || 'Failed to save stage weightage', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = orig;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    }
+};
+
+window.StageWeightageManager = StageWeightageManager;
 
 
 // Global export for inline/onclick handlers immediately

@@ -116,7 +116,7 @@
                 btn.dataset.originalHtml = btn.innerHTML;
             }
 
-            const currentText = btn.innerText.trim();
+            const currentText = btn.innerText ? btn.innerText.trim() : 'Processing';
             let loadingText = customText;
 
             if (!loadingText) {
@@ -137,8 +137,9 @@
                 }
             }
 
-            btn.classList.add('is-locked', 'btn-loading');
+            btn.classList.add('is-locked', 'btn-loading', 'disabled');
             btn.dataset.loading = 'true';
+            btn.dataset.locked = 'true';
             btn.setAttribute('disabled', 'true');
             btn.setAttribute('aria-busy', 'true');
             btn.style.pointerEvents = 'none';
@@ -148,6 +149,13 @@
             btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>${loadingText}</span>`;
 
             this.activeLocks.add(btn);
+
+            // Safety fallback timeout after 5 seconds to prevent permanent locking
+            if (btn._lockSafetyTimer) clearTimeout(btn._lockSafetyTimer);
+            btn._lockSafetyTimer = setTimeout(() => {
+                this.unlockButton(btn);
+            }, 5000);
+
             return true;
         }
 
@@ -157,8 +165,14 @@
         unlockButton(btn) {
             if (!btn) return;
 
-            btn.classList.remove('is-locked', 'btn-loading');
+            if (btn._lockSafetyTimer) {
+                clearTimeout(btn._lockSafetyTimer);
+                btn._lockSafetyTimer = null;
+            }
+
+            btn.classList.remove('is-locked', 'btn-loading', 'disabled');
             btn.dataset.loading = 'false';
+            btn.dataset.locked = 'false';
             btn.removeAttribute('disabled');
             btn.removeAttribute('aria-busy');
             btn.style.pointerEvents = '';

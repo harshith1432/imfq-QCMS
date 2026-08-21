@@ -119,93 +119,24 @@ def _audit_log(org_id, invoice_id, action, details):
 @jwt_required()
 @super_admin_required()
 def get_billing_dashboard():
-    # Fetch KPIs — exclude platform/system orgs (SuperAdmin's internal org)
-    now = datetime.utcnow()
-    month_start = datetime(now.year, now.month, 1)
-    year_start = datetime(now.year, 1, 1)
-
-    # Get platform org IDs to exclude
-    platform_org_ids = [
-        r[0] for r in db.session.query(Organization.id).filter(Organization.is_platform_org == True).all()
-    ]
-
-    def _excl_pay(q):
-        """Exclude payments belonging to platform orgs."""
-        if platform_org_ids:
-            return q.filter(~SubscriptionPayment.org_id.in_(platform_org_ids))
-        return q
-
-    def _excl_inv(q):
-        """Exclude invoices belonging to platform orgs."""
-        if platform_org_ids:
-            return q.join(Subscription, SubscriptionInvoice.subscription_id == Subscription.id, isouter=True)\
-                    .filter(~Subscription.org_id.in_(platform_org_ids))
-        return q
-
-    total_revenue = _excl_pay(
-        db.session.query(func.sum(SubscriptionPayment.final_amount)).filter_by(payment_status='Completed')
-    ).scalar() or 0.0
-
-    monthly_revenue = _excl_pay(
-        db.session.query(func.sum(SubscriptionPayment.final_amount)).filter(
-            SubscriptionPayment.payment_status == 'Completed',
-            SubscriptionPayment.created_at >= month_start
-        )
-    ).scalar() or 0.0
-
-    annual_revenue = _excl_pay(
-        db.session.query(func.sum(SubscriptionPayment.final_amount)).filter(
-            SubscriptionPayment.payment_status == 'Completed',
-            SubscriptionPayment.created_at >= year_start
-        )
-    ).scalar() or 0.0
-
-    pending_payments = SubscriptionInvoice.query.filter_by(invoice_status='Sent').count()
-    paid_invoices = SubscriptionInvoice.query.filter_by(invoice_status='Paid').count()
-    overdue_invoices = SubscriptionInvoice.query.filter(
-        SubscriptionInvoice.invoice_status == 'Sent',
-        SubscriptionInvoice.due_date < now
-    ).count()
-    failed_payments = _excl_pay(
-        SubscriptionPayment.query.filter_by(payment_status='Failed')
-    ).count()
-    refunds = db.session.query(func.sum(SubscriptionRefund.amount)).scalar() or 0.0
-    taxes_collected = _excl_pay(
-        db.session.query(func.sum(SubscriptionPayment.gst_amount)).filter_by(payment_status='Completed')
-    ).scalar() or 0.0
-
-    outstanding = db.session.query(func.sum(SubscriptionInvoice.total_amount)).filter(
-        SubscriptionInvoice.invoice_status.in_(['Draft', 'Sent']),
-        SubscriptionInvoice.due_date < now
-    ).scalar() or 0.0
-
-    avg_invoice = db.session.query(func.avg(SubscriptionInvoice.total_amount)).scalar() or 0.0
-
-    # Collection Rate = paid invoices / total issued invoices (Paid + Sent/Pending, excludes Drafts)
-    # Returns 0.0 when there are no issued invoices (not 100%)
-    total_issued = SubscriptionInvoice.query.filter(
-        SubscriptionInvoice.invoice_status.in_(['Paid', 'Sent', 'Overdue'])
-    ).count()
-    if total_issued > 0:
-        collection_rate = round(paid_invoices / total_issued * 100, 1)
-    else:
-        collection_rate = 0.0  # No invoices issued yet — not 100%
-
+    from app.domain.services.financial_metrics_engine import FinancialMetricsEngine
+    kpis = FinancialMetricsEngine.get_consolidated_kpis()
+    
     return jsonify({
         "status": "success",
         "data": {
-            "total_revenue": total_revenue,
-            "monthly_revenue": monthly_revenue,
-            "annual_revenue": annual_revenue,
-            "pending_payments": pending_payments,
-            "paid_invoices": paid_invoices,
-            "overdue_invoices": overdue_invoices,
-            "failed_payments": failed_payments,
-            "refunds": refunds,
-            "taxes_collected": taxes_collected,
-            "outstanding_amount": outstanding,
-            "avg_invoice_value": avg_invoice,
-            "collection_rate": collection_rate
+            "total_revenue": kpis["total_revenue"],
+            "monthly_revenue": kpis["monthly_cash_collected"],
+            "annual_revenue": kpis["arr"],
+            "pending_payments": kpis["unpaid_invoices_count"],
+            "paid_invoices": kpis["paid_invoices_count"],
+            "overdue_invoices": kpis["unpaid_invoices_count"],
+            "failed_payments": 0,
+            "refunds": 0.0,
+            "taxes_collected": kpis["taxes_collected"],
+            "outstanding_amount": kpis["outstanding_due"],
+            "avg_invoice_value": round(kpis["total_revenue"] / max(1, kpis["paid_invoices_count"] + kpis["unpaid_invoices_count"]), 2),
+            "collection_rate": kpis["collection_rate"]
         }
     })
 
@@ -1322,4 +1253,232 @@ def upload_proof_screenshot(proof_id):
         "screenshot_url": proof.screenshot_url,
         "api_url": f"/api/billing/offline-payments/{proof_id}/screenshot"
     }), 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAY-AS-YOU-GO (PAYG) METERED BILLING & INVOICING API
+# ─────────────────────────────────────────────────────────────────────────────
+
+@billing_bp.route('/payg/live-usage', methods=['GET'])
+@jwt_required()
+def get_payg_live_usage():
+    """
+    Returns real-time usage telemetry, rate configuration, and current estimated accrued bill
+    for the authenticated organization (or specified org_id for Super Admin).
+    """
+    user = _get_current_user()
+    if not user:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    role_name = user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))
+    is_super = role_name == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False)
+
+    target_org_id = request.args.get('org_id', type=int) if is_super else _get_effective_org_id(user)
+    if not target_org_id:
+        target_org_id = 1
+
+    try:
+        from app.domain.services.payg_billing_service import PaygBillingService
+        breakdown = PaygBillingService.calculate_payg_bill_breakdown(target_org_id)
+        return jsonify({
+            "status": "success",
+            "data": breakdown
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to compute real-time usage: {str(e)}"
+        }), 500
+
+
+@billing_bp.route('/payg/rules', methods=['GET', 'POST'])
+@jwt_required()
+@super_admin_required()
+def payg_rules_endpoint():
+    """
+    Super Admin endpoint: Get or update global/default Pay-As-You-Go metered billing rules
+    (rates & free tier allowances for seats, storage, projects, departments, locations, etc.).
+    """
+    try:
+        from app.domain.services.payg_billing_service import PaygBillingService
+        if request.method == 'POST':
+            data = request.get_json(silent=True) or {}
+            updated = PaygBillingService.update_global_payg_rules(data)
+            return jsonify({
+                "status": "success",
+                "message": "Pay-As-You-Go metered rules updated successfully.",
+                "rules": updated
+            }), 200
+        else:
+            rules = PaygBillingService.get_global_payg_rules()
+            return jsonify({
+                "status": "success",
+                "rules": rules
+            }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@billing_bp.route('/payg/preview-all', methods=['GET', 'POST'])
+@jwt_required()
+@super_admin_required()
+def preview_all_payg_bills():
+    """
+    Super Admin endpoint: Previews all organizations currently on Pay-As-You-Go with their
+    calculated real-time usage metrics and estimated monthly bill.
+    """
+    try:
+        from app.domain.services.payg_billing_service import PaygBillingService
+        previews = PaygBillingService.preview_all_payg_organizations()
+        
+        # If no organizations are strictly flagged, preview all active organizations for Super Admin view
+        if not previews:
+            orgs = Organization.query.filter(
+                (Organization.is_deleted == False) | (Organization.is_deleted == None),
+                Organization.is_platform_org == False
+            ).all()
+            for org in orgs:
+                previews.append(PaygBillingService.calculate_payg_bill_breakdown(org.id))
+
+        total_projected_revenue = sum(p.get('total_amount', 0.0) for p in previews)
+        return jsonify({
+            "status": "success",
+            "count": len(previews),
+            "total_projected_revenue": round(total_projected_revenue, 2),
+            "data": previews
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@billing_bp.route('/payg/preview-single', methods=['POST'])
+@billing_bp.route('/billing/payg/preview-single', methods=['POST'])
+@jwt_required()
+@super_admin_required()
+def preview_single_payg_bill():
+    """
+    Renders live preview data for a single organization's PAYG bill (including admin recipient email,
+    breakdown, subject, HTML email body, and HTML invoice document preview).
+    """
+    data = request.get_json(silent=True) or {}
+    org_id = data.get('org_id')
+    if not org_id:
+        return jsonify({"status": "error", "message": "org_id is required"}), 400
+
+    org = Organization.query.get(org_id)
+    if not org:
+        return jsonify({"status": "error", "message": "Organization not found"}), 404
+
+    # Recipient email lookup
+    admin_user = User.query.filter_by(org_id=org.id).first()
+    recipient_email = org.email or (admin_user.email if admin_user else "")
+
+    from app.domain.services.payg_billing_service import PaygBillingService
+    breakdown = PaygBillingService.calculate_payg_bill_breakdown(org.id)
+
+    # Dummy invoice mock object for template rendering
+    class MockInvoice:
+        invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m')}-{org.id:03d}"
+        invoice_status = "Pending Dispatch"
+        due_date = datetime.utcnow() + timedelta(days=15)
+        base_amount = breakdown.get('subtotal', 0.0)
+        gst_percent = breakdown.get('tax_percent', 18.0)
+        gst_amount = breakdown.get('tax_amount', 0.0)
+        total_amount = breakdown.get('total_amount', 0.0)
+
+    mock_inv = MockInvoice()
+    invoice_html = PaygBillingService.generate_payg_invoice_html(mock_inv, org, breakdown)
+
+    subject = f"Monthly Metered Invoice #{mock_inv.invoice_number} - {org.name} (QCMS Platform)"
+
+    return jsonify({
+        "status": "success",
+        "data": {
+            "org_id": org.id,
+            "org_name": org.name,
+            "org_code": org.org_code or f"ORG-{org.id:03d}",
+            "recipient_email": recipient_email,
+            "admin_name": org.admin_name or (admin_user.full_name if admin_user else "Admin"),
+            "subject": subject,
+            "period_start": breakdown.get('period_start'),
+            "period_end": breakdown.get('period_end'),
+            "subtotal": breakdown.get('subtotal', 0.0),
+            "subtotal_fmt": f"₹{breakdown.get('subtotal', 0.0):,.2f}",
+            "tax_amount": breakdown.get('tax_amount', 0.0),
+            "tax_amount_fmt": f"₹{breakdown.get('tax_amount', 0.0):,.2f}",
+            "estimated_total": breakdown.get('total_amount', 0.0),
+            "estimated_total_fmt": f"₹{breakdown.get('total_amount', 0.0):,.2f}",
+            "line_items": breakdown.get('line_items', []),
+            "invoice_html": invoice_html
+        }
+    }), 200
+
+
+@billing_bp.route('/payg/generate-bills', methods=['POST'])
+@jwt_required()
+@super_admin_required()
+def generate_payg_monthly_bills():
+    """
+    Super Admin endpoint: Generates official monthly SubscriptionInvoice records and dispatches
+    dashboard notifications & branded email bills.
+    Can be run for a single org_id or for all PAYG organizations.
+    """
+    user = _get_current_user()
+    data = request.get_json(silent=True) or {}
+    target_org_id = data.get('org_id')
+    send_email = data.get('send_email', True)
+    recipient_email = data.get('recipient_email')
+    cc_email = data.get('cc_email')
+    subject = data.get('subject')
+
+    try:
+        from app.domain.services.payg_billing_service import PaygBillingService
+        
+        if target_org_id:
+            res = PaygBillingService.generate_and_send_monthly_invoice(
+                org_id=int(target_org_id),
+                auto_send_email=bool(send_email),
+                created_by_id=user.id if user else None,
+                recipient_email=recipient_email,
+                cc_email=cc_email,
+                subject=subject
+            )
+            return jsonify({
+                "status": "success",
+                "message": f"Monthly Pay-As-You-Go invoice #{res['invoice_number']} created and dispatched successfully.",
+                "data": res
+            }), 200
+        else:
+            res = PaygBillingService.run_monthly_payg_batch(admin_id=user.id if user else None)
+            return jsonify({
+                "status": "success",
+                "message": f"Monthly billing batch executed. Processed {res['total_processed']} organization bills.",
+                "data": res
+            }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Billing generation failed: {str(e)}"}), 500
+
+
+@billing_bp.route('/payg/invoices/<int:invoice_id>/html', methods=['GET'])
+@jwt_required()
+def get_payg_invoice_html(invoice_id):
+    """
+    Renders standalone printable / web tax invoice for a Pay-As-You-Go invoice.
+    """
+    user = _get_current_user()
+    invoice = SubscriptionInvoice.query.get_or_404(invoice_id)
+    
+    role_name = user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))
+    is_super = role_name == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False)
+
+    if not is_super and user.org_id != invoice.org_id:
+        return jsonify({"status": "error", "message": "Unauthorized access to invoice"}), 403
+
+    from app.domain.services.payg_billing_service import PaygBillingService
+    org = Organization.query.get(invoice.org_id)
+    breakdown = invoice.usage_breakdown or PaygBillingService.calculate_payg_bill_breakdown(invoice.org_id)
+    
+    html_content = PaygBillingService.generate_payg_invoice_html(invoice, org, breakdown)
+    return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+
 

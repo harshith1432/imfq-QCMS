@@ -80,9 +80,12 @@ def get_points_history():
     if not current_user:
         return jsonify({"message": "User not found"}), 404
 
-    # Allow admins to query specific employee_id, defaults to current_user_id
+    # Allow querying specific employee_id within the same organization, defaults to current_user_id
     target_emp_id = request.args.get('employee_id', type=int)
-    if target_emp_id and current_user.role.name in ['Admin', 'SuperAdmin', 'CEO', 'Team Leader']:
+    if target_emp_id:
+        target_user = db.session.get(User, target_emp_id)
+        if not target_user or target_user.org_id != current_user.org_id:
+            return jsonify({"message": "Employee not found in organization"}), 404
         emp_id = target_emp_id
     else:
         emp_id = current_user_id
@@ -129,6 +132,7 @@ def get_leaderboard():
     search_q = (request.args.get('q') or '').strip()
     dept_id = request.args.get('department_id', type=int)
     plant_param = (request.args.get('plant') or request.args.get('plant_name') or request.args.get('plant_id') or '').strip()
+    role_param = (request.args.get('role') or request.args.get('role_name') or '').strip()
     time_filter = request.args.get('period', 'all')  # 'all', 'monthly', 'yearly'
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 5, type=int)
@@ -152,6 +156,10 @@ def get_leaderboard():
 
     if dept_id:
         query = query.filter(User.department_id == dept_id)
+
+    if role_param:
+        from app.infrastructure.database.models.models import Role
+        query = query.join(Role, User.role_id == Role.id).filter(Role.name.ilike(f"%{role_param}%"))
 
     if search_q:
         pattern = f"%{search_q}%"
@@ -187,6 +195,7 @@ def get_leaderboard():
             "email": u.email,
             "avatar": get_profile_picture_url(u),
             "department": u.dept.name if u.dept else "General",
+            "plant": u.plant.name if getattr(u, 'plant', None) else (u.dept.plant.name if u.dept and u.dept.plant else "Main Plant"),
             "role": u.role.name if u.role else "Team Member",
             "total_points": lb.total_points,
             "badge": lb.badges or PointEngineService.get_badge_for_points(lb.total_points),
@@ -209,10 +218,71 @@ def get_leaderboard():
     my_entry = next((e for e in full_leaderboard if e['employee_id'] == current_user_id), None)
     podium = full_leaderboard[:3]
 
+    # Compute Comprehensive Champions Summary (Overall, Plant-Level, Department-Level, Role-Level)
+    all_org_entries = db.session.query(EmployeeLeaderboard)\
+        .join(User, User.id == EmployeeLeaderboard.employee_id)\
+        .outerjoin(Department, User.department_id == Department.id)\
+        .filter(EmployeeLeaderboard.organization_id == current_user.org_id)\
+        .order_by(
+            EmployeeLeaderboard.total_points.desc(),
+            EmployeeLeaderboard.projects_completed.desc(),
+            EmployeeLeaderboard.ideas_approved.desc(),
+            EmployeeLeaderboard.knowledge_articles.desc(),
+            User.created_at.asc()
+        ).all()
+
+    overall_champ = None
+    plant_champs_dict = {}
+    dept_champs_dict = {}
+    role_champs_dict = {}
+
+    for rank_i, lb_item in enumerate(all_org_entries, start=1):
+        u_item = lb_item.employee
+        if not u_item:
+            continue
+        p_name = u_item.plant.name if getattr(u_item, 'plant', None) else (u_item.dept.plant.name if u_item.dept and u_item.dept.plant else '')
+        d_name = u_item.dept.name if u_item.dept else ''
+        r_name = u_item.role.name if u_item.role else 'Team Member'
+        
+        u_summary = {
+            "rank": rank_i,
+            "employee_id": u_item.id,
+            "name": u_item.full_name or u_item.username,
+            "username": u_item.username,
+            "avatar": get_profile_picture_url(u_item),
+            "department": d_name or "General",
+            "plant": p_name or "Main Plant",
+            "role": r_name,
+            "total_points": lb_item.total_points,
+            "badge": lb_item.badges or PointEngineService.get_badge_for_points(lb_item.total_points),
+            "projects_completed": lb_item.projects_completed
+        }
+        
+        if overall_champ is None:
+            overall_champ = u_summary
+            
+        if p_name and p_name not in plant_champs_dict:
+            plant_champs_dict[p_name] = u_summary
+            
+        if d_name and d_name not in dept_champs_dict:
+            dept_champs_dict[d_name] = u_summary
+            
+        EXCLUDED_ROLE_CHAMPS = {'admin', 'ceo', 'superadmin', 'system admin', 'administrator'}
+        if r_name and r_name.strip().lower() not in EXCLUDED_ROLE_CHAMPS and r_name not in role_champs_dict:
+            role_champs_dict[r_name] = u_summary
+
+    champions_summary = {
+        "overall": overall_champ,
+        "plants": [{"plant_name": k, "champion": v} for k, v in plant_champs_dict.items()],
+        "departments": [{"department_name": k, "champion": v} for k, v in dept_champs_dict.items()],
+        "roles": [{"role_name": k, "champion": v} for k, v in role_champs_dict.items()]
+    }
+
     return jsonify({
         "status": "success",
         "leaderboard": paged_leaderboard,
         "podium": podium,
+        "champions_summary": champions_summary,
         "my_summary": my_entry or {
             "rank": "-",
             "total_points": 0,

@@ -93,8 +93,8 @@
                                     <tr>
                                         <th data-i18n="dashboards.admin.stakeholder">Stakeholder</th>
                                         <th data-i18n="dashboards.admin.corporate_role">Corporate Role</th>
+                                        <th data-i18n="dashboards.admin.plant_location">Plant Location</th>
                                         <th data-i18n="dashboards.common.department">Department</th>
-                                        <th data-i18n="dashboards.admin.access_status">Access Status</th>
                                         <th data-i18n="dashboards.admin.last_active">Last Active</th>
                                     </tr>
                                 </thead>
@@ -777,10 +777,10 @@
                             QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'folder-kanban', 'blue', null) +
                             QCMS.kpiCard('Team Stakeholders', stats.total_members || 0, 'users', 'purple', null, '/admin/users.html') +
                             QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green', null, '/analytics/analytics.html') +
-                            QCMS.kpiCard('Rejected Projects', stats.rejected_projects || 0, 'x-circle', 'red', null) +
+                            QCMS.kpiCard('Stopped Projects', stats.rejected_projects || 0, 'x-circle', 'red', null) +
                             QCMS.kpiCard('Total Plants', stats.total_plants || 0, 'building-2', 'amber', null);
 
-                        // Wire Active Pipeline card, Rejected Projects card & Plant Locations card
+                        // Wire Active Pipeline card, Stopped Projects card & Plant Locations card
                         const kpiCols = document.querySelectorAll('#kpiGrid > div, #kpiGrid > a');
                         if (kpiCols[0]) {
                             kpiCols[0].style.cursor = 'pointer';
@@ -1171,6 +1171,18 @@
                             Showing <strong>${startIndex}-${endIndex}</strong> of <strong>${totalProjects}</strong> projects
                         </div>
                         <div class="d-flex align-items-center gap-3">
+                            <div class="d-flex align-items-center gap-2 me-2">
+                                <select class="ds-input ds-select text-xs font-semibold py-1 px-2"
+                                        style="width: 72px; height: 32px; border-radius: 16px; text-align: center; border: 1.5px solid var(--ds-border-color); background: var(--ds-input-bg); cursor: pointer; color: var(--ds-text-main);"
+                                        onchange="adminDash.setProjectsPerPage(this.value)">
+                                    <option value="5" ${limit == 5 ? 'selected' : ''}>5</option>
+                                    <option value="10" ${limit == 10 ? 'selected' : ''}>10</option>
+                                    <option value="25" ${limit == 25 ? 'selected' : ''}>25</option>
+                                    <option value="50" ${limit == 50 ? 'selected' : ''}>50</option>
+                                    <option value="100" ${limit == 100 ? 'selected' : ''}>100</option>
+                                </select>
+                                <span class="text-xs text-muted font-medium">per page</span>
+                            </div>
                             <button class="ds-btn ds-btn-sm border-0 d-flex align-items-center gap-1 px-3 py-2"
                                     style="background: var(--ds-bg-hover, rgba(0,0,0,0.04)); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-primary);"
                                     ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed; background: rgba(0,0,0,0.02); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-tertiary);"' : ''}
@@ -1189,6 +1201,13 @@
                 `;
                 paginationContainer.innerHTML = paginationHtml;
                 if (window.lucide) lucide.createIcons();
+            },
+
+            setProjectsPerPage(val) {
+                const num = parseInt(val, 10);
+                if (!num || isNaN(num)) return;
+                this.projectsPerPage = num;
+                this.loadProjects(1);
             },
 
             filterProjects() {
@@ -1438,20 +1457,19 @@
                             <div class="d-flex align-items-center gap-3">
                                 ${QCMS.renderAvatar(u, 32)}
                                 <div class="truncate">
-                                    <div class="fw-bold text-sm">${u.full_name || u.username}</div>
-                                    <div class="text-xs text-muted">@${u.username}</div>
-                                    <div class="text-xxs text-muted fst-italic">${u.email}</div>
+                                    <div class="fw-bold text-sm">${QCMS.escapeHtml(u.full_name || u.username)}</div>
+                                    <div class="text-xs text-muted fst-italic">${QCMS.escapeHtml(u.email || '')}</div>
                                 </div>
                             </div>
                         </td>
                         <td>${QCMS.badge(u.role, u.role === 'Admin' ? 'red' : 'blue')}</td>
-                        <td><span class="text-xs font-medium">${u.department || 'Corporate'}</span></td>
                         <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="ds-badge-dot ${u.is_active ? 'green' : 'gray'}"></span>
-                                <span class="text-xxs fw-medium">${u.is_active ? 'Authorized' : 'Suspended'}</span>
-                            </div>
+                            <span class="text-xs font-medium text-main d-inline-flex align-items-center gap-1">
+                                <i data-lucide="building-2" style="width:13px;height:13px;" class="text-primary"></i>
+                                ${QCMS.escapeHtml(u.plant_name || u.plant_location || 'Corporate HQ')}
+                            </span>
                         </td>
+                        <td><span class="text-xs font-medium">${QCMS.escapeHtml(u.department || 'Corporate')}</span></td>
                         <td>
                             <span class="text-xs text-muted">${u.last_login ? QCMS.formatRelative(u.last_login) : 'Never'}</span>
                         </td>
@@ -1472,6 +1490,18 @@
                                     Showing <strong>${startIndex}-${endIndex}</strong> of <strong>${totalCount}</strong> stakeholders
                                 </div>
                                 <div class="d-flex align-items-center gap-3">
+                                    <div class="d-flex align-items-center gap-2 me-2">
+                                        <select class="ds-input ds-select text-xs font-semibold py-1 px-2"
+                                                style="width: 72px; height: 32px; border-radius: 16px; text-align: center; border: 1.5px solid var(--ds-border-color); background: var(--ds-input-bg); cursor: pointer; color: var(--ds-text-main);"
+                                                onchange="adminDash.setUsersPerPage(this.value)">
+                                            <option value="5" ${this.usersPerPage == 5 ? 'selected' : ''}>5</option>
+                                            <option value="10" ${this.usersPerPage == 10 ? 'selected' : ''}>10</option>
+                                            <option value="25" ${this.usersPerPage == 25 ? 'selected' : ''}>25</option>
+                                            <option value="50" ${this.usersPerPage == 50 ? 'selected' : ''}>50</option>
+                                            <option value="100" ${this.usersPerPage == 100 ? 'selected' : ''}>100</option>
+                                        </select>
+                                        <span class="text-xs text-muted font-medium">per page</span>
+                                    </div>
                                     <button class="ds-btn ds-btn-sm border-0 d-flex align-items-center gap-1 px-3 py-2"
                                             style="background: var(--ds-bg-hover, rgba(0,0,0,0.04)); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-primary);"
                                             ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed; background: rgba(0,0,0,0.02); border-radius: 12px; font-weight: 600; font-size: 13px; color: var(--ds-text-tertiary);"' : ''}
@@ -1498,6 +1528,13 @@
             setUserPage(page) {
                 if (page < 1 || (this.userTotalPages && page > this.userTotalPages)) return;
                 this.loadUsers(page);
+            },
+
+            setUsersPerPage(val) {
+                const num = parseInt(val, 10);
+                if (!num || isNaN(num)) return;
+                this.usersPerPage = num;
+                this.loadUsers(1);
             },
 
             openEditUserModal(userId) {
@@ -1972,7 +2009,7 @@
 
                 const container = document.getElementById('rejectedProjectsModalBody');
                 if (container) {
-                    container.innerHTML = `<div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading rejected projects...</div>`;
+                    container.innerHTML = `<div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading stopped projects...</div>`;
                 }
 
                 try {
@@ -1981,7 +2018,7 @@
                         container.innerHTML = `
                             <div class="p-5 text-center text-muted border rounded-3">
                                 <i data-lucide="check-circle" class="mb-2 text-success" style="width:36px; height:36px;"></i>
-                                <h6 class="fw-bold">No Rejected Projects Found</h6>
+                                <h6 class="fw-bold">No Stopped Projects Found</h6>
                                 <p class="text-xs mb-0">All organization projects are active or completed cleanly.</p>
                             </div>
                         `;
@@ -1997,8 +2034,8 @@
                                         <th class="py-2.5 px-3">PROJECT</th>
                                         <th class="py-2.5 px-3">DEPARTMENT & PLANT</th>
                                         <th class="py-2.5 px-3">REVIEWER & LEADER</th>
-                                        <th class="py-2.5 px-3" style="width:35%;">REJECTION REASON (WHY REJECTED)</th>
-                                        <th class="py-2.5 px-3 text-end">DATE REJECTED</th>
+                                        <th class="py-2.5 px-3" style="width:35%;">REASON FOR STOPPING (WHY STOPPED)</th>
+                                        <th class="py-2.5 px-3 text-end">DATE STOPPED</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -2033,7 +2070,7 @@
                     `;
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
-                    container.innerHTML = `<div class="p-4 text-center text-danger">Failed to load rejected projects: ${QCMS.escapeHtml(e.message)}</div>`;
+                    container.innerHTML = `<div class="p-4 text-center text-danger">Failed to load stopped projects: ${QCMS.escapeHtml(e.message)}</div>`;
                 }
             }
         };
@@ -2060,7 +2097,7 @@
         document.addEventListener('DOMContentLoaded', () => adminDash.init().catch(e => console.error('[QCMS] Dashboard init failed:', e)));
     </script>
 
-    <!-- Rejected Projects Modal -->
+    <!-- Stopped Projects Modal -->
     <div class="modal fade" id="rejectedProjectsModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content glass-card ds-card border-0">
@@ -2070,14 +2107,14 @@
                             <i data-lucide="x-circle" style="width:20px;height:20px;"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold mb-0">Rejected Projects Directory</h5>
-                            <p class="text-xs text-muted mb-0">Audit trail of projects permanently rejected by reviewers with feedback details.</p>
+                            <h5 class="modal-title fw-bold mb-0">Stopped Projects Directory</h5>
+                            <p class="text-xs text-muted mb-0">Audit trail of projects discontinued or stopped by reviewers with feedback details.</p>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4" id="rejectedProjectsModalBody">
-                    <div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading rejected projects...</div>
+                    <div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading stopped projects...</div>
                 </div>
                 <div class="modal-footer border-0 p-4">
                     <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>

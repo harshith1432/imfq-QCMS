@@ -62,6 +62,23 @@
             border-color: rgba(99, 102, 241, 0.4);
             box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
         }
+        .audit-kpi-card.active-kpi {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4), 0 8px 24px rgba(99, 102, 241, 0.18) !important;
+            transform: translateY(-2px);
+            background: rgba(99, 102, 241, 0.05) !important;
+        }
+        .audit-kpi-card.active-kpi .audit-kpi-accent {
+            background: #6366f1 !important;
+            height: 4px !important;
+        }
+        .ds-table tbody tr.audit-row-clickable {
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .ds-table tbody tr.audit-row-clickable:hover {
+            background: rgba(99, 102, 241, 0.06) !important;
+        }
         .audit-kpi-icon {
             width: 26px;
             height: 26px;
@@ -311,6 +328,19 @@
                 <!-- KPI Grid -->
                 <div class="audit-kpi-grid" id="kpiGrid"></div>
 
+                <!-- Active KPI Filter Banner -->
+                <div id="activeKpiFilterBanner" class="alert alert-primary d-none mb-3 py-2 px-3 align-items-center justify-content-between flex-wrap gap-2 fade-in" style="border-radius: 12px; background: rgba(99,102,241,0.08); border: 1.5px solid rgba(99,102,241,0.3);">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="p-1 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width:22px;height:22px;">
+                            <i data-lucide="filter" style="width:12px;height:12px;"></i>
+                        </span>
+                        <span class="text-xs fw-semibold text-dark">Active Filter: <strong id="activeKpiFilterName" class="text-primary">—</strong></span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0.5 px-2 text-xs d-flex align-items-center gap-1" onclick="Audit.resetFilters()">
+                        <i data-lucide="x" style="width:12px;height:12px;"></i> Clear Filter &amp; Show All
+                    </button>
+                </div>
+
                 <!-- Search & Filters Container -->
                 <div class="filter-panel mb-4">
                     <div class="row g-3">
@@ -376,9 +406,17 @@
                     <div class="tab-pane fade show active" id="streamView">
                         <div class="glass-card ds-card">
                             <div class="ds-card-header h-stack justify-content-between p-3 border-bottom border-light border-opacity-10">
-                                <div class="h-stack gap-2">
+                                <div class="h-stack gap-2 align-items-center">
                                      <h5 class="mb-0 fw-bold">Compliance Activity Stream</h5>
                                      <span class="ds-badge outline text-xs" id="logsCount">0 logs</span>
+                                     <span class="text-xs text-muted ms-3 border-start ps-3 border-secondary border-opacity-25 font-normal" style="font-weight: 400;">
+                                         <i data-lucide="info" style="width:13px;height:13px;" class="me-1"></i>Maximum retention policy: 8 years. Logs older than 8 years are automatically purged.
+                                     </span>
+                                 </div>
+                                 <div class="h-stack gap-2">
+                                     <button type="button" class="ds-btn ds-btn-danger ds-btn-sm text-xs py-1 px-3" onclick="openOrgPurgeAuditLogsModal()">
+                                         <i data-lucide="trash-2" style="width:13px;height:13px;" class="me-1"></i> Purge Logs
+                                     </button>
                                  </div>
                              </div>
                             <div class="table-responsive">
@@ -470,6 +508,41 @@
                 <button class="ds-btn ds-btn-secondary ds-btn-icon" onclick="Audit.closeDrawer()"><i data-lucide="x" style="width:16px;"></i></button>
             </div>
 
+            <!-- Target Entity & Modification Overview -->
+            <div class="mb-4" id="dEntitySection">
+                <div class="p-3 rounded text-sm border" style="background:rgba(99,102,241,0.05); border-color: rgba(99,102,241,0.2) !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary px-2 py-1 font-mono text-xs" id="dModuleBadge">MODULE</span>
+                            <span class="text-xs fw-bold text-dark" id="dRecordId">#—</span>
+                        </div>
+                        <span class="badge bg-success-subtle text-success text-xxs font-mono" id="dIntegrityBadge"><i data-lucide="shield-check" style="width:11px;height:11px;"></i> SHA-256 Verified</span>
+                    </div>
+                    <div class="text-xs fw-semibold text-main" id="dChangeSummary">No modification details recorded.</div>
+                </div>
+            </div>
+
+            <!-- Before / After Diff Comparison -->
+            <div class="mb-4 d-none" id="diffBox">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="text-indigo fw-bold text-xs uppercase mb-0 d-flex align-items-center gap-1.5">
+                        <i data-lucide="git-commit" style="width:14px;height:14px;"></i> Modified Field Comparison
+                    </h6>
+                    <span class="badge bg-secondary-subtle text-secondary text-xxs" id="diffCountBadge">0 fields</span>
+                </div>
+                <div class="diff-container custom-scroll" id="diffData" style="max-height: 280px; overflow-y: auto;"></div>
+            </div>
+
+            <!-- Event Parameters & Metadata JSON -->
+            <div class="mb-4 d-none" id="detailsJsonBox">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="text-indigo fw-bold text-xs uppercase mb-0 d-flex align-items-center gap-1.5">
+                        <i data-lucide="code" style="width:14px;height:14px;"></i> Event Parameters &amp; Metadata
+                    </h6>
+                </div>
+                <pre class="p-2.5 rounded font-mono text-xxs border mb-0 custom-scroll" id="detailsJsonData" style="background:var(--audit-box-bg); max-height: 180px; overflow:auto; color:var(--ds-text-main);"></pre>
+            </div>
+
             <div class="mb-4">
                 <h6 class="text-indigo fw-bold text-xs uppercase mb-2">Request Context</h6>
                 <div class="p-3 rounded text-sm" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06);">
@@ -488,11 +561,6 @@
                 </div>
             </div>
 
-            <div class="mb-4 d-none" id="diffBox">
-                <h6 class="text-indigo fw-bold text-xs uppercase mb-2">Before / After Diff Comparison</h6>
-                <div class="diff-container" id="diffData"></div>
-            </div>
-
             <div class="mb-4">
                 <h6 class="text-indigo fw-bold text-xs uppercase mb-2">Chronological Session Stream</h6>
                 <div class="timeline-audit" id="sessionTimeline"></div>
@@ -503,9 +571,10 @@
                 <div id="relatedLogs" class="text-xs text-muted">No related activity flags.</div>
             </div>
 
-            <div class="h-stack gap-2 pt-3 border-top border-light border-opacity-10">
-                <button class="ds-btn ds-btn-secondary w-50" onclick="Audit.copyLogId()">Copy Log ID</button>
-                <button class="ds-btn ds-btn-primary w-50" onclick="Audit.generateIncident()">Trigger Incident Alert</button>
+            <div class="pt-3 border-top border-light border-opacity-10">
+                <button class="ds-btn ds-btn-secondary w-100 d-flex align-items-center justify-content-center gap-1.5" onclick="Audit.copyLogId()">
+                    <i data-lucide="copy" style="width:14px;height:14px;"></i> Copy Log ID
+                </button>
             </div>
         </div>
     </div>
@@ -518,10 +587,11 @@
     <script>
         const Audit = {
             currentTab: 'logs',
+            currentActiveKpi: null,
             logs: [],
             sessions: [],
             insights: {},
-            filters: { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', module: '' },
+            filters: { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', module: '', action_type: '' },
             sessionFilters: { page: 1, per_page: 10 },
             searchTimer: null,
             
@@ -572,8 +642,6 @@
                         .filter(key => key !== 'export_activities' && labels[key])
                         .map(key => {
                         const kpi = d[key];
-                        const growthSign = kpi.growth > 0 ? '+' : '';
-                        const growthClass = kpi.growth > 0 ? 'up' : (kpi.growth < 0 ? 'down' : 'neutral');
                         const icon = kpi.icon || 'activity';
                         
                         // Pick color theme per card type
@@ -589,9 +657,11 @@
                             cardColor = 'rgba(245, 158, 11, 0.12)';
                             textColor = '#f59e0b';
                         }
+
+                        const isActive = this.currentActiveKpi === key ? 'active-kpi' : '';
                         
                         return `
-                        <div class="audit-kpi-card" onclick="Audit.filterByKpi('${key}')" title="${kpi.tooltip}">
+                        <div class="audit-kpi-card ${isActive}" data-kpi="${key}" onclick="Audit.filterByKpi('${key}')" title="${kpi.tooltip}">
                             <div class="audit-kpi-icon" style="background:${cardColor};">
                                 <i data-lucide="${icon}" style="width:16px;height:16px;color:${textColor};"></i>
                             </div>
@@ -612,9 +682,15 @@
                 if(!tbody) return;
                 tbody.innerHTML = `<tr><td colspan="10" class="p-5 text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading secure activity stream...</td></tr>`;
                 
-                const params = new URLSearchParams(this.filters);
+                const params = new URLSearchParams();
+                for (const [k, v] of Object.entries(this.filters)) {
+                    if (v !== '' && v !== null && v !== undefined) {
+                        params.append(k, v);
+                    }
+                }
+
                 try {
-                    const res = await api.get(`/admin/audit/logs?${params}`);
+                    const res = await api.get(`/admin/audit/logs?${params.toString()}`);
                     this.logs = res.data;
                     document.getElementById('logsCount').textContent = `${res.pagination.total} events`;
                     this.renderLogs(tbody);
@@ -640,20 +716,31 @@
                 tbody.innerHTML = this.logs.map(log => {
                     const statusClass = log.status === 'Success' ? 'success' : (log.status === 'Critical' ? 'critical' : 'failed');
                     const riskClass = (log.risk_level || 'Low').toLowerCase();
+                    const isMod = log.has_diff || (log.action && (log.action.includes('UPDATE') || log.action.includes('MODIFY') || log.action.includes('CREATE') || log.action.includes('DELETE')));
                     
                     return `
-                    <tr class="fade-in">
+                    <tr class="fade-in audit-row-clickable" onclick="Audit.openDrawer(${log.id})" title="Click to view detailed log & data modifications">
                         <td class="text-xs font-mono text-secondary" style="white-space:nowrap;">${new Date(log.timestamp).toLocaleString('en-IN')}</td>
-                        <td><strong>${highlight(log.user)}</strong></td>
+                        <td>
+                            <div><strong>${highlight(log.user)}</strong></div>
+                            <div class="text-xxs text-muted font-mono">${highlight(log.user_email || '')}</div>
+                        </td>
                         <td><span class="text-xs text-muted">${log.role}</span></td>
-                        <td><span class="ds-badge blue">${highlight(log.action)}</span></td>
+                        <td>
+                            <div><span class="ds-badge blue font-mono text-xs">${highlight(log.action)}</span></div>
+                            ${log.change_summary ? `
+                                <div class="text-xxs text-primary mt-1 fw-semibold d-flex align-items-center gap-1">
+                                    <i data-lucide="${isMod ? 'file-edit' : 'info'}" style="width:11px;height:11px;flex-shrink:0;"></i>
+                                    <span>${highlight(log.change_summary)}</span>
+                                </div>` : (log.module ? `<div class="text-xxs text-muted mt-0.5 font-mono">${highlight(log.module)}${log.record_id ? ' #' + highlight(String(log.record_id)) : ''}</div>` : '')}
+                        </td>
                         <td class="font-mono text-xs">${highlight(log.ip_address)}</td>
                         <td class="text-xs text-secondary">${highlight(log.location)}</td>
                         <td class="text-xs" title="${log.browser || ''} on ${log.os || ''}"><span class="text-muted">${highlight(log.device)}</span></td>
                         <td><span class="audit-risk-badge ${riskClass}">${log.risk_level}</span></td>
                         <td><span class="plan-status-badge ${statusClass}">${log.status}</span></td>
                         <td class="text-end">
-                            <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" onclick="Audit.openDrawer(${log.id})">
+                            <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" onclick="event.stopPropagation(); Audit.openDrawer(${log.id})" title="Inspect Log Trace & Change Diffs">
                                 <i data-lucide="eye" style="width:14px;"></i>
                             </button>
                         </td>
@@ -815,13 +902,34 @@
                     document.getElementById('dRisk').textContent = log.risk_level;
                     document.getElementById('dRisk').className = `audit-risk-badge ${log.risk_level.toLowerCase()}`;
                     document.getElementById('dAction').textContent = log.action;
-                    document.getElementById('dLogId').textContent = `Audit ID: ${log.id} · SHA-256 Verified`;
+                    document.getElementById('dLogId').textContent = `Audit ID: #${log.id} · Recorded: ${new Date(log.timestamp).toLocaleString('en-IN')}`;
                     
+                    // Target Entity & Change Summary Section
+                    const modBadge = document.getElementById('dModuleBadge');
+                    const recId = document.getElementById('dRecordId');
+                    const chgSum = document.getElementById('dChangeSummary');
+                    const intBadge = document.getElementById('dIntegrityBadge');
+                    
+                    if (modBadge) modBadge.textContent = (log.module || 'SYSTEM').toUpperCase();
+                    if (recId) recId.textContent = log.record_id ? `Target Record #${log.record_id}` : `Global Target`;
+                    if (chgSum) chgSum.textContent = log.change_summary || (log.action.includes('LOGIN') ? 'Authentication session event' : 'Security telemetry record');
+                    if (intBadge) {
+                        if (log.is_tampered) {
+                            intBadge.className = 'badge bg-danger-subtle text-danger text-xxs font-mono';
+                            intBadge.innerHTML = '<i data-lucide="alert-triangle" style="width:11px;height:11px;"></i> Tamper Alert';
+                        } else {
+                            intBadge.className = 'badge bg-success-subtle text-success text-xxs font-mono';
+                            intBadge.innerHTML = '<i data-lucide="shield-check" style="width:11px;height:11px;"></i> SHA-256 Verified';
+                        }
+                    }
+
+                    // Operator & Telemetry Context
                     document.getElementById('dUser').textContent = log.user;
-                    document.getElementById('dEmail').textContent = log.user_email;
+                    document.getElementById('dEmail').textContent = log.user_email || '—';
                     document.getElementById('dIp').textContent = log.ip_address;
                     document.getElementById('dLoc').textContent = log.location;
                     document.getElementById('dDev').textContent = log.device;
+                    document.getElementById('dOs').textContent = `${log.os} / ${log.browser}`;
                     const respCode = log.response_code || 200;
                     document.getElementById('dCode').textContent = `${respCode} (${respCode >= 400 ? 'Error' : 'OK'})`;
                     const execTime = (log.execution_time !== null && log.execution_time !== undefined) ? Number(log.execution_time).toFixed(1) : '0.0';
@@ -829,22 +937,55 @@
                     document.getElementById('dSession').textContent = log.session_id || '—';
                     document.getElementById('dRequest').textContent = log.request_id || '—';
                     
-                    // Render Diff comparison if Update action
+                    // Render Diff comparison if fields modified
                     const diffBox = document.getElementById('diffBox');
                     const diffData = document.getElementById('diffData');
-                    if (Object.keys(log.changed_fields).length > 0) {
+                    const diffCountBadge = document.getElementById('diffCountBadge');
+                    
+                    const formatVal = (v) => {
+                        if (v === null || v === undefined) return '<span class="text-muted italic">(None)</span>';
+                        if (typeof v === 'object') return `<pre class="mb-0 font-mono text-xxs">${JSON.stringify(v, null, 2)}</pre>`;
+                        return String(v);
+                    };
+
+                    const changedKeys = log.changed_fields ? Object.keys(log.changed_fields) : [];
+                    if (changedKeys.length > 0) {
                         diffBox.classList.remove('d-none');
-                        diffData.innerHTML = Object.keys(log.changed_fields).map(key => {
+                        if (diffCountBadge) diffCountBadge.textContent = `${changedKeys.length} field${changedKeys.length > 1 ? 's' : ''}`;
+                        diffData.innerHTML = changedKeys.map(key => {
                             const val = log.changed_fields[key];
+                            const beforeStr = formatVal(val.before);
+                            const afterStr = formatVal(val.after);
                             return `
-                            <div class="mb-2">
-                                <strong class="text-indigo" style="font-size:11px;">• ${key}:</strong>
-                                <div class="diff-removed">- Before: ${val.before}</div>
-                                <div class="diff-added">+ After: ${val.after}</div>
+                            <div class="p-2.5 rounded-3 mb-2 border" style="background:var(--audit-box-bg); border-color:var(--audit-card-border) !important;">
+                                <div class="fw-bold text-xs text-primary mb-1.5 font-mono d-flex align-items-center gap-1">
+                                    <i data-lucide="chevron-right" style="width:12px;height:12px;"></i> ${key}
+                                </div>
+                                <div class="row g-2 text-xs">
+                                    <div class="col-6">
+                                        <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Previous / Before</div>
+                                        <div class="diff-removed p-2 rounded text-break" style="font-size:11px;">${beforeStr}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">New / Modified (After)</div>
+                                        <div class="diff-added p-2 rounded text-break" style="font-size:11px;">${afterStr}</div>
+                                    </div>
+                                </div>
                             </div>`;
                         }).join('');
                     } else {
                         diffBox.classList.add('d-none');
+                    }
+
+                    // Render Raw Event Parameters / Details JSON
+                    const detailsJsonBox = document.getElementById('detailsJsonBox');
+                    const detailsJsonData = document.getElementById('detailsJsonData');
+                    const rawDetails = log.details || (log.before_data || log.after_data ? { before: log.before_data, after: log.after_data } : null);
+                    if (rawDetails && Object.keys(rawDetails).length > 0 && typeof rawDetails === 'object') {
+                        detailsJsonBox.classList.remove('d-none');
+                        detailsJsonData.textContent = JSON.stringify(rawDetails, null, 2);
+                    } else {
+                        detailsJsonBox.classList.add('d-none');
                     }
 
                     // Render Session Timeline
@@ -871,7 +1012,7 @@
                     // Related logs
                     const relEl = document.getElementById('relatedLogs');
                     if (log.related_logs && log.related_logs.length) {
-                        relEl.innerHTML = `<ul class="ps-3 mb-0" style="list-style:circle;">
+                        relEl.innerHTML = `<ul class="ps-3 mb-0 text-xs" style="list-style:circle;">
                             ${log.related_logs.map(rl => `<li>
                                 <strong>${rl.action}</strong> by ${rl.user} (${new Date(rl.timestamp).toLocaleTimeString()})
                             </li>`).join('')}
@@ -954,44 +1095,113 @@
             },
 
             filterByKpi(kpiType) {
-                this.resetFilters();
-                
-                // Map KPI click to filters
-                if (kpiType === 'failed_actions') {
-                    this.filters.status = 'Failed';
-                } else if (kpiType === 'security_events') {
-                    this.filters.risk_level = 'High';
-                } else if (kpiType === 'critical_events') {
-                    this.filters.risk_level = 'Critical';
-                } else if (kpiType === 'login_events') {
-                    this.filters.action_type = 'LOGIN,LOGOUT';
-                } else if (kpiType === 'deleted_records') {
-                    this.filters.action_type = 'DELETE';
-                } else if (kpiType === 'export_activities') {
-                    this.filters.action_type = 'EXPORT';
-                } else if (kpiType === 'active_sessions') {
-                    // switch tab
-                    const btn = document.getElementById('sessions-tab');
-                    if(btn) btn.click();
+                // If clicking the active card again, toggle it off (reset to all)
+                if (this.currentActiveKpi === kpiType) {
+                    this.resetFilters();
                     return;
                 }
+
+                this.currentActiveKpi = kpiType;
                 
-                // Set selects if matching
+                // Highlight active card
+                document.querySelectorAll('.audit-kpi-card').forEach(c => {
+                    c.classList.toggle('active-kpi', c.getAttribute('data-kpi') === kpiType);
+                });
+
+                // Clear previous filters
+                this.filters = { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', module: '', action_type: '' };
+                
+                const kpiLabels = {
+                    total_events: "All Logged Actions",
+                    today_events: "Today's Events (Past 24h)",
+                    failed_actions: "Failed Actions (Status >= 400)",
+                    success_actions: "Successful Actions",
+                    security_events: "Security Warnings & Risk Alerts",
+                    login_events: "Access Sessions & Logins",
+                    data_changes: "Data Modifications & Records",
+                    critical_events: "Critical Incidents & Compliance Threats",
+                    deleted_records: "Deleted Records & Removals",
+                    active_sessions: "Active User Sessions",
+                    failed_logins: "Failed Login Attempts"
+                };
+
+                const filterName = kpiLabels[kpiType] || kpiType;
+
+                if (kpiType === 'total_events') {
+                    // Show all events
+                } else if (kpiType === 'today_events') {
+                    this.filters.date_preset = 'today';
+                } else if (kpiType === 'failed_actions') {
+                    this.filters.status = 'Failed';
+                } else if (kpiType === 'success_actions') {
+                    this.filters.status = 'Success';
+                } else if (kpiType === 'security_events') {
+                    this.filters.action_type = 'SECURITY';
+                } else if (kpiType === 'login_events') {
+                    this.filters.action_type = 'SESSIONS';
+                } else if (kpiType === 'data_changes') {
+                    this.filters.action_type = 'DATA_CHANGES';
+                } else if (kpiType === 'critical_events') {
+                    this.filters.risk_level = 'Critical';
+                } else if (kpiType === 'deleted_records') {
+                    this.filters.action_type = 'DELETED_RECORDS';
+                } else if (kpiType === 'failed_logins') {
+                    this.filters.action_type = 'FAILED_LOGINS';
+                } else if (kpiType === 'active_sessions') {
+                    // Switch to sessions tab
+                    const btn = document.getElementById('sessions-tab');
+                    if (btn) btn.click();
+                    return;
+                }
+
+                // If not on stream tab, switch to it
+                const streamTab = document.getElementById('stream-tab');
+                if (streamTab && !streamTab.classList.contains('active')) {
+                    streamTab.click();
+                }
+
+                // Update filter banner
+                const banner = document.getElementById('activeKpiFilterBanner');
+                const bannerName = document.getElementById('activeKpiFilterName');
+                if (banner && bannerName) {
+                    if (kpiType !== 'total_events') {
+                        banner.classList.remove('d-none');
+                        banner.classList.add('d-flex');
+                        bannerName.textContent = filterName;
+                    } else {
+                        banner.classList.add('d-none');
+                        banner.classList.remove('d-flex');
+                    }
+                }
+
+                // Sync UI controls
                 const statusSelect = document.getElementById('filterStatus');
-                if(statusSelect && this.filters.status) statusSelect.value = this.filters.status;
+                if (statusSelect) statusSelect.value = this.filters.status || '';
                 const riskSelect = document.getElementById('filterRisk');
-                if(riskSelect && this.filters.risk_level) riskSelect.value = this.filters.risk_level;
-                
+                if (riskSelect) riskSelect.value = this.filters.risk_level || '';
+                const dateSelect = document.getElementById('filterDate');
+                if (dateSelect) dateSelect.value = this.filters.date_preset || '';
+                if (document.getElementById('searchQ')) document.getElementById('searchQ').value = '';
+
                 this.loadLogs();
             },
 
             resetFilters() {
-                this.filters = { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', module: '' };
+                this.currentActiveKpi = null;
+                document.querySelectorAll('.audit-kpi-card').forEach(c => c.classList.remove('active-kpi'));
                 
-                document.getElementById('searchQ').value = '';
-                document.getElementById('filterDate').value = '';
-                document.getElementById('filterStatus').value = '';
-                document.getElementById('filterRisk').value = '';
+                const banner = document.getElementById('activeKpiFilterBanner');
+                if (banner) {
+                    banner.classList.add('d-none');
+                    banner.classList.remove('d-flex');
+                }
+
+                this.filters = { page: 1, per_page: 10, q: '', date_preset: '', status: '', risk_level: '', module: '', action_type: '' };
+                
+                if (document.getElementById('searchQ')) document.getElementById('searchQ').value = '';
+                if (document.getElementById('filterDate')) document.getElementById('filterDate').value = '';
+                if (document.getElementById('filterStatus')) document.getElementById('filterStatus').value = '';
+                if (document.getElementById('filterRisk')) document.getElementById('filterRisk').value = '';
                 this.loadLogs();
             },
 
@@ -1093,29 +1303,85 @@
                     document.getElementById('purgeModalStorageSize').textContent = res.estimated_mb + ' MB';
                     document.getElementById('purgeModalOldestDate').textContent = res.oldest_date ? res.oldest_date.split('T')[0] : 'None';
 
-                    if (document.getElementById('cnt-30d')) document.getElementById('cnt-30d').textContent = res.older_than_30d.toLocaleString();
-                    if (document.getElementById('cnt-60d')) document.getElementById('cnt-60d').textContent = res.older_than_60d.toLocaleString();
-                    if (document.getElementById('cnt-90d')) document.getElementById('cnt-90d').textContent = res.older_than_90d.toLocaleString();
-                    if (document.getElementById('cnt-180d')) document.getElementById('cnt-180d').textContent = res.older_than_180d.toLocaleString();
-                    if (document.getElementById('cnt-365d')) document.getElementById('cnt-365d').textContent = res.older_than_365d.toLocaleString();
+                    if (document.getElementById('cnt-30d')) document.getElementById('cnt-30d').textContent = (res.older_than_30d || 0).toLocaleString();
+                    if (document.getElementById('cnt-60d')) document.getElementById('cnt-60d').textContent = (res.older_than_60d || 0).toLocaleString();
+                    if (document.getElementById('cnt-90d')) document.getElementById('cnt-90d').textContent = (res.older_than_90d || 0).toLocaleString();
+                    if (document.getElementById('cnt-180d')) document.getElementById('cnt-180d').textContent = (res.older_than_180d || 0).toLocaleString();
+                    if (document.getElementById('cnt-365d')) document.getElementById('cnt-365d').textContent = (res.older_than_365d || 0).toLocaleString();
 
                     const autoSelect = document.getElementById('autoRetentionSelect');
-                    if (autoSelect) autoSelect.value = res.retention_days || 0;
+                    const customContainer = document.getElementById('customYearsContainer');
+                    const customInput = document.getElementById('customYearsInput');
 
+                    const presetValues = ['0', '30', '60', '90', '180', '365', '730', '1095', '1825', '2555', '2920'];
+                    const currentDaysStr = String(res.retention_days || 0);
+
+                    if (presetValues.includes(currentDaysStr)) {
+                        if (autoSelect) autoSelect.value = currentDaysStr;
+                        if (customContainer) customContainer.classList.add('d-none');
+                    } else if (res.retention_days > 0 || res.retention_years > 0) {
+                        if (autoSelect) autoSelect.value = 'custom_years';
+                        if (customContainer) customContainer.classList.remove('d-none');
+                        const yrs = res.retention_years || Number((res.retention_days / 365.25).toFixed(1));
+                        if (customInput) customInput.value = yrs;
+                    } else {
+                        if (autoSelect) autoSelect.value = '0';
+                        if (customContainer) customContainer.classList.add('d-none');
+                    }
+
+                    this.onRetentionSelectChange(autoSelect ? autoSelect.value : '0');
                     this.updatePurgePreview();
                 } catch(e) {
                     QCMS.toast('Failed to load storage details', 'error');
                 }
             },
 
+            onRetentionSelectChange(val) {
+                const customContainer = document.getElementById('customYearsContainer');
+                const previewText = document.getElementById('retentionPolicyPreviewText');
+                
+                if (val === 'custom_years') {
+                    if (customContainer) customContainer.classList.remove('d-none');
+                    this.updateCustomYearsPreview();
+                } else {
+                    if (customContainer) customContainer.classList.add('d-none');
+                    const days = parseInt(val, 10);
+                    if (days === 0) {
+                        if (previewText) previewText.textContent = 'All audit logs will be retained indefinitely (Never auto-delete).';
+                    } else {
+                        const years = (days / 365.25).toFixed(1);
+                        if (previewText) previewText.innerHTML = `Audit logs older than <strong>${days} days</strong> (~<strong>${years >= 1 ? years + ' year(s)' : Math.round(days / 30) + ' months'}</strong>) will be automatically pruned by the system.`;
+                    }
+                }
+            },
+
+            updateCustomYearsPreview() {
+                const input = document.getElementById('customYearsInput');
+                const yearsVal = document.getElementById('customYearsVal');
+                const daysVal = document.getElementById('customDaysVal');
+                const previewText = document.getElementById('retentionPolicyPreviewText');
+                
+                const y = input ? parseFloat(input.value) : 1;
+                if (!isNaN(y) && y > 0) {
+                    const approxDays = Math.round(y * 365.25);
+                    if (yearsVal) yearsVal.textContent = y;
+                    if (daysVal) daysVal.textContent = approxDays.toLocaleString();
+                    if (previewText) previewText.innerHTML = `Audit logs older than <strong>${y} year(s)</strong> (~<strong>${approxDays.toLocaleString()} days</strong>) will be automatically pruned by the system.`;
+                } else {
+                    if (previewText) previewText.textContent = 'Please enter a valid positive number of years (e.g. 1.5, 3, 5, 10).';
+                }
+            },
+
             updatePurgePreview() {
                 const selectedRadio = document.querySelector('input[name="purgePreset"]:checked');
-                const customBox = document.getElementById('customDateRangeBox');
+                const customDateBox = document.getElementById('customDateRangeBox');
+                const customYearsBox = document.getElementById('customPurgeYearsBox');
                 const previewText = document.getElementById('purgePreviewText');
                 const btnExecute = document.getElementById('btnExecutePurge');
 
                 if (!selectedRadio) {
-                    if (customBox) customBox.classList.add('d-none');
+                    if (customDateBox) customDateBox.classList.add('d-none');
+                    if (customYearsBox) customYearsBox.classList.add('d-none');
                     if (previewText) previewText.textContent = 'Select a retention horizon option above to preview deletion.';
                     if (btnExecute) btnExecute.disabled = true;
                     return;
@@ -1125,7 +1391,8 @@
                 const info = this._storageInfo || {};
 
                 if (val === 'custom') {
-                    if (customBox) customBox.classList.remove('d-none');
+                    if (customDateBox) customDateBox.classList.remove('d-none');
+                    if (customYearsBox) customYearsBox.classList.add('d-none');
                     const startDate = document.getElementById('purgeStartDate')?.value;
                     const endDate = document.getElementById('purgeEndDate')?.value;
                     if (startDate && endDate) {
@@ -1138,8 +1405,24 @@
                         previewText.textContent = 'Please pick a start/cutoff date below.';
                         btnExecute.disabled = true;
                     }
+                } else if (val === 'custom_years') {
+                    if (customDateBox) customDateBox.classList.add('d-none');
+                    if (customYearsBox) customYearsBox.classList.remove('d-none');
+                    const yrsInput = document.getElementById('purgeCustomYearsInput');
+                    const yrs = yrsInput ? parseFloat(yrsInput.value) : 2;
+                    if (!isNaN(yrs) && yrs > 0) {
+                        const days = Math.round(yrs * 365.25);
+                        const helpText = document.getElementById('purgeCustomYearsHelpText');
+                        if (helpText) helpText.textContent = `Logs older than ${yrs} years (~${days.toLocaleString()} days) will be deleted.`;
+                        previewText.innerHTML = `Will delete organization audit logs older than <strong>${yrs} year(s)</strong> (~<strong>${days.toLocaleString()} days</strong>).`;
+                        btnExecute.disabled = false;
+                    } else {
+                        previewText.textContent = 'Please enter a valid positive number of years to keep.';
+                        btnExecute.disabled = true;
+                    }
                 } else {
-                    if (customBox) customBox.classList.add('d-none');
+                    if (customDateBox) customDateBox.classList.add('d-none');
+                    if (customYearsBox) customYearsBox.classList.add('d-none');
                     btnExecute.disabled = false;
 
                     if (val === 'all') {
@@ -1154,6 +1437,14 @@
                         previewText.innerHTML = `Will delete <strong>${info.older_than_180d || 0} logs</strong> older than 180 days (keep last 6 months).`;
                     } else if (val === '365') {
                         previewText.innerHTML = `Will delete <strong>${info.older_than_365d || 0} logs</strong> older than 1 year (keep last 365 days).`;
+                    } else if (val === '1095') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_1095d || 0} logs</strong> older than 3 years (keep last 3 years).`;
+                    } else if (val === '1826') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_1825d || 0} logs</strong> older than 5 years (keep last 5 years).`;
+                    } else if (val === '2556') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_2555d || 0} logs</strong> older than 7 years (keep last 7 years).`;
+                    } else if (val === '2922') {
+                        previewText.innerHTML = `Will delete <strong>${info.older_than_2920d || 0} logs</strong> older than 8 years (keep last 8 years).`;
                     }
                 }
             },
@@ -1173,6 +1464,12 @@
                     const endDate = document.getElementById('purgeEndDate')?.value;
                     if (!startDate) { QCMS.toast('Please select a valid date', 'error'); return; }
                     payload = { mode: 'custom_range', start_date: startDate, end_date: endDate };
+                } else if (val === 'custom_years') {
+                    const yrsInput = document.getElementById('purgeCustomYearsInput');
+                    const yrs = yrsInput ? parseFloat(yrsInput.value) : 2;
+                    if (isNaN(yrs) || yrs <= 0) { QCMS.toast('Please enter a valid number of years', 'error'); return; }
+                    if (!confirm(`Are you sure you want to purge audit logs older than ${yrs} year(s)?`)) return;
+                    payload = { mode: 'older_than_years', retention_years: yrs };
                 } else {
                     const days = parseInt(val, 10);
                     if (!confirm(`Are you sure you want to purge audit logs older than ${days} days?`)) return;
@@ -1201,13 +1498,26 @@
             async saveRetentionPolicy() {
                 const select = document.getElementById('autoRetentionSelect');
                 if (!select) return;
-                const retentionDays = parseInt(select.value, 10);
+                
+                let payload = {};
+                if (select.value === 'custom_years') {
+                    const input = document.getElementById('customYearsInput');
+                    const years = input ? parseFloat(input.value) : 0;
+                    if (isNaN(years) || years <= 0) {
+                        QCMS.toast('Please enter a valid positive number of years', 'error');
+                        return;
+                    }
+                    payload = { retention_years: years };
+                } else {
+                    const retentionDays = parseInt(select.value, 10);
+                    payload = { retention_days: retentionDays };
+                }
 
                 try {
-                    const res = await api.post('/admin/audit/retention-policy', { retention_days: retentionDays });
+                    const res = await api.post('/admin/audit/retention-policy', payload);
                     QCMS.toast(res.message, 'success');
                 } catch(e) {
-                    QCMS.toast('Error updating retention policy', 'error');
+                    QCMS.toast(e.message || 'Error updating retention policy', 'error');
                 }
             }
         };
@@ -1302,10 +1612,55 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="2922" checked onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 8 Years (Max Policy)</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 8 years (2,922 days)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="2556" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 7 Years</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 7 years (2,556 days)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="1826" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 5 Years</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 5 years (1,826 days)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="1095" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Keep Last 3 Years</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 30 days</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
                                         <input type="radio" name="purgePreset" value="365" onchange="Audit.updatePurgePreview()">
                                         <div>
                                             <div class="fw-bold text-sm">Keep Last 1 Year</div>
-                                            <div class="text-xxs text-muted">Delete logs older than 365 days (<span id="cnt-365d">0</span> logs)</div>
+                                            <div class="text-xxs text-muted">Delete logs older than 1 year (365 days)</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 cursor-pointer w-100 purge-opt-label">
+                                        <input type="radio" name="purgePreset" value="custom_years" onchange="Audit.updatePurgePreview()">
+                                        <div>
+                                            <div class="fw-bold text-sm">Custom Retention Years</div>
+                                            <div class="text-xxs text-muted">Specify exact number of years to keep</div>
                                         </div>
                                     </label>
                                 </div>
@@ -1314,7 +1669,7 @@
                                         <input type="radio" name="purgePreset" value="custom" onchange="Audit.updatePurgePreview()">
                                         <div>
                                             <div class="fw-bold text-sm">Custom Date Range</div>
-                                            <div class="text-xxs text-muted">Specify custom start & end cutoff dates</div>
+                                            <div class="text-xxs text-muted">Specify custom start &amp; end cutoff dates</div>
                                         </div>
                                     </label>
                                 </div>
@@ -1327,6 +1682,16 @@
                                         </div>
                                     </label>
                                 </div>
+                            </div>
+
+                            <!-- Custom Number of Years Box for Manual Purge -->
+                            <div id="customPurgeYearsBox" class="mb-3 d-none p-3 border rounded-3 bg-light">
+                                <label class="ds-label text-xs fw-bold mb-1">Enter Number of Years to Keep:</label>
+                                <div class="input-group input-group-sm mb-1">
+                                    <input type="number" class="form-control form-control-sm font-mono" id="purgeCustomYearsInput" min="0.1" max="50" step="0.5" value="2" placeholder="e.g. 2.5" oninput="Audit.updatePurgePreview()">
+                                    <span class="input-group-text text-xs bg-white">Years</span>
+                                </div>
+                                <div class="text-xxs text-muted" id="purgeCustomYearsHelpText">Logs older than 2 years (~730 days) will be deleted.</div>
                             </div>
 
                             <!-- Custom Date Range Picker Container -->
@@ -1348,7 +1713,7 @@
                                     <span id="purgePreviewText">Select a retention horizon option above to preview deletion.</span>
                                 </div>
                                 <button type="button" class="ds-btn ds-btn-danger ds-btn-sm text-nowrap" id="btnExecutePurge" onclick="Audit.executePurge()" disabled>
-                                    <i data-lucide="trash-2" style="width:12px;height:12px;" class="me-1"></i> Confirm & Purge
+                                    <i data-lucide="trash-2" style="width:12px;height:12px;" class="me-1"></i> Confirm &amp; Purge
                                 </button>
                             </div>
                         </div>
@@ -1361,14 +1726,33 @@
                                 
                                 <div class="ds-field mb-3">
                                     <label class="ds-label fw-bold">Automated Retention Threshold:</label>
-                                    <select class="ds-input" id="autoRetentionSelect">
+                                    <select class="ds-input" id="autoRetentionSelect" onchange="Audit.onRetentionSelectChange(this.value)">
                                         <option value="0" selected>Never Auto-Delete (Keep All Logs Indefinitely - Default)</option>
                                         <option value="30">Auto-Purge Logs Older Than 1 Month (30 Days)</option>
-                                        <option value="60">Auto-Purge Logs Older Than 2 Months (60 Days)</option>
-                                        <option value="90">Auto-Purge Logs Older Than 3 Months (90 Days)</option>
-                                        <option value="180">Auto-Purge Logs Older Than 6 Months (180 Days)</option>
                                         <option value="365">Auto-Purge Logs Older Than 1 Year (365 Days)</option>
+                                        <option value="730">Auto-Purge Logs Older Than 2 Years (730 Days)</option>
+                                        <option value="1095">Auto-Purge Logs Older Than 3 Years (1,095 Days)</option>
+                                        <option value="1825">Auto-Purge Logs Older Than 5 Years (1,825 Days)</option>
+                                        <option value="2555">Auto-Purge Logs Older Than 7 Years (2,555 Days)</option>
+                                        <option value="custom_years">Custom Number of Years (Set Custom Years)...</option>
                                     </select>
+                                </div>
+
+                                <!-- Custom Years Input Container -->
+                                <div class="ds-field mb-3 d-none p-3 border rounded-3 bg-white" id="customYearsContainer">
+                                    <label class="ds-label fw-bold text-xs mb-1">Set Custom Retention Period (in Years):</label>
+                                    <div class="input-group input-group-sm mb-1">
+                                        <input type="number" class="form-control form-control-sm font-mono" id="customYearsInput" min="0.1" max="100" step="0.5" value="2" placeholder="Enter number of years, e.g. 2.5" oninput="Audit.updateCustomYearsPreview()">
+                                        <span class="input-group-text text-xs bg-light">Years</span>
+                                    </div>
+                                    <div class="form-text text-xxs text-muted" id="customYearsHelpText">
+                                        Logs older than <strong id="customYearsVal">2</strong> year(s) (~<strong id="customDaysVal">730</strong> days) will be automatically pruned.
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" id="retentionPolicyPreview" style="font-size:11px;">
+                                    <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
+                                    <span id="retentionPolicyPreviewText">All audit logs are retained permanently unless a retention threshold is saved.</span>
                                 </div>
 
                                 <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="Audit.saveRetentionPolicy()">
@@ -1384,6 +1768,15 @@
                 </div>
             </div>
         </div>
-    </div>
+    <script>
+        function openOrgPurgeAuditLogsModal() {
+            if (window.Audit && typeof window.Audit.openPurgeModal === 'function') {
+                window.Audit.openPurgeModal();
+            } else {
+                const modal = new bootstrap.Modal(document.getElementById('purgeModal'));
+                modal.show();
+            }
+        }
+    </script>
 </body>
 </html>

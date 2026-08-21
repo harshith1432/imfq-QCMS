@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vector Cosine Similarity — How Quality AI Searches Knowledge</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    padding: 24px 28px;
+}
+
+/* ─── COVER ─── */
+.cover {
+    background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 55%, #6366f1 100%);
+    color: #fff;
+    padding: 28px 32px;
+    border-radius: 10px;
+    margin-bottom: 22px;
+}
+.cover h1 { font-size: 22pt; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
+.cover .sub { font-size: 11pt; color: #c7d2fe; margin-bottom: 14px; }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag {
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.3);
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 7.5pt; font-weight: 600;
+}
+
+/* ─── METRIC DECK ─── */
+.kpi-deck { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 22px; }
+.kpi {
+    background: #f8fafc; border: 1px solid #cbd5e1;
+    border-left: 4px solid #6366f1;
+    border-radius: 6px; padding: 10px 14px;
+}
+.kpi .num { font-size: 16pt; font-weight: 800; color: #4338ca; line-height: 1.1; }
+.kpi .lbl { font-size: 7pt; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ─── SECTIONS ─── */
+h2 {
+    font-size: 13pt; font-weight: 800; color: #1e1b4b;
+    border-bottom: 2.5px solid #4338ca;
+    padding-bottom: 5px; margin: 22px 0 10px;
+    page-break-after: avoid;
+}
+h3 { font-size: 10.5pt; font-weight: 700; color: #4338ca; margin: 14px 0 6px; page-break-after: avoid; }
+
+/* ─── CARDS ─── */
+.card {
+    background: #fafafa; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 14px 18px;
+    margin-bottom: 14px; page-break-inside: avoid;
+}
+.card-title {
+    font-size: 10pt; font-weight: 700; color: #1e1b4b;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+}
+.pill {
+    background: #4338ca; color: #fff;
+    font-size: 7pt; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+}
+.green-pill { background: #059669; }
+.red-pill   { background: #dc2626; }
+
+/* ─── TABLE ─── */
+table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 8.5pt; page-break-inside: auto; }
+th { background: #1e1b4b; color: #fff; text-align: left; padding: 8px 10px; border: 1px solid #312e81; font-weight: 700; }
+td { padding: 7px 10px; border: 1px solid #e2e8f0; vertical-align: top; }
+tr:nth-child(even) td { background: #f8fafc; }
+
+/* ─── INLINE CODE ─── */
+code {
+    font-family: 'JetBrains Mono', monospace;
+    background: #e2e8f0; padding: 1px 5px; border-radius: 3px;
+    font-size: 8pt; color: #1e1b4b;
+}
+
+/* ─── ALERT BOX ─── */
+.alert {
+    background: #eff6ff; border-left: 5px solid #3b82f6;
+    padding: 12px 16px; border-radius: 0 6px 6px 0;
+    margin: 14px 0; page-break-inside: avoid;
+}
+.alert.green  { background: #f0fdf4; border-color: #22c55e; }
+.alert.purple { background: #faf5ff; border-color: #a855f7; }
+.alert.orange { background: #fff7ed; border-color: #f97316; }
+.alert-title  { font-weight: 800; font-size: 9.5pt; color: #1e40af; margin-bottom: 3px; }
+.alert.green  .alert-title  { color: #15803d; }
+.alert.purple .alert-title  { color: #7e22ce; }
+.alert.orange .alert-title  { color: #c2410c; }
+.alert-body   { font-size: 8.5pt; color: #1e3a8a; line-height: 1.45; }
+.alert.green  .alert-body   { color: #166534; }
+.alert.purple .alert-body   { color: #581c87; }
+.alert.orange .alert-body   { color: #9a3412; }
+
+/* ─── 2D VECTOR SPACE SVG ─── */
+.svg-box {
+    background: #fff; border: 1.5px solid #cbd5e1;
+    border-radius: 8px; padding: 16px; margin: 14px 0 20px;
+    text-align: center; page-break-inside: avoid;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+}
+.svg-cap { font-size: 8pt; color: #64748b; margin-top: 8px; font-style: italic; }
+
+/* ─── FORMULA BOX ─── */
+.formula-box {
+    background: #1e1b4b; color: #e0e7ff;
+    border-radius: 8px; padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt; line-height: 1.7; margin: 14px 0;
+    page-break-inside: avoid;
+}
+.formula-box .comment { color: #818cf8; font-size: 8pt; }
+
+/* ─── PIPELINE STEPS ─── */
+.pipeline { display: flex; flex-direction: column; gap: 0; margin: 14px 0; }
+.pipe-step {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 12px 16px;
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 0; border-bottom: none;
+}
+.pipe-step:first-child { border-radius: 8px 8px 0 0; }
+.pipe-step:last-child  { border-radius: 0 0 8px 8px; border-bottom: 1px solid #e2e8f0; }
+.pipe-num {
+    background: #4338ca; color: #fff; font-weight: 800;
+    font-size: 12pt; width: 34px; height: 34px; min-width: 34px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.pipe-content .title { font-weight: 700; color: #1e1b4b; font-size: 9.5pt; }
+.pipe-content .desc  { font-size: 8.5pt; color: #475569; margin-top: 2px; }
+.pipe-content .detail{ font-family: 'JetBrains Mono', monospace; font-size: 7.5pt; color: #6366f1; background: #eef2ff; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+.pipe-connector { width: 2px; height: 16px; background: #4338ca; margin-left: 30px; }
+
+/* ─── SIMILARITY BARS ─── */
+.sim-bar-wrap { display: grid; grid-template-columns: 200px 1fr 60px; align-items: center; gap: 10px; margin: 6px 0; }
+.sim-bar-label { font-size: 8.5pt; font-weight: 600; color: #334155; }
+.sim-bar-track { background: #e2e8f0; border-radius: 20px; height: 14px; overflow: hidden; }
+.sim-bar-fill  { height: 100%; border-radius: 20px; display: flex; align-items: center; padding-left: 6px; }
+.sim-bar-pct   { font-size: 8pt; font-weight: 800; color: #334155; }
+
+.page-break { page-break-before: always; }
+ul { padding-left: 18px; }
+ul li { margin-bottom: 4px; font-size: 8.5pt; }
+p { margin-bottom: 8px; font-size: 8.5pt; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     COVER
+══════════════════════════════════════════════════════════ -->
+<div class="cover">
+    <h1>Vector Cosine Similarity</h1>
+    <div class="sub">How Quality AI Understands Meaning &amp; Finds Past Solutions Without Matching Words</div>
+    <div class="tags">
+        <span class="tag">⟨384-Dimensional Embeddings⟩</span>
+        <span class="tag">Cosine Angle Math</span>
+        <span class="tag">Semantic Search Engine</span>
+        <span class="tag">RAG Knowledge Pipeline</span>
+        <span class="tag">all-MiniLM-L6-v2 AI Model</span>
+    </div>
+</div>
+
+<!-- KPI DECK -->
+<div class="kpi-deck">
+    <div class="kpi"><div class="num">384</div><div class="lbl">Dimensions per Embedding</div></div>
+    <div class="kpi"><div class="num">0 → 1.0</div><div class="lbl">Similarity Score Range</div></div>
+    <div class="kpi"><div class="num">&lt; 5ms</div><div class="lbl">Search Latency</div></div>
+    <div class="kpi"><div class="num">100%</div><div class="lbl">Meaning-Based (No Keywords)</div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 1 — WHAT IS A VECTOR?
+══════════════════════════════════════════════════════════ -->
+<h2>1. What is a Vector? (The Foundation)</h2>
+
+<p>A <strong>Vector</strong> is a list of numbers that represents the <strong>meaning and concept</strong> of a sentence. 
+Think of it as a GPS coordinate — but instead of 2 numbers (Latitude, Longitude), a sentence is mapped into <strong>384 numbers</strong> that capture its full meaning.</p>
+
+<div class="card">
+    <div class="card-title"><span class="pill">ANALOGY</span> Words as Map Coordinates</div>
+    <p style="font-size:8.5pt;margin:0;">
+        Just as the GPS coordinates <strong>[12.9716, 77.5946]</strong> uniquely identify Bengaluru on a map,
+        the Quality AI model converts the sentence <em>"Paint peeling on car bumper"</em> into a 384-number coordinate
+        like <strong>[0.24, -0.81, 0.45, 0.12, 0.67, ...]</strong> that uniquely identifies its <em>meaning</em> in concept-space.
+    </p>
+</div>
+
+<div class="alert green">
+    <div class="alert-title">🔑 The Golden Rule</div>
+    <div class="alert-body">
+        <strong>Sentences with similar meaning will have vectors pointing in the same direction.</strong><br>
+        "Paint peeling on bumper" and "Coating detachment on vehicle panels" use completely different words —
+        but an AI model trained on millions of engineering texts assigns both sentences vectors that point
+        within 12–15° of each other in 384-dimensional space.
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 2 — 2D VECTOR SPACE DIAGRAM
+══════════════════════════════════════════════════════════ -->
+<h2>2. 2D Geometric Diagram — How Vectors Represent Meaning</h2>
+<p>Even though Quality AI uses 384 dimensions, we can visualize the core idea in 2D to understand angle and similarity:</p>
+
+<div class="svg-box">
+<svg viewBox="-20 -30 520 440" xmlns="http://www.w3.org/2000/svg" width="480" height="420" font-family="Inter, sans-serif">
+  <!-- AXES -->
+  <defs>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#475569"/>
+    </marker>
+    <marker id="ahq" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+    </marker>
+    <marker id="ahg" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+    </marker>
+    <marker id="ahm" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#0ea5e9"/>
+    </marker>
+    <marker id="ahr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <!-- Grid lines -->
+  <g stroke="#e2e8f0" stroke-width="0.6">
+    <line x1="250" y1="0" x2="250" y2="400"/>
+    <line x1="0" y1="200" x2="480" y2="200"/>
+    <!-- Concentric reference circles -->
+    <circle cx="250" cy="200" r="80"  fill="none" stroke-dasharray="4,4"/>
+    <circle cx="250" cy="200" r="160" fill="none" stroke-dasharray="4,4"/>
+  </g>
+
+  <!-- Axes -->
+  <line x1="250" y1="400" x2="250" y2="20" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="0"   y1="200" x2="475" y2="200" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="260" y="16"  font-size="9" fill="#64748b" font-weight="600">Concept Dimension 2</text>
+  <text x="460" y="215" font-size="9" fill="#64748b" font-weight="600">Concept Dimension 1</text>
+
+  <!-- Origin label -->
+  <circle cx="250" cy="200" r="5" fill="#1e1b4b"/>
+  <text x="256" y="218" font-size="9" fill="#1e1b4b" font-weight="700">ORIGIN (0, 0)</text>
+
+  <!-- === VECTOR Q: USER QUERY (BLUE) === -->
+  <!-- Paint peeling on bumper — direction ~60° from horizontal -->
+  <line x1="250" y1="200" x2="365" y2="40" stroke="#2563eb" stroke-width="3" marker-end="url(#ahq)"/>
+  <rect x="368" y="22" width="115" height="50" rx="5" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="376" y="37" font-size="8" font-weight="700" fill="#1e40af">👤 USER QUERY</text>
+  <text x="376" y="50" font-size="7.5" fill="#1d4ed8">"Paint peeling on</text>
+  <text x="376" y="61" font-size="7.5" fill="#1d4ed8">car bumper"</text>
+  <text x="376" y="72" font-size="7" fill="#3730a3" font-weight="600">Vector Q</text>
+
+  <!-- === VECTOR R1: CLOSEST MATCH (GREEN) ~12° from Q === -->
+  <!-- direction ~48° from horizontal -->
+  <line x1="250" y1="200" x2="378" y2="55" stroke="#059669" stroke-width="2.5" marker-end="url(#ahg)"/>
+  <rect x="382" y="38" width="95" height="52" rx="5" fill="#f0fdf4" stroke="#059669" stroke-width="1.5"/>
+  <text x="390" y="53" font-size="7.5" font-weight="700" fill="#065f46">✅ RECORD #084</text>
+  <text x="390" y="65" font-size="7" fill="#166534">"Paint peeling on</text>
+  <text x="390" y="76" font-size="7" fill="#166534">plastic bumpers"</text>
+  <text x="390" y="87" font-size="6.5" fill="#059669" font-weight="700">Similarity = 98%</text>
+
+  <!-- Arc showing angle between Q and R1 -->
+  <path d="M 280 172 A 40 40 0 0 1 291 163" stroke="#059669" fill="none" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <text x="296" y="160" font-size="7.5" fill="#059669" font-weight="600">θ=12°</text>
+
+  <!-- === VECTOR R2: MEDIUM MATCH (SKY) ~25° from Q === -->
+  <!-- direction ~35° from horizontal -->
+  <line x1="250" y1="200" x2="390" y2="80" stroke="#0ea5e9" stroke-width="2.5" marker-end="url(#ahm)"/>
+  <rect x="393" y="65" width="100" height="62" rx="5" fill="#f0f9ff" stroke="#0ea5e9" stroke-width="1.5"/>
+  <text x="400" y="81" font-size="7.5" font-weight="700" fill="#0c4a6e">✅ RECORD #019</text>
+  <text x="400" y="93" font-size="7" fill="#0369a1">"Coating detachment</text>
+  <text x="400" y="104" font-size="7" fill="#0369a1">vehicle body panels"</text>
+  <text x="400" y="115" font-size="6.5" fill="#0284c7" font-weight="700">Similarity = 91%</text>
+  <text x="400" y="124" font-size="6" fill="#64748b" font-style="italic">Different words, same concept!</text>
+
+  <!-- Arc Q vs R2 -->
+  <path d="M 285 170 A 50 50 0 0 1 302 158" stroke="#0ea5e9" fill="none" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <text x="308" y="153" font-size="7.5" fill="#0ea5e9" font-weight="600">θ=25°</text>
+
+  <!-- === VECTOR R3: NO MATCH (RED) ~89° from Q === -->
+  <!-- direction pointing almost right -->
+  <line x1="250" y1="200" x2="415" y2="195" stroke="#dc2626" stroke-width="2.5" marker-end="url(#ahr)"/>
+  <rect x="418" y="179" width="58" height="48" rx="5" fill="#fff1f2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="424" y="195" font-size="7.5" font-weight="700" fill="#991b1b">❌ #112</text>
+  <text x="424" y="207" font-size="7" fill="#b91c1c">"CNC spindle</text>
+  <text x="424" y="218" font-size="7" fill="#b91c1c">vibration"</text>
+  <text x="424" y="228" font-size="6.5" fill="#dc2626" font-weight="700">Sim = 4%</text>
+
+  <!-- Arc Q vs R3 (large angle) -->
+  <path d="M 305 174 A 70 70 0 0 1 318 200" stroke="#dc2626" fill="none" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <text x="324" y="182" font-size="7.5" fill="#dc2626" font-weight="600">θ≈89°</text>
+
+  <!-- LEGEND -->
+  <rect x="2" y="330" width="220" height="80" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="12" y="346" font-size="8" font-weight="700" fill="#1e1b4b">📋 Legend</text>
+  <line x1="12" y1="356" x2="34" y2="356" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="38" y="360" font-size="7.5" fill="#1e3a8a">User Query Vector (Q)</text>
+  <line x1="12" y1="370" x2="34" y2="370" stroke="#059669" stroke-width="2.5"/>
+  <text x="38" y="374" font-size="7.5" fill="#065f46">Very Close Match (98% | θ=12°)</text>
+  <line x1="12" y1="384" x2="34" y2="384" stroke="#0ea5e9" stroke-width="2.5"/>
+  <text x="38" y="388" font-size="7.5" fill="#0c4a6e">Partial Match (91% | θ=25°)</text>
+  <line x1="12" y1="398" x2="34" y2="398" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="5,2"/>
+  <text x="38" y="402" font-size="7.5" fill="#991b1b">No Match (4% | θ≈89°)</text>
+
+  <!-- KEY INSIGHT LABEL -->
+  <rect x="2" y="240" width="230" height="80" rx="6" fill="#faf5ff" stroke="#a855f7" stroke-width="1.5"/>
+  <text x="12" y="257" font-size="8" font-weight="700" fill="#6b21a8">💡 Why Records #084 &amp; #019 Both Match</text>
+  <text x="12" y="271" font-size="7.5" fill="#7e22ce">Record #019 uses DIFFERENT WORDS:</text>
+  <text x="12" y="284" font-size="7.5" fill="#7e22ce">  "coating detachment" "body panels"</text>
+  <text x="12" y="297" font-size="7.5" fill="#6b21a8">Yet the AI model trained on millions</text>
+  <text x="12" y="310" font-size="7.5" fill="#6b21a8">of texts knows they mean the SAME</text>
+  <text x="12" y="323" font-size="7.5" fill="#6b21a8">physical surface adhesion failure!</text>
+</svg>
+<div class="svg-cap">Figure 1: 2D representation of 384-dimensional vector space — arrows pointing in the same direction = similar meaning; arrows pointing sideways = unrelated topics</div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 3 — EXAMPLE QUERY STEP BY STEP
+══════════════════════════════════════════════════════════ -->
+<h2>3. Live Example: "How was paint peeling solved before?" — Full Data Flow</h2>
+
+<div class="pipeline">
+    <div class="pipe-step">
+        <div class="pipe-num">1</div>
+        <div class="pipe-content">
+            <div class="title">👤 User Types a Natural Language Question</div>
+            <div class="desc">The quality engineer types into the AI chat widget embedded in the QCMS dashboard.</div>
+            <div class="detail">"How was paint peeling on automotive bumpers solved before?"</div>
+        </div>
+    </div>
+    <div class="pipe-connector"></div>
+
+    <div class="pipe-step">
+        <div class="pipe-num">2</div>
+        <div class="pipe-content">
+            <div class="title">🔒 Authentication &amp; Tenant Lock (rag_routes.py)</div>
+            <div class="desc">The backend verifies the user's JWT token. All database lookups are locked strictly to the user's <code>org_id</code>, so Company A can never see Company B's data.</div>
+            <div class="detail">POST /api/rag/chat → JWT verified → org_id = 5 locked</div>
+        </div>
+    </div>
+    <div class="pipe-connector"></div>
+
+    <div class="pipe-step">
+        <div class="pipe-num">3</div>
+        <div class="pipe-content">
+            <div class="title">🧠 Sentence → Numbers (Embedding Conversion)</div>
+            <div class="desc">The <strong>all-MiniLM-L6-v2</strong> AI model converts the full sentence into a 384-number vector. This encoding captures the semantic meaning of every word, the sentence structure, and the engineering domain context.</div>
+            <div class="detail">Query Vector Q = [0.241, -0.812, 0.455, 0.122, 0.671, -0.330, ... (381 more numbers)]</div>
+        </div>
+    </div>
+    <div class="pipe-connector"></div>
+
+    <div class="pipe-step">
+        <div class="pipe-num">4</div>
+        <div class="pipe-content">
+            <div class="title">🗄️ Fetch All Past Project Vectors (PostgreSQL)</div>
+            <div class="desc">The system queries the <code>knowledge_repository</code> table to fetch all previously ingested project records for this organization — along with their pre-stored 384-dimensional embedding vectors.</div>
+            <div class="detail">SELECT id, title, problem_summary, root_cause, solution_summary, embedding FROM knowledge_repository WHERE org_id = 5</div>
+        </div>
+    </div>
+    <div class="pipe-connector"></div>
+
+    <div class="pipe-step">
+        <div class="pipe-num">5</div>
+        <div class="pipe-content">
+            <div class="title">📐 Cosine Similarity Computation (The Mathematical Core)</div>
+            <div class="desc">For each past project vector <strong>V</strong>, the system computes the Cosine Similarity against the user's Query vector <strong>Q</strong> using the dot product formula. Results are ranked from highest to lowest score.</div>
+            <div class="detail">Similarity(Q, V) = (Q · V) / (||Q|| × ||V||) → sorted descending</div>
+        </div>
+    </div>
+    <div class="pipe-connector"></div>
+
+    <div class="pipe-step">
+        <div class="pipe-num">6</div>
+        <div class="pipe-content">
+            <div class="title">🏆 Top 4 Matches Selected &amp; Formatted</div>
+            <div class="desc">The system selects the top 4 records with similarity above threshold, extracts their problem summary, verified root cause, countermeasure plan, KPI improvement %, and cost savings (₹), then formats the response with clickable project storyboard links.</div>
+            <div class="detail">Return: { answer: "Here are the top 2 matching past solutions...", sources: [{ project_id: 84, similarity: 0.98 }, { project_id: 19, similarity: 0.91 }] }</div>
+        </div>
+    </div>
+    <div class="pipe-connector"></div>
+
+    <div class="pipe-step">
+        <div class="pipe-num">7</div>
+        <div class="pipe-content">
+            <div class="title">✨ Verified Answer Rendered in Chat UI</div>
+            <div class="desc">The frontend renders the answer with formatted Markdown — bold highlights, bullet points, KPI metric badges, and clickable direct hyperlinks to the original quality storyboard project for full root-cause drill-down.</div>
+            <div class="detail">🔗 → /project-details.html?id=84 | /project-details.html?id=19</div>
+        </div>
+    </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 4 — COSINE FORMULA WALKTHROUGH WITH NUMBERS
+══════════════════════════════════════════════════════════ -->
+<h2>4. The Math Made Simple — Numerical Walkthrough</h2>
+<p>For illustration, we simplify to <strong>3 dimensions</strong> (in reality it is 384). The same formula applies identically.</p>
+
+<h3>4.1 — The Three Vectors</h3>
+
+<table>
+    <thead>
+        <tr><th>Vector Name</th><th>Sentence It Represents</th><th>3D Coordinates</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Q</strong> (User Query)</td>
+            <td>"Paint peeling on automotive bumper"</td>
+            <td><code>[1, 2, 3]</code></td>
+        </tr>
+        <tr>
+            <td><strong>V₁</strong> (Past Project #084)</td>
+            <td>"Paint peeling defect on Line 2 plastic bumpers"</td>
+            <td><code>[2, 4, 6]</code> (same direction, scaled 2×)</td>
+        </tr>
+        <tr>
+            <td><strong>V₂</strong> (Past Project #112)</td>
+            <td>"CNC milling spindle bearing vibration failure"</td>
+            <td><code>[5, -2, 0]</code> (different direction)</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>4.2 — The Cosine Similarity Formula</h3>
+
+<div class="formula-box">
+<span class="comment">// The Formula:</span>
+Similarity(Q, V) = ( Q · V ) / ( ||Q|| × ||V|| )
+
+<span class="comment">// Where:
+//   Q · V    = Dot Product (how much two vectors "agree" in direction)
+//   ||Q||    = Magnitude (length) of Query vector
+//   ||V||    = Magnitude (length) of Past project vector</span>
+</div>
+
+<h3>4.3 — Calculation: Query Q vs. Past Project V₁ (Paint Peeling Project #084)</h3>
+
+<div class="card">
+    <div class="card-title"><span class="pill green-pill">Step A</span> Dot Product: Q · V₁</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; color: #1e1b4b; background: #f8fafc; padding: 10px 14px; border-radius: 6px; margin-top: 8px;">
+        Q · V₁ = (1 × 2) + (2 × 4) + (3 × 6)<br>
+              = 2 + 8 + 18<br>
+              = <strong>28</strong>
+    </div>
+</div>
+<div class="card">
+    <div class="card-title"><span class="pill green-pill">Step B</span> Magnitudes: ||Q|| and ||V₁||</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; color: #1e1b4b; background: #f8fafc; padding: 10px 14px; border-radius: 6px; margin-top: 8px;">
+        ||Q||  = √(1² + 2² + 3²) = √(1 + 4 + 9) = √14 = <strong>3.742</strong><br>
+        ||V₁|| = √(2² + 4² + 6²) = √(4 + 16 + 36) = √56 = <strong>7.483</strong>
+    </div>
+</div>
+<div class="card">
+    <div class="card-title"><span class="pill green-pill">Step C</span> Final Cosine Similarity Score</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; color: #1e1b4b; background: #f0fdf4; border: 1px solid #22c55e; padding: 10px 14px; border-radius: 6px; margin-top: 8px;">
+        Similarity(Q, V₁) = 28 / (3.742 × 7.483)<br>
+                          = 28 / 27.99<br>
+                          = <strong style="color: #059669; font-size: 10pt;">1.000 → 100% EXACT MATCH! ✅</strong>
+    </div>
+</div>
+
+<h3>4.4 — Calculation: Query Q vs. Unrelated Project V₂ (CNC Bearing #112)</h3>
+
+<div class="card">
+    <div class="card-title"><span class="pill red-pill">Step A</span> Dot Product: Q · V₂</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; color: #1e1b4b; background: #f8fafc; padding: 10px 14px; border-radius: 6px; margin-top: 8px;">
+        Q · V₂ = (1 × 5) + (2 × -2) + (3 × 0)<br>
+              = 5 + (-4) + 0<br>
+              = <strong>1</strong>
+    </div>
+</div>
+<div class="card">
+    <div class="card-title"><span class="pill red-pill">Step B</span> Magnitude of V₂</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; color: #1e1b4b; background: #f8fafc; padding: 10px 14px; border-radius: 6px; margin-top: 8px;">
+        ||V₂|| = √(5² + (-2)² + 0²) = √(25 + 4 + 0) = √29 = <strong>5.385</strong>
+    </div>
+</div>
+<div class="card">
+    <div class="card-title"><span class="pill red-pill">Step C</span> Final Cosine Similarity Score</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; color: #1e1b4b; background: #fff1f2; border: 1px solid #dc2626; padding: 10px 14px; border-radius: 6px; margin-top: 8px;">
+        Similarity(Q, V₂) = 1 / (3.742 × 5.385)<br>
+                          = 1 / 20.15<br>
+                          = <strong style="color: #dc2626; font-size: 10pt;">0.049 → 4.9% REJECTED as Irrelevant! ❌</strong>
+    </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 5 — RANKED RESULTS VISUAL
+══════════════════════════════════════════════════════════ -->
+<h2>5. How Results are Ranked &amp; Filtered</h2>
+
+<div class="svg-box">
+<svg viewBox="0 0 500 280" xmlns="http://www.w3.org/2000/svg" width="480" height="270" font-family="Inter, sans-serif">
+  <!-- Title -->
+  <text x="10" y="22" font-size="10" font-weight="700" fill="#1e1b4b">Ranked Similarity Scores — All Past Projects in Organization</text>
+
+  <!-- Record #084 — 98% -->
+  <rect x="10" y="38" width="185" height="16" rx="3" fill="#f0fdf4" stroke="#22c55e" stroke-width="1"/>
+  <text x="18" y="50" font-size="7.5" fill="#166534" font-weight="600">Project #084 — Paint peeling bumpers</text>
+  <rect x="200" y="38" width="4" height="16" rx="1" fill="#e2e8f0"/>
+  <rect x="205" y="40" width="274" height="12" rx="6" fill="#059669"/>
+  <text x="484" y="50" font-size="8" font-weight="700" fill="#065f46">98%</text>
+
+  <!-- Record #019 — 91% -->
+  <rect x="10" y="62" width="185" height="16" rx="3" fill="#f0f9ff" stroke="#38bdf8" stroke-width="1"/>
+  <text x="18" y="74" font-size="7.5" fill="#0c4a6e" font-weight="600">Project #019 — Coating detachment panels</text>
+  <rect x="200" y="62" width="4" height="16" rx="1" fill="#e2e8f0"/>
+  <rect x="205" y="64" width="253" height="12" rx="6" fill="#0ea5e9"/>
+  <text x="461" y="74" font-size="8" font-weight="700" fill="#0369a1">91%</text>
+
+  <!-- Record #038 — 67% (shown as mid) -->
+  <rect x="10" y="86" width="185" height="16" rx="3" fill="#fefce8" stroke="#facc15" stroke-width="1"/>
+  <text x="18" y="98" font-size="7.5" fill="#713f12" font-weight="600">Project #038 — Surface finish quality issues</text>
+  <rect x="200" y="86" width="4" height="16" rx="1" fill="#e2e8f0"/>
+  <rect x="205" y="88" width="186" height="12" rx="6" fill="#eab308"/>
+  <text x="394" y="98" font-size="8" font-weight="700" fill="#854d0e">67%</text>
+
+  <!-- Threshold line -->
+  <line x1="200" y1="108" x2="490" y2="108" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,2"/>
+  
+  <!-- Threshold label -->
+  <line x1="200" y1="116" x2="490" y2="116" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="205" y="127" font-size="7.5" fill="#dc2626" font-weight="600">▲ Minimum Threshold (Score must be above 0 to appear)</text>
+
+  <!-- Record #112 — 4.9% (rejected) -->
+  <rect x="10" y="132" width="185" height="16" rx="3" fill="#fff1f2" stroke="#f87171" stroke-width="1"/>
+  <text x="18" y="144" font-size="7.5" fill="#991b1b" font-weight="600">Project #112 — CNC spindle bearing vibration</text>
+  <rect x="200" y="132" width="4" height="16" rx="1" fill="#e2e8f0"/>
+  <rect x="205" y="134" width="14" height="12" rx="6" fill="#fca5a5"/>
+  <text x="222" y="144" font-size="8" font-weight="700" fill="#dc2626">4.9% ← Excluded</text>
+
+  <!-- Record #057 — 2.1% (rejected) -->
+  <rect x="10" y="156" width="185" height="16" rx="3" fill="#fff1f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="18" y="168" font-size="7.5" fill="#991b1b" font-weight="600">Project #057 — HR recruitment process delay</text>
+  <rect x="200" y="156" width="4" height="16" rx="1" fill="#e2e8f0"/>
+  <rect x="205" y="158" width="6" height="12" rx="6" fill="#fca5a5"/>
+  <text x="214" y="168" font-size="8" font-weight="700" fill="#dc2626">2.1% ← Excluded</text>
+
+  <!-- FINAL OUTPUT AREA -->
+  <rect x="10" y="190" width="470" height="80" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="22" y="208" font-size="9" font-weight="700" fill="#065f46">✨ Final AI Response (Top 4 matches returned to the user):</text>
+  <text x="22" y="226" font-size="8" fill="#166534">1. Project #084 (98%) — Root cause: Flash-off time → ₹3,40,000 savings → 82% defect reduction</text>
+  <text x="22" y="241" font-size="8" fill="#166534">2. Project #019 (91%) — Root cause: Paint viscosity variance → ₹1,80,000 savings → 74% reduction</text>
+  <text x="22" y="256" font-size="8" fill="#166534">3. Project #038 (67%) — Root cause: Surface contamination dust → ₹90,000 savings → 61% reduction</text>
+  <text x="22" y="271" font-size="7.5" fill="#4ade80" font-style="italic">Projects #112 and #057 are filtered out — mathematically proven irrelevant.</text>
+</svg>
+<div class="svg-cap">Figure 2: How all past projects are scored and ranked — only the top 4 most relevant matches are returned to the engineer</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 6 — COMPARISON TABLE
+══════════════════════════════════════════════════════════ -->
+<h2>6. Why Vector Cosine Similarity vs. Traditional Search</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Feature</th>
+            <th>Traditional Keyword Search ❌</th>
+            <th>Quality AI Vector Search ✅</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>How It Searches</strong></td>
+            <td>Looks for exact character-by-character word matches in text.</td>
+            <td>Converts sentences into 384-number mathematical meaning-vectors and computes angular distance.</td>
+        </tr>
+        <tr>
+            <td><strong>Synonym Handling</strong></td>
+            <td>❌ "Coating detachment" will NOT match "paint peeling".</td>
+            <td>✅ "Coating detachment" and "paint peeling" are placed within 12° of each other in vector space → matched automatically.</td>
+        </tr>
+        <tr>
+            <td><strong>Result Ranking</strong></td>
+            <td>Lists all documents containing the keyword — no intelligence in ranking.</td>
+            <td>Every document receives a precise 0.0–1.0 similarity score → mathematically sorted most-relevant first.</td>
+        </tr>
+        <tr>
+            <td><strong>Context Awareness</strong></td>
+            <td>Ignores sentence structure and engineering domain context entirely.</td>
+            <td>Understands that "peeling on automotive production line" is completely different from "peeling a banana."</td>
+        </tr>
+        <tr>
+            <td><strong>Multi-Language Concepts</strong></td>
+            <td>Fails completely if a term is expressed differently.</td>
+            <td>Understands industry synonyms: Delamination = Peeling = Detachment = Adhesion failure.</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="alert purple">
+    <div class="alert-title">🎯 Core Principle</div>
+    <div class="alert-body">
+        <strong>Cosine Similarity does not compare words — it compares the meaning-direction of vectors.</strong><br><br>
+        When the angle (θ) between two vectors is small, both sentences are conceptually similar — regardless of which exact words were used to express that concept.
+        This is why Quality AI can retrieve past solutions even when engineers describe the same defect using completely different technical vocabulary.
+    </div>
+</div>
+
+</body>
+</html>

@@ -210,19 +210,7 @@
                         </div>
                     </div>
                     <!-- Pagination Footer -->
-                    <div class="ds-card-footer px-4 py-3 border-top" id="repoPagination" style="display:none; background: var(--ds-bg-surface);">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                            <span class="text-sm text-muted fw-medium" id="repoPaginationInfo">Showing 1-10 of 0 projects</span>
-                            <div class="d-flex gap-2">
-                                <button class="ds-btn ds-btn-secondary ds-btn-sm" id="repoPrevBtn" onclick="repoUI.changePage(-1)">
-                                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Previous
-                                </button>
-                                <button class="ds-btn ds-btn-secondary ds-btn-sm" id="repoNextBtn" onclick="repoUI.changePage(1)">
-                                    Next <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <div id="repoPagination" style="display:none;"></div>
                 </div>
             </div>
         <div class="modal fade" id="initModal" tabindex="-1">
@@ -597,7 +585,7 @@
         checkedMemberNames: {},
         currentPage: 1,
         totalPages: 1,
-        perPage: 10,
+        perPage: 5,
         totalProjects: 0,
 
         getSearchScore(member, q) {
@@ -1983,10 +1971,6 @@
 
         renderPagination() {
             const container = document.getElementById('repoPagination');
-            const info = document.getElementById('repoPaginationInfo');
-            const prevBtn = document.getElementById('repoPrevBtn');
-            const nextBtn = document.getElementById('repoNextBtn');
-
             if (!container) return;
 
             if (!this.totalProjects || this.totalProjects <= 0) {
@@ -1996,14 +1980,21 @@
 
             container.style.display = 'block';
 
-            const start = (this.currentPage - 1) * this.perPage + 1;
-            const end = Math.min(this.currentPage * this.perPage, this.totalProjects);
-            info.textContent = `Showing ${start}-${end} of ${this.totalProjects} projects`;
-
-            if (prevBtn) prevBtn.disabled = (this.currentPage <= 1);
-            if (nextBtn) nextBtn.disabled = (this.currentPage >= this.totalPages);
-
-            if (window.lucide) lucide.createIcons();
+            window.createStandardPagination({
+                containerId: 'repoPagination',
+                entityName: 'projects',
+                totalItems: this.totalProjects,
+                currentPage: this.currentPage,
+                pageSize: this.perPage || 5,
+                pageSizeOptions: [5, 10, 25, 50, 100],
+                onPageChange: (p) => {
+                    this.loadData(p);
+                },
+                onPageSizeChange: (s) => {
+                    this.perPage = s;
+                    this.loadData(1);
+                }
+            });
         },
 
         renderStats(stats) {
@@ -2071,7 +2062,7 @@
                         <div class="text-sm fw-medium">${p.team_leader}</div>
                     </td>
                     <td style="width:180px;">
-                        ${QCMS.projectProgress(p.current_stage || 1, 8)}
+                        ${QCMS.projectProgress(p.current_stage || 1, 8, p.progress_pct ?? p.progress)}
                     </td>
                     <td>
                         <div class="text-sm fw-bold ${p.efficiency > 0 ? 'text-green' : 'text-muted'}">${p.efficiency}% Improvement</div>
@@ -2084,29 +2075,29 @@
                         <div class="text-xs text-muted">Latest update</div>
                     </td>
                     <td class="text-end">
-                        <div class="d-flex justify-content-end gap-1 align-items-center">
-                            <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-xs ds-btn-ghost d-flex align-items-center gap-1" title="Continue Workflow">
-                                <i data-lucide="play-circle" style="width:14px;"></i> Continue
-                            </a>
-                            <div class="dropdown d-inline-block">
-                                <button class="ds-btn ds-btn-xs ds-btn-ghost p-1 text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More Options">
-                                    <i data-lucide="more-vertical" style="width:16px;height:16px;"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-md py-1 border-0" style="min-width: 210px; border-radius: var(--ds-radius-md, 8px);">
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="javascript:void(0)" onclick="repoUI.openTeamGovernanceModal(${p.id})">
-                                            <i data-lucide="users" style="width:14px;" class="text-primary"></i> Team & Governance
-                                        </a>
-                                    </li>
-                                    ${(p.status === 'Closed' || p.status === 'Completed') ? `
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="javascript:void(0)" onclick="repoUI.downloadReport(${p.id}, '${p.project_uid}', '${(p.title || '').replace(/'/g, "\\'")}', '${p.status}')">
-                                            <i data-lucide="file-text" style="width:14px;" class="text-danger"></i> Download PDF Report
-                                        </a>
-                                    </li>
-                                    ` : ''}
-                                </ul>
-                            </div>
+                        <div class="dropdown d-inline-block">
+                            <button class="ds-btn ds-btn-xs ds-btn-ghost p-1 text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More Options">
+                                <i data-lucide="more-vertical" style="width:16px;height:16px;"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-md py-1 border-0" style="min-width: 200px; border-radius: var(--ds-radius-md, 8px);">
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="/projects/project-details.html?id=${p.id}">
+                                        <i data-lucide="eye" style="width:14px;height:14px;" class="text-primary"></i> View
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="javascript:void(0)" onclick="repoUI.openTeamGovernanceModal(${p.id})">
+                                        <i data-lucide="users" style="width:14px;height:14px;" class="text-secondary"></i> Team &amp; Governance
+                                    </a>
+                                </li>
+                                ${(p.status === 'Closed' || p.status === 'Completed') ? `
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="javascript:void(0)" onclick="repoUI.downloadReport(${p.id}, '${p.project_uid}', '${(p.title || '').replace(/'/g, "\\'")}', '${p.status}')">
+                                        <i data-lucide="file-text" style="width:14px;height:14px;" class="text-danger"></i> Download PDF Report
+                                    </a>
+                                </li>
+                                ` : ''}
+                            </ul>
                         </div>
                     </td>
                 </tr>

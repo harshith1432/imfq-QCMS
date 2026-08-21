@@ -123,9 +123,11 @@
 
                 <!-- ── Strategic Overview Section ── -->
                 <div id="sec-strategic-overview">
-                    <!-- KPI Grid (6 Cards) -->
+                    <!-- KPI Grid (8 Cards) -->
                     <div class="kpi-grid-8 fade-in section-spacing" id="ceoKpiGrid">
                         <!-- Skeletons initially -->
+                        <div class="ds-card skeleton kpi-skeleton"></div>
+                        <div class="ds-card skeleton kpi-skeleton"></div>
                         <div class="ds-card skeleton kpi-skeleton"></div>
                         <div class="ds-card skeleton kpi-skeleton"></div>
                         <div class="ds-card skeleton kpi-skeleton"></div>
@@ -288,20 +290,153 @@
                     </div>
                 </div>
 
-                <!-- ── ROI & Financial Analytics Section ── -->
+                <!-- ── ROI & Business Analytics Section ── -->
                 <div id="sec-roi-analytics" class="mt-4 pt-3">
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                        <i data-lucide="trending-up" style="width:20px; height:20px;" class="text-success"></i>
-                        <h5 class="fw-bold text-success mb-0">Corporate Financial Impact & Quality ROI Analytics</h5>
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="p-2 rounded-3 bg-success-subtle text-success">
+                                <i data-lucide="trending-up" style="width:24px; height:24px;"></i>
+                            </div>
+                            <div>
+                                <h4 class="fw-bold text-dark mb-0">Executive Business Analytics &amp; Profit Engine</h4>
+                                <p class="text-xs text-muted mb-0">Quality Circle monetary returns, QCMS software profit yield, and capital recovery trajectory.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success-subtle text-success text-xs fw-semibold px-2.5 py-1.5 border border-success-subtle">
+                                <i data-lucide="shield-check" style="width:12px;height:12px;" class="me-1"></i> Live Valuation Active
+                            </span>
+                        </div>
                     </div>
-                    <!-- Financial Impact Grid & Top Projects -->
+
+                    <!-- 1. Top Executive Financial & Profit Metrics Hero Row -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="ds-card p-3 h-100 shadow-sm border-start border-4 border-success">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <span class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Quality Returns (Gross Revenue)</span>
+                                        <h3 class="fw-extrabold text-success mb-0 mt-1" id="bizGrossRevenue">₹ 0.00 L</h3>
+                                    </div>
+                                    <div class="p-2 rounded-circle bg-success-subtle text-success">
+                                        <i data-lucide="arrow-up-right" style="width:18px;height:18px;"></i>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between text-xs mt-2 pt-2 border-top">
+                                    <span class="text-muted">Direct Savings + Gains</span>
+                                    <span class="badge bg-success-subtle text-success fw-bold" id="bizProfitMargin">+0% Margin</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6">
+                            <div class="ds-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <span class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Total Investment Done</span>
+                                        <h3 class="fw-extrabold text-primary mb-0 mt-1" id="bizTotalInvestment">₹ 0.00 L</h3>
+                                    </div>
+                                    <div class="p-2 rounded-circle bg-primary-subtle text-primary">
+                                        <i data-lucide="wallet" style="width:18px;height:18px;"></i>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between text-xs mt-2 pt-2 border-top">
+                                    <span class="text-muted">Software &amp; Tooling</span>
+                                    <span class="text-primary fw-semibold" id="bizCapexRatio">Low Overhead</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6">
+                            <div class="ds-card p-3 h-100 shadow-sm border-start border-4 border-purple" style="border-left-color: #7c3aed !important;">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <span class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Net Profit Generated</span>
+                                        <h3 class="fw-extrabold mb-0 mt-1" id="bizNetProfit" style="color:#7c3aed;">₹ 0.00 L</h3>
+                                    </div>
+                                    <div class="p-2 rounded-circle" style="background:rgba(124, 58, 237, 0.1); color:#7c3aed;">
+                                        <i data-lucide="sparkles" style="width:18px;height:18px;"></i>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between text-xs mt-2 pt-2 border-top">
+                                    <span class="text-muted">QCMS Profit Multiple</span>
+                                    <span class="badge fw-bold" id="bizRoiMultiplier" style="background:rgba(124, 58, 237, 0.1); color:#7c3aed;">0.0x Multiplier</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6">
+                            <div class="ds-card p-3 h-100 shadow-sm border-start border-4 border-warning">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <span class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Payback &amp; Recovery</span>
+                                        <h3 class="fw-extrabold text-dark mb-0 mt-1" id="bizPaybackPeriod">0.0 Months</h3>
+                                    </div>
+                                    <div class="p-2 rounded-circle bg-warning-subtle text-warning">
+                                        <i data-lucide="hourglass" style="width:18px;height:18px;"></i>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between text-xs mt-2 pt-2 border-top">
+                                    <span class="text-muted" id="bizBreakEvenDate">Break-Even: —</span>
+                                    <span id="bizRecoveryBadgeContainer"><span class="badge bg-success text-white fw-bold">Recovered</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Trajectory & Quality Pillar Charts Row -->
                     <div class="row g-4 mb-4">
-                        <div class="col-lg-5">
+                        <div class="col-lg-8">
+                            <div class="ds-card h-100">
+                                <div class="ds-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h5 class="card-title mb-0">Cumulative Cash Flow &amp; Capital Break-Even Trajectory</h5>
+                                        <p class="text-xs text-muted mb-0">Tracking cumulative project revenue vs software/countermeasure investments over time</p>
+                                    </div>
+                                    <div class="badge bg-light text-dark border text-xs px-2.5 py-1" id="cashflowMilestoneBadge">
+                                        <i data-lucide="check-circle" style="width:12px;height:12px;" class="text-success me-1"></i> Capital 100% Recovered
+                                    </div>
+                                </div>
+                                <div class="ds-card-body">
+                                    <div id="bizCashflowTrajectoryChart" style="min-height: 290px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="ds-card h-100">
+                                <div class="ds-card-header">
+                                    <h5 class="card-title mb-0">Revenue by Quality Pillar</h5>
+                                    <p class="text-xs text-muted mb-0">Monetary value created per operational category</p>
+                                </div>
+                                <div class="ds-card-body d-flex flex-column align-items-center justify-content-center">
+                                    <div id="bizPillarDonutChart" style="width:100%; min-height: 250px;"></div>
+                                    <div class="w-100 mt-2" id="bizPillarLegendList"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Departmental Financial Performance & Corporate Financial Impact Grid -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-6">
+                            <div class="ds-card h-100">
+                                <div class="ds-card-header">
+                                    <h5 class="card-title mb-0">Departmental Business ROI &amp; Revenue Leaderboard</h5>
+                                    <p class="text-xs text-muted mb-0">Revenue generated vs investment per department</p>
+                                </div>
+                                <div class="ds-card-body">
+                                    <div id="bizDeptRoiBarChart" style="min-height: 260px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
                             <div class="ds-card h-100">
                                 <div class="ds-card-header d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h5 class="card-title">Corporate Financial Impact</h5>
-                                        <p class="text-xs text-muted mb-0">Cost avoidance, reductions, and investment payback</p>
+                                        <h5 class="card-title mb-0">Corporate Financial Impact Breakdown</h5>
+                                        <p class="text-xs text-muted mb-0">Cost avoidance, direct reductions, waste recovery &amp; net gain</p>
                                     </div>
                                     <span class="badge bg-success-soft text-success text-xs fw-semibold">
                                         <i data-lucide="zap" style="width:11px;height:11px;"></i> Real-Time
@@ -309,27 +444,27 @@
                                 </div>
                                 <div class="ds-card-body">
                                     <div class="financial-grid">
-                                        <div class="financial-item" title="Confirmed savings that prevented future costs (Total savings minus direct reduction, waste & revenue gains)">
+                                        <div class="financial-item" title="Confirmed savings that prevented future costs">
                                             <div class="text-xs text-muted">Cost Avoidance <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
                                             <h5 class="fw-bold mb-0 text-primary mt-1" id="finCostAvoidance">₹0L</h5>
                                         </div>
-                                        <div class="financial-item" title="Direct cost reductions captured from Stage 6 workflow data">
+                                        <div class="financial-item" title="Direct cost reductions captured from Stage 6 workflows">
                                             <div class="text-xs text-muted">Cost Reduction <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
                                             <h5 class="fw-bold mb-0 text-success mt-1" id="finCostReduction">₹0L</h5>
                                         </div>
-                                        <div class="financial-item" title="Estimated annual savings projected from Stage 5 (Improve) workflows">
+                                        <div class="financial-item" title="Estimated annual savings projected from Stage 5 workflows">
                                             <div class="text-xs text-muted">Revenue Improvement <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
                                             <h5 class="fw-bold mb-0 text-info mt-1" id="finRevImprove">₹0L</h5>
                                         </div>
-                                        <div class="financial-item" title="Productivity gains logged in Stage 8 closure reports">
+                                        <div class="financial-item" title="Productivity and scrap gains from Stage 8 closures">
                                             <div class="text-xs text-muted">Waste Reduction <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
                                             <h5 class="fw-bold mb-0 text-warning mt-1" id="finWasteReduce">₹0L</h5>
                                         </div>
-                                        <div class="financial-item" title="Investment ÷ (Total Savings / 12 months) — using actual implementation costs from Stage 8">
+                                        <div class="financial-item" title="Investment divided by monthly realized returns">
                                             <div class="text-xs text-muted">Avg Payback Period <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
                                             <h5 class="fw-bold mb-0 text-secondary mt-1" id="finPayback">0 Months</h5>
                                         </div>
-                                        <div class="financial-item" title="Total Savings (Stage 8 + Knowledge Repo + Workflows) minus actual implementation cost">
+                                        <div class="financial-item" title="Total Savings minus actual implementation cost">
                                             <div class="text-xs text-muted">Total Net Gain <i data-lucide="info" style="width:10px;height:10px;" class="text-muted"></i></div>
                                             <h5 class="fw-bold mb-0 text-primary mt-1" id="finNetGain">₹0L</h5>
                                         </div>
@@ -341,37 +476,43 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-7">
-                            <div class="ds-card h-100">
-                                <div class="ds-card-header h-stack justify-content-between">
-                                    <h5 class="card-title">Top 10 Quality Improvement Projects</h5>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <input type="text" class="ds-input py-1 px-2 text-xs" style="width:160px;" placeholder="Search projects..." id="projectSearch" onkeyup="ceoDash.filterProjects()">
-                                    </div>
-                                </div>
-                                <div class="ds-card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="ds-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Project</th>
-                                                    <th>Priority</th>
-                                                    <th>Category</th>
-                                                    <th>Status</th>
-                                                    <th>Stage Progress</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="topProjectsBody">
-                                                <tr>
-                                                    <td colspan="5" class="text-center py-4">
-                                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div id="topProjectsPaginationContainer"></div>
-                                </div>
+                    </div>
+
+                    <!-- 4. Quality Project Financial Ledger Table -->
+                    <div class="ds-card mb-4">
+                        <div class="ds-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h5 class="card-title mb-0">Quality Circle Project Financial Ledger &amp; Valuation</h5>
+                                <p class="text-xs text-muted mb-0">Project-by-project breakdown of capital invested, revenue realized, and net profits</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="text" class="ds-input py-1 px-2.5 text-xs" style="width:220px;" placeholder="Search ledger projects..." id="bizLedgerSearch" onkeyup="ceoDash.filterLedgerProjects()">
+                            </div>
+                        </div>
+                        <div class="ds-card-body p-0">
+                            <div class="table-responsive">
+                                <table class="ds-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Project</th>
+                                            <th>Plant &amp; Dept</th>
+                                            <th>Pillar</th>
+                                            <th>Investment</th>
+                                            <th>Revenue Returns</th>
+                                            <th>Net Profit</th>
+                                            <th>Project ROI</th>
+                                            <th>Payback Status</th>
+                                            <th class="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bizLedgerTableBody">
+                                        <tr>
+                                            <td colspan="9" class="text-center py-4 text-muted">
+                                                <div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading business financial ledger...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -598,8 +739,8 @@
                         subtitle: 'Cross-department efficiency, project risk breakdown, and organizational health metrics.'
                     },
                     'roi-analytics': {
-                        title: 'Corporate ROI & Financial Analytics',
-                        subtitle: 'Cumulative cost savings, financial impact breakdowns, and quality ROI trends.'
+                        title: 'Executive Business Analytics & Quality ROI',
+                        subtitle: 'Real-time Quality Circle revenue, software investment recovery, and corporate profit analysis.'
                     }
                 };
 
@@ -1032,6 +1173,9 @@
                     // Render leaderboard with 5 members per page dynamically
                     this.loadLeaderboard(1);
 
+                    // Load Executive Business Analytics
+                    await this.loadBusinessAnalytics();
+
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error('[CEO Dash] Failed loading datasets:', e);
@@ -1044,10 +1188,12 @@
                 const kpis = [
                     { title: 'Projects Running', value: metrics.projects_running || 0, trend: 'Optimal', type: 'success', color: 'blue', sparkColor: '#3b82f6', sparkData: spark.projects_running || [0, 0, 0, metrics.projects_running || 0] },
                     { title: 'Completed Projects', value: metrics.completed_projects || 0, trend: 'Real-time', type: 'primary', color: 'green', sparkColor: '#10b981', sparkData: spark.completed_projects || [0, 0, 0, metrics.completed_projects || 0] },
-                    { title: 'Rejected Projects', value: metrics.rejected_projects || 0, trend: 'Audit Trail', type: 'danger', color: 'red', sparkColor: '#ef4444', sparkData: [0, 0, 0, metrics.rejected_projects || 0], isRejected: true },
+                    { title: 'Stopped Projects', value: metrics.rejected_projects || 0, trend: 'Audit Trail', type: 'danger', color: 'red', sparkColor: '#ef4444', sparkData: [0, 0, 0, metrics.rejected_projects || 0], isRejected: true },
                     { title: 'Annual Savings', value: QCMS.formatINR(Math.round((metrics.annual_savings || 0) * 10000000)), trend: 'Growing', type: 'success', color: 'green', sparkColor: '#10b981', sparkData: spark.annual_savings || [0, 0, 0, metrics.annual_savings || 0] },
                     { title: 'Average ROI', value: `${(metrics.roi || 0).toFixed(1)}%`, trend: 'Outstanding', type: 'success', color: 'purple', sparkColor: '#8b5cf6', sparkData: spark.roi || [0, 0, 0, metrics.roi || 0] },
-                    { title: 'Total Employees', value: metrics.employees_participating || 0, trend: 'Active', type: 'primary', color: 'blue', sparkColor: '#3b82f6', sparkData: spark.employees_participating || [0, 0, 0, metrics.employees_participating || 0] }
+                    { title: 'Total Employees', value: metrics.employees_participating || 0, trend: 'Active', type: 'primary', color: 'blue', sparkColor: '#3b82f6', sparkData: spark.employees_participating || [0, 0, 0, metrics.employees_participating || 0] },
+                    { title: 'Total Plants', value: metrics.total_plants || 0, trend: 'Locations', type: 'primary', color: 'indigo', sparkColor: '#6366f1', sparkData: spark.total_plants || [0, 0, 0, metrics.total_plants || 0] },
+                    { title: 'Total Departments', value: metrics.total_departments || 0, trend: 'Units', type: 'primary', color: 'teal', sparkColor: '#0d9488', sparkData: spark.total_departments || [0, 0, 0, metrics.total_departments || 0] }
                 ];
 
                 const container = document.getElementById('ceoKpiGrid');
@@ -1112,6 +1258,287 @@
                 if (el('finPayback'))        el('finPayback').textContent        = `${parseFloat(fin.payback_months || 0).toFixed(1)} Months`;
                 if (el('finNetGain'))        el('finNetGain').textContent        = fmtL(fin.net_gain);
                 if (el('finLastUpdated'))    el('finLastUpdated').textContent    = new Date().toLocaleTimeString();
+            },
+
+            async loadBusinessAnalytics() {
+                try {
+                    const timelineVal = document.getElementById('comparePeriod')?.value || document.getElementById('savingsTimelineFilter')?.value || '6';
+                    const res = await api.get('/ceo/business-analytics?timeline=' + encodeURIComponent(timelineVal));
+                    if (res && res.summary) {
+                        this.businessData = res;
+                        this.renderBusinessAnalytics(res);
+                    }
+                } catch (e) {
+                    console.error('[CEO Dash] Failed to load Business Analytics:', e);
+                }
+            },
+
+            renderBusinessAnalytics(data) {
+                if (!data || !data.summary) return;
+                const s = data.summary;
+                const el = (id) => document.getElementById(id);
+
+                if (el('bizGrossRevenue')) el('bizGrossRevenue').textContent = `₹ ${parseFloat(s.total_revenue_lakhs || 0).toFixed(2)} L`;
+                if (el('bizProfitMargin')) el('bizProfitMargin').textContent = `+${parseFloat(s.profit_margin_pct || 0).toFixed(1)}% Margin`;
+                if (el('bizTotalInvestment')) el('bizTotalInvestment').textContent = `₹ ${parseFloat(s.total_investment_lakhs || 0).toFixed(2)} L`;
+                if (el('bizNetProfit')) el('bizNetProfit').textContent = `₹ ${parseFloat(s.net_profit_lakhs || 0).toFixed(2)} L`;
+                if (el('bizRoiMultiplier')) el('bizRoiMultiplier').textContent = `${s.roi_multiplier || '0x'} Multiplier`;
+                if (el('bizPaybackPeriod')) el('bizPaybackPeriod').textContent = `${parseFloat(s.payback_months || 0).toFixed(1)} Months`;
+                if (el('bizBreakEvenDate')) el('bizBreakEvenDate').textContent = `Break-Even: ${s.break_even_month || 'Achieved'}`;
+
+                if (el('bizRecoveryBadgeContainer')) {
+                    if (s.is_recovered) {
+                        el('bizRecoveryBadgeContainer').innerHTML = `<span class="badge bg-success text-white fw-bold">100% Capital Recovered</span>`;
+                    } else {
+                        el('bizRecoveryBadgeContainer').innerHTML = `<span class="badge bg-warning text-dark fw-bold">In Progress</span>`;
+                    }
+                }
+
+                // Render Visual Analytics Charts
+                if (data.cashflow_trajectory) {
+                    this.renderCashflowTrajectoryChart(data.cashflow_trajectory);
+                }
+                if (data.pillar_breakdown) {
+                    this.renderPillarDonutChart(data.pillar_breakdown);
+                }
+                if (data.department_analytics) {
+                    this.renderDeptRoiBarChart(data.department_analytics);
+                }
+
+                // Render Project Financial Ledger
+                this.ledgerProjects = data.projects_ledger || [];
+                this.renderLedgerTable(this.ledgerProjects);
+
+                if (window.lucide) lucide.createIcons();
+            },
+
+            renderCashflowTrajectoryChart(cf) {
+                if (this.charts.bizCashflow) this.charts.bizCashflow.destroy();
+
+                const months = cf.months || [];
+                const revenue = cf.revenue || [];
+                const investment = cf.investment || [];
+                const netProfit = cf.net_profit || [];
+
+                this.charts.bizCashflow = new ApexCharts(document.getElementById('bizCashflowTrajectoryChart'), {
+                    chart: {
+                        type: 'area',
+                        height: 290,
+                        toolbar: { show: false },
+                        zoom: { enabled: false }
+                    },
+                    series: [
+                        { name: 'Cumulative Quality Revenue (₹ L)', data: revenue },
+                        { name: 'Cumulative Capital Investment (₹ L)', data: investment },
+                        { name: 'Cumulative Net Profit (₹ L)', data: netProfit }
+                    ],
+                    colors: ['#10b981', '#3b82f6', '#8b5cf6'],
+                    stroke: { curve: 'smooth', width: [3, 2, 2.5] },
+                    fill: {
+                        type: 'gradient',
+                        gradient: { opacityFrom: 0.25, opacityTo: 0.02 }
+                    },
+                    dataLabels: { enabled: false },
+                    xaxis: {
+                        categories: months,
+                        labels: { style: { colors: 'var(--ds-text-secondary)', fontSize: '11px' } }
+                    },
+                    yaxis: {
+                        labels: {
+                            formatter: (v) => `₹${parseFloat(v).toFixed(1)}L`,
+                            style: { colors: 'var(--ds-text-secondary)', fontSize: '11px' }
+                        }
+                    },
+                    tooltip: {
+                        y: { formatter: (v) => `₹ ${parseFloat(v).toFixed(2)} Lakhs` }
+                    },
+                    legend: {
+                        position: 'top',
+                        horizontalAlign: 'right',
+                        fontSize: '12px',
+                        labels: { colors: 'var(--ds-text-main)' }
+                    },
+                    grid: {
+                        borderColor: 'var(--ds-border-color)',
+                        strokeDashArray: 4
+                    }
+                });
+                this.charts.bizCashflow.render();
+            },
+
+            renderPillarDonutChart(pillars) {
+                if (this.charts.bizPillars) this.charts.bizPillars.destroy();
+
+                const activePillars = (pillars || []).filter(p => p.revenue_lakhs > 0 || p.projects_count > 0);
+                const series = activePillars.length > 0 ? activePillars.map(p => p.revenue_lakhs || p.projects_count) : [1];
+                const labels = activePillars.length > 0 ? activePillars.map(p => `${p.pillar} (₹${p.revenue_lakhs.toFixed(2)}L)`) : ['Quality'];
+                const colors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'];
+
+                this.charts.bizPillars = new ApexCharts(document.getElementById('bizPillarDonutChart'), {
+                    chart: { type: 'donut', height: 240 },
+                    series: series,
+                    labels: labels,
+                    colors: colors,
+                    stroke: { width: 0 },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                size: '70%',
+                                labels: {
+                                    show: true,
+                                    name: { fontSize: '12px', fontWeight: 600 },
+                                    value: {
+                                        fontSize: '14px',
+                                        fontWeight: 700,
+                                        formatter: (v) => `₹${parseFloat(v).toFixed(2)}L`
+                                    },
+                                    total: {
+                                        show: true,
+                                        label: 'Total Value',
+                                        formatter: () => {
+                                            const total = activePillars.reduce((a, b) => a + (b.revenue_lakhs || 0), 0);
+                                            return `₹${total.toFixed(2)}L`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    legend: { show: false },
+                    tooltip: {
+                        y: { formatter: (v) => `₹ ${parseFloat(v).toFixed(2)} Lakhs` }
+                    }
+                });
+                this.charts.bizPillars.render();
+
+                // Custom legend
+                const legendEl = document.getElementById('bizPillarLegendList');
+                if (legendEl) {
+                    legendEl.innerHTML = activePillars.slice(0, 4).map((p, i) => `
+                        <div class="d-flex justify-content-between align-items-center text-xs py-1 border-bottom border-light">
+                            <span class="d-flex align-items-center gap-1.5">
+                                <span class="d-inline-block rounded-circle" style="width:8px;height:8px;background:${colors[i % colors.length]};"></span>
+                                ${p.pillar}
+                            </span>
+                            <span class="fw-bold text-dark">₹${parseFloat(p.revenue_lakhs).toFixed(2)}L</span>
+                        </div>
+                    `).join('');
+                }
+            },
+
+            renderDeptRoiBarChart(depts) {
+                if (this.charts.bizDeptRoi) this.charts.bizDeptRoi.destroy();
+
+                const validDepts = (depts || []).filter(d => d.dept_name);
+                const categories = validDepts.map(d => d.dept_name);
+                const revenueData = validDepts.map(d => d.revenue_lakhs || 0);
+                const investmentData = validDepts.map(d => d.investment_lakhs || 0);
+
+                this.charts.bizDeptRoi = new ApexCharts(document.getElementById('bizDeptRoiBarChart'), {
+                    chart: {
+                        type: 'bar',
+                        height: 260,
+                        toolbar: { show: false }
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: false,
+                            columnWidth: '50%',
+                            borderRadius: 4
+                        }
+                    },
+                    dataLabels: { enabled: false },
+                    series: [
+                        { name: 'Revenue Generated (₹ L)', data: revenueData },
+                        { name: 'Capital Invested (₹ L)', data: investmentData }
+                    ],
+                    colors: ['#10b981', '#3b82f6'],
+                    xaxis: {
+                        categories: categories,
+                        labels: { style: { colors: 'var(--ds-text-secondary)', fontSize: '11px' } }
+                    },
+                    yaxis: {
+                        labels: {
+                            formatter: (v) => `₹${parseFloat(v).toFixed(1)}L`,
+                            style: { colors: 'var(--ds-text-secondary)', fontSize: '11px' }
+                        }
+                    },
+                    tooltip: {
+                        y: { formatter: (v) => `₹ ${parseFloat(v).toFixed(2)} Lakhs` }
+                    },
+                    legend: {
+                        position: 'top',
+                        horizontalAlign: 'right',
+                        fontSize: '11px'
+                    },
+                    grid: {
+                        borderColor: 'var(--ds-border-color)',
+                        strokeDashArray: 4
+                    }
+                });
+                this.charts.bizDeptRoi.render();
+            },
+
+            renderLedgerTable(projects) {
+                const tbody = document.getElementById('bizLedgerTableBody');
+                if (!tbody) return;
+
+                if (!projects || !projects.length) {
+                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No projects found in financial ledger.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = projects.map(p => `
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-main">${p.title}</div>
+                            <div class="text-xxs text-muted font-mono">${p.project_uid || `#PRJ-${p.id}`}</div>
+                        </td>
+                        <td class="text-xs">
+                            <span class="fw-semibold text-dark">${p.plant || 'Main Plant'}</span>
+                            <div class="text-xxs text-muted">${p.department || 'Operations'}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border text-xxs px-2 py-0.5">${p.category || 'Quality'}</span>
+                        </td>
+                        <td class="text-primary fw-bold text-xs">₹ ${parseFloat(p.investment_lakhs || 0).toFixed(2)} L</td>
+                        <td class="text-success fw-bold text-xs">₹ ${parseFloat(p.revenue_lakhs || 0).toFixed(2)} L</td>
+                        <td class="fw-bold text-xs ${p.net_profit_lakhs >= 0 ? 'text-purple' : 'text-danger'}" style="${p.net_profit_lakhs >= 0 ? 'color:#7c3aed;' : ''}">
+                            ₹ ${parseFloat(p.net_profit_lakhs || 0).toFixed(2)} L
+                        </td>
+                        <td>
+                            <span class="badge bg-success-subtle text-success fw-bold text-xxs px-2 py-0.5">+${parseFloat(p.roi_pct || 0).toFixed(0)}%</span>
+                        </td>
+                        <td>
+                            <span class="badge ${p.payback_status === 'Recovered' ? 'bg-success text-white' : 'bg-warning-subtle text-warning'} text-xxs fw-semibold px-2 py-0.5">
+                                ${p.payback_status}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <a href="/project-details.html?id=${p.id}" class="btn btn-xs btn-outline-primary py-0.5 px-2 text-xxs rounded-pill text-decoration-none">
+                                <i data-lucide="external-link" style="width:11px;height:11px;" class="me-1"></i> Details
+                            </a>
+                        </td>
+                    </tr>
+                `).join('');
+                if (window.lucide) lucide.createIcons();
+            },
+
+            filterLedgerProjects() {
+                const query = (document.getElementById('bizLedgerSearch')?.value || '').toLowerCase().trim();
+                if (!this.ledgerProjects) return;
+                if (!query) {
+                    this.renderLedgerTable(this.ledgerProjects);
+                    return;
+                }
+                const filtered = this.ledgerProjects.filter(p => 
+                    (p.title || '').toLowerCase().includes(query) ||
+                    (p.project_uid || '').toLowerCase().includes(query) ||
+                    (p.department || '').toLowerCase().includes(query) ||
+                    (p.plant || '').toLowerCase().includes(query) ||
+                    (p.category || '').toLowerCase().includes(query)
+                );
+                this.renderLedgerTable(filtered);
             },
 
             renderPipelineChart(pipeline) {
@@ -1834,14 +2261,14 @@
                             <i data-lucide="x-circle" style="width:20px;height:20px;"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold mb-0">Rejected Projects Governance Audit</h5>
-                            <p class="text-xs text-muted mb-0">Executive view of projects permanently rejected by reviewers with feedback details.</p>
+                            <h5 class="modal-title fw-bold mb-0">Stopped Projects Governance Audit</h5>
+                            <p class="text-xs text-muted mb-0">Executive view of projects discontinued or stopped by reviewers with feedback details.</p>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4" id="rejectedProjectsModalBody">
-                    <div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading rejected projects...</div>
+                    <div class="p-5 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading stopped projects...</div>
                 </div>
                 <div class="modal-footer border-0 p-4">
                     <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>

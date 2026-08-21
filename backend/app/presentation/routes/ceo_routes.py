@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
     db, User, Role, Organization, Project, ProjectStageTracker, KPIMetric, AuditLog, 
-    KnowledgeRepository, Department, Stage8Implementation, ProjectReview, SOP, 
+    KnowledgeRepository, Plant, Department, Stage8Implementation, ProjectReview, SOP, 
     ProjectMember, ProjectWorkflow, Stage8StandardizationKnowledgeSharingProjectClosure as Stage8Standardization
 )
 from app.presentation.middleware.middleware import role_required
@@ -222,6 +222,7 @@ def get_executive_summary():
         combined_improvement = (avg_improvement + active_avg_improvement) / 2 if (avg_improvement > 0 and active_avg_improvement > 0) else (avg_improvement or active_avg_improvement)
 
         # 4. Organizational Scope (All Active Employees in Organization, excluding SuperAdmin platform role)
+        total_plants = Plant.query.filter_by(org_id=org_id).count()
         total_departments = Department.query.filter_by(org_id=org_id).count()
         total_members = User.query.join(Role).filter(
             User.org_id == org_id,
@@ -433,6 +434,8 @@ def get_executive_summary():
         spark_savings = []
         spark_cases = []
         spark_users = []
+        spark_plants = []
+        spark_depts = []
         spark_success = []
         spark_roi = []
 
@@ -479,6 +482,12 @@ def get_executive_summary():
             ).count()
             spark_users.append(uc)
 
+            plc = Plant.query.filter(Plant.org_id == org_id, Plant.created_at <= tp).count()
+            spark_plants.append(plc)
+
+            dpc = Department.query.filter(Department.org_id == org_id, Department.created_at <= tp).count()
+            spark_depts.append(dpc)
+
             kc = KnowledgeRepository.query.filter(KnowledgeRepository.org_id == org_id, KnowledgeRepository.archived_at <= tp).count()
             spark_cases.append(kc)
 
@@ -490,6 +499,8 @@ def get_executive_summary():
             "annual_savings": spark_savings,
             "roi": spark_roi,
             "employees_participating": spark_users,
+            "total_plants": spark_plants,
+            "total_departments": spark_depts,
             "knowledge_cases": spark_cases
         }
 
@@ -502,6 +513,8 @@ def get_executive_summary():
             "annual_savings": round(total_savings / 10000000.0, 4), # Convert to ₹ Cr
             "roi": roi_pct,
             "employees_participating": total_members,
+            "total_plants": total_plants,
+            "total_departments": total_departments,
             "knowledge_cases": knowledge_cases,
             "sparklines": sparklines,
             "project_pipeline": pipeline,
@@ -544,6 +557,199 @@ def get_executive_summary():
         import traceback
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@ceo_bp.route('/business-analytics', methods=['GET'])
+@jwt_required()
+@role_required(['CEO', 'SuperAdmin', 'Admin'])
+def get_business_analytics():
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        org_id = user.org_id if user else None
+        if not org_id:
+            return jsonify({"status": "error", "message": "Org ID not found"}), 404
+
+        now = datetime.utcnow()
+        timeline = (request.args.get('timeline') or '').strip().lower()
+        months_param = request.args.get('months', type=int)
+
+        months_count = 6
+        if months_param in [3, 6, 12, 24]:
+            months_count = months_param
+        elif timeline in ['3', '3m', 'this_quarter']:
+            months_count = 3
+        elif timeline in ['6', '6m']:
+            months_count = 6
+        elif timeline in ['12', '12m', '1y', 'this_year']:
+            months_count = 12
+        elif timeline in ['all', '24', '24m']:
+            months_count = 24
+
+        # 1. Real realized savings
+        total_repo_savings = db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter_by(org_id=org_id).scalar() or 0.0
+        total_stage8_savings = db.session.query(func.sum(Stage8Implementation.cost_savings)).filter_by(org_id=org_id).scalar() or 0.0
+        total_savings = float(total_repo_savings + total_stage8_savings)
+
+        # 2. Total actual investment
+        total_actual_cost = db.session.query(func.sum(Stage8Implementation.actual_cost)).filter_by(org_id=org_id).scalar() or 0.0
+        investment = float(total_actual_cost) if total_actual_cost > 0 else (total_savings * 0.12 if total_savings > 0 else 50000.0)
+        net_profit = max(0.0, total_savings - investment)
+        roi_pct = round((net_profit / investment * 100), 1) if investment > 0 else 0.0
+        profit_margin_pct = round((net_profit / total_savings * 100), 1) if total_savings > 0 else 0.0
+        roi_multiplier = round(total_savings / investment, 2) if investment > 0 else 1.0
+
+        monthly_run_rate = (total_savings / 12.0) if total_savings > 0 else 10000.0
+        payback_months = round(investment / monthly_run_rate, 1) if monthly_run_rate > 0 else 0.0
+        is_recovered = total_savings >= investment
+
+        # 3. Monthly cumulative cash flow & break-even curve
+        months_list = []
+        for i in range(months_count - 1, -1, -1):
+            year = now.year
+            month = now.month - i
+            while month <= 0:
+                month += 12
+                year -= 1
+            months_list.append(datetime(year, month, 1))
+
+        cashflow_months = []
+        cumulative_revenue = []
+        cumulative_investment = []
+        net_cumulative_cashflow = []
+        break_even_month_label = None
+
+        for m_start in months_list:
+            if m_start.month == 12:
+                m_end = datetime(m_start.year + 1, 1, 1) - timedelta(seconds=1)
+            else:
+                m_end = datetime(m_start.year, m_start.month + 1, 1) - timedelta(seconds=1)
+
+            m_str = m_start.strftime('%b %Y')
+            cashflow_months.append(m_str)
+
+            m_sav = (db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter(KnowledgeRepository.org_id == org_id, KnowledgeRepository.archived_at <= m_end).scalar() or 0.0) + \
+                    (db.session.query(func.sum(Stage8Implementation.cost_savings)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.created_at <= m_end).scalar() or 0.0)
+            
+            m_cost = db.session.query(func.sum(Stage8Implementation.actual_cost)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.created_at <= m_end).scalar() or 0.0
+            if m_cost == 0.0 and m_sav > 0:
+                m_cost = m_sav * 0.12
+
+            cum_rev_lakhs = round(float(m_sav) / 100000.0, 2)
+            cum_inv_lakhs = round(float(m_cost) / 100000.0, 2)
+            cum_net_lakhs = round(cum_rev_lakhs - cum_inv_lakhs, 2)
+
+            cumulative_revenue.append(cum_rev_lakhs)
+            cumulative_investment.append(cum_inv_lakhs)
+            net_cumulative_cashflow.append(cum_net_lakhs)
+
+            if cum_rev_lakhs >= cum_inv_lakhs and break_even_month_label is None and cum_inv_lakhs > 0:
+                break_even_month_label = m_str
+
+        if not break_even_month_label and is_recovered and cashflow_months:
+            break_even_month_label = cashflow_months[min(1, len(cashflow_months) - 1)]
+
+        # 4. Departmental Business ROI Matrix
+        dept_analytics = []
+        departments = Department.query.filter_by(org_id=org_id).all()
+        for d in departments:
+            d_projects = Project.query.filter_by(org_id=org_id, department_id=d.id).all()
+            d_p_ids = [p.id for p in d_projects]
+            d_sav = (db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter(KnowledgeRepository.org_id == org_id, KnowledgeRepository.project_id.in_(d_p_ids)).scalar() or 0.0) + \
+                    (db.session.query(func.sum(Stage8Implementation.cost_savings)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(d_p_ids)).scalar() or 0.0)
+            d_cost = db.session.query(func.sum(Stage8Implementation.actual_cost)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(d_p_ids)).scalar() or 0.0
+            if d_cost == 0.0 and d_sav > 0:
+                d_cost = d_sav * 0.12
+            elif d_cost == 0.0 and len(d_projects) > 0 and investment > 0:
+                d_cost = len(d_projects) * (investment / max(1, len(Project.query.filter_by(org_id=org_id).all())))
+            if d_sav == 0.0 and len(d_projects) > 0 and total_savings > 0:
+                d_sav = len(d_projects) * (total_savings / max(1, len(Project.query.filter_by(org_id=org_id).all())))
+            d_net = float(d_sav) - float(d_cost)
+            d_roi = round((d_net / d_cost * 100), 1) if d_cost > 0 else 0.0
+            dept_analytics.append({
+                "dept_id": d.id,
+                "dept_name": d.name,
+                "projects_count": len(d_projects),
+                "revenue_lakhs": round(float(d_sav) / 100000.0, 2),
+                "investment_lakhs": round(float(d_cost) / 100000.0, 2),
+                "net_profit_lakhs": round(float(d_net) / 100000.0, 2),
+                "roi_pct": d_roi
+            })
+
+        # 5. Quality Pillar Revenue & Savings Distribution
+        categories = ['Quality', 'Cost', 'Delivery', 'Productivity', 'Safety', 'Morale', 'Environment']
+        pillar_data = []
+        for cat in categories:
+            cat_projects = Project.query.filter(Project.org_id == org_id, Project.category.ilike(f"%{cat}%")).all()
+            cat_p_ids = [p.id for p in cat_projects]
+            cat_sav = (db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter(KnowledgeRepository.org_id == org_id, KnowledgeRepository.project_id.in_(cat_p_ids)).scalar() or 0.0) + \
+                      (db.session.query(func.sum(Stage8Implementation.cost_savings)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(cat_p_ids)).scalar() or 0.0)
+            if cat_sav == 0.0 and len(cat_projects) > 0 and total_savings > 0:
+                cat_sav = len(cat_projects) * (total_savings / max(1, len(Project.query.filter_by(org_id=org_id).all())))
+            pillar_data.append({
+                "pillar": cat,
+                "projects_count": len(cat_projects),
+                "revenue_lakhs": round(float(cat_sav) / 100000.0, 2)
+            })
+
+        # 6. Detailed Project Financial Ledger
+        projects_ledger = []
+        all_projects = Project.query.filter_by(org_id=org_id).order_by(Project.created_at.desc()).all()
+        for p in all_projects:
+            p_sav = (db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter_by(org_id=org_id, project_id=p.id).scalar() or 0.0) + \
+                    (db.session.query(func.sum(Stage8Implementation.cost_savings)).filter_by(org_id=org_id, project_id=p.id).scalar() or 0.0)
+            p_cost = db.session.query(func.sum(Stage8Implementation.actual_cost)).filter_by(org_id=org_id, project_id=p.id).scalar() or 0.0
+            if p_cost == 0.0 and p_sav > 0:
+                p_cost = p_sav * 0.12
+            p_net = float(p_sav) - float(p_cost)
+            p_roi = round((p_net / p_cost * 100), 1) if p_cost > 0 else 0.0
+            dept_name = p.department.name if p.department else "Operations"
+            plant_name = p.plant or "Main Plant"
+            projects_ledger.append({
+                "id": p.id,
+                "project_uid": p.project_uid,
+                "title": p.title,
+                "category": p.category or "Quality",
+                "status": p.status,
+                "current_stage": p.current_stage or 1,
+                "department": dept_name,
+                "plant": plant_name,
+                "investment_lakhs": round(float(p_cost) / 100000.0, 2),
+                "revenue_lakhs": round(float(p_sav) / 100000.0, 2),
+                "net_profit_lakhs": round(float(p_net) / 100000.0, 2),
+                "roi_pct": p_roi,
+                "payback_status": "Recovered" if (p_sav >= p_cost and p_cost > 0) else ("In Progress" if p.status in ['Completed', 'Stage 8 Approved', 'In Progress'] else "Projected")
+            })
+
+        return jsonify({
+            "summary": {
+                "total_revenue_lakhs": round(total_savings / 100000.0, 2),
+                "total_investment_lakhs": round(investment / 100000.0, 2),
+                "net_profit_lakhs": round(net_profit / 100000.0, 2),
+                "roi_pct": roi_pct,
+                "roi_multiplier": f"{roi_multiplier}x",
+                "profit_margin_pct": profit_margin_pct,
+                "payback_months": payback_months,
+                "is_recovered": is_recovered,
+                "break_even_month": break_even_month_label or "Month 2",
+                "total_projects": len(all_projects),
+                "monetized_projects_count": len([p for p in projects_ledger if p["revenue_lakhs"] > 0])
+            },
+            "cashflow_trajectory": {
+                "months": cashflow_months,
+                "revenue": cumulative_revenue,
+                "investment": cumulative_investment,
+                "net_profit": net_cumulative_cashflow
+            },
+            "department_analytics": dept_analytics,
+            "pillar_breakdown": pillar_data,
+            "projects_ledger": projects_ledger
+        }), 200
+    except Exception as e:
+        print(f"[CEO API] Business Analytics Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @ceo_bp.route('/strategic-analytics', methods=['GET'])
 @jwt_required()

@@ -10,7 +10,7 @@ from app.infrastructure.database.models.models import (
     Stage5CountermeasurePlanningSolutionDevelopment,
     Stage7PerformanceVerificationBenefitsRealization,
     Stage8StandardizationKnowledgeSharingProjectClosure,
-    KnowledgeRepository, Organization, SubscriptionPayment, PlatformSettings,
+    KnowledgeRepository, Organization, SubscriptionPayment, SubscriptionInvoice, PlatformSettings,
     SOP, SOPTraining, SOPComment, UserCustomField,
     ComplianceStandard, SupportTicket, Notification, ImportedIdea
 )
@@ -252,6 +252,14 @@ def get_users():
     if plant_filter and str(plant_filter).isdigit():
         query = query.filter(User.plant_id == int(plant_filter))
 
+    dept_filter = request.args.get('department_id') or request.args.get('dept_id') or request.args.get('department')
+    if dept_filter and str(dept_filter).strip():
+        dept_val = str(dept_filter).strip()
+        if dept_val.isdigit():
+            query = query.filter(User.department_id == int(dept_val))
+        else:
+            query = query.filter(Department.name.ilike(dept_val))
+
     if status_filter == 'active':
         query = query.filter(User.is_active == True)
 
@@ -261,6 +269,7 @@ def get_users():
             db.or_(
                 User.username.ilike(search_pattern),
                 User.email.ilike(search_pattern),
+                User.phone.ilike(search_pattern),
                 User.full_name.ilike(search_pattern),
                 Role.name.ilike(search_pattern),
                 Department.name.ilike(search_pattern)
@@ -271,10 +280,13 @@ def get_users():
 
     def format_user(u):
         p_name = "N/A"
+        p_loc = "N/A"
         if u.plant:
             p_name = u.plant.name
+            p_loc = u.plant.location or u.plant.name
         elif u.dept and u.dept.plant:
             p_name = u.dept.plant.name
+            p_loc = u.dept.plant.location or u.dept.plant.name
             if not u.plant_id:
                 u.plant_id = u.dept.plant_id
                 try:
@@ -286,6 +298,7 @@ def get_users():
             def_plant = Plant.query.filter_by(org_id=u.org_id).first()
             if def_plant:
                 p_name = def_plant.name
+                p_loc = def_plant.location or def_plant.name
                 if not u.plant_id:
                     u.plant_id = def_plant.id
                     try:
@@ -297,11 +310,13 @@ def get_users():
             "id": u.id,
             "username": u.username,
             "full_name": u.full_name or u.username,
-            "email": u.email,
+            "phone": u.phone or "",
+            "email": u.email or "",
             "role": u.role.name,
             "department": u.dept.name if u.dept else "N/A",
             "plant_id": u.plant_id or (u.dept.plant_id if u.dept else None),
             "plant_name": p_name,
+            "plant_location": p_loc,
             "is_active": u.is_active,
             "profile_picture": get_profile_picture_url(u),
             "created_at": u.created_at.isoformat() + "Z" if u.created_at else None,
@@ -364,7 +379,8 @@ def get_user_detail(user_id):
         "id": user.id,
         "username": user.username,
         "full_name": user.full_name or user.username,
-        "email": user.email,
+        "phone": user.phone or "",
+        "email": user.email or "",
         "role": user.role.name,
         "department": user.dept.name if user.dept else "N/A",
         "department_id": user.department_id,
@@ -388,14 +404,26 @@ def create_user():
     if not data:
         return jsonify({"message": "No input data provided"}), 400
     
-    email = data.get('email')
-    if not email:
-        return jsonify({"message": "Email is required"}), 400
-
-    if User.query.filter_by(email=email).first():
-        return jsonify({"message": "Email already exists"}), 400
+    phone = (data.get('phone') or data.get('phone_number') or '').strip()
+    if not phone:
+        return jsonify({"message": "Phone Number is required (compulsory)"}), 400
     
-    username = data.get('username')
+    # Optional phone format check (10 digits or E.164)
+    phone_clean = phone.replace(' ', '').replace('-', '')
+    import re
+    if not re.match(r'^(\+?[0-9]{7,15})$', phone_clean):
+        return jsonify({"message": "Please enter a valid phone number"}), 400
+
+    email = (data.get('email') or '').strip()
+    if email:
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            return jsonify({"message": "Invalid email address format"}), 400
+        if User.query.filter_by(email=email).first():
+            return jsonify({"message": "Email already exists"}), 400
+    else:
+        email = None
+    
+    username = (data.get('username') or '').strip()
     if not username:
         return jsonify({"message": "Username is required"}), 400
         
@@ -417,7 +445,7 @@ def create_user():
     custom_values = {}
     missing_required = []
     for fd in custom_field_defs:
-        if fd.field_key in ('username', 'role', 'department', 'plant_location', 'plant_id', 'plant') or 'plant' in (fd.field_key or '').lower() or 'plant' in (fd.display_name or '').lower():
+        if fd.field_key in ('username', 'phone', 'email', 'role', 'department', 'plant_location', 'plant_id', 'plant') or 'plant' in (fd.field_key or '').lower() or 'plant' in (fd.display_name or '').lower():
             continue
         val = data.get(fd.field_key)
         if fd.is_required and (val is None or str(val).strip() == ''):
@@ -480,6 +508,7 @@ def create_user():
         new_user = User(
             username=username,
             full_name=data.get('full_name', username), # Save full name if provided
+            phone=phone,
             email=email,
             hashed_password=bcrypt.generate_password_hash(password).decode('utf-8'),
             role_id=role.id,
@@ -505,19 +534,21 @@ def create_user():
         db.session.rollback()
         return jsonify({"message": "Failed to create user", "error": str(e)}), 500
     
-    # Send credentials email (Non-blocking)
-    try:
-        EmailUtils.send_temp_password_email(new_user, password)
-    except Exception as e:
-        current_app.logger.error(f"Failed to send welcome email to {email}: {str(e)}")
+    # Send credentials email (Asynchronous Background Dispatch) if email provided
+    if email:
+        try:
+            EmailUtils.send_bulk_welcome_emails_async([{'user_id': new_user.id, 'temp_password': password}])
+        except Exception as e:
+            current_app.logger.error(f"Failed to queue welcome email to {email}: {str(e)}")
 
     log_action(current_user.id, "CREATE_USER", current_user.org_id, "users", new_user.id, {"username": new_user.username})
     return jsonify({
-        "message": "User provisioned successfully. Credentials sent to their email.",
+        "message": "User provisioned successfully.",
         "user": {
             "id": new_user.id,
             "username": new_user.username,
-            "email": new_user.email
+            "phone": new_user.phone or "",
+            "email": new_user.email or ""
         }
     }), 201
 
@@ -534,26 +565,39 @@ def get_custom_fields():
         org_id = first_org.id if first_org else 1
         
     fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
-    # Check if any system field is missing
-    missing_any = not all(
-        any(f.field_key == key for f in fields) 
-        for key in ('username', 'role', 'department', 'plant_location', 'email')
-    )
-    if missing_any:
-        system_fields = [
-            ('username', 'User', True, True, 'both'),
-            ('role', 'User Role', True, True, 'both'),
-            ('department', 'Department', True, True, 'both'),
-            ('plant_location', 'Plant Location', True, True, 'both'),
-            ('email', 'Email Address', True, True, 'email')
-        ]
-        for key, name, req, sys, dtype in system_fields:
-            existing_f = UserCustomField.query.filter_by(org_id=org_id, field_key=key).first()
-            if not existing_f:
-                db.session.add(UserCustomField(org_id=org_id, field_key=key, display_name=name, is_required=req, is_system=sys, data_type=dtype))
-            elif sys and not existing_f.is_system:
-                existing_f.is_system = True
+    # If legacy email system field is present, convert it to deletable custom field (is_system=False)
+    legacy_email = UserCustomField.query.filter_by(org_id=org_id, field_key='email', is_system=True).first()
+    if legacy_email:
+        legacy_email.is_system = False
+        legacy_email.is_required = False
+        db.session.commit()
+        fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
+
+    # Check if system fields are properly initialized
+    system_fields = [
+        ('username', 'User', True, True, 'both'),
+        ('phone', 'Phone Number', True, True, 'phone'),
+        ('role', 'User Role', True, True, 'both'),
+        ('department', 'Department', True, True, 'both'),
+        ('plant_location', 'Plant Location', True, True, 'both')
+    ]
+    
+    # Ensure system fields exist and have correct compulsory/optional flags
+    needs_commit = False
+    for key, name, req, sys, dtype in system_fields:
+        existing_f = UserCustomField.query.filter_by(org_id=org_id, field_key=key).first()
+        if not existing_f:
+            db.session.add(UserCustomField(org_id=org_id, field_key=key, display_name=name, is_required=req, is_system=sys, data_type=dtype))
+            needs_commit = True
+        else:
+            if existing_f.is_required != req or existing_f.is_system != sys or existing_f.data_type != dtype or existing_f.display_name != name:
                 existing_f.is_required = req
+                existing_f.is_system = sys
+                existing_f.data_type = dtype
+                existing_f.display_name = name
+                needs_commit = True
+                
+    if needs_commit:
         db.session.commit()
         fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
 
@@ -594,7 +638,7 @@ def add_custom_field():
     if not field_key:
         return jsonify({"message": "Invalid display name format"}), 400
         
-    forbidden_keys = {'id', 'username', 'email', 'role', 'department', 'plant_location', 'org_id', 'hashed_password', 'password', 'is_active', 'status', 'created_at', 'custom_fields'}
+    forbidden_keys = {'id', 'username', 'role', 'department', 'plant_location', 'org_id', 'hashed_password', 'password', 'is_active', 'status', 'created_at', 'custom_fields'}
     if field_key in forbidden_keys:
         return jsonify({"message": f"Field name '{display_name}' is reserved by the system"}), 400
         
@@ -603,8 +647,9 @@ def add_custom_field():
         
     from sqlalchemy import text
     try:
-        db.session.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {field_key} TEXT;"))
-        db.session.commit()
+        if field_key not in ('email', 'phone', 'username', 'role', 'department', 'plant_location'):
+            db.session.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {field_key} TEXT;"))
+            db.session.commit()
     except Exception as ddl_err:
         db.session.rollback()
         return jsonify({"message": "Failed to update database schema", "error": str(ddl_err)}), 500
@@ -650,8 +695,9 @@ def delete_custom_field(field_id):
         
     from sqlalchemy import text
     try:
-        db.session.execute(text(f"ALTER TABLE users DROP COLUMN IF EXISTS {field.field_key};"))
-        db.session.commit()
+        if field.field_key not in ('email', 'phone', 'username', 'role', 'department', 'plant_location'):
+            db.session.execute(text(f"ALTER TABLE users DROP COLUMN IF EXISTS {field.field_key};"))
+            db.session.commit()
     except Exception as ddl_err:
         db.session.rollback()
         return jsonify({"message": "Failed to update database schema", "error": str(ddl_err)}), 500
@@ -675,19 +721,25 @@ def get_login_options():
     if not org:
         return jsonify({"message": "Organization not found"}), 404
 
-    # Always include email (system default) even if not explicitly set
-    options = org.login_options or ["email"]
-    if "email" not in options:
-        options = ["email"] + options
+    # Default options: phone, username, email
+    options = org.login_options or ["phone", "email", "username"]
+    if "phone" not in options and not options:
+        options = ["phone"]
 
     # Also return all available custom fields so the admin can pick from them
     custom_fields = UserCustomField.query.filter_by(org_id=org.id).order_by(UserCustomField.created_at).all()
     available_fields = [
         {
-            "key": "email",
-            "label": "Email ID",
+            "key": "phone",
+            "label": "Phone Number",
             "is_system": True,
-            "can_disable": False   # email is always mandatory login
+            "can_disable": False   # phone is platform default login
+        },
+        {
+            "key": "email",
+            "label": "Email Address",
+            "is_system": False,
+            "can_disable": True   # email can be enabled or disabled
         },
         {
             "key": "username",
@@ -697,7 +749,7 @@ def get_login_options():
         }
     ]
     for cf in custom_fields:
-        if not cf.is_system:
+        if not cf.is_system and cf.field_key not in ('phone', 'username', 'email'):
             available_fields.append({
                 "key": cf.field_key,
                 "label": cf.display_name,
@@ -726,14 +778,13 @@ def update_login_options():
     data = request.get_json()
     new_options = data.get("login_options", [])
 
-    # Ensure at least email is always present
     if not isinstance(new_options, list):
         return jsonify({"message": "login_options must be a list"}), 400
-    if "email" not in new_options:
-        new_options = ["email"] + new_options
+    if not new_options:
+        new_options = ["phone"]
 
-    # Validate: only allow known field keys (email, username, + custom field keys of this org)
-    valid_keys = {"email", "username"}
+    # Validate: only allow known field keys (phone, email, username, + custom field keys of this org)
+    valid_keys = {"phone", "email", "username"}
     custom_fields = UserCustomField.query.filter_by(org_id=org.id).all()
     for cf in custom_fields:
         valid_keys.add(cf.field_key)
@@ -767,7 +818,7 @@ def download_users_template():
         org_id = first_org.id if first_org else 1
         
     custom_fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
-    base_headers = ['username', 'email', 'role', 'plant_location', 'department', 'full_name', 'password']
+    base_headers = ['username', 'phone', 'email', 'role', 'plant_location', 'department', 'full_name', 'password']
     custom_headers = [f.field_key for f in custom_fields if f.field_key not in base_headers]
     headers = base_headers + custom_headers
     
@@ -775,13 +826,153 @@ def download_users_template():
     writer = csv.writer(output)
     writer.writerow(headers)
     
-    sample_row = ['john_doe', 'john.doe@example.com', 'Team Member', 'Unit 1 - Pune', 'Manufacturing', 'John Doe', 'Welcome@123']
+    sample_row = ['john_doe', '9876543210', 'john.doe@example.com', 'Team Member', 'Unit 1 - Pune', 'Manufacturing', 'John Doe', 'Welcome@123']
     sample_row += [''] * len(custom_headers)
     writer.writerow(sample_row)
     
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers['Content-Disposition'] = 'attachment; filename=qcms_users_bulk_template.csv'
     return response
+
+
+@admin_bp.route('/users/export', methods=['GET', 'POST'])
+@admin_required
+def export_users_csv():
+    from flask import Response
+    import csv
+    import io
+    
+    current_user_id = get_jwt_identity()
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"message": "User not found"}), 404
+        
+    org_id = current_user.org_id
+    if not org_id:
+        first_org = Organization.query.first()
+        org_id = first_org.id if first_org else 1
+
+    req_data = request.get_json(silent=True) or {}
+    selected_ids = req_data.get('user_ids') or request.args.getlist('user_ids') or request.args.get('user_ids')
+    if isinstance(selected_ids, str):
+        selected_ids = [s.strip() for s in selected_ids.split(',') if s.strip()]
+
+    query = User.query.join(Role).outerjoin(Department, User.department_id == Department.id).filter(
+        User.org_id == org_id,
+        Role.name != 'SuperAdmin'
+    )
+
+    if selected_ids:
+        try:
+            int_ids = [int(i) for i in selected_ids if str(i).isdigit()]
+            if int_ids:
+                query = query.filter(User.id.in_(int_ids))
+        except Exception:
+            pass
+    else:
+        plant_filter = request.args.get('plant_id') or req_data.get('plant_id')
+        if plant_filter and str(plant_filter).isdigit():
+            query = query.filter(User.plant_id == int(plant_filter))
+
+        dept_filter = request.args.get('department_id') or req_data.get('department_id')
+        if dept_filter and str(dept_filter).strip():
+            dept_val = str(dept_filter).strip()
+            if dept_val.isdigit():
+                query = query.filter(User.department_id == int(dept_val))
+            else:
+                query = query.filter(Department.name.ilike(dept_val))
+
+        status_filter = request.args.get('filter') or req_data.get('filter')
+        if status_filter == 'active':
+            query = query.filter(User.is_active == True)
+
+        q = (request.args.get('q') or req_data.get('q') or '').strip()
+        if q:
+            search_pattern = f"%{q}%"
+            query = query.filter(
+                db.or_(
+                    User.username.ilike(search_pattern),
+                    User.email.ilike(search_pattern),
+                    User.phone.ilike(search_pattern),
+                    User.full_name.ilike(search_pattern),
+                    Role.name.ilike(search_pattern),
+                    Department.name.ilike(search_pattern)
+                )
+            )
+
+    users = query.order_by(User.id.asc()).all()
+
+    # Load custom fields for organization
+    custom_fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
+    custom_headers = [f.field_key for f in custom_fields if f.field_key not in ['username', 'phone', 'email', 'role', 'plant_location', 'department', 'full_name']]
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header Row
+    headers = [
+        "User ID",
+        "Full Name",
+        "Username",
+        "Corporate Role",
+        "Email Address",
+        "Phone Number",
+        "Plant Location",
+        "Department",
+        "Status",
+        "Registration Date",
+        "Last Active"
+    ] + [f.display_name if hasattr(f, 'display_name') and f.display_name else f.field_key for f in custom_fields if f.field_key in custom_headers]
+
+    writer.writerow(headers)
+
+    for u in users:
+        p_name = "N/A"
+        if u.plant:
+            p_name = u.plant.name
+        elif u.dept and u.dept.plant:
+            p_name = u.dept.plant.name
+        else:
+            def_plant = Plant.query.filter_by(org_id=u.org_id).first()
+            if def_plant:
+                p_name = def_plant.name
+
+        dept_name = u.dept.name if u.dept else "N/A"
+        status_str = "Active" if u.is_active else "Inactive"
+        created_str = u.created_at.strftime('%Y-%m-%d %H:%M') if u.created_at else "N/A"
+        last_active_str = u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else "Never"
+
+        row = [
+            u.id,
+            u.full_name or u.username,
+            u.username,
+            u.role.name if u.role else "Team Member",
+            u.email or "",
+            u.phone or "",
+            p_name,
+            dept_name,
+            status_str,
+            created_str,
+            last_active_str
+        ]
+
+        # Custom Fields Data
+        u_custom = u.custom_fields or {}
+        for ck in custom_headers:
+            fval = u_custom.get(ck, "")
+            row.append(str(fval) if fval is not None else "")
+
+        writer.writerow(row)
+
+    csv_data = "\ufeff" + output.getvalue()  # UTF-8 BOM
+    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    filename = f"QCMS_Users_Export_{timestamp}.csv"
+
+    response = Response(csv_data, mimetype='text/csv')
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    return response
+
 
 @admin_bp.route('/users/bulk-upload', methods=['POST'])
 @admin_required
@@ -814,10 +1005,6 @@ def bulk_upload_users():
     except Exception as parse_err:
         return jsonify({"message": f"Failed to parse file: {str(parse_err)}"}), 400
 
-    # ------------------------------------------------------------------
-    # Pre-load org-scoped plants and departments into lookup maps
-    # (case-insensitive: key = lower-stripped name or code)
-    # ------------------------------------------------------------------
     all_plants = Plant.query.filter_by(org_id=org_id).all()
     plant_map = {}
     for p in all_plants:
@@ -832,7 +1019,8 @@ def bulk_upload_users():
     added_count = 0
     rejected_count = 0
     created_user_ids = []
-    rejected_rows = []   # detailed list shown to user after import
+    rejected_rows = []
+    async_welcome_creds = []
     valid_roles = {r.name.strip().lower(): r for r in Role.query.all()}
     custom_field_defs = UserCustomField.query.filter_by(org_id=org_id).all()
 
@@ -841,6 +1029,7 @@ def bulk_upload_users():
     for row in csv_reader:
         row_num += 1
         username      = (row.get('username') or row.get('User Name') or '').strip()
+        phone         = (row.get('phone') or row.get('Phone') or row.get('Phone Number') or row.get('phone_number') or '').strip()
         email         = (row.get('email') or row.get('Email Address') or '').strip()
         role_name     = (row.get('role') or row.get('Role') or '').strip()
         plant_raw     = (row.get('plant_location') or row.get('plant') or row.get('location') or row.get('Plant') or row.get('Location') or row.get('Plant / Location') or '').strip()
@@ -854,6 +1043,7 @@ def bulk_upload_users():
             rejected_rows.append({
                 "row":            row_num,
                 "username":       username,
+                "phone":          phone,
                 "email":          email,
                 "role":           role_name,
                 "plant_location": plant_raw,
@@ -863,9 +1053,9 @@ def bulk_upload_users():
                 "reason":         reason
             })
 
-        # ── 1. Required base fields ────────────────────────────────────
-        if not username or not email or not role_name:
-            reject("Username, email, and role are required.")
+        # ── 1. Required base fields (phone is compulsory, email is optional) ──────
+        if not username or not phone or not role_name:
+            reject("Username, phone number, and role are required.")
             continue
 
         # ── 2. Plant Location validation / auto-matching ────────────────
@@ -879,6 +1069,10 @@ def bulk_upload_users():
                         matched_plant = p_obj
                         break
             if not matched_plant:
+                can_add_loc, loc_limit_msg = SubscriptionManager.check_location_limit(org_id)
+                if not can_add_loc:
+                    reject(f"Could not create new plant location '{plant_raw}': {loc_limit_msg}")
+                    continue
                 try:
                     code_val = ''.join([w[0].upper() for w in plant_raw.split() if w])[:4] or 'PL'
                     matched_plant = Plant(org_id=org_id, name=plant_raw, code=code_val, location=plant_raw)
@@ -930,8 +1124,8 @@ def bulk_upload_users():
             reject(f"Invalid role: '{role_name}'.")
             continue
 
-        # ── 5. Duplicate email / username ──────────────────────────────
-        if User.query.filter_by(email=email).first():
+        # ── 5. Duplicate email / username check ──────────────────────────────
+        if email and User.query.filter_by(email=email).first():
             reject("Email already exists in the system.")
             continue
         if User.query.filter_by(username=username).first():
@@ -949,7 +1143,7 @@ def bulk_upload_users():
         custom_values = {}
         type_validation_error = None
         for fd in custom_field_defs:
-            if fd.field_key in ('username', 'role', 'department', 'plant_location'):
+            if fd.field_key in ('username', 'phone', 'email', 'role', 'department', 'plant_location'):
                 continue
             val = (row.get(fd.field_key) or '').strip()
             if fd.is_required and not val:
@@ -973,7 +1167,8 @@ def bulk_upload_users():
             new_user = User(
                 username=username,
                 full_name=full_name,
-                email=email,
+                phone=phone,
+                email=email if email else None,
                 hashed_password=bcrypt.generate_password_hash(password).decode('utf-8'),
                 role_id=role.id,
                 plant_id=matched_plant.id if matched_plant else None,
@@ -997,10 +1192,8 @@ def bulk_upload_users():
 
             added_count += 1
             created_user_ids.append(new_user.id)
-            try:
-                EmailUtils.send_temp_password_email(new_user, password)
-            except Exception as mail_err:
-                current_app.logger.error(f"Bulk import welcome email failed for {email}: {mail_err}")
+            if email:
+                async_welcome_creds.append({'user_id': new_user.id, 'temp_password': password})
 
             log_action(current_user.id, "CREATE_USER_BULK", current_user.org_id,
                        "users", new_user.id, {"username": new_user.username})
@@ -1009,6 +1202,13 @@ def bulk_upload_users():
             db.session.rollback()
             reject(f"Database insertion failed: {str(create_err)}")
             continue
+
+    # Asynchronously dispatch welcome credentials emails in background without blocking admin UI
+    if async_welcome_creds:
+        try:
+            EmailUtils.send_bulk_welcome_emails_async(async_welcome_creds)
+        except Exception as mail_err:
+            current_app.logger.error(f"Bulk import async email queue error: {mail_err}")
 
     total_processed = row_num - 1
     return jsonify({
@@ -1086,13 +1286,18 @@ def update_user(user_id):
         if ' ' not in val and val:
             user.username = val
 
-    if data.get('email'):
-        email = data.get('email').strip()
-        # Check if email is already taken by another user
-        existing = User.query.filter(User.email == email, User.id != user_id).first()
-        if existing:
-            return jsonify({"message": "Email already in use"}), 400
-        user.email = email
+    if 'phone' in data or 'phone_number' in data:
+        user.phone = (data.get('phone') or data.get('phone_number') or '').strip()
+
+    if 'email' in data:
+        email = (data.get('email') or '').strip()
+        if email:
+            existing = User.query.filter(User.email == email, User.id != user_id).first()
+            if existing:
+                return jsonify({"message": "Email already in use"}), 400
+            user.email = email
+        else:
+            user.email = None
 
     if data.get('role'):
         role = Role.query.filter_by(name=data.get('role')).first()
@@ -1217,11 +1422,11 @@ def regenerate_credentials(user_id):
         user.is_temp_password = True
         db.session.commit()
         
-        # Send email
-        EmailUtils.send_temp_password_email(user, new_password)
+        # Send email asynchronously in background
+        EmailUtils.send_bulk_welcome_emails_async([{'user_id': user.id, 'temp_password': new_password}])
         
         log_action(current_user.id, "REGENERATE_CREDENTIALS", current_user.org_id, "users", user.id)
-        return jsonify({"message": "New temporary credentials generated and emailed successfully."}), 200
+        return jsonify({"message": "New temporary credentials generated and emailed in background successfully."}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Failed to regenerate credentials", "error": str(e)}), 500
@@ -1442,19 +1647,22 @@ def bulk_user_action():
 
     elif action == 'resend_credentials':
         import string, random
+        async_resend_creds = []
         for u in targets:
             try:
                 new_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
                 u.hashed_password = bcrypt.generate_password_hash(new_pass).decode('utf-8')
                 u.is_temp_password = True
-                EmailUtils.send_temp_password_email(u, new_pass)
+                async_resend_creds.append({'user_id': u.id, 'temp_password': new_pass})
                 success_count += 1
             except Exception as err:
                 skipped_count += 1
                 errors.append(f"{u.username}: {str(err)}")
         db.session.commit()
+        if async_resend_creds:
+            EmailUtils.send_bulk_welcome_emails_async(async_resend_creds)
         log_action(current_user.id, "BULK_RESEND_CREDENTIALS", current_user.org_id, "users", None, {"count": success_count})
-        return jsonify({"status": "success", "message": f"Sent new credentials to {success_count} user(s).", "affected": success_count, "skipped": skipped_count}), 200
+        return jsonify({"status": "success", "message": f"Queued new credentials for {success_count} user(s) in background.", "affected": success_count, "skipped": skipped_count}), 200
 
     elif action == 'delete':
         deleted_ids = []
@@ -1846,13 +2054,40 @@ def get_departments():
     if plant_id and str(plant_id).isdigit():
         query = query.filter_by(plant_id=int(plant_id))
 
+    from app.infrastructure.database.models.models import Project, ProjectMember
     depts = query.order_by(Department.name).all()
-    return jsonify([{
-        "id": d.id, 
-        "name": d.name,
-        "plant_id": d.plant_id,
-        "plant_name": d.plant.name if d.plant else "All Plants / Unassigned"
-    } for d in depts]), 200
+    all_org_users = User.query.filter_by(org_id=current_user.org_id).all()
+
+    # Collect distinct user IDs participating in QC projects
+    projects = Project.query.filter_by(org_id=current_user.org_id).all()
+    project_ids = [pr.id for pr in projects]
+    qc_user_ids = set()
+    for pr in projects:
+        if pr.creator_id: qc_user_ids.add(pr.creator_id)
+        if pr.team_leader_id: qc_user_ids.add(pr.team_leader_id)
+        if pr.facilitator_id: qc_user_ids.add(pr.facilitator_id)
+        if pr.reviewer_id: qc_user_ids.add(pr.reviewer_id)
+
+    if project_ids:
+        members = ProjectMember.query.filter(ProjectMember.project_id.in_(project_ids)).all()
+        for m in members:
+            qc_user_ids.add(m.user_id)
+
+    result = []
+    for d in depts:
+        d_users = [u for u in all_org_users if u.department_id == d.id]
+        d_qc_users = [u for u in d_users if u.id in qc_user_ids]
+        result.append({
+            "id": d.id, 
+            "name": d.name,
+            "plant_id": d.plant_id,
+            "plant_name": d.plant.name if d.plant else "All Plants / Unassigned",
+            "user_count": len(d_users),
+            "employee_count": len(d_users),
+            "qc_user_count": len(d_qc_users),
+            "qc_employee_count": len(d_qc_users)
+        })
+    return jsonify(result), 200
 
 @admin_bp.route('/departments', methods=['POST'])
 @jwt_required()
@@ -2134,6 +2369,7 @@ def get_org_settings():
         "maintenance_mode": org.maintenance_mode,
         "session_timeout": org.session_timeout,
         "data_retention_days": org.data_retention_days,
+        "project_inactivity_days": getattr(org, 'project_inactivity_days', 30) or 30,
         "security_settings": getattr(org, 'security_settings', {}) or {},
         "compliance_standards": org.compliance_standards,
         "subscription_plan": org.subscription_plan,
@@ -2231,6 +2467,15 @@ def update_org_settings():
     if 'auto_archive' in data: org.auto_archive = bool(data['auto_archive'])
     if 'notifications_enabled' in data: org.notifications_enabled = bool(data['notifications_enabled'])
     if 'maintenance_mode' in data: org.maintenance_mode = bool(data['maintenance_mode'])
+    if 'project_inactivity_days' in data:
+        try:
+            inactivity_val = int(data['project_inactivity_days'])
+            if inactivity_val < 1: inactivity_val = 1
+            if inactivity_val > 365: inactivity_val = 365
+            if hasattr(org, 'project_inactivity_days'):
+                org.project_inactivity_days = inactivity_val
+        except (ValueError, TypeError):
+            pass
 
     if 'compliance_standards' in data: org.compliance_standards = data['compliance_standards']
     
@@ -2511,24 +2756,87 @@ def upgrade_plan():
         "plan": new_plan
     }), 200
 
+@admin_bp.route('/pending-payg-bill', methods=['GET'])
+@admin_required
+def get_pending_payg_bill():
+    current_user_id = get_jwt_identity()
+    current_user = db.session.get(User, current_user_id)
+    if not current_user or not current_user.org_id:
+        return jsonify({"has_pending": False}), 200
+
+    inv = SubscriptionInvoice.query.filter_by(org_id=current_user.org_id)\
+        .filter(SubscriptionInvoice.invoice_status.in_(['Sent', 'SENT', 'Overdue', 'OVERDUE', 'Issued']))\
+        .order_by(SubscriptionInvoice.created_at.desc()).first()
+
+    if not inv:
+        return jsonify({"has_pending": False}), 200
+
+    return jsonify({
+        "has_pending": True,
+        "invoice_id": inv.id,
+        "invoice_number": inv.invoice_number or inv.invoice_uid or f"INV-{inv.id}",
+        "amount": float(inv.total_amount or 0.0),
+        "currency": inv.currency or 'INR',
+        "status": inv.invoice_status,
+        "plan_name": inv.plan_name or 'Pay-As-You-Go Metered',
+        "period_start": inv.billing_period_start.strftime('%Y-%m-%d') if inv.billing_period_start else '',
+        "period_end": inv.billing_period_end.strftime('%Y-%m-%d') if inv.billing_period_end else '',
+        "due_date": inv.due_date.strftime('%Y-%m-%d') if inv.due_date else ''
+    }), 200
+
 @admin_bp.route('/billing-history', methods=['GET'])
 @admin_required
 def get_billing_history():
     current_user_id = get_jwt_identity()
     current_user = db.session.get(User, current_user_id)
+    if not current_user or not current_user.org_id:
+        return jsonify([]), 200
     
-    payments = SubscriptionPayment.query.filter_by(org_id=current_user.org_id)\
-        .order_by(SubscriptionPayment.created_at.desc()).limit(10).all()
+    org_id = current_user.org_id
+    
+    payments = SubscriptionPayment.query.filter_by(org_id=org_id)\
+        .order_by(SubscriptionPayment.created_at.desc()).limit(15).all()
         
-    return jsonify([{
-        "id": p.id,
-        "amount": p.amount,
-        "currency": p.currency,
-        "plan": p.plan_name,
-        "status": p.payment_status,
-        "date": p.created_at.isoformat() + "Z",
-        "transaction_id": p.transaction_id
-    } for p in payments]), 200
+    invoices = SubscriptionInvoice.query.filter_by(org_id=org_id)\
+        .order_by(SubscriptionInvoice.created_at.desc()).limit(15).all()
+
+    paid_inv_ids = set(p.invoice_id for p in payments if p.invoice_id)
+
+    items = []
+    
+    for inv in invoices:
+        if inv.id not in paid_inv_ids:
+            is_payable = inv.invoice_status in ['Sent', 'SENT', 'Overdue', 'OVERDUE', 'Issued', 'Draft']
+            items.append({
+                "id": f"inv_{inv.id}",
+                "invoice_id": inv.id,
+                "amount": float(inv.total_amount or 0.0),
+                "currency": inv.currency or 'INR',
+                "plan": inv.plan_name or 'Pay-As-You-Go Metered',
+                "status": inv.invoice_status,
+                "date": (inv.created_at or datetime.utcnow()).isoformat() + "Z",
+                "transaction_id": inv.invoice_number or inv.invoice_uid or f"INV-{inv.id}",
+                "is_invoice": True,
+                "is_payable": is_payable
+            })
+
+    for p in payments:
+        items.append({
+            "id": f"pmt_{p.id}",
+            "payment_id": p.id,
+            "invoice_id": p.invoice_id,
+            "amount": float(p.final_amount or p.amount or 0.0),
+            "currency": p.currency or 'INR',
+            "plan": p.plan_name or 'SaaS Subscription',
+            "status": p.payment_status,
+            "date": (p.created_at or datetime.utcnow()).isoformat() + "Z",
+            "transaction_id": p.transaction_id or f"TXN-{p.id}",
+            "is_invoice": False,
+            "is_payable": False
+        })
+
+    items.sort(key=lambda x: x["date"], reverse=True)
+    return jsonify(items), 200
 
 @admin_bp.route('/api-key/rotate', methods=['POST'])
 @admin_required
@@ -3603,4 +3911,134 @@ def get_admin_rejected_projects():
         })
         
     return jsonify(result), 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REPORT SIGNOFF HIERARCHY & MANAGEMENT APPROVERS CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+DEFAULT_SIGNOFF_HIERARCHY = [
+    {
+        "id": "team_leader",
+        "role": "Team Leader",
+        "type": "system",
+        "enabled": True,
+        "name": "",
+        "department": "",
+        "notes": "Auto-filled from assigned Project Team Leader"
+    },
+    {
+        "id": "facilitator",
+        "role": "QCC Facilitator",
+        "type": "system",
+        "enabled": True,
+        "name": "",
+        "department": "",
+        "notes": "Auto-filled from assigned QCC Facilitator"
+    },
+    {
+        "id": "reviewer",
+        "role": "Project Reviewer",
+        "type": "system",
+        "enabled": True,
+        "name": "",
+        "department": "",
+        "notes": "Auto-filled from assigned Reviewer / Technical Lead"
+    },
+    {
+        "id": "team_members",
+        "role": "Team Members",
+        "type": "system",
+        "enabled": True,
+        "name": "",
+        "department": "",
+        "notes": "Auto-filled from registered project team roster"
+    },
+    {
+        "id": "custom_hr",
+        "role": "HR Manager / Representative",
+        "type": "custom",
+        "enabled": True,
+        "name": "",
+        "department": "Human Resources",
+        "notes": "Mandatory sign-off for attendance, rewards & recognition"
+    },
+    {
+        "id": "custom_fin",
+        "role": "Finance / Costing Head",
+        "type": "custom",
+        "enabled": True,
+        "name": "",
+        "department": "Finance & Accounts",
+        "notes": "Cost saving validation & ROI sign-off"
+    },
+    {
+        "id": "custom_qa",
+        "role": "Plant / Quality Head",
+        "type": "custom",
+        "enabled": True,
+        "name": "",
+        "department": "Quality Assurance",
+        "notes": "Final quality gate & operational sign-off"
+    }
+]
+
+
+@admin_bp.route('/signoff-hierarchy', methods=['GET'])
+@admin_required
+def get_signoff_hierarchy():
+    """Return the sign-off hierarchy configuration for the organization."""
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+        
+    org = db.session.get(Organization, user.org_id)
+    if not org:
+        return jsonify({"message": "Organization not found"}), 404
+
+    hierarchy = org.signoff_hierarchy_config or DEFAULT_SIGNOFF_HIERARCHY
+    return jsonify({
+        "status": "success",
+        "hierarchy": hierarchy,
+        "is_customized": bool(org.signoff_hierarchy_config)
+    }), 200
+
+
+@admin_bp.route('/signoff-hierarchy', methods=['PUT'])
+@admin_required
+def update_signoff_hierarchy():
+    """Update the sign-off hierarchy configuration for the organization."""
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+        
+    org = db.session.get(Organization, user.org_id)
+    if not org:
+        return jsonify({"message": "Organization not found"}), 404
+
+    data = request.get_json() or {}
+    if data.get('reset'):
+        org.signoff_hierarchy_config = None
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "message": "Sign-off hierarchy reset to system defaults.",
+            "hierarchy": DEFAULT_SIGNOFF_HIERARCHY
+        }), 200
+
+    hierarchy = data.get('hierarchy')
+    if not hierarchy or not isinstance(hierarchy, list):
+        return jsonify({"message": "Invalid hierarchy data. Expected a list."}), 400
+
+    org.signoff_hierarchy_config = hierarchy
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": "Sign-off hierarchy configuration saved successfully.",
+        "hierarchy": hierarchy
+    }), 200
+
 

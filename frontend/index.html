@@ -95,10 +95,35 @@
         .cta-banner h2, .cta-banner p, .cta-banner span {
             color: #ffffff !important;
         }
+        .cta-banner .ds-btn-ghost,
+        #lp-cta-banner-btn2 {
+            color: #ffffff !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(8px);
+            font-weight: 600;
+        }
+        .cta-banner .ds-btn-ghost:hover,
+        #lp-cta-banner-btn2:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+            border-color: #ffffff !important;
+        }
 
         @media (max-width: 991px) {
             .hero-title {
                 font-size: 3rem;
+            }
+        }
+        @media (max-width: 576px) {
+            .cta-banner {
+                padding: 40px 20px;
+                margin: 40px 0;
+            }
+            .cta-banner .ds-btn {
+                width: 100%;
+                text-align: center;
+                justify-content: center;
             }
         }
     </style>
@@ -638,11 +663,12 @@
                 <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px;"></i>
                     <span>AI Assistant</span></div>
             </div>
-            <div class="d-flex justify-content-center gap-3">
-                <a href="register-org.html" class="ds-btn ds-btn-secondary px-5 py-3 fs-5"
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a href="register-org.html" class="ds-btn ds-btn-secondary px-4 px-sm-5 py-3 fs-5"
                     style="border-radius: 12px; background: white; color: var(--primary-900); font-weight:700;" id="lp-cta-banner-btn1">Launch
                     Your Instance</a>
-                <a href="javascript:void(0)" onclick="openTalkToSalesModal()" class="ds-btn ds-btn-ghost px-5 py-3 fs-5 text-white border-white" id="lp-cta-banner-btn2">Talk to Sales</a>
+                <a href="javascript:void(0)" onclick="openTalkToSalesModal()" class="ds-btn ds-btn-ghost px-4 px-sm-5 py-3 fs-5"
+                    style="border-radius: 12px; color: #ffffff !important; border: 1.5px solid rgba(255, 255, 255, 0.7) !important; background: rgba(255, 255, 255, 0.1); font-weight:600;" id="lp-cta-banner-btn2">Talk to Sales</a>
             </div>
         </div>
     </div>

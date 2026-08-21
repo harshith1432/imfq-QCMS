@@ -198,6 +198,7 @@
       "provision_access": "Provision Access",
       "stakeholder": "Stakeholder",
       "corporate_role": "Corporate Role",
+      "plant_location": "Plant Location",
       "access_status": "Access Status",
       "last_active": "Last Active",
       "sync_directory": "Synchronizing user directory..."

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QCMS Quality AI Feature — Architecture & User Documentation</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                darkMode: false,
+                background: '#ffffff',
+                primaryColor: '#f0fdf4',
+                primaryTextColor: '#0f172a',
+                primaryBorderColor: '#16a34a',
+                lineColor: '#2563eb',
+                secondaryColor: '#eff6ff',
+                tertiaryColor: '#ffffff',
+                fontFamily: 'Inter, sans-serif',
+                edgeLabelBackground: '#ffffff'
+            },
+            securityLevel: 'loose',
+            flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+        });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        @page {
+            size: A4 portrait;
+            margin: 12mm 12mm 12mm 12mm;
+            @bottom-right {
+                content: "Page " counter(page);
+                font-family: 'Inter', sans-serif;
+                font-size: 8pt;
+                color: #64748b;
+            }
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #0f172a;
+            background-color: #ffffff;
+            line-height: 1.45;
+            margin: 0;
+            padding: 0;
+            font-size: 9.5pt;
+        }
+
+        .cover-header {
+            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%);
+            color: #ffffff;
+            padding: 26px 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px -4px rgba(6, 78, 59, 0.25);
+        }
+
+        .cover-header h1 {
+            font-size: 21pt;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .cover-header p {
+            font-size: 11pt;
+            color: #d1fae5;
+            margin: 0 0 14px 0;
+        }
+
+        .tag-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            padding: 4px 12px;
+            border-radius: 5px;
+            font-size: 8pt;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .kpi-deck {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border-left: 4px solid #10b981;
+        }
+
+        .kpi-card .num {
+            font-size: 15pt;
+            font-weight: 800;
+            color: #047857;
+            line-height: 1.1;
+        }
+
+        .kpi-card .txt {
+            font-size: 7.5pt;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        h2 {
+            font-size: 13.5pt;
+            font-weight: 800;
+            color: #0f172a;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 5px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            page-break-after: avoid;
+        }
+
+        h3 {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #047857;
+            margin-top: 16px;
+            margin-bottom: 6px;
+            page-break-after: avoid;
+        }
+
+        .diagram-container {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 14px 0 20px 0;
+            text-align: center;
+            page-break-inside: avoid;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .feature-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+        }
+
+        .feature-title {
+            font-weight: 700;
+            font-size: 10pt;
+            color: #065f46;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .feature-body {
+            font-size: 8.5pt;
+            color: #334155;
+            line-height: 1.4;
+        }
+
+        .step-pill {
+            background: #047857;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 7.5pt;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 16px 0;
+            font-size: 8.5pt;
+            page-break-inside: auto;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 700;
+            text-align: left;
+            padding: 7px 10px;
+            border: 1px solid #cbd5e1;
+        }
+
+        td {
+            padding: 6px 10px;
+            border: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+
+        .code-pill {
+            font-family: 'JetBrains Mono', monospace;
+            background: #e2e8f0;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 7.5pt;
+            color: #0f172a;
+        }
+
+        .alert-box {
+            background-color: #ecfdf5;
+            border-left: 4px solid #10b981;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+            page-break-inside: avoid;
+        }
+
+        .alert-title {
+            font-weight: 700;
+            color: #065f46;
+            font-size: 9.5pt;
+            margin-bottom: 3px;
+        }
+
+        .alert-body {
+            color: #047857;
+            font-size: 8.5pt;
+            line-height: 1.4;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cover Header -->
+    <div class="cover-header">
+        <h1>Quality AI Assistant & RAG Knowledge Engine</h1>
+        <p>Complete Architectural Documentation, Data Inflow Mapping & User-Friendly Explanation</p>
+        <div class="tag-row">
+            <span class="tag">AI Quality Copilot</span>
+            <span class="tag">RAG Semantic Search</span>
+            <span class="tag">384-Dim Vector Embeddings</span>
+            <span class="tag">Role-Based Privacy (RBAC)</span>
+        </div>
+    </div>
+
+    <!-- Vital Metrics -->
+    <div class="kpi-deck">
+        <div class="kpi-card">
+            <div class="num">&lt; 50ms</div>
+            <div class="txt">Live Data Query Latency</div>
+        </div>
+        <div class="kpi-card">
+            <div class="num">100%</div>
+            <div class="txt">Tenant Data Isolation</div>
+        </div>
+        <div class="kpi-card">
+            <div class="num">8 Stages</div>
+            <div class="txt">QC DMAIC Methodology</div>
+        </div>
+        <div class="kpi-card">
+            <div class="num">4 Layers</div>
+            <div class="txt">Knowledge Processing</div>
+        </div>
+    </div>
+
+    <!-- Section 1: Simple 2D Diagram for Normal Users -->
+    <h2>1. How Quality AI Works (Simple 2D Diagram for Normal Users)</h2>
+    <p>This 2D diagram explains the journey of your question from the moment you click "Send" to the instant you receive an accurate, verified answer with reference links.</p>
+
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    classDef userStep fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#065f46;
+    classDef gateStep fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+    classDef brainStep fill:#fdf4ff,stroke:#c026d3,stroke-width:2px,color:#701a75;
+    classDef sourceStep fill:#fffbeb,stroke:#d97706,stroke-width:2px,color:#78350f;
+    classDef outputStep fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#064e3b;
+
+    A["👤 User asks a question<br/><i>'How many employees are in QC projects?'</i>"]:::userStep
+    B["🔒 Security & Identity Check<br/><i>Verifies user's organization & role permissions</i>"]:::gateStep
+    C["🧠 Quality AI Brain (Router)<br/><i>Understands intent & picks the right knowledge source</i>"]:::brainStep
+
+    D1["📊 Live Company Database<br/><i>Counts users, plants, active projects & stages</i>"]:::sourceStep
+    D2["📚 Historical Solutions (RAG)<br/><i>Finds past root causes, 5-Why & cost savings</i>"]:::sourceStep
+    D3["🛠️ 7 QC Tools & 8 Stages Guide<br/><i>Fishbone 6M, Pareto 80/20, SPC standards</i>"]:::sourceStep
+    D4["🧭 Platform Navigation Manual<br/><i>Step-by-step how-to for settings & exports</i>"]:::sourceStep
+
+    E["✨ Instant Verified Answer<br/><i>Formatted with summary, metrics, and clickable project links</i>"]:::outputStep
+
+    A --> B
+    B --> C
+    C -->|"Live Counts"| D1
+    C -->|"Past Solutions"| D2
+    C -->|"Tool Methods"| D3
+    C -->|"How-To Steps"| D4
+    D1 --> E
+    D2 --> E
+    D3 --> E
+    D4 --> E
+        </pre>
+    </div>
+
+    <div class="alert-box">
+        <div class="alert-title">💡 Why is Quality AI Safe and Accurate?</div>
+        <div class="alert-body">
+            Unlike public chatbots (like ChatGPT) that guess or hallucinate answers, <strong>Quality AI queries your actual organization's verified quality records, live plant metrics, and standard QC methodologies</strong>. It never shares your company's proprietary data outside your tenant.
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 2: Where Does Quality AI Get Its Data? -->
+    <h2>2. Data Inflow: Where Does Quality AI Fetch Its Data?</h2>
+    <p>Quality AI is not a generic language model. It acts as an intelligent aggregator fetching data from <strong>4 distinct internal sources</strong> in real time:</p>
+
+    <div class="feature-card">
+        <div class="feature-title">
+            <span class="step-pill">Source 1</span> 📊 Live Relational Database (Real-Time Organizational Data)
+        </div>
+        <div class="feature-body">
+            <ul>
+                <li><strong>Workforce & Employees:</strong> Queries <span class="code-pill">users</span> and <span class="code-pill">project_members</span> to compute total staff, active members, and QC circle enrollment percentage.</li>
+                <li><strong>Plant Facilities & Departments:</strong> Queries <span class="code-pill">plants</span> and <span class="code-pill">departments</span> to map which teams operate in which physical locations.</li>
+                <li><strong>Project Portfolio & Growth:</strong> Queries <span class="code-pill">projects</span> to analyze stage distribution (how many projects are in Stage 1 vs Stage 4 vs Stage 8), running vs completed projects, and completion velocity.</li>
+                <li><strong>Gamification Leaderboard:</strong> Queries <span class="code-pill">employee_leaderboard</span> and <span class="code-pill">employee_points</span> to highlight top-ranked quality contributors.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-title">
+            <span class="step-pill">Source 2</span> 📚 Historical Quality Knowledge Repository (RAG Vector Database)
+        </div>
+        <div class="feature-body">
+            <ul>
+                <li><strong>Archived Problem Solutions:</strong> Stored in <span class="code-pill">knowledge_repository</span> containing verified root causes, 5-Why findings, and countermeasure plans from previous successful projects.</li>
+                <li><strong>Dense Mathematical Vector Embeddings:</strong> Uses the <span class="code-pill">all-MiniLM-L6-v2</span> natural language model to convert quality problems into 384-dimensional semantic vector arrays stored in PostgreSQL (<span class="code-pill">pgvector</span>).</li>
+                <li><strong>Tangible Impact Metrics:</strong> Retrieves verified % KPI improvement and financial cost savings (₹) achieved in past projects.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-title">
+            <span class="step-pill">Source 3</span> 🏆 Standardized 8-Stage QC Methodology & 7 QC Tools Manual
+        </div>
+        <div class="feature-body">
+            <ul>
+                <li><strong>8-Stage DMAIC Framework:</strong> Stage 1 (Problem Definition) through Stage 8 (Standardization & Closure).</li>
+                <li><strong>Statistical Quality Tools:</strong> Expert rules for <strong>Ishikawa Fishbone Diagrams (6M)</strong>, <strong>Pareto 80/20 Analysis</strong>, <strong>SPC Control Charts (X-bar & R-chart)</strong>, <strong>Check Sheets</strong>, <strong>Scatter Plots</strong>, and <strong>3W1H Action Plans</strong>.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-title">
+            <span class="step-pill">Source 4</span> 🧭 System Navigation & 200+ How-To Configuration Guides
+        </div>
+        <div class="feature-body">
+            <ul>
+                <li>Step-by-step instructions on configuring plant locations, managing departments, importing members via CSV, customizing the Section 9 Sign-Off Hierarchy for PDF storyboards, and adjusting stage weightages.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 3: Step-by-Step Processing Pipeline -->
+    <h2>3. How Quality AI Processes the Data (Technical Pipeline)</h2>
+
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart LR
+    Q["1. User Query"] --> AUTH["2. JWT & Tenant Isolation"]
+    AUTH --> RBAC["3. Role-Based Privacy Filter"]
+    RBAC --> ROUTE["4. Intent Router"]
+    
+    ROUTE -->|"Metric Question"| SQL["5A. Live SQL Aggregation"]
+    ROUTE -->|"Troubleshooting"| VEC["5B. Vector Cosine Similarity"]
+    ROUTE -->|"Tool Question"| GUIDE["5C. QC Method Guide"]
+    ROUTE -->|"Config Question"| NAV["5D. System Manual"]
+
+    SQL --> SYNTH["6. Response Synthesis & Source Links"]
+    VEC --> SYNTH
+    GUIDE --> SYNTH
+    NAV --> SYNTH
+
+    SYNTH --> UI["7. Rendered Markdown in Chat UI"]
+        </pre>
+    </div>
+
+    <h3>Detailed Pipeline Steps:</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 15%;">Stage</th>
+                <th style="width: 25%;">Component</th>
+                <th style="width: 60%;">What Happens</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><b>1. Authentication</b></td>
+                <td><span class="code-pill">rag_routes.py</span></td>
+                <td>Extracts the encrypted JWT token from the request header, identifies the user ID, and locks all database queries strictly to that user's <span class="code-pill">org_id</span>.</td>
+            </tr>
+            <tr>
+                <td><b>2. Privacy Check</b></td>
+                <td><span class="code-pill">QualityAIAssistant</span></td>
+                <td>Checks the user's role. If a non-executive employee asks for sensitive financial ledger data, billing rates, or admin passwords, access is politely blocked with role explanations.</td>
+            </tr>
+            <tr>
+                <td><b>3. Intent Routing</b></td>
+                <td><span class="code-pill">Pattern Classifier</span></td>
+                <td>Classifies the user's query into one of 4 categories: <i>Live Counts</i>, <i>Configuration How-To</i>, <i>Quality Methodology</i>, or <i>Historical RAG Search</i>.</td>
+            </tr>
+            <tr>
+                <td><b>4. RAG Vector Match</b></td>
+                <td><span class="code-pill">vector_service.py</span></td>
+                <td>Encodes the query using <span class="code-pill">all-MiniLM-L6-v2</span> and runs Cosine Similarity against historical project summaries to find the top matching past solutions.</td>
+            </tr>
+            <tr>
+                <td><b>5. Formatting & Links</b></td>
+                <td><span class="code-pill">Markdown Engine</span></td>
+                <td>Combines the answers with bold highlights, emoji bullet points, KPI stats, and clickable direct links to the relevant project storyboard.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Section 4: Real-World Example Query Responses -->
+    <h2>4. Real-World Example Queries & Quality AI Responses</h2>
+
+    <div class="feature-card">
+        <div class="feature-title">💬 Example Query 1: "How many employees are working in Quality Circle projects?"</div>
+        <div class="feature-body">
+            <strong>Quality AI Processing:</strong> Queries <span class="code-pill">users</span>, <span class="code-pill">projects</span>, and <span class="code-pill">project_members</span> for the active organization in &lt; 10ms.
+            <br><br>
+            <strong>Generated Output:</strong>
+            <br>
+            • <strong>Total Registered Employees:</strong> <span class="code-pill">24</span><br>
+            • <strong>Active Members:</strong> <span class="code-pill">24 active members</span><br>
+            • <strong>Employees in Quality Circle (QC) Projects:</strong> <span class="code-pill">18</span> (75% participation rate)<br>
+            • <strong>Plant Breakdown:</strong> Bangalore Plant (12 in QC), Chennai Plant (6 in QC).
+        </div>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-title">💬 Example Query 2: "We have paint peeling defects on Line 2. How was this solved before?"</div>
+        <div class="feature-body">
+            <strong>Quality AI Processing:</strong> RAG vector search scans <span class="code-pill">knowledge_repository</span> for semantic matches to "paint peeling" and retrieves top historical projects.
+            <br><br>
+            <strong>Generated Output:</strong>
+            <br>
+            <strong>1. Reducing Paint Peeling on Outer Casing</strong> <span class="code-pill">[Quality]</span><br>
+            • <strong>Problem Summary:</strong> High defect rejection on automotive paint booth during monsoon shift.<br>
+            • <strong>Root Cause:</strong> Flash-off drying time was insufficient due to 85% ambient humidity.<br>
+            • <strong>Countermeasure:</strong> Installed automated infrared heating blowers and updated SOP #QA-PNT-04.<br>
+            • <strong>Impact:</strong> 82% Defect Reduction · ₹3,40,000 Annual Savings.<br>
+            • <em>Source Link: <a href="#">QC Project #QC-2025-084</a></em>
+        </div>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-title">💬 Example Query 3: "How to configure sign-off hierarchy for the PDF report?"</div>
+        <div class="feature-body">
+            <strong>Quality AI Processing:</strong> Triggers the configuration navigation manual.
+            <br><br>
+            <strong>Generated Output:</strong>
+            <br>
+            1. Open <strong>Administration &gt; Settings</strong> and click the <strong>Sign-Off Hierarchy</strong> tab.<br>
+            2. Click <strong>`+ Add Hierarchy Role`</strong> to add Plant Head, Quality Director, or Finance Controller.<br>
+            3. Use the arrow buttons to arrange approval sequence and click <strong>Save</strong>.<br>
+            4. Section 9 of the generated QC Storyboard PDF will automatically render custom signature boxes.
+        </div>
+    </div>
+
+    <div class="alert-box">
+        <div class="alert-title">🎯 Summary of Quality AI Capabilities</div>
+        <div class="alert-body">
+            Quality AI provides zero-latency answers, guides operators through complex quality tools (Fishbone, Pareto, 5-Why), assists administrators with system setup, and preserves institutional engineering knowledge so problem-solving is never repeated from scratch.
+        </div>
+    </div>
+
+</body>
+</html>

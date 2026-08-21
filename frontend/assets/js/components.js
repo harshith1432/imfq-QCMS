@@ -1159,6 +1159,10 @@ const QCMS = {
                             <i class="link-icon" data-lucide="layers"></i>
                             <span>Global Stage Templates</span>
                         </a>
+                        <a href="/admin/super-admin.html?view=stage-weightage" class="sidebar-link sa-compact-link" title="Stage Weightage">
+                            <i class="link-icon" data-lucide="percent"></i>
+                            <span>Stage Weightage</span>
+                        </a>
                         <a href="/admin/super-admin.html?view=recycle-bin" class="sidebar-link sa-compact-link" title="Recycle Bin">
                             <i class="link-icon" data-lucide="trash-2"></i>
                             <span>Recycle Bin</span>
@@ -1206,7 +1210,7 @@ const QCMS = {
                     mainNav += `<a href="/dashboard/dashboard-ceo.html?view=strategic-overview" class="sidebar-link"><i class="link-icon" data-lucide="line-chart"></i><span data-i18n="sidebar.links.overview">Overview</span></a>`;
                     mainNav += `<a href="/dashboard/dashboard-ceo.html?view=executive-approvals" class="sidebar-link"><i class="link-icon" data-lucide="check-circle-2"></i><span>Project Closures</span><span class="badge bg-warning-subtle text-warning ms-auto d-none" id="ceoPendingApprovalsBadge">0</span></a>`;
                     mainNav += `<a href="/dashboard/dashboard-ceo.html?view=org-health" class="sidebar-link"><i class="link-icon" data-lucide="activity"></i><span data-i18n="sidebar.links.org_health">Organization Health</span></a>`;
-                    mainNav += `<a href="/dashboard/dashboard-ceo.html?view=roi-analytics" class="sidebar-link"><i class="link-icon" data-lucide="trending-up"></i><span data-i18n="sidebar.links.roi_analytics">ROI Analytics</span></a>`;
+                    mainNav += `<a href="/dashboard/dashboard-ceo.html?view=roi-analytics" class="sidebar-link"><i class="link-icon" data-lucide="trending-up"></i><span>Business Analytics</span></a>`;
                 } else {
                     mainNav += `<a href="${dashboardUrl}" class="sidebar-link"><i class="link-icon" data-lucide="layout-dashboard"></i><span data-i18n="sidebar.links.overview">Overview</span></a>`;
                 }
@@ -1525,11 +1529,12 @@ const QCMS = {
         return content;
     },
 
-    projectProgress(currentStage, totalStages = 8) {
-        let pct = (currentStage / totalStages) * 100;
+    projectProgress(currentStage, totalStages = 8, customPct = null) {
+        let pct = (customPct !== null && customPct !== undefined) ? Number(customPct) : ((currentStage / totalStages) * 100);
+        if (isNaN(pct)) pct = 0;
         if (pct > 100) pct = 100;
         if (pct < 0) pct = 0;
-        const pctStr = pct.toFixed(2);
+        const pctStr = (pct % 1 === 0) ? pct.toFixed(0) : pct.toFixed(1);
         return `
             <div class="ds-progress-container mt-3">
                 <div class="ds-progress-label"><span>Stage ${currentStage} of ${totalStages} = ${pctStr}%</span></div>
@@ -1632,17 +1637,42 @@ const QCMS = {
                         <div class="ai-avatar"><i data-lucide="bot"></i></div>
                         <div>
                             <div class="fw-bold text-white">Quality AI Assistant</div>
-                            <div class="text-xs text-blue-200">Retrieval Augmented Generation</div>
+                            <div class="text-xs text-blue-200">Organization &amp; Quality Intelligence</div>
                         </div>
                     </div>
                     <button id="close-chat" class="btn-close-chat"><i data-lucide="x"></i></button>
                 </div>
                 <div id="chat-messages" class="chat-messages p-4">
-                    <div class="message system">Hello! I'm your Quality Assistant. Ask me anything about archived projects.</div>
+                    <div class="message system">
+                        <div class="mb-1">👋 Hello! I'm your <strong>Quality AI Assistant</strong>.</div>
+                        <div class="text-xs text-muted">Ask me anything about your organization's employees, project growth &amp; status, how-to step guides, 8-stage quality tools, or past root causes.</div>
+                    </div>
+                    <div class="quick-questions-container" id="quickQuestionsContainer">
+                        <div class="text-xs fw-bold text-muted mb-2 d-flex align-items-center gap-1">
+                            <i data-lucide="sparkles" style="width:12px;height:12px;color:var(--ds-primary, #6366f1);"></i> Quick Questions:
+                        </div>
+                        <div class="d-flex flex-column gap-1.5" id="quickQuestionsList">
+                            <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="What is the overall progress and completion status of our quality projects?">
+                                📊 Overall project status &amp; completion progress
+                            </button>
+                            <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="How do I start and execute an 8-Stage QCMS project?">
+                                🛠️ How to start an 8-Stage QCMS project
+                            </button>
+                            <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="Which plant location has the highest quality performance and savings?">
+                                🏭 Plant quality performance &amp; top savings
+                            </button>
+                            <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="How many active employees, stakeholders, and departments are registered?">
+                                👥 Organization headcount &amp; registered stakeholders
+                            </button>
+                            <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="What are the most common root causes and corrective actions identified?">
+                                🔍 Common root causes &amp; corrective actions
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <form id="chat-form" class="chat-input-area p-3 border-top">
                     <div class="input-group">
-                        <input type="text" id="chat-input" class="form-control" placeholder="Ask about past root causes..." autocomplete="off">
+                        <input type="text" id="chat-input" class="form-control" placeholder="Ask about employees, project growth, how-to..." autocomplete="off">
                         <button type="submit" class="btn btn-primary"><i data-lucide="send"></i></button>
                     </div>
                 </form>
@@ -1671,9 +1701,48 @@ const QCMS = {
         };
         close.onclick = () => chatWindow.classList.add('hidden');
 
-        form.onsubmit = async (e) => {
-            e.preventDefault();
-            const query = input.value.trim();
+        function formatAIMarkdown(text) {
+            if (!text) return '';
+            let formatted = String(text);
+            
+            // Convert code blocks
+            formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="p-2 rounded bg-dark text-light font-mono my-2" style="font-size:11px; overflow-x:auto;"><code>$1</code></pre>');
+            // Convert inline code
+            formatted = formatted.replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-light border text-primary font-mono text-xs">$1</code>');
+            
+            // Headers
+            formatted = formatted.replace(/^### (.*$)/gim, '<h6 class="fw-bold text-primary mt-2 mb-1">$1</h6>');
+            formatted = formatted.replace(/^## (.*$)/gim, '<h6 class="fw-bold text-main mt-2 mb-1">$1</h6>');
+            formatted = formatted.replace(/^# (.*$)/gim, '<h5 class="fw-bold text-main mt-2 mb-1">$1</h5>');
+            
+            // Bold: **text** or __text__
+            formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            formatted = formatted.replace(/__(.*?)__/g, '<strong>$1</strong>');
+            
+            // Italic: *text* or _text_
+            formatted = formatted.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+            formatted = formatted.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+            
+            // Clean up any remaining stray double asterisks
+            formatted = formatted.replace(/\*\*/g, '');
+            
+            // Unordered lists: lines starting with * or -
+            formatted = formatted.replace(/^\s*[\*\-]\s+(.*$)/gim, '<li class="ms-3 mb-1">$1</li>');
+            
+            // Numbered lists: lines starting with 1. 2. etc.
+            formatted = formatted.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li class="ms-3 mb-1" style="list-style-type:decimal;">$2</li>');
+            
+            // Newlines to br
+            formatted = formatted.replace(/\n/g, '<br>');
+            formatted = formatted.replace(/(<\/h[56]>)<br>/g, '$1');
+            formatted = formatted.replace(/(<\/li>)<br>/g, '$1');
+            formatted = formatted.replace(/(<\/pre>)<br>/g, '$1');
+
+            return formatted;
+        }
+
+        const sendQuery = async (queryText) => {
+            const query = (queryText || '').trim();
             if (!query) return;
 
             // Add user message
@@ -1709,14 +1778,10 @@ const QCMS = {
                 aiMsg.className = 'message system';
                 
                 if (data.answer) {
-                    let formatted = data.answer
-                        .replace(/### (.*?)\n/g, '<h6 class="fw-bold text-primary mt-2 mb-1">$1</h6>')
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-light">$1</code>')
-                        .replace(/\n/g, '<br>');
+                    const formatted = formatAIMarkdown(data.answer);
                     aiMsg.innerHTML = `<div class="answer text-sm">${formatted}</div>`;
                     if (data.sources && data.sources.length > 0) {
-                        const sourcesHtml = data.sources.map(s => `<li class="mt-1"><a href="project-details.html?id=${s.project_id}" target="_blank" class="source-link fw-semibold">${s.title}</a> <span class="text-xs text-muted">(${s.category || 'Quality'})</span></li>`).join('');
+                        const sourcesHtml = data.sources.map(s => `<li class="mt-1"><a href="/project-details.html?id=${s.project_id}" target="_blank" class="source-link fw-semibold">${s.title}</a> <span class="text-xs text-muted">(${s.category || 'Quality'})</span></li>`).join('');
                         aiMsg.innerHTML += `<div class="sources mt-3 pt-2 border-top text-xs"><strong>Knowledge Sources (${data.sources.length}):</strong><ul class="ps-3 mb-0">${sourcesHtml}</ul></div>`;
                     }
                 } else {
@@ -1732,6 +1797,19 @@ const QCMS = {
                 messages.appendChild(errorMsg);
             }
             messages.scrollTop = messages.scrollHeight;
+        };
+
+        // Attach quick question click handlers
+        widget.querySelectorAll('.quick-question-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const prompt = btn.getAttribute('data-prompt');
+                sendQuery(prompt);
+            });
+        });
+
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            sendQuery(input.value);
         };
 
         if (window.lucide) lucide.createIcons();
@@ -2220,6 +2298,7 @@ const QCMS = {
         const titleLower = (notif.title || '').toLowerCase();
         const msgLower = (notif.message || '').toLowerCase();
         const isOfflinePaymentNotif = titleLower.includes('offline payment') || msgLower.includes('payment proof') || titleLower.includes('payment verification') || titleLower.includes('payment approved') || msgLower.includes('utr:');
+        const isPaygBillNotif = titleLower.includes('pay-as-you-go') || msgLower.includes('metered invoice') || msgLower.includes('pay-as-you-go bill') || titleLower.includes('monthly pay-as-you-go') || (titleLower.includes('bill') && msgLower.includes('generated'));
 
         let utrMatch = null;
         if (notif.message) {
@@ -2228,7 +2307,16 @@ const QCMS = {
         }
 
         let actionButtonHtml = '';
-        if (isOfflinePaymentNotif) {
+        if (isPaygBillNotif) {
+            actionButtonHtml = `
+                <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 mb-3">
+                    <div class="text-xs text-secondary mb-2 fw-bold"><i data-lucide="receipt" class="me-1"></i> Outstanding Pay-As-You-Go Bill Action</div>
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm w-100 py-2 fw-bold text-white shadow-sm" onclick="QCMS.handlePaygBillNotifClick()">
+                        <i data-lucide="credit-card" class="me-1.5"></i> Pay Invoice Now & View Usage Breakdown
+                    </button>
+                </div>
+            `;
+        } else if (isOfflinePaymentNotif) {
             if (window.location.pathname.includes('super-admin.html')) {
                 actionButtonHtml = `
                     <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 mb-3">
@@ -2324,6 +2412,24 @@ ${QCMS.escapeHtml(notif.message || 'No detailed description available.')}
             }
         } else {
             window.location.href = `/admin/super-admin.html?view=subscriptions&utr=${encodeURIComponent(utr)}`;
+        }
+    },
+
+    handlePaygBillNotifClick() {
+        const detailModal = document.getElementById('notif-detail-modal-container');
+        if (detailModal) detailModal.remove();
+
+        if (window.location.pathname.includes('settings.html')) {
+            const billingTab = document.querySelector('[data-i18n="settings.nav.billing"]') || document.querySelector('button[onclick*="billing"]');
+            if (billingTab) billingTab.click();
+            if (typeof settingsManager !== 'undefined' && typeof settingsManager.loadBillingHistory === 'function') {
+                settingsManager.loadBillingHistory();
+            }
+            if (typeof openCheckoutModal === 'function') {
+                openCheckoutModal();
+            }
+        } else {
+            window.location.href = '/admin/settings.html#billing';
         }
     }
 };

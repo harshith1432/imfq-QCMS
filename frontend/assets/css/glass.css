@@ -1873,6 +1873,35 @@ select.ds-select option {
     background: rgba(255, 255, 255, 0.02);
 }
 
+.quick-questions-container {
+    animation: fadeInUp 0.3s ease;
+}
+
+.quick-question-btn {
+    background: var(--ds-surface, rgba(255, 255, 255, 0.85));
+    color: var(--ds-text-main, #1e293b);
+    border: 1px solid var(--ds-border-color, rgba(99, 102, 241, 0.15)) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    text-align: left;
+    width: 100%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.quick-question-btn:hover {
+    background: rgba(99, 102, 241, 0.08) !important;
+    border-color: var(--ds-primary, #6366f1) !important;
+    color: var(--ds-primary, #6366f1) !important;
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+.quick-question-btn:active {
+    transform: translateX(1px);
+}
+
 .source-link {
     color: var(--ds-accent);
     text-decoration: none;

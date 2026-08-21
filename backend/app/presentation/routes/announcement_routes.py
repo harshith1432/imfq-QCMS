@@ -133,79 +133,135 @@ def deliver_in_app(announcement, user_ids):
 
 
 def deliver_email(announcement, user_ids):
-    """Deliver announcement via email channel to target users."""
+    """Deliver announcement via email channel asynchronously in background without blocking the UI."""
     if not user_ids:
         return 0
-
-    email_provider = None
-    if isinstance(announcement.channels, dict):
-        email_provider = announcement.channels.get('email_provider')
 
     default_org_id = None
     first_org = Organization.query.first()
     if first_org:
         default_org_id = first_org.id
 
-    success_count = 0
+    # 1. Pre-register delivery records as 'Queued' immediately
+    delivery_records = []
     for uid in user_ids:
         user = db.session.get(User, uid)
         if not user or not user.email:
             continue
-
         effective_org_id = user.org_id or default_org_id or 1
-        try:
-            subject = f"📢 [{announcement.category or 'Announcement'}] {announcement.title}"
-            body_html = f"""
-                <h2 style="color: #2563eb; margin-top:0;">{announcement.title}</h2>
-                {f'<p style="font-size:15px; color:#475569; font-weight:500;">{announcement.summary}</p>' if announcement.summary else ''}
-                <div style="margin: 20px 0; line-height: 1.6; color: #1e293b;">
-                    {announcement.body}
-                </div>
-                <div style="margin: 25px 0;">
-                    <a href="{EmailUtils._get_app_url()}/admin/super-admin.html?view=announcements&ann={announcement.id}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display:inline-block;">View Announcement</a>
-                </div>
-            """
-            html = DocumentBrandingService.wrap_email_html(body_html, title=announcement.title, org_id=user.org_id)
-            res = EmailUtils.send_email(user.email, subject, html, provider_override=email_provider)
-            
-            status = 'Sent' if res else 'Failed'
-            err_msg = None if res else f"Email provider ({email_provider or 'default'}) failed to deliver."
-            if res:
-                success_count += 1
-        except Exception as e:
-            status = 'Failed'
-            err_msg = str(e)
-
         delivery = AnnouncementDelivery(
             announcement_id=announcement.id,
             org_id=effective_org_id,
             user_id=uid,
             channel='email',
-            status=status,
-            error_message=err_msg,
+            status='Queued',
             sent_at=datetime.utcnow()
         )
         db.session.add(delivery)
+        delivery_records.append(uid)
 
-    return success_count
+    db.session.flush()
+
+    # 2. Dispatch the actual email sending loop to background thread pool
+    ann_id = announcement.id
+    email_provider = None
+    if isinstance(announcement.channels, dict):
+        email_provider = announcement.channels.get('email_provider')
+
+    app = current_app._get_current_object()
+
+    def _async_announcement_email_worker(target_app, a_id, u_ids, provider_override):
+        with target_app.app_context():
+            from app.infrastructure.database.models.models import Announcement, AnnouncementDelivery, User, db
+            from app.infrastructure.mailer.email_service import EmailUtils
+            from app.domain.services.document_branding_service import DocumentBrandingService
+
+            ann = db.session.get(Announcement, a_id)
+            if not ann:
+                return
+
+            success_cnt = 0
+            for uid in u_ids:
+                user = db.session.get(User, uid)
+                if not user or not user.email:
+                    continue
+
+                delivery = AnnouncementDelivery.query.filter_by(
+                    announcement_id=a_id, user_id=uid, channel='email'
+                ).first()
+
+                try:
+                    subject = f"📢 [{ann.category or 'Announcement'}] {ann.title}"
+                    body_html = f"""
+                        <h2 style="color: #2563eb; margin-top:0;">{ann.title}</h2>
+                        {f'<p style="font-size:15px; color:#475569; font-weight:500;">{ann.summary}</p>' if ann.summary else ''}
+                        <div style="margin: 20px 0; line-height: 1.6; color: #1e293b;">
+                            {ann.body}
+                        </div>
+                        <div style="margin: 25px 0;">
+                            <a href="{EmailUtils._get_app_url()}/admin/super-admin.html?view=announcements&ann={ann.id}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display:inline-block;">View Announcement</a>
+                        </div>
+                    """
+                    html = DocumentBrandingService.wrap_email_html(body_html, title=ann.title, org_id=user.org_id)
+                    res = EmailUtils.send_email(user.email, subject, html, provider_override=provider_override)
+
+                    if res:
+                        success_cnt += 1
+                        if delivery:
+                            delivery.status = 'Sent'
+                            delivery.error_message = None
+                    else:
+                        if delivery:
+                            delivery.status = 'Failed'
+                            delivery.error_message = f"Email provider ({provider_override or 'default'}) failed to deliver."
+                except Exception as e:
+                    if delivery:
+                        delivery.status = 'Failed'
+                        delivery.error_message = str(e)
+
+            if ann:
+                ann.total_delivered = AnnouncementDelivery.query.filter_by(
+                    announcement_id=a_id, status='Sent'
+                ).count()
+            try:
+                db.session.commit()
+            except Exception as commit_err:
+                target_app.logger.error(f"[AsyncAnnouncement] Commit error: {commit_err}")
+
+    from app.infrastructure.mailer.email_service import email_executor
+    email_executor.submit(_async_announcement_email_worker, app, ann_id, delivery_records, email_provider)
+
+    return len(delivery_records)
 
 
 def resolve_audience(ann):
     """Return list of user_ids who should receive this announcement."""
+    if not ann:
+        return []
+
     if ann.audience_type == 'all':
         users = User.query.filter(User.is_active == True).all() if hasattr(User, 'is_active') else User.query.all()
         return [u.id for u in users]
 
-    criteria = ann.audience
+    criteria = ann.audience or []
+    if not criteria:
+        return []
+
     user_ids = set()
     for criterion in criteria:
-        t = criterion.target_type
-        v = (criterion.target_value or '').strip()
-        if not v:
+        if isinstance(criterion, dict):
+            t = criterion.get('type') or criterion.get('target_type')
+            v = criterion.get('value') if criterion.get('value') is not None else criterion.get('target_value')
+        else:
+            t = getattr(criterion, 'target_type', None) or getattr(criterion, 'type', None)
+            v = getattr(criterion, 'target_value', None) or getattr(criterion, 'value', None)
+        v = str(v or '').strip()
+        if not v or not t:
             continue
+
         if t == 'org':
             if v.isdigit():
-                us = User.query.filter_by(org_id=int(v)).all()
+                us = User.query.filter(db.or_(User.org_id == int(v), User.id == int(v))).all()
                 user_ids.update(u.id for u in us)
             else:
                 orgs = Organization.query.filter(Organization.name.ilike(f"%{v}%")).all()
@@ -213,33 +269,49 @@ def resolve_audience(ann):
                     us = User.query.filter_by(org_id=org.id).all()
                     user_ids.update(u.id for u in us)
         elif t == 'plan':
-            orgs = Organization.query.filter(Organization.subscription_plan.ilike(f"%{v}%")).all()
+            orgs = Organization.query.filter(
+                db.or_(
+                    Organization.subscription_plan.ilike(f"%{v}%"),
+                    Organization.subscription_status.ilike(f"%{v}%")
+                )
+            ).all()
             for org in orgs:
                 us = User.query.filter_by(org_id=org.id).all()
                 user_ids.update(u.id for u in us)
         elif t == 'role':
             from app.infrastructure.database.models.models import Role
-            role_v = v.rstrip('s').strip()
-            us = User.query.join(Role, User.role_id == Role.id).filter(
-                db.or_(Role.name.ilike(f"%{v}%"), Role.name.ilike(f"%{role_v}%"))
-            ).all()
-            user_ids.update(u.id for u in us)
+            role_clean = v.rstrip('s').strip()
+            if v.isdigit():
+                us = User.query.filter_by(role_id=int(v)).all()
+                user_ids.update(u.id for u in us)
+            else:
+                us = User.query.join(Role, User.role_id == Role.id).filter(
+                    db.or_(
+                        Role.name.ilike(f"%{v}%"),
+                        Role.name.ilike(f"%{role_clean}%"),
+                        Role.name.ilike(f"%{v.replace(' ', '_')}%"),
+                        Role.name.ilike(f"%{v.replace(' ', '')}%")
+                    )
+                ).all()
+                user_ids.update(u.id for u in us)
         elif t == 'country':
             orgs = Organization.query.filter(Organization.country.ilike(f"%{v}%")).all()
             for org in orgs:
                 us = User.query.filter_by(org_id=org.id).all()
                 user_ids.update(u.id for u in us)
         elif t == 'status':
-            orgs = Organization.query.filter(Organization.status.ilike(f"%{v}%")).all()
+            orgs = Organization.query.filter(Organization.subscription_status.ilike(f"%{v}%")).all()
             for org in orgs:
                 us = User.query.filter_by(org_id=org.id).all()
                 user_ids.update(u.id for u in us)
+            us_status = User.query.filter(User.status.ilike(f"%{v}%")).all()
+            user_ids.update(u.id for u in us_status)
         elif t == 'user':
             if v.isdigit():
                 us = User.query.filter_by(id=int(v)).all()
                 user_ids.update(u.id for u in us)
             else:
-                us = User.query.filter(db.or_(User.username.ilike(f"%{v}%"), User.email.ilike(f"%{v}%"))).all()
+                us = User.query.filter(db.or_(User.username.ilike(f"%{v}%"), User.email.ilike(f"%{v}%"), User.full_name.ilike(f"%{v}%"))).all()
                 user_ids.update(u.id for u in us)
     return list(user_ids)
 
@@ -1108,6 +1180,122 @@ def get_target_suggestions():
             "org": org_list,
             "country": country_list,
             "status": status_list
+        }
+    }), 200
+
+
+@announcement_bp.route('/preview-recipients', methods=['POST'])
+@jwt_required()
+def preview_recipients():
+    """
+    Super Admin helper endpoint: Resolves target audience criteria in real-time
+    and returns itemized recipient email addresses, role breakdowns, and organization summary metrics.
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    data = request.get_json(silent=True) or {}
+    audience_type = data.get('audience_type', 'all')
+    audience_raw = data.get('audience', [])
+
+    from app.infrastructure.database.models.models import Announcement, AnnouncementAudience, Role, Organization, User
+    dummy_ann = Announcement(audience_type=audience_type)
+    
+    if audience_type == 'selected' and isinstance(audience_raw, list):
+        dummy_criteria = []
+        for item in audience_raw:
+            if isinstance(item, dict):
+                t_type = item.get('type') or item.get('target_type')
+                t_val = item.get('value') if item.get('value') is not None else item.get('target_value', '')
+                if t_type and str(t_val).strip():
+                    dummy_criteria.append(AnnouncementAudience(
+                        target_type=t_type,
+                        target_value=str(t_val).strip()
+                    ))
+        dummy_ann.audience = dummy_criteria
+
+    try:
+        user_ids = resolve_audience(dummy_ann)
+    except Exception as e:
+        print(f"[AnnouncementRoutes] resolve_audience error: {e}")
+        user_ids = []
+
+    if user_ids:
+        users = User.query.filter(User.id.in_(user_ids)).all()
+    else:
+        users = []
+
+    recipients_list = []
+    org_ids = set()
+    valid_email_count = 0
+    role_counts = {}
+    org_counts = {}
+
+    for u in users:
+        role_name = u.role.name if u.role else (getattr(u, 'role_name', None) or 'User')
+        org_name = u.organization.name if u.organization else 'System / Internal'
+        if u.org_id:
+            org_ids.add(u.org_id)
+        
+        email_str = (u.email or '').strip()
+        has_valid_email = bool(email_str and '@' in email_str)
+        if has_valid_email:
+            valid_email_count += 1
+            role_counts[role_name] = role_counts.get(role_name, 0) + 1
+            org_counts[org_name] = org_counts.get(org_name, 0) + 1
+
+        recipients_list.append({
+            "id": u.id,
+            "name": (getattr(u, 'full_name', None) or getattr(u, 'name', None) or u.username or f"User #{u.id}").strip(),
+            "username": u.username,
+            "email": email_str or "No email configured",
+            "has_valid_email": has_valid_email,
+            "role": role_name,
+            "org_id": u.org_id,
+            "org_name": org_name
+        })
+
+    recipients_list.sort(key=lambda x: (x['role'], x['org_name'], x['name']))
+
+    role_colors = {
+        'Super Admin': '#8b5cf6',
+        'Admin': '#2563eb',
+        'Org Admin': '#2563eb',
+        'Plant Admin': '#0284c7',
+        'Quality Manager': '#0d9488',
+        'Reviewer': '#10b981',
+        'Auditor': '#f59e0b',
+        'Operator': '#64748b',
+        'User': '#6b7280'
+    }
+
+    role_breakdown = [
+        {
+            "role": role,
+            "email_count": cnt,
+            "color": role_colors.get(role, '#6366f1')
+        }
+        for role, cnt in sorted(role_counts.items(), key=lambda x: -x[1])
+    ]
+
+    org_breakdown = [
+        {
+            "org_name": org,
+            "email_count": cnt
+        }
+        for org, cnt in sorted(org_counts.items(), key=lambda x: -x[1])
+    ]
+
+    return jsonify({
+        "status": "success",
+        "data": {
+            "total_users": len(users),
+            "total_emails": valid_email_count,
+            "total_orgs": len(org_ids),
+            "role_breakdown": role_breakdown,
+            "org_breakdown": org_breakdown,
+            "recipients": recipients_list
         }
     }), 200
 

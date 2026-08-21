@@ -765,17 +765,22 @@ def build_qc_story_html(project_id):
     team_name = get_v(s1, d1, "init.circle_name")
     if team_name == "--": team_name = f"{project.department.name if project.department else 'Quality'} QC Circle"
 
+    plant_val = (project.plant or "").strip()
+    if not plant_val or plant_val == "--":
+        plant_val = get_v(s1, d1, "init.plant")
+    if not plant_val or plant_val == "--":
+        plant_val = "Main Plant"
+
     work_area_val = (project.work_area or "").strip()
     if not work_area_val or work_area_val == "--":
         work_area_val = get_v(s1, d1, "init.work_area")
-    if not work_area_val or work_area_val == "--":
-        where_val = get_v(s1, d1, "background_5w2h.where")
-        if where_val and where_val != "--":
-            work_area_val = where_val
-        else:
-            work_area_val = project.plant or "Assembly Line"
+    
+    if plant_val and work_area_val and work_area_val != plant_val and work_area_val != "--":
+        plant_location = f"{plant_val} ({work_area_val})"
+    else:
+        plant_location = plant_val
 
-    plant_line = work_area_val
+    plant_line = plant_location
     proc_step = get_v(s2, d2, "process_observation.step")
     if proc_step == "--":
         proc_step = get_v(s2, d2, "process_walkthrough.step")
@@ -796,9 +801,153 @@ def build_qc_story_html(project_id):
     facilitator = (project.facilitator.full_name or project.facilitator.username) if project.facilitator else get_v(s1, d1, "init.facilitator")
     if not facilitator or facilitator == "--":
         facilitator = "Quality Facilitator"
+
+    reviewer = (project.reviewer.full_name or project.reviewer.username) if project.reviewer else get_v(s1, d1, "review.reviewer")
+    if not reviewer or reviewer == "--":
+        reviewer = "Project Reviewer"
     
     m_list = [m.full_name or m.username for m in (project.members or [])]
     members_str = ", ".join(m_list) if m_list else "Ramesh P., Vikram S., Anita M., Suresh K."
+
+    # Build Comprehensive Membership Movement & Contributor Timeline (Past & Current Members)
+    start_dt_clean = project.start_date.strftime('%d-%b-%Y') if project.start_date else (project.created_at.strftime('%d-%b-%Y') if project.created_at else 'Project Initiation')
+    end_dt_clean = project.end_date.strftime('%d-%b-%Y') if project.end_date else 'Present'
+    is_proj_closed = project.status in ('Closed', 'Completed', 'Archived')
+
+    movement_rows = []
+    seen_movement_keys = set()
+
+    # 1. Leadership (Team Leader)
+    if project.team_leader:
+        tl_nm = (project.team_leader.full_name or project.team_leader.username or 'Team Leader').strip()
+        tl_dpt = project.team_leader.department.name if getattr(project.team_leader, 'department', None) else (project.department.name if project.department else 'Operations')
+        seen_movement_keys.add(tl_nm.lower())
+        movement_rows.append({
+            'name': f"{html.escape(tl_nm)} <span style='font-size:6.5pt; color:#64748b;'>({html.escape(tl_dpt)})</span>",
+            'role': 'Team Leader (Lead)',
+            'status': '<span style="color:#059669; font-weight:bold;">Active / Completed</span>' if is_proj_closed else '<span style="color:#2563eb; font-weight:bold;">Present (Active)</span>',
+            'period': f"{start_dt_clean} &rarr; {end_dt_clean}",
+            'note': 'Full 8-Stage Execution Lead'
+        })
+
+    # 2. Quality Facilitator
+    if project.facilitator:
+        fac_nm = (project.facilitator.full_name or project.facilitator.username or 'Quality Facilitator').strip()
+        fac_dpt = project.facilitator.department.name if getattr(project.facilitator, 'department', None) else 'Quality Assurance'
+        seen_movement_keys.add(fac_nm.lower())
+        movement_rows.append({
+            'name': f"{html.escape(fac_nm)} <span style='font-size:6.5pt; color:#64748b;'>({html.escape(fac_dpt)})</span>",
+            'role': 'Quality Facilitator',
+            'status': '<span style="color:#059669; font-weight:bold;">Active / Completed</span>' if is_proj_closed else '<span style="color:#2563eb; font-weight:bold;">Present (Active)</span>',
+            'period': f"{start_dt_clean} &rarr; {end_dt_clean}",
+            'note': 'QC Governance & Gate Approver'
+        })
+
+    # 3. Core Current Members
+    for m in (project.members or []):
+        m_nm = (m.full_name or m.username or 'Team Member').strip()
+        m_dpt = m.department.name if getattr(m, 'department', None) else (project.department.name if project.department else 'Production')
+        if m_nm.lower() not in seen_movement_keys:
+            seen_movement_keys.add(m_nm.lower())
+            movement_rows.append({
+                'name': f"{html.escape(m_nm)} <span style='font-size:6.5pt; color:#64748b;'>({html.escape(m_dpt)})</span>",
+                'role': 'Core Team Member',
+                'status': '<span style="color:#059669; font-weight:bold;">Active / Completed</span>' if is_proj_closed else '<span style="color:#2563eb; font-weight:bold;">Present (Active)</span>',
+                'period': f"{start_dt_clean} &rarr; {end_dt_clean}",
+                'note': 'Stages 1&ndash;8 Active Contributor'
+            })
+
+    # 4. Stage 1 Initial Team Members (Detecting Past Members who left / transferred)
+    stage1_tms = (d1.get('team') or {}).get('team_members') or []
+    for tm in stage1_tms:
+        if isinstance(tm, dict):
+            t_nm = (tm.get('name') or tm.get('username') or '').strip()
+            if t_nm and t_nm.lower() not in seen_movement_keys:
+                seen_movement_keys.add(t_nm.lower())
+                from_d = tm.get('from_date') or tm.get('joined_date') or start_dt_clean
+                to_d = tm.get('to_date') or tm.get('left_date') or 'Stage 3 Transition'
+                t_r = tm.get('role') or 'Process SME'
+                t_d = tm.get('department') or 'Manufacturing'
+                movement_rows.append({
+                    'name': f"{html.escape(t_nm)} <span style='font-size:6.5pt; color:#64748b;'>({html.escape(t_d)})</span>",
+                    'role': html.escape(t_r),
+                    'status': '<span style="color:#dc2626; font-weight:bold;">Past Member (Left in Stage 2/3)</span>',
+                    'period': f"{html.escape(from_d)} &rarr; {html.escape(to_d)}",
+                    'note': html.escape(tm.get('reason') or tm.get('note') or 'Department Transfer / Baseline Handover')
+                })
+
+    # 5. Check Stage 6 Task Assignments for Mid-Project Additions
+    stage6_assignees = (d6.get('countermeasure_task_assignments') or []) if isinstance(d6, dict) else []
+    for ta in stage6_assignees:
+        if isinstance(ta, dict):
+            ta_nm = (ta.get('owner') or ta.get('assigned_to') or ta.get('name') or '').strip()
+            if ta_nm and ta_nm.lower() not in seen_movement_keys and len(ta_nm) > 2:
+                seen_movement_keys.add(ta_nm.lower())
+                join_dt = ta.get('start_date') or ta.get('date') or 'Stage 5 Countermeasures'
+                movement_rows.append({
+                    'name': f"{html.escape(ta_nm)} <span style='font-size:6.5pt; color:#64748b;'>(Implementation SME)</span>",
+                    'role': 'Implementation Specialist',
+                    'status': '<span style="color:#2563eb; font-weight:bold;">Joined Mid-Project (Stage 5/6)</span>',
+                    'period': f"{html.escape(join_dt)} &rarr; {end_dt_clean}",
+                    'note': html.escape(ta.get('task') or 'Countermeasure Execution & Trial Testing')
+                })
+
+    # Detect Any Role Changes / Transitions (Team Leader, Facilitator, Reviewer, Past Members Who Left, Mid-Project Joiners)
+    role_changes_list = []
+
+    # 1. Facilitator change
+    init_fac = (d1.get('init') or {}).get('facilitator') or ''
+    curr_fac = (project.facilitator.full_name or project.facilitator.username) if project.facilitator else ''
+    if init_fac and curr_fac and init_fac.strip().lower() != curr_fac.strip().lower():
+        role_changes_list.append(f"<b>Facilitator Replaced:</b> {html.escape(init_fac.strip())} (Initiation) &rarr; {html.escape(curr_fac.strip())} (Current)")
+
+    # 2. Team Leader change
+    init_tl = (d1.get('init') or {}).get('team_leader') or ''
+    curr_tl = (project.team_leader.full_name or project.team_leader.username) if project.team_leader else ''
+    if init_tl and curr_tl and init_tl.strip().lower() != curr_tl.strip().lower():
+        role_changes_list.append(f"<b>Team Leader Handover:</b> {html.escape(init_tl.strip())} (Initiation) &rarr; {html.escape(curr_tl.strip())} (Current)")
+
+    # 3. Reviewer change
+    init_rev = (d1.get('review') or {}).get('reviewer') or ''
+    curr_rev = (project.reviewer.full_name or project.reviewer.username) if project.reviewer else ''
+    if init_rev and curr_rev and init_rev.strip().lower() != curr_rev.strip().lower():
+        role_changes_list.append(f"<b>Reviewer Transition:</b> {html.escape(init_rev.strip())} (Stage 1 Gate) &rarr; {html.escape(curr_rev.strip())} (Closure Gate)")
+
+    # 4. Past Members Who Left in Middle
+    curr_member_names = [((m.full_name or m.username) or '').strip().lower() for m in (project.members or [])]
+    if curr_tl: curr_member_names.append(curr_tl.strip().lower())
+
+    init_tms = (d1.get('team') or {}).get('team_members') or []
+    for tm in init_tms:
+        if isinstance(tm, dict):
+            tm_name = (tm.get('name') or tm.get('username') or '').strip()
+            if tm_name and tm_name.lower() not in curr_member_names:
+                from_d = tm.get('from_date') or tm.get('joined_date') or start_dt_clean
+                to_d = tm.get('to_date') or tm.get('left_date') or 'Mid-Project Handover'
+                reason = tm.get('reason') or tm.get('note') or 'Department Transfer'
+                role_changes_list.append(f"<b>Past Member (Departed):</b> <span style='color:#b91c1c; font-weight:600;'>{html.escape(tm_name)}</span> (Active from {html.escape(from_d)} to {html.escape(to_d)} &bull; {html.escape(reason)})")
+
+    # 5. Mid-Project Joiners
+    init_member_names = [((tm.get('name') or tm.get('username') or '')).strip().lower() for tm in init_tms if isinstance(tm, dict)]
+    if init_tl: init_member_names.append(init_tl.strip().lower())
+
+    for m in (project.members or []):
+        m_name = (m.full_name or m.username or '').strip()
+        if m_name and m_name.lower() not in init_member_names and len(init_member_names) > 0:
+            role_changes_list.append(f"<b>Joined Mid-Project:</b> <span style='color:#1d4ed8; font-weight:600;'>{html.escape(m_name)}</span> (Inducted during execution &bull; Active till {html.escape(end_dt_clean)})")
+
+    # If changes exist, format row; otherwise keep empty
+    if role_changes_list:
+        changes_html_content = " &nbsp;|&nbsp; ".join(role_changes_list)
+        role_and_membership_changes_row_html = f"""
+        <tr>
+          <th style="background-color: #fff1f2; color: #9f1239; font-size: 6.5pt; vertical-align: middle;">Role & Member Changes</th>
+          <td colspan="5" style="background-color: #fffbeb; font-size: 6.8pt; line-height: 1.35; color: #854d0e; padding: 2.5px 5px;">
+            {changes_html_content}
+          </td>
+        </tr>"""
+    else:
+        role_and_membership_changes_row_html = ""
 
     # Section 1
     cand_theme = get_v(s1, d1, "theme_target_schedule.improvement_theme")
@@ -1131,59 +1280,46 @@ def build_qc_story_html(project_id):
         return fallback_dept
 
     signoff_rows = []
-    if saved_signoff:
-        for item in saved_signoff:
-            if isinstance(item, dict):
-                r_role = item.get('role') or 'Team Member'
-                r_name = item.get('name') or ''
-                r_dept = item.get('department') or ''
-                r_sig = item.get('signature') or ''
-                r_date = item.get('date') or ''
-                if r_name.strip() or r_role.strip():
-                    signoff_rows.append({
-                        'role': r_role,
-                        'name': r_name,
-                        'department': r_dept,
-                        'signature': r_sig,
-                        'date': r_date
-                    })
 
-    if not signoff_rows:
-        if project.team_leader:
-            tl_n = project.team_leader.full_name or project.team_leader.username
-            if tl_n:
-                signoff_rows.append({
-                    'role': 'Team Leader',
-                    'name': tl_n,
-                    'department': get_user_dept_name(project.team_leader, default_dept),
-                    'signature': '',
-                    'date': ''
-                })
+    # 1. Team Leader (Mandatory)
+    tl_user = project.team_leader or project.creator
+    tl_name = (tl_user.full_name or tl_user.username) if tl_user else ""
+    tl_dept = get_user_dept_name(tl_user, default_dept)
+    signoff_rows.append({
+        'role': 'Team Leader',
+        'name': tl_name,
+        'department': tl_dept,
+        'signature': '',
+        'date': ''
+    })
 
-        if project.facilitator:
-            fac_n = project.facilitator.full_name or project.facilitator.username
-            if fac_n:
-                signoff_rows.append({
-                    'role': 'QCC Facilitator',
-                    'name': fac_n,
-                    'department': get_user_dept_name(project.facilitator, default_dept),
-                    'signature': '',
-                    'date': ''
-                })
+    # 2. QCC Facilitator (Mandatory)
+    fac_user = project.facilitator
+    fac_name = (fac_user.full_name or fac_user.username) if fac_user else ""
+    fac_dept = get_user_dept_name(fac_user, default_dept)
+    signoff_rows.append({
+        'role': 'QCC Facilitator',
+        'name': fac_name,
+        'department': fac_dept,
+        'signature': '',
+        'date': ''
+    })
 
-        rev_user = getattr(project, 'reviewer', None) or project.creator
-        if rev_user:
-            rev_n = rev_user.full_name or rev_user.username
-            if rev_n:
-                signoff_rows.append({
-                    'role': 'Reviewer',
-                    'name': rev_n,
-                    'department': get_user_dept_name(rev_user, default_dept),
-                    'signature': '',
-                    'date': ''
-                })
+    # 3. Project Reviewer (Mandatory)
+    rev_user = getattr(project, 'reviewer', None)
+    rev_name = (rev_user.full_name or rev_user.username) if rev_user else ""
+    rev_dept = get_user_dept_name(rev_user, default_dept)
+    signoff_rows.append({
+        'role': 'Project Reviewer',
+        'name': rev_name,
+        'department': rev_dept,
+        'signature': '',
+        'date': ''
+    })
 
-        members_list = project.members or []
+    # 4. Team Members (from project members roster or saved_signoff)
+    members_list = project.members or []
+    if members_list:
         for idx, m in enumerate(members_list):
             m_n = m.full_name or m.username
             if m_n:
@@ -1194,16 +1330,65 @@ def build_qc_story_html(project_id):
                     'signature': '',
                     'date': ''
                 })
+    elif saved_signoff:
+        for item in saved_signoff:
+            if isinstance(item, dict):
+                r_role = item.get('role') or 'Team Member'
+                r_name = item.get('name') or ''
+                r_dept = item.get('department') or default_dept
+                # Skip if it's already TL/Fac/Rev to avoid duplicate
+                if any(x in r_role.lower() for x in ['leader', 'facilitator', 'reviewer']):
+                    continue
+                if r_name.strip() or r_role.strip():
+                    signoff_rows.append({
+                        'role': r_role,
+                        'name': r_name,
+                        'department': r_dept,
+                        'signature': item.get('signature') or '',
+                        'date': item.get('date') or ''
+                    })
+
+    # 5. Organization Custom Hierarchy Approvers (HR, Finance, Plant Head, Quality Head, HOD, etc.)
+    org = project.organization
+    hierarchy = (org and getattr(org, 'signoff_hierarchy_config', None)) or None
+    if not hierarchy:
+        hierarchy = [
+            {"role": "HR Manager / Representative", "department": "Human Resources", "name": "", "enabled": True, "type": "custom"},
+            {"role": "Finance / Costing Head", "department": "Finance & Accounts", "name": "", "enabled": True, "type": "custom"},
+            {"role": "Plant / Quality Head", "department": "Quality Assurance", "name": "", "enabled": True, "type": "custom"}
+        ]
+
+    for h_item in hierarchy:
+        if not isinstance(h_item, dict):
+            continue
+        if h_item.get('enabled') is False:
+            continue
+        h_type = h_item.get('type')
+        if h_type == 'system':
+            # System roles are already added above
+            continue
+        h_role = h_item.get('role') or 'Management Approver'
+        h_dept = h_item.get('department') or 'Management'
+        h_name = h_item.get('name') or ''
+        signoff_rows.append({
+            'role': h_role,
+            'name': h_name,
+            'department': h_dept,
+            'signature': '',
+            'date': ''
+        })
 
     signoff_table_rows_html = ""
     for s_item in signoff_rows:
+        sig_val = html.escape(s_item["signature"]) if s_item.get("signature") else ''
+        date_val = html.escape(s_item["date"]) if s_item.get("date") else ''
         signoff_table_rows_html += f'''
             <tr>
-              <td><b>{html.escape(s_item["role"])}</b></td>
-              <td>{html.escape(s_item["name"])}</td>
-              <td>{html.escape(s_item["department"])}</td>
-              <td style="color: #059669; font-weight: bold;">{html.escape(s_item["signature"])}</td>
-              <td>{html.escape(s_item["date"])}</td>
+              <td style="padding: 2.5px 5px; font-weight: 600; color: #0f172a;">{html.escape(s_item["role"])}</td>
+              <td style="padding: 2.5px 5px; color: #334155;">{html.escape(s_item["name"])}</td>
+              <td style="padding: 2.5px 5px; color: #475569;">{html.escape(s_item["department"])}</td>
+              <td style="padding: 2.5px 5px; text-align: center;">{sig_val}</td>
+              <td style="padding: 2.5px 5px; text-align: center;">{date_val}</td>
             </tr>'''
 
     # HTML Output
@@ -1415,15 +1600,15 @@ def build_qc_story_html(project_id):
 
       <table class="data-table">
         <tr>
-          <th style="width: 12%;">Project Title</th>
+          <th style="width: 13%;">Project Title</th>
           <td colspan="3" style="font-weight: bold; color: #1e3a8a;">{html.escape(project_title)}</td>
-          <th style="width: 14%;">Project No.</th>
+          <th style="width: 13%;">Project No.</th>
           <td>{html.escape(doc_id)}</td>
         </tr>
         <tr>
-          <th>Plant / Line</th>
-          <td>{html.escape(plant_line)}</td>
-          <th style="width: 12%;">Part / Process</th>
+          <th>Plant Location</th>
+          <td>{html.escape(plant_location)}</td>
+          <th style="width: 13%;">Part / Process</th>
           <td>{html.escape(part_process)}</td>
           <th>No. of Meetings</th>
           <td>{html.escape(meeting_count)}</td>
@@ -1433,9 +1618,13 @@ def build_qc_story_html(project_id):
           <td>{html.escape(team_leader)}</td>
           <th>Facilitator / QA</th>
           <td>{html.escape(facilitator)}</td>
-          <th>Team Members</th>
-          <td>{members_str}</td>
+          <th>Reviewer</th>
+          <td>{html.escape(reviewer)}</td>
         </tr>
+        <tr>
+          <th>Team Members</th>
+          <td colspan="5">{members_str}</td>
+        </tr>{role_and_membership_changes_row_html}
       </table>
 
       <!-- SECTION 1 -->
@@ -1695,16 +1884,21 @@ def build_qc_story_html(project_id):
 
     return html_code
 
-def render_html_to_pdf_edge(html_code):
+import shutil
+
+def render_html_to_pdf_browser(html_code):
+    """Fast headless Chromium/Chrome/Edge renderer for exact 2-page print layout."""
     with tempfile.NamedTemporaryFile('w', delete=False, suffix='.html', encoding='utf-8') as f:
         f.write(html_code)
-        html_path = f.name
+        html_path = os.path.abspath(f.name)
 
     pdf_path = html_path.replace('.html', '.pdf')
+    file_url = 'file:///' + html_path.replace('\\', '/')
+
     browser_paths = [
+        r'C:\Program Files\Google\Chrome\Application\chrome.exe',
         r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
         r'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
-        r'C:\Program Files\Google\Chrome\Application\chrome.exe',
         r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
     ]
 
@@ -1715,31 +1909,69 @@ def render_html_to_pdf_edge(html_code):
             break
 
     if not browser:
-        raise RuntimeError("No Chromium or Edge browser available for PDF generation")
+        raise RuntimeError("No Chromium or Chrome/Edge browser available for PDF generation")
 
+    user_data_dir = tempfile.mkdtemp(prefix='qcms_pdf_profile_')
     cmd = [
         browser,
-        '--headless',
+        '--headless=new',
+        f'--user-data-dir={user_data_dir}',
+        '--no-first-run',
+        '--no-default-browser-check',
         '--disable-gpu',
+        '--no-sandbox',
+        '--disable-extensions',
+        '--disable-background-networking',
         '--no-pdf-header-footer',
         f'--print-to-pdf={pdf_path}',
-        html_path
+        file_url
     ]
 
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, timeout=20)
     with open(pdf_path, 'rb') as f:
         pdf_bytes = f.read()
 
-    os.remove(html_path)
-    os.remove(pdf_path)
+    try:
+        os.remove(html_path)
+    except Exception:
+        pass
+    try:
+        os.remove(pdf_path)
+    except Exception:
+        pass
+    try:
+        shutil.rmtree(user_data_dir, ignore_errors=True)
+    except Exception:
+        pass
+
     return pdf_bytes
+
+def render_html_to_pdf_pymupdf(html_code):
+    """Fallback in-memory PDF rendering using PyMuPDF Story."""
+    import io
+    story = fitz.Story(html_code)
+    out_buf = io.BytesIO()
+    writer = fitz.DocumentWriter(out_buf)
+    rect = fitz.paper_rect('a4')
+    more = 1
+    while more:
+        dev = writer.begin_page(rect)
+        more, _ = story.place(rect)
+        story.draw(dev)
+        writer.end_page()
+    writer.close()
+    return out_buf.getvalue()
 
 def generate_qc_story_closure_summary_pdf(project_id):
     html_code = build_qc_story_html(project_id)
     if not html_code:
         return None
     try:
-        return render_html_to_pdf_edge(html_code)
+        return render_html_to_pdf_browser(html_code)
     except Exception as e:
-        print(f"[PDF_FILLER] Browser PDF generation failed: {e}")
-        return None
+        print(f"[PDF_FILLER] Browser rendering exception: {e}, falling back to PyMuPDF...")
+        try:
+            return render_html_to_pdf_pymupdf(html_code)
+        except Exception as e2:
+            print(f"[PDF_FILLER] PyMuPDF fallback failed: {e2}")
+            return None

@@ -122,21 +122,91 @@
         [data-theme="dark"] .badge-Silver, body.dark-mode .badge-Silver { color: #cbd5e1 !important; }
         [data-theme="dark"] .badge-Newbie, body.dark-mode .badge-Newbie { color: #f1f5f9 !important; background: rgba(241, 245, 249, 0.15) !important; border-color: rgba(241, 245, 249, 0.3) !important; }
 
-        .point-counter {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #2563eb !important;
-            font-family: var(--ds-font-heading);
+        /* Scope Champions Cards Grid */
+        .champions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
         }
 
-        [data-theme="dark"] .point-counter,
-        body.dark-mode .point-counter {
-            color: #60a5fa !important;
+        .champion-card {
+            background: var(--ds-bg-card, #ffffff);
+            border: 1px solid var(--ds-border-color, #e2e8f0);
+            border-radius: 16px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.25s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
-        [data-theme="dark"] .point-counter span,
-        body.dark-mode .point-counter span {
-            color: #cbd5e1 !important;
+        .champion-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -4px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+            border-color: #3b82f6;
+        }
+
+        .champion-scope-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed rgba(0,0,0,0.06);
+        }
+
+        .champion-scope-tag {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #1e40af;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .champion-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 0.5rem auto;
+            border: 2.5px solid #3b82f6;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+
+        .scope-pills-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .scope-pills-container .nav-link {
+            color: #64748b;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            border: 0;
+            background: transparent;
+        }
+
+        .scope-pills-container .nav-link:hover {
+            color: #1e293b;
+            background: #f8fafc;
+        }
+
+        .scope-pills-container .nav-link.active {
+            background: #2563eb !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
         }
     </style>
 </head>
@@ -172,28 +242,68 @@
 
 
 
-                <!-- Top 3 Podium -->
-                <div class="podium-container" id="podiumSection">
-                    <!-- Dynamic Top 3 Cards rendered here -->
+                <!-- Scope Hierarchy Switcher (Company-Wide / Plant Level / Department Level / By Role) -->
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+                    <div class="nav nav-pills scope-pills-container p-1 rounded-pill" id="scopePills" role="tablist">
+                        <button class="nav-link active" id="pillOverall" onclick="rewardsApp.setScope('overall')">
+                            <i data-lucide="globe" style="width:14px;height:14px;" class="me-1"></i> Overall Company
+                        </button>
+                        <button class="nav-link" id="pillPlant" onclick="rewardsApp.setScope('plant')">
+                            <i data-lucide="factory" style="width:14px;height:14px;" class="me-1"></i> Plant Champions
+                        </button>
+                        <button class="nav-link" id="pillDept" onclick="rewardsApp.setScope('department')">
+                            <i data-lucide="building-2" style="width:14px;height:14px;" class="me-1"></i> Department Champions
+                        </button>
+                        <button class="nav-link" id="pillRole" onclick="rewardsApp.setScope('role')">
+                            <i data-lucide="users" style="width:14px;height:14px;" class="me-1"></i> Champions by Role
+                        </button>
+                    </div>
+
+                    <div id="activeScopeLabel" class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 text-xs fw-semibold" id="scopeBadgeText">
+                            🏢 Overall Company Rankings (All Plants & Departments)
+                        </span>
+                        <button class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2.5 text-xxs" id="resetFiltersBtn" onclick="rewardsApp.resetAllFilters()" style="display:none;">
+                            <i data-lucide="x" style="width:12px;height:12px;" class="me-1"></i> Reset Filters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Top Showcase (Podium OR Scope Champions Grid) -->
+                <div id="showcaseSection">
+                    <div class="podium-container" id="podiumSection">
+                        <!-- Dynamic Top 3 Cards rendered here -->
+                    </div>
                 </div>
 
                 <!-- Leaderboard Table Controls -->
                 <div class="glass-card ds-card mb-4">
                     <div class="ds-card-header p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">
-                        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 400px;">
+                        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 360px;">
                             <div class="position-relative w-100">
-                                <input type="text" class="ds-input ps-5" id="leaderboardSearch" placeholder="Search employee name or department..." oninput="rewardsApp.filterLeaderboard()">
-                                <i data-lucide="search" class="position-absolute start-0 top-50 translate-middle-y ms-3 text-muted" style="width:16px;height:16px;"></i>
+                                <input type="text" class="ds-input ps-5 text-xs" id="leaderboardSearch" placeholder="Search employee name, department, role..." oninput="rewardsApp.filterLeaderboard()">
+                                <i data-lucide="search" class="position-absolute start-0 top-50 translate-middle-y ms-3 text-muted" style="width:15px;height:15px;"></i>
                             </div>
                         </div>
 
                         <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <!-- Role Filter -->
+                            <select class="ds-input ds-select py-1 px-3 text-xs" id="roleFilter" style="width:auto;" onchange="rewardsApp.loadLeaderboard(1)">
+                                <option value="">All Roles</option>
+                                <option value="Team Member">Team Members</option>
+                                <option value="Facilitator">Facilitators</option>
+                                <option value="Reviewer">Reviewers</option>
+                            </select>
+
+                            <!-- Plant Filter -->
                             <div id="plantFilterCol" style="display:none;">
                                 <select class="ds-input ds-select py-1 px-3 text-xs" id="plantFilter" style="width:auto;" onchange="rewardsApp.handlePlantChange(this.value)">
                                     <option value="">All Plants</option>
                                 </select>
                             </div>
-                            <select class="ds-input ds-select py-1 px-3 text-xs" id="deptFilter" style="width:auto;" onchange="rewardsApp.loadLeaderboard()">
+
+                            <!-- Department Filter -->
+                            <select class="ds-input ds-select py-1 px-3 text-xs" id="deptFilter" style="width:auto;" onchange="rewardsApp.loadLeaderboard(1)">
                                 <option value="">All Departments</option>
                             </select>
                         </div>
@@ -204,20 +314,21 @@
                         <table class="table ds-table align-middle mb-0" id="leaderboardTable">
                             <thead>
                                 <tr>
-                                    <th style="width: 80px;" class="text-center">RANK</th>
+                                    <th style="width: 75px;" class="text-center">RANK</th>
                                     <th>EMPLOYEE</th>
-                                    <th>DEPARTMENT</th>
+                                    <th>ROLE</th>
+                                    <th>PLANT & DEPT</th>
                                     <th>BADGE</th>
                                     <th class="text-end">TOTAL POINTS</th>
                                     <th class="text-center">COMPLETED</th>
-                                    <th class="text-center">IDEAS APP.</th>
+                                    <th class="text-center">IDEAS APPROVED</th>
                                     <th class="text-center">ARTICLES</th>
                                     <th class="text-center">ACTION</th>
                                 </tr>
                             </thead>
                             <tbody id="leaderboardTbody">
                                 <tr>
-                                    <td colspan="9" class="text-center py-4 text-muted">
+                                    <td colspan="10" class="text-center py-4 text-muted">
                                         <div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading leaderboard data...
                                     </td>
                                 </tr>
@@ -226,8 +337,20 @@
                     </div>
                     <!-- Pagination Footer Bar -->
                     <div class="card-footer p-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-3" id="paginationBar">
-                        <div class="text-xs text-muted" id="paginationInfo">
-                            Showing 0 to 0 of 0 members
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <div class="text-xs text-muted" id="paginationInfo">
+                                Showing 0 to 0 of 0 members
+                            </div>
+                            <div class="d-flex align-items-center gap-2 text-xs text-muted">
+                                <span>Per page:</span>
+                                <select class="form-select form-select-sm text-xs py-1 px-2 border" id="perPageSelect" style="width: auto; min-width: 65px; height: 30px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; background-color: var(--ds-bg-card, #fff);" onchange="rewardsApp.changePerPage(this.value)">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="d-flex align-items-center gap-1" id="paginationBtns">
                         </div>
@@ -258,13 +381,14 @@
     <!-- Core Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/components.js"></script>
-
     <script>
         class LeaderboardManager {
             constructor() {
                 this.leaderboardData = [];
                 this.podiumData = [];
+                this.championsSummary = {};
                 this.departments = [];
+                this.currentScope = 'overall'; // 'overall', 'plant', 'department', 'role'
                 this.page = 1;
                 this.perPage = 5;
                 this.pagination = { total: 0, page: 1, per_page: 5, pages: 1 };
@@ -327,18 +451,6 @@
             async loadDepartments(plantVal = '') {
                 try {
                     const select = document.getElementById('deptFilter');
-                    const plantCol = document.getElementById('plantFilterCol');
-                    const isPlantFilterVisible = plantCol && plantCol.style.display !== 'none';
-
-                    if (isPlantFilterVisible && !plantVal) {
-                        if (select) {
-                            select.innerHTML = '<option value="">Select plant location first...</option>';
-                            select.value = '';
-                            select.disabled = true;
-                        }
-                        return;
-                    }
-
                     const token = this.getToken();
                     let url = '/api/projects/departments';
                     if (plantVal) url += '?plant_name=' + encodeURIComponent(plantVal);
@@ -358,6 +470,225 @@
                 }
             }
 
+            setScope(scope) {
+                this.currentScope = scope;
+                
+                // Update active pill
+                document.querySelectorAll('#scopePills .nav-link').forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(
+                    scope === 'plant' ? 'pillPlant' : (scope === 'department' ? 'pillDept' : (scope === 'role' ? 'pillRole' : 'pillOverall'))
+                );
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Update scope badge text
+                const badgeEl = document.getElementById('scopeBadgeText');
+                if (badgeEl) {
+                    if (scope === 'overall') badgeEl.textContent = '🏢 Overall Company Rankings (All Plants & Departments)';
+                    else if (scope === 'plant') badgeEl.textContent = '🏭 Plant-Level Top Champions';
+                    else if (scope === 'department') badgeEl.textContent = '🏬 Department-Level Top Champions';
+                    else if (scope === 'role') badgeEl.textContent = '👥 Top Champions by Organizational Role';
+                }
+
+                this.renderShowcase();
+            }
+
+            renderShowcase() {
+                const container = document.getElementById('showcaseSection');
+                if (!container) return;
+
+                if (this.currentScope === 'overall') {
+                    // Render Top 3 Podium
+                    if (!this.podiumData || !this.podiumData.length) {
+                        container.innerHTML = '<div class="text-center py-3 text-muted text-xs">No podium entries available.</div>';
+                        return;
+                    }
+
+                    const top3 = this.podiumData.slice(0, 3);
+                    const crowns = ['🥇', '🥈', '🥉'];
+                    
+                    container.innerHTML = `
+                        <div class="podium-container" id="podiumSection">
+                            ${top3.map((emp, i) => {
+                                const rankClass = `rank-${emp.rank || (i + 1)}`;
+                                return `
+                                    <div class="podium-card ${rankClass} fade-in">
+                                        <div class="crown-badge">${crowns[i]}</div>
+                                        <img src="${emp.avatar || '/assets/img/default-avatar.png'}" class="podium-avatar" alt="${emp.name}" onerror="this.src='/assets/img/default-avatar.png'">
+                                        <h6 class="fw-bold mb-1 text-main text-truncate">${emp.name}</h6>
+                                        <p class="text-xs text-secondary mb-1">${emp.department || 'General'} &bull; ${emp.plant || 'Main Plant'}</p>
+                                        <div class="mb-2"><span class="badge-pill badge-${emp.badge}">${emp.badge}</span></div>
+                                        <div class="point-counter">${(emp.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else if (this.currentScope === 'plant') {
+                    // Render Plant Champions Grid
+                    const plants = this.championsSummary.plants || [];
+                    if (!plants.length) {
+                        container.innerHTML = '<div class="text-center py-4 text-muted text-xs">No plant champions data available.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        <div class="champions-grid">
+                            ${plants.map(p => {
+                                const c = p.champion;
+                                return `
+                                    <div class="champion-card">
+                                        <div>
+                                            <div class="champion-scope-header">
+                                                <span class="champion-scope-tag"><i data-lucide="factory" style="width:12px;height:12px;" class="me-1"></i> ${p.plant_name}</span>
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle text-xxs px-2 py-0.5 fw-bold">#1 Plant Lead</span>
+                                            </div>
+                                            <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" alt="${c.name}">
+                                            <h6 class="fw-bold mb-0 text-dark text-truncate">${c.name}</h6>
+                                            <div class="text-xxs text-muted mb-2">${c.department} &bull; ${c.role}</div>
+                                            <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
+                                            <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
+                                        </div>
+                                        <button class="btn btn-xs btn-outline-primary rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp.filterByPlant('${p.plant_name}')">
+                                            <i data-lucide="filter" style="width:12px;height:12px;" class="me-1"></i> View Plant Leaderboard
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else if (this.currentScope === 'department') {
+                    // Render Department Champions Grid
+                    const depts = this.championsSummary.departments || [];
+                    if (!depts.length) {
+                        container.innerHTML = '<div class="text-center py-4 text-muted text-xs">No department champions data available.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        <div class="champions-grid">
+                            ${depts.map(d => {
+                                const c = d.champion;
+                                return `
+                                    <div class="champion-card">
+                                        <div>
+                                            <div class="champion-scope-header">
+                                                <span class="champion-scope-tag" style="background:rgba(16, 185, 129, 0.1); color:#059669;"><i data-lucide="building-2" style="width:12px;height:12px;" class="me-1"></i> ${d.department_name}</span>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle text-xxs px-2 py-0.5 fw-bold">#1 Dept Lead</span>
+                                            </div>
+                                            <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" style="border-color:#10b981;" alt="${c.name}">
+                                            <h6 class="fw-bold mb-0 text-dark text-truncate">${c.name}</h6>
+                                            <div class="text-xxs text-muted mb-2">${c.plant} &bull; ${c.role}</div>
+                                            <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
+                                            <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
+                                        </div>
+                                        <button class="btn btn-xs btn-outline-success rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp.filterByDepartment('${d.department_name}')">
+                                            <i data-lucide="filter" style="width:12px;height:12px;" class="me-1"></i> View Dept Leaderboard
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else if (this.currentScope === 'role') {
+                    // Render Role Champions Grid (Excluding Admin and CEO)
+                    const excludedRoles = ['admin', 'ceo', 'superadmin', 'system admin', 'administrator'];
+                    const roles = (this.championsSummary.roles || []).filter(r => !excludedRoles.includes((r.role_name || '').trim().toLowerCase()));
+                    if (!roles.length) {
+                        container.innerHTML = '<div class="text-center py-4 text-muted text-xs">No role champions data available.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        <div class="champions-grid">
+                            ${roles.map(r => {
+                                const c = r.champion;
+                                return `
+                                    <div class="champion-card">
+                                        <div>
+                                            <div class="champion-scope-header">
+                                                <span class="champion-scope-tag" style="background:rgba(168, 85, 247, 0.1); color:#7e22ce;"><i data-lucide="user-check" style="width:12px;height:12px;" class="me-1"></i> ${r.role_name}</span>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-xxs px-2 py-0.5 fw-bold">Top ${r.role_name}</span>
+                                            </div>
+                                            <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" style="border-color:#a855f7;" alt="${c.name}">
+                                            <h6 class="fw-bold mb-0 text-dark text-truncate">${c.name}</h6>
+                                            <div class="text-xxs text-muted mb-2">${c.department} &bull; ${c.plant}</div>
+                                            <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
+                                            <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
+                                        </div>
+                                        <button class="btn btn-xs btn-outline-primary rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp.filterByRole('${r.role_name}')">
+                                            <i data-lucide="filter" style="width:12px;height:12px;" class="me-1"></i> Filter By Role
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
+
+                if (window.lucide) lucide.createIcons();
+            }
+
+            filterByPlant(plantName) {
+                const plantSelect = document.getElementById('plantFilter');
+                if (plantSelect) {
+                    plantSelect.value = plantName;
+                    this.handlePlantChange(plantName);
+                }
+                this.updateResetBtnVisibility();
+            }
+
+            filterByDepartment(deptName) {
+                const deptSelect = document.getElementById('deptFilter');
+                if (deptSelect) {
+                    for (let opt of deptSelect.options) {
+                        if (opt.text.toLowerCase() === deptName.toLowerCase()) {
+                            deptSelect.value = opt.value;
+                            break;
+                        }
+                    }
+                    this.loadLeaderboard(1);
+                }
+                this.updateResetBtnVisibility();
+            }
+
+            filterByRole(roleName) {
+                const roleSelect = document.getElementById('roleFilter');
+                if (roleSelect) {
+                    roleSelect.value = roleName;
+                    this.loadLeaderboard(1);
+                }
+                this.updateResetBtnVisibility();
+            }
+
+            resetAllFilters() {
+                if (document.getElementById('leaderboardSearch')) document.getElementById('leaderboardSearch').value = '';
+                if (document.getElementById('roleFilter')) document.getElementById('roleFilter').value = '';
+                if (document.getElementById('plantFilter')) document.getElementById('plantFilter').value = '';
+                if (document.getElementById('deptFilter')) document.getElementById('deptFilter').value = '';
+                this.setScope('overall');
+                this.loadLeaderboard(1);
+                this.updateResetBtnVisibility();
+            }
+
+            updateResetBtnVisibility() {
+                const s = (document.getElementById('leaderboardSearch')?.value || '').trim();
+                const r = document.getElementById('roleFilter')?.value || '';
+                const p = document.getElementById('plantFilter')?.value || '';
+                const d = document.getElementById('deptFilter')?.value || '';
+                const resetBtn = document.getElementById('resetFiltersBtn');
+                if (resetBtn) {
+                    resetBtn.style.display = (s || r || p || d || this.currentScope !== 'overall') ? 'inline-flex' : 'none';
+                }
+            }
+
+            changePerPage(newVal) {
+                const parsed = parseInt(newVal, 10);
+                if (parsed > 0) {
+                    this.perPage = parsed;
+                    this.loadLeaderboard(1);
+                }
+            }
+
             async loadLeaderboard(targetPage = 1) {
                 try {
                     this.page = targetPage;
@@ -365,10 +696,13 @@
                     const search = (document.getElementById('leaderboardSearch')?.value || '').trim();
                     const plantVal = document.getElementById('plantFilter')?.value || '';
                     const deptId = document.getElementById('deptFilter')?.value || '';
+                    const roleVal = document.getElementById('roleFilter')?.value || '';
 
-                    let url = `/api/leaderboard?page=${this.page}&per_page=5`;
+                    const currentPerPage = this.perPage || 5;
+                    let url = `/api/leaderboard?page=${this.page}&per_page=${currentPerPage}`;
                     if (plantVal) url += `&plant_name=${encodeURIComponent(plantVal)}`;
                     if (deptId) url += `&department_id=${deptId}`;
+                    if (roleVal) url += `&role=${encodeURIComponent(roleVal)}`;
                     if (search) url += `&q=${encodeURIComponent(search)}`;
 
                     const res = await fetch(url, {
@@ -380,57 +714,27 @@
                     const data = await res.json();
                     this.leaderboardData = data.leaderboard || [];
                     this.podiumData = data.podium || [];
-                    this.pagination = data.pagination || { total: this.leaderboardData.length, page: 1, per_page: 5, pages: 1 };
+                    this.championsSummary = data.champions_summary || {};
+                    this.pagination = data.pagination || { total: this.leaderboardData.length, page: 1, per_page: currentPerPage, pages: 1 };
 
-                    // Render My Summary if elements exist
-                    const my = data.my_summary || {};
-                    const pEl = document.getElementById('myPoints'); if (pEl) pEl.textContent = (my.total_points || 0).toLocaleString();
-                    const rEl = document.getElementById('myRank'); if (rEl) rEl.textContent = my.rank ? `#${my.rank}` : '--';
-                    const cEl = document.getElementById('myProjectsComp'); if (cEl) cEl.textContent = my.projects_completed || 0;
-                    const bEl = document.getElementById('myBadge'); if (bEl) bEl.innerHTML = `<span class="badge-pill badge-${my.badge}">${my.badge || 'Newbie'}</span>`;
-
-                    this.renderPodium();
+                    this.renderShowcase();
                     this.renderTable();
                     this.renderPagination();
+                    this.updateResetBtnVisibility();
                     if (window.lucide) lucide.createIcons();
                 } catch (err) {
                     console.error(err);
                     document.getElementById('leaderboardTbody').innerHTML = `
-                        <tr><td colspan="9" class="text-center py-4 text-danger">Failed to load leaderboard data.</td></tr>
+                        <tr><td colspan="10" class="text-center py-4 text-danger">Failed to load leaderboard data.</td></tr>
                     `;
                 }
-            }
-
-            renderPodium() {
-                const sec = document.getElementById('podiumSection');
-                if (!this.podiumData || !this.podiumData.length) {
-                    sec.innerHTML = '';
-                    return;
-                }
-
-                const top3 = this.podiumData.slice(0, 3);
-                const crowns = ['🥇', '🥈', '🥉'];
-                
-                sec.innerHTML = top3.map((emp, i) => {
-                    const rankClass = `rank-${emp.rank || (i + 1)}`;
-                    return `
-                        <div class="podium-card ${rankClass} fade-in">
-                            <div class="crown-badge">${crowns[i]}</div>
-                            <img src="${emp.avatar || '/assets/img/default-avatar.png'}" class="podium-avatar" alt="${emp.name}" onerror="this.src='/assets/img/default-avatar.png'">
-                            <h6 class="fw-bold mb-1 text-main text-truncate">${emp.name}</h6>
-                            <p class="text-xs text-secondary mb-2">${emp.department || 'General'}</p>
-                            <div class="mb-2"><span class="badge-pill badge-${emp.badge}">${emp.badge}</span></div>
-                            <div class="point-counter">${(emp.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
-                        </div>
-                    `;
-                }).join('');
             }
 
             renderTable() {
                 const tbody = document.getElementById('leaderboardTbody');
 
                 if (!this.leaderboardData || !this.leaderboardData.length) {
-                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No employees found matching criteria.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">No employees found matching selected criteria.</td></tr>`;
                     return;
                 }
 
@@ -441,21 +745,27 @@
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-3">
-                                <img src="${e.avatar || '/assets/img/default-avatar.png'}" class="rounded-circle" style="width:36px;height:36px;object-fit:cover;" onerror="this.src='/assets/img/default-avatar.png'">
+                                <img src="${e.avatar || '/assets/img/default-avatar.png'}" class="rounded-circle border" style="width:36px;height:36px;object-fit:cover;" onerror="this.src='/assets/img/default-avatar.png'">
                                 <div>
                                     <div class="fw-bold text-main">${e.name}</div>
                                     <div class="text-xs text-muted">@${e.username}</div>
                                 </div>
                             </div>
                         </td>
-                        <td class="text-secondary font-medium">${e.department}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border text-xxs px-2 py-1">${e.role || 'Team Member'}</span>
+                        </td>
+                        <td class="text-secondary font-medium text-xs">
+                            <span class="fw-semibold text-dark">${e.plant || 'Main Plant'}</span>
+                            <div class="text-xxs text-muted">${e.department || 'General'}</div>
+                        </td>
                         <td><span class="badge-pill badge-${e.badge}">${e.badge}</span></td>
                         <td class="text-end fw-extrabold text-primary fs-6">${(e.total_points || 0).toLocaleString()}</td>
                         <td class="text-center fw-bold">${e.projects_completed}</td>
                         <td class="text-center fw-bold">${e.ideas_approved}</td>
                         <td class="text-center fw-bold">${e.knowledge_articles}</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-outline-primary py-0 px-2 text-xs" onclick="rewardsApp.viewHistory(${e.employee_id}, '${e.name}')">
+                            <button class="btn btn-sm btn-outline-primary py-0.5 px-2.5 text-xs rounded-pill" onclick="rewardsApp.viewHistory(${e.employee_id}, '${e.name}')">
                                 <i data-lucide="history" style="width:12px;height:12px;" class="me-1"></i> History
                             </button>
                         </td>
@@ -466,9 +776,14 @@
             renderPagination() {
                 const info = document.getElementById('paginationInfo');
                 const btns = document.getElementById('paginationBtns');
+                const perPageSelect = document.getElementById('perPageSelect');
                 if (!info || !btns) return;
 
                 const { total, page, per_page, pages } = this.pagination;
+                if (perPageSelect && per_page) {
+                    perPageSelect.value = String(per_page);
+                }
+
                 if (!total) {
                     info.textContent = 'Showing 0 members';
                     btns.innerHTML = '';
@@ -482,12 +797,11 @@
                 let html = [];
                 // Previous button
                 html.push(`
-                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs" onclick="rewardsApp.loadLeaderboard(${page - 1})" ${page <= 1 ? 'disabled' : ''}>
+                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs rounded-pill" onclick="rewardsApp.loadLeaderboard(${page - 1})" ${page <= 1 ? 'disabled' : ''}>
                         ‹
                     </button>
                 `);
 
-                // 3-Number Window Pagination (1 2 3 ...)
                 if (pages > 0) {
                     let startPage = Math.max(1, page - 1);
                     let endPage = startPage + 2;
@@ -498,7 +812,7 @@
 
                     for (let i = startPage; i <= endPage; i++) {
                         html.push(`
-                            <button class="ds-btn ${i === page ? 'ds-btn-primary' : 'ds-btn-secondary'} btn-sm px-3 text-xs fw-bold" onclick="rewardsApp.loadLeaderboard(${i})">
+                            <button class="ds-btn ${i === page ? 'ds-btn-primary' : 'ds-btn-secondary'} btn-sm px-3 text-xs fw-bold rounded-pill" onclick="rewardsApp.loadLeaderboard(${i})">
                                 ${i}
                             </button>
                         `);
@@ -511,7 +825,7 @@
 
                 // Next button
                 html.push(`
-                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs" onclick="rewardsApp.loadLeaderboard(${page + 1})" ${page >= pages ? 'disabled' : ''}>
+                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs rounded-pill" onclick="rewardsApp.loadLeaderboard(${page + 1})" ${page >= pages ? 'disabled' : ''}>
                         ›
                     </button>
                 `);
@@ -535,9 +849,9 @@
                 modal.show();
 
                 try {
-                    const token = sessionStorage.getItem('token');
+                    const token = this.getToken();
                     const res = await fetch(`/api/points/history?employee_id=${empId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                     });
                     if (res.ok) {
                         const data = await res.json();
@@ -547,20 +861,30 @@
                             return;
                         }
                         list.innerHTML = `
-                            <ul class="list-group list-group-flush">
+                            <div class="d-flex flex-column gap-2">
                                 ${items.map(item => `
-                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
-                                        <div>
-                                            <div class="fw-bold text-main text-sm">${item.description}</div>
-                                            <div class="text-xs text-muted">${item.activity_type} • ${new Date(item.created_at).toLocaleDateString()}</div>
+                                    <div class="d-flex justify-content-between align-items-center p-3 rounded-3 border bg-white shadow-xs">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="rounded-circle p-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;">
+                                                <i data-lucide="award" style="width:18px;height:18px;"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark text-sm">${window.QCMS && QCMS.escapeHtml ? QCMS.escapeHtml(item.description || 'Points Awarded') : (item.description || 'Points Awarded')}</div>
+                                                <div class="text-xxs text-muted mt-0.5">
+                                                    <span class="badge bg-light text-secondary border text-xxs me-1">${item.activity_type || 'Activity'}</span>
+                                                    ${item.project_title ? `<span class="fw-medium text-dark">${item.project_title}</span> &bull; ` : ''}
+                                                    <span>${item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <span class="badge ${item.points >= 0 ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'} fw-bold fs-6">
+                                        <span class="badge ${item.points >= 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'} fw-bold text-sm px-2.5 py-1 rounded-pill flex-shrink-0">
                                             ${item.points >= 0 ? '+' : ''}${item.points} PTS
                                         </span>
-                                    </li>
+                                    </div>
                                 `).join('')}
-                            </ul>
+                            </div>
                         `;
+                        if (window.lucide) lucide.createIcons();
                     }
                 } catch (e) {
                     list.innerHTML = '<div class="text-center py-3 text-danger">Failed to load point history.</div>';

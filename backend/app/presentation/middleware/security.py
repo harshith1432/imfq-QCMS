@@ -97,7 +97,7 @@ _WAF_STRICT_PATTERNS = [
     # XSS
     (re.compile(
         r"(<\s*(script|iframe|object|embed|form|svg|img|body|html|style|link|"
-        r"meta|base)[^>]*>|javascript\s*:|on\w+\s*=|eval\s*\(|"
+        r"meta|base)[^>]*>|javascript\s*:|\bon[a-z]+\s*=|eval\s*\(|"
         r"expression\s*\(|vbscript\s*:|data\s*:text/html)",
         re.IGNORECASE
     ), 'XSS'),

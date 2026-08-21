@@ -49,11 +49,8 @@
             font-weight: 500;
         }
 
-        .onboarding-card {
-            width: 100%;
-            background: transparent;
-            border: none;
-            padding: 0;
+        #onboardingCard {
+            padding: 2.75rem 2.5rem !important;
         }
 
         .section-title {
@@ -61,6 +58,7 @@
             font-weight: 800;
             letter-spacing: -0.03em;
             color: var(--ds-text-main);
+            margin-top: 0.5rem;
             margin-bottom: var(--ds-space-8);
             display: block;
         }
@@ -116,10 +114,40 @@
         /* Responsive Adjustments */
         @media (max-width: 768px) {
             .onboarding-header h1 {
-                font-size: 2.25rem;
+                font-size: 2rem;
             }
             body {
-                padding: 2rem 1.5rem;
+                padding: 1.5rem 1rem;
+            }
+            #onboardingCard,
+            #disabledSignupBanner {
+                padding: 1.5rem 1.25rem !important;
+            }
+            .otp-box-inner {
+                padding: 1.25rem 1rem !important;
+            }
+            .otp-input-group {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+            .otp-input-group input {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            .otp-input-group button {
+                width: 100% !important;
+            }
+        }
+        @media (max-width: 480px) {
+            body {
+                padding: 1rem 0.5rem;
+            }
+            #onboardingCard,
+            #disabledSignupBanner {
+                padding: 1.25rem 0.875rem !important;
+            }
+            .otp-box-inner {
+                padding: 1rem 0.75rem !important;
             }
         }
         /* Plan cards styling */
@@ -134,6 +162,51 @@
             background: rgba(var(--ds-primary-rgb), 0.05);
             transform: translateY(-4px);
             box-shadow: var(--ds-shadow-lg);
+        }
+
+        @keyframes otpWarnSlideIn {
+            0% { opacity: 0; transform: translateY(-8px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes otpBtnShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .otp-btn-shake {
+            animation: otpBtnShake 0.4s ease-in-out !important;
+        }
+
+        /* Password toggle & requirements styling */
+        .password-toggle-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            padding: 6px;
+            color: #64748b;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .password-toggle-btn:hover {
+            color: var(--ds-primary, #6366f1);
+            background: rgba(99, 102, 241, 0.08);
+        }
+        .req-item-valid {
+            color: #10b981 !important;
+            font-weight: 600 !important;
+        }
+        .req-item-valid i,
+        .req-item-valid svg {
+            color: #10b981 !important;
+            stroke: #10b981 !important;
         }
     </style>
 </head>
@@ -205,13 +278,13 @@
                         </div>
                         
                         <div class="col-12" id="otpSection" style="display: none;">
-                            <div class="ds-card glass-card" style="padding: var(--ds-space-8); background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-primary); border-radius: var(--ds-radius-lg);">
+                            <div class="ds-card glass-card otp-box-inner" style="padding: var(--ds-space-6); background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-primary); border-radius: var(--ds-radius-lg);">
                                 <label class="ds-label mb-3">
                                     <i data-lucide="shield-check" class="inline-block w-4 h-4 mr-2 text-primary opacity-70"></i>
                                     Email Verification Code
                                 </label>
-                                <div class="d-flex gap-3 align-items-center">
-                                    <input type="text" class="ds-input" id="otp_code" placeholder="000000" maxlength="6" style="letter-spacing: 0.5em; text-align: center; font-weight: 800; font-size: 1.25rem; width: 220px; background: rgba(255,255,255,0.05);">
+                                <div class="d-flex flex-wrap gap-2 gap-sm-3 align-items-center otp-input-group">
+                                    <input type="text" class="ds-input" id="otp_code" placeholder="000000" maxlength="6" style="letter-spacing: 0.35em; text-align: center; font-weight: 800; font-size: 1.25rem; min-width: 140px; max-width: 220px; background: rgba(255,255,255,0.05);">
                                     <button type="button" class="ds-btn ds-btn-primary px-4" id="verifyOtpBtn" onclick="verifyOtp()">
                                         Verify Code
                                     </button>
@@ -219,7 +292,7 @@
                                         <i data-lucide="check-circle" class="me-2"></i> Verified
                                     </span>
                                 </div>
-                                <p class="small text-white-50 mt-3 mb-0">Please enter the 6-digit code sent to your work email.</p>
+                                <p class="small text-muted mt-3 mb-0">Please enter the 6-digit code sent to your work email.</p>
                             </div>
                         </div>
 
@@ -244,13 +317,13 @@
                         </div>
 
                         <div class="col-12" id="phoneOtpSection" style="display: none;">
-                            <div class="ds-card glass-card" style="padding: var(--ds-space-8); background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-primary); border-radius: var(--ds-radius-lg);">
+                            <div class="ds-card glass-card otp-box-inner" style="padding: var(--ds-space-6); background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-primary); border-radius: var(--ds-radius-lg);">
                                 <label class="ds-label mb-3">
                                     <i data-lucide="smartphone" class="inline-block w-4 h-4 mr-2 text-primary opacity-70"></i>
                                     Phone Verification Code
                                 </label>
-                                <div class="d-flex gap-3 align-items-center">
-                                    <input type="text" class="ds-input" id="phone_otp_code" placeholder="000000" maxlength="6" style="letter-spacing: 0.5em; text-align: center; font-weight: 800; font-size: 1.25rem; width: 220px; background: rgba(255,255,255,0.05);">
+                                <div class="d-flex flex-wrap gap-2 gap-sm-3 align-items-center otp-input-group">
+                                    <input type="text" class="ds-input" id="phone_otp_code" placeholder="000000" maxlength="6" style="letter-spacing: 0.35em; text-align: center; font-weight: 800; font-size: 1.25rem; min-width: 140px; max-width: 220px; background: rgba(255,255,255,0.05);">
                                     <button type="button" class="ds-btn ds-btn-primary px-4" id="verifyPhoneOtpBtn" onclick="verifyPhoneOtp()">
                                         Verify Code
                                     </button>
@@ -258,13 +331,13 @@
                                         <i data-lucide="check-circle" class="me-2"></i> Verified
                                     </span>
                                 </div>
-                                <p class="small text-white-50 mt-3 mb-0">Please enter the 6-digit code sent to your phone number.</p>
+                                <p class="small text-muted mt-3 mb-0">Please enter the 6-digit code sent to your phone number.</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="mt-5 pt-3 text-end">
-                        <button type="button" class="ds-btn ds-btn-primary px-5 ds-btn-lg" id="nextToStep2" onclick="nextStep(2)" disabled title="Please complete required verification step first">
+                        <button type="button" class="ds-btn ds-btn-primary px-5 ds-btn-lg" id="nextToStep2" onclick="tryNextStep()">
                             Next: Admin Setup <i data-lucide="arrow-right" class="ms-2" style="width:18px; height:18px;"></i>
                         </button>
                     </div>
@@ -288,21 +361,23 @@
                         <div class="col-md-6">
                             <label class="ds-label"><i data-lucide="lock" class="w-4 h-4 mr-2"></i> Password <span class="text-danger">*</span></label>
                             <div class="position-relative">
-                                <input type="password" class="ds-input pe-5" id="password" placeholder="••••••••" required>
-                                <button type="button" class="btn position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-3 text-white-50" onclick="togglePassword('password', this)">
+                                <input type="password" class="ds-input pe-5" id="password" placeholder="Enter your password" required oninput="updatePasswordValidation()">
+                                <button type="button" class="password-toggle-btn" onclick="togglePassword('password', this)" title="Show / Hide Password" aria-label="Toggle Password Visibility">
                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                 </button>
                             </div>
+                            <p class="small text-muted mt-1 mb-0">8+ characters · A–Z · a–z · 0–9 · Special character</p>
                         </div>
                         
                         <div class="col-md-6">
                             <label class="ds-label"><i data-lucide="shield-check" class="w-4 h-4 mr-2"></i> Confirm Password <span class="text-danger">*</span></label>
                             <div class="position-relative">
-                                <input type="password" class="ds-input pe-5" id="confirm_password" placeholder="••••••••" required>
-                                <button type="button" class="btn position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-3 text-white-50" onclick="togglePassword('confirm_password', this)">
+                                <input type="password" class="ds-input pe-5" id="confirm_password" placeholder="Confirm your password" required oninput="updatePasswordValidation()">
+                                <button type="button" class="password-toggle-btn" onclick="togglePassword('confirm_password', this)" title="Show / Hide Password" aria-label="Toggle Password Visibility">
                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                 </button>
                             </div>
+                            <div id="match-hint" class="small mt-1" style="min-height: 1.25rem;"></div>
                         </div>
                     </div>
 
@@ -320,7 +395,7 @@
 
         <!-- Footer -->
         <div class="onboarding-footer">
-            Already registered? <a href="login.html">Sign in to your instance</a>
+            Already registered? <a href="login.html">Sign In</a>
         </div>
     </div>
 
@@ -336,24 +411,135 @@
             const target = document.getElementById('step' + step);
             if (target) {
                 target.classList.add('active');
-                // Scroll to top of form smoothly
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            // Scroll smoothly to top of the onboarding container
+            const container = document.querySelector('.onboarding-container');
+            if (container) {
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            if (step === 2) {
+                updatePasswordValidation();
             }
             // Re-render lucide icons in newly visible step
             if (window.lucide) lucide.createIcons();
         }
 
-        function togglePassword(inputId, btn) {
-            const input = document.getElementById(inputId);
-            const icon = btn.querySelector('i');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.setAttribute('data-lucide', 'eye-off');
-            } else {
-                input.type = 'password';
-                icon.setAttribute('data-lucide', 'eye');
+        function tryNextStep() {
+            const companyName = document.getElementById('company_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+
+            if (!companyName) {
+                showOtpWarning('Please enter your Company Name before continuing.');
+                document.getElementById('company_name').focus();
+                triggerShake();
+                return;
+            }
+
+            if (!email) {
+                showOtpWarning('Please enter your Work Email address.');
+                document.getElementById('email').focus();
+                triggerShake();
+                return;
+            }
+
+            const emailOk = !requireEmailOtp || isEmailVerified;
+            const phoneOk = !requirePhoneOtp || isPhoneVerified;
+
+            if (emailOk && phoneOk) {
+                // All required OTPs verified — proceed to Step 2
+                hideOtpWarning();
+                nextStep(2);
+                return;
+            }
+
+            // Build dynamic warning message depending on which OTP is active/pending
+            let warningMsg = '';
+            if (!emailOk && !phoneOk) {
+                warningMsg = 'Please verify your Email and Phone Number via OTP before continuing.';
+            } else if (!emailOk) {
+                warningMsg = 'Please verify your Email Address via OTP before continuing.';
+            } else if (!phoneOk) {
+                warningMsg = 'Please verify your Phone Number via OTP before continuing.';
+            }
+
+            showOtpWarning(warningMsg);
+            triggerShake();
+        }
+
+        function triggerShake() {
+            const btn = document.getElementById('nextToStep2');
+            if (btn) {
+                btn.classList.remove('otp-btn-shake');
+                void btn.offsetWidth; // Trigger DOM reflow to replay animation
+                btn.classList.add('otp-btn-shake');
+            }
+        }
+
+        function showOtpWarning(msg) {
+            hideOtpWarning();
+
+            const toast = document.createElement('div');
+            toast.id = 'otpWarningToast';
+            toast.style.cssText = `
+                display: flex; align-items: center; gap: 12px;
+                padding: 12px 18px; margin-top: 16px; margin-bottom: 8px;
+                background: #fffbeb; border: 1.5px solid #f59e0b;
+                border-radius: 10px; color: #92400e;
+                font-size: 0.9rem; font-weight: 600;
+                box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+                animation: otpWarnSlideIn 0.3s ease;
+            `;
+            toast.innerHTML = `
+                <i data-lucide="alert-triangle" style="width:20px; height:20px; color:#d97706; flex-shrink:0;"></i>
+                <span style="flex:1">${msg}</span>
+                <button type="button" onclick="hideOtpWarning()" style="background:none;border:none;cursor:pointer;color:#b45309;font-size:1.1rem;padding:0;line-height:1;" title="Dismiss">✕</button>
+            `;
+
+            const btnRow = document.getElementById('nextToStep2').closest('div');
+            if (btnRow && btnRow.parentNode) {
+                btnRow.parentNode.insertBefore(toast, btnRow);
             }
             if (window.lucide) lucide.createIcons();
+
+            // Auto-dismiss after 7 seconds
+            setTimeout(() => { hideOtpWarning(); }, 7000);
+        }
+
+        function hideOtpWarning() {
+            const existing = document.getElementById('otpWarningToast');
+            if (existing) existing.remove();
+        }
+
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
+            } else {
+                input.type = 'password';
+                btn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function updatePasswordValidation() {
+            const password = document.getElementById('password')?.value || '';
+            const confirm = document.getElementById('confirm_password')?.value || '';
+
+            const matchEl = document.getElementById('match-hint');
+            if (matchEl) {
+                if (!confirm) {
+                    matchEl.innerHTML = '';
+                } else if (password === confirm) {
+                    matchEl.innerHTML = '<span class="text-success fw-semibold">✓ Passwords match</span>';
+                } else {
+                    matchEl.innerHTML = '<span class="text-danger">✕ Passwords do not match</span>';
+                }
+            }
         }
 
         let requireEmailOtp = true;
@@ -368,11 +554,11 @@
             const emailOk = !requireEmailOtp || isEmailVerified;
             const phoneOk = !requirePhoneOtp || isPhoneVerified;
 
+            nextBtn.disabled = false;
             if (emailOk && phoneOk) {
-                nextBtn.disabled = false;
                 nextBtn.title = "Proceed to Administrator Account Setup";
+                hideOtpWarning();
             } else {
-                nextBtn.disabled = true;
                 if (!emailOk && !phoneOk) {
                     nextBtn.title = "Please verify your email and phone number via OTP first.";
                 } else if (!emailOk) {
@@ -589,6 +775,26 @@
             const password = document.getElementById('password').value;
             const confirm = document.getElementById('confirm_password').value;
             
+            if (password.length < 8) {
+                showError("Password must be at least 8 characters long.");
+                return;
+            }
+            if (!/[A-Z]/.test(password)) {
+                showError("Password must contain at least one uppercase letter (A-Z).");
+                return;
+            }
+            if (!/[a-z]/.test(password)) {
+                showError("Password must contain at least one lowercase letter (a-z).");
+                return;
+            }
+            if (!/[0-9]/.test(password)) {
+                showError("Password must contain at least one number (0-9).");
+                return;
+            }
+            if (!/[^A-Za-z0-9]/.test(password)) {
+                showError("Password must contain at least one special character (!@#$...).");
+                return;
+            }
             if (password !== confirm) {
                 showError("Passwords do not match.");
                 return;

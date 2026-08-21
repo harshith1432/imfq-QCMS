@@ -837,11 +837,134 @@ def submit_public_enquiry():
     db.session.add(enquiry)
     db.session.commit()
 
+    # --- Sales Lead Notification / Email Redirection ---
+    try:
+        from app.infrastructure.database.models.models import PlatformSettings
+        from app.infrastructure.mailer.email_service import EmailUtils
+        from app.domain.services.document_branding_service import DocumentBrandingService
+
+        ps = PlatformSettings.query.first()
+        notif_cfg = (ps.notification_settings or {}) if ps else {}
+        sales_email = (notif_cfg.get('sales_notification_email') or '').strip()
+        sales_enabled = bool(notif_cfg.get('sales_notification_enabled', False))
+
+        if sales_enabled and sales_email:
+            subject = f"🎯 New Sales Enquiry: {company_name} ({name})"
+            body = f"""
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 24px; color: #ffffff;">
+                        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">New Sales Enquiry (Talk to Sales)</h2>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">A prospective enterprise client submitted an inquiry on the QCMS Platform.</p>
+                    </div>
+                    <div style="padding: 24px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 10px 0; color: #64748b; width: 35%;"><strong>Prospect Name:</strong></td>
+                                <td style="padding: 10px 0; color: #0f172a; font-weight: 600;">{name}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 10px 0; color: #64748b;"><strong>Company Name:</strong></td>
+                                <td style="padding: 10px 0; color: #0f172a; font-weight: 600;">{company_name}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 10px 0; color: #64748b;"><strong>Work Email:</strong></td>
+                                <td style="padding: 10px 0; color: #2563eb; font-weight: 600;"><a href="mailto:{email}" style="color:#2563eb; text-decoration:none;">{email}</a></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 10px 0; color: #64748b;"><strong>Phone Number:</strong></td>
+                                <td style="padding: 10px 0; color: #0f172a; font-weight: 600;">{phone}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 10px 0; color: #64748b;"><strong>Source Channel:</strong></td>
+                                <td style="padding: 10px 0; color: #0f172a;"><span style="background: rgba(99, 102, 241, 0.1); color: #6366f1; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">{source}</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 10px 0; color: #64748b;"><strong>Submitted At:</strong></td>
+                                <td style="padding: 10px 0; color: #475569;">{datetime.utcnow().strftime('%d %b %Y, %I:%M %p UTC')}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 12px 0 6px 0; color: #64748b; vertical-align: top;"><strong>Message / Notes:</strong></td>
+                                <td style="padding: 12px 0 6px 0; color: #1e293b; line-height: 1.5;">{message if message else '<em style="color:#94a3b8;">No additional message provided.</em>'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+                        <p style="font-size: 12px; color: #64748b; margin: 0;">This email was automatically forwarded by QCMS Platform because Sales Enquiry Email Forwarding is enabled.</p>
+                    </div>
+                </div>
+            """
+            wrapped_html = DocumentBrandingService.wrap_email_html(body, title=subject, include_header=False)
+            EmailUtils.send_email_async(
+                to_email=sales_email,
+                subject=subject,
+                html_content=wrapped_html,
+                email_type='general'
+            )
+            print(f"[SupportRoutes] Sales enquiry #{enquiry.id} queued for forwarding to sales email: {sales_email}")
+    except Exception as em_err:
+        print(f"[SupportRoutes] Sales enquiry email forward error: {em_err}")
+
     return jsonify({
         "status": "success",
         "message": "Thank you! Your inquiry has been submitted. Our sales team will contact you shortly.",
         "enquiry_id": enquiry.id
     }), 201
+
+
+@support_bp.route('/enquiries/settings', methods=['GET', 'POST', 'PUT'])
+@support_bp.route('/support/enquiries/settings', methods=['GET', 'POST', 'PUT'])
+@jwt_required()
+def manage_enquiries_settings():
+    user, err = get_current_user_and_check_rbac()
+    if err:
+        return jsonify({"status": "error", "message": err}), 403
+
+    from app.infrastructure.database.models.models import PlatformSettings
+    ps = PlatformSettings.query.first()
+    if not ps:
+        ps = PlatformSettings()
+        db.session.add(ps)
+        db.session.commit()
+
+    notif_cfg = dict(ps.notification_settings or {})
+
+    if request.method in ['POST', 'PUT']:
+        data = request.get_json() or {}
+        sales_email = (data.get('sales_notification_email') or '').strip()
+        sales_enabled_raw = data.get('sales_notification_enabled')
+        sales_enabled = bool(sales_enabled_raw)
+        
+        if sales_email:
+            import re
+            if not re.match(r"^[^@]+@[^@]+\.[^@]+$", sales_email):
+                return jsonify({"status": "error", "message": "Please enter a valid email address."}), 400
+        else:
+            sales_enabled = False
+
+        notif_cfg['sales_notification_email'] = sales_email
+        notif_cfg['sales_notification_enabled'] = sales_enabled
+
+        ps.notification_settings = dict(notif_cfg)
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(ps, 'notification_settings')
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": "Sales Enquiry notification settings updated successfully.",
+            "data": {
+                "sales_notification_email": sales_email,
+                "sales_notification_enabled": sales_enabled
+            }
+        }), 200
+
+    return jsonify({
+        "status": "success",
+        "data": {
+            "sales_notification_email": notif_cfg.get('sales_notification_email', ''),
+            "sales_notification_enabled": bool(notif_cfg.get('sales_notification_enabled', False))
+        }
+    }), 200
 
 
 @support_bp.route('/enquiries', methods=['GET'])
@@ -1002,8 +1125,8 @@ def send_enquiry_email(enquiry_id):
         """
         html_wrapped = DocumentBrandingService.wrap_email_html(body_html, title=subject, org_id=user_org_id)
 
-        # Dispatch email using 'support' email_type (dynamically fetches configured Support Email from Contact Directory / Integration Hub)
-        EmailUtils.send_email(
+        # Dispatch email asynchronously using 'support' email_type in background
+        EmailUtils.send_email_async(
             to_email=recipient_email,
             subject=subject,
             html_content=html_wrapped,

@@ -57,15 +57,17 @@ class Organization(db.Model):
     maintenance_mode = db.Column(db.Boolean, default=False)
     session_timeout = db.Column(db.Integer, default=60)
     data_retention_days = db.Column(db.Integer, default=365)
+    project_inactivity_days = db.Column(db.Integer, default=30)
     
     # Compliance
     compliance_standards = db.Column(db.JSON, default=[]) # e.g. ["ISO 9001", "AS9100"]
     
     # SaaS Subscription
-    subscription_plan = db.Column(db.String(50), default='Professional', index=True) # Starter, Professional, Enterprise
+    subscription_plan = db.Column(db.String(50), default='Trial', index=True) # Trial, Starter, Professional, Enterprise
     subscription_status = db.Column(db.String(20), default='Trialing', index=True) # Trialing, Active, Expired, Canceled
     trial_ends_at = db.Column(db.DateTime, index=True)
     max_users = db.Column(db.Integer, default=500)
+    max_locations = db.Column(db.Integer, default=5)
     is_white_label = db.Column(db.Boolean, default=False)
     multi_plant = db.Column(db.Boolean, default=False)
     api_access = db.Column(db.Boolean, default=False)
@@ -103,6 +105,7 @@ class Organization(db.Model):
     # "email" is always present as the system default
     login_options = db.Column(db.JSON, default=lambda: ["email"])
     security_settings = db.Column(db.JSON, nullable=True)
+    signoff_hierarchy_config = db.Column(db.JSON, nullable=True)  # List of hierarchy roles for PDF report sign-off
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
@@ -278,7 +281,8 @@ class User(db.Model):
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
     full_name = db.Column(db.String(255))
     employee_id = db.Column(db.String(100), index=True)
-    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    phone = db.Column(db.String(50), nullable=True, index=True)
+    email = db.Column(db.String(255), unique=True, nullable=True, index=True)
     hashed_password = db.Column(db.String(255), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False, index=True)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), index=True)
@@ -1142,7 +1146,7 @@ class PlatformSettings(db.Model):
     global_template_preview_image = db.Column(db.Text, nullable=True)
     
     default_plan = db.Column(db.String(50), default="Starter")
-    trial_period_days = db.Column(db.Integer, default=14)
+    trial_period_days = db.Column(db.Integer, default=180)
     max_auto_trial_extensions = db.Column(db.Integer, default=2)
     payment_gateway_mode = db.Column(db.String(20), default="Test") # Test or Live
     plans_initial_seeded = db.Column(db.Boolean, default=False)
@@ -1184,6 +1188,7 @@ class PlatformSettings(db.Model):
     system_health_settings = db.Column(db.JSON, nullable=True)
     about_settings = db.Column(db.JSON, nullable=True)
     global_stages_config = db.Column(db.JSON, nullable=True)
+    stage_weightage_config = db.Column(db.JSON, nullable=True)  # List of 8 floats summing to 100.0
     
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -1340,7 +1345,7 @@ class SubscriptionPayment(db.Model):
     # FK to new Subscription model (nullable for legacy records)
     subscription_id = db.Column(db.Integer, db.ForeignKey('subscriptions.id'), nullable=True)
     invoice_id = db.Column(db.Integer, db.ForeignKey('subscription_invoices.id', ondelete='SET NULL'), nullable=True)
-    amount = db.Column(db.Float, nullable=False)  # base amount (preserved)
+    amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)  # base amount
     currency = db.Column(db.String(10), default='INR')
     plan_name = db.Column(db.String(50))
     billing_cycle = db.Column(db.String(20))  # Monthly, Quarterly, Yearly, Lifetime
@@ -1348,12 +1353,12 @@ class SubscriptionPayment(db.Model):
     transaction_id = db.Column(db.String(255), unique=True)
     payment_gateway = db.Column(db.String(50))  # Razorpay, Stripe, Manual, etc.
     gateway_reference = db.Column(db.String(255))
-    discount_amount = db.Column(db.Float, default=0.0)
-    gst_percent = db.Column(db.Float, default=18.0)
-    gst_amount = db.Column(db.Float, default=0.0)
-    final_amount = db.Column(db.Float)  # amount - discount + gst
+    discount_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    gst_percent = db.Column(db.Numeric(5, 2), default=18.00, nullable=False)
+    gst_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    final_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)  # amount - discount + gst
     refund_status = db.Column(db.String(20))  # None, Partial, Full
-    refund_amount = db.Column(db.Float, default=0.0)
+    refund_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
     refund_date = db.Column(db.DateTime)
     billing_period_start = db.Column(db.DateTime)
     billing_period_end = db.Column(db.DateTime)
@@ -1390,8 +1395,11 @@ class Subscription(db.Model):
     subscription_uid = db.Column(db.String(50), unique=True, nullable=False)
 
     # Plan & Billing
-    plan_name = db.Column(db.String(50), default='Professional')  # Starter, Professional, Enterprise, Custom
+    plan_name = db.Column(db.String(50), default='Professional')  # Starter, Professional, Enterprise, Custom, Pay-As-You-Go
+    pricing_model = db.Column(db.String(30), default='fixed')     # fixed, pay_as_you_go
+    payg_rules = db.Column(db.JSON, nullable=True)                # Snapshot of metered rates
     billing_cycle = db.Column(db.String(20), default='Yearly')    # Monthly, Quarterly, Yearly, Lifetime
+    last_metered_billing_at = db.Column(db.DateTime, nullable=True) # Last time monthly PAYG bill was processed
 
     # Status
     subscription_status = db.Column(db.String(20), default='Active')
@@ -1407,17 +1415,18 @@ class Subscription(db.Model):
     trial_end_date = db.Column(db.DateTime)
 
     # Pricing
-    base_price = db.Column(db.Float, default=0.0)
-    discount_percent = db.Column(db.Float, default=0.0)
-    discount_amount = db.Column(db.Float, default=0.0)
-    gst_percent = db.Column(db.Float, default=18.0)
-    gst_amount = db.Column(db.Float, default=0.0)
-    final_amount = db.Column(db.Float, default=0.0)
+    base_price = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    discount_percent = db.Column(db.Numeric(5, 2), default=0.00, nullable=False)
+    discount_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    gst_percent = db.Column(db.Numeric(5, 2), default=18.00, nullable=False)
+    gst_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    final_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
     currency = db.Column(db.String(10), default='INR')
     is_tax_inclusive = db.Column(db.Boolean, default=False)
 
     # Limits & Configuration
     max_users = db.Column(db.Integer, default=500)
+    max_locations = db.Column(db.Integer, default=5)
     storage_limit_gb = db.Column(db.Float, default=10.0)
     api_limit = db.Column(db.Integer, default=10000)  # API calls per month
     enabled_modules = db.Column(db.JSON, default=list)  # list of module names
@@ -1454,7 +1463,7 @@ class OfflinePaymentProof(db.Model):
 
     plan_name = db.Column(db.String(50), nullable=False)          # Starter, Professional, Enterprise
     billing_cycle = db.Column(db.String(20), default='Monthly')   # Monthly, Yearly
-    amount = db.Column(db.Float, nullable=False)
+    amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
     currency = db.Column(db.String(10), default='INR')
     
     transaction_id = db.Column(db.String(255), nullable=False)   # UTR / Transaction Reference
@@ -1496,18 +1505,22 @@ class SubscriptionInvoice(db.Model):
     billing_cycle = db.Column(db.String(20))
 
     # Pricing
-    base_amount = db.Column(db.Float, default=0.0)
-    discount_percent = db.Column(db.Float, default=0.0)
-    discount_amount = db.Column(db.Float, default=0.0)
-    gst_percent = db.Column(db.Float, default=18.0)
-    gst_amount = db.Column(db.Float, default=0.0)
-    total_amount = db.Column(db.Float, default=0.0)
+    base_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    discount_percent = db.Column(db.Numeric(5, 2), default=0.00, nullable=False)
+    discount_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    gst_percent = db.Column(db.Numeric(5, 2), default=18.00, nullable=False)
+    gst_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    total_amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
     currency = db.Column(db.String(10), default='INR')
     is_tax_inclusive = db.Column(db.Boolean, default=False)
 
     # Status
     invoice_status = db.Column(db.String(20), default='Draft')
     # Draft, Sent, Paid, Overdue, Cancelled, Refunded
+
+    # Type & Metered breakdown
+    invoice_type = db.Column(db.String(30), default='subscription') # subscription, pay_as_you_go
+    usage_breakdown = db.Column(db.JSON, nullable=True) # itemized metrics, rates, units, subtotal
 
     # Link to payment
     payment_id = db.Column(db.Integer, db.ForeignKey('subscription_payments.id', use_alter=True, name='fk_invoice_payment_id'), nullable=True)
@@ -1838,11 +1851,13 @@ class SaaSPlan(db.Model):
     icon = db.Column(db.String(50), default='layers')
     color = db.Column(db.String(20), default='#3b82f6')
     status = db.Column(db.String(20), default='Active')      # Active, Inactive, Deprecated, Coming Soon
-    plan_type = db.Column(db.String(100), default='Professional') # Starter, Professional, Enterprise, Custom, Trial
+    plan_type = db.Column(db.String(100), default='Professional') # Starter, Professional, Enterprise, Custom, Trial, Pay-As-You-Go
+    pricing_model = db.Column(db.String(30), default='fixed') # fixed, pay_as_you_go
+    payg_rules = db.Column(db.JSON, nullable=True)           # Metered pricing rules (base_fee, user_rate, storage_rate, etc.)
     currency = db.Column(db.String(10), default='INR')
     is_custom = db.Column(db.Boolean, default=False)
     is_default_trial = db.Column(db.Boolean, default=False)
-    trial_duration_days = db.Column(db.Integer, default=14)
+    trial_duration_days = db.Column(db.Integer, default=180)
     auto_approve_extensions_limit = db.Column(db.Integer, default=2)
     version = db.Column(db.Integer, default=1)
     
@@ -1864,9 +1879,9 @@ class SaaSPlanPricing(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     plan_id = db.Column(db.Integer, db.ForeignKey('saas_plans.id', ondelete='CASCADE'), nullable=False)
     billing_cycle = db.Column(db.String(20), nullable=False)  # Monthly, Quarterly, Yearly, Lifetime
-    price = db.Column(db.Float, nullable=False)
-    discount = db.Column(db.Float, default=0.0)              # Percentage discount
-    tax = db.Column(db.Float, default=18.0)                  # Default tax rate
+    price = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    discount = db.Column(db.Numeric(5, 2), default=0.00, nullable=False)              # Percentage discount
+    tax = db.Column(db.Numeric(5, 2), default=18.00, nullable=False)                  # Default tax rate
     is_tax_inclusive = db.Column(db.Boolean, default=False)   # True if price includes GST
     is_active = db.Column(db.Boolean, default=True)
 
@@ -1878,6 +1893,7 @@ class SaaSPlanLimits(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     plan_id = db.Column(db.Integer, db.ForeignKey('saas_plans.id', ondelete='CASCADE'), nullable=False)
     max_users = db.Column(db.Integer, default=100)
+    max_locations = db.Column(db.Integer, default=5)
     max_departments = db.Column(db.Integer, default=10)
     max_projects = db.Column(db.Integer, default=25)
     storage_limit_gb = db.Column(db.Float, default=10.0)
@@ -2202,7 +2218,7 @@ class SubscriptionRefund(db.Model):
     invoice_id = db.Column(db.Integer, db.ForeignKey('subscription_invoices.id', ondelete='CASCADE'), nullable=False)
     payment_id = db.Column(db.Integer, db.ForeignKey('subscription_payments.id', ondelete='CASCADE'), nullable=False)
     refund_uid = db.Column(db.String(50), unique=True, nullable=False)
-    amount = db.Column(db.Float, nullable=False)
+    amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
     reason = db.Column(db.String(255))
     status = db.Column(db.String(20), default='Approved')  # Pending, Approved, Rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -2216,8 +2232,8 @@ class SubscriptionCreditNote(db.Model):
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id', ondelete='CASCADE'), nullable=False)
     invoice_id = db.Column(db.Integer, db.ForeignKey('subscription_invoices.id', ondelete='SET NULL'), nullable=True)
     credit_note_uid = db.Column(db.String(50), unique=True, nullable=False)
-    amount = db.Column(db.Float, default=0.0)
-    balance = db.Column(db.Float, default=0.0)
+    amount = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
+    balance = db.Column(db.Numeric(12, 2), default=0.00, nullable=False)
     status = db.Column(db.String(20), default='Active')  # Active, Applied, Void
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -2832,7 +2848,15 @@ class EmailNotificationRule(db.Model):
     target_roles = db.Column(db.JSON, default=list) # ["Admin", "CEO", "All"]
     target_plans = db.Column(db.JSON, default=list) # ["Small MSME's", "Enterprise"]
     target_statuses = db.Column(db.JSON, default=list) # ["Active", "Trial", "Expiring", "Suspended"]
-    
+
+    # SMS Notification Configuration (Gio DLT / Kaleyra Gateway)
+    sms_enabled = db.Column(db.Boolean, default=False)           # Send SMS alongside email
+    sms_template_id = db.Column(db.String(100), nullable=True)   # Gio DLT registered Template ID
+    sms_entity_id = db.Column(db.String(100), nullable=True)     # DLT Entity / PE ID
+    sms_sender_id = db.Column(db.String(20), nullable=True)      # 6-char DLT approved Sender ID (e.g. IFQMSK)
+    sms_body = db.Column(db.Text, nullable=True)                 # SMS body with {{variable}} placeholders
+    sms_total_sent = db.Column(db.Integer, default=0)
+
     # State & Audit
     is_active = db.Column(db.Boolean, default=True)
     is_system_preset = db.Column(db.Boolean, default=False)
@@ -2873,7 +2897,77 @@ class EmailNotificationRule(db.Model):
             'is_system_preset': self.is_system_preset,
             'last_triggered_at': self.last_triggered_at.isoformat() + 'Z' if self.last_triggered_at else None,
             'total_sent': self.total_sent or 0,
+            # SMS fields
+            'sms_enabled': self.sms_enabled or False,
+            'sms_template_id': self.sms_template_id or '',
+            'sms_entity_id': self.sms_entity_id or '',
+            'sms_sender_id': self.sms_sender_id or '',
+            'sms_body': self.sms_body or '',
+            'sms_total_sent': self.sms_total_sent or 0,
             'created_by': self.created_by.username if self.created_by else 'Super Admin',
+            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() + 'Z' if self.updated_at else None
+        }
+
+
+class SmsTemplateConfig(db.Model):
+    """Standalone SMS Template Configurations for system-level SMS (OTP, alerts, quality events, audience targeting)."""
+    __tablename__ = 'sms_template_configs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    template_key = db.Column(db.String(100), unique=True, nullable=False)  # e.g. phone_otp_verification
+    display_name = db.Column(db.String(255), nullable=False)               # Human-readable label
+    category = db.Column(db.String(100), default='custom')                 # auth, quality, subscription, billing, etc.
+    description = db.Column(db.Text, nullable=True)
+    template_id = db.Column(db.String(100), nullable=True)                 # Gio DLT Template ID
+    entity_id = db.Column(db.String(100), nullable=True)                   # DLT Entity / PE ID
+    sender_id = db.Column(db.String(20), nullable=True)                    # 6-char DLT Sender ID (e.g. IFQMSK)
+    body = db.Column(db.Text, nullable=True)                               # SMS body with {{variable}} placeholders
+
+    # Triggers & Timing
+    trigger_type = db.Column(db.String(50), default='event')               # event, scheduled, manual
+    event_trigger = db.Column(db.String(100), nullable=True)
+    trigger_days_before = db.Column(db.Integer, default=0)
+    scheduled_at = db.Column(db.DateTime, nullable=True)
+
+    # Audience & Targeting Filters
+    target_audience_type = db.Column(db.String(50), default='all')         # all, specific_orgs, role_based, subscription_based
+    target_org_ids = db.Column(db.JSON, default=list)                      # [1, 2, 3] or []
+    target_roles = db.Column(db.JSON, default=list)                        # ["Admin", "CEO", "All"]
+    target_plans = db.Column(db.JSON, default=list)                        # ["Small MSME's", "Enterprise"]
+    target_statuses = db.Column(db.JSON, default=list)                     # ["Active", "Trial", "Expiring", "Suspended"]
+
+    is_active = db.Column(db.Boolean, default=True)
+    is_system_preset = db.Column(db.Boolean, default=True)
+    total_sent = db.Column(db.Integer, default=0)
+    last_triggered_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'template_key': self.template_key,
+            'display_name': self.display_name,
+            'category': self.category or 'custom',
+            'description': self.description or '',
+            'template_id': self.template_id or '',
+            'entity_id': self.entity_id or '',
+            'sender_id': self.sender_id or '',
+            'body': self.body or '',
+            'trigger_type': self.trigger_type or 'event',
+            'event_trigger': self.event_trigger or '',
+            'trigger_days_before': self.trigger_days_before or 0,
+            'scheduled_at': self.scheduled_at.isoformat() + 'Z' if self.scheduled_at else None,
+            'target_audience_type': self.target_audience_type or 'all',
+            'target_org_ids': self.target_org_ids or [],
+            'target_roles': self.target_roles or [],
+            'target_plans': self.target_plans or [],
+            'target_statuses': self.target_statuses or [],
+            'is_active': self.is_active,
+            'is_system_preset': self.is_system_preset,
+            'total_sent': self.total_sent or 0,
+            'last_triggered_at': self.last_triggered_at.isoformat() + 'Z' if self.last_triggered_at else None,
             'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,
             'updated_at': self.updated_at.isoformat() + 'Z' if self.updated_at else None
         }
@@ -2916,5 +3010,50 @@ class EmailNotificationLog(db.Model):
             'sent_by': self.sent_by.username if self.sent_by else 'System Automation',
             'sent_at': self.sent_at.isoformat() + 'Z' if self.sent_at else None
         }
+
+
+class SmsNotificationLog(db.Model):
+    """Delivery log for SMS notifications sent via templates, OTPs, or manual broadcasts."""
+    __tablename__ = 'sms_notification_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    template_key = db.Column(db.String(100), nullable=True)
+    template_name = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(100), default='custom')
+    sender_id = db.Column(db.String(20), nullable=True)
+    dlt_template_id = db.Column(db.String(100), nullable=True)
+    dlt_entity_id = db.Column(db.String(100), nullable=True)
+    message_body = db.Column(db.Text, nullable=False)
+    phone_number = db.Column(db.String(50), nullable=False)
+    recipient_name = db.Column(db.String(255), nullable=True)
+    org_name = db.Column(db.String(255), nullable=True)
+    gateway = db.Column(db.String(100), default='Fast2SMS / Resend')
+    status = db.Column(db.String(50), default='Delivered')  # Delivered, Sent, Failed
+    error_message = db.Column(db.Text, nullable=True)
+    sent_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sent_by = db.relationship('User', foreign_keys=[sent_by_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'template_key': self.template_key or '',
+            'template_name': self.template_name or '',
+            'category': self.category or 'custom',
+            'sender_id': self.sender_id or 'IFQMSK',
+            'dlt_template_id': self.dlt_template_id or '',
+            'dlt_entity_id': self.dlt_entity_id or '',
+            'message_body': self.message_body or '',
+            'phone_number': self.phone_number or '',
+            'recipient_name': self.recipient_name or 'Team Member',
+            'org_name': self.org_name or 'Enterprise Org',
+            'gateway': self.gateway or 'Fast2SMS / Resend',
+            'status': self.status or 'Delivered',
+            'error_message': self.error_message or '',
+            'sent_by': self.sent_by.username if self.sent_by else 'System Automation',
+            'sent_at': self.sent_at.isoformat() + 'Z' if self.sent_at else None
+        }
+
 
 

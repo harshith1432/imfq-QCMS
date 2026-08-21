@@ -190,7 +190,7 @@ def register_org():
                     trial_days = int(match.group(1))
                     break
     if not trial_days:
-        trial_days = 14
+        trial_days = 180
     
     trial_ends = datetime.utcnow() + timedelta(days=int(trial_days))
     
@@ -382,7 +382,24 @@ def dispatch_phone_otp_sms(phone, otp):
         else:
             formatted_phone = clean_phone
 
-        sms_body = f"Dear Customer, use OTP {otp} to complete your activation on IFQM Skills. Do not share this OTP with anyone."
+        # Load SMS body from DB (SmsTemplateConfig) — falls back to default if not configured
+        sms_body_template = f"Dear Customer, use OTP {otp} to complete your activation on IFQM Skills. Do not share this OTP with anyone."
+        try:
+            from app.infrastructure.database.models.models import SmsTemplateConfig
+            otp_tmpl = SmsTemplateConfig.query.filter_by(template_key='phone_otp_verification', is_active=True).first()
+            if otp_tmpl and otp_tmpl.body:
+                sms_body_template = otp_tmpl.body.replace('{{otp}}', otp).replace('{otp}', otp)
+                # If template_id is configured in SmsTemplateConfig and not overridden in integration settings, use it
+                if otp_tmpl.template_id and not template_id:
+                    template_id = otp_tmpl.template_id
+                if otp_tmpl.entity_id and not entity_id:
+                    entity_id = otp_tmpl.entity_id
+                if otp_tmpl.sender_id and not sender_id:
+                    sender_id = otp_tmpl.sender_id
+        except Exception as _e:
+            print(f"[QCMS Phone OTP] Could not load SMS template from DB: {_e}")
+
+        sms_body = sms_body_template
 
         import urllib.request
         import urllib.parse
@@ -816,11 +833,12 @@ def login():
     except Exception:
         pass  # Never block login on middleware errors
 
-    # Build a flexible query: always check username and email first (system fields)
+    # Build a flexible query: check username, phone, and email (system fields)
     from sqlalchemy import or_
     user = User.query.filter(
         or_(
             User.username.ilike(identifier),
+            User.phone.ilike(identifier),
             User.email.ilike(identifier)
         )
     ).first()
@@ -1710,7 +1728,10 @@ def sso_login(provider):
             from app.infrastructure.database.models.models import Organization, Role
             org = Organization.query.first()
             if not org:
-                org = Organization(name="Default Organization", email=email, subscription_plan="Starter")
+                from app.domain.services.subscription_service import SubscriptionManager
+                sso_trial_plan = SubscriptionManager.get_default_trial_plan()
+                sso_plan_name = sso_trial_plan.name if sso_trial_plan else 'Trial'
+                org = Organization(name="Default Organization", email=email, subscription_plan=sso_plan_name)
                 db.session.add(org)
                 db.session.flush()
                 

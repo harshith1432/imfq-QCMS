@@ -132,12 +132,11 @@
                 <header class="ds-header-layout section-spacing mb-4">
                     <div class="row align-items-center g-3">
                         <div class="col-lg-8">
-                            <div class="d-flex align-items-center gap-2 mb-1">
+                            <div class="mb-1">
                                 <h1 class="ds-title mb-0">Additional Sources</h1>
-                                <span class="api-pill"><span class="api-pill-dot"></span> Integration API v1</span>
                             </div>
                             <p class="ds-text-secondary mb-0">
-                                Real-time ideation & continuous improvement data received from external integrations (<code class="text-primary" id="ideasEndpointDisplay" style="font-size:0.8rem;">/api/v1/integrations/ideas</code>).
+                                Real-time ideation & continuous improvement data received from external integrations.
                             </p>
                         </div>
                         <div class="col-lg-4 text-lg-end">
@@ -300,11 +299,6 @@
                     const res = await api.get('/admin/additional-sources/ideas');
                     this.ideas = res.ideas || [];
                     this.filteredIdeas = [...this.ideas];
-                    
-                    if (res.api_endpoint) {
-                        const el = document.getElementById('ideasEndpointDisplay');
-                        if (el) el.textContent = res.api_endpoint;
-                    }
 
                     this.populateFilters();
                     this.updateKPIs();
@@ -400,10 +394,6 @@
                                 <p class="text-secondary text-sm mb-4">
                                     External systems and tools (such as Ideation Apps, ERP, or CRM) can submit approved ideas directly to your organization using your Organization API Key.
                                 </p>
-                                <div class="p-3 rounded-3 border text-start mb-4" style="background: var(--ds-bg-card, rgba(15, 23, 42, 0.6)) !important; border-color: var(--ds-border-color) !important;">
-                                    <div class="text-xs text-secondary text-uppercase fw-bold mb-1">API Integration Endpoint</div>
-                                    <code class="text-primary font-mono text-sm fw-bold" style="color: var(--ds-primary, #38bdf8) !important;">POST ${window.location.origin}/api/v1/integrations/ideas</code>
-                                </div>
                                 <a href="/admin/settings.html" class="ds-btn ds-btn-primary gap-2">
                                     <i data-lucide="shield-check" style="width:16px;height:16px;"></i>
                                     View / Manage API Keys in Settings

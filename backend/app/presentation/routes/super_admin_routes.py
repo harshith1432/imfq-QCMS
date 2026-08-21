@@ -1,7 +1,7 @@
 import os
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
-from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, Subscription, SubscriptionPayment, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
+from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, Subscription, SubscriptionPayment, SubscriptionInvoice, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
 from app.presentation.middleware.middleware import super_admin_required, sub_role_write_required, sub_role_required, get_sa_permissions, _get_sa_sub_role
 from app import bcrypt
 from datetime import datetime, timedelta
@@ -98,13 +98,10 @@ def get_global_stats():
     sa_role = Role.query.filter_by(name='SuperAdmin').first()
     total_users = User.query.filter(User.role_id != sa_role.id).count() if sa_role else User.query.count()
     
-    # Revenue calculations (simplified)
-    total_revenue = db.session.query(func.sum(SubscriptionPayment.amount)).join(
-        Organization, SubscriptionPayment.org_id == Organization.id
-    ).filter(
-        Organization.is_platform_org == False,
-        SubscriptionPayment.payment_status == 'Completed'
-    ).scalar() or 0.0
+    # Revenue calculations (Single Source of Truth)
+    from app.domain.services.financial_metrics_engine import FinancialMetricsEngine
+    kpis = FinancialMetricsEngine.get_consolidated_kpis()
+    total_revenue = kpis["total_revenue"]
     
     # Growth metrics (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -3580,4 +3577,106 @@ def save_global_stages_template():
         "message": f"Global 8-Stage Workflow Template (v{ps.global_template_version}) published and sent to all Organization Admins.",
         "global_template_version": ps.global_template_version,
         "stages": stages
+    }), 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUPER ADMIN — STAGE WEIGHTAGE CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+DEFAULT_STAGE_WEIGHTS = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5]  # 8 × 12.5 = 100
+
+STAGE_DEFAULT_LABELS = [
+    "S1 Plan & Establish Team",
+    "S2 Define Problem",
+    "S3 Interim Containment",
+    "S4 Determine Root Causes",
+    "S5 Choose Permanent Corrections",
+    "S6 Implement Corrective Actions",
+    "S7 Take Preventive Measures",
+    "S8 Congratulate Team & Closure",
+]
+
+
+@super_admin_bp.route('/stage-weightage', methods=['GET'])
+@jwt_required()
+@super_admin_required()
+def get_stage_weightage():
+    """Return the current per-stage progress weightage configuration."""
+    ps = PlatformSettings.query.first()
+    weights = (ps and ps.stage_weightage_config) or DEFAULT_STAGE_WEIGHTS
+    # Ensure we always return exactly 8 entries (back-fill with equal if shorter)
+    while len(weights) < 8:
+        weights.append(round((100 - sum(weights)) / (8 - len(weights)), 4))
+    weights = weights[:8]
+    stages = [
+        {"stage": i + 1, "label": STAGE_DEFAULT_LABELS[i], "weight": weights[i]}
+        for i in range(8)
+    ]
+    return jsonify({
+        "status": "success",
+        "weights": weights,
+        "stages": stages,
+        "is_customized": bool(ps and ps.stage_weightage_config),
+        "total": round(sum(weights), 4)
+    }), 200
+
+
+@super_admin_bp.route('/stage-weightage', methods=['POST'])
+@jwt_required()
+@super_admin_required()
+def save_stage_weightage():
+    """Save or reset the per-stage progress weightage configuration."""
+    ps = PlatformSettings.query.first()
+    if not ps:
+        ps = PlatformSettings()
+        db.session.add(ps)
+        db.session.commit()
+
+    data = request.get_json() or {}
+
+    # Handle reset
+    if data.get('reset'):
+        ps.stage_weightage_config = None
+        db.session.commit()
+        log_admin_action("Reset Stage Weightage to equal defaults (12.5% × 8)", target_type="StageWeightage")
+        return jsonify({
+            "status": "success",
+            "message": "Stage weightage reset to equal defaults (12.5% per stage).",
+            "weights": DEFAULT_STAGE_WEIGHTS
+        }), 200
+
+    weights = data.get('weights')
+    if not weights or not isinstance(weights, list):
+        return jsonify({"status": "error", "message": "Provide a 'weights' array of 8 numbers."}), 400
+    if len(weights) != 8:
+        return jsonify({"status": "error", "message": "Exactly 8 weight values are required (one per stage)."}), 400
+
+    # Validate each weight
+    parsed = []
+    for i, w in enumerate(weights):
+        try:
+            val = round(float(w), 4)
+        except (TypeError, ValueError):
+            return jsonify({"status": "error", "message": f"Stage {i+1} weight must be a number."}), 400
+        if val < 0:
+            return jsonify({"status": "error", "message": f"Stage {i+1} weight must be ≥ 0."}), 400
+        parsed.append(val)
+
+    total = round(sum(parsed), 4)
+    if abs(total - 100.0) > 0.5:
+        return jsonify({
+            "status": "error",
+            "message": f"Weights must sum to 100%. Current total: {total}%."
+        }), 400
+
+    ps.stage_weightage_config = parsed
+    db.session.commit()
+    log_admin_action("Updated Stage Weightage Configuration", target_type="StageWeightage",
+                     details={"weights": parsed, "total": total})
+    return jsonify({
+        "status": "success",
+        "message": "Stage weightage configuration saved successfully.",
+        "weights": parsed,
+        "total": total
     }), 200

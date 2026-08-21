@@ -42,6 +42,10 @@ def create_app():
     bcrypt.init_app(app)
     migrate.init_app(app, db)
 
+    # Initialize Idempotency & Concurrency Middleware
+    from app.presentation.middleware.idempotency_middleware import init_idempotency_middleware
+    init_idempotency_middleware(app)
+
     # Configure JWT revocation / session termination verification
     @jwt.token_in_blocklist_loader
     def check_if_token_is_revoked(jwt_header, jwt_payload):
@@ -422,12 +426,17 @@ def create_app():
                 )
                 orgs = Organization.query.all()
                 for org in orgs:
+                    # Clean up legacy system email field if present
+                    legacy_email = UserCustomField.query.filter_by(org_id=org.id, field_key='email', is_system=True).first()
+                    if legacy_email:
+                        db.session.delete(legacy_email)
+
                     system_fields = [
                         ('username', 'User', True, True, 'both'),
+                        ('phone', 'Phone Number', True, True, 'phone'),
                         ('role', 'User Role', True, True, 'both'),
                         ('department', 'Department', True, True, 'both'),
-                        ('plant_location', 'Plant Location', True, True, 'both'),
-                        ('email', 'Email Address', True, True, 'email')
+                        ('plant_location', 'Plant Location', True, True, 'both')
                     ]
                     for key, name, req, sys, dtype in system_fields:
                         existing_f = UserCustomField.query.filter_by(org_id=org.id, field_key=key).first()
@@ -487,7 +496,30 @@ def create_app():
                         )
                         db.session.add(def_trial)
                         db.session.commit()
-                        print("[QCMS] Created System Default Trial Plan (t1).")
+                    # Guarantee default Pay-As-You-Go plan template exists
+                    payg_exists = SaaSPlan.query.filter(
+                        (SaaSPlan.plan_type == 'Pay-As-You-Go') | 
+                        (SaaSPlan.pricing_model == 'pay_as_you_go') |
+                        (func.lower(SaaSPlan.code) == 'payg')
+                    ).first()
+                    if not payg_exists:
+                        from app.domain.services.payg_billing_service import DEFAULT_PAYG_RULES
+                        def_payg = SaaSPlan(
+                            name='Pay-As-You-Go (Metered)',
+                            code='payg',
+                            plan_type='Pay-As-You-Go',
+                            pricing_model='pay_as_you_go',
+                            payg_rules=DEFAULT_PAYG_RULES,
+                            status='Active',
+                            icon='gauge',
+                            color='#8b5cf6',
+                            is_custom=False,
+                            is_default_trial=False,
+                            description='Flexible metered billing based on active users, storage, projects, and API usage'
+                        )
+                        db.session.add(def_payg)
+                        db.session.commit()
+                        print("[QCMS] Created System Default Pay-As-You-Go Plan (payg).")
 
 
 

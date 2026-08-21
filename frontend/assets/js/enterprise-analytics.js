@@ -57,9 +57,29 @@ const EnterpriseAnalytics = {
         
         this.renderLayout(containerId);
         this.bindEvents();
+        this.initFinancialSyncListener();
         await this.loadFiltersData();
         await this.refreshDashboard();
         this.startRealtimeUpdates();
+    },
+
+    initFinancialSyncListener() {
+        if (window.BroadcastChannel && !this._financialSyncListenerInitialized) {
+            try {
+                this._financialSyncChannel = new BroadcastChannel('qcms_financial_sync');
+                this._financialSyncChannel.onmessage = (msg) => {
+                    if (msg && msg.data && msg.data.event === 'FINANCIAL_UPDATE') {
+                        console.log('[QCMS Analytics Sync] Received financial update event.');
+                        this.refreshDashboard();
+                    }
+                };
+                this._financialSyncListenerInitialized = true;
+            } catch(e) {}
+        }
+    },
+
+    refreshData() {
+        return this.refreshDashboard();
     },
 
     async getProfile() {
@@ -86,11 +106,11 @@ const EnterpriseAnalytics = {
 
 
                 <!-- Navigation Tabs -->
-                <div class="ds-tab-group scroll-x flex-nowrap" style="position: relative; z-index: 1; border-bottom:1px solid rgba(255,255,255,0.08); width: 100%; max-width: 100%; overflow-x: auto; white-space: nowrap; margin-bottom: 18px !important;">
-                    <button class="ds-tab active" id="ea-tab-overview" onclick="EnterpriseAnalytics.switchTab('overview')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="layout" class="me-1" style="width:13px; height:13px;"></i> Overview</button>
-                    <button class="ds-tab" id="ea-tab-revenue" onclick="EnterpriseAnalytics.switchTab('revenue')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="indian-rupee" class="me-1" style="width:13px; height:13px;"></i> Revenue</button>
-                    ${this.isSuperAdmin ? `<button class="ds-tab" id="ea-tab-organizations" onclick="EnterpriseAnalytics.switchTab('organizations')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="building" class="me-1" style="width:13px; height:13px;"></i> Tenants</button>` : ''}
-                    <button class="ds-tab" id="ea-tab-support" onclick="EnterpriseAnalytics.switchTab('support')" style="padding: 6px 10px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="life-buoy" class="me-1" style="width:13px; height:13px;"></i> Support</button>
+                <div class="ds-tab-group scroll-x flex-nowrap" style="position: relative; z-index: 1; border-bottom:1px solid rgba(255,255,255,0.08); width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; display: flex; flex-wrap: nowrap; gap: 6px; margin-bottom: 18px !important; padding-bottom: 2px;">
+                    <button class="ds-tab active text-nowrap" id="ea-tab-overview" onclick="EnterpriseAnalytics.switchTab('overview')" style="padding: 6px 12px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="layout" class="me-1" style="width:13px; height:13px;"></i> Overview</button>
+                    <button class="ds-tab text-nowrap" id="ea-tab-revenue" onclick="EnterpriseAnalytics.switchTab('revenue')" style="padding: 6px 12px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="indian-rupee" class="me-1" style="width:13px; height:13px;"></i> Revenue</button>
+                    ${this.isSuperAdmin ? `<button class="ds-tab text-nowrap" id="ea-tab-organizations" onclick="EnterpriseAnalytics.switchTab('organizations')" style="padding: 6px 12px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="building" class="me-1" style="width:13px; height:13px;"></i> Tenants</button>` : ''}
+                    <button class="ds-tab text-nowrap" id="ea-tab-support" onclick="EnterpriseAnalytics.switchTab('support')" style="padding: 6px 12px !important; gap: 4px !important; font-size: 11.5px;"><i data-lucide="life-buoy" class="me-1" style="width:13px; height:13px;"></i> Support</button>
                 </div>
 
                 <!-- Tab Contents -->

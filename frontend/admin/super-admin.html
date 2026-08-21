@@ -21,7 +21,7 @@
         }
 
         .view-section { display: none; }
-        .view-section.active { display: block; }
+        .view-section.active { display: block !important; }
         
         /* Prevent layout shift and horizontal scrolling from fixed drawers */
         html, body {
@@ -39,6 +39,54 @@
         .app-content-inner {
             overflow-x: hidden !important;
             max-width: 100%;
+        }
+
+        /* Mobile: allow table card itself to stretch and table to scroll horizontally */
+        @media (max-width: 768px) {
+            .ds-card {
+                overflow: hidden;
+            }
+            .table-responsive {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                width: 100% !important;
+                display: block !important;
+            }
+            .table-responsive .ds-table,
+            .table-responsive table {
+                min-width: 680px !important;
+            }
+            /* Scrollbar hint on mobile */
+            .table-responsive::-webkit-scrollbar {
+                height: 4px;
+            }
+            .table-responsive::-webkit-scrollbar-thumb {
+                background: rgba(100, 116, 139, 0.35);
+                border-radius: 4px;
+            }
+            /* Settings pane action buttons mobile wrap */
+            .ps-tab-pane .d-flex.justify-content-between.flex-wrap > div:last-child {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem !important;
+            }
+            .ps-tab-pane .d-flex.justify-content-between.flex-wrap > div:last-child .ds-btn {
+                flex: 1 1 auto;
+                justify-content: center;
+                text-align: center;
+                white-space: nowrap;
+            }
+            /* Sticky center empty state inside scrollable tables on mobile */
+            .table-responsive tbody tr td[colspan] > div {
+                position: sticky;
+                left: 0;
+                width: 100%;
+                max-width: calc(100vw - 48px);
+                margin: 0 auto;
+                text-align: center;
+                box-sizing: border-box;
+            }
         }
         
         .health-indicator {
@@ -150,6 +198,51 @@
         .audit-risk-badge.medium { background: rgba(59, 130, 246, 0.15); color: #2563eb; }
         .audit-risk-badge.high { background: rgba(245, 158, 11, 0.15); color: #d97706; }
         .audit-risk-badge.critical { background: #ef4444; color: #ffffff; }
+        .audit-kpi-card.active {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.45), 0 8px 24px rgba(99, 102, 241, 0.18) !important;
+            background: rgba(99, 102, 241, 0.08) !important;
+            transform: translateY(-2px);
+        }
+        .audit-kpi-card.active .audit-kpi-accent {
+            background: #6366f1 !important;
+            height: 4px !important;
+        }
+        .diff-split-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid var(--audit-card-border, #e2e8f0);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 12px;
+        }
+        .diff-split-table th {
+            padding: 8px 12px;
+            font-weight: 700;
+            background: rgba(99, 102, 241, 0.08);
+            border-bottom: 1px solid var(--audit-card-border, #e2e8f0);
+            color: var(--ds-primary, #6366f1);
+        }
+        .diff-split-table td {
+            padding: 8px 12px;
+            vertical-align: top;
+            border-bottom: 1px solid var(--audit-card-border, #e2e8f0);
+        }
+        .diff-past-cell {
+            background: rgba(239, 68, 68, 0.06);
+            color: #ef4444;
+            font-family: monospace;
+            word-break: break-all;
+            border-left: 3px solid #ef4444 !important;
+        }
+        .diff-current-cell {
+            background: rgba(16, 185, 129, 0.06);
+            color: #10b981;
+            font-family: monospace;
+            word-break: break-all;
+            border-left: 3px solid #10b981 !important;
+        }
         .audit-drawer { position: fixed; top: 0; right: -600px; width: 550px; height: 100vh; background: var(--audit-card-bg); color: var(--audit-text-main); border-left: 1px solid var(--audit-card-border); box-shadow: -10px 0 30px rgba(0,0,0,0.2); z-index: 100050 !important; transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1); overflow-y: auto; backdrop-filter: blur(20px); }
         .audit-drawer.open { right: 0; }
         .audit-drawer-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100040 !important; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
@@ -317,8 +410,8 @@
             position: relative !important;
             z-index: 99999 !important;
         }
-        .table-responsive, .glass-card {
-            overflow: visible !important;
+        .glass-card {
+            position: relative;
         }
         .dropdown-menu {
             max-height: 340px !important;
@@ -397,18 +490,21 @@
             background: rgba(148, 163, 184, 0.7);
         }
 
-        /* Allow table containers to let dropdowns float outside */
+        /* Allow table containers to scroll properly on mobile while preserving layout */
         .table-responsive,
         .table-responsive-sm,
         .table-responsive-md,
         .table-responsive-lg,
-        .table-responsive-xl,
-        .ds-card-body,
-        .ds-card,
-        .card-body,
-        tbody,
-        tr {
-            overflow: visible !important;
+        .table-responsive-xl {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            display: block !important;
+        }
+        .table-responsive .ds-table,
+        .table-responsive table {
+            min-width: 720px;
         }
         
         /* Bulk bar toolbar heights & Elevated Stacking */
@@ -500,20 +596,36 @@
             }
         }
 
-        /* Force Analytics KPI Cards to match License/Subscription card layout */
+        /* Analytics KPI Grid and Cards layout */
         #eaKpiGrid {
             display: grid !important;
-            grid-template-columns: repeat(8, 1fr) !important;
-            gap: 0.3rem !important;
+            grid-template-columns: repeat(6, 1fr) !important;
+            gap: 0.6rem !important;
             margin-bottom: 1.25rem !important;
             width: 100% !important;
             overflow: visible !important;
         }
+        #eaKpiGrid > div {
+            min-width: 0 !important;
+            width: 100% !important;
+        }
+        @media (max-width: 991px) {
+            #eaKpiGrid {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 0.5rem !important;
+            }
+        }
+        @media (max-width: 576px) {
+            #eaKpiGrid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.5rem !important;
+            }
+        }
         .ea-kpi-card {
             background: var(--ds-surface);
             border: 1px solid var(--ds-border-color);
-            border-radius: 8px !important;
-            padding: 0.5rem 0.6rem !important;
+            border-radius: 12px !important;
+            padding: 0.75rem 0.6rem !important;
             position: relative;
             overflow: visible !important;
             cursor: pointer;
@@ -523,6 +635,8 @@
             align-items: center;
             text-align: center;
             height: 100%;
+            min-height: 95px !important;
+            box-shadow: var(--ds-shadow-sm) !important;
         }
         .ea-kpi-card:hover {
             transform: translateY(-2px);
@@ -530,39 +644,43 @@
             z-index: 1000;
         }
         .ea-kpi-card .kpi-icon {
-            width: 24px !important;
-            height: 24px !important;
-            border-radius: 5px !important;
-            margin-bottom: 0.2rem !important;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+            margin-bottom: 0.35rem !important;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .ea-kpi-card .kpi-icon i, .ea-kpi-card .kpi-icon svg {
-            width: 11px !important;
-            height: 11px !important;
+            width: 15px !important;
+            height: 15px !important;
         }
         .ea-kpi-card .kpi-label {
-            font-size: 8.5px !important;
-            font-weight: 600;
+            font-size: 0.68rem !important;
+            font-weight: 600 !important;
             text-transform: uppercase;
             letter-spacing: .5px;
             color: var(--ds-text-secondary);
-            margin-bottom: 0.05rem !important;
+            margin-bottom: 0.2rem !important;
+            white-space: normal !important;
+            word-break: normal !important;
+            line-height: 1.25 !important;
+            width: 100%;
         }
         .ea-kpi-card .kpi-value {
-            font-size: 1.1rem !important;
-            font-weight: 700;
+            font-size: 1.25rem !important;
+            font-weight: 700 !important;
             color: var(--ds-text-main);
-            line-height: 1;
+            line-height: 1.2 !important;
         }
         .ea-kpi-card .kpi-accent {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 3px;
-            border-radius: 0 0 8px 8px;
+            height: 3.5px;
+            border-radius: 0 0 12px 12px;
         }
 
         /* Hover Tooltip Popup for Platform Analytics KPI Cards */
@@ -721,19 +839,25 @@
             border-radius: 0 0 12px 12px;
         }
 
-        /* Force Billing KPI Grid and Cards to match License/Subscription card layout */
+        /* Billing KPI Grid and Cards layout */
         #billingView .bill-kpi-grid {
             display: grid !important;
-            grid-template-columns: repeat(5, 1fr) !important;
-            gap: 0.3rem !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 0.75rem !important;
             margin-bottom: 1.25rem !important;
             width: 100% !important;
+        }
+        @media (max-width: 768px) {
+            #billingView .bill-kpi-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.65rem !important;
+            }
         }
         #billingView .bill-kpi-card {
             background: var(--ds-surface) !important;
             border: 1px solid var(--ds-border-color) !important;
-            border-radius: 8px !important;
-            padding: 0.5rem 0.6rem !important;
+            border-radius: 12px !important;
+            padding: 0.85rem 0.75rem !important;
             position: relative;
             overflow: hidden;
             cursor: pointer;
@@ -742,50 +866,50 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            height: 100%;
-            box-shadow: none !important;
+            min-height: 96px !important;
+            box-shadow: var(--ds-shadow-sm) !important;
         }
         #billingView .bill-kpi-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(0,0,0,.09) !important;
         }
         #billingView .bill-kpi-card .kpi-icon {
-            width: 24px !important;
-            height: 24px !important;
-            border-radius: 5px !important;
-            margin-bottom: 0.2rem !important;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+            margin-bottom: 0.35rem !important;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         #billingView .bill-kpi-card .kpi-icon i, #billingView .bill-kpi-card .kpi-icon svg {
-            width: 11px !important;
-            height: 11px !important;
+            width: 15px !important;
+            height: 15px !important;
         }
         #billingView .bill-kpi-card .kpi-label {
-            font-size: 8.5px !important;
-            font-weight: 600;
+            font-size: 0.68rem !important;
+            font-weight: 600 !important;
             text-transform: uppercase;
             letter-spacing: .5px;
             color: var(--ds-text-secondary);
-            margin-bottom: 0.05rem !important;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            margin-bottom: 0.2rem !important;
+            white-space: normal !important;
+            word-break: normal !important;
+            line-height: 1.25 !important;
             width: 100%;
         }
         #billingView .bill-kpi-card .kpi-value {
-            font-size: 1.1rem !important;
-            font-weight: 700;
+            font-size: 1.25rem !important;
+            font-weight: 700 !important;
             color: var(--ds-text-main) !important;
-            line-height: 1;
+            line-height: 1.2 !important;
         }
         #billingView .bill-kpi-card .bill-kpi-accent {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 3px;
+            height: 3.5px;
             border-radius: 0 0 12px 12px;
         }
 
@@ -844,6 +968,23 @@
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
+        }
+        @media (max-width: 768px) {
+            #announcementsView .glass-card .ds-input,
+            #announcementsView .glass-card select.ds-input {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            #announcementsView .glass-card .d-flex.align-items-center.gap-2 {
+                width: 100% !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+            }
+            #announcementsView .glass-card .d-flex.align-items-center.gap-2 .ds-btn {
+                flex: 1 1 auto !important;
+                white-space: nowrap !important;
+                justify-content: center !important;
+            }
         }
 
         /* ── SYSTEM CONFIGURATION / PLATFORM SETTINGS ── */
@@ -1147,6 +1288,149 @@
                         </div>
                     </div>
 
+                    <!-- ROW 2.5: Organization Onboarding & Adoption Analytics -->
+                    <div class="row g-3 fade-in mb-3">
+                        <div class="col-12">
+                            <div class="ds-card">
+                                <div class="ds-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width:32px;height:32px;border-radius:8px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;">
+                                            <i data-lucide="trending-up" style="width:16px;height:16px;color:var(--ds-primary);"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title mb-0">Organization Onboarding & Adoption Trend</h5>
+                                            <div class="text-xs text-muted">Month-by-month platform onboarding velocity and tenant adoption rate</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <!-- Range Filter -->
+                                        <div class="btn-group btn-group-sm" id="onboardingRangeGroup">
+                                            <button class="btn btn-outline-secondary text-xs" onclick="SuperAdmin.setOnboardingRange('6m');return false;" style="font-size:11px;padding:2px 8px;">6M</button>
+                                            <button class="btn btn-outline-secondary active-range text-xs" onclick="SuperAdmin.setOnboardingRange('12m');return false;" style="font-size:11px;padding:2px 8px;">12M</button>
+                                            <button class="btn btn-outline-secondary text-xs" onclick="SuperAdmin.setOnboardingRange('ytd');return false;" style="font-size:11px;padding:2px 8px;">YTD</button>
+                                            <button class="btn btn-outline-secondary text-xs" onclick="SuperAdmin.setOnboardingRange('all');return false;" style="font-size:11px;padding:2px 8px;">ALL</button>
+                                        </div>
+                                        <!-- Export Dropdown -->
+                                        <div class="dropdown">
+                                            <button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="dropdown">
+                                                <i data-lucide="more-horizontal" style="width:15px;height:15px;"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item text-sm" href="#" onclick="SuperAdmin.exportOnboardingChart('csv');return false;">Export CSV</a></li>
+                                                <li><a class="dropdown-item text-sm" href="#" onclick="SuperAdmin.exportOnboardingChart('png');return false;">Export PNG</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- KPI Metric Pills Row -->
+                                <div class="d-flex gap-4 px-4 pt-3 pb-2 flex-wrap border-bottom" style="border-color:var(--ds-border-color)!important;">
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="New organizations registered in the selected time period.">
+                                        <div class="text-xs text-muted">New Onboarded</div>
+                                        <div class="fw-bold text-lg" id="dashOnboardedTotal" style="color:var(--ds-primary);">—</div>
+                                    </div>
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Average number of new organizations onboarded per month.">
+                                        <div class="text-xs text-muted">Avg Monthly</div>
+                                        <div class="fw-bold text-lg" id="dashOnboardedAvg">—</div>
+                                    </div>
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Percentage of tenant organizations with active or paid status.">
+                                        <div class="text-xs text-muted">Adoption Rate</div>
+                                        <div class="fw-bold text-lg" id="dashAdoptionRate" style="color:#22c55e;">—</div>
+                                    </div>
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Month with the highest number of new organization onboardings.">
+                                        <div class="text-xs text-muted">Peak Month</div>
+                                        <div class="fw-bold text-lg" id="dashPeakMonth">—</div>
+                                    </div>
+                                </div>
+                                <div class="ds-card-body pt-3">
+                                    <div style="min-height:280px;height:280px;width:100%;">
+                                        <canvas id="onboardingTrendChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ROW 2.7: Customer Business Value & Project Savings (Impact Delivered from Closed Projects) -->
+                    <div class="row g-3 fade-in mb-3">
+                        <div class="col-12">
+                            <div class="ds-card">
+                                <div class="ds-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width:32px;height:32px;border-radius:8px;background:rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:center;">
+                                            <i data-lucide="award" style="width:16px;height:16px;color:#10b981;"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title mb-0">Customer Business Value & Project Savings (QCMS Impact)</h5>
+                                            <div class="text-xs text-muted">Verified economic revenue & tangible savings generated by onboarded customer organizations from closed QC projects</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <button class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-2 py-1 px-3" onclick="SuperAdmin.openOrgRevenueModal()" style="font-size:12px; font-weight:600; border-radius:6px;">
+                                            <i data-lucide="building-2" style="width:13px;height:13px;"></i> See Individual Organization Revenue
+                                        </button>
+                                        <!-- Export Dropdown -->
+                                        <div class="dropdown">
+                                            <button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="dropdown">
+                                                <i data-lucide="more-horizontal" style="width:15px;height:15px;"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item text-sm" href="#" onclick="SuperAdmin.exportRealizedValueData('csv');return false;">Export CSV</a></li>
+                                                <li><a class="dropdown-item text-sm" href="#" onclick="SuperAdmin.exportRealizedValueChart('png');return false;">Export Chart PNG</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- KPI Metric Row -->
+                                <div class="d-flex gap-4 px-4 pt-3 pb-2 flex-wrap border-bottom" style="border-color:var(--ds-border-color)!important;">
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Total verified economic return & cost savings unlocked across all customer organizations strictly from closed QC projects.">
+                                        <div class="text-xs text-muted">Total Realized Value / Savings</div>
+                                        <div class="fw-bold text-lg text-success" id="dashRealizedSavings">—</div>
+                                    </div>
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Total count of successfully completed and closed QC projects delivering ROI.">
+                                        <div class="text-xs text-muted">Total Closed Projects</div>
+                                        <div class="fw-bold text-lg" id="dashClosedProjects" style="color:var(--ds-primary);">—</div>
+                                    </div>
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Average financial return generated per closed QC project.">
+                                        <div class="text-xs text-muted">Avg Value / Closed Project</div>
+                                        <div class="fw-bold text-lg" id="dashAvgSavingsProject">—</div>
+                                    </div>
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Average percentage quality/defect/process improvement verified upon project closure.">
+                                        <div class="text-xs text-muted">Avg Quality Improvement</div>
+                                        <div class="fw-bold text-lg text-info" id="dashAvgKpiImp">—</div>
+                                    </div>
+                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Number of onboarded customer organizations that have realized financial returns from closed projects.">
+                                        <div class="text-xs text-muted">Active Value-Generating Orgs</div>
+                                        <div class="fw-bold text-lg" id="dashOrgsWithSavings">—</div>
+                                    </div>
+                                </div>
+                                <div class="ds-card-body pt-3">
+                                    <div class="row g-3">
+                                        <!-- Value Realization Timeline Chart (8 cols) -->
+                                        <div class="col-lg-8 border-end">
+                                            <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                                                <span class="text-xs fw-bold text-muted text-uppercase">Cumulative Value Realization Timeline</span>
+                                                <span class="badge bg-success-subtle text-success text-xxs font-monospace">Closed Projects Only</span>
+                                            </div>
+                                            <div style="min-height:280px;height:280px;width:100%;">
+                                                <canvas id="realizedValueTrendChart"></canvas>
+                                            </div>
+                                        </div>
+                                        <!-- Top Value Generating Organizations Bar Chart (4 cols) -->
+                                        <div class="col-lg-4">
+                                            <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                                                <span class="text-xs fw-bold text-muted text-uppercase">Top Organizations by Revenue/Savings</span>
+                                                <a href="#" onclick="SuperAdmin.openOrgRevenueModal();return false;" class="text-xxs text-primary">View All &rarr;</a>
+                                            </div>
+                                            <div style="min-height:280px;height:280px;width:100%;">
+                                                <canvas id="topOrgValueChart"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- ROW 3: Activity Timeline + Support Tickets -->
                     <div class="row g-3 fade-in mb-3">
                         <!-- Recent Activity Timeline -->
@@ -1237,7 +1521,7 @@
                                     </select>
                                 </div>
                                 <div class="col-lg-2 col-md-3 col-6 text-end">
-                                    <button class="ds-btn ds-btn-secondary w-100 d-flex align-items-center justify-content-center gap-1" onclick="SuperAdmin.exportCompanies('csv')" style="height: 42px; font-size: 13px;">
+                                    <button class="ds-btn ds-btn-secondary w-100 d-flex align-items-center justify-content-center gap-1" onclick="SuperAdmin.openExportModal()" style="height: 42px; font-size: 13px;">
                                         <i data-lucide="download" style="width:14px; height:14px;"></i> Export CSV
                                     </button>
                                 </div>
@@ -1258,7 +1542,7 @@
                     </div>
 
                     <!-- Organizations Table -->
-                    <div class="ds-card fade-in section-spacing" style="overflow: visible !important; position: relative; z-index: 10;">
+                    <div class="ds-card fade-in section-spacing" style="position: relative; z-index: 10;">
                         <div class="ds-card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">Registered Organizations</h5>
                             <div class="d-flex align-items-center gap-3">
@@ -1280,19 +1564,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="ds-card-body p-0" style="overflow: visible !important;">
-                            <div class="table-responsive" style="min-height: 240px; overflow: visible !important;">
-                                <table class="ds-table" id="companiesTable">
+                        <div class="ds-card-body p-0">
+                            <div class="table-responsive" style="min-height: 240px; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100%; display: block;">
+                                <table class="ds-table align-middle text-xs mb-0" id="companiesTable" style="min-width: 920px; width: 100%;">
                                     <thead>
                                         <tr>
-                                            <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllOrgs"></th>
-                                            <th class="col-company cursor-pointer" onclick="SuperAdmin.handleSort('name')">Company</th>
-                                            <th class="col-admin">Admin</th>
-                                            <th class="col-plan cursor-pointer" onclick="SuperAdmin.handleSort('plan')">Plan</th>
-                                            <th class="col-users cursor-pointer" onclick="SuperAdmin.handleSort('max_users')">Users</th>
-                                            <th class="col-status">Status</th>
-                                            <th class="col-trial cursor-pointer" onclick="SuperAdmin.handleSort('license_expiry')">Trial / Renewal</th>
-                                            <th class="text-end">Actions</th>
+                                            <th style="width: 40px; min-width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllOrgs"></th>
+                                            <th class="col-company cursor-pointer" style="min-width: 180px;" onclick="SuperAdmin.handleSort('name')">Company</th>
+                                            <th class="col-admin" style="min-width: 180px;">Admin</th>
+                                            <th class="col-plan cursor-pointer" style="min-width: 110px;" onclick="SuperAdmin.handleSort('plan')">Plan</th>
+                                            <th class="col-users cursor-pointer" style="min-width: 90px;" onclick="SuperAdmin.handleSort('max_users')">Users</th>
+                                            <th class="col-status" style="min-width: 90px;">Status</th>
+                                            <th class="col-trial cursor-pointer" style="min-width: 120px;" onclick="SuperAdmin.handleSort('license_expiry')">Trial / Renewal</th>
+                                            <th class="text-end" style="min-width: 100px;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="companiesBody">
@@ -1358,29 +1642,29 @@
                     </div>
 
                     <!-- Recycle Bin Table Card -->
-                    <div class="ds-card fade-in section-spacing" style="overflow: visible !important;">
+                    <div class="ds-card fade-in section-spacing">
                         <div class="ds-card-header d-flex justify-content-between align-items-center">
                             <span class="text-xs text-muted" id="recycleBinCount">—</span>
                             <button class="ds-btn ds-btn-sm ds-btn-ghost text-xs" onclick="SuperAdmin.clearBinSelection()" id="recycleBinClearSelBtn" style="display:none; opacity:0.7;">
                                 Clear Selection
                             </button>
                         </div>
-                        <div class="ds-card-body p-0" style="overflow: visible !important;">
-                            <div class="table-responsive" style="min-height: 240px; overflow: visible !important;">
-                                <table class="ds-table" id="recycleBinTable">
+                        <div class="ds-card-body p-0">
+                            <div class="table-responsive" style="min-height: 240px; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100%;">
+                                <table class="ds-table align-middle text-xs mb-0" id="recycleBinTable" style="min-width: 720px; width: 100%;">
                                     <thead>
                                         <tr>
-                                            <th style="width:42px; padding-right:4px;">
+                                            <th style="width:42px; min-width:42px; padding-right:4px;">
                                                 <div style="display:flex;align-items:center;justify-content:center;">
                                                     <input type="checkbox" id="recycleBinSelectAll" title="Select all" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ds-primary);" onchange="SuperAdmin.toggleAllBinRows(this.checked)">
                                                 </div>
                                             </th>
-                                            <th>Company Name</th>
-                                            <th>Admin Email</th>
-                                            <th>Plan</th>
-                                            <th>Deleted On</th>
-                                            <th>Days Left</th>
-                                            <th class="text-end">Actions</th>
+                                            <th style="min-width: 160px;">Company Name</th>
+                                            <th style="min-width: 160px;">Admin Email</th>
+                                            <th style="min-width: 90px;">Plan</th>
+                                            <th style="min-width: 120px;">Deleted On</th>
+                                            <th style="min-width: 110px;">Days Left</th>
+                                            <th style="min-width: 80px;" class="text-end">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="recycleBinBody">
@@ -1596,7 +1880,7 @@
                             </div>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div class="table-responsive" style="overflow: visible;">
+                            <div class="table-responsive">
                                 <table class="ds-table align-middle mb-0">
                                     <thead>
                                         <tr>
@@ -1616,9 +1900,7 @@
                                 </table>
                             </div>
                         </div>
-                        <div class="ds-card-footer d-flex align-items-center justify-content-between p-3 border-top" id="offlinePaymentsPagination" style="background:var(--ds-bg-card);">
-                            <!-- Pagination controls -->
-                        </div>
+                        <div id="offlinePaymentsPagination"></div>
                     </div>
 
                     <!-- Data table -->
@@ -1632,7 +1914,7 @@
                             </div>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div class="table-responsive" style="overflow: visible;">
+                            <div class="table-responsive">
                                 <table class="ds-table">
                                     <thead>
                                         <tr>
@@ -1655,10 +1937,18 @@
                             </div>
                         </div>
                         <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center p-3 border-top">
-                            <span class="text-xs text-muted" id="billPagInfo">Showing 0-0 of 0</span>
-                            <div class="d-flex gap-1" id="billPagBtns">
-                                <!-- Dynamic pagination buttons -->
+                        <div class="ds-card-body py-3 px-4 border-top d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color:var(--ds-border-color)!important;">
+                            <div class="text-xs text-muted" id="billPagInfo">Showing 0-0 of 0</div>
+                            <div class="d-flex gap-1 align-items-center">
+                                <select class="ds-input" id="billPerPage" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SuperAdmin.setBillPerPage(this.value)">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                                <span class="text-xs text-muted ms-1 me-2">per page</span>
+                                <div id="billPagBtns" class="d-flex gap-1 align-items-center"></div>
                             </div>
                         </div>
                     </div>
@@ -1689,6 +1979,87 @@
                     </div>
                     <div class="glass-card ds-card p-0 overflow-hidden">
                         <iframe src="/admin/super-admin-stage-template.html" style="width:100%; height:920px; border:none;"></iframe>
+                    </div>
+                </div>
+
+                <!-- Stage Weightage Configuration View -->
+                <div id="stage-weightageView" class="view-section">
+                    <div class="row g-4">
+                        <!-- Top Summary / Live Matrix Card -->
+                        <div class="col-12">
+                            <div class="glass-card ds-card p-4">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div style="width:36px;height:36px;border-radius:10px;background:rgba(37,99,235,0.1);display:flex;align-items:center;justify-content:center;">
+                                                <i data-lucide="percent" style="width:18px;height:18px;color:#2563eb;"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="fw-bold mb-0">8-Stage Progress Weightage Distribution</h5>
+                                                <p class="text-xs text-muted mb-0">Assign completion percentage weight to each QC stage. Total allocation must equal 100.0%.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" onclick="StageWeightageManager.applyPreset('equal')">
+                                            <i data-lucide="sliders" style="width:13px;height:13px;" class="me-1"></i> Equal Split (12.5% × 8)
+                                        </button>
+                                        <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" onclick="StageWeightageManager.applyPreset('rca_heavy')">
+                                            <i data-lucide="zap" style="width:13px;height:13px;" class="me-1"></i> RCA Heavy (S1–S4)
+                                        </button>
+                                        <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" onclick="StageWeightageManager.applyPreset('execution_heavy')">
+                                            <i data-lucide="activity" style="width:13px;height:13px;" class="me-1"></i> Execution Heavy (S5–S8)
+                                        </button>
+                                        <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" onclick="StageWeightageManager.resetDefaults()">
+                                            <i data-lucide="rotate-ccw" style="width:13px;height:13px;" class="me-1"></i> Reset
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Allocation Bar & Live Total Status -->
+                                <div class="p-3 rounded-3 mb-2" style="background: var(--ds-surface-secondary, rgba(0,0,0,0.02)); border: 1px solid var(--ds-border-color);">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="text-xs fw-bold text-uppercase text-secondary">Cumulative Weight Allocation</span>
+                                        <div id="weightTotalBadge" class="badge bg-success-subtle text-success px-3 py-1 fw-bold fs-6">
+                                            Total: 100.0%
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 12px; border-radius: 6px; overflow: hidden; background: #e2e8f0;" id="weightProgressBar">
+                                        <!-- Dynamic segments -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 8 Stages Grid / Rows -->
+                        <div class="col-12">
+                            <div class="glass-card ds-card p-4">
+                                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                                    <h6 class="fw-bold mb-0 text-secondary text-uppercase text-xs" style="letter-spacing: 0.05em;">Stage Configuration Matrix</h6>
+                                    <span class="text-xs text-muted">Adjust sliders or type values directly</span>
+                                </div>
+                                <div id="stageWeightageList" class="d-flex flex-column gap-3">
+                                    <div class="text-center py-5 text-muted">
+                                        <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                                        <div>Loading stage weightage configuration...</div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center justify-content-between pt-4 mt-3 border-top flex-wrap gap-3">
+                                    <div id="weightageValidationMsg" class="text-xs text-muted">
+                                        All stage weights must sum up to exactly 100.0%.
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="ds-btn ds-btn-secondary" onclick="StageWeightageManager.load()">
+                                            <i data-lucide="refresh-cw" style="width:14px;height:14px;" class="me-1"></i> Discard Changes
+                                        </button>
+                                        <button type="button" id="saveStageWeightageBtn" class="ds-btn ds-btn-primary px-4" onclick="StageWeightageManager.save()">
+                                            <i data-lucide="check" style="width:14px;height:14px;" class="me-1"></i> Save Configuration
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2077,22 +2448,22 @@
 
                                     <!-- 3. All Super Admin Accounts Table -->
                                     <div class="col-12">
-                                        <div class="glass-card p-4" style="background: rgba(255,255,255,0.02); border: 1px solid var(--ds-border-color); border-radius: var(--ds-radius-lg); overflow: hidden; max-width: 100%;">
-                                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="glass-card p-3 p-md-4" style="background: rgba(255,255,255,0.02); border: 1px solid var(--ds-border-color); border-radius: var(--ds-radius-lg); overflow: hidden; max-width: 100%;">
+                                            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                                                 <h6 class="fw-bold mb-0 text-main"><i data-lucide="users" class="me-1.5 text-primary"></i>All Super Admin Logins</h6>
                                                 <button class="ds-btn ds-btn-secondary ds-btn-xs" onclick="PlatformSettings.loadAdminLogins()"><i data-lucide="refresh-cw" class="me-1" style="width:11px;"></i> Refresh</button>
                                             </div>
 
-                                            <div class="table-responsive" style="overflow-x: auto; width: 100%; max-width: 100%;">
-                                                <table class="ds-table align-middle text-xs mb-0" style="min-width: 580px; width: 100%;">
+                                            <div class="table-responsive" style="overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100%; max-width: 100%; display: block;">
+                                                <table class="ds-table align-middle text-xs mb-0" style="min-width: 680px; width: 100%;">
                                                     <thead>
                                                         <tr>
-                                                            <th>Admin User</th>
-                                                            <th>Email Address</th>
-                                                            <th>Sub-Role</th>
-                                                            <th>Status</th>
-                                                            <th>Created Date</th>
-                                                            <th class="text-end">Actions</th>
+                                                            <th style="min-width: 160px;">Admin User</th>
+                                                            <th style="min-width: 180px;">Email Address</th>
+                                                            <th style="min-width: 100px;">Sub-Role</th>
+                                                            <th style="min-width: 80px;">Status</th>
+                                                            <th style="min-width: 110px;">Created Date</th>
+                                                            <th style="min-width: 70px;" class="text-end">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="adminLoginsTableBody">
@@ -2106,7 +2477,7 @@
                                             <!-- Pagination Footer -->
                                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 mt-3 border-top" style="border-color: var(--ds-border-color) !important;">
                                                 <span class="text-xs text-muted" id="adminLoginsPaginationInfo">—</span>
-                                                <div class="d-flex gap-1 align-items-center">
+                                                <div class="d-flex gap-1 align-items-center flex-wrap">
                                                     <select class="ds-input" id="adminLoginsPerPageSelect" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="PlatformSettings.adminLoginsSetPerPage(this.value)">
                                                         <option value="5" selected>5</option>
                                                         <option value="10">10</option>
@@ -2132,8 +2503,8 @@
                                             <h5 class="mb-1 fw-bold text-main d-flex align-items-center gap-2"><i data-lucide="layout-template" class="text-primary"></i> Landing Page CMS</h5>
                                             <p class="text-secondary text-sm mb-0">Modify the public landing page hero, FAQs, and footer.</p>
                                         </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-warning" onclick="PlatformSettings.resetLandingCMSDefaults()"><i data-lucide="rotate-ccw" class="me-1"></i> Use Default System Template</button>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <button type="button" class="ds-btn ds-btn-outline ds-btn-sm text-warning" onclick="PlatformSettings.resetLandingCMSDefaults()"><i data-lucide="rotate-ccw" class="me-1"></i> Use Default Template</button>
                                             <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="PlatformSettings.saveLandingCMS()"><i data-lucide="globe" class="me-1"></i> Publish Landing Page</button>
                                         </div>
                                     </div>
@@ -2592,21 +2963,32 @@
 
                     <!-- Search & Filters Container (Single Row Layout) -->
                     <div class="filter-panel mb-4 p-3 glass-card" style="border-radius:12px;">
-                        <div class="d-flex align-items-end gap-3 flex-wrap" style="gap: 16px !important;">
-                            <div style="flex: 1 1 180px; min-width: 160px;">
+                        <div class="d-flex align-items-end gap-3 flex-wrap" style="gap: 14px !important;">
+                            <div style="flex: 1 1 170px; min-width: 150px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Organization Filter</label>
                                 <select class="ds-input text-xs" id="superAuditOrgFilter" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('org_id', this.value)">
                                     <option value="">All Organizations</option>
                                 </select>
                             </div>
-                            <div style="flex: 2 1 240px; min-width: 200px;">
+                            <div style="flex: 1.2 1 190px; min-width: 175px;">
+                                <label class="ds-label mb-1 text-xs fw-semibold">Event Category</label>
+                                <select class="ds-input text-xs" id="superAuditFilterCategory" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('action_type', this.value)">
+                                    <option value="">All Categories</option>
+                                    <option value="DATA_CHANGES">Data Modifications (Create/Update/Delete)</option>
+                                    <option value="SECURITY">Security Alerts & Warnings</option>
+                                    <option value="SESSIONS">User Sessions & Auth</option>
+                                    <option value="CRITICAL">Critical Incidents</option>
+                                    <option value="EXPORT">Data Exports & Reports</option>
+                                </select>
+                            </div>
+                            <div style="flex: 2 1 230px; min-width: 190px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Search Event Logs</label>
                                 <div class="position-relative w-100" style="height: 38px;">
                                     <i data-lucide="search" class="text-muted" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; pointer-events: none; opacity: 0.6;"></i>
-                                    <input type="text" class="ds-input text-xs w-100" id="superAuditSearchQ" style="height: 38px; padding-left: 34px !important; background: transparent !important; border: 1px solid var(--ds-border-color) !important; border-radius: var(--ds-radius-md, 8px) !important;" placeholder="Search actor, ID, IP, location..." oninput="SuperAdmin.debounceAuditSearch(this.value)" autocomplete="off">
+                                    <input type="text" class="ds-input text-xs w-100" id="superAuditSearchQ" style="height: 38px; padding-left: 34px !important; background: transparent !important; border: 1px solid var(--ds-border-color) !important; border-radius: var(--ds-radius-md, 8px) !important;" placeholder="Search actor, ID, IP, details..." oninput="SuperAdmin.debounceAuditSearch(this.value)" autocomplete="off">
                                 </div>
                             </div>
-                            <div style="flex: 1 1 140px; min-width: 130px;">
+                            <div style="flex: 1 1 130px; min-width: 120px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Date Range</label>
                                 <select class="ds-input text-xs" id="superAuditFilterDate" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('date_preset', this.value)">
                                     <option value="">All Time</option>
@@ -2617,7 +2999,7 @@
                                     <option value="90days">Last 90 Days</option>
                                 </select>
                             </div>
-                            <div style="flex: 1 1 130px; min-width: 120px;">
+                            <div style="flex: 1 1 120px; min-width: 110px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Status</label>
                                 <select class="ds-input text-xs" id="superAuditFilterStatus" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('status', this.value)">
                                     <option value="">All Status</option>
@@ -2627,7 +3009,7 @@
                                     <option value="Critical">Critical</option>
                                 </select>
                             </div>
-                            <div style="flex: 1 1 130px; min-width: 120px;">
+                            <div style="flex: 1 1 120px; min-width: 110px;">
                                 <label class="ds-label mb-1 text-xs fw-semibold">Risk Level</label>
                                 <select class="ds-input text-xs" id="superAuditFilterRisk" style="height:38px; padding-right:28px;" onchange="SuperAdmin.setAuditFilter('risk_level', this.value)">
                                     <option value="">All Risks</option>
@@ -2661,9 +3043,17 @@
                         <div class="tab-pane fade show active" id="superStreamView">
                             <div class="glass-card ds-card">
                                 <div class="ds-card-header h-stack justify-content-between p-3 border-bottom border-light border-opacity-10">
-                                    <div class="h-stack gap-2">
+                                    <div class="h-stack gap-2 align-items-center">
                                         <h5 class="mb-0 fw-bold">Compliance Activity Stream</h5>
                                         <span class="ds-badge outline text-xs" id="superLogsCount">0 logs</span>
+                                        <span class="text-xs text-muted ms-3 border-start ps-3 border-secondary border-opacity-25 font-normal" style="font-weight: 400;">
+                                            <i data-lucide="shield-check" style="width:13px;height:13px;" class="me-1"></i>Standard retention: 7 years. Logs older than 7 years are eligible for purge.
+                                        </span>
+                                    </div>
+                                    <div class="h-stack gap-2">
+                                        <button type="button" class="ds-btn ds-btn-danger ds-btn-sm text-xs py-1 px-3" onclick="SuperAdmin.openPurgeAuditLogsModal()">
+                                            <i data-lucide="trash-2" style="width:13px;height:13px;" class="me-1"></i> Purge Audit Logs
+                                        </button>
                                     </div>
                                 </div>
                                 <div class="table-responsive">
@@ -2789,10 +3179,16 @@
                             </div>
                         </div>
 
-                        <!-- Diffs Container -->
+                        <!-- Diffs Container (Past Data vs Current Data) -->
                         <div class="mb-4 d-none" id="superDiffBox">
-                            <h6 class="fw-bold text-xs text-uppercase text-secondary mb-2">State Modifications (Diff)</h6>
-                            <div class="diff-container" id="superDiffData"></div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-bold text-xs text-uppercase text-secondary mb-0 d-flex align-items-center gap-2">
+                                    <i data-lucide="git-compare" style="width:13px;height:13px;color:var(--ds-primary);"></i>
+                                    State Modifications (Past vs Current)
+                                </h6>
+                                <span class="badge bg-indigo text-white text-xxs px-2 py-0.5 rounded-pill" id="superDiffCountBadge">Diff</span>
+                            </div>
+                            <div class="diff-container p-0 border-0" id="superDiffData"></div>
                         </div>
 
                         <!-- Timeline -->
@@ -2809,6 +3205,61 @@
 
                         <div class="pt-3 border-top">
                             <button class="ds-btn ds-btn-secondary ds-btn-sm w-100" onclick="SuperAdmin.copyAuditLogId()"><i data-lucide="copy" class="me-1" style="width:13px;height:13px;"></i> Copy Log ID</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── AUDIT DATA MODIFICATION DIFF MODAL ── -->
+                <div class="modal fade" id="superAuditDiffModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content glass-card" style="border-radius:16px; border:1px solid var(--ds-border-color); background:var(--ds-bg-card, #ffffff);">
+                            <div class="modal-header border-bottom border-light border-opacity-10 p-4 pb-3">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="ds-badge purple" id="superDiffModalAction">DATA_CHANGE</span>
+                                        <span class="audit-risk-badge" id="superDiffModalRisk">LOW</span>
+                                        <span class="text-xs text-secondary font-mono" id="superDiffModalId">#—</span>
+                                    </div>
+                                    <h5 class="modal-title fw-bold mb-0" id="superDiffModalTitle">Data Modification Details</h5>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                                <div class="p-3 mb-4 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.15);">
+                                    <div>
+                                        <div class="text-xs text-secondary">Operator & Target</div>
+                                        <div class="fw-semibold text-sm" id="superDiffModalOperator">—</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-secondary">Timestamp</div>
+                                        <div class="text-xs font-mono text-secondary" id="superDiffModalTime">—</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-secondary">Change Summary</div>
+                                        <div class="fw-bold text-sm text-primary" id="superDiffModalSummary">—</div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <h6 class="fw-bold text-xs text-uppercase text-secondary mb-2 d-flex align-items-center gap-2">
+                                        <i data-lucide="git-compare" style="width:14px;height:14px;color:var(--ds-primary);"></i>
+                                        Past Data (Before) vs Current Data (After) Comparison
+                                    </h6>
+                                    <div id="superDiffModalTableContainer"></div>
+                                </div>
+
+                                <div id="superDiffModalRawSection" class="mt-4 pt-3 border-top border-light border-opacity-10">
+                                    <details>
+                                        <summary class="text-xs text-secondary fw-semibold cursor-pointer mb-2" style="cursor:pointer;">
+                                            <i data-lucide="code" style="width:12px;height:12px;"></i> View Raw Payload Data (JSON)
+                                        </summary>
+                                        <pre class="p-3 rounded text-xs font-mono mb-0" id="superDiffModalRaw" style="background:var(--audit-box-bg); max-height:220px; overflow-y:auto; border:1px solid var(--audit-card-border);"></pre>
+                                    </details>
+                                </div>
+                            </div>
+                            <div class="modal-footer border-top-0 pt-0 p-4">
+                                <button type="button" class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2974,7 +3425,7 @@
                             </div>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div class="table-responsive" style="overflow: visible;">
+                            <div class="table-responsive">
                                 <table class="ds-table" id="adminsTable">
                                     <thead>
                                         <tr>
@@ -3018,7 +3469,7 @@
                             </div>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div class="table-responsive" style="overflow: visible;">
+                            <div class="table-responsive">
                                 <table class="ds-table" id="usersTable">
                                     <thead>
                                         <tr>
@@ -3088,6 +3539,9 @@
                             <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.loadPlans()">
                                 <i data-lucide="refresh-cw" style="width:13px;height:13px;" id="planRefreshIcon"></i> Refresh
                             </button>
+                            <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.openPaygOperationsModal()">
+                                <i data-lucide="calculator" style="width:13px;height:13px;color:#8b5cf6;"></i> Pay As You Go
+                            </button>
                             <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.planExportCSV()">
                                 <i data-lucide="download" style="width:13px;height:13px;"></i> Export Catalog
                             </button>
@@ -3126,6 +3580,7 @@
                                     <option value="Starter">Starter</option>
                                     <option value="Professional">Professional</option>
                                     <option value="Enterprise">Enterprise</option>
+                                    <option value="Pay-As-You-Go">Pay-As-You-Go</option>
                                     <option value="Custom">Custom</option>
                                     <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                                 </select>
@@ -3148,24 +3603,24 @@
                             <span class="text-xs text-muted" id="plansCount">—</span>
                         </div>
                         <div class="ds-card-body p-0">
-                            <div class="table-responsive" style="max-height:560px;overflow-y:auto;">
-                                <table class="ds-table" id="plansTable" style="min-width:900px;">
+                            <div class="table-responsive" style="max-height:560px; overflow-x:auto !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; width:100%; display:block;">
+                                <table class="ds-table align-middle text-xs mb-0" id="plansTable" style="min-width:1040px; width:100%;">
                                     <thead>
                                         <tr>
-                                            <th>Plan Name</th>
-                                            <th>Plan Code</th>
-                                            <th>Description</th>
-                                            <th>Price</th>
-                                            <th>Billing Cycle</th>
-                                            <th>Max Users</th>
-                                            <th>Storage Limit</th>
-                                            <th>Subscribers</th>
-                                            <th>Status</th>
-                                            <th class="text-end">Actions</th>
+                                            <th style="min-width: 170px;">Plan Name</th>
+                                            <th style="min-width: 110px;">Plan Code</th>
+                                            <th style="min-width: 180px;">Description</th>
+                                            <th style="min-width: 100px;">Price</th>
+                                            <th style="min-width: 110px;">Billing Cycle</th>
+                                            <th style="min-width: 95px;">Max Users</th>
+                                            <th style="min-width: 110px;">Storage Limit</th>
+                                            <th style="min-width: 100px;">Subscribers</th>
+                                            <th style="min-width: 90px;">Status</th>
+                                            <th style="min-width: 80px;" class="text-end">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="plansBody">
-                                        <tr><td colspan="11" class="text-center py-5 text-muted text-xs"><span class="spinner-border spinner-border-sm me-2"></span>Loading plans catalogue…</td></tr>
+                                        <tr><td colspan="10" class="text-center py-5 text-muted text-xs"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span>Loading plans catalogue…</div></td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -3238,6 +3693,177 @@
                     </div>
                 </div>
 
+                <!-- ── PAYG BILLING OPERATIONS & DISPATCH MODAL ── -->
+                <div class="modal fade" id="paygOperationsModal" tabindex="-1">
+                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-height: 90vh; margin: 1.75rem auto;">
+                        <div class="modal-content" style="max-height: 90vh; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+                            <div class="modal-header flex-shrink-0 bg-white border-bottom py-3 px-4">
+                                <div>
+                                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                                        <i data-lucide="calculator" style="width:20px;height:20px;color:#8b5cf6;"></i>
+                                        Pay-As-You-Go Monthly Billing Operations &amp; Dispatch
+                                    </h5>
+                                    <div class="text-xs text-muted mt-1">
+                                        Review real-time accrued usage telemetry across organizations on metered billing and dispatch monthly tax invoices (Dashboard + Email).
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-4 custom-modal-scroll" style="overflow-y: auto !important; max-height: calc(90vh - 135px); flex: 1 1 auto;">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <div>
+                                        <span class="text-xs text-muted">Projected Monthly Metered Revenue:</span>
+                                        <strong class="text-primary fs-5 ms-1" id="paygTotalProjected">₹0.00</strong>
+                                        <span class="badge bg-purple-subtle text-purple ms-2" id="paygOrgCountBadge">0 Organizations</span>
+                                    </div>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" id="paygToggleRulesBtn" onclick="SuperAdmin.togglePaygRulesPanel()">
+                                            <i data-lucide="sliders" style="width:13px;height:13px;"></i> Set Metered Rules
+                                        </button>
+                                        <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.loadPaygBillingPreviews()">
+                                            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Refresh Telemetry
+                                        </button>
+                                        <button class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-1" id="paygBatchDispatchBtn" onclick="SuperAdmin.executePaygBatchBilling()" style="background:#7c3aed; border-color:#7c3aed;">
+                                            <i data-lucide="send" style="width:13px;height:13px;"></i> Dispatch All Bills
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Collapsible Metered Rules Panel -->
+                                <div class="card mb-3 border-0 shadow-sm rounded-3" id="paygRulesPanel" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0 !important;">
+                                    <div class="card-header bg-white py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i data-lucide="sliders" style="width:16px;height:16px;color:#7c3aed;"></i>
+                                            <strong style="font-size:13px;" class="text-dark">Configure Pay-As-You-Go Metered Pricing &amp; Free Tier Rules</strong>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-link text-muted p-0" onclick="SuperAdmin.togglePaygRulesPanel(false)"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+                                    </div>
+                                    <div class="card-body p-3">
+                                        <div class="row g-3">
+                                            <!-- Base Fee & Tax -->
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Base Access Fee (₹/mo)</label>
+                                                <div class="position-relative">
+                                                    <span class="position-absolute top-50 translate-middle-y text-muted fw-bold" style="left: 10px; font-size: 13px; pointer-events: none; z-index: 5;">₹</span>
+                                                    <input type="number" class="form-control form-control-sm" id="paygRuleBaseFee" min="0" step="1" placeholder="999" style="padding-left: 24px !important; height: 36px !important; border-radius: 8px !important;">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">GST / Tax Rate (%)</label>
+                                                <div class="position-relative">
+                                                    <input type="number" class="form-control form-control-sm" id="paygRuleTaxPercent" min="0" max="100" step="0.5" placeholder="18" style="padding-right: 28px !important; height: 36px !important; border-radius: 8px !important;">
+                                                    <span class="position-absolute top-50 translate-middle-y text-muted fw-bold" style="right: 12px; font-size: 13px; pointer-events: none; z-index: 5;">%</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Users / Seats -->
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Included Users (Free Tier)</label>
+                                                <input type="number" class="form-control form-control-sm" id="paygRuleUserFree" min="0" step="1" placeholder="5" style="height: 36px !important; border-radius: 8px !important;">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Cost Per User (₹/user/mo)</label>
+                                                <div class="position-relative">
+                                                    <span class="position-absolute top-50 translate-middle-y text-muted fw-bold" style="left: 10px; font-size: 13px; pointer-events: none; z-index: 5;">₹</span>
+                                                    <input type="number" class="form-control form-control-sm" id="paygRuleUserRate" min="0" step="1" placeholder="50" style="padding-left: 24px !important; height: 36px !important; border-radius: 8px !important;">
+                                                </div>
+                                            </div>
+
+                                            <!-- Storage (GB) -->
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Included Storage (GB Free)</label>
+                                                <input type="number" class="form-control form-control-sm" id="paygRuleStorageFree" min="0" step="0.5" placeholder="5" style="height: 36px !important; border-radius: 8px !important;">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Cost Per GB (₹/GB/mo)</label>
+                                                <div class="position-relative">
+                                                    <span class="position-absolute top-50 translate-middle-y text-muted fw-bold" style="left: 10px; font-size: 13px; pointer-events: none; z-index: 5;">₹</span>
+                                                    <input type="number" class="form-control form-control-sm" id="paygRuleStorageRate" min="0" step="1" placeholder="20" style="padding-left: 24px !important; height: 36px !important; border-radius: 8px !important;">
+                                                </div>
+                                            </div>
+
+                                            <!-- Projects -->
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Included Projects (Free Tier)</label>
+                                                <input type="number" class="form-control form-control-sm" id="paygRuleProjectFree" min="0" step="1" placeholder="2" style="height: 36px !important; border-radius: 8px !important;">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Cost Per Project (₹/proj/mo)</label>
+                                                <div class="position-relative">
+                                                    <span class="position-absolute top-50 translate-middle-y text-muted fw-bold" style="left: 10px; font-size: 13px; pointer-events: none; z-index: 5;">₹</span>
+                                                    <input type="number" class="form-control form-control-sm" id="paygRuleProjectRate" min="0" step="1" placeholder="100" style="padding-left: 24px !important; height: 36px !important; border-radius: 8px !important;">
+                                                </div>
+                                            </div>
+
+                                            <!-- Departments -->
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Included Depts (Free Tier)</label>
+                                                <input type="number" class="form-control form-control-sm" id="paygRuleDeptFree" min="0" step="1" placeholder="2" style="height: 36px !important; border-radius: 8px !important;">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Cost Per Department (₹/dept/mo)</label>
+                                                <div class="position-relative">
+                                                    <span class="position-absolute top-50 translate-middle-y text-muted fw-bold" style="left: 10px; font-size: 13px; pointer-events: none; z-index: 5;">₹</span>
+                                                    <input type="number" class="form-control form-control-sm" id="paygRuleDeptRate" min="0" step="1" placeholder="50" style="padding-left: 24px !important; height: 36px !important; border-radius: 8px !important;">
+                                                </div>
+                                            </div>
+
+                                            <!-- Plant Locations / Sites -->
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Included Locations (Free Tier)</label>
+                                                <input type="number" class="form-control form-control-sm" id="paygRuleLocFree" min="0" step="1" placeholder="1" style="height: 36px !important; border-radius: 8px !important;">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1">Cost Per Location (₹/loc/mo)</label>
+                                                <div class="position-relative">
+                                                    <span class="position-absolute top-50 translate-middle-y text-muted fw-bold" style="left: 10px; font-size: 13px; pointer-events: none; z-index: 5;">₹</span>
+                                                    <input type="number" class="form-control form-control-sm" id="paygRuleLocRate" min="0" step="1" placeholder="100" style="padding-left: 24px !important; height: 36px !important; border-radius: 8px !important;">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top flex-wrap gap-2">
+                                            <span class="text-xxs text-muted">Rules take effect immediately and are applied across all active tenant meters.</span>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="SuperAdmin.resetPaygRulesToDefault()">
+                                                    <i data-lucide="rotate-ccw" style="width:12px;height:12px;" class="me-1"></i> Reset Defaults
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-primary text-white d-flex align-items-center gap-1" id="savePaygRulesBtn" onclick="SuperAdmin.savePaygRules()" style="background:#7c3aed; border-color:#7c3aed;">
+                                                    <i data-lucide="check" style="width:12px;height:12px;"></i> Save Rules &amp; Recalculate
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-responsive border rounded-3" style="overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100%; display: block;">
+                                    <table class="table table-hover align-middle mb-0" style="font-size:12px; min-width: 1060px; width: 100%;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="min-width: 180px;">Organization</th>
+                                                <th style="min-width: 120px;">Active Users</th>
+                                                <th style="min-width: 130px;">Storage (GB)</th>
+                                                <th style="min-width: 110px;">Projects</th>
+                                                <th style="min-width: 140px;">Depts &amp; Sites</th>
+                                                <th style="min-width: 90px;">Base Fee</th>
+                                                <th style="min-width: 80px;">GST</th>
+                                                <th style="min-width: 110px;">Estimated Bill</th>
+                                                <th style="min-width: 100px;" class="text-end">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="paygOperationsBody">
+                                            <tr><td colspan="9" class="text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span>Loading metered usage telemetry...</div></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="modal-footer flex-shrink-0 bg-white border-top py-2 px-4">
+                                <button class="ds-btn ds-btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ── CREATE PLAN WIZARD MODAL ── -->
                 <div class="modal fade" id="planCreateModal" tabindex="-1">
                     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -3267,6 +3893,7 @@
                                                     <option value="Starter">Starter</option>
                                                     <option value="Professional">Professional</option>
                                                     <option value="Enterprise">Enterprise</option>
+                                                    <option value="Pay-As-You-Go">Pay-As-You-Go (Metered Pricing)</option>
                                                     <option value="Custom">Custom</option>
                                                     <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                                                 </select>
@@ -3282,6 +3909,99 @@
                                 <!-- Step 2: Pricing -->
                                 <div class="wiz-panel" id="pwp2">
                                     <div class="row g-3">
+                                        <!-- Dynamic Pay-As-You-Go Metered Rules Configurator Panel (Step 2) -->
+                                        <div class="col-12" id="pwPaygConfigContainer" style="display: none;">
+                                            <div class="p-3 rounded-3 border" style="background: rgba(139,92,246,0.06); border-color: rgba(139,92,246,0.25) !important;">
+                                                <div class="fw-bold text-sm text-primary mb-1 d-flex align-items-center gap-1.5" style="color:#7c3aed !important;">
+                                                    <i data-lucide="gauge" style="width:16px;height:16px;"></i> Pay-As-You-Go Metered Pricing Rules &amp; Unit Rates
+                                                </div>
+                                                <div class="text-xs text-muted mb-3">
+                                                    Configure base monthly platform fee, unit rates for each consumption metric, and free-tier threshold allowances. The system automatically calculates monthly billing based on actual tenant usage.
+                                                </div>
+                                                <div class="row g-3">
+                                                    <!-- Base Monthly Fee -->
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Base Platform Access Fee (₹ / month) <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwPaygBaseFee" value="999" min="0" placeholder="e.g. 999" oninput="SuperAdmin.updatePlanTaxCalculationPreview()">
+                                                            <div class="text-xxs text-muted mt-1">Fixed monthly baseline hosting &amp; platform access charge.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Default GST / Tax Rate (%)</label>
+                                                            <input type="number" class="ds-input" id="pwPaygTax" value="18" min="0" max="100" oninput="SuperAdmin.updatePlanTaxCalculationPreview()">
+                                                            <div class="text-xxs text-muted mt-1">Tax percentage applied to monthly invoice total.</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Active Users Rate & Free Tier -->
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Active Users Unit Rate (₹ / user / month) <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwPaygUserRate" value="50" min="0" placeholder="e.g. 50">
+                                                            <div class="text-xxs text-muted mt-1">Price per active licensed user seat.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Free Users Allowance (Seats)</label>
+                                                            <input type="number" class="ds-input" id="pwPaygUserFree" value="5" min="0" placeholder="e.g. 5">
+                                                            <div class="text-xxs text-muted mt-1">Included free before per-user charges apply.</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Storage Rate & Free Tier -->
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Storage Unit Rate (₹ / GB / month) <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwPaygStorageRate" value="20" min="0" placeholder="e.g. 20">
+                                                            <div class="text-xxs text-muted mt-1">Price per GB of cloud repository &amp; database storage.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Free Storage Allowance (GB)</label>
+                                                            <input type="number" class="ds-input" id="pwPaygStorageFree" value="5" min="0" placeholder="e.g. 5">
+                                                            <div class="text-xxs text-muted mt-1">GBs of storage included free each month.</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Projects Rate & Free Tier -->
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Project Creation Rate (₹ / project / mo) <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwPaygProjectRate" value="100" min="0" placeholder="e.g. 100">
+                                                            <div class="text-xxs text-muted mt-1">Price per 8-Stage QC project created or active.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Free Projects Allowance</label>
+                                                            <input type="number" class="ds-input" id="pwPaygProjectFree" value="2" min="0" placeholder="e.g. 2">
+                                                            <div class="text-xxs text-muted mt-1">Projects included free before charges apply.</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- API Rate & Free Tier -->
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">API Rate (₹ / 1,000 API calls) <span class="text-danger">*</span></label>
+                                                            <input type="number" class="ds-input" id="pwPaygApiRate" value="10" min="0" placeholder="e.g. 10">
+                                                            <div class="text-xxs text-muted mt-1">Price per 1,000 API &amp; integration calls.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="ds-field">
+                                                            <label class="ds-label">Free API Allowance (x1,000 calls)</label>
+                                                            <input type="number" class="ds-input" id="pwPaygApiFree" value="10" min="0" placeholder="e.g. 10">
+                                                            <div class="text-xxs text-muted mt-1">1,000s of API requests included free (e.g. 10 = 10,000 calls).</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <!-- Dynamic Trial & Onboarding Configuration Panel (Step 2) -->
                                         <div class="col-12" id="pwTrialConfigContainer" style="display: none;">
                                             <div class="p-3 rounded-3 border" style="background: rgba(37,99,235,0.06); border-color: rgba(37,99,235,0.25) !important;">
@@ -3291,9 +4011,18 @@
                                                 <div class="row g-3">
                                                     <div class="col-md-6">
                                                         <div class="ds-field">
-                                                            <label class="ds-label">Default Onboarding Trial Period (Days) <span class="text-danger">*</span></label>
-                                                            <input type="number" class="ds-input" id="pwTrialDays" value="14" min="1" max="365" placeholder="e.g. 14">
-                                                            <div class="text-xxs text-muted mt-1">Number of days new organizations get for their initial trial period.</div>
+                                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                                <label class="ds-label mb-0">Default Onboarding Trial Period (Days) <span class="text-danger">*</span></label>
+                                                                <span class="badge bg-primary-subtle text-primary text-xxs fw-bold" id="pwTrialMonthsLabel">6 Months</span>
+                                                            </div>
+                                                            <input type="number" class="ds-input" id="pwTrialDays" value="180" min="1" max="730" placeholder="e.g. 180" oninput="SuperAdmin.updateTrialMonthsLabel(this.value)">
+                                                            <div class="d-flex align-items-center gap-1.5 flex-wrap mt-1.5" id="trialPresetBtnsGroup">
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary trial-preset-btn py-1 px-2 text-xxs rounded" data-days="30" onclick="SuperAdmin.setTrialDaysPreset(30)">1 Mo (30d)</button>
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary trial-preset-btn py-1 px-2 text-xxs rounded" data-days="90" onclick="SuperAdmin.setTrialDaysPreset(90)">3 Mo (90d)</button>
+                                                                <button type="button" class="btn btn-xs btn-primary trial-preset-btn py-1 px-2 text-xxs rounded fw-bold shadow-sm" data-days="180" onclick="SuperAdmin.setTrialDaysPreset(180)">⭐ 6 Mo (180d - Default)</button>
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary trial-preset-btn py-1 px-2 text-xxs rounded" data-days="365" onclick="SuperAdmin.setTrialDaysPreset(365)">1 Yr (365d)</button>
+                                                            </div>
+                                                            <div class="text-xxs text-muted mt-1">Number of days new organizations get for their initial trial period (System Default: 180 Days / 6 Months).</div>
                                                         </div>
                                                     </div>
                                                     <div class="col-md-6">
@@ -3315,13 +4044,14 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-md-6">
+                                        <!-- Fixed Pricing Controls (Hidden for PAYG) -->
+                                        <div class="col-md-6 pw-fixed-pricing-field">
                                             <div class="ds-field">
                                                 <label class="ds-label">Plan Amount (₹) <span class="text-danger">*</span></label>
                                                 <input type="number" class="ds-input" id="pwPriceAmount" placeholder="e.g. 499" value="0" min="0" oninput="SuperAdmin.updatePlanTaxCalculationPreview()" onkeyup="SuperAdmin.updatePlanTaxCalculationPreview()" onchange="SuperAdmin.updatePlanTaxCalculationPreview()" onpaste="SuperAdmin.updatePlanTaxCalculationPreview()">
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-6 pw-fixed-pricing-field">
                                             <div class="ds-field">
                                                 <label class="ds-label">Billing Cycle / Plan Duration <span class="text-danger">*</span></label>
                                                 <select class="ds-input" id="pwBillingCycle" onchange="SuperAdmin.togglePlanCustomYears()">
@@ -3334,7 +4064,7 @@
                                                 </select>
                                             </div>
                                         </div>
-                                        <div class="col-md-6" id="pwCustomYearsContainer" style="display: none;">
+                                        <div class="col-md-6 pw-fixed-pricing-field" id="pwCustomYearsContainer" style="display: none;">
                                             <div class="ds-field">
                                                 <label class="ds-label">Select Number of Years <span class="text-danger">*</span></label>
                                                 <select class="ds-input" id="pwCustomYearsSelect">
@@ -3350,13 +4080,13 @@
                                                 </select>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-6 pw-fixed-pricing-field">
                                             <div class="ds-field">
                                                 <label class="ds-label">Default Tax (%)</label>
                                                 <input type="number" class="ds-input" id="pwTax" value="18" min="0" max="100" oninput="SuperAdmin.updatePlanTaxCalculationPreview()" onkeyup="SuperAdmin.updatePlanTaxCalculationPreview()" onchange="SuperAdmin.updatePlanTaxCalculationPreview()">
                                             </div>
                                         </div>
-                                        <div class="col-12">
+                                        <div class="col-12 pw-fixed-pricing-field">
                                             <div class="ds-field mb-1">
                                                 <label class="ds-label mb-2 fw-semibold">GST / Tax Pricing Mode <span class="text-danger">*</span></label>
                                                 <div class="d-flex gap-4 align-items-center flex-wrap p-3 rounded" style="background: rgba(99,102,241,0.04); border: 1px solid var(--ds-border-color);">
@@ -3377,7 +4107,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-12">
+                                        <div class="col-12 pw-fixed-pricing-field">
                                             <div class="form-check mt-2">
                                                 <input class="form-check-input" type="checkbox" id="pwIsCustom">
                                                 <label class="form-check-label text-sm" for="pwIsCustom">Mark as Custom Plan (Hide public pricing, require custom quote)</label>
@@ -3406,8 +4136,22 @@
                                         </div>
                                         <div class="col-md-4"><div class="ds-field"><label class="ds-label">Storage limit (GB)</label><input type="number" class="ds-input" id="pwStorage" value="10"></div></div>
                                         <div class="col-md-4"><div class="ds-field"><label class="ds-label">Max Projects</label><input type="number" class="ds-input" id="pwMaxProjects" value="25"></div></div>
+                                        <div class="col-md-4">
+                                            <div class="ds-field">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="ds-label mb-0">Max Locations</label>
+                                                    <div class="form-check form-switch m-0" title="Enable Unlimited Locations">
+                                                        <input class="form-check-input" type="checkbox" id="pwUnlimitedLocationsToggle" style="cursor: pointer;" onchange="SuperAdmin.toggleUnlimitedLocations(this.checked)">
+                                                        <label class="form-check-label text-xs font-semibold text-primary ms-1" for="pwUnlimitedLocationsToggle" style="font-size: 11px; cursor: pointer;">Unlimited</label>
+                                                    </div>
+                                                </div>
+                                                <input type="number" class="ds-input" id="pwMaxLocations" value="5" placeholder="e.g. 5" min="1">
+                                                <div class="text-xs text-primary mt-1 d-none" id="pwUnlimitedLocationsNotice" style="font-size: 11px;">
+                                                    <i data-lucide="infinity" style="width: 13px; height: 13px; vertical-align: middle;"></i> Unlimited Locations (∞)
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="col-md-4"><div class="ds-field"><label class="ds-label">Max Departments</label><input type="number" class="ds-input" id="pwMaxDepts" value="10"></div></div>
-
                                         <div class="col-md-4"><div class="ds-field"><label class="ds-label">Support Level</label><select class="ds-input" id="pwSupport"><option>Standard</option><option>Priority</option><option>Enterprise</option></select></div></div>
                                     </div>
                                 </div>
@@ -3949,6 +4693,7 @@
                                     <li><a class="dropdown-item py-1" href="#" onclick="EnterpriseAnalytics.setDateRange('Last 12 Months'); return false;">Last 12 Months</a></li>
                                     <li><hr class="dropdown-divider my-1"></li>
                                     <li><a class="dropdown-item py-1" href="#" onclick="EnterpriseAnalytics.showCustomDateModal(); return false;"><i data-lucide="calendar-range" class="me-1" style="width:12px;height:12px;"></i> Custom Range...</a></li>
+                                </ul>
                             </div>
                             <div class="dropdown">
                                 <button class="ds-btn ds-btn-primary ds-btn-sm dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
@@ -4535,12 +5280,10 @@
                                 </div>
                                 <div class="modal-body p-4" id="sa-doc-preview-body">
                                     <div class="text-center p-4 text-muted">Generating live preview...</div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
         </main>
     </div>
@@ -5464,18 +6207,177 @@
             </div>
         </div>
     </div>
+    <!-- Organization Realized Project Revenue & Value Modal -->
+    <div class="modal fade" id="orgProjectRevenueModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content glass-card border-0" style="border-radius: 16px; background: var(--ds-bg-card);">
+                <div class="modal-header border-bottom pb-3">
+                    <div>
+                        <h5 class="modal-title fw-bold text-main d-flex align-items-center gap-2">
+                            <i data-lucide="award" class="text-success" style="width:20px;height:20px;"></i>
+                            Organization Business Value & Project Revenue
+                        </h5>
+                        <div class="text-xs text-muted mt-1">Verified tangible savings & economic revenue realized by customer organizations strictly from closed QC projects.</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-xs">
+                    <!-- Top Summary Stats -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded-3 text-center" style="background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.2) !important;">
+                                <div class="text-muted text-xxs text-uppercase fw-bold">Platform Total Realized</div>
+                                <div class="text-lg fw-bold text-success mt-1" id="modalTotalRealizedVal">—</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded-3 text-center" style="background: rgba(59,130,246,0.06); border-color: rgba(59,130,246,0.2) !important;">
+                                <div class="text-muted text-xxs text-uppercase fw-bold">Total Closed Projects</div>
+                                <div class="text-lg fw-bold text-primary mt-1" id="modalTotalClosedProjects">—</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded-3 text-center" style="background: rgba(139,92,246,0.06); border-color: rgba(139,92,246,0.2) !important;">
+                                <div class="text-muted text-xxs text-uppercase fw-bold">Avg Value / Project</div>
+                                <div class="text-lg fw-bold mt-1" style="color:#8b5cf6;" id="modalAvgSavingsPerProj">—</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded-3 text-center" style="background: rgba(6,182,212,0.06); border-color: rgba(6,182,212,0.2) !important;">
+                                <div class="text-muted text-xxs text-uppercase fw-bold">Avg Quality Improvement</div>
+                                <div class="text-lg fw-bold text-info mt-1" id="modalAvgKpiImp">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Organizations List View -->
+                    <div id="orgRevenueListView">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div class="position-relative" style="flex:1; max-width:380px;">
+                                <i data-lucide="search" class="text-muted position-absolute" style="top:50%; left:12px; transform:translateY(-50%); width:14px; height:14px; pointer-events:none; z-index:2;"></i>
+                                <input type="text" class="ds-input text-xs w-100" id="orgRevenueSearchInput" placeholder="Search organization..." oninput="SuperAdmin.filterOrgRevenueTable()" style="padding-left:36px; padding-top:6px; padding-bottom:6px; border-radius:8px;">
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm text-xs" id="orgRevenueStatusFilter" onchange="SuperAdmin.filterOrgRevenueTable()" style="width:170px;">
+                                    <option value="all">All Organizations</option>
+                                    <option value="with_savings">With Closed Projects</option>
+                                    <option value="zero_savings">No Closed Projects Yet</option>
+                                </select>
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="SuperAdmin.exportRealizedValueData('csv')">
+                                    <i data-lucide="download" style="width:12px;height:12px;" class="me-1"></i> Export CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive border rounded-3" style="max-height: 420px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0 text-xs" id="orgRevenueTable">
+                                <thead class="table-light sticky-top" style="background: var(--ds-surface-raised, #f8fafc);">
+                                    <tr>
+                                        <th style="width: 28%;">Organization</th>
+                                        <th style="width: 16%;">Plan &amp; Status</th>
+                                        <th style="width: 14%; text-align: center;">Closed Projects</th>
+                                        <th style="width: 18%; text-align: right;">Total Tangible Savings</th>
+                                        <th style="width: 14%; text-align: right;">Avg / Project</th>
+                                        <th style="width: 10%; text-align: center;">Avg Quality Imp.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orgRevenueTableBody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination Footer -->
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top flex-wrap gap-2 text-xs">
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <div class="text-muted" id="orgRevenuePaginationInfo">Showing 0 to 0 of 0 organizations</div>
+                                <div class="d-flex align-items-center gap-2 text-muted">
+                                    <span style="font-size:11px;">Show:</span>
+                                    <select class="form-select form-select-sm" id="orgRevenuePageSize" onchange="SuperAdmin.changeOrgRevenuePageSize(this.value)" style="width:auto !important; min-width:115px !important; height:32px !important; padding:2px 28px 2px 10px !important; font-size:12px !important; line-height:26px !important; color:#1e293b !important; background-color:#ffffff !important; border:1.5px solid #94a3b8 !important; border-radius:6px !important; font-weight:600 !important; cursor:pointer !important;">
+                                        <option value="10" selected>10 / page</option>
+                                        <option value="20">20 / page</option>
+                                        <option value="50">50 / page</option>
+                                        <option value="100">100 / page</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2 d-flex align-items-center gap-1" id="orgRevenuePrevBtn" onclick="SuperAdmin.prevOrgRevenuePage()" disabled>
+                                    <i data-lucide="chevron-left" style="width:13px;height:13px;"></i> Previous
+                                </button>
+                                <span class="px-2 py-1 border rounded bg-light font-monospace fw-bold" id="orgRevenuePageIndicator">Page 1 of 1</span>
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2 d-flex align-items-center gap-1" id="orgRevenueNextBtn" onclick="SuperAdmin.nextOrgRevenuePage()" disabled>
+                                    Next <i data-lucide="chevron-right" style="width:13px;height:13px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Organization Drilldown View (Closed Projects of a single org) -->
+                    <div id="orgClosedProjectsDetailView" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.backToOrgRevenueList()">
+                                <i data-lucide="arrow-left" style="width:13px;height:13px;"></i> Back to All Organizations
+                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary-subtle text-primary font-monospace" id="detailOrgBadge">Organization Details</span>
+                            </div>
+                        </div>
+
+                        <div class="p-3 mb-3 border rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-3" style="background: var(--ds-surface-raised, #f8fafc);">
+                            <div>
+                                <h6 class="fw-bold mb-1 text-main" id="detailOrgName">—</h6>
+                                <div class="text-xs text-muted" id="detailOrgSubText">Plan: — | Onboarded: —</div>
+                            </div>
+                            <div class="d-flex gap-4">
+                                <div class="text-end">
+                                    <div class="text-xxs text-muted text-uppercase">Total Closed Projects</div>
+                                    <div class="fw-bold text-primary fs-6" id="detailOrgClosedCount">0</div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-xxs text-muted text-uppercase">Total Verified Value / Savings</div>
+                                    <div class="fw-bold text-success fs-6" id="detailOrgTotalSavings">₹0.00</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive border rounded-3" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0 text-xs">
+                                <thead class="table-light sticky-top" style="background: var(--ds-surface-raised, #f8fafc);">
+                                    <tr>
+                                        <th style="width: 28%;">Project Title &amp; Ref</th>
+                                        <th style="width: 14%;">Department</th>
+                                        <th style="width: 14%;">Category</th>
+                                        <th style="width: 12%;">Closed Date</th>
+                                        <th style="width: 16%; text-align: right;">Verified Savings</th>
+                                        <th style="width: 16%; text-align: center;">Quality Improvement</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detailOrgProjectsTableBody">
+                                    <!-- Dynamic project rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top pt-2">
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/assets/js/api.js"></script>
     <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
-    <script src="/assets/js/enterprise-analytics.js?v=3.0"></script>
-    <script src="/assets/js/support-desk.js?v=3.0"></script>
-    <script src="/assets/js/announcements.js?v=2.6"></script>
-    <script src="/assets/js/integrations.js"></script>
-    <script src="/assets/js/platform-settings.js"></script>
-    <script src="/assets/js/super-admin.js?v=2.9"></script>
+    <script src="/assets/js/components.js?v=3.1"></script>
+    <script src="/assets/js/enterprise-analytics.js?v=3.1"></script>
+    <script src="/assets/js/support-desk.js?v=3.4"></script>
+    <script src="/assets/js/announcements.js?v=3.1"></script>
+    <script src="/assets/js/integrations.js?v=3.1"></script>
+    <script src="/assets/js/platform-settings.js?v=3.1"></script>
+    <script src="/assets/js/super-admin.js?v=3.3"></script>
     <script>
     // Helper: get JWT token from sessionStorage (primary) or localStorage (fallback) — matches api.js
     function _diGetToken() {
@@ -6676,7 +7578,384 @@ body.dark-mode #sa-doc-preview-body > div {
     outline: none !important;
 }
 </style>
+
+    <!-- Custom Organization Export Modal -->
+    <div class="modal fade" id="orgExportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius:12px; overflow:hidden;">
+                <div class="modal-header border-bottom py-3 px-4" style="background:var(--ds-card-bg);">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="file-spreadsheet" style="width:20px;height:20px;color:var(--ds-primary);"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title mb-0 fw-bold" style="font-size:1.1rem;">Custom Organization CSV Export</h5>
+                            <div class="text-xs text-muted">Select the specific data fields and metrics you want to include in your CSV report</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close text-xs" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" style="background:var(--ds-body-bg);">
+                    <!-- Presets & Quick Actions Toolbar -->
+                    <div class="ds-card p-3 mb-4" style="background:rgba(var(--ds-primary-rgb),0.03); border:1px solid rgba(var(--ds-primary-rgb),0.15);">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                            <span class="text-xs fw-bold text-uppercase tracking-wider text-muted">Quick Selection Templates</span>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary text-xs py-1 px-2" onclick="SuperAdmin.toggleAllExportFields(true)">Select All</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary text-xs py-1 px-2" onclick="SuperAdmin.toggleAllExportFields(false)">Deselect All</button>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm text-xs py-1 px-2 active-preset" id="btnPresetExec" onclick="SuperAdmin.applyExportPreset('executive')">💼 Executive Overview</button>
+                            <button type="button" class="btn btn-sm text-xs py-1 px-2" id="btnPresetQC" onclick="SuperAdmin.applyExportPreset('qc_operations')">🚀 QC Projects & Operations</button>
+                            <button type="button" class="btn btn-sm text-xs py-1 px-2" id="btnPresetFinance" onclick="SuperAdmin.applyExportPreset('financial')">💵 Financial Savings & ROI</button>
+                            <button type="button" class="btn btn-sm text-xs py-1 px-2" id="btnPresetUser" onclick="SuperAdmin.applyExportPreset('user_capacity')">👥 Users & Seat Capacity</button>
+                        </div>
+                    </div>
+
+                    <!-- Category Checkboxes Grid -->
+                    <div class="row g-3">
+                        <!-- Category 1: Identity & Contact -->
+                        <div class="col-md-6">
+                            <div class="ds-card p-3 h-100">
+                                <div class="fw-bold text-xs text-uppercase tracking-wider text-primary mb-3 d-flex align-items-center gap-1">
+                                    <i data-lucide="building-2" style="width:14px;height:14px;"></i> 1. Identity & Contact Info
+                                </div>
+                                <div class="d-flex flex-column gap-2 text-sm">
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="id" checked onchange="SuperAdmin.updateExportBadgeCount()"> Organization ID
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="name" checked onchange="SuperAdmin.updateExportBadgeCount()"> Organization Name
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="org_code" checked onchange="SuperAdmin.updateExportBadgeCount()"> Organization Code
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="industry" checked onchange="SuperAdmin.updateExportBadgeCount()"> Industry / Sector
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="admin_name" checked onchange="SuperAdmin.updateExportBadgeCount()"> Admin Name
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="email" checked onchange="SuperAdmin.updateExportBadgeCount()"> Admin Email
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="phone" onchange="SuperAdmin.updateExportBadgeCount()"> Contact Phone Number
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="website" onchange="SuperAdmin.updateExportBadgeCount()"> Website URL
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="gst_number" onchange="SuperAdmin.updateExportBadgeCount()"> GST / Tax Identification
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="created_at" checked onchange="SuperAdmin.updateExportBadgeCount()"> Registration Date
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category 2: Locations & Departments -->
+                        <div class="col-md-6">
+                            <div class="ds-card p-3 h-100">
+                                <div class="fw-bold text-xs text-uppercase tracking-wider text-primary mb-3 d-flex align-items-center gap-1">
+                                    <i data-lucide="map-pin" style="width:14px;height:14px;"></i> 2. Locations & Departments
+                                </div>
+                                <div class="d-flex flex-column gap-2 text-sm">
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="plants_count" checked onchange="SuperAdmin.updateExportBadgeCount()">
+                                        <div>
+                                            <span class="fw-medium">Number of Plant Locations</span>
+                                            <div class="text-xs text-muted">Total physical operational plants</div>
+                                        </div>
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer mt-2">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="departments_count" checked onchange="SuperAdmin.updateExportBadgeCount()">
+                                        <div>
+                                            <span class="fw-medium">Number of Departments</span>
+                                            <div class="text-xs text-muted">Configured operational departments</div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="fw-bold text-xs text-uppercase tracking-wider text-primary mt-4 mb-3 d-flex align-items-center gap-1">
+                                    <i data-lucide="users" style="width:14px;height:14px;"></i> 3. User & Capacity Metrics
+                                </div>
+                                <div class="d-flex flex-column gap-2 text-sm">
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="total_users" checked onchange="SuperAdmin.updateExportBadgeCount()"> Total Registered Users
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="max_users" checked onchange="SuperAdmin.updateExportBadgeCount()"> Max User Seat Limit
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="active_users" onchange="SuperAdmin.updateExportBadgeCount()"> Active Users Count
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="inactive_users" onchange="SuperAdmin.updateExportBadgeCount()"> Inactive / Deactivated Users Count
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer fw-semibold text-primary">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="qc_users_count" checked onchange="SuperAdmin.updateExportBadgeCount()"> ⭐ Users Working in QC Projects
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category 4: QC Projects & Quality -->
+                        <div class="col-md-6">
+                            <div class="ds-card p-3 h-100">
+                                <div class="fw-bold text-xs text-uppercase tracking-wider text-primary mb-3 d-flex align-items-center gap-1">
+                                    <i data-lucide="folder-kanban" style="width:14px;height:14px;"></i> 4. QC Projects & Quality Performance
+                                </div>
+                                <div class="d-flex flex-column gap-2 text-sm">
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="total_projects" checked onchange="SuperAdmin.updateExportBadgeCount()"> Total QC Projects
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="in_progress_projects" checked onchange="SuperAdmin.updateExportBadgeCount()"> In-Progress Projects Count
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="closed_projects" checked onchange="SuperAdmin.updateExportBadgeCount()"> Completed / Closed Projects Count
+                                    </label>
+                                </div>
+
+                                <div class="fw-bold text-xs text-uppercase tracking-wider text-primary mt-4 mb-3 d-flex align-items-center gap-1">
+                                    <i data-lucide="hard-drive" style="width:14px;height:14px;"></i> 5. Storage & System
+                                </div>
+                                <div class="d-flex flex-column gap-2 text-sm">
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="storage_used_mb" onchange="SuperAdmin.updateExportBadgeCount()"> Storage Used (MB)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category 5: Financial Return & ROI -->
+                        <div class="col-md-6">
+                            <div class="ds-card p-3 h-100">
+                                <div class="fw-bold text-xs text-uppercase tracking-wider text-primary mb-3 d-flex align-items-center gap-1">
+                                    <i data-lucide="circle-dollar-sign" style="width:14px;height:14px;"></i> 5. Financial Return & Subscription ROI
+                                </div>
+                                <div class="d-flex flex-column gap-2 text-sm">
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="subscription_plan" checked onchange="SuperAdmin.updateExportBadgeCount()"> Subscription Plan Name
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="subscription_status" checked onchange="SuperAdmin.updateExportBadgeCount()"> Subscription Status
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="license_expiry_date" onchange="SuperAdmin.updateExportBadgeCount()"> Renewal / Expiry Date
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="mrr" onchange="SuperAdmin.updateExportBadgeCount()"> Monthly Recurring Revenue (MRR)
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer fw-semibold text-success mt-2">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="realized_savings" checked onchange="SuperAdmin.updateExportBadgeCount()"> 💰 Realized Project Financial Savings
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="project_investment" onchange="SuperAdmin.updateExportBadgeCount()"> Total Project Investment Spent
+                                    </label>
+                                    <label class="form-check d-flex align-items-center gap-2 m-0 cursor-pointer">
+                                        <input class="form-check-input export-field-cb" type="checkbox" value="net_value_created" onchange="SuperAdmin.updateExportBadgeCount()"> Net Financial ROI Created
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 d-flex justify-content-between align-items-center" style="background:var(--ds-card-bg);">
+                    <div>
+                        <span class="badge bg-primary text-xs px-2 py-1" id="exportSelectedCountBadge">18 of 27 fields selected</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-2" id="btnSubmitCustomExport" onclick="SuperAdmin.processCustomExport()">
+                            <i data-lucide="download" style="width:14px;height:14px;"></i> Generate & Download CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <!-- PAYG Single Organization Invoice & Email Dispatch Preview Modal -->
+    <div class="modal fade" id="paygInvoiceDispatchModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-height: 92vh; margin: 1.5rem auto;">
+            <div class="modal-content" style="border-radius:14px; overflow:hidden; border: none; box-shadow:0 25px 50px -12px rgba(0,0,0,0.35);">
+                <!-- Modal Header -->
+                <div class="modal-header py-3 px-4 text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="mail-check" style="width:22px;height:22px;color:#ffffff;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title mb-0 fw-bold text-white" style="font-size:1.15rem;" id="paygDispatchModalTitle">Generate & Send Monthly Invoice</h5>
+                            <div class="text-xs text-white-50" id="paygDispatchModalSubtitle">Review recipient email, message body, and itemized tax invoice before dispatching</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-0 custom-modal-scroll" style="background:var(--ds-body-bg); flex:1 1 auto; overflow-y:auto;">
+                    <!-- Recipient & Subject Header Panel -->
+                    <div class="p-4 border-bottom bg-white" style="border-color:var(--ds-border-color)!important;">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-xs fw-bold text-muted mb-1 d-flex align-items-center gap-1">
+                                    <i data-lucide="send" style="width:13px;height:13px;color:#6366f1;"></i> Recipient Email Address (To:)
+                                </label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light text-muted border-end-0"><i data-lucide="mail" style="width:14px;height:14px;"></i></span>
+                                    <input type="email" class="form-control fw-semibold" id="paygDispatchRecipientEmail" placeholder="admin@organization.com" style="font-size:13px;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-xs fw-bold text-muted mb-1 d-flex align-items-center gap-1">
+                                    <i data-lucide="copy" style="width:13px;height:13px;"></i> Optional CC Email
+                                </label>
+                                <input type="email" class="form-control form-control-sm" id="paygDispatchCcEmail" placeholder="billing@organization.com (optional CC)" style="font-size:13px;">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-xs fw-bold text-muted mb-1 d-flex align-items-center gap-1">
+                                    <i data-lucide="bookmark" style="width:13px;height:13px;"></i> Email Subject Line
+                                </label>
+                                <input type="text" class="form-control form-control-sm fw-medium" id="paygDispatchSubject" placeholder="Monthly Metered Invoice #INV-202608-053" style="font-size:13px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Tabs -->
+                    <div class="px-4 pt-3 pb-0 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <ul class="nav nav-tabs border-bottom-0 gap-2" id="paygDispatchTabs" role="tablist" style="margin-bottom:-1px;">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active text-xs fw-bold py-2 px-3 d-flex align-items-center gap-2" id="tabEmailPreview-tab" data-bs-toggle="tab" data-bs-target="#tabEmailPreview" type="button" role="tab">
+                                    <i data-lucide="mail" style="width:14px;height:14px;"></i> 📧 Email Message Body Preview
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link text-xs fw-bold py-2 px-3 d-flex align-items-center gap-2" id="tabInvoiceDoc-tab" data-bs-toggle="tab" data-bs-target="#tabInvoiceDoc" type="button" role="tab">
+                                    <i data-lucide="file-text" style="width:14px;height:14px;"></i> 📄 Itemized Tax Invoice Document
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link text-xs fw-bold py-2 px-3 d-flex align-items-center gap-2" id="tabTelemetry-tab" data-bs-toggle="tab" data-bs-target="#tabTelemetry" type="button" role="tab">
+                                    <i data-lucide="activity" style="width:14px;height:14px;"></i> 📊 Metered Usage Telemetry
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="d-flex align-items-center gap-2 pb-2">
+                            <span class="text-xs text-muted">Estimated Bill Total:</span>
+                            <strong class="fs-6 text-success" id="paygDispatchModalTotal">₹0.00</strong>
+                        </div>
+                    </div>
+
+                    <!-- Tab Contents Container -->
+                    <div class="tab-content p-4" id="paygDispatchTabContent">
+                        <!-- Tab 1: Email Body Preview -->
+                        <div class="tab-pane fade show active" id="tabEmailPreview" role="tabpanel">
+                            <div class="ds-card p-3 mb-3 bg-white" style="border: 1px solid #cbd5e1 !important; border-radius: 10px;">
+                                <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom text-xs text-muted">
+                                    <div><strong>From:</strong> QCMS Platform Billing &lt;billing@qcms.com&gt;</div>
+                                    <div id="paygEmailHeaderWindow">Billing Period: Current Month</div>
+                                </div>
+                                <!-- Rendered Live Email Body -->
+                                <div id="paygLiveEmailBodyContainer" style="background:#ffffff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading live email preview...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Itemized Tax Invoice PDF/Doc Preview -->
+                        <div class="tab-pane fade" id="tabInvoiceDoc" role="tabpanel">
+                            <div class="ds-card p-3 bg-white" style="border: 1px solid #cbd5e1 !important; border-radius: 10px; min-height: 400px;" id="paygLiveInvoiceDocContainer">
+                                <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading tax invoice document...</div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Usage Telemetry Breakdown -->
+                        <div class="tab-pane fade" id="tabTelemetry" role="tabpanel">
+                            <div class="table-responsive border rounded-3 bg-white">
+                                <table class="table table-hover align-middle mb-0" style="font-size:12.5px;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Usage Metric</th>
+                                            <th class="text-center">Total Units</th>
+                                            <th class="text-center">Free Tier Allowance</th>
+                                            <th class="text-center">Billable Units</th>
+                                            <th class="text-end">Unit Rate (₹)</th>
+                                            <th class="text-end">Line Total (₹)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="paygTelemetryTableBody">
+                                        <tr><td colspan="6" class="text-center py-4">No breakdown telemetry loaded.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer border-top py-3 px-4 d-flex justify-content-between align-items-center bg-white flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-indigo-subtle text-indigo px-3 py-2 text-xs" id="paygDispatchFooterBadge">Ready to send email to recipient</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ds-btn ds-btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-2" id="btnConfirmSendPaygInvoice" onclick="SuperAdmin.confirmSendPaygInvoice()" style="background:#7c3aed; border-color:#7c3aed; font-weight:600; padding: 6px 16px;">
+                            <i data-lucide="send" style="width:14px;height:14px;"></i> Send Invoice Email
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <!-- Purge Audit Logs Modal -->
+    <div class="modal fade" id="superPurgeAuditLogsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background:var(--ds-bg-card); border: 1px solid var(--ds-border-color); border-radius: var(--ds-radius-lg);">
+                <div class="modal-header border-bottom pb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded bg-danger-subtle text-danger">
+                            <i data-lucide="trash-2" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">Purge & Delete Audit Logs</h5>
+                            <div class="text-xxs text-secondary">Permanently remove old security telemetry & administrative logs based on retention parameters.</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="text-xs text-muted mb-3">
+                        Standard audit compliance policy retains logs for <strong>7 years</strong>. Choose a cutoff retention period below to purge older records.
+                    </div>
+                    <div class="mb-3">
+                        <label class="ds-label text-xs fw-semibold mb-1">Select Log Retention & Purge Cutoff</label>
+                        <select class="ds-input text-xs" id="superPurgeRetentionSelect" onchange="SuperAdmin.onPurgeRetentionChange(this.value)">
+                            <option value="7" selected>Keep 7 Years of Logs (Delete logs older than 7 years - Standard Policy)</option>
+                            <option value="5">Keep 5 Years of Logs (Delete logs older than 5 years)</option>
+                            <option value="3">Keep 3 Years of Logs (Delete logs older than 3 years)</option>
+                            <option value="1">Keep 1 Year of Logs (Delete logs older than 1 year)</option>
+                            <option value="custom">Custom Cutoff Date (Delete all logs prior to selected date)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="superPurgeCustomDateBox" style="display: none;">
+                        <label class="ds-label text-xs fw-semibold mb-1">Select Custom Cutoff Date</label>
+                        <input type="date" class="ds-input text-xs" id="superPurgeCustomDate" onchange="SuperAdmin.updatePurgePreview()">
+                    </div>
+                    <div class="p-3 rounded border bg-light-subtle text-xs mb-3" id="superPurgePreviewBox">
+                        <div class="fw-bold text-main mb-1"><i data-lucide="info" style="width:13px;height:13px;" class="me-1 text-primary"></i> Purge Target Summary:</div>
+                        <div class="text-secondary" id="superPurgeSummaryText">Calculating records older than cutoff date...</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top pt-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-danger ds-btn-sm px-4 fw-bold" id="btnConfirmPurgeLogs" onclick="SuperAdmin.executePurgeAuditLogs()">
+                        <i data-lucide="trash-2" style="width:14px;height:14px;" class="me-1"></i> Confirm & Purge Logs
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
-
-
 </html>
