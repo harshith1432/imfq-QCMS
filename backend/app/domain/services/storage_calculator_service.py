@@ -243,7 +243,7 @@ def calculate_org_storage_realtime(org_id=None):
                         total_disk_bytes += os.path.getsize(fp)
 
     disk_media_mb = round(total_disk_bytes / (1024.0 * 1024.0), 3)
-    total_software_used_mb = max(total_orgs_used_mb, disk_media_mb)
+    total_software_used_mb = total_orgs_used_mb
 
     # Format tenant orgs storage for Organization Storage Analytics
     if total_orgs_used_mb >= 1024.0:
@@ -255,15 +255,7 @@ def calculate_org_storage_realtime(org_id=None):
     else:
         total_used_fmt = "0.00 MB"
 
-    # Format overall software storage for Platform Analytics
-    if total_software_used_mb >= 1024.0:
-        total_software_used_fmt = f"{(total_software_used_mb / 1024.0):.2f} GB"
-    elif total_software_used_mb >= 0.1:
-        total_software_used_fmt = f"{total_software_used_mb:.2f} MB"
-    elif total_software_used_mb > 0:
-        total_software_used_fmt = f"{total_software_used_mb:.3f} MB"
-    else:
-        total_software_used_fmt = "0.00 MB"
+    total_software_used_fmt = total_used_fmt
 
     total_limit_fmt = f"{(total_platform_limit_mb / 1024.0):.1f} GB"
 

@@ -1337,8 +1337,10 @@ def parse_filters(user):
     elif date_range == 'Quarter':
         q_month = ((now.month - 1) // 3) * 3 + 1
         start_date = datetime(now.year, q_month, 1)
-    elif date_range == 'Year':
+    elif date_range in ('Year', 'Year to Date', 'YTD'):
         start_date = datetime(now.year, 1, 1)
+    elif date_range in ('Last 12 Months', '12m', '1y', 'ALL', 'All Time'):
+        start_date = now - timedelta(days=365)
     elif date_range == 'Custom Range':
         start_str = request.args.get('start_date')
         end_str = request.args.get('end_date')
@@ -1528,7 +1530,7 @@ def get_enterprise_dashboard():
         def get_storage_usage():
             res = calculate_org_storage_realtime(f['org_id'] if f.get('org_id') else None)
             summary = res.get('summary', {})
-            return summary.get('total_software_used_mb', summary.get('total_used_mb', 0.0))
+            return summary.get('total_used_mb', 0.0), summary.get('total_used_fmt', '0.00 MB')
 
         def get_api_usage(s_dt, e_dt):
             q = db.session.query(func.count(AuditLog.id)).filter(
@@ -1553,7 +1555,12 @@ def get_enterprise_dashboard():
 
         # ── Metric calculations ────────────────────────────────────────────
         from app.domain.services.financial_metrics_engine import FinancialMetricsEngine
-        engine_kpis = FinancialMetricsEngine.get_consolidated_kpis(org_id=f['org_id'])
+        engine_kpis = FinancialMetricsEngine.get_consolidated_kpis(
+            org_id=f['org_id'],
+            start_date=start,
+            end_date=end,
+            date_range_name=request.args.get('date_range', 'Last 30 Days')
+        )
 
         rev_curr = engine_kpis["total_revenue"]
         rev_prev = get_rev(prev_start, prev_end)
@@ -1577,15 +1584,7 @@ def get_enterprise_dashboard():
         act_users_prev = get_active_users(e_dt=prev_end)
         users_growth   = calc_growth(act_users, act_users_prev)
 
-        stor_mb  = get_storage_usage()
-        if stor_mb >= 1024.0:
-            stor_fmt = f"{(stor_mb / 1024.0):.2f} GB"
-        elif stor_mb >= 0.1:
-            stor_fmt = f"{stor_mb:.2f} MB"
-        elif stor_mb > 0:
-            stor_fmt = f"{stor_mb:.3f} MB"
-        else:
-            stor_fmt = "0.00 MB"
+        stor_mb, stor_fmt = get_storage_usage()
 
         api_cnt  = get_api_usage(start, end)
         api_prev = get_api_usage(prev_start, prev_end)
@@ -1657,7 +1656,12 @@ def get_revenue_analytics():
     f = parse_filters(user)
     
     from app.domain.services.financial_metrics_engine import FinancialMetricsEngine
-    kpis = FinancialMetricsEngine.get_consolidated_kpis(org_id=f['org_id'])
+    kpis = FinancialMetricsEngine.get_consolidated_kpis(
+        org_id=f['org_id'],
+        start_date=f['start_date'],
+        end_date=f['end_date'],
+        date_range_name=request.args.get('date_range', 'Last 30 Days')
+    )
 
     orgs_count = Organization.query.filter_by(is_deleted=False).filter(Organization.is_platform_org == False)
     if f['org_id']:

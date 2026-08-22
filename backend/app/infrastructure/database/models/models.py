@@ -934,6 +934,7 @@ class SaaSUserSession(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
     login_time = db.Column(db.DateTime, default=datetime.utcnow)
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
     logout_time = db.Column(db.DateTime)
     session_duration = db.Column(db.Integer)  # in seconds
     device = db.Column(db.String(50))
@@ -941,7 +942,7 @@ class SaaSUserSession(db.Model):
     os = db.Column(db.String(50))
     ip_address = db.Column(db.String(45))
     location = db.Column(db.String(100))
-    status = db.Column(db.String(20), default='Active')  # Active, LoggedOut, Terminated
+    status = db.Column(db.String(20), default='Active')  # Active, LoggedOut, Terminated, Expired
 
     user = db.relationship('User', backref=db.backref('sessions', cascade='all, delete-orphan'))
     organization = db.relationship('Organization', backref='sessions')

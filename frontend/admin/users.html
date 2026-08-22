@@ -1031,19 +1031,19 @@
 
                 let availableDepts = this.departments || [];
                 if (plantId && String(plantId) !== "") {
-                    // Strictly filter: only departments for this exact plant
-                    availableDepts = availableDepts.filter(d => d.plant_id && String(d.plant_id) === String(plantId));
+                    // Include departments assigned to this plant location AND company-wide departments (All Plants / plant_id is null)
+                    availableDepts = availableDepts.filter(d => !d.plant_id || String(d.plant_id) === String(plantId));
                 }
 
                 const filteredDepts = availableDepts.filter(d => d.name !== 'N/A' && d.name !== 'All');
 
-                // Show warning if plant selected but no departments exist under it
-                if (plantId && String(plantId) !== '' && filteredDepts.length === 0) {
+                // Show warning ONLY if there are literally 0 departments available in the entire organization
+                if (filteredDepts.length === 0) {
                     deptSelect.innerHTML = `<option value="">-- No departments found --</option>`;
                     if (deptWarning) {
                         deptWarning.innerHTML = `<div class="alert alert-warning py-2 px-3 mt-2 mb-0" style="font-size:0.8rem; border-radius:8px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#b45309;">
                             <i data-lucide="triangle-alert" style="width:13px;height:13px;" class="me-1"></i>
-                            No departments found under this plant. <a href="/admin/departments.html" class="fw-bold" style="color:#b45309;">Create a Department first &rarr;</a>
+                            No departments found under this plant or organization. <a href="/admin/departments.html" class="fw-bold" style="color:#b45309;">Create a Department first &rarr;</a>
                         </div>`;
                         if (window.lucide) lucide.createIcons();
                     }
@@ -1053,9 +1053,10 @@
                 if (deptWarning) deptWarning.innerHTML = '';
 
                 let selectHtml = `<option value="N/A">N/A</option>`;
-                selectHtml += filteredDepts.map(d => `
-                    <option value="${QCMS.escapeHtml(d.name)}">${QCMS.escapeHtml(d.name)}${d.plant_name ? ' (' + QCMS.escapeHtml(d.plant_name) + ')' : ''}</option>
-                `).join('');
+                selectHtml += filteredDepts.map(d => {
+                    const tag = (d.plant_name && d.plant_name !== 'All Plants / Unassigned') ? ` (${d.plant_name})` : ` (All Plants)`;
+                    return `<option value="${QCMS.escapeHtml(d.name)}">${QCMS.escapeHtml(d.name)}${tag}</option>`;
+                }).join('');
                 deptSelect.innerHTML = selectHtml;
 
                 if (selectedDeptName) {
@@ -1293,7 +1294,7 @@
                                 <h6 class="fw-bold mb-2" style="color:var(--ds-text-main);">Setup Required Before Adding Users</h6>
                                 <p class="text-sm text-muted mb-4">Your organisation doesn't have any Plant Locations or Departments set up yet. You need to create them first so users can be assigned correctly.</p>
                                 <div class="d-flex flex-column gap-2">
-                                    <a href="/admin/plants.htm" class="ds-btn ds-btn-primary w-100">
+                                    <a href="/admin/plants.html" class="ds-btn ds-btn-primary w-100">
                                         <i data-lucide="building-2" style="width:15px;height:15px;"></i>
                                         Step 1 &mdash; Create a Plant Location
                                     </a>

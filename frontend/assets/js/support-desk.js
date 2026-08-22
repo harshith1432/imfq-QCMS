@@ -2089,7 +2089,7 @@ const SupportDesk = {
 
             const items = res.data || [];
             this.enquiriesList = items;
-            const m = res.metrics || { total: 0, new: 0, contacted: 0, converted: 0 };
+            const m = res.metrics || { total: 0, new: 0, contacted: 0, in_progress: 0, converted: 0, closed: 0 };
             const pag = res.pagination || { page: 1, pages: 1, total: items.length, per_page: perPage };
 
             const startItem = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
@@ -2098,49 +2098,60 @@ const SupportDesk = {
 
             view.innerHTML = `
                 <div class="v-stack gap-4 fade-in">
-                    <!-- KPI Stat Row -->
+                    <!-- KPI Stat Row (Total = New + Contacted + In Progress + Converted + Closed) -->
                     <div class="row g-2 g-md-3">
-                        <div class="col-6 col-md-3">
-                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100">
+                        <div class="col-6 col-md">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" onclick="SupportDesk.filterEnquiriesStatus('All')" title="Click to view all enquiries" style="cursor:pointer; transition:all .15s ease;">
                                 <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
                                     <i data-lucide="phone-call" style="width:18px;height:18px;"></i>
                                 </div>
                                 <div class="min-w-0">
                                     <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">Total Enquiries</div>
-                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.total}</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.total || 0}</div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100">
+                        <div class="col-6 col-md">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" onclick="SupportDesk.filterEnquiriesStatus('New')" title="Click to filter by New Prospects" style="cursor:pointer; transition:all .15s ease;">
                                 <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
                                     <i data-lucide="bell" style="width:18px;height:18px;"></i>
                                 </div>
                                 <div class="min-w-0">
                                     <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">New Prospects</div>
-                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.new}</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.new || 0}</div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100">
+                        <div class="col-6 col-md">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" onclick="SupportDesk.filterEnquiriesStatus('Contacted')" title="Click to filter by Contacted" style="cursor:pointer; transition:all .15s ease;">
                                 <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
                                     <i data-lucide="message-square" style="width:18px;height:18px;"></i>
                                 </div>
                                 <div class="min-w-0">
                                     <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">Contacted</div>
-                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.contacted}</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.contacted || 0}</div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100">
+                        <div class="col-6 col-md">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" onclick="SupportDesk.filterEnquiriesStatus('In Progress')" title="Click to filter by In Progress" style="cursor:pointer; transition:all .15s ease;">
+                                <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(6, 182, 212, 0.15); color: #0891b2;">
+                                    <i data-lucide="activity" style="width:18px;height:18px;"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">In Progress</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.in_progress || 0}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" onclick="SupportDesk.filterEnquiriesStatus('Converted')" title="Click to filter by Converted" style="cursor:pointer; transition:all .15s ease;">
                                 <div class="p-2 p-md-2.5 rounded-3 flex-shrink-0" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
                                     <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
                                 </div>
                                 <div class="min-w-0">
                                     <div class="text-xxs text-muted fw-semibold text-uppercase text-truncate">Converted</div>
-                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.converted}</div>
+                                    <div class="fs-5 fs-md-4 fw-extrabold text-main lh-1 mt-1">${m.converted || 0}</div>
                                 </div>
                             </div>
                         </div>

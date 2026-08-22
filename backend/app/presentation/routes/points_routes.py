@@ -139,10 +139,22 @@ def get_leaderboard():
     if page < 1: page = 1
     if per_page < 1 or per_page > 100: per_page = 5
 
+    from app.infrastructure.database.models.models import Role
+    
+    # Leaderboards are strictly for operational Quality Circle participants: Team Members, Team Leaders, Facilitators, and Reviewers.
+    # Administrators and Executive Observers (Admin, SuperAdmin, CEO, Owner) are excluded.
+    EXCLUDED_ROLES = ['admin', 'ceo', 'superadmin', 'owner', 'system admin', 'administrator']
+
     query = db.session.query(EmployeeLeaderboard)\
         .join(User, User.id == EmployeeLeaderboard.employee_id)\
+        .outerjoin(Role, User.role_id == Role.id)\
         .outerjoin(Department, User.department_id == Department.id)\
-        .filter(EmployeeLeaderboard.organization_id == current_user.org_id)
+        .filter(EmployeeLeaderboard.organization_id == current_user.org_id)\
+        .filter(db.or_(
+            Role.name.in_(['Team Member', 'Team Leader', 'Facilitator', 'Reviewer']),
+            Role.id == None
+        ))\
+        .filter(db.not_(Role.name.in_(['Admin', 'admin', 'SuperAdmin', 'superadmin', 'CEO', 'ceo', 'Owner', 'owner', 'System Admin', 'Administrator'])))
 
     if plant_param:
         from app.infrastructure.database.models.models import Plant
@@ -158,8 +170,7 @@ def get_leaderboard():
         query = query.filter(User.department_id == dept_id)
 
     if role_param:
-        from app.infrastructure.database.models.models import Role
-        query = query.join(Role, User.role_id == Role.id).filter(Role.name.ilike(f"%{role_param}%"))
+        query = query.filter(Role.name.ilike(f"%{role_param}%"))
 
     if search_q:
         pattern = f"%{search_q}%"
@@ -221,8 +232,14 @@ def get_leaderboard():
     # Compute Comprehensive Champions Summary (Overall, Plant-Level, Department-Level, Role-Level)
     all_org_entries = db.session.query(EmployeeLeaderboard)\
         .join(User, User.id == EmployeeLeaderboard.employee_id)\
+        .outerjoin(Role, User.role_id == Role.id)\
         .outerjoin(Department, User.department_id == Department.id)\
         .filter(EmployeeLeaderboard.organization_id == current_user.org_id)\
+        .filter(db.or_(
+            Role.name.in_(['Team Member', 'Team Leader', 'Facilitator', 'Reviewer']),
+            Role.id == None
+        ))\
+        .filter(db.not_(Role.name.in_(['Admin', 'admin', 'SuperAdmin', 'superadmin', 'CEO', 'ceo', 'Owner', 'owner', 'System Admin', 'Administrator'])))\
         .order_by(
             EmployeeLeaderboard.total_points.desc(),
             EmployeeLeaderboard.projects_completed.desc(),

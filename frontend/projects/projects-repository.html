@@ -386,7 +386,12 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="ds-field">
-                                        <label class="ds-label"><i data-lucide="user-check"></i> Facilitator <span class="text-danger">*</span></label>
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <label class="ds-label mb-0"><i data-lucide="user-check"></i> Facilitator <span class="text-danger">*</span></label>
+                                            <button type="button" class="btn btn-sm btn-link p-0 text-primary text-xs text-decoration-none fw-semibold d-inline-flex align-items-center gap-1" onclick="repoUI.openAddCrossDeptRoleModal('Facilitator')">
+                                                <i data-lucide="user-plus" style="width:12px;height:12px;"></i> + Add from another dept / location
+                                            </button>
+                                        </div>
                                         <select class="ds-input ds-select" id="projFacilitator" required>
                                             <option value="" disabled selected>Loading...</option>
                                         </select>
@@ -394,7 +399,12 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="ds-field">
-                                        <label class="ds-label"><i data-lucide="shield-check"></i> Reviewer <span class="text-danger">*</span></label>
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <label class="ds-label mb-0"><i data-lucide="shield-check"></i> Reviewer <span class="text-danger">*</span></label>
+                                            <button type="button" class="btn btn-sm btn-link p-0 text-primary text-xs text-decoration-none fw-semibold d-inline-flex align-items-center gap-1" onclick="repoUI.openAddCrossDeptRoleModal('Reviewer')">
+                                                <i data-lucide="user-plus" style="width:12px;height:12px;"></i> + Add from another dept / location
+                                            </button>
+                                        </div>
                                         <select class="ds-input ds-select" id="projReviewer" required>
                                             <option value="" disabled selected>Loading...</option>
                                         </select>
@@ -482,13 +492,14 @@
     </div>
 </div>
 
-<!-- ── Modal: Select Member from Another Department / Location ── -->
+<!-- ── Modal: Select Member / Facilitator / Reviewer from Another Department / Location ── -->
 <div class="modal fade" id="crossDeptMemberModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4" style="background: var(--ds-bg-card, #ffffff); color: var(--ds-text-main); border: 1px solid var(--ds-border-color) !important;">
             <div class="modal-header border-bottom py-3 px-4" style="background: var(--ds-bg-elevated, #f8f9fa); border-color: var(--ds-border-color) !important;">
-                <h6 class="modal-title fw-bold ds-text-main d-flex align-items-center gap-2 mb-0">
-                    <i data-lucide="user-plus" class="text-primary" style="width:18px;height:18px;"></i> Select Member from Another Department / Location
+                <h6 class="modal-title fw-bold ds-text-main d-flex align-items-center gap-2 mb-0" id="crossDeptModalTitleContainer">
+                    <i data-lucide="user-plus" class="text-primary" id="crossDeptModalIcon" style="width:18px;height:18px;"></i>
+                    <span id="crossDeptModalTitle">Select Member from Another Department / Location</span>
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -508,10 +519,10 @@
                     </div>
                 </div>
                 <div class="mb-3 position-relative">
-                    <input type="text" class="ds-input text-sm py-1.5 ps-4" id="crossDeptMemberSearch" placeholder="Search member by name, email, or username..." oninput="repoUI.renderCrossDeptMemberList()">
+                    <input type="text" class="ds-input text-sm py-1.5 ps-4" id="crossDeptMemberSearch" placeholder="Search by name, email, or username..." oninput="repoUI.renderCrossDeptMemberList()">
                     <i data-lucide="search" class="position-absolute text-muted" style="left:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; pointer-events:none;"></i>
                 </div>
-                <div class="border rounded p-2" style="background: var(--ds-bg-surface, #f8fafc) !important; border-color: var(--ds-border-color) !important; max-height: 260px; overflow-y: auto;" id="crossDeptMemberList">
+                <div class="border rounded p-2" style="background: var(--ds-bg-surface, #f8fafc) !important; border-color: var(--ds-border-color) !important; max-height: 280px; overflow-y: auto;" id="crossDeptMemberList">
                     <span class="text-muted text-xs p-2">Loading members...</span>
                 </div>
             </div>
@@ -519,7 +530,7 @@
                 <span class="text-xs text-muted" id="crossDeptSelectedCount">0 member(s) checked</span>
                 <div class="d-flex gap-2">
                     <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="repoUI.confirmAddCrossDeptMembers()">Add to Project Team</button>
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" id="crossDeptConfirmBtn" onclick="repoUI.confirmAddCrossDeptMembers()">Add to Project Team</button>
                 </div>
             </div>
         </div>
@@ -1006,11 +1017,43 @@
         },
 
         async openAddCrossDeptMemberModal() {
+            return this.openAddCrossDeptRoleModal('Team Member');
+        },
+
+        async openAddCrossDeptRoleModal(targetRole = 'Team Member') {
+            this.crossDeptRole = targetRole || 'Team Member';
             if (!this.crossDeptModal) {
                 const el = document.getElementById('crossDeptMemberModal');
                 if (el) this.crossDeptModal = new bootstrap.Modal(el);
             }
             
+            // Update Title & Icon dynamically
+            const titleEl = document.getElementById('crossDeptModalTitle');
+            const iconEl = document.getElementById('crossDeptModalIcon');
+            const countEl = document.getElementById('crossDeptSelectedCount');
+            const confirmBtn = document.getElementById('crossDeptConfirmBtn');
+
+            if (this.crossDeptRole === 'Facilitator') {
+                if (titleEl) titleEl.textContent = 'Select Facilitator from Another Department / Location';
+                if (iconEl) iconEl.setAttribute('data-lucide', 'user-check');
+                if (countEl) countEl.textContent = 'Click "Select as Facilitator" on any employee below.';
+                if (confirmBtn) confirmBtn.style.display = 'none';
+            } else if (this.crossDeptRole === 'Reviewer') {
+                if (titleEl) titleEl.textContent = 'Select Reviewer from Another Department / Location';
+                if (iconEl) iconEl.setAttribute('data-lucide', 'shield-check');
+                if (countEl) countEl.textContent = 'Click "Select as Reviewer" on any employee below.';
+                if (confirmBtn) confirmBtn.style.display = 'none';
+            } else {
+                if (titleEl) titleEl.textContent = 'Select Member from Another Department / Location';
+                if (iconEl) iconEl.setAttribute('data-lucide', 'user-plus');
+                if (countEl) countEl.textContent = '0 member(s) checked';
+                if (confirmBtn) {
+                    confirmBtn.style.display = 'inline-block';
+                    confirmBtn.textContent = 'Add to Project Team';
+                }
+            }
+            if (window.lucide) lucide.createIcons();
+
             const plantSel = document.getElementById('crossDeptPlantSelect');
             if (plantSel) {
                 plantSel.innerHTML = '<option value="">All Locations</option>' +
@@ -1024,7 +1067,10 @@
             }
 
             const searchInput = document.getElementById('crossDeptMemberSearch');
-            if (searchInput) searchInput.value = '';
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.placeholder = `Search ${this.crossDeptRole.toLowerCase()} by name, email, or username...`;
+            }
 
             await this.loadCrossDeptMemberList();
             if (this.crossDeptModal) this.crossDeptModal.show();
@@ -1033,24 +1079,36 @@
         async loadCrossDeptMemberList() {
             const container = document.getElementById('crossDeptMemberList');
             if (!container) return;
-            container.innerHTML = '<div class="p-3 text-center text-muted text-sm"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading organization members...</div>';
+            const roleName = this.crossDeptRole || 'Team Member';
+            container.innerHTML = `<div class="p-3 text-center text-muted text-sm"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading organization ${roleName.toLowerCase()}s...</div>`;
 
             const plantVal = (document.getElementById('crossDeptPlantSelect')?.value || '').trim();
             const deptVal = (document.getElementById('crossDeptDeptSelect')?.value || '').trim();
             const searchVal = (document.getElementById('crossDeptMemberSearch')?.value || '').trim();
 
             try {
-                let url = `/projects/potential-members?role=Team Member&ignore_dept=true&`;
+                let url = `/projects/potential-members?role=${encodeURIComponent(roleName)}&ignore_dept=true&`;
                 if (plantVal) url += `plant_name=${encodeURIComponent(plantVal)}&`;
                 if (deptVal) url += `dept_id=${encodeURIComponent(deptVal)}&`;
                 if (searchVal) url += `search=${encodeURIComponent(searchVal)}&`;
 
-                const members = await api.get(url);
+                let members = await api.get(url);
+                if ((!members || !members.length) && roleName === 'Facilitator') {
+                    // Fallback to /projects/facilitators
+                    try {
+                        let facUrl = `/projects/facilitators?ignore_dept=true&`;
+                        if (plantVal) facUrl += `plant_name=${encodeURIComponent(plantVal)}&`;
+                        if (deptVal) facUrl += `dept_id=${encodeURIComponent(deptVal)}&`;
+                        const facFallback = await api.get(facUrl);
+                        if (Array.isArray(facFallback) && facFallback.length) members = facFallback;
+                    } catch (eFac) {}
+                }
+
                 this.crossDeptMembersCache = Array.isArray(members) ? members : [];
                 this.renderCrossDeptMemberList();
             } catch (e) {
-                console.error('Failed to fetch cross-dept members', e);
-                container.innerHTML = '<div class="p-3 text-center text-danger text-sm">Failed to load members.</div>';
+                console.error(`Failed to fetch cross-dept ${roleName}s`, e);
+                container.innerHTML = `<div class="p-3 text-center text-danger text-sm">Failed to load ${roleName.toLowerCase()}s.</div>`;
             }
         },
 
@@ -1060,6 +1118,7 @@
 
             const list = this.crossDeptMembersCache || [];
             const searchVal = (document.getElementById('crossDeptMemberSearch')?.value || '').toLowerCase().trim();
+            const isRoleMode = this.crossDeptRole === 'Facilitator' || this.crossDeptRole === 'Reviewer';
 
             let filtered = list;
             if (searchVal) {
@@ -1073,7 +1132,7 @@
             }
 
             if (!filtered.length) {
-                container.innerHTML = '<div class="p-3 text-center text-muted text-sm">No matching members found</div>';
+                container.innerHTML = `<div class="p-3 text-center text-muted text-sm">No matching ${this.crossDeptRole ? this.crossDeptRole.toLowerCase() + 's' : 'members'} found</div>`;
                 return;
             }
 
@@ -1081,13 +1140,43 @@
                 const isChecked = this.checkedMemberIds.has(m.id);
                 const deptBadge = m.department ? `<span class="badge bg-light text-dark border me-1">${esc(m.department)}</span>` : '';
                 const locBadge = (m.plant_name || m.location) ? `<span class="badge bg-secondary-subtle text-secondary border me-1">${esc(m.plant_name || m.location)}</span>` : '';
+                const mName = m.full_name || m.username;
+                const mEmail = m.email || m.username;
+                const mDept = m.department || '';
+                const mPlant = m.plant_name || m.location || '';
+
+                if (isRoleMode) {
+                    return `
+                        <div class="d-flex align-items-center justify-content-between p-2 border-bottom hover-bg-light rounded text-sm gap-2">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <div class="avatar-circle flex-shrink-0" style="width:32px;height:32px;border-radius:50%;background:rgba(var(--ds-primary-rgb),0.1);color:var(--ds-primary);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;">
+                                    ${esc((mName || 'U').charAt(0).toUpperCase())}
+                                </div>
+                                <div class="min-w-0">
+                                    <strong class="text-dark d-block text-truncate">${esc(mName)}</strong>
+                                    <span class="text-muted text-xs">${esc(mEmail)}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <div>
+                                    ${locBadge}
+                                    ${deptBadge}
+                                </div>
+                                <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 text-xs fw-semibold d-inline-flex align-items-center gap-1" onclick="repoUI.selectCrossDeptRoleUser(${m.id}, '${esc(mName).replace(/'/g, "\\'")}', '${esc(mDept).replace(/'/g, "\\'")}', '${esc(mPlant).replace(/'/g, "\\'")}')">
+                                    <i data-lucide="check" style="width:12px;height:12px;"></i> Select as ${this.crossDeptRole}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="d-flex align-items-center justify-content-between p-2 border-bottom hover-bg-light rounded text-sm">
                         <div class="d-flex align-items-center gap-2">
-                            <input class="form-check-input cross-dept-cb" type="checkbox" value="${m.id}" data-name="${esc(m.full_name || m.username)}" id="cd_mem_${m.id}" ${isChecked ? 'checked' : ''} onchange="repoUI.updateCrossDeptSelectedCount()">
+                            <input class="form-check-input cross-dept-cb" type="checkbox" value="${m.id}" data-name="${esc(mName)}" id="cd_mem_${m.id}" ${isChecked ? 'checked' : ''} onchange="repoUI.updateCrossDeptSelectedCount()">
                             <label for="cd_mem_${m.id}" class="form-check-label cursor-pointer mb-0">
-                                <strong class="text-dark">${esc(m.full_name || m.username)}</strong>
-                                <span class="text-muted text-xs ms-1">(${esc(m.email || m.username)})</span>
+                                <strong class="text-dark">${esc(mName)}</strong>
+                                <span class="text-muted text-xs ms-1">(${esc(mEmail)})</span>
                             </label>
                         </div>
                         <div>
@@ -1098,8 +1187,31 @@
                 `;
             }).join('');
 
-            this.updateCrossDeptSelectedCount();
+            if (!isRoleMode) {
+                this.updateCrossDeptSelectedCount();
+            }
             if (window.lucide) lucide.createIcons();
+        },
+
+        selectCrossDeptRoleUser(id, name, dept, plant) {
+            const selectId = this.crossDeptRole === 'Facilitator' ? 'projFacilitator' : 'projReviewer';
+            const selectEl = document.getElementById(selectId);
+            if (selectEl) {
+                const labelExtra = dept ? ` (${dept}${plant ? ' • ' + plant : ''})` : (plant ? ` (${plant})` : '');
+                let existingOpt = Array.from(selectEl.options).find(o => o.value == id);
+                if (!existingOpt) {
+                    existingOpt = document.createElement('option');
+                    existingOpt.value = id;
+                    existingOpt.textContent = `${name}${labelExtra}`;
+                    selectEl.appendChild(existingOpt);
+                }
+                selectEl.value = id;
+            }
+
+            if (this.crossDeptModal) this.crossDeptModal.hide();
+            if (window.QCMS && QCMS.toast) {
+                QCMS.toast(`Selected ${name} as Project ${this.crossDeptRole}`, 'success');
+            }
         },
 
         updateCrossDeptSelectedCount() {
@@ -2042,11 +2154,11 @@
             }
 
             body.innerHTML = this.data.map(p => `
-                <tr class="${p.is_stalled ? 'stalled-row' : ''} fade-in">
+                <tr class="${p.is_stalled ? 'stalled-row' : ''} fade-in cursor-pointer" onclick="window.location.href='/projects/project-details.html?id=${p.id}'" style="cursor:pointer;" title="Click to open project">
                     <td>
                         <div class="v-stack">
                             <div class="h-stack gap-2 align-items-center mb-1">
-                                <span class="fw-bold text-dark">${p.title}</span>
+                                <span class="fw-bold text-dark hover-primary">${p.title}</span>
                                 ${p.is_stalled ? '<span class="stalled-badge">Inactive</span>' : ''}
                             </div>
                             <div class="h-stack gap-2 align-items-center text-xs opacity-75">
@@ -2074,7 +2186,7 @@
                         <div class="text-sm fw-medium">${QCMS.formatRelative(p.last_updated)}</div>
                         <div class="text-xs text-muted">Latest update</div>
                     </td>
-                    <td class="text-end">
+                    <td class="text-end" onclick="event.stopPropagation()">
                         <div class="dropdown d-inline-block">
                             <button class="ds-btn ds-btn-xs ds-btn-ghost p-1 text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More Options">
                                 <i data-lucide="more-vertical" style="width:16px;height:16px;"></i>
@@ -2082,7 +2194,7 @@
                             <ul class="dropdown-menu dropdown-menu-end shadow-md py-1 border-0" style="min-width: 200px; border-radius: var(--ds-radius-md, 8px);">
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="/projects/project-details.html?id=${p.id}">
-                                        <i data-lucide="eye" style="width:14px;height:14px;" class="text-primary"></i> View
+                                        <i data-lucide="eye" style="width:14px;height:14px;" class="text-primary"></i> View Workspace
                                     </a>
                                 </li>
                                 <li>

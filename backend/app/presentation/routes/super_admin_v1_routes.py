@@ -152,19 +152,30 @@ def get_dashboard_stats():
     ).count()
     
     # 2. Paid Organizations (orgs on a real paid subscription, not trial)
-    active_orgs = Organization.query.filter(
+    all_non_deleted_orgs = Organization.query.filter(
         Organization.is_deleted == False,
-        Organization.is_platform_org == False,
-        Organization.subscription_status.in_(['Active', 'ACTIVE']),
-        (Organization.license_expiry_date >= now) | (Organization.license_expiry_date.is_(None))
-    ).count()
+        Organization.is_platform_org == False
+    ).all()
+
+    def _is_org_paid(o):
+        plan_str = (o.subscription_plan or '').strip().lower()
+        stat_str = (o.subscription_status or '').strip().lower()
+        if stat_str in ('suspended', 'expired'):
+            return False
+        if plan_str and plan_str not in ('trial', 'trialing', 'default trial plan', ''):
+            return True
+        if stat_str in ('active', 'paid'):
+            return True
+        return False
+
+    paid_orgs_list = [o for o in all_non_deleted_orgs if _is_org_paid(o)]
+    active_orgs = len(paid_orgs_list)
 
     # 3. On Trial Organizations
-    trial_orgs = Organization.query.filter(
-        Organization.is_deleted == False,
-        Organization.is_platform_org == False,
-        Organization.subscription_status.in_(['Trialing', 'Trial', 'TRIAL'])
-    ).count()
+    trial_orgs = len([
+        o for o in all_non_deleted_orgs
+        if not _is_org_paid(o) and (o.subscription_status or '').strip().lower() not in ('suspended', 'expired')
+    ])
 
     # 4. Expired Licenses / Organizations
     expired_licenses = Organization.query.filter(
@@ -302,7 +313,8 @@ def get_dashboard_stats():
         if po[0]:
             paid_org_ids.add(po[0])
 
-    paid_orgs_count = len(paid_org_ids)
+    paid_orgs_count = max(len(paid_org_ids), active_orgs)
+    active_orgs = paid_orgs_count
 
     if revenue_in_period == 0.0 and active_paid_amount > 0.0:
         revenue_in_period = active_paid_amount

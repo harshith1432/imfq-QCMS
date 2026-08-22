@@ -246,10 +246,18 @@ class PointEngineService:
         3. ideas_approved DESC
         4. knowledge_articles DESC
         5. User.created_at ASC
+        Only operational Quality Circle roles are included (Team Member, Team Leader, Facilitator, Reviewer).
         """
+        from app.infrastructure.database.models.models import Role
         entries = db.session.query(EmployeeLeaderboard)\
             .join(User, User.id == EmployeeLeaderboard.employee_id)\
+            .outerjoin(Role, User.role_id == Role.id)\
             .filter(EmployeeLeaderboard.organization_id == org_id)\
+            .filter(db.or_(
+                Role.name.in_(['Team Member', 'Team Leader', 'Facilitator', 'Reviewer']),
+                Role.id == None
+            ))\
+            .filter(db.not_(Role.name.in_(['Admin', 'admin', 'SuperAdmin', 'superadmin', 'CEO', 'ceo', 'Owner', 'owner', 'System Admin', 'Administrator'])))\
             .order_by(
                 EmployeeLeaderboard.total_points.desc(),
                 EmployeeLeaderboard.projects_completed.desc(),
@@ -266,14 +274,19 @@ class PointEngineService:
     @staticmethod
     def seed_initial_points_if_needed(org_id: int):
         """
-        Initializes leaderboard rows and points for all existing users in the organization
+        Initializes leaderboard rows and points for all operational Quality Circle users in the organization
         by scanning real activity in Project, Stage trackers, SOPs, and Knowledge Repository.
         Guarantees NO fake numbers — only real historical actions!
         """
         if not org_id:
             return
         users = User.query.filter_by(org_id=org_id).all()
+        EXCLUDED_ROLES = {'admin', 'ceo', 'superadmin', 'owner', 'system admin', 'administrator'}
         for u in users:
+            role_name = (u.role.name if u.role else '').strip().lower()
+            if role_name in EXCLUDED_ROLES:
+                continue
+
             # Ensure leaderboard row exists
             lb = EmployeeLeaderboard.query.filter_by(employee_id=u.id).first()
             if not lb:

@@ -35,7 +35,7 @@ def _get_user_from_jwt():
         current_user_id = int(current_user_id)
     except Exception:
         pass
-    return db.session.get(User, current_user_id)
+    return db.session.get(User, current_user_id) if current_user_id else None
 
 def audit_required(f):
     @wraps(f)
@@ -249,14 +249,14 @@ def get_risk_level_for_action(action, role_name):
         return "Low"
 
 def log_audit_event(org_id, user_id, action, target_table=None, target_id=None, details=None, before_data=None, after_data=None, response_code=200, execution_time=0.0):
-    user = db.session.get(User, user_id)
+    user = db.session.get(User, user_id) if user_id else None
     ua_str = request.headers.get('User-Agent') if request else None
     ip_addr = get_real_client_ip(request) if request else "127.0.0.1"
     os, browser, device = parse_user_agent(ua_str)
     
     # Session identification
     session_id = request.cookies.get('session_id') if request else None
-    if not session_id and user:
+    if not session_id and user and user_id:
         # Fallback to last active session
         last_sess = SaaSUserSession.query.filter_by(user_id=user_id).order_by(SaaSUserSession.login_time.desc()).first()
         if last_sess:
@@ -400,7 +400,8 @@ def get_audit_dashboard():
     exp_prev = AuditLog.query.filter(org_filter, exp_cond, AuditLog.created_at >= p_prev_start, AuditLog.created_at < p_curr_start).count()
     export_growth = calc_growth(exp_curr, exp_prev)
     
-    # Active Sessions
+    # Active Sessions (Auto-terminates >= 2 hours inactive sessions first)
+    cleanup_inactive_sessions(target_org_id if 'target_org_id' in locals() else user.org_id if (user and user.role and user.role.name != 'SuperAdmin') else None, inactivity_hours=2)
     active_sessions = SaaSUserSession.query.filter(sess_filter, SaaSUserSession.status == 'Active').count()
     sess_curr = SaaSUserSession.query.filter(sess_filter, SaaSUserSession.login_time >= p_curr_start).count()
     sess_prev = SaaSUserSession.query.filter(sess_filter, SaaSUserSession.login_time >= p_prev_start, SaaSUserSession.login_time < p_curr_start).count()
@@ -828,6 +829,91 @@ def get_audit_log_detail(log_id):
         }
     }), 200
 
+def cleanup_inactive_sessions(org_id=None, inactivity_hours=2):
+    """
+    Terminates all active user sessions that have had no user movement/activity for >= inactivity_hours (default 2 hours).
+    Sets status='Expired', logout_time = last_activity + 2h (or login_time + 2h), and calculates accurate session_duration.
+    """
+    try:
+        now = datetime.utcnow()
+        cutoff = now - timedelta(hours=inactivity_hours)
+        query = SaaSUserSession.query.filter(
+            SaaSUserSession.status == 'Active',
+            db.or_(
+                db.and_(SaaSUserSession.last_activity.isnot(None), SaaSUserSession.last_activity < cutoff),
+                db.and_(SaaSUserSession.last_activity.is_(None), SaaSUserSession.login_time < cutoff)
+            )
+        )
+        if org_id:
+            query = query.filter(SaaSUserSession.org_id == org_id)
+            
+        expired_sessions = query.all()
+        for s in expired_sessions:
+            ref_time = s.last_activity or s.login_time or (now - timedelta(hours=inactivity_hours))
+            s.status = 'Expired'
+            # Expire timestamp is ref_time + 2 hours (or now if less than 2 hours ago)
+            expire_timestamp = ref_time + timedelta(hours=inactivity_hours)
+            s.logout_time = expire_timestamp if expire_timestamp <= now else now
+            if s.login_time:
+                s.session_duration = max(0, int((s.logout_time - s.login_time).total_seconds()))
+            else:
+                s.session_duration = int(inactivity_hours * 3600)
+                
+        if expired_sessions:
+            db.session.commit()
+        return len(expired_sessions)
+    except Exception as e:
+        db.session.rollback()
+        return 0
+
+
+@audit_bp.route('/heartbeat', methods=['POST', 'GET'])
+@jwt_required()
+def session_heartbeat():
+    """
+    Called by frontend when user movement/interaction is detected to refresh last_activity.
+    If session has been inactive for > 2 hours, terminates the session and returns 401.
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        claims = get_jwt()
+        session_id = claims.get('session_id') if isinstance(claims, dict) else None
+        
+        now = datetime.utcnow()
+        cutoff = now - timedelta(hours=2)
+        
+        sess = None
+        if session_id:
+            sess = SaaSUserSession.query.filter_by(session_id=session_id).first()
+        if not sess:
+            sess = SaaSUserSession.query.filter_by(user_id=current_user_id, status='Active').order_by(SaaSUserSession.login_time.desc()).first()
+            
+        if sess:
+            ref_time = sess.last_activity or sess.login_time
+            if sess.status == 'Active' and ref_time and ref_time < cutoff:
+                # 2-hour continuous inactivity exceeded
+                sess.status = 'Expired'
+                sess.logout_time = ref_time + timedelta(hours=2)
+                if sess.login_time:
+                    sess.session_duration = max(0, int((sess.logout_time - sess.login_time).total_seconds()))
+                db.session.commit()
+                return jsonify({"status": "expired", "message": "Session terminated due to 2 hours of inactivity."}), 401
+                
+            # User is actively working: keep/set status to Active and refresh last_activity
+            sess.status = 'Active'
+            sess.last_activity = now
+            db.session.commit()
+            return jsonify({
+                "status": "active",
+                "session_id": sess.session_id,
+                "last_activity": now.isoformat() + "Z"
+            }), 200
+            
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @audit_bp.route('/sessions', methods=['GET'])
 @jwt_required()
 @audit_required
@@ -835,10 +921,14 @@ def get_audit_sessions():
     current_user_id = get_jwt_identity()
     user = db.session.get(User, current_user_id)
     
+    # Auto-cleanup any sessions that have been inactive for >= 2 hours before returning data
+    target_org = user.org_id if (user and user.role and user.role.name != 'SuperAdmin') else None
+    cleanup_inactive_sessions(target_org, inactivity_hours=2)
+    
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     q = request.args.get('q', '').strip()
-    status = request.args.get('status', 'Active').strip() # Active, LoggedOut, Terminated, or all
+    status = request.args.get('status', 'Active').strip() # Active, LoggedOut, Terminated, Expired, or all
 
     query = SaaSUserSession.query.filter(get_user_org_filter(user, SaaSUserSession))
     
@@ -868,13 +958,27 @@ def get_audit_sessions():
         raw_browser = s.browser if (s.browser and s.browser not in ('Other', 'Other Browser')) else 'Chrome'
         raw_device = s.device or 'Desktop'
 
+        # Accurate session duration calculation
+        now_dt = datetime.utcnow()
+        if s.status == 'Active':
+            login_t = s.login_time or now_dt
+            dur_secs = max(0, int((now_dt - login_t).total_seconds()))
+        else:
+            if s.session_duration is not None and s.session_duration >= 0:
+                dur_secs = s.session_duration
+            elif s.logout_time and s.login_time:
+                dur_secs = max(0, int((s.logout_time - s.login_time).total_seconds()))
+            else:
+                dur_secs = 0
+
         res_sessions.append({
             "session_id": s.session_id,
             "username": s.user.username if s.user else "Unknown",
             "email": s.user.email if s.user else "N/A",
             "login_time": s.login_time.isoformat() + "Z" if s.login_time else None,
+            "last_activity": s.last_activity.isoformat() + "Z" if s.last_activity else None,
             "logout_time": s.logout_time.isoformat() + "Z" if s.logout_time else None,
-            "session_duration": s.session_duration or (int((datetime.utcnow() - s.login_time).total_seconds()) if s.status == 'Active' and s.login_time else 0),
+            "session_duration": dur_secs,
             "device": raw_device,
             "browser": raw_browser,
             "os": raw_os,
@@ -905,7 +1009,7 @@ def terminate_session(session_id):
     if sess.status == 'Active':
         sess.status = 'Terminated'
         sess.logout_time = datetime.utcnow()
-        sess.session_duration = int((sess.logout_time - sess.login_time).total_seconds())
+        sess.session_duration = int((sess.logout_time - (sess.login_time or sess.logout_time)).total_seconds())
         
         # Log this administrative termination
         log_audit_event(
@@ -914,8 +1018,9 @@ def terminate_session(session_id):
             action="SESSION_FORCE_TERMINATION",
             target_table="saas_user_sessions",
             target_id=None,
-            details={"terminated_session_id": session_id, "user_affected": sess.user.username}
+            details={"terminated_session_id": session_id, "user_affected": sess.user.username if sess.user else "Unknown"}
         )
+        db.session.commit()
         return jsonify({"status": "success", "message": f"Session {session_id} has been terminated."}), 200
         
     return jsonify({"status": "error", "message": "Session is not active."}), 400

@@ -469,6 +469,9 @@ const ProjectApp = {
                                         const label = wrapper.querySelector('label');
                                         if (label) {
                                             let cleanLbl = (cfg.label || label.textContent || '').replace(/\s*\*$/, '');
+                                            if (id === 's8_sop_purpose' && (cleanLbl === 'Section 1: Purpose' || cleanLbl === 'Purpose' || cleanLbl === 'Section 1')) cleanLbl = 'Section 8.1.1: Purpose';
+                                            if (id === 's8_sop_scope' && (cleanLbl === 'Section 2: Scope' || cleanLbl === 'Scope' || cleanLbl === 'Section 2')) cleanLbl = 'Section 8.1.2: Scope';
+                                            if (id === 's8_sop_responsibilities' && (cleanLbl === 'Section 3: Responsibilities' || cleanLbl === 'Responsibilities' || cleanLbl === 'Section 3')) cleanLbl = 'Section 8.1.3: Responsibilities';
                                             if (cfg.required !== false) {
                                                 label.innerHTML = `${cleanLbl} <span class="text-danger">*</span>`;
                                                 el.required = true;
@@ -1329,7 +1332,7 @@ const ProjectApp = {
         window.addEventListener('beforeunload', (e) => {
             if (window.hasUnsavedChanges) {
                 e.preventDefault();
-                e.returnValue = 'You have unsaved changes in this stage! If you leave without saving, your entered data will be lost.';
+                e.returnValue = 'You have unsaved changes in this stage. Would you like to save before leaving?';
                 return e.returnValue;
             }
         });
@@ -1369,35 +1372,35 @@ const ProjectApp = {
             }
 
             modalEl.innerHTML = `
-                <div class="modal-dialog modal-dialog-centered" style="max-width: 560px;">
-                    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                        <div class="modal-header border-0 bg-warning-subtle py-3 px-4">
-                            <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;">
-                                <span class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink:0;">
-                                    <i data-lucide="alert-triangle" style="width: 18px; height: 18px;"></i>
+                <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+                    <div class="modal-content border-0 shadow" style="border-radius: 16px; overflow: hidden;">
+                        <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <span class="rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: rgba(99, 102, 241, 0.1); color: #6366f1; flex-shrink:0;">
+                                    <i data-lucide="file-edit" style="width: 18px; height: 18px;"></i>
                                 </span>
-                                Unsaved Changes Warning
-                            </h5>
+                                <div>
+                                    <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.05rem;">
+                                        Unsaved Changes
+                                    </h5>
+                                    <p class="text-xs text-muted mb-0">Stage ${this.activeStageId || 1} Form Edits</p>
+                                </div>
+                            </div>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body p-4">
-                            <div class="alert alert-warning border-0 p-3 mb-3 rounded-3" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b !important;">
-                                <p class="mb-0 text-sm fw-bold text-dark d-flex align-items-start gap-2">
-                                    <span>⚠️ <strong>Warning:</strong> You have unsaved changes in Stage ${this.activeStageId || 1}. If you leave without saving, your entered data will be lost.</span>
-                                </p>
-                            </div>
-                            <p class="text-secondary text-xs mb-0">
-                                Would you like to save your changes as a draft before leaving, or discard them?
+                        <div class="modal-body px-4 py-3">
+                            <p class="text-secondary text-sm mb-0">
+                                You have unsaved changes in this stage. Would you like to save them as a draft before leaving, or discard them?
                             </p>
                         </div>
-                        <div class="modal-footer border-0 bg-light-subtle py-3 px-4 d-flex align-items-center justify-content-end gap-2 flex-nowrap" style="white-space: nowrap;">
-                            <button type="button" class="ds-btn ds-btn-ghost text-xs" data-bs-dismiss="modal" id="cancelUnsavedBtn" style="white-space: nowrap;">
+                        <div class="modal-footer border-0 pt-2 pb-4 px-4 d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                            <button type="button" class="ds-btn ds-btn-ghost text-xs" data-bs-dismiss="modal" id="cancelUnsavedBtn">
                                 Stay on Page
                             </button>
-                            <button type="button" class="btn btn-outline-danger text-xs px-3 py-2 fw-semibold" id="discardUnsavedBtn" style="border-radius:8px; white-space: nowrap;">
+                            <button type="button" class="ds-btn ds-btn-outline text-xs text-secondary" id="discardUnsavedBtn">
                                 Discard &amp; Leave
                             </button>
-                            <button type="button" class="ds-btn ds-btn-primary text-xs" id="saveAndLeaveBtn" style="white-space: nowrap;">
+                            <button type="button" class="ds-btn ds-btn-primary text-xs" id="saveAndLeaveBtn">
                                 <i data-lucide="save" style="width: 14px; height: 14px; margin-right: 4px;"></i> Save Draft &amp; Leave
                             </button>
                         </div>

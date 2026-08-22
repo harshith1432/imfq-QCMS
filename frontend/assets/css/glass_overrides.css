@@ -525,34 +525,48 @@ select,
 .ds-select,
 select.ds-input,
 select.ds-select,
+select.r-stat,
 .form-select,
 select.form-select,
 select.form-control {
     appearance: none !important;
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
+    background-color: var(--ds-input-bg, #ffffff) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: right 0.75rem center !important;
     background-size: 16px 16px !important;
     padding-right: 2.25rem !important;
+    cursor: pointer !important;
 }
 
-select,
-.ds-select,
-select.ds-input,
-select.ds-select,
-.form-select,
-select.form-select {
+select:focus,
+.ds-select:focus,
+select.ds-input:focus,
+select.ds-select:focus,
+select.r-stat:focus,
+.form-select:focus,
+select.form-select:focus {
+    background-color: #ffffff !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 16px !important;
 }
 
 [data-theme="dark"] select,
 [data-theme="dark"] .ds-select,
 [data-theme="dark"] select.ds-input,
 [data-theme="dark"] select.ds-select,
+[data-theme="dark"] select.r-stat,
 [data-theme="dark"] .form-select,
 [data-theme="dark"] select.form-select,
-[data-theme="dark"] select.form-control {
+[data-theme="dark"] select.form-control,
+body.dark-mode select,
+body.dark-mode .ds-select,
+body.dark-mode select.ds-input,
+body.dark-mode select.ds-select {
     appearance: none !important;
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
@@ -974,6 +988,9 @@ html[data-theme="dark"] #footerPageModal .modal-content {
     #superKpiGrid,
     #orgKpiGrid,
     #eaKpiGrid,
+    #kpiGrid,
+    #workstationKpiGrid,
+    #teamKpiGrid,
     .kpi-grid,
     .sub-kpi-grid,
     .lic-kpi-grid,
@@ -981,15 +998,30 @@ html[data-theme="dark"] #footerPageModal .modal-content {
     .plan-kpi-grid,
     .bill-kpi-grid {
         display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         gap: 0.5rem !important;
         margin-bottom: 1rem !important;
-        overflow-x: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    #kpiGrid > a,
+    #kpiGrid > div,
+    .kpi-grid > a,
+    .kpi-grid > div {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
     }
 
     /* Compact KPI Card Layout */
     #superKpiGrid .glass-card,
     #orgKpiGrid .glass-card,
+    #kpiGrid .glass-card,
+    #workstationKpiGrid .glass-card,
+    #teamKpiGrid .glass-card,
+    .kpi-grid .glass-card,
     .kpi-card,
     .ea-kpi-card,
     .sub-kpi-card,
@@ -997,15 +1029,25 @@ html[data-theme="dark"] #footerPageModal .modal-content {
     .mod-kpi-card,
     .plan-kpi-card,
     .bill-kpi-card {
-        min-height: 70px !important;
-        height: auto !important;
-        padding: 0.45rem 0.35rem !important;
+        min-height: 80px !important;
+        height: 100% !important;
+        padding: 0 !important;
         border-radius: 10px !important;
         display: flex !important;
         flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
+        box-sizing: border-box !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .kpi-card-body,
+    #kpiGrid .ds-card-body,
+    .kpi-grid .ds-card-body {
+        padding: 10px 10px !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        min-width: 0 !important;
     }
 
     /* Compact KPI Icons */
@@ -1013,14 +1055,14 @@ html[data-theme="dark"] #footerPageModal .modal-content {
     #superKpiGrid .glass-card div[style*="width:40px"],
     #orgKpiGrid .glass-card div[style*="width:36px"],
     #orgKpiGrid .glass-card div[style*="width:40px"],
+    .kpi-icon-box,
     .kpi-icon,
     .sub-kpi-card .kpi-icon,
     .lic-kpi-card .kpi-icon,
     .mod-kpi-card .kpi-icon {
-        width: 26px !important;
-        height: 26px !important;
+        width: 28px !important;
+        height: 28px !important;
         border-radius: 7px !important;
-        margin: 0 auto 0.25rem !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -1030,6 +1072,7 @@ html[data-theme="dark"] #footerPageModal .modal-content {
     #superKpiGrid .glass-card div[style*="width:40px"] i,
     #orgKpiGrid .glass-card div[style*="width:36px"] i,
     #orgKpiGrid .glass-card div[style*="width:40px"] i,
+    .kpi-icon-box i,
     .kpi-icon i,
     .sub-kpi-card .kpi-icon i {
         width: 14px !important;
@@ -1042,7 +1085,7 @@ html[data-theme="dark"] #footerPageModal .modal-content {
     #superKpiGrid .text-2xl,
     #orgKpiGrid .text-xl,
     #orgKpiGrid .text-2xl {
-        font-size: 1.05rem !important;
+        font-size: 1.15rem !important;
         font-weight: 700 !important;
         line-height: 1.15 !important;
         margin-bottom: 1px !important;
@@ -1055,12 +1098,13 @@ html[data-theme="dark"] #footerPageModal .modal-content {
     #superKpiGrid .text-xs,
     #orgKpiGrid .text-xs {
         font-size: 10px !important;
-        line-height: 1.15 !important;
+        line-height: 1.2 !important;
         margin-top: 1px !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
         max-width: 100% !important;
+        letter-spacing: 0.02em !important;
     }
 
     /* Info Icon positioning inside compact cards */
@@ -1139,13 +1183,31 @@ html[data-theme="dark"] #footerPageModal .modal-content {
 
 /* Centered Status Select Dropdown */
 select.ds-select.r-stat,
-.ds-select.r-stat {
+.ds-select.r-stat,
+select.r-stat {
     text-align: center !important;
     text-align-last: center !important;
     font-weight: 600 !important;
     cursor: pointer !important;
     padding-left: 1.5rem !important;
     padding-right: 2.25rem !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-color: var(--ds-input-bg, #ffffff) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 16px !important;
+}
+
+[data-theme="dark"] select.ds-select.r-stat,
+[data-theme="dark"] .ds-select.r-stat,
+[data-theme="dark"] select.r-stat,
+body.dark-mode select.ds-select.r-stat,
+body.dark-mode select.r-stat {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
 }
 
 /* Tooltip Hover Triggers for Headings & Field Abbreviation Guidance */

@@ -515,6 +515,24 @@
                                 </table>
                             </div>
                         </div>
+                        <!-- Quality Project Financial Ledger Pagination Footer -->
+                        <div class="p-3 border-top border-light border-opacity-10 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="text-xs text-muted" id="bizLedgerPaginationInfo">Showing 0 to 0 of 0 projects</div>
+                                <div class="d-flex align-items-center gap-1 text-xs text-muted">
+                                    <span>Show:</span>
+                                    <select class="ds-input ds-select ds-select-sm py-0 px-2" style="width:auto; min-width:72px; height:28px; font-size:12px; border-radius:6px;" id="bizLedgerPageSize" onchange="ceoDash.changeLedgerPageSize(this.value)">
+                                        <option value="5">5</option>
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <span>per page</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-1" id="bizLedgerPaginationControls"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -571,6 +589,13 @@
             departments: [],
             topProjectsList: [],
             liveSource: null,
+            ledgerProjects: [],
+            ledgerFilteredProjects: [],
+            ledgerPage: 1,
+            ledgerPageSize: 10,
+            deptPageSize: 5,
+            leaderboardPageSize: 5,
+            topProjectsPageSize: 4,
 
             formatINR(amount) {
                 return QCMS.formatINR(amount);
@@ -1199,11 +1224,9 @@
                 const container = document.getElementById('ceoKpiGrid');
                 container.innerHTML = kpis.map((kpi, idx) => `
                     <div class="ds-card p-3 shadow-sm hover-row" id="ceoKpiCard_${idx}" style="${kpi.isRejected ? 'cursor:pointer;' : ''}">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <span class="text-xs text-muted fw-semibold text-uppercase tracking-wider">${kpi.title}</span>
-                                <h4 class="fw-bold mb-0 mt-1 ${kpi.isRejected ? 'text-danger' : 'text-primary'}" style="font-size:1.25rem;">${kpi.value}</h4>
-                            </div>
+                        <div class="mb-2">
+                            <span class="d-block text-xs text-muted fw-semibold text-uppercase tracking-wider">${kpi.title}</span>
+                            <h4 class="d-block fw-bold mb-0 mt-1 ${kpi.isRejected ? 'text-danger' : 'text-primary'}" style="font-size:1.25rem;">${kpi.value}</h4>
                         </div>
                         <div id="sparkline-chart-${idx}" class="sparkline-container"></div>
                     </div>
@@ -1479,16 +1502,34 @@
                 this.charts.bizDeptRoi.render();
             },
 
-            renderLedgerTable(projects) {
+            renderLedgerTable(projects = null) {
                 const tbody = document.getElementById('bizLedgerTableBody');
                 if (!tbody) return;
 
-                if (!projects || !projects.length) {
+                if (projects !== null) {
+                    this.ledgerFilteredProjects = projects;
+                } else if (!this.ledgerFilteredProjects || !this.ledgerFilteredProjects.length) {
+                    this.ledgerFilteredProjects = this.ledgerProjects || [];
+                }
+
+                const allItems = this.ledgerFilteredProjects || [];
+                const totalCount = allItems.length;
+
+                if (!totalCount) {
                     tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No projects found in financial ledger.</td></tr>`;
+                    this.renderLedgerPagination(0, 0, 0, 1);
                     return;
                 }
 
-                tbody.innerHTML = projects.map(p => `
+                const totalPages = Math.ceil(totalCount / this.ledgerPageSize) || 1;
+                if (this.ledgerPage > totalPages) this.ledgerPage = totalPages;
+                if (this.ledgerPage < 1) this.ledgerPage = 1;
+
+                const startIdx = (this.ledgerPage - 1) * this.ledgerPageSize;
+                const endIdx = Math.min(startIdx + this.ledgerPageSize, totalCount);
+                const pageData = allItems.slice(startIdx, endIdx);
+
+                tbody.innerHTML = pageData.map(p => `
                     <tr>
                         <td>
                             <div class="fw-bold text-main">${p.title}</div>
@@ -1521,12 +1562,84 @@
                         </td>
                     </tr>
                 `).join('');
+
+                this.renderLedgerPagination(startIdx + 1, endIdx, totalCount, totalPages);
                 if (window.lucide) lucide.createIcons();
+            },
+
+            renderLedgerPagination(from, to, total, totalPages) {
+                const infoEl = document.getElementById('bizLedgerPaginationInfo');
+                if (infoEl) {
+                    if (total === 0) {
+                        infoEl.textContent = 'Showing 0 to 0 of 0 projects';
+                    } else {
+                        infoEl.textContent = `Showing ${from} to ${to} of ${total} project${total === 1 ? '' : 's'}`;
+                    }
+                }
+
+                const ctrlEl = document.getElementById('bizLedgerPaginationControls');
+                if (!ctrlEl) return;
+
+                if (total === 0) {
+                    ctrlEl.innerHTML = '';
+                    return;
+                }
+
+                let html = '';
+                // Previous button
+                const isPrevDisabled = this.ledgerPage <= 1;
+                html += `<button class="ds-btn ds-btn-sm ds-btn-ghost py-1 px-2.5 text-xs d-flex align-items-center gap-1" ${isPrevDisabled ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} onclick="ceoDash.goToLedgerPage(${this.ledgerPage - 1})">
+                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Prev
+                </button>`;
+
+                // Page numbers
+                const maxButtons = 5;
+                let startP = Math.max(1, this.ledgerPage - 2);
+                let endP = Math.min(totalPages, startP + maxButtons - 1);
+                if (endP - startP < maxButtons - 1) {
+                    startP = Math.max(1, endP - maxButtons + 1);
+                }
+
+                if (startP > 1) {
+                    html += `<button class="ds-btn ds-btn-sm ds-btn-ghost py-1 px-2 text-xs" onclick="ceoDash.goToLedgerPage(1)">1</button>`;
+                    if (startP > 2) html += `<span class="px-1 text-muted text-xs">...</span>`;
+                }
+
+                for (let i = startP; i <= endP; i++) {
+                    const isActive = i === this.ledgerPage;
+                    html += `<button class="ds-btn ds-btn-sm ${isActive ? 'ds-btn-primary fw-bold' : 'ds-btn-ghost'} py-1 px-2.5 text-xs" onclick="ceoDash.goToLedgerPage(${i})">${i}</button>`;
+                }
+
+                if (endP < totalPages) {
+                    if (endP < totalPages - 1) html += `<span class="px-1 text-muted text-xs">...</span>`;
+                    html += `<button class="ds-btn ds-btn-sm ds-btn-ghost py-1 px-2 text-xs" onclick="ceoDash.goToLedgerPage(${totalPages})">${totalPages}</button>`;
+                }
+
+                // Next button
+                const isNextDisabled = this.ledgerPage >= totalPages;
+                html += `<button class="ds-btn ds-btn-sm ds-btn-ghost py-1 px-2.5 text-xs d-flex align-items-center gap-1" ${isNextDisabled ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} onclick="ceoDash.goToLedgerPage(${this.ledgerPage + 1})">
+                    Next <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                </button>`;
+
+                ctrlEl.innerHTML = html;
+                if (window.lucide) lucide.createIcons();
+            },
+
+            changeLedgerPageSize(newSize) {
+                this.ledgerPageSize = parseInt(newSize, 10) || 10;
+                this.ledgerPage = 1;
+                this.renderLedgerTable();
+            },
+
+            goToLedgerPage(pageNum) {
+                this.ledgerPage = pageNum;
+                this.renderLedgerTable();
             },
 
             filterLedgerProjects() {
                 const query = (document.getElementById('bizLedgerSearch')?.value || '').toLowerCase().trim();
                 if (!this.ledgerProjects) return;
+                this.ledgerPage = 1;
                 if (!query) {
                     this.renderLedgerTable(this.ledgerProjects);
                     return;
@@ -1682,7 +1795,8 @@
             async loadDepartmentPerformance(page = 1) {
                 try {
                     this.currentDeptPage = page;
-                    const res = await api.get(`/ceo/departments?page=${page}&per_page=5&t=` + Date.now());
+                    const perPage = this.deptPageSize || 5;
+                    const res = await api.get(`/ceo/departments?page=${page}&per_page=${perPage}&t=` + Date.now());
 
                     let depts = [];
                     let total = 0;
@@ -1694,20 +1808,26 @@
                         totalPages = res.total_pages;
                     } else if (Array.isArray(res)) {
                         total = res.length;
-                        totalPages = Math.ceil(total / 5) || 1;
-                        depts = res.slice((page - 1) * 5, page * 5);
+                        totalPages = Math.ceil(total / perPage) || 1;
+                        depts = res.slice((page - 1) * perPage, page * perPage);
                     }
 
                     this.renderDepartmentTable(depts, page, total, totalPages);
                 } catch (e) {
                     console.error('[CEO Dash] Department pagination fetch failed:', e);
                     if (this.allDepartments) {
+                        const perPage = this.deptPageSize || 5;
                         const total = this.allDepartments.length;
-                        const totalPages = Math.ceil(total / 5) || 1;
-                        const depts = this.allDepartments.slice((page - 1) * 5, page * 5);
+                        const totalPages = Math.ceil(total / perPage) || 1;
+                        const depts = this.allDepartments.slice((page - 1) * perPage, page * perPage);
                         this.renderDepartmentTable(depts, page, total, totalPages);
                     }
                 }
+            },
+
+            changeDeptPageSize(newSize) {
+                this.deptPageSize = parseInt(newSize, 10) || 5;
+                this.loadDepartmentPerformance(1);
             },
 
             renderDepartmentTable(depts, page = 1, total = 0, totalPages = 1) {
@@ -1761,15 +1881,28 @@
                 }).join('');
 
                 if (pagContainer) {
+                    const perPage = this.deptPageSize || 5;
                     const actualTotal = total || depts.length;
-                    const actualTotalPages = totalPages || Math.ceil(actualTotal / 5) || 1;
-                    const startIndex = Math.min((page - 1) * 5 + 1, actualTotal);
-                    const endIndex = Math.min(page * 5, actualTotal);
+                    const actualTotalPages = totalPages || Math.ceil(actualTotal / perPage) || 1;
+                    const startIndex = Math.min((page - 1) * perPage + 1, actualTotal);
+                    const endIndex = Math.min(page * perPage, actualTotal);
 
                     pagContainer.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
-                            <div class="text-xs text-muted">
-                                Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span> departments
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="text-xs text-muted">
+                                    Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span> departments
+                                </div>
+                                <div class="d-flex align-items-center gap-1 text-xs text-muted">
+                                    <span>Show:</span>
+                                    <select class="ds-input ds-select ds-select-sm py-0 px-2" style="width:auto; min-width:65px; height:28px; font-size:12px; border-radius:6px;" onchange="ceoDash.changeDeptPageSize(this.value)">
+                                        <option value="5" ${perPage === 5 ? 'selected' : ''}>5</option>
+                                        <option value="10" ${perPage === 10 ? 'selected' : ''}>10</option>
+                                        <option value="25" ${perPage === 25 ? 'selected' : ''}>25</option>
+                                        <option value="50" ${perPage === 50 ? 'selected' : ''}>50</option>
+                                    </select>
+                                    <span>per page</span>
+                                </div>
                             </div>
                             <div class="pagination-buttons d-flex gap-1 align-items-center">
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadDepartmentPerformance(${page - 1})">
@@ -1792,8 +1925,9 @@
             async loadTopProjects(page = 1) {
                 try {
                     this.currentTopProjectsPage = page;
+                    const perPage = this.topProjectsPageSize || 4;
                     const search = (document.getElementById('projectSearch')?.value || '').trim();
-                    const res = await api.get(`/ceo/priority-initiatives?page=${page}&per_page=4&search=` + encodeURIComponent(search) + '&t=' + Date.now());
+                    const res = await api.get(`/ceo/priority-initiatives?page=${page}&per_page=${perPage}&search=` + encodeURIComponent(search) + '&t=' + Date.now());
 
                     let projects = [];
                     let total = 0;
@@ -1805,14 +1939,19 @@
                         totalPages = res.total_pages;
                     } else if (Array.isArray(res)) {
                         total = res.length;
-                        totalPages = Math.ceil(total / 4) || 1;
-                        projects = res.slice((page - 1) * 4, page * 4);
+                        totalPages = Math.ceil(total / perPage) || 1;
+                        projects = res.slice((page - 1) * perPage, page * perPage);
                     }
 
                     this.renderTopProjects(projects, page, total, totalPages);
                 } catch (e) {
                     console.error('[CEO Dash] Top Projects pagination fetch failed:', e);
                 }
+            },
+
+            changeTopProjectsPageSize(newSize) {
+                this.topProjectsPageSize = parseInt(newSize, 10) || 4;
+                this.loadTopProjects(1);
             },
 
             renderTopProjects(projects, page = 1, total = 0, totalPages = 1) {
@@ -1857,15 +1996,28 @@
                 }).join('');
 
                 if (pagContainer) {
+                    const perPage = this.topProjectsPageSize || 4;
                     const actualTotal = total || projects.length;
-                    const actualTotalPages = totalPages || Math.ceil(actualTotal / 4) || 1;
-                    const startIndex = Math.min((page - 1) * 4 + 1, actualTotal);
-                    const endIndex = Math.min(page * 4, actualTotal);
+                    const actualTotalPages = totalPages || Math.ceil(actualTotal / perPage) || 1;
+                    const startIndex = Math.min((page - 1) * perPage + 1, actualTotal);
+                    const endIndex = Math.min(page * perPage, actualTotal);
 
                     pagContainer.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
-                            <div class="text-xs text-muted">
-                                Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span> projects
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="text-xs text-muted">
+                                    Showing <span class="fw-semibold text-main">${startIndex}</span> to <span class="fw-semibold text-main">${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span> projects
+                                </div>
+                                <div class="d-flex align-items-center gap-1 text-xs text-muted">
+                                    <span>Show:</span>
+                                    <select class="ds-input ds-select ds-select-sm py-0 px-2" style="width:auto; min-width:65px; height:28px; font-size:12px; border-radius:6px;" onchange="ceoDash.changeTopProjectsPageSize(this.value)">
+                                        <option value="4" ${perPage === 4 ? 'selected' : ''}>4</option>
+                                        <option value="10" ${perPage === 10 ? 'selected' : ''}>10</option>
+                                        <option value="25" ${perPage === 25 ? 'selected' : ''}>25</option>
+                                        <option value="50" ${perPage === 50 ? 'selected' : ''}>50</option>
+                                    </select>
+                                    <span>per page</span>
+                                </div>
                             </div>
                             <div class="pagination-buttons d-flex gap-1 align-items-center">
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadTopProjects(${page - 1})">
@@ -1889,7 +2041,8 @@
             async loadLeaderboard(page = 1) {
                 try {
                     this.currentLeaderboardPage = page;
-                    const res = await api.get(`/ceo/top-contributors?page=${page}&per_page=5&t=` + Date.now());
+                    const perPage = this.leaderboardPageSize || 5;
+                    const res = await api.get(`/ceo/top-contributors?page=${page}&per_page=${perPage}&t=` + Date.now());
 
                     let contributors = [];
                     let total = 0;
@@ -1901,14 +2054,19 @@
                         totalPages = res.total_pages;
                     } else if (Array.isArray(res)) {
                         total = res.length;
-                        totalPages = Math.ceil(total / 5) || 1;
-                        contributors = res.slice((page - 1) * 5, page * 5);
+                        totalPages = Math.ceil(total / perPage) || 1;
+                        contributors = res.slice((page - 1) * perPage, page * perPage);
                     }
 
                     this.renderLeaderboard(contributors, page, total, totalPages);
                 } catch (e) {
                     console.error('[CEO Dash] Leaderboard fetch error:', e);
                 }
+            },
+
+            changeLeaderboardPageSize(newSize) {
+                this.leaderboardPageSize = parseInt(newSize, 10) || 5;
+                this.loadLeaderboard(1);
             },
 
             get3PageWindowHtml(page, totalPages, onClickFnStr, btnStyle = '') {
@@ -1966,15 +2124,27 @@
                 }).join('');
 
                 if (pagContainer) {
+                    const perPage = this.leaderboardPageSize || 5;
                     const actualTotal = total || contributors.length;
-                    const actualTotalPages = totalPages || Math.ceil(actualTotal / 5) || 1;
-                    const startIndex = Math.min((page - 1) * 5 + 1, actualTotal);
-                    const endIndex = Math.min(page * 5, actualTotal);
+                    const actualTotalPages = totalPages || Math.ceil(actualTotal / perPage) || 1;
+                    const startIndex = Math.min((page - 1) * perPage + 1, actualTotal);
+                    const endIndex = Math.min(page * perPage, actualTotal);
 
                     pagContainer.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center px-3 py-2" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
-                            <div class="text-xs text-muted" style="font-size: 0.75rem;">
-                                Showing <span class="fw-semibold text-main">${startIndex}-${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2" style="border-top: 1px solid var(--ds-border-color); background: rgba(0,0,0,0.01);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="text-xs text-muted" style="font-size: 0.75rem;">
+                                    Showing <span class="fw-semibold text-main">${startIndex}-${endIndex}</span> of <span class="fw-semibold text-main">${actualTotal}</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1 text-xs text-muted">
+                                    <span style="font-size: 0.75rem;">Show:</span>
+                                    <select class="ds-input ds-select ds-select-sm py-0 px-1" style="width:auto; min-width:55px; height:24px; font-size:11px; border-radius:4px;" onchange="ceoDash.changeLeaderboardPageSize(this.value)">
+                                        <option value="5" ${perPage === 5 ? 'selected' : ''}>5</option>
+                                        <option value="10" ${perPage === 10 ? 'selected' : ''}>10</option>
+                                        <option value="25" ${perPage === 25 ? 'selected' : ''}>25</option>
+                                        <option value="50" ${perPage === 50 ? 'selected' : ''}>50</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="pagination-buttons d-flex gap-1 align-items-center">
                                 <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" style="padding: 2px 6px;" ${page === 1 ? 'disabled' : ''} onclick="ceoDash.loadLeaderboard(${page - 1})">

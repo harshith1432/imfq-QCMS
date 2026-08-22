@@ -315,7 +315,7 @@
 
             let filtered = this.allDepts;
             if (plantVal) {
-                filtered = filtered.filter(d => String(d.plant_id) === String(plantVal));
+                filtered = filtered.filter(d => !d.plant_id || String(d.plant_id) === String(plantVal));
             }
             if (q) {
                 filtered = filtered.filter(d => d.name.toLowerCase().includes(q));

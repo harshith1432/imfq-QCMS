@@ -138,6 +138,9 @@ def get_all_projects():
         creator = User.query.get(p.creator_id) if p.creator_id else None
         leader = User.query.get(p.team_leader_id) if p.team_leader_id else creator
         dept = Department.query.get(p.department_id) if p.department_id else None
+        dept_name = dept.name if dept else (p.plant or "General")
+        plant_name = p.plant or (dept.plant.name if dept and dept.plant else "Main Plant")
+        plant_id = (dept.plant_id if dept and dept.plant_id else None)
         result.append({
             "id": p.id,
             "uid": p.project_uid,
@@ -145,8 +148,10 @@ def get_all_projects():
             "stage": p.current_stage,
             "status": p.status,
             "team_leader": leader.full_name or leader.username if leader else "Unknown",
-            "dept": dept.name if dept else (p.plant or "General"),
-            "plant": p.plant or "Main Plant",
+            "dept": dept_name,
+            "department_id": p.department_id,
+            "plant": plant_name,
+            "plant_id": plant_id,
             "created_at": p.created_at.isoformat() + "Z" if p.created_at else None
         })
     return jsonify(result)
@@ -172,13 +177,19 @@ def get_assisted_history():
         req_user = User.query.get(r.user_id) if r.user_id else None
         proj = Project.query.get(r.project_id) if r.project_id else None
         dept = Department.query.get(proj.department_id) if (proj and proj.department_id) else None
+        dept_name = dept.name if dept else ((proj.plant if proj and proj.plant else "General"))
+        plant_name = (proj.plant or (dept.plant.name if dept and dept.plant else "Main Plant")) if proj else "Main Plant"
+        plant_id = (dept.plant_id if dept and dept.plant_id else None)
         
         res.append({
             "id": r.id,
             "project_id": r.project_id,
             "project_uid": proj.project_uid if proj else "PRJ-???",
             "project_title": proj.title if proj else "Unknown",
-            "dept": dept.name if dept else (proj.plant if proj else "General"),
+            "dept": dept_name,
+            "department_id": proj.department_id if proj else None,
+            "plant": plant_name,
+            "plant_id": plant_id,
             "stage_id": r.stage_id,
             "requested_by": (req_user.full_name or req_user.username) if req_user else "Unknown User",
             "user_email": req_user.email if req_user else "",
@@ -702,13 +713,21 @@ def get_assistance_requests():
 
     res = []
     for r in requests:
-        req_user = User.query.get(r.user_id)
-        proj = Project.query.get(r.project_id)
+        req_user = User.query.get(r.user_id) if r.user_id else None
+        proj = Project.query.get(r.project_id) if r.project_id else None
+        dept = Department.query.get(proj.department_id) if (proj and proj.department_id) else None
+        dept_name = dept.name if dept else ((proj.plant if proj and proj.plant else "General"))
+        plant_name = (proj.plant or (dept.plant.name if dept and dept.plant else "Main Plant")) if proj else "Main Plant"
+        plant_id = (dept.plant_id if dept and dept.plant_id else None)
         res.append({
             "id": r.id,
             "project_id": r.project_id,
             "project_uid": proj.project_uid if proj else "PRJ-???",
             "project_title": proj.title if proj else "Unknown",
+            "dept": dept_name,
+            "department_id": proj.department_id if proj else None,
+            "plant": plant_name,
+            "plant_id": plant_id,
             "stage_id": r.stage_id,
             "user_name": (req_user.full_name or req_user.username) if req_user else "Unknown User",
             "user_email": req_user.email if req_user else "",

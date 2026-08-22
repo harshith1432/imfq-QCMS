@@ -999,7 +999,9 @@ def list_enquiries():
     total_count = SalesEnquiry.query.count()
     new_count = SalesEnquiry.query.filter_by(status='New').count()
     contacted_count = SalesEnquiry.query.filter_by(status='Contacted').count()
+    in_progress_count = SalesEnquiry.query.filter_by(status='In Progress').count()
     converted_count = SalesEnquiry.query.filter_by(status='Converted').count()
+    closed_count = SalesEnquiry.query.filter_by(status='Closed').count()
 
     paginated = query.order_by(SalesEnquiry.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
@@ -1026,7 +1028,9 @@ def list_enquiries():
             "total": total_count,
             "new": new_count,
             "contacted": contacted_count,
-            "converted": converted_count
+            "in_progress": in_progress_count,
+            "converted": converted_count,
+            "closed": closed_count
         },
         "pagination": {
             "total": paginated.total,

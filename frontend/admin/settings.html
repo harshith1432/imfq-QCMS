@@ -288,13 +288,18 @@
                                         <div class="col-md-6">
                                             <div class="ds-field">
                                                 <label class="ds-label" data-i18n="settings.profile.industry">INDUSTRY SECTOR</label>
-                                                <select class="ds-input ds-select" id="org_industry">
+                                                <select class="ds-input ds-select" id="org_industry" onchange="toggleOrgOtherIndustry(this.value)">
                                                     <option value="Manufacturing">Manufacturing</option>
+                                                    <option value="Healthcare">Healthcare</option>
+                                                    <option value="IT/Software">IT/Software</option>
                                                     <option value="Automotive">Automotive</option>
-                                                    <option value="Aerospace">Aerospace</option>
-                                                    <option value="Pharmaceutical">Pharmaceutical</option>
-                                                    <option value="Technology">Technology</option>
+                                                    <option value="Finance">Finance</option>
+                                                    <option value="Education">Education</option>
+                                                    <option value="Other">Other</option>
                                                 </select>
+                                                <div id="orgOtherIndustryContainer" class="mt-2" style="display: none;">
+                                                    <input type="text" class="ds-input" id="org_other_industry" placeholder="Please specify your industry (e.g. Aerospace, Energy)...">
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -4878,8 +4883,22 @@ console.log(data);
                     }
                     // Profile
                     const orgName = document.getElementById('org_name'); if (orgName) orgName.value = settings.name || '';
-                    const orgCode = document.getElementById('org_code'); if (orgCode) orgCode.value = settings.org_code || settings.code || '';
-                    const orgInd = document.getElementById('org_industry'); if (orgInd) orgInd.value = settings.industry || 'Manufacturing';
+                    const orgInd = document.getElementById('org_industry');
+                    const orgOtherIndContainer = document.getElementById('orgOtherIndustryContainer');
+                    const orgOtherInd = document.getElementById('org_other_industry');
+                    const standardIndustries = ['Manufacturing', 'Healthcare', 'IT/Software', 'Automotive', 'Finance', 'Education'];
+                    if (orgInd) {
+                        const currentInd = (settings.industry || 'Manufacturing').trim();
+                        if (standardIndustries.includes(currentInd)) {
+                            orgInd.value = currentInd;
+                            if (orgOtherIndContainer) orgOtherIndContainer.style.display = 'none';
+                            if (orgOtherInd) orgOtherInd.value = '';
+                        } else {
+                            orgInd.value = 'Other';
+                            if (orgOtherIndContainer) orgOtherIndContainer.style.display = 'block';
+                            if (orgOtherInd) orgOtherInd.value = currentInd === 'Other' ? '' : currentInd;
+                        }
+                    }
                     const orgAdmin = document.getElementById('org_admin_name'); if (orgAdmin) orgAdmin.value = settings.admin_name || '';
                     const orgWeb = document.getElementById('org_website'); if (orgWeb) orgWeb.value = settings.website || '';
                     const orgEmail = document.getElementById('org_email'); if (orgEmail) orgEmail.value = settings.email || '';
@@ -5402,9 +5421,13 @@ ET`;
                 return;
             }
 
+            const selIndustry = getV('org_industry');
+            const otherIndVal = (document.getElementById('org_other_industry')?.value || '').trim();
+            const finalIndustry = (selIndustry === 'Other' && otherIndVal) ? otherIndVal : selIndustry;
+
             const payload = {
                 name: getV('org_name'),
-                industry: getV('org_industry'),
+                industry: finalIndustry,
                 admin_name: getV('org_admin_name'),
                 website: getV('org_website'),
                 email: getV('org_email'),
@@ -5855,17 +5878,20 @@ ET`;
 
             let html = modules.map(m => {
                 let cells = roles.map(r => {
-                    const isChecked = perms[r] && perms[r][m.key] === true;
+                    const isLockedSystemDefault = (r === 'Admin' && m.key === 'settings');
+                    const isChecked = isLockedSystemDefault ? true : (perms[r] && perms[r][m.key] === true);
                     return `
                         <td class="text-center py-2.5 px-2">
-                            <div class="form-check form-switch d-inline-block m-0">
+                            <div class="form-check form-switch d-inline-block m-0" ${isLockedSystemDefault ? 'title="System Default: Admin access to Settings & Billing cannot be disabled."' : ''}>
                                 <input class="form-check-input rbac-toggle-input" 
                                        type="checkbox" 
                                        data-role="${r}" 
                                        data-module="${m.key}" 
                                        ${isChecked ? 'checked' : ''}
-                                       style="cursor:pointer; width:38px; height:20px;">
+                                       ${isLockedSystemDefault ? 'disabled' : ''}
+                                       style="${isLockedSystemDefault ? 'cursor:not-allowed; opacity:0.85; filter:grayscale(0.1);' : 'cursor:pointer;'} width:38px; height:20px;">
                             </div>
+                            ${isLockedSystemDefault ? '<div class="text-xxs text-muted mt-0.5" style="font-size:9.5px; font-weight:600;"><i data-lucide="lock" style="width:10px;height:10px;display:inline;vertical-align:-1px;"></i> System Default</div>' : ''}
                         </td>
                     `;
                 }).join('');
@@ -5904,6 +5930,10 @@ ET`;
                 }
             });
 
+            // Ensure Admin Settings is always true
+            if (!newPerms['Admin']) newPerms['Admin'] = {};
+            newPerms['Admin']['settings'] = true;
+
             try {
                 const res = await api.put('/admin/role-permissions', { permissions: newPerms });
                 if (res && res.status === 'success') {
@@ -5932,7 +5962,7 @@ ET`;
         },
 
         toggleColumnPermissions(roleName) {
-            const inputs = document.querySelectorAll(`.rbac-toggle-input[data-role="${roleName}"]`);
+            const inputs = document.querySelectorAll(`.rbac-toggle-input[data-role="${roleName}"]:not(:disabled)`);
             if (!inputs.length) return;
             const allChecked = Array.from(inputs).every(i => i.checked);
             inputs.forEach(i => { i.checked = !allChecked; });
@@ -7069,6 +7099,17 @@ ET`;
             } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send" style="width: 14px; height: 14px;" class="me-1"></i> Submit Extension Request'; }
                 if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function toggleOrgOtherIndustry(val) {
+            const container = document.getElementById('orgOtherIndustryContainer');
+            const input = document.getElementById('org_other_industry');
+            if (container) {
+                container.style.display = (val === 'Other') ? 'block' : 'none';
+            }
+            if (val === 'Other' && input) {
+                input.focus();
             }
         }
     </script>

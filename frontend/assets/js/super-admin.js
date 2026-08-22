@@ -10,6 +10,16 @@ const SuperAdmin = {
     saSubRole: 'Owner',
     _permissions: null,   // { section: { can_read, can_write } }
 
+    formatINR(val, maxDecimals = 2) {
+        if (val === null || val === undefined || val === '') return '0';
+        const num = typeof val === 'number' ? val : (parseFloat(String(val).replace(/[^0-9.-]+/g, '')) || 0);
+        const hasDecimals = num % 1 !== 0;
+        return num.toLocaleString('en-IN', {
+            minimumFractionDigits: hasDecimals ? (maxDecimals !== undefined ? maxDecimals : 2) : 0,
+            maximumFractionDigits: maxDecimals !== undefined ? maxDecimals : 2
+        });
+    },
+
     async init() {
         console.log("Super Admin Controller Initializing...");
 
@@ -1647,7 +1657,7 @@ const SuperAdmin = {
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="check-circle" style="width:18px;height:18px;color:#22c55e;"></i>
                         </div>
-                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.active_organizations || 0}</div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.paid_orgs !== undefined ? data.paid_orgs : (data.active_organizations || 0)}</div>
                         <div class="text-muted" style="font-size:11px;margin-top:2px;">Paid Organizations</div>
                     </div>
 
@@ -1681,7 +1691,7 @@ const SuperAdmin = {
                             <i data-lucide="x-circle" style="width:18px;height:18px;color:#ef4444;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.expired_licenses || 0}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Expired Plans</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Expired Subscriptions</div>
                     </div>
 
                     <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('storage')">
@@ -1702,7 +1712,7 @@ const SuperAdmin = {
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="credit-card" style="width:18px;height:18px;color:#22c55e;"></i>
                         </div>
-                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">₹${(data.revenue_in_period || data.revenue_this_month || 0).toLocaleString('en-IN')}</div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">₹${SuperAdmin.formatINR(data.revenue_in_period || data.revenue_this_month || 0)}</div>
                         <div class="text-muted" style="font-size:11px;margin-top:2px;">Revenue (${data.range_label || 'Selected Period'})</div>
                     </div>
 
@@ -1728,8 +1738,8 @@ const SuperAdmin = {
                 const paidOrgs = data.paid_orgs !== undefined ? data.paid_orgs : (data.active_organizations || 0);
                 const growthVal = data.growth_pct !== undefined ? data.growth_pct : 0;
 
-                document.getElementById('dashMrr').textContent = `₹${mrr.toLocaleString('en-IN')}`;
-                document.getElementById('dashArr').textContent = `₹${arr.toLocaleString('en-IN')}`;
+                document.getElementById('dashMrr').textContent = `₹${SuperAdmin.formatINR(mrr)}`;
+                document.getElementById('dashArr').textContent = `₹${SuperAdmin.formatINR(arr)}`;
                 document.getElementById('dashPaidOrgs').textContent = paidOrgs;
                 document.getElementById('dashGrowth').textContent = `${growthVal >= 0 ? '+' : ''}${growthVal}%`;
 
@@ -2077,7 +2087,7 @@ const SuperAdmin = {
                 ${QCMS.kpiCardWithTooltip('Inactive (20d)', kpi.inactive_20d || 0, 'user-x', 'slate', 'Tenants registered over 20 days ago with no login activity in the last 20 days.', '', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Inactive 20d\')"')}
                 ${QCMS.kpiCardWithTooltip('On Hold', kpi.suspended, 'pause-circle', 'red', 'Tenants suspended from platform access.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Suspended\')"')}
                 ${QCMS.kpiCardWithTooltip('Enterprise', kpi.enterprise, 'crown', 'purple', 'Tenants using the Enterprise SaaS plan.', '', 'onclick="SuperAdmin.filterByKpi(\'plan\', \'Enterprise\')"')}
-                ${QCMS.kpiCardWithTooltip('Expired', kpi.expired, 'x-circle', 'gray', 'Tenants whose trial or subscription has expired.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Expired\')"')}
+                ${QCMS.kpiCardWithTooltip('Expired Subscription', kpi.expired, 'x-circle', 'gray', 'Tenants whose trial or subscription has expired.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Expired\')"')}
             `;
             // Force all cards onto a responsive grid with clean spacing
             grid.style.display = 'grid';
@@ -2098,21 +2108,32 @@ const SuperAdmin = {
         const elStatus = document.getElementById('filterStatus');
         const elFeature = document.getElementById('filterFeature');
         const elLicStatus = document.getElementById('filterLicenseStatus');
+        const titleEl = document.getElementById('registeredOrgsCardTitle') || document.querySelector('#organizationsView .card-title');
 
         if (type === 'all') {
             if (elPlan) elPlan.value = '';
             if (elStatus) elStatus.value = '';
             if (elFeature) elFeature.value = '';
             if (elLicStatus) elLicStatus.value = '';
+            if (titleEl) titleEl.textContent = 'Registered Organizations';
         } else if (type === 'status') {
             if (elStatus) elStatus.value = value;
+            if (titleEl) {
+                if (value === 'Expired') titleEl.textContent = 'Expired Subscription Organizations';
+                else if (value === 'Active') titleEl.textContent = 'Paid Organizations';
+                else if (value === 'Trialing') titleEl.textContent = 'On Trial Organizations';
+                else if (value === 'Suspended') titleEl.textContent = 'On Hold Organizations';
+                else titleEl.textContent = `${value} Organizations`;
+            }
         } else if (type === 'plan') {
             if (elPlan) elPlan.value = value;
+            if (titleEl) titleEl.textContent = `${value} Plan Organizations`;
         } else if (type === 'feature') {
             if (elFeature) elFeature.value = value;
         } else if (type === 'license_status') {
             if (elStatus) elStatus.value = value;
             if (elLicStatus) elLicStatus.value = value;
+            if (titleEl) titleEl.textContent = `${value} Organizations`;
         }
         this.currentPage = 1;
         this.loadOrganizations();
@@ -2121,6 +2142,26 @@ const SuperAdmin = {
     renderCompanies(companies) {
         const tbody = document.getElementById('companiesBody');
         const countEl = document.getElementById('orgTableCount');
+        const titleEl = document.getElementById('registeredOrgsCardTitle') || document.querySelector('#organizationsView .card-title');
+        const currentStatus = document.getElementById('filterStatus')?.value || '';
+        const currentPlan = document.getElementById('filterPlan')?.value || '';
+
+        if (titleEl) {
+            if (currentStatus === 'Expired') {
+                titleEl.textContent = 'Expired Subscription Organizations';
+            } else if (currentStatus === 'Active') {
+                titleEl.textContent = 'Paid Organizations';
+            } else if (currentStatus === 'Trialing') {
+                titleEl.textContent = 'On Trial Organizations';
+            } else if (currentStatus === 'Suspended') {
+                titleEl.textContent = 'On Hold Organizations';
+            } else if (currentPlan) {
+                titleEl.textContent = `${currentPlan} Plan Organizations`;
+            } else {
+                titleEl.textContent = 'Registered Organizations';
+            }
+        }
+
         if (countEl) countEl.textContent = `${this.pagination?.total || companies.length} organizations`;
 
         if (!companies || companies.length === 0) {
@@ -2133,9 +2174,19 @@ const SuperAdmin = {
         const search = document.getElementById('companySearch')?.value || '';
 
         tbody.innerHTML = companies.map(org => {
-            const displayPlan = org.plan_name || org.plan || org.plan_type;
-            const planColor = planColors[org.plan_category] || planColors[displayPlan] || 'blue';
-            const statColor = statusColors[org.status] || 'gray';
+            const displayPlan = org.plan_name || org.plan || org.plan_type || 'Trial';
+            const isPaidPlan = displayPlan && !displayPlan.toLowerCase().includes('trial');
+            const planColor = planColors[org.plan_category] || planColors[displayPlan] || (isPaidPlan ? 'blue' : 'amber');
+            
+            let effectiveStatus = org.status || 'Active';
+            if (isPaidPlan && (effectiveStatus === 'Trialing' || effectiveStatus === 'Trial' || effectiveStatus === 'On Trial')) {
+                effectiveStatus = 'Active';
+            }
+            const statColor = statusColors[effectiveStatus] || (isPaidPlan ? 'green' : 'orange');
+            const displayStatusText = (effectiveStatus === 'Trialing' || effectiveStatus === 'Trial' || effectiveStatus === 'On Trial')
+                ? 'On Trial'
+                : (effectiveStatus === 'Suspended' ? 'On Hold' : effectiveStatus);
+
             const trialInfo = org.trial_days_left !== null && org.trial_days_left !== undefined
                 ? `<div class="fw-bold" style="font-size: 13px; line-height: 1.4; color: ${org.trial_days_left <= 7 ? '#dc2626' : '#334155'};">${org.trial_days_left}d left</div>`
                 : (org.trial_ends_at ? `<div style="font-size: 12px; color: #475569;">${QCMS.formatDate(org.trial_ends_at)}</div>` : '<span style="font-size: 12px; color: #94a3b8;">—</span>');
@@ -2160,7 +2211,7 @@ const SuperAdmin = {
                 <td class="col-users">
                     <div class="fw-bold" style="font-size:13px;">${org.user_count}<span class="fw-normal" style="color:#64748b;">/${(!org.max_users || org.max_users >= 99999) ? '∞' : org.max_users}</span></div>
                 </td>
-                <td class="col-status"><span class="ds-badge ${statColor}">${org.status === 'Trialing' || org.status === 'Trial' ? 'On Trial' : (org.status === 'Suspended' ? 'On Hold' : org.status)}</span></td>
+                <td class="col-status"><span class="ds-badge ${statColor}">${displayStatusText}</span></td>
                 <td class="col-trial">${trialInfo}</td>
                 <td class="text-end">
                     <div class="dropdown">
@@ -2276,10 +2327,10 @@ const SuperAdmin = {
         if (!grid) return;
         
         const kpis = [
-            { label: 'Total Revenue', value: `₹${(data.total_revenue || 0).toLocaleString('en-IN')}`, icon: 'dollar-sign', color: '#10b981', accent: '#10b981' },
-            { label: 'Monthly Rate (MRR)', value: `₹${(data.monthly_revenue || 0).toLocaleString('en-IN')}`, icon: 'trending-up', color: '#3b82f6', accent: '#3b82f6' },
+            { label: 'Total Revenue', value: `₹${SuperAdmin.formatINR(data.total_revenue || 0)}`, icon: 'dollar-sign', color: '#10b981', accent: '#10b981' },
+            { label: 'Monthly Rate (MRR)', value: `₹${SuperAdmin.formatINR(data.monthly_revenue || 0)}`, icon: 'trending-up', color: '#3b82f6', accent: '#3b82f6' },
             { label: 'Unpaid Invoices', value: data.overdue_invoices || 0, icon: 'alert-triangle', color: '#ef4444', accent: '#ef4444' },
-            { label: 'Payment Due', value: `₹${(data.outstanding_amount || 0).toLocaleString('en-IN')}`, icon: 'clock', color: '#f59e0b', accent: '#f59e0b' }
+            { label: 'Payment Due', value: `₹${SuperAdmin.formatINR(data.outstanding_amount || 0)}`, icon: 'clock', color: '#f59e0b', accent: '#f59e0b' }
         ];
 
         grid.innerHTML = kpis.map(k => `
@@ -4440,16 +4491,9 @@ const SuperAdmin = {
                 <td><span class="audit-risk-badge ${riskClass}">${log.risk_level}</span></td>
                 <td><span class="plan-status-badge ${statusClass}">${log.status}</span></td>
                 <td class="text-end">
-                    <div class="d-inline-flex align-items-center gap-1">
-                        ${hasDiff ? `
-                            <button class="ds-btn ds-btn-sm py-1 px-2 text-xs d-inline-flex align-items-center gap-1" style="background:rgba(99,102,241,0.1); color:#6366f1; border:1px solid rgba(99,102,241,0.25);" onclick="SuperAdmin.openAuditDiffModal(${log.id})" title="View Past vs Current Modified Data">
-                                <i data-lucide="git-compare" style="width:12px;height:12px;"></i> Diff
-                            </button>
-                        ` : ''}
-                        <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" onclick="SuperAdmin.openAuditDrawer(${log.id})" title="View Full Audit Telemetry">
-                            <i data-lucide="eye" style="width:14px;"></i>
-                        </button>
-                    </div>
+                    <button class="ds-btn ds-btn-ghost ds-btn-icon ds-btn-sm" onclick="SuperAdmin.openAuditDrawer(${log.id})" title="View Full Audit Telemetry">
+                        <i data-lucide="eye" style="width:14px;"></i>
+                    </button>
                 </td>
             </tr>`;
         }).join('');
@@ -4507,13 +4551,21 @@ const SuperAdmin = {
     renderSessionsPagination(pag) {
         const info = document.getElementById('superSessionsPaginationInfo');
         const controls = document.getElementById('superSessionsPaginationControls');
+        const pSizeSelect = document.getElementById('superSessionPageSize');
+        if (pSizeSelect) pSizeSelect.value = String(pag.per_page || this.sessionFilters.per_page || 10);
         if (!info || !controls) return;
         
         const start = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
         const end = Math.min(pag.page * pag.per_page, pag.total);
-        info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${pag.total} sessions` : 'Showing 0 of 0 sessions';
+        info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${(pag.total || 0).toLocaleString('en-IN')} sessions` : 'Showing 0 of 0 sessions';
         
         controls.innerHTML = this.buildFourPagePagination(pag.page, pag.pages || 1, 'SuperAdmin.changeSessionPage');
+    },
+
+    changeSessionPageSize(v) {
+        this.sessionFilters.per_page = parseInt(v, 10) || 10;
+        this.sessionFilters.page = 1;
+        this.loadAuditSessions();
     },
 
     changeSessionPage(p) {
@@ -4833,13 +4885,21 @@ const SuperAdmin = {
     renderAuditPagination(pag) {
         const info = document.getElementById('superPaginationInfo');
         const controls = document.getElementById('superPaginationControls');
+        const pSizeSelect = document.getElementById('superAuditPageSize');
+        if (pSizeSelect) pSizeSelect.value = String(pag.per_page || this.auditFilters.per_page || 10);
         if (!info || !controls) return;
         
         const start = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
         const end = Math.min(pag.page * pag.per_page, pag.total);
-        info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${pag.total} events` : 'Showing 0 of 0 events';
+        info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${(pag.total || 0).toLocaleString('en-IN')} events` : 'Showing 0 of 0 events';
         
         controls.innerHTML = this.buildFourPagePagination(pag.page, pag.pages || 1, 'SuperAdmin.changeAuditPage');
+    },
+
+    changeAuditPageSize(v) {
+        this.auditFilters.per_page = parseInt(v, 10) || 10;
+        this.auditFilters.page = 1;
+        this.loadLogs();
     },
 
     changeAuditPage(p) {
@@ -11419,7 +11479,7 @@ const StageWeightageManager = {
             const cumStr = (cumulative % 1 === 0) ? cumulative.toFixed(0) : cumulative.toFixed(1);
 
             return `
-            <div class="p-3 rounded-3" style="background: var(--ds-card-bg, #fff); border: 1px solid var(--ds-border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div class="p-3 rounded-3 stage-weightage-row" style="border: 1px solid var(--ds-border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
                 <div class="row align-items-center g-3">
                     <!-- Stage Info -->
                     <div class="col-lg-4 col-md-5 col-12">
@@ -11437,7 +11497,7 @@ const StageWeightageManager = {
                     <!-- Slider Control -->
                     <div class="col-lg-4 col-md-4 col-7">
                         <div class="d-flex align-items-center gap-2">
-                            <input type="range" class="form-range" min="0" max="50" step="0.5" 
+                            <input type="range" class="form-range stage-weightage-slider" min="0" max="50" step="0.5" 
                                    value="${val}" 
                                    id="rangeStage_${idx}" 
                                    oninput="StageWeightageManager.onSliderChange(${idx}, this.value)">
@@ -11449,8 +11509,8 @@ const StageWeightageManager = {
                         <div class="d-flex align-items-center justify-content-end gap-2">
                             <!-- Unified Single Box for Weightage Number & % -->
                             <div class="position-relative" style="width: 85px;">
-                                <input type="number" class="form-control form-control-sm text-start fw-bold text-xs" 
-                                       style="padding-right: 22px; height: 32px; border-radius: 8px; font-weight: 700; background: var(--ds-surface-secondary, #fff);" 
+                                <input type="number" class="form-control form-control-sm text-start fw-bold text-xs stage-weightage-num-input" 
+                                       style="padding-right: 22px; height: 32px; border-radius: 8px; font-weight: 700;" 
                                        min="0" max="100" step="0.1" 
                                        value="${val}" 
                                        id="numStage_${idx}" 
@@ -11458,7 +11518,7 @@ const StageWeightageManager = {
                                 <span class="position-absolute text-muted fw-bold" 
                                       style="right: 8px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 11px;">%</span>
                             </div>
-                            <span class="badge bg-light text-secondary text-xxs border px-2 py-1" id="cumStage_${idx}" title="Cumulative progress when completing this stage">
+                            <span class="badge cum-stage-badge text-xxs border px-2 py-1" id="cumStage_${idx}" title="Cumulative progress when completing this stage">
                                 Cum: ${cumStr}%
                             </span>
                         </div>

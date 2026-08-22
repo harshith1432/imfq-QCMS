@@ -1030,7 +1030,8 @@ def login():
             ip_address=ip_addr,
             location=loc,
             status='Active',
-            login_time=datetime.utcnow()
+            login_time=datetime.utcnow(),
+            last_activity=datetime.utcnow()
         )
         db.session.add(new_sess)
         db.session.commit()
@@ -1441,6 +1442,56 @@ def logout():
         )
         db.session.commit()
     return jsonify({"msg": "Successfully logged out"}), 200
+
+@auth_bp.route('/heartbeat', methods=['POST', 'GET'])
+@jwt_required()
+def auth_heartbeat():
+    """
+    Heartbeat ping from active frontend client to record ongoing user movement and refresh last_activity.
+    If session has had no user movement for >= 2 hours, it is terminated and returns 401.
+    """
+    try:
+        from app.presentation.routes.audit_routes import cleanup_inactive_sessions
+        from app.infrastructure.database.models.models import SaaSUserSession
+        from flask_jwt_extended import get_jwt
+        
+        user_id = int(get_jwt_identity())
+        claims = get_jwt()
+        session_id = claims.get('session_id') if isinstance(claims, dict) else None
+        
+        now = datetime.utcnow()
+        cutoff = now - timedelta(hours=2)
+        
+        sess = None
+        if session_id:
+            sess = SaaSUserSession.query.filter_by(session_id=session_id).first()
+        if not sess:
+            sess = SaaSUserSession.query.filter_by(user_id=user_id, status='Active').order_by(SaaSUserSession.login_time.desc()).first()
+            
+        if sess:
+            ref_time = sess.last_activity or sess.login_time
+            if sess.status == 'Active' and ref_time and ref_time < cutoff:
+                # 2-hour continuous inactivity exceeded
+                sess.status = 'Expired'
+                sess.logout_time = ref_time + timedelta(hours=2)
+                if sess.login_time:
+                    sess.session_duration = max(0, int((sess.logout_time - sess.login_time).total_seconds()))
+                db.session.commit()
+                return jsonify({"status": "expired", "message": "Session terminated due to 2 hours of inactivity."}), 401
+                
+            # User is actively working: keep/set status to Active and refresh last_activity
+            sess.status = 'Active'
+            sess.last_activity = now
+            db.session.commit()
+            return jsonify({
+                "status": "active",
+                "session_id": sess.session_id,
+                "last_activity": now.isoformat() + "Z"
+            }), 200
+            
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 def validate_password_complexity(password):
     import re

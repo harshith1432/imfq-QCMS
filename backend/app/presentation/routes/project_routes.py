@@ -74,10 +74,15 @@ def list_departments():
     if not user:
         return jsonify({"msg": "User not found"}), 404
         
+    org_id = request.args.get('org_id', type=int)
     plant_id = request.args.get('plant_id')
     plant_name = request.args.get('plant_name')
     
-    q = Department.query.filter_by(org_id=user.org_id)
+    if user.role and user.role.name == 'SuperAdmin':
+        target_org = org_id or user.org_id
+        q = Department.query.filter_by(org_id=target_org) if target_org else Department.query
+    else:
+        q = Department.query.filter_by(org_id=user.org_id)
     
     if plant_id:
         try:
@@ -91,7 +96,7 @@ def list_departments():
             q = q.filter(db.or_(Department.plant_id.in_(p_ids), Department.plant_id.is_(None)))
         else:
             from app.infrastructure.database.models.models import Plant
-            q = q.filter(Department.plant.has(Plant.name.ilike(f"%{plant_name}%")))
+            q = q.filter(db.or_(Department.plant.has(Plant.name.ilike(f"%{plant_name}%")), Department.plant_id.is_(None)))
 
     depts = q.order_by(Department.name).all()
     return jsonify([{"id": d.id, "name": d.name, "plant_id": d.plant_id} for d in depts]), 200
@@ -2099,13 +2104,19 @@ def upload_project_evidence():
         'png', 'jpg', 'jpeg', 'gif', 
         'mp4', 'mkv', 'avi', 'webm', 'mov'
     )
-    if ext not in allowed_extensions:
-        return jsonify({"msg": f"File type not supported. Allowed types: {', '.join(allowed_extensions)}"}), 400
-        
+    import os
     from werkzeug.utils import secure_filename
     from datetime import datetime
-    import os
     from flask import current_app
+
+    # Check file size (Strict 2MB limit: 2 * 1024 * 1024 bytes)
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
+    if file_size > MAX_FILE_SIZE:
+        size_mb = round(file_size / (1024 * 1024), 2)
+        return jsonify({"msg": f"File size exceeds 2MB limit ({size_mb} MB). Please upload a document up to 2MB."}), 400
     
     filename = secure_filename(file.filename)
     filename = f"ev_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"

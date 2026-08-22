@@ -68,15 +68,40 @@ const Stage8 = {
                                 </div>
                                 
                                 <div class="col-md-6">
-                                    <label class="ds-label ds-tooltip-trigger" title="Purpose: Core objective of implementing this standard procedure" for="s8_sop_purpose">Section 1: Purpose</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="SOP Owner / Author: Process owner responsible for drafting standard" for="s8_sop_owner">SOP Owner / Author</label>
+                                    <input type="text" id="s8_sop_owner" class="ds-input" placeholder="e.g. Rajesh Kumar (Process Owner)" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="ds-label ds-tooltip-trigger" title="SOP Approver: Authority responsible for approving and releasing this SOP" for="s8_sop_approver">SOP Approver Name</label>
+                                    <input type="text" id="s8_sop_approver" class="ds-input" placeholder="e.g. Amit Sharma (Quality Head / Plant Manager)" required>
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="ds-label ds-tooltip-trigger" title="Attach Annexure or Supporting SOP Document (PDF, DOCX, XLSX, max 2MB)" for="s8_sop_attachment">SOP Attachment / Annexure Document</label>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <input type="text" id="s8_sop_attachment" class="ds-input" placeholder="Attach document link or upload file (Max 2MB)" style="flex-grow:1;">
+                                        <label class="ds-btn ds-btn-outline ds-btn-sm d-flex align-items-center gap-1 py-2 px-3 mb-0" style="cursor:pointer; white-space:nowrap; border-radius:10px;" title="Upload Annexure / SOP Document (Max 2MB)">
+                                            <i data-lucide="upload" style="width:14px;height:14px;"></i>
+                                            <span>Upload Annexure</span>
+                                            <input type="file" style="display: none;" accept=".pdf,.docx,.xlsx,.xls,.png,.jpg,.jpeg" onchange="StageModules[8].handleAnnexureUpload(this)">
+                                        </label>
+                                        <a id="s8_sop_attachment_view" href="#" target="_blank" class="ds-btn ds-btn-ghost text-primary p-2 d-none" title="Open Attached Document">
+                                            <i data-lucide="external-link" style="width:15px;height:15px;"></i>
+                                        </a>
+                                    </div>
+                                    <div class="form-text text-muted mt-1" style="font-size:0.75rem;">Upload documents size is 2MB (PDF, DOCX, XLSX, JPG, PNG)</div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="ds-label ds-tooltip-trigger" title="Purpose: Core objective of implementing this standard procedure" for="s8_sop_purpose">Section 8.1.1: Purpose</label>
                                     <textarea id="s8_sop_purpose" class="ds-input ds-textarea" rows="2" required placeholder="e.g. To establish standard pressure settings and PM guidelines to eliminate wire crimping faults."></textarea>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="ds-label ds-tooltip-trigger" title="Scope: Boundaries and operational areas covered by procedure" for="s8_sop_scope">Section 2: Scope</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Scope: Boundaries and operational areas covered by procedure" for="s8_sop_scope">Section 8.1.2: Scope</label>
                                     <textarea id="s8_sop_scope" class="ds-input ds-textarea" rows="2" required placeholder="e.g. Applies to all production operators and maintenance engineers working on Line A."></textarea>
                                 </div>
                                 <div class="col-md-12">
-                                    <label class="ds-label ds-tooltip-trigger" title="Responsibilities: Specific roles responsible for executing and auditing procedure" for="s8_sop_responsibilities">Section 3: Responsibilities</label>
+                                    <label class="ds-label ds-tooltip-trigger" title="Responsibilities: Specific roles responsible for executing and auditing procedure" for="s8_sop_responsibilities">Section 8.1.3: Responsibilities</label>
                                     <textarea id="s8_sop_responsibilities" class="ds-input ds-textarea" rows="2" required placeholder="e.g. Line Operator: Performs weekly pressure checks. Shift Supervisor: Performs monthly torque verification audits."></textarea>
                                 </div>
                             </div>
@@ -85,7 +110,7 @@ const Stage8 = {
                             
                             <!-- Procedure Steps Builder -->
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <label class="ds-label mb-0 ds-tooltip-trigger" title="Procedure Steps: Sequential operational steps for execution" style="font-size: 0.8rem; font-weight: 600;">Section 4: Procedure Steps</label>
+                                <label class="ds-label mb-0 ds-tooltip-trigger" title="Procedure Steps: Sequential operational steps for execution" style="font-size: 0.8rem; font-weight: 600;">Section 8.1.4: Procedure Steps</label>
                                 <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" style="font-size:.72rem;padding:.2rem .5rem;" onclick="StageModules[8].addSopStepRow()">
                                     <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Step
                                 </button>
@@ -674,6 +699,19 @@ const Stage8 = {
                 this.setVal('s8_sop_type', details.sop_type || 'Operational');
                 this.setVal('s8_sop_description', details.description || '');
                 this.setVal('s8_sop_applicability', details.applicability || '');
+                this.setVal('s8_sop_owner', details.owner || details.author || details.created_by || this.projectData.team_leader_name || this.projectData.creator_name || '');
+                this.setVal('s8_sop_approver', details.approver || details.approved_by || this.projectData.facilitator_name || this.projectData.reviewer_name || '');
+                this.setVal('s8_sop_attachment', details.attachment_url || details.annexure_url || details.attachment || '');
+                const attachView = document.getElementById('s8_sop_attachment_view');
+                if (attachView) {
+                    const url = details.attachment_url || details.annexure_url || details.attachment || '';
+                    if (url) {
+                        attachView.href = url;
+                        attachView.classList.remove('d-none');
+                    } else {
+                        attachView.classList.add('d-none');
+                    }
+                }
                 this.setVal('s8_sop_purpose', details.purpose || '');
                 this.setVal('s8_sop_scope', details.scope || '');
                 this.setVal('s8_sop_responsibilities', details.responsibilities || '');
@@ -688,27 +726,50 @@ const Stage8 = {
                 const s4 = (this.projectData.workflows || []).find(w => w.stage_id === 4)?.data || {};
                 const whyList = s4.why_why_analysis || [];
                 const rootCause = whyList.length ? whyList[whyList.length - 1].root_cause : '';
+                const d = (this.projectData.workflows || []).find(w => w.stage_id === 8)?.data || {};
+                const savedSop = d.sop || {};
 
-                await this.loadSopMasterOptions(this.projectData.category || 'Quality', 'Operational');
-                // Populate default pre-fills from project context
-                this.setVal('s8_sop_title', this.projectData.title + ' SOP');
-                this.setVal('s8_sop_category', this.projectData.category || 'Quality');
-                this.setVal('s8_sop_type', 'Operational');
-                this.setVal('s8_sop_description', "Standardization for Root Cause: " + rootCause);
-                this.setVal('s8_sop_applicability', 'Applicable to sections affected by root cause: ' + rootCause);
-                this.setVal('s8_sop_purpose', 'To standardize the corrections implemented to eliminate the root cause: ' + rootCause);
-                this.setVal('s8_sop_scope', 'Applies to the departments and work areas specified in the project scope.');
-                this.setVal('s8_sop_responsibilities', 'All operators and supervisors in the area are responsible for adhering to this standard.');
+                await this.loadSopMasterOptions(savedSop.category || this.projectData.category || 'Quality', savedSop.sop_type || 'Operational');
+                // Populate default pre-fills from project context or workflow data
+                const proj = this.projectData || window.currentProject || {};
+                this.setVal('s8_sop_title', savedSop.title || ((proj.title || 'Project') + ' SOP'));
+                this.setVal('s8_sop_category', savedSop.category || proj.category || 'Quality');
+                this.setVal('s8_sop_type', savedSop.sop_type || 'Operational');
+                this.setVal('s8_sop_description', savedSop.description || ("Standardization for Root Cause: " + rootCause));
+                this.setVal('s8_sop_applicability', savedSop.applicability || ('Applicable to sections affected by root cause: ' + rootCause));
+                this.setVal('s8_sop_owner', savedSop.owner || proj.team_leader_name || proj.creator_name || 'Project Leader');
+                this.setVal('s8_sop_approver', savedSop.approver || proj.facilitator_name || proj.reviewer_name || 'Plant Quality Head / Manager');
+                this.setVal('s8_sop_attachment', savedSop.attachment_url || savedSop.attachment || '');
+                const attachView = document.getElementById('s8_sop_attachment_view');
+                if (attachView) {
+                    const url = savedSop.attachment_url || savedSop.attachment || '';
+                    if (url) {
+                        attachView.href = url;
+                        attachView.classList.remove('d-none');
+                    } else {
+                        attachView.classList.add('d-none');
+                    }
+                }
+                this.setVal('s8_sop_purpose', savedSop.purpose || ('To standardize the corrections implemented to eliminate the root cause: ' + rootCause));
+                this.setVal('s8_sop_scope', savedSop.scope || 'Applies to the departments and work areas specified in the project scope.');
+                this.setVal('s8_sop_responsibilities', savedSop.responsibilities || 'All operators and supervisors in the area are responsible for adhering to this standard.');
 
                 stepsContainer.innerHTML = '';
-                this.addSopStepRow();
+                if (savedSop.steps && savedSop.steps.length) {
+                    savedSop.steps.forEach(st => this.addSopStepRow(st));
+                } else {
+                    this.addSopStepRow();
+                }
             }
         } catch (e) {
             console.error('Failed to load SOP details', e);
             // Graceful fallback to default values
-            this.setVal('s8_sop_title', this.projectData.title + ' SOP');
-            this.setVal('s8_sop_category', this.projectData.category || 'Quality');
+            const proj = this.projectData || window.currentProject || {};
+            this.setVal('s8_sop_title', (proj.title || 'Project') + ' SOP');
+            this.setVal('s8_sop_category', proj.category || 'Quality');
             this.setVal('s8_sop_type', 'Operational');
+            this.setVal('s8_sop_owner', proj.team_leader_name || proj.creator_name || 'Project Leader');
+            this.setVal('s8_sop_approver', proj.facilitator_name || proj.reviewer_name || 'Plant Quality Head / Manager');
 
             stepsContainer.innerHTML = '';
             this.addSopStepRow();
@@ -862,6 +923,10 @@ const Stage8 = {
                                             <div class="col-md-4"><strong>Approver:</strong> <span id="sop_v_approver">---</span></div>
                                         </div>
                                     </div>
+                                    <div class="mb-4" id="sop_v_attachment_container">
+                                        <h6 class="fw-bold text-primary border-bottom pb-2">6. Annexure / Attached Document</h6>
+                                        <div id="sop_v_attachment_content" class="text-sm">---</div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer border-top p-3">
@@ -904,17 +969,29 @@ const Stage8 = {
 
             // Author, Reviewer, Approver displays
             const proj = this.projectData || window.currentProject || {};
-            const author = proj.creator_name || proj.creator_username || 'Project Leader';
+            const owner = getValFlex(['s8_sop_owner', 'sop_owner', 'owner']) || proj.creator_name || proj.creator_username || 'Project Leader';
             const reviewer = proj.reviewer_name || 'Project Reviewer';
-            const approver = proj.facilitator_name || 'Project Facilitator';
+            const approver = getValFlex(['s8_sop_approver', 'sop_approver', 'approver']) || proj.facilitator_name || 'Project Facilitator';
+            const attachmentUrl = getValFlex(['s8_sop_attachment', 'sop_attachment', 'attachment_url']);
 
             const elAuth = document.getElementById('sop_v_author');
             const elRev = document.getElementById('sop_v_reviewer');
             const elApp = document.getElementById('sop_v_approver');
 
-            if (elAuth) elAuth.textContent = author;
+            if (elAuth) elAuth.textContent = owner;
             if (elRev) elRev.textContent = reviewer;
             if (elApp) elApp.textContent = approver;
+
+            const attachContainer = document.getElementById('sop_v_attachment_container');
+            const attachContent = document.getElementById('sop_v_attachment_content');
+            if (attachContainer && attachContent) {
+                if (attachmentUrl) {
+                    attachContainer.style.display = 'block';
+                    attachContent.innerHTML = `<a href="${attachmentUrl}" target="_blank" class="ds-btn ds-btn-outline ds-btn-sm text-primary"><i data-lucide="external-link" style="width:13px;height:13px;margin-right:4px;"></i> View Attached Annexure / Document</a>`;
+                } else {
+                    attachContainer.style.display = 'none';
+                }
+            }
 
             // Steps preview
             const list = document.getElementById('sop_v_steps_list');
@@ -1040,6 +1117,9 @@ const Stage8 = {
                 sop_type: this.getVal('s8_sop_type'),
                 description: this.getVal('s8_sop_description'),
                 applicability: this.getVal('s8_sop_applicability'),
+                owner: this.getVal('s8_sop_owner'),
+                approver: this.getVal('s8_sop_approver'),
+                attachment_url: this.getVal('s8_sop_attachment'),
                 purpose: this.getVal('s8_sop_purpose'),
                 scope: this.getVal('s8_sop_scope'),
                 responsibilities: this.getVal('s8_sop_responsibilities'),
@@ -1212,9 +1292,75 @@ const Stage8 = {
         }).filter(x => Object.values(x).some(v => v !== ''));
     },
 
+    async handleAnnexureUpload(inputEl) {
+        const file = inputEl.files[0];
+        if (!file) return;
+
+        // Strict 2MB Limitation (2 * 1024 * 1024 bytes)
+        const MAX_SIZE_BYTES = 2 * 1024 * 1024;
+        if (file.size > MAX_SIZE_BYTES) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            const msg = `File size exceeds 2MB limit (Selected: ${sizeMB} MB). Please upload a document up to 2MB.`;
+            if (window.QCMS && QCMS.toast) QCMS.toast(msg, "warning");
+            else alert(msg);
+            inputEl.value = '';
+            return;
+        }
+
+        const attachInput = document.getElementById('s8_sop_attachment');
+        const viewLink = document.getElementById('s8_sop_attachment_view');
+        if (!attachInput) return;
+
+        const originalVal = attachInput.value;
+        attachInput.value = "Uploading...";
+        attachInput.disabled = true;
+
+        try {
+            const res = await api.uploadFile('/sop/upload', file);
+            if (res && res.url) {
+                const fullUrl = window.location.origin + res.url;
+                attachInput.value = fullUrl;
+                if (viewLink) {
+                    viewLink.href = fullUrl;
+                    viewLink.classList.remove('d-none');
+                }
+                if (window.QCMS && QCMS.toast) {
+                    QCMS.toast("Annexure / SOP uploaded successfully (Under 2MB limit)", "success");
+                }
+            } else {
+                throw new Error("Invalid response from server");
+            }
+        } catch (err) {
+            console.error("Upload error:", err);
+            attachInput.value = originalVal;
+            if (window.QCMS && QCMS.toast) {
+                QCMS.toast("Upload failed: " + (err.message || 'File upload error'), "error");
+            } else {
+                alert("Upload failed: " + (err.message || 'File upload error'));
+            }
+        } finally {
+            attachInput.disabled = false;
+            inputEl.value = '';
+        }
+    },
+
     async handleFileChange(inputEl) {
         const file = inputEl.files[0];
         if (!file) return;
+
+        // Strict 2MB Limitation (2 * 1024 * 1024 bytes)
+        const MAX_SIZE_BYTES = 2 * 1024 * 1024;
+        if (file.size > MAX_SIZE_BYTES) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            const msg = `File size exceeds 2MB limit (Selected: ${sizeMB} MB). Please upload a document up to 2MB.`;
+            if (window.QCMS && QCMS.toast) {
+                QCMS.toast(msg, "warning");
+            } else {
+                alert(msg);
+            }
+            inputEl.value = '';
+            return;
+        }
 
         // Find the input field relative to the file input element
         const container = inputEl.closest('.d-flex');
@@ -1231,7 +1377,7 @@ const Stage8 = {
             if (res && res.url) {
                 docInput.value = window.location.origin + res.url;
                 if (window.QCMS && QCMS.toast) {
-                    QCMS.toast("File uploaded successfully", "success");
+                    QCMS.toast("File uploaded successfully (Under 2MB limit)", "success");
                 }
             } else {
                 throw new Error("Invalid response from server");
@@ -1240,12 +1386,13 @@ const Stage8 = {
             console.error("Upload error:", err);
             docInput.value = originalVal;
             if (window.QCMS && QCMS.toast) {
-                QCMS.toast("Upload failed: " + err.message, "error");
+                QCMS.toast("Upload failed: " + (err.message || 'File upload error'), "error");
             } else {
-                alert("Upload failed: " + err.message);
+                alert("Upload failed: " + (err.message || 'File upload error'));
             }
         } finally {
             docInput.disabled = false;
+            inputEl.value = '';
         }
     },
 
@@ -1263,9 +1410,9 @@ const Stage8 = {
             <div class="col-4">
                 <div class="d-flex gap-1">
                     <input type="text" class="ds-input r-doc" placeholder="e.g. Standard Document SOP-MFG-042" value="${d.document || ''}" style="flex-grow: 1;" required>
-                    <label class="ds-btn ds-btn-ghost ds-btn-sm p-2 d-flex align-items-center justify-content-center" style="border: 1px solid var(--ds-input-border); min-width: 36px; border-radius: 10px; cursor: pointer; margin-bottom: 0;" title="Upload File">
+                    <label class="ds-btn ds-btn-ghost ds-btn-sm p-2 d-flex align-items-center justify-content-center" style="border: 1px solid var(--ds-input-border); min-width: 36px; border-radius: 10px; cursor: pointer; margin-bottom: 0;" title="Upload Document (Max 2MB)">
                         <i data-lucide="upload" style="width:14px;height:14px;color:var(--ds-text-secondary);"></i>
-                        <input type="file" style="display: none;" onchange="StageModules[8].handleFileChange(this)">
+                        <input type="file" style="display: none;" accept=".pdf,.docx,.xlsx,.xls,.png,.jpg,.jpeg" onchange="StageModules[8].handleFileChange(this)">
                     </label>
                 </div>
             </div>
@@ -1313,9 +1460,9 @@ const Stage8 = {
             <div class="col-4">
                 <div class="d-flex gap-1">
                     <input type="text" class="ds-input r-lnk" placeholder="e.g. https://sharepoint.corp/qc-projects/imfq-39.pdf" value="${d.link || ''}" style="flex-grow: 1;">
-                    <label class="ds-btn ds-btn-ghost ds-btn-sm p-2 d-flex align-items-center justify-content-center" style="border: 1px solid var(--ds-input-border); min-width: 36px; border-radius: 10px; cursor: pointer; margin-bottom: 0;" title="Upload File">
+                    <label class="ds-btn ds-btn-ghost ds-btn-sm p-2 d-flex align-items-center justify-content-center" style="border: 1px solid var(--ds-input-border); min-width: 36px; border-radius: 10px; cursor: pointer; margin-bottom: 0;" title="Upload Document (Max 2MB)">
                         <i data-lucide="upload" style="width:14px;height:14px;color:var(--ds-text-secondary);"></i>
-                        <input type="file" style="display: none;" onchange="StageModules[8].handleFileChange(this)">
+                        <input type="file" style="display: none;" accept=".pdf,.docx,.xlsx,.xls,.png,.jpg,.jpeg" onchange="StageModules[8].handleFileChange(this)">
                     </label>
                 </div>
             </div>`);

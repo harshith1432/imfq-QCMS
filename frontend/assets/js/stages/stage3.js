@@ -299,7 +299,7 @@ const Stage3 = {
                                 <span class="ds-icon-circle bg-primary-soft text-primary" style="width:32px;height:32px;font-size:.75rem;font-weight:700;">3.5</span>
                                 Ishikawa (Fishbone) Diagram (Post-Verification)
                             </h5>
-                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Map the verified causes onto a Fishbone diagram grouped by category (Man, Machine, Method, Material).</p>
+                            <p class="text-xs text-muted mb-0 mt-1 ms-1">Map the verified causes onto a Fishbone diagram grouped by category.</p>
                         </div>
                     </div>
                     <div class="ds-card-body p-4">

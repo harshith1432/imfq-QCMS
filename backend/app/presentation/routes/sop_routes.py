@@ -1984,7 +1984,7 @@ def get_sop_comments(sop_id):
 @jwt_required()
 @role_required(['Team Member', 'Team Leader', 'Reviewer', 'Facilitator', 'Admin', 'SuperAdmin'])
 def upload_sop_file():
-    """Upload PDF/DOCX/XLSX/Images for SOP or Reference Documents."""
+    """Upload PDF/DOCX/XLSX/Images for SOP or Reference Documents (Max 2MB)."""
     if 'file' not in request.files:
         return jsonify({"msg": "No file part"}), 400
     file = request.files['file']
@@ -1996,6 +1996,16 @@ def upload_sop_file():
     if ext not in ('pdf', 'docx', 'xlsx', 'xls', 'png', 'jpg', 'jpeg'):
         return jsonify({"msg": "Supported formats: PDF, DOCX, XLSX, PNG, JPG, JPEG"}), 400
         
+    # Check file size (Strict 2MB limit: 2 * 1024 * 1024 bytes)
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
+    if file_size > MAX_FILE_SIZE:
+        size_mb = round(file_size / (1024 * 1024), 2)
+        return jsonify({"msg": f"File size exceeds 2MB limit ({size_mb} MB). Please upload a document up to 2MB."}), 400
+
+    from werkzeug.utils import secure_filename
     filename = secure_filename(file.filename)
     filename = f"sop_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
     upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'))

@@ -226,10 +226,8 @@
 /* --- Professional Form Controls --- */
 .ds-input,
 .ds-textarea,
-.ds-select,
-.form-control,
-.form-select {
-    background: var(--ds-input-bg) !important;
+.form-control {
+    background-color: var(--ds-input-bg) !important;
     border: 1px solid var(--ds-input-border) !important;
     color: var(--ds-text-main) !important;
     border-radius: 10px !important;
@@ -239,10 +237,33 @@
     transition: all 0.2s ease !important;
 }
 
+.ds-select,
+.form-select,
+select.ds-input,
+select.ds-select {
+    background-color: var(--ds-input-bg) !important;
+    border: 1px solid var(--ds-input-border) !important;
+    color: var(--ds-text-main) !important;
+    border-radius: 10px !important;
+    padding: 0.75rem 2.25rem 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+    transition: all 0.2s ease !important;
+}
+
 .ds-input:focus,
 .ds-textarea:focus,
-.ds-select:focus,
 .form-control:focus {
+    background-color: white !important;
+    border-color: var(--ds-primary) !important;
+    box-shadow: 0 0 0 4px rgba(var(--ds-primary-rgb), 0.08) !important;
+    outline: none !important;
+}
+
+.ds-select:focus,
+.form-select:focus,
+select.ds-input:focus,
+select.ds-select:focus {
     background-color: white !important;
     border-color: var(--ds-primary) !important;
     box-shadow: 0 0 0 4px rgba(var(--ds-primary-rgb), 0.08) !important;

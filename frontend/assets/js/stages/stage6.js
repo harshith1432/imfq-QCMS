@@ -268,7 +268,7 @@ const Stage6 = {
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Readiness Verification: Final pre-flight verification sign-off">Section 6.10 - Readiness Verification</h6>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Readiness Verification: Final pre-flight verification sign-off">Section 6.9 - Readiness Verification</h6>
                             <button type="button" class="ds-btn ds-btn-ghost ds-tooltip-trigger" title="+ Add Check: Add a readiness audit checklist item" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[6].addReadinessRow()">
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Check
                             </button>
@@ -763,10 +763,18 @@ const Stage6 = {
     },
 
     addReadinessRow(d = {}) {
+        const currentStat = d.status || 'Ready';
+        const defaultOptions = ['Ready', 'In Progress', 'Pending', 'Action Required', 'Not Ready', 'N/A'];
+        const allOptions = (d.status && !defaultOptions.includes(d.status)) ? [d.status, ...defaultOptions] : defaultOptions;
+        const selectHtml = `
+            <select class="ds-input ds-select r-stat" required>
+                ${allOptions.map(opt => `<option value="${opt}" ${currentStat === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+            </select>`;
+
         this.addRowTemplate('s6_readinessContainer', d, `
             <div class="col-6"><input type="text" class="ds-input r-itm" placeholder="e.g. Standard tools & calibration kits verified" value="${d.item || ''}" required></div>
             <div class="col-3"><input type="text" class="ds-input r-ver" placeholder="e.g. Rajesh Kumar" value="${d.verified_by || ''}" required></div>
-            <div class="col-2"><input type="text" class="ds-input r-stat" placeholder="e.g. Ready" value="${d.status || ''}" required></div>`);
+            <div class="col-2">${selectHtml}</div>`);
     },
 
     // Check callbacks and helpers

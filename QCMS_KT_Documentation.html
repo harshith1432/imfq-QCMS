@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>QCMS Enterprise OS — KT Documentation</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #fff; color: #0f172a; font-size: 9.5pt; line-height: 1.6; }
+
+.page {
+    width: 210mm;
+    background: #fff;
+    padding: 16px 20px;
+    margin: 0 auto 4px;
+    page-break-after: always;
+    page-break-inside: avoid;
+}
+.page:last-child { page-break-after: avoid; }
+
+/* COVER */
+.cover {
+    background: linear-gradient(135deg,#0f172a 0%,#1e1b4b 40%,#312e81 70%,#4338ca 100%);
+    color: #fff;
+    border-radius: 10px;
+    padding: 28px 32px;
+    margin-bottom: 18px;
+    min-height: 200px;
+}
+.cover .logo-row { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+.cover .logo-box {
+    background: rgba(255,255,255,.15); border:2px solid rgba(255,255,255,.3);
+    border-radius:10px; padding:8px 14px; font-size:18pt; font-weight:900;
+    letter-spacing:-1px; color:#fff;
+}
+.cover .doc-type { font-size:8pt; font-weight:700; color:#a5b4fc; letter-spacing:2px; text-transform:uppercase; }
+.cover h1 { font-size:22pt; font-weight:900; color:#fff; letter-spacing:-0.5px; margin:8px 0 4px; }
+.cover .sub { font-size:10pt; color:#c7d2fe; margin-bottom:16px; }
+.cover .meta-row { display:flex; gap:20px; flex-wrap:wrap; }
+.cover .meta { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); padding:6px 12px; border-radius:6px; }
+.cover .meta .ml { font-size:6.5pt; color:#a5b4fc; text-transform:uppercase; letter-spacing:0.5px; }
+.cover .meta .mv { font-size:9pt; font-weight:700; color:#fff; }
+
+/* SECTION HEADERS */
+.sec-header {
+    background: linear-gradient(90deg,#1e1b4b,#3730a3);
+    color:#fff; border-radius:8px; padding:12px 18px; margin:14px 0 10px;
+    page-break-after: avoid;
+}
+.sec-header .sec-num { font-size:8pt; font-weight:700; color:#a5b4fc; margin-bottom:2px; }
+.sec-header h2 { font-size:13pt; font-weight:800; color:#fff; }
+
+h3 { font-size:10.5pt; font-weight:700; color:#1e1b4b; margin:12px 0 6px; border-bottom:1.5px solid #e2e8f0; padding-bottom:4px; }
+h4 { font-size:9.5pt; font-weight:700; color:#4338ca; margin:8px 0 4px; }
+
+p { font-size:8.5pt; color:#374151; margin-bottom:6px; }
+ul, ol { padding-left:18px; margin-bottom:8px; }
+ul li, ol li { font-size:8.5pt; color:#374151; margin-bottom:3px; }
+strong { color:#1e1b4b; }
+
+/* TABLES */
+table { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:8pt; page-break-inside:auto; }
+th { background:#1e1b4b; color:#fff; padding:8px 10px; text-align:left; font-weight:700; border:1px solid #312e81; font-size:7.5pt; }
+td { padding:7px 10px; border:1px solid #e2e8f0; vertical-align:top; }
+tr:nth-child(even) td { background:#f8fafc; }
+td strong { color:#1e1b4b; }
+
+/* CARDS */
+.card { background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:8px; padding:12px 14px; margin:8px 0; page-break-inside:avoid; }
+.card.blue   { background:#eff6ff; border-color:#3b82f6; }
+.card.green  { background:#f0fdf4; border-color:#22c55e; }
+.card.amber  { background:#fffbeb; border-color:#f59e0b; }
+.card.red    { background:#fff1f2; border-color:#dc2626; }
+.card.purple { background:#faf5ff; border-color:#a855f7; }
+.card-title  { font-weight:700; font-size:9.5pt; color:#1e1b4b; margin-bottom:5px; }
+.card.blue   .card-title  { color:#1d4ed8; }
+.card.green  .card-title  { color:#15803d; }
+.card.amber  .card-title  { color:#92400e; }
+.card.red    .card-title  { color:#991b1b; }
+.card.purple .card-title  { color:#6b21a8; }
+
+/* ALERT BOXES */
+.alert { border-radius:6px; padding:10px 14px; margin:8px 0; page-break-inside:avoid; }
+.alert.warn   { background:#fffbeb; border-left:4px solid #f59e0b; }
+.alert.info   { background:#eff6ff; border-left:4px solid #3b82f6; }
+.alert.danger { background:#fff1f2; border-left:4px solid #dc2626; }
+.alert.tip    { background:#f0fdf4; border-left:4px solid #22c55e; }
+.alert .at    { font-weight:800; font-size:8.5pt; margin-bottom:2px; }
+.alert.warn   .at { color:#92400e; }
+.alert.info   .at { color:#1d4ed8; }
+.alert.danger .at { color:#991b1b; }
+.alert.tip    .at { color:#15803d; }
+.alert .ab    { font-size:8pt; }
+.alert.warn   .ab { color:#78350f; }
+.alert.info   .ab { color:#1e3a8a; }
+.alert.danger .ab { color:#991b1b; }
+.alert.tip    .ab { color:#166534; }
+
+/* CODE BLOCKS */
+.code { background:#0f172a; color:#e2e8f0; border-radius:8px; padding:12px 16px; font-family:'JetBrains Mono',monospace; font-size:8pt; line-height:1.7; margin:8px 0; page-break-inside:avoid; }
+.code .cm { color:#64748b; }
+.code .kw { color:#c084fc; }
+.code .st { color:#86efac; }
+.code .vr { color:#fbbf24; }
+.code .op { color:#67e8f9; }
+
+code { font-family:'JetBrains Mono',monospace; background:#f1f5f9; padding:1px 5px; border-radius:3px; font-size:8pt; color:#1e1b4b; }
+
+/* ROLE PILL BADGES */
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:7pt; font-weight:700; }
+.badge.sa   { background:#fef3c7; color:#92400e; border:1px solid #f59e0b; }
+.badge.adm  { background:#dbeafe; color:#1e3a8a; border:1px solid #3b82f6; }
+.badge.rev  { background:#d1fae5; color:#065f46; border:1px solid #22c55e; }
+.badge.fac  { background:#ede9fe; color:#4c1d95; border:1px solid #8b5cf6; }
+.badge.tl   { background:#fee2e2; color:#991b1b; border:1px solid #dc2626; }
+.badge.tm   { background:#f1f5f9; color:#475569; border:1px solid #94a3b8; }
+
+/* STAGE TIMELINE */
+.stages { display:flex; gap:0; margin:8px 0 12px; overflow:hidden; border-radius:8px; }
+.stage-box { flex:1; padding:8px 6px; text-align:center; border-right:1px solid rgba(255,255,255,.3); }
+.stage-box:last-child { border-right:none; }
+.stage-n { font-size:10pt; font-weight:900; color:#fff; }
+.stage-t { font-size:6.5pt; font-weight:600; color:rgba(255,255,255,.85); }
+
+/* 2-COLUMN GRID */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 0; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:8px 0; }
+
+/* DIVIDER */
+hr { border:none; border-top:2px solid #e2e8f0; margin:14px 0; }
+
+/* TOC */
+.toc-item { display:flex; align-items:baseline; gap:6px; padding:5px 0; border-bottom:1px dotted #e2e8f0; }
+.toc-num { font-weight:700; color:#4338ca; font-size:9pt; min-width:24px; }
+.toc-title { font-size:9pt; color:#1e1b4b; font-weight:500; }
+.toc-dots { flex:1; border-bottom:1px dotted #cbd5e1; }
+.toc-pg { font-size:8.5pt; color:#64748b; min-width:20px; text-align:right; }
+
+/* Footer */
+.footer { text-align:center; font-size:7pt; color:#94a3b8; border-top:1px solid #f1f5f9; padding-top:8px; margin-top:12px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     COVER PAGE
+     ═══════════════════════════════════════════════════════ -->
+<div class="page" style="display:flex; flex-direction:column; justify-content:space-between; min-height:260mm;">
+<div>
+<div class="cover">
+    <div class="logo-row">
+        <div class="logo-box">QCMS</div>
+        <div>
+            <div class="doc-type">Knowledge Transfer Document</div>
+            <div style="font-size:9pt; color:#c7d2fe; font-weight:600;">Quality &amp; Continuous Improvement Management System</div>
+        </div>
+    </div>
+    <h1>QCMS Enterprise OS</h1>
+    <div class="sub">Complete Software KT Documentation — Architecture, Installation, Configuration &amp; Operations Guide</div>
+    <div class="meta-row">
+        <div class="meta"><div class="ml">Version</div><div class="mv">1.2.1</div></div>
+        <div class="meta"><div class="ml">Date</div><div class="mv">August 2026</div></div>
+        <div class="meta"><div class="ml">Classification</div><div class="mv">Internal Engineering</div></div>
+        <div class="meta"><div class="ml">Status</div><div class="mv">Active / Production</div></div>
+    </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<h3 style="margin-top:12px;">Table of Contents</h3>
+<div class="toc-item"><span class="toc-num">1</span><span class="toc-title">System Overview &amp; Purpose</span><span class="toc-dots"></span><span class="toc-pg">2</span></div>
+<div class="toc-item"><span class="toc-num">2</span><span class="toc-title">Technology Stack</span><span class="toc-dots"></span><span class="toc-pg">2</span></div>
+<div class="toc-item"><span class="toc-num">3</span><span class="toc-title">Architecture — Clean Architecture Layers</span><span class="toc-dots"></span><span class="toc-pg">3</span></div>
+<div class="toc-item"><span class="toc-num">4</span><span class="toc-title">Directory Structure</span><span class="toc-dots"></span><span class="toc-pg">3</span></div>
+<div class="toc-item"><span class="toc-num">5</span><span class="toc-title">Role-Based Access Control (RBAC)</span><span class="toc-dots"></span><span class="toc-pg">4</span></div>
+<div class="toc-item"><span class="toc-num">6</span><span class="toc-title">8-Stage Workflow Engine</span><span class="toc-dots"></span><span class="toc-pg">4</span></div>
+<div class="toc-item"><span class="toc-num">7</span><span class="toc-title">API Modules — All 35 Blueprint Routes</span><span class="toc-dots"></span><span class="toc-pg">5</span></div>
+<div class="toc-item"><span class="toc-num">8</span><span class="toc-title">Frontend Architecture</span><span class="toc-dots"></span><span class="toc-pg">6</span></div>
+<div class="toc-item"><span class="toc-num">9</span><span class="toc-title">Database Schema Overview</span><span class="toc-dots"></span><span class="toc-pg">7</span></div>
+<div class="toc-item"><span class="toc-num">10</span><span class="toc-title">Security &amp; Middleware Stack</span><span class="toc-dots"></span><span class="toc-pg">7</span></div>
+<div class="toc-item"><span class="toc-num">11</span><span class="toc-title">Quality AI (RAG) Intelligent Search</span><span class="toc-dots"></span><span class="toc-pg">8</span></div>
+<div class="toc-item"><span class="toc-num">12</span><span class="toc-title">Subscription &amp; Multi-Tenant Model</span><span class="toc-dots"></span><span class="toc-pg">8</span></div>
+<div class="toc-item"><span class="toc-num">13</span><span class="toc-title">Installation Guide — Docker (Recommended)</span><span class="toc-dots"></span><span class="toc-pg">9</span></div>
+<div class="toc-item"><span class="toc-num">14</span><span class="toc-title">Installation Guide — Manual (Local Dev)</span><span class="toc-dots"></span><span class="toc-pg">9</span></div>
+<div class="toc-item"><span class="toc-num">15</span><span class="toc-title">Environment Variables Configuration</span><span class="toc-dots"></span><span class="toc-pg">10</span></div>
+<div class="toc-item"><span class="toc-num">16</span><span class="toc-title">Additional Configurations</span><span class="toc-dots"></span><span class="toc-pg">10</span></div>
+<div class="toc-item"><span class="toc-num">17</span><span class="toc-title">Server Requirements</span><span class="toc-dots"></span><span class="toc-pg">11</span></div>
+<div class="toc-item"><span class="toc-num">18</span><span class="toc-title">Key Integration Points</span><span class="toc-dots"></span><span class="toc-pg">11</span></div>
+<div class="toc-item"><span class="toc-num">19</span><span class="toc-title">Troubleshooting &amp; Common Issues</span><span class="toc-dots"></span><span class="toc-pg">12</span></div>
+<div class="toc-item"><span class="toc-num">20</span><span class="toc-title">KT Handoff Checklist</span><span class="toc-dots"></span><span class="toc-pg">12</span></div>
+</div>
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 2 — OVERVIEW + TECH STACK
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 1</div>
+    <h2>System Overview &amp; Purpose</h2>
+</div>
+
+<p><strong>QCMS (Quality &amp; Continuous Improvement Management System)</strong> is an enterprise-grade, multi-tenant SaaS platform that digitizes and automates structured problem-solving methodologies for industrial organizations — primarily <strong>Quality Circle (QC Story / 8D)</strong>, <strong>Six Sigma / DMAIC</strong>, and continuous improvement programs.</p>
+
+<div class="two-col">
+<div class="card blue">
+    <div class="card-title">What Problem Does It Solve?</div>
+    <p style="margin:0;font-size:8pt;">Most manufacturing and service organizations track quality improvement projects on paper, Excel sheets, or disconnected tools. QCMS provides a single digital platform where the entire lifecycle — from problem identification to SOP standardization — is tracked, governed, and measurable.</p>
+</div>
+<div class="card green">
+    <div class="card-title">Who Uses It?</div>
+    <ul style="margin:0;font-size:8pt;">
+        <li>Quality Circles / Kaizen Teams</li>
+        <li>Manufacturing Plants &amp; Factories</li>
+        <li>ISO 9001 Compliance Teams</li>
+        <li>Six Sigma Black/Green Belt Programs</li>
+        <li>Corporate Quality Departments</li>
+    </ul>
+</div>
+</div>
+
+<h3>Core Capabilities</h3>
+<div class="three-col">
+<div class="card">
+    <div class="card-title" style="font-size:9pt;">🔄 8-Stage Workflow</div>
+    <p style="margin:0;font-size:7.5pt;">Rigid sequential problem-solving lifecycle with approval gates and role-locked stage transitions.</p>
+</div>
+<div class="card">
+    <div class="card-title" style="font-size:9pt;">🏢 Multi-Tenant SaaS</div>
+    <p style="margin:0;font-size:7.5pt;">Complete data isolation per organization. Shared DB, shared schema, row-level org_id scoping.</p>
+</div>
+<div class="card">
+    <div class="card-title" style="font-size:9pt;">🤖 Quality AI (RAG)</div>
+    <p style="margin:0;font-size:7.5pt;">AI-powered semantic search across closed projects using vector embeddings and cosine similarity.</p>
+</div>
+<div class="card">
+    <div class="card-title" style="font-size:9pt;">📊 Enterprise Analytics</div>
+    <p style="margin:0;font-size:7.5pt;">KPI dashboards, trend analysis, savings verification, and CEO-level financial reporting.</p>
+</div>
+<div class="card">
+    <div class="card-title" style="font-size:9pt;">📄 Automated PDF Reports</div>
+    <p style="margin:0;font-size:7.5pt;">Auto-generated QC Story closures, ISO certificates, invoices, and compliance audit reports.</p>
+</div>
+<div class="card">
+    <div class="card-title" style="font-size:9pt;">🌐 Multi-Language i18n</div>
+    <p style="margin:0;font-size:7.5pt;">Real-time UI translation in 6 languages: English, Hindi, Kannada, Telugu, Tamil, Malayalam.</p>
+</div>
+</div>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 2</div>
+    <h2>Technology Stack</h2>
+</div>
+
+<table>
+<thead><tr><th>Layer</th><th>Technology</th><th>Version / Detail</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><strong>Frontend UI</strong></td><td>HTML5, Vanilla JavaScript (ES6+)</td><td>No Framework</td><td>Glassmorphism design system, SPCI pattern</td></tr>
+<tr><td><strong>UI Styling</strong></td><td>Vanilla CSS3</td><td>CSS Variables + Glass.css</td><td>Design tokens, glassmorphism aesthetic layer</td></tr>
+<tr><td><strong>Charts &amp; Icons</strong></td><td>Chart.js, Lucide Icons</td><td>Latest CDN</td><td>KPI visualization, iconography</td></tr>
+<tr><td><strong>Backend API</strong></td><td>Python + Flask</td><td>Python 3.11, Flask 3.0.0</td><td>REST API, Blueprint-based modular routing</td></tr>
+<tr><td><strong>ORM</strong></td><td>SQLAlchemy</td><td>2.0.23</td><td>Type-safe DB modeling, query builder</td></tr>
+<tr><td><strong>Auth</strong></td><td>Flask-JWT-Extended + Bcrypt</td><td>4.5.3 / 1.0.1</td><td>Stateless JWT auth, password hashing</td></tr>
+<tr><td><strong>Database</strong></td><td>PostgreSQL</td><td>Neon Serverless / Local 15+</td><td>Primary relational store + JSONB fields</td></tr>
+<tr><td><strong>AI / Embeddings</strong></td><td>all-MiniLM-L6-v2 + FAISS</td><td>384-dim vectors</td><td>RAG semantic search over closed projects</td></tr>
+<tr><td><strong>Email</strong></td><td>Resend API</td><td>resend 2.4.0</td><td>Transactional emails, OTP, notifications</td></tr>
+<tr><td><strong>PDF Engine</strong></td><td>fpdf2</td><td>2.7.5</td><td>QC Story PDFs, invoices, certificates</td></tr>
+<tr><td><strong>Payments</strong></td><td>Razorpay</td><td>Webhook-based</td><td>Subscription upgrades, billing invoices</td></tr>
+<tr><td><strong>Migration</strong></td><td>Alembic + Flask-Migrate</td><td>1.13.1</td><td>DB schema versioning</td></tr>
+<tr><td><strong>WSGI Server</strong></td><td>Gunicorn</td><td>21.2.0</td><td>Production app server, single worker, preload</td></tr>
+<tr><td><strong>Reverse Proxy</strong></td><td>Nginx (Alpine)</td><td>Latest</td><td>Static file serving, API proxy, SSL termination</td></tr>
+<tr><td><strong>Containerization</strong></td><td>Docker + Docker Compose</td><td>Latest</td><td>Consistent environment, multi-service orchestration</td></tr>
+</tbody>
+</table>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 3 — ARCHITECTURE + DIRECTORY
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 3</div>
+    <h2>Architecture — Clean Architecture Layers</h2>
+</div>
+
+<p>QCMS backend follows strict <strong>Clean Architecture</strong> (Domain → Application → Infrastructure → Presentation), separating business rules from I/O concerns. This makes the system testable, replaceable, and independently deployable.</p>
+
+<table>
+<thead><tr><th>Layer</th><th>Location</th><th>Responsibility</th><th>Key Files</th></tr></thead>
+<tbody>
+<tr><td><strong>Presentation</strong></td><td><code>app/presentation/</code></td><td>HTTP routing, request validation, JWT guards, response serialization</td><td>35 Blueprint route files, middleware/</td></tr>
+<tr><td><strong>Application</strong></td><td><code>app/application/</code></td><td>Use-case handlers, orchestrates domain + infrastructure calls</td><td>Service handlers per feature domain</td></tr>
+<tr><td><strong>Domain</strong></td><td><code>app/domain/</code></td><td>Pure business logic, policy engines, feature flags, exceptions</td><td>services/, exceptions/</td></tr>
+<tr><td><strong>Infrastructure</strong></td><td><code>app/infrastructure/</code></td><td>SQLAlchemy ORM models, DB sessions, file I/O, email adapters</td><td>database/models/models.py</td></tr>
+<tr><td><strong>Config</strong></td><td><code>app/config/settings.py</code></td><td>All environment variable loading, DB URL parsing, CORS, pool settings</td><td>settings.py</td></tr>
+<tr><td><strong>Utils</strong></td><td><code>app/utils/</code></td><td>PDF template fillers, report generators, avatar helpers</td><td>pdf_template_helper.py (47KB)</td></tr>
+</tbody>
+</table>
+
+<div class="alert info">
+    <div class="at">App Factory Pattern</div>
+    <div class="ab">The Flask app is created via <code>create_app()</code> in <code>backend/app/__init__.py</code>. All 35 blueprints, security middleware, JWT hooks, CORS, and DB auto-migration are initialized here. Gunicorn calls this with <code>preload_app=True</code> so migrations only run once in the master process before worker forking.</div>
+</div>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 4</div>
+    <h2>Directory Structure</h2>
+</div>
+
+<div class="code">
+<span class="cm">/ (Repository Root)</span>
+├── backend/                         <span class="cm"># Flask REST API Service</span>
+│   ├── app/
+│   │   ├── <span class="st">__init__.py</span>             <span class="cm"># App factory, blueprint registration, JWT hooks</span>
+│   │   ├── config/
+│   │   │   └── <span class="st">settings.py</span>        <span class="cm"># All env vars, DB URL parsing, pool config</span>
+│   │   ├── domain/
+│   │   │   ├── services/            <span class="cm"># Business logic, subscription manager, policies</span>
+│   │   │   └── exceptions/          <span class="cm"># Custom exception classes</span>
+│   │   ├── application/             <span class="cm"># Use-case handlers, feature orchestration</span>
+│   │   ├── infrastructure/
+│   │   │   └── database/models/
+│   │   │       └── <span class="st">models.py</span>      <span class="cm"># ALL SQLAlchemy ORM models (single file)</span>
+│   │   ├── presentation/
+│   │   │   ├── routes/              <span class="cm"># 35 Blueprint files (API endpoints)</span>
+│   │   │   └── middleware/          <span class="cm"># Security, JWT, idempotency, WAF</span>
+│   │   └── utils/                   <span class="cm"># PDF helpers, report builders</span>
+│   ├── <span class="st">run.py</span>                     <span class="cm"># WSGI entry point (Gunicorn: run:app)</span>
+│   ├── <span class="st">gunicorn.conf.py</span>           <span class="cm"># Gunicorn: 1 worker, 300s timeout, preload</span>
+│   ├── <span class="st">requirements.txt</span>           <span class="cm"># Python dependencies</span>
+│   ├── <span class="st">.env</span>                       <span class="cm"># Secrets (NOT committed to git)</span>
+│   └── Dockerfile                   <span class="cm"># python:3.11-slim, gunicorn CMD</span>
+│
+├── frontend/                        <span class="cm"># Static Web Application</span>
+│   ├── index.html                   <span class="cm"># Public landing page</span>
+│   ├── assets/
+│   │   ├── css/                     <span class="cm"># design-system.css, glass.css, utilities</span>
+│   │   ├── js/                      <span class="cm"># 30+ JS modules (components.js 178KB, super-admin.js 643KB)</span>
+│   │   └── translations/            <span class="cm"># i18n JSON dictionaries (6 languages)</span>
+│   ├── admin/                       <span class="cm"># Super Admin portal HTML pages</span>
+│   ├── auth/                        <span class="cm"># Login, register, password recovery</span>
+│   ├── dashboard/                   <span class="cm"># Role dashboards (Admin, CEO, Reviewer, TL)</span>
+│   ├── projects/                    <span class="cm"># 8-Stage workspace, QC tools, repository</span>
+│   ├── analytics/                   <span class="cm"># KPI dashboards, financial reports</span>
+│   ├── <span class="st">nginx.conf</span>                 <span class="cm"># Reverse proxy: /api → backend:5000</span>
+│   └── Dockerfile                   <span class="cm"># nginx:alpine serving static files</span>
+│
+├── migrations/                      <span class="cm"># Alembic DB migration scripts</span>
+├── docker-compose.yml               <span class="cm"># Backend:5000 + Frontend:80 orchestration</span>
+└── .env.local                       <span class="cm"># Root-level environment overrides</span>
+</div>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 4 — RBAC + 8-STAGE WORKFLOW
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 5</div>
+    <h2>Role-Based Access Control (RBAC)</h2>
+</div>
+
+<p>QCMS enforces a strict <strong>6-tier hierarchical permission model</strong>. Every API endpoint is protected by a <code>role_required</code> decorator that compares the authenticated user's role level against the endpoint's minimum required level.</p>
+
+<table>
+<thead><tr><th>Level</th><th>Role</th><th>Scope</th><th>Key Permissions</th></tr></thead>
+<tbody>
+<tr>
+    <td><strong>Platform</strong></td>
+    <td><span class="badge sa">Super Admin</span></td>
+    <td>Entire Platform</td>
+    <td>Manage ALL organizations, subscriptions, billing, system settings, global announcements, integrations, platform identity/branding</td>
+</tr>
+<tr>
+    <td><strong>Level 4</strong></td>
+    <td><span class="badge adm">Admin</span></td>
+    <td>Own Organization</td>
+    <td>Create/manage users, departments, plants. Configure org settings, security policies, workflow templates. View all org analytics.</td>
+</tr>
+<tr>
+    <td><strong>Level 3</strong></td>
+    <td><span class="badge rev">Reviewer</span></td>
+    <td>Own Organization</td>
+    <td>Quality gatekeeper. Mandatory sign-off on Stages 4, 5, 7, 8. Can reject with comments. Cannot edit project data.</td>
+</tr>
+<tr>
+    <td><strong>Level 2</strong></td>
+    <td><span class="badge fac">Facilitator</span></td>
+    <td>Own Organization</td>
+    <td>Technical SME. Validates Root Cause Analysis (Stage 5). Can oversee multiple teams. Access to QC tools and cross-project data.</td>
+</tr>
+<tr>
+    <td><strong>Level 1</strong></td>
+    <td><span class="badge tl">Team Leader</span></td>
+    <td>Own Projects</td>
+    <td>Project manager. Creates and drives projects. Assigns tasks to Team Members. Responsible for stage completion.</td>
+</tr>
+<tr>
+    <td><strong>Level 0</strong></td>
+    <td><span class="badge tm">Team Member</span></td>
+    <td>Assigned Projects</td>
+    <td>Data entry and task execution. Can only work on projects they are explicitly assigned to.</td>
+</tr>
+</tbody>
+</table>
+
+<div class="alert info">
+    <div class="at">How the Guard Works in Code</div>
+    <div class="ab">Each API route uses <code>@jwt_required()</code> + a custom <code>@role_required(min_level)</code> decorator. If the user's level is below the required level, the API returns HTTP 403. Super Admin tokens carry an out-of-band <code>is_super_admin=True</code> claim and bypass org_id scoping entirely.</div>
+</div>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 6</div>
+    <h2>The 8-Stage Quality Circle Workflow Engine</h2>
+</div>
+
+<p>The core of QCMS is a <strong>rigid, sequential 8-stage lifecycle</strong>. A project cannot advance to the next stage without completing mandatory fields and, for gated stages, obtaining explicit Reviewer/Facilitator approval.</p>
+
+<div class="stages">
+    <div class="stage-box" style="background:#1e3a8a;"><div class="stage-n">S1</div><div class="stage-t">Identification</div></div>
+    <div class="stage-box" style="background:#1d4ed8;"><div class="stage-n">S2</div><div class="stage-t">Selection</div></div>
+    <div class="stage-box" style="background:#4338ca;"><div class="stage-n">S3</div><div class="stage-t">Analysis</div></div>
+    <div class="stage-box" style="background:#7c3aed; border:2px solid #fbbf24;"><div class="stage-n">S4</div><div class="stage-t">Causes ⛔</div></div>
+    <div class="stage-box" style="background:#6d28d9; border:2px solid #fbbf24;"><div class="stage-n">S5</div><div class="stage-t">Root Cause ⛔</div></div>
+    <div class="stage-box" style="background:#059669;"><div class="stage-n">S6</div><div class="stage-t">Data Analysis</div></div>
+    <div class="stage-box" style="background:#0d9488; border:2px solid #fbbf24;"><div class="stage-n">S7</div><div class="stage-t">Development ⛔</div></div>
+    <div class="stage-box" style="background:#0f766e; border:2px solid #fbbf24;"><div class="stage-n">S8</div><div class="stage-t">Implementation ⛔</div></div>
+</div>
+<p style="font-size:7.5pt; color:#64748b; margin-top:-2px;">⛔ = Gated stage requiring explicit Reviewer approval before transition</p>
+
+<table>
+<thead><tr><th>Stage</th><th>Name</th><th>Key Activities</th><th>Approval Required</th><th>DB Model</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Identification</td><td>Problem statement, team formation, target metrics, project charter</td><td>No</td><td>Stage1Identification</td></tr>
+<tr><td>2</td><td>Selection</td><td>KPI baseline data collection, data stratification, evidence upload</td><td>No</td><td>Stage2Selection</td></tr>
+<tr><td>3</td><td>Analysis</td><td>Fishbone diagram, 5-Why tree, Pareto analysis, hypothesis testing</td><td>No</td><td>Stage3Analysis</td></tr>
+<tr><td>4</td><td>Causes</td><td>Probable cause identification, verification of root cause candidates</td><td><strong>Reviewer ✓</strong></td><td>Stage4Causes</td></tr>
+<tr><td>5</td><td>Root Cause</td><td>Final RCA sign-off, statistical validation, Facilitator verification</td><td><strong>Facilitator + Reviewer ✓</strong></td><td>Stage5RootCause</td></tr>
+<tr><td>6</td><td>Data Analysis</td><td>Countermeasure planning, cost-benefit analysis, ROI estimation</td><td>No</td><td>Stage6DataAnalysis</td></tr>
+<tr><td>7</td><td>Development</td><td>Implementation milestones, task assignments, execution tracking</td><td><strong>Reviewer ✓</strong></td><td>Stage7Development</td></tr>
+<tr><td>8</td><td>Implementation</td><td>Post-KPI measurement, savings verification, SOP update, lessons learned</td><td><strong>Reviewer ✓</strong></td><td>Stage8Implementation</td></tr>
+</tbody>
+</table>
+
+<div class="alert tip">
+    <div class="at">QC Tools Available at Stage 3</div>
+    <div class="ab">Interactive <strong>Fishbone Diagram</strong> (6M categories: Man, Machine, Method, Material, Measurement, Environment), <strong>5-Why Analysis Tree</strong>, <strong>Pareto Chart</strong> builder, <strong>Histogram</strong>, <strong>Control Chart</strong> — all rendered client-side via Canvas/SVG and stored as JSON in the DB.</div>
+</div>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 5 — API MODULES (ALL 35 BLUEPRINTS)
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 7</div>
+    <h2>API Modules — All 35 Blueprint Route Files</h2>
+</div>
+
+<p>Every feature area is a separate Flask Blueprint registered with its own URL prefix. This ensures clean separation of concerns and allows independent development of each module.</p>
+
+<table>
+<thead><tr><th>Blueprint File</th><th>URL Prefix</th><th>Size</th><th>Key Endpoints / Responsibility</th></tr></thead>
+<tbody>
+<tr><td>auth_routes.py</td><td>/api/auth</td><td>78KB</td><td>Login, logout, registration, OTP verify, password reset, Google SSO, magic links, user profile update</td></tr>
+<tr><td>project_routes.py</td><td>/api/projects</td><td>95KB</td><td>Create/read/update/delete projects, assign teams, project storyboard, status transitions</td></tr>
+<tr><td>workflow_routes.py</td><td>/api/workflow</td><td>22KB</td><td>Stage progression engine, approval/rejection logic, stage validation</td></tr>
+<tr><td>admin_routes.py</td><td>/api/admin</td><td>164KB</td><td>User management, department CRUD, org settings, custom fields, security policies, audit logs, rewards</td></tr>
+<tr><td>plant_routes.py</td><td>/api/admin/plants</td><td>14KB</td><td>Multi-plant management: create plants, assign users/departments to plants</td></tr>
+<tr><td>analytics_routes.py</td><td>/api/analytics</td><td>129KB</td><td>KPI dashboards, trend analytics, delivery rates, department performance, CEO-level reports</td></tr>
+<tr><td>super_admin_routes.py</td><td>/api/super-admin</td><td>178KB</td><td>Multi-tenant org management, subscription control, platform settings, global branding, security</td></tr>
+<tr><td>super_admin_v1_routes.py</td><td>/api/v1</td><td>63KB</td><td>V1 API compatibility layer for super admin operations</td></tr>
+<tr><td>ceo_routes.py</td><td>/api/ceo</td><td>71KB</td><td>Executive-level financial analytics, cross-department KPIs, enterprise savings reports</td></tr>
+<tr><td>reviewer_routes.py</td><td>/api/reviewer</td><td>51KB</td><td>Pending review queue, approve/reject stage gates, review history, reviewer dashboard data</td></tr>
+<tr><td>facilitator_routes.py</td><td>/api/facilitator</td><td>33KB</td><td>RCA validation, facilitation oversight, team progress monitoring</td></tr>
+<tr><td>team_leader_routes.py</td><td>/api/team-leader</td><td>17KB</td><td>Team assignment, task management, project progress for TL dashboard</td></tr>
+<tr><td>team_member_routes.py</td><td>/api/team-member</td><td>4KB</td><td>Assigned project data access, task completion endpoints</td></tr>
+<tr><td>qc_tools_routes.py</td><td>/api/project</td><td>41KB</td><td>Fishbone diagram, 5-Why, Pareto, Histogram, Control Chart data save/load</td></tr>
+<tr><td>dashboard_routes.py</td><td>/api/dashboard</td><td>10KB</td><td>Role-tailored dashboard summary cards, recent activity, KPI widgets</td></tr>
+<tr><td>repository_routes.py</td><td>/api/repository</td><td>39KB</td><td>Knowledge repository CRUD, closed project indexing, embedding ingestion triggers</td></tr>
+<tr><td>rag_routes.py</td><td>/api/rag</td><td>5KB</td><td>Quality AI chat endpoint — receives query, runs cosine similarity, returns ranked past solutions</td></tr>
+<tr><td>subscription_routes.py</td><td>/api/subscriptions</td><td>135KB</td><td>Plan management, trial extensions, upgrade/downgrade, Razorpay webhook handling</td></tr>
+<tr><td>billing_routes.py</td><td>/api/billing</td><td>60KB</td><td>Invoice generation, payment history, billing address, GST invoice PDFs</td></tr>
+<tr><td>license_routes.py</td><td>/api/licenses</td><td>23KB</td><td>License key validation, expiry management, multi-seat enforcement</td></tr>
+<tr><td>modules_routes.py</td><td>/api/modules</td><td>31KB</td><td>Feature module enable/disable per org, subscription-gated feature flags</td></tr>
+<tr><td>reports_routes.py</td><td>/api/reports</td><td>36KB</td><td>PDF report generation: QC closure reports, compliance summaries, stage-by-stage exports</td></tr>
+<tr><td>sop_routes.py</td><td>/api/sops</td><td>87KB</td><td>Standard Operating Procedure CRUD, version control, SOP linking to projects</td></tr>
+<tr><td>audit_routes.py</td><td>(root /api)</td><td>70KB</td><td>Audit log queries, activity stream, risk-level events, user session tracking</td></tr>
+<tr><td>support_routes.py</td><td>/api/support</td><td>51KB</td><td>Support ticket creation, status tracking, admin response, SLA monitoring</td></tr>
+<tr><td>announcement_routes.py</td><td>(root /api)</td><td>57KB</td><td>Global/org-level announcement broadcast, read receipts, audience targeting</td></tr>
+<tr><td>notification_routes.py</td><td>/api</td><td>5.5KB</td><td>In-app notification delivery, mark-as-read, notification preferences</td></tr>
+<tr><td>email_notification_routes.py</td><td>(root /api)</td><td>44KB</td><td>Transactional email triggers via Resend API, email template management</td></tr>
+<tr><td>integrations_routes.py</td><td>/api/super-admin</td><td>28KB</td><td>Third-party integration management (Razorpay, webhooks)</td></tr>
+<tr><td>integration_v1_routes.py</td><td>/api/v1/integrations</td><td>19KB</td><td>V1 integration API for external system connectivity</td></tr>
+<tr><td>points_routes.py</td><td>/api</td><td>19KB</td><td>Gamification points system, leaderboards, badges, rewards redemption</td></tr>
+<tr><td>document_branding_routes.py</td><td>(root /api)</td><td>31KB</td><td>Dynamic platform branding: name, logo, colors, acronym, invoice headers</td></tr>
+<tr><td>feature_engine_routes.py</td><td>(root /api)</td><td>5KB</td><td>Feature flag evaluation for frontend conditional rendering</td></tr>
+<tr><td>workflow_routes.py</td><td>/api/workflow</td><td>22KB</td><td>Stage transition rules, approval workflow configuration</td></tr>
+<tr><td>dashboard_activity_route.py</td><td>/api/dashboard</td><td>1.4KB</td><td>Live activity feed for dashboard home widget</td></tr>
+</tbody>
+</table>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 6 — FRONTEND + DATABASE
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 8</div>
+    <h2>Frontend Architecture — SPCI Pattern</h2>
+</div>
+
+<p>The frontend uses <strong>no framework</strong> (no React/Vue/Angular). Instead, it uses a custom architectural pattern called <strong>SPCI (Single Page Component Injection)</strong> where UI components are dynamically generated and injected into the DOM via JavaScript functions.</p>
+
+<div class="two-col">
+<div>
+<h4>Core JavaScript Modules</h4>
+<table>
+<thead><tr><th>File</th><th>Size</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>components.js</code></td><td>178KB</td><td>CORE UI ENGINE: renderSidebar, renderNavbar, kpiCard, statusBadge, modal builders — adapts to all 6 roles</td></tr>
+<tr><td><code>super-admin.js</code></td><td>643KB</td><td>Super Admin portal — full org management, subscription tables, platform settings panels</td></tr>
+<tr><td><code>platform-settings.js</code></td><td>153KB</td><td>Org-level settings: branding, security, workflow config, notification templates</td></tr>
+<tr><td><code>project-details-app.js</code></td><td>156KB</td><td>8-Stage workspace: all stage renderers, QC tools, review panels, PDF export</td></tr>
+<tr><td><code>support-desk.js</code></td><td>163KB</td><td>Full support ticket system UI</td></tr>
+<tr><td><code>announcements.js</code></td><td>332KB</td><td>Global announcement system with rich text editor</td></tr>
+<tr><td><code>auth-guard.js</code></td><td>65KB</td><td>Frontend RBAC enforcement, route protection, permission utilities</td></tr>
+<tr><td><code>api.js</code></td><td>25KB</td><td>Service layer: auto-injects org_id and JWT headers, handles 401/403 centrally</td></tr>
+<tr><td><code>i18n.js</code></td><td>27KB</td><td>Real-time i18n engine with DOM MutationObserver for dynamic content</td></tr>
+<tr><td><code>enterprise-analytics.js</code></td><td>63KB</td><td>Chart.js-based KPI dashboards, trend analysis</td></tr>
+</tbody>
+</table>
+</div>
+<div>
+<h4>CSS Design System</h4>
+<div class="card">
+    <div class="card-title">Glassmorphism Design</div>
+    <p style="margin:0;font-size:8pt;">The UI uses a custom Glassmorphism design system with:</p>
+    <ul style="font-size:8pt;margin-top:4px;">
+        <li><code>design-system.css</code> — CSS variables for spacing, colors, typography tokens</li>
+        <li><code>glass.css</code> — <code>backdrop-filter: blur()</code> aesthetic layer</li>
+        <li>Dark/Light mode via <code>data-theme</code> attribute + <code>ThemeManager</code></li>
+    </ul>
+</div>
+<h4>Frontend Page Structure</h4>
+<ul style="font-size:8.5pt;">
+    <li><code>index.html</code> — Public landing page / marketing site</li>
+    <li><code>auth/</code> — Login, register, password reset, OTP verify</li>
+    <li><code>dashboard/</code> — Role-specific dashboards</li>
+    <li><code>projects/</code> — Project list, detail workspace, repository</li>
+    <li><code>analytics/</code> — KPI analytics, savings reports</li>
+    <li><code>admin/</code> — Super Admin portal pages</li>
+    <li><code>docs/</code> — Internal documentation pages</li>
+</ul>
+<h4>Multi-Language Support</h4>
+<p style="font-size:8.5pt;">JSON dictionaries in <code>assets/translations/</code> for: <strong>en, hi, kn, te, ta, ml</strong>. The <code>i18n.js</code> module watches DOM mutations and auto-translates dynamically injected content.</p>
+</div>
+</div>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 9</div>
+    <h2>Database Schema Overview</h2>
+</div>
+
+<p>All models are defined in a single file: <code>backend/app/infrastructure/database/models/models.py</code>. The database uses <strong>PostgreSQL</strong> with <strong>JSONB</strong> columns for flexible fields.</p>
+
+<div class="two-col">
+<div>
+<h4>Core Tables</h4>
+<table>
+<thead><tr><th>Table</th><th>Key Columns / Notes</th></tr></thead>
+<tbody>
+<tr><td>organizations</td><td>org_id, subscription_plan, org_scale, plants, security_settings (JSONB), login_options (JSONB), enabled_modules (JSONB)</td></tr>
+<tr><td>users</td><td>user_id, org_id, role, email, is_active, plant_id, custom_fields (JSONB), deactivated_at</td></tr>
+<tr><td>departments</td><td>id, org_id, plant_id, name</td></tr>
+<tr><td>plants</td><td>id, org_id, name, code, location</td></tr>
+<tr><td>projects</td><td>id, org_id, title, status, team_id, current_stage</td></tr>
+<tr><td>project_workflow</td><td>id, project_id, stage_data (JSONB), template_snapshot (JSONB)</td></tr>
+<tr><td>stage1_identification</td><td>project_id, problem_statement, target_kpi, team_members</td></tr>
+<tr><td>stage3_analysis</td><td>project_id, fishbone_data (JSONB), five_why_data (JSONB)</td></tr>
+<tr><td>knowledge_repository</td><td>id, org_id, title, problem_summary, root_cause, solution, embedding (vector)</td></tr>
+</tbody>
+</table>
+</div>
+<div>
+<h4>SaaS / Billing Tables</h4>
+<table>
+<thead><tr><th>Table</th><th>Key Columns / Notes</th></tr></thead>
+<tbody>
+<tr><td>saas_plans</td><td>id, name, max_users, max_projects, is_default_trial, trial_duration_days</td></tr>
+<tr><td>subscriptions</td><td>id, org_id, plan_id, status, trial_start/end_date, cancelled_at</td></tr>
+<tr><td>saas_user_sessions</td><td>id, user_id, session_id, status (Active/Terminated/Revoked)</td></tr>
+<tr><td>audit_logs</td><td>id, org_id, user_id, action, resource, risk_level, timestamp</td></tr>
+<tr><td>platform_settings</td><td>id, branding_config (JSONB), global_template_version</td></tr>
+<tr><td>_qcms_schema_version</td><td>version (INT) — migration version guard</td></tr>
+</tbody>
+</table>
+<div class="alert warn" style="margin-top:8px;">
+    <div class="at">Schema Auto-Migration</div>
+    <div class="ab">On first boot, 100+ ALTER TABLE statements run automatically. On subsequent boots, the <code>_qcms_schema_version</code> table is checked — if the version matches, all migrations are skipped for fast startup (&lt;2s).</div>
+</div>
+</div>
+</div>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 7 — SECURITY + RAG AI + SUBSCRIPTIONS
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 10</div>
+    <h2>Security &amp; Middleware Stack</h2>
+</div>
+
+<div class="two-col">
+<div>
+<h4>Middleware Layers (backend)</h4>
+<table>
+<thead><tr><th>Middleware</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><strong>JWT Auth Guard</strong></td><td>Validates Bearer token on every /api/* request. Checks revocation via SaaSUserSession table.</td></tr>
+<tr><td><strong>Role Required</strong></td><td>Enforces RBAC hierarchy (0-4). Returns 403 if user level below endpoint minimum.</td></tr>
+<tr><td><strong>Subscription Guard</strong></td><td>Feature-flags endpoints by org subscription tier (Starter/Professional/Enterprise).</td></tr>
+<tr><td><strong>WAF (Web App Firewall)</strong></td><td>SQL injection, XSS pattern detection on request bodies. DB-driven — enabled via security_settings.</td></tr>
+<tr><td><strong>Rate Limiter</strong></td><td>Per-IP request throttling. Brute-force lockout on /api/auth/login after N failures.</td></tr>
+<tr><td><strong>IP Whitelist/Blacklist</strong></td><td>org-level IP restriction policy stored in security_settings JSONB.</td></tr>
+<tr><td><strong>Idempotency</strong></td><td>Deduplicates concurrent identical POST requests using Idempotency-Key header.</td></tr>
+<tr><td><strong>Security Headers</strong></td><td>X-Content-Type-Options, X-Frame-Options, strict CORS on /api/*.</td></tr>
+</tbody>
+</table>
+</div>
+<div>
+<h4>JWT Session Lifecycle</h4>
+<div class="card">
+    <p style="font-size:8.5pt;">1. User logs in → JWT issued with <code>session_id</code> claim + SaaSUserSession row created (status=Active)</p>
+    <p style="font-size:8.5pt;">2. Every subsequent request → <code>token_in_blocklist_loader</code> checks if session is Terminated/Revoked</p>
+    <p style="font-size:8.5pt;">3. Admin can force-terminate any active session → SaaSUserSession row updated → next request instantly returns 401</p>
+    <p style="font-size:8.5pt;">4. Deactivated/deleted users → <code>is_active=False</code> check revokes all tokens immediately</p>
+</div>
+<h4>Security Settings per Org (JSONB)</h4>
+<ul style="font-size:8.5pt;">
+    <li>Enable/disable WAF, rate limiting, IP whitelist</li>
+    <li>Set login attempt limits, lockout duration</li>
+    <li>Force 2FA / OTP on login</li>
+    <li>Custom session timeout values</li>
+    <li>Allowed IP ranges for admin access</li>
+</ul>
+</div>
+</div>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 11</div>
+    <h2>Quality AI — RAG Intelligent Search</h2>
+</div>
+
+<p>The <strong>Quality AI</strong> feature allows engineers to ask natural language questions like <em>"How was paint peeling on bumpers solved before?"</em> and retrieve verified past solutions from closed projects — without needing to match exact keywords.</p>
+
+<div class="two-col">
+<div>
+<h4>How It Works (RAG Pipeline)</h4>
+<ol style="font-size:8.5pt;">
+    <li><strong>Ingestion:</strong> When a project is closed and approved, its problem summary, root cause, and solution are extracted and converted to a 384-dimensional embedding vector using <code>all-MiniLM-L6-v2</code> neural network.</li>
+    <li><strong>Storage:</strong> The vector is stored in the <code>knowledge_repository</code> table alongside the full project metadata.</li>
+    <li><strong>Query:</strong> User types a question in the AI chat widget → query is converted to a 384-dim vector.</li>
+    <li><strong>Retrieval:</strong> Cosine similarity computed between query vector and all stored project vectors (locked to org_id).</li>
+    <li><strong>Ranked Answer:</strong> Top 3-4 most similar past projects returned with root cause, countermeasure, KPI %, and cost savings.</li>
+</ol>
+</div>
+<div>
+<h4>API Endpoint</h4>
+<div class="code">
+<span class="cm">POST /api/rag/chat</span>
+<span class="cm">Auth: Bearer JWT required</span>
+<span class="cm">Org: Locked to org_id from token</span>
+
+Body: {
+  <span class="st">"query"</span>: <span class="st">"How was paint peeling solved?"</span>
+}
+
+Response: {
+  <span class="st">"answer"</span>: <span class="st">"Top 2 matching solutions..."</span>,
+  <span class="st">"sources"</span>: [
+    { <span class="st">"project_id"</span>: <span class="vr">84</span>, <span class="st">"similarity"</span>: <span class="vr">0.97</span> },
+    { <span class="st">"project_id"</span>: <span class="vr">19</span>, <span class="st">"similarity"</span>: <span class="vr">0.91</span> }
+  ]
+}
+</div>
+<div class="alert info">
+    <div class="at">Subscription Gate</div>
+    <div class="ab">Quality AI is available only on <strong>Enterprise tier</strong> subscriptions. The <code>subscription_guard</code> middleware blocks access for Starter/Professional plans with HTTP 403.</div>
+</div>
+</div>
+</div>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 12</div>
+    <h2>Subscription &amp; Multi-Tenant Model</h2>
+</div>
+
+<div class="three-col">
+<div class="card">
+    <div class="card-title" style="color:#64748b;">Starter</div>
+    <ul style="font-size:8pt;margin:0;">
+        <li>5 Active Projects</li>
+        <li>10 Users</li>
+        <li>Basic Analytics</li>
+        <li>No AI / No API</li>
+    </ul>
+</div>
+<div class="card blue">
+    <div class="card-title">Professional</div>
+    <ul style="font-size:8pt;margin:0;">
+        <li>50 Projects</li>
+        <li>100 Users</li>
+        <li>Advanced Analytics</li>
+        <li>White-labeling</li>
+        <li>Priority Email</li>
+    </ul>
+</div>
+<div class="card purple">
+    <div class="card-title">Enterprise</div>
+    <ul style="font-size:8pt;margin:0;">
+        <li>Unlimited everything</li>
+        <li>Quality AI (RAG)</li>
+        <li>API Access</li>
+        <li>Multi-plant support</li>
+        <li>Priority Support SLA</li>
+    </ul>
+</div>
+</div>
+<p style="font-size:8.5pt;">Trial extensions: Up to 2 auto-approved. The <code>max_auto_trial_extensions</code> is set in <code>platform_settings</code>. Razorpay integration handles payment → webhook → subscription upgrade.</p>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 8 — INSTALLATION GUIDE
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 13</div>
+    <h2>Installation Guide — Docker (Recommended for Production)</h2>
+</div>
+
+<div class="alert info">
+    <div class="at">Prerequisites for Docker Installation</div>
+    <div class="ab">Docker 24+ and Docker Compose v2+ must be installed on the host. No Python or Node.js needed on the host when using Docker.</div>
+</div>
+
+<h4>Step 1 — Clone the Repository</h4>
+<div class="code">
+<span class="cm"># SSH (recommended for servers)</span>
+git clone git@github.com:harshith1432/imfq-QCMS.git
+cd imfq-QCMS
+
+<span class="cm"># OR via HTTPS</span>
+git clone https://github.com/harshith1432/imfq-QCMS.git
+cd imfq-QCMS
+</div>
+
+<h4>Step 2 — Create the Backend Environment File</h4>
+<div class="code">
+<span class="cm"># Copy the example and fill in your actual values</span>
+cp backend/.env.example backend/.env
+
+<span class="cm"># Open backend/.env and set:</span>
+<span class="vr">DATABASE_URL</span>=postgresql://user:password@host:5432/dbname
+<span class="vr">JWT_SECRET_KEY</span>=your_strong_random_secret_here
+<span class="vr">RESEND_API_KEY</span>=re_xxxxxxxxxxxx
+<span class="vr">RESEND_FROM_EMAIL</span>=noreply@yourdomain.com
+<span class="vr">SUPER_ADMIN_USERNAME</span>=admin@yourcompany.com
+<span class="vr">SUPER_ADMIN_PASSWORD</span>=StrongAdminPassword123!
+<span class="vr">INTEGRATION_BASE_URL</span>=https://yourdomain.com
+<span class="vr">CORS_ORIGINS</span>=https://yourdomain.com
+<span class="vr">PORT</span>=10000
+</div>
+
+<h4>Step 3 — Build and Start All Services</h4>
+<div class="code">
+<span class="cm"># Build images and start containers in background</span>
+docker-compose up --build -d
+
+<span class="cm"># Verify both containers are running</span>
+docker-compose ps
+
+<span class="cm"># Watch startup logs (migration runs on first boot)</span>
+docker-compose logs -f backend
+</div>
+
+<h4>Step 4 — Verify the Deployment</h4>
+<div class="code">
+<span class="cm"># Frontend web app (served by Nginx)</span>
+curl http://localhost:80
+
+<span class="cm"># Backend API health</span>
+curl http://localhost:5000/api/auth/health
+<span class="cm"># Expected: {"status": "ok"}</span>
+
+<span class="cm"># On first boot you will see in logs:</span>
+<span class="cm"># [QCMS] Connecting to database at: postgresql://user:****@host:5432/dbname</span>
+<span class="cm"># [QCMS] Running schema migrations...</span>
+<span class="cm"># [QCMS] Schema migrations complete. Version: 2</span>
+</div>
+
+<div class="alert warn">
+    <div class="at">First-Boot Migration Time</div>
+    <div class="ab">On the very first deployment against a fresh database, 100+ ALTER TABLE statements run automatically. This takes approximately <strong>30-60 seconds</strong>. The Gunicorn timeout is set to 300 seconds to accommodate this. Subsequent restarts take less than 2 seconds (migration version guard detects schema is current).</div>
+</div>
+
+<h4>Step 5 — Restart / Update Commands</h4>
+<div class="code">
+<span class="cm"># Restart all services</span>
+docker-compose restart
+
+<span class="cm"># Rebuild and restart after code changes</span>
+docker-compose up --build -d
+
+<span class="cm"># Stop all services</span>
+docker-compose down
+
+<span class="cm"># View live logs</span>
+docker-compose logs -f
+</div>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 14</div>
+    <h2>Installation Guide — Manual Local Development Setup</h2>
+</div>
+
+<h4>Backend Setup</h4>
+<div class="code">
+<span class="cm"># 1. Navigate to backend directory</span>
+cd backend
+
+<span class="cm"># 2. Create Python virtual environment</span>
+python -m venv venv
+
+<span class="cm"># 3a. Activate (Linux/macOS)</span>
+source venv/bin/activate
+
+<span class="cm"># 3b. Activate (Windows PowerShell)</span>
+venv\Scripts\Activate.ps1
+
+<span class="cm"># 4. Install all dependencies</span>
+pip install -r requirements.txt
+
+<span class="cm"># 5. Ensure backend/.env is set up (copy from .env.example)</span>
+cp .env.example .env
+<span class="cm"># Edit .env with your DATABASE_URL and other secrets</span>
+
+<span class="cm"># 6. Run the development server</span>
+python run.py
+<span class="cm"># Flask will start on http://127.0.0.1:5000</span>
+<span class="cm"># Database tables created automatically on first run</span>
+</div>
+
+<h4>Frontend Setup (Static File Serving)</h4>
+<div class="code">
+<span class="cm"># Option A: Python simple server (quickest for local dev)</span>
+cd frontend
+python -m http.server 8080
+<span class="cm"># Visit http://localhost:8080</span>
+
+<span class="cm"># Option B: Use VS Code Live Server extension</span>
+<span class="cm"># Right-click frontend/index.html → "Open with Live Server"</span>
+
+<span class="cm"># IMPORTANT: api.js must point to backend:</span>
+<span class="cm"># In frontend/assets/js/api.js, ensure BASE_URL = 'http://127.0.0.1:5000'</span>
+<span class="cm"># for local development</span>
+</div>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 9 — ENVIRONMENT VARIABLES + ADDITIONAL CONFIG
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 15</div>
+    <h2>Environment Variables — Complete Reference</h2>
+</div>
+
+<p>All environment variables are loaded from <code>backend/.env</code> by <code>python-dotenv</code> in <code>app/config/settings.py</code>.</p>
+
+<table>
+<thead><tr><th>Variable</th><th>Required</th><th>Default</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>DATABASE_URL</code></td><td><strong>Yes</strong></td><td>SQLite fallback</td><td>Full PostgreSQL connection string. Format: <code>postgresql://user:password@host:port/dbname</code>. For Neon serverless, append <code>?sslmode=require</code>.</td></tr>
+<tr><td><code>JWT_SECRET_KEY</code></td><td><strong>Yes</strong></td><td><code>qcms_secret</code> (unsafe)</td><td>Secret used to sign JWT tokens. Must be a long random string in production. Minimum 32 characters.</td></tr>
+<tr><td><code>SECRET_KEY</code></td><td>Recommended</td><td><code>qcms_default_secret_key</code></td><td>Flask session secret. Set to a different value from JWT_SECRET_KEY.</td></tr>
+<tr><td><code>RESEND_API_KEY</code></td><td><strong>Yes</strong> (for emails)</td><td>—</td><td>API key from resend.com for transactional email delivery (OTP, notifications, invites).</td></tr>
+<tr><td><code>RESEND_FROM_EMAIL</code></td><td><strong>Yes</strong> (for emails)</td><td><code>onboarding@resend.dev</code></td><td>The "From" email address. Must be a verified domain sender in Resend.</td></tr>
+<tr><td><code>SUPER_ADMIN_USERNAME</code></td><td><strong>Yes</strong></td><td>—</td><td>Email of the platform-level super administrator account. Created automatically on first boot.</td></tr>
+<tr><td><code>SUPER_ADMIN_PASSWORD</code></td><td><strong>Yes</strong></td><td>—</td><td>Password for the super admin account. Use a strong password.</td></tr>
+<tr><td><code>INTEGRATION_BASE_URL</code></td><td>Recommended</td><td><code>http://localhost:5000</code></td><td>The public URL of the backend API. Used for Razorpay webhook callbacks and integration redirects.</td></tr>
+<tr><td><code>CORS_ORIGINS</code></td><td>Recommended</td><td><code>*</code> (unsafe)</td><td>Comma-separated list of allowed CORS origins. Set to your frontend domain in production, e.g., <code>https://app.yourdomain.com</code>.</td></tr>
+<tr><td><code>PORT</code></td><td>No</td><td><code>10000</code></td><td>Port Gunicorn binds to. Render.com provides this automatically. Use <code>5000</code> for local Docker.</td></tr>
+<tr><td><code>GOOGLE_API_KEY</code></td><td>No</td><td>—</td><td>Google API key for Google SSO / OAuth2 login integration (if enabled for an org).</td></tr>
+<tr><td><code>FLASK_ENV</code></td><td>No</td><td><code>production</code></td><td>Set to <code>development</code> for debug mode with auto-reloader. Never use <code>development</code> in production.</td></tr>
+<tr><td><code>FLASK_APP</code></td><td>No</td><td>—</td><td>Set to <code>run.py</code> if using <code>flask</code> CLI commands.</td></tr>
+</tbody>
+</table>
+
+<div class="alert danger">
+    <div class="at">Critical Security Warning</div>
+    <div class="ab">NEVER commit <code>backend/.env</code> to git. The <code>.gitignore</code> is configured to exclude it, but always verify. If JWT_SECRET_KEY or DATABASE_URL is exposed, rotate them immediately and invalidate all existing sessions.</div>
+</div>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 16</div>
+    <h2>Additional Configurations</h2>
+</div>
+
+<h3>16.1 — Gunicorn Production Settings</h3>
+<p>Configured in <code>backend/gunicorn.conf.py</code>:</p>
+
+<table>
+<thead><tr><th>Setting</th><th>Value</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td><code>workers</code></td><td>1</td><td>Single worker prevents per-worker DB migration re-runs. Increase only after confirming migration guards work correctly.</td></tr>
+<tr><td><code>timeout</code></td><td>300 seconds</td><td>Accommodates first-boot DB migration (100+ ALTER statements). Safe to reduce to 60s after first migration.</td></tr>
+<tr><td><code>preload_app</code></td><td>True</td><td>App initialized once in master process. Workers inherit the migrated state — no duplicate migrations.</td></tr>
+<tr><td><code>worker_class</code></td><td>sync</td><td>Synchronous worker is sufficient for QCMS request patterns.</td></tr>
+<tr><td><code>keepalive</code></td><td>5</td><td>Persistent connections for Nginx reverse proxy.</td></tr>
+</tbody>
+</table>
+
+<h3>16.2 — Nginx Reverse Proxy Configuration</h3>
+<p>Configured in <code>frontend/nginx.conf</code>:</p>
+<ul style="font-size:8.5pt;">
+    <li>All <code>/api/*</code> requests are proxied to <code>http://backend:5000</code></li>
+    <li>All <code>/uploads/*</code> requests are proxied to backend for file serving</li>
+    <li>Frontend SPA routing uses <code>try_files $uri $uri/ /index.html</code> for client-side navigation</li>
+    <li>For production HTTPS: add SSL certificates via <code>ssl_certificate</code> directives or use a load balancer / Cloudflare for TLS termination</li>
+</ul>
+
+<h3>16.3 — Database Connection Pool</h3>
+<ul style="font-size:8.5pt;">
+    <li>Standard PostgreSQL: <code>pool_size=5</code>, <code>max_overflow=5</code>, <code>pool_recycle=1800</code>, <code>pool_pre_ping=True</code></li>
+    <li>Serverless (Vercel/Lambda): <code>NullPool</code> (no persistent connections — each request opens/closes its own connection)</li>
+    <li>Neon Serverless: Requires <code>?sslmode=require</code> in DATABASE_URL</li>
+</ul>
+
+<h3>16.4 — File Upload Configuration</h3>
+<ul style="font-size:8.5pt;">
+    <li>Max file size: <strong>16 MB</strong> per upload (set in <code>MAX_CONTENT_LENGTH</code>)</li>
+    <li>Upload folder: <code>backend/uploads/</code> (created automatically on boot)</li>
+    <li>Serverless environments: uploads go to <code>/tmp/uploads</code> (ephemeral — consider S3/GCS for production serverless)</li>
+    <li>Supported file types enforced per route (images, PDFs, Excel)</li>
+</ul>
+
+<h3>16.5 — Super Admin Account Bootstrap</h3>
+<ul style="font-size:8.5pt;">
+    <li>On first boot, <code>boot_utils.py</code> reads <code>SUPER_ADMIN_USERNAME</code> and <code>SUPER_ADMIN_PASSWORD</code> from env</li>
+    <li>If no super admin exists in DB, one is created automatically with a platform-level organization</li>
+    <li>Super Admin logs in at <code>/admin/</code> portal, not the regular organization login page</li>
+</ul>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 10 — SERVER REQUIREMENTS + INTEGRATIONS + TROUBLESHOOT
+     ═══════════════════════════════════════════════════════ -->
+<div class="page">
+<div class="sec-header">
+    <div class="sec-num">SECTION 17</div>
+    <h2>Server Basic Requirements</h2>
+</div>
+
+<h3>17.1 — Minimum Requirements (Development / Small Org)</h3>
+<table>
+<thead><tr><th>Component</th><th>Minimum</th><th>Recommended Production</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><strong>CPU</strong></td><td>2 vCPU</td><td>4 vCPU</td><td>RAG embedding computation is CPU-intensive during ingestion</td></tr>
+<tr><td><strong>RAM</strong></td><td>1 GB</td><td>4 GB</td><td>all-MiniLM-L6-v2 model requires ~500MB RAM. Gunicorn + Nginx + PostgreSQL need additional headroom.</td></tr>
+<tr><td><strong>Disk</strong></td><td>20 GB SSD</td><td>50 GB SSD</td><td>OS + Docker images (~2GB) + uploads + PDF reports + vector store</td></tr>
+<tr><td><strong>OS</strong></td><td>Ubuntu 22.04 LTS</td><td>Ubuntu 22.04 LTS / Debian 12</td><td>Any Linux distro with Docker support works</td></tr>
+<tr><td><strong>Network</strong></td><td>100 Mbps</td><td>1 Gbps</td><td>PDF report generation creates large binary responses</td></tr>
+<tr><td><strong>Open Ports</strong></td><td>80 (HTTP), 443 (HTTPS)</td><td>80, 443 (+ firewall)</td><td>Port 5000 (backend) should NOT be publicly exposed — proxied via Nginx</td></tr>
+</tbody>
+</table>
+
+<h3>17.2 — Software Requirements on Host</h3>
+<table>
+<thead><tr><th>Software</th><th>Version</th><th>Required For</th></tr></thead>
+<tbody>
+<tr><td><strong>Docker</strong></td><td>24+</td><td>Container runtime for both frontend and backend</td></tr>
+<tr><td><strong>Docker Compose</strong></td><td>v2+</td><td>Multi-container orchestration</td></tr>
+<tr><td><strong>Python</strong></td><td>3.11+</td><td>Only if running without Docker (manual setup)</td></tr>
+<tr><td><strong>PostgreSQL</strong></td><td>15+</td><td>Only if hosting DB locally (Neon serverless is preferred)</td></tr>
+<tr><td><strong>Git</strong></td><td>Any</td><td>Cloning the repository</td></tr>
+</tbody>
+</table>
+
+<h3>17.3 — Cloud / Managed Service Options</h3>
+<table>
+<thead><tr><th>Service</th><th>Provider</th><th>Purpose</th><th>Configuration Notes</th></tr></thead>
+<tbody>
+<tr><td>Managed PostgreSQL</td><td>Neon (current), AWS RDS, Supabase</td><td>Primary DB</td><td>Add <code>?sslmode=require</code> to DATABASE_URL for Neon/cloud</td></tr>
+<tr><td>Backend Hosting</td><td>Render, Railway, EC2, GCP VM</td><td>Flask API</td><td>Render provides PORT env var automatically. Gunicorn binds to it.</td></tr>
+<tr><td>Frontend Hosting</td><td>Vercel, Netlify, S3+CloudFront</td><td>Static files</td><td>Update CORS_ORIGINS and INTEGRATION_BASE_URL to match</td></tr>
+<tr><td>Transactional Email</td><td>Resend (current)</td><td>OTP, notifications</td><td>RESEND_API_KEY required. Verify sender domain in Resend dashboard.</td></tr>
+<tr><td>Payments</td><td>Razorpay</td><td>Subscription billing</td><td>Configure Razorpay API keys in Super Admin → Integrations panel</td></tr>
+</tbody>
+</table>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 18</div>
+    <h2>Key Integration Points</h2>
+</div>
+
+<table>
+<thead><tr><th>Integration</th><th>How It Works</th><th>Config Location</th></tr></thead>
+<tbody>
+<tr><td><strong>Razorpay Payments</strong></td><td>Organization upgrades plan → Razorpay checkout → Webhook POST to <code>/api/subscriptions/razorpay/webhook</code> → subscription updated in DB</td><td>Super Admin → Integrations → Razorpay</td></tr>
+<tr><td><strong>Resend Email</strong></td><td>Events (OTP, invite, alert) trigger <code>resend.Emails.send()</code> calls in <code>email_notification_routes.py</code></td><td><code>backend/.env</code>: RESEND_API_KEY</td></tr>
+<tr><td><strong>Google SSO</strong></td><td>Optional per-org login option. OAuth2 flow via <code>GOOGLE_API_KEY</code>. Managed in org login_options JSONB.</td><td><code>backend/.env</code>: GOOGLE_API_KEY + Admin → Login Options</td></tr>
+<tr><td><strong>RAG AI Engine</strong></td><td>Sentence transformers + FAISS/PostgreSQL vector lookup via <code>POST /api/rag/chat</code></td><td>Enterprise subscription required. Auto-activates.</td></tr>
+<tr><td><strong>External API Access</strong></td><td>Enterprise orgs get API key for programmatic access. Integration endpoint at <code>/api/v1/integrations/</code></td><td>Admin → API Access panel</td></tr>
+</tbody>
+</table>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 19</div>
+    <h2>Troubleshooting &amp; Common Issues</h2>
+</div>
+
+<table>
+<thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Backend container exits on startup</td><td>DATABASE_URL is wrong or DB unreachable</td><td>Check <code>docker-compose logs backend</code>. Verify DB URL, credentials, and network accessibility from container.</td></tr>
+<tr><td>First boot takes 60+ seconds</td><td>Running 100+ ALTER TABLE migrations against remote DB</td><td>Normal. Wait for "Schema migrations complete" in logs. Subsequent boots are fast.</td></tr>
+<tr><td>401 on all API calls after code deploy</td><td>JWT_SECRET_KEY changed between deployments</td><td>All existing tokens are now invalid. Users must log in again. This is correct behavior.</td></tr>
+<tr><td>CORS errors in browser</td><td>CORS_ORIGINS not set to match frontend domain</td><td>Set <code>CORS_ORIGINS=https://yourdomain.com</code> in <code>backend/.env</code> and restart.</td></tr>
+<tr><td>File upload fails with 413</td><td>Nginx rejecting file larger than default limit</td><td>Add <code>client_max_body_size 20M;</code> to nginx.conf server block.</td></tr>
+<tr><td>Emails not sending</td><td>RESEND_API_KEY invalid or from-email domain not verified</td><td>Verify key in Resend dashboard. Check RESEND_FROM_EMAIL is a verified sender.</td></tr>
+<tr><td>Super Admin login fails</td><td>SUPER_ADMIN_PASSWORD not set or account not bootstrapped</td><td>Check <code>boot_utils.py</code> ran. Verify SUPER_ADMIN_USERNAME and SUPER_ADMIN_PASSWORD in .env on first boot.</td></tr>
+<tr><td>RAG AI returns no results</td><td>No projects have been ingested into knowledge_repository yet</td><td>At least one project must be Closed and Approved for ingestion to trigger.</td></tr>
+</tbody>
+</table>
+
+<hr/>
+
+<div class="sec-header">
+    <div class="sec-num">SECTION 20</div>
+    <h2>KT Handoff Checklist</h2>
+</div>
+
+<div class="two-col">
+<div>
+<h4>Access &amp; Credentials to Hand Over</h4>
+<ul>
+    <li>GitHub repository access</li>
+    <li>Neon / PostgreSQL DB connection string</li>
+    <li>Resend API key + verified sender domain</li>
+    <li>Razorpay API key + webhook secret</li>
+    <li>Super Admin login credentials</li>
+    <li>Docker registry (if using private images)</li>
+    <li>Render / hosting platform access</li>
+    <li>Google API Console project (for SSO)</li>
+</ul>
+</div>
+<div>
+<h4>Knowledge Items to Verify</h4>
+<ul>
+    <li>Understand the 8-stage workflow &amp; approval gates</li>
+    <li>Know how to add a new organization (Super Admin)</li>
+    <li>Know how the DB auto-migration version guard works</li>
+    <li>Know how to read audit logs for compliance events</li>
+    <li>Know how to force-terminate a user session</li>
+    <li>Know how to run a manual DB migration if needed</li>
+    <li>Understand the subscription tier feature gates</li>
+    <li>Know how to trigger RAG ingestion for a closed project</li>
+</ul>
+</div>
+</div>
+
+<div class="alert tip">
+    <div class="at">Quick Health Check Command</div>
+    <div class="ab">After any deployment, run: <code>curl https://yourdomain.com/api/auth/health</code>. If it returns <code>{"status": "ok"}</code> the backend is healthy. Then log in as Super Admin and verify the Organizations list loads correctly.</div>
+</div>
+
+<div class="footer">QCMS Enterprise OS — Internal KT Documentation — Confidential — v1.2.1 — August 2026</div>
+</div>
+
+</body>
+</html>

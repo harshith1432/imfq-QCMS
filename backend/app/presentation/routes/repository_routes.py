@@ -633,10 +633,11 @@ def auto_archive_project_to_repository(project_id, org_id):
         content += f"Problem: {entry.problem_summary or ''}\n"
         content += f"Root Cause: {entry.root_cause or ''}\n"
         content += f"Solution: {entry.solution_summary or ''}\n"
-        content += f"Keywords: {entry.keywords or ''}"
-        entry.embedding = str(model.encode(content).tolist())
+        raw_emb = model.encode(content)
+        entry.embedding = raw_emb.tolist() if hasattr(raw_emb, 'tolist') else list(raw_emb)
     except Exception as e:
         print(f"[RAG] Vector encoding skipped or failed during auto-archive: {e}")
+        entry.embedding = None
         
     return entry
 

@@ -2049,10 +2049,17 @@ def get_departments():
     if not current_user:
         return jsonify({"message": "User not found"}), 404
         
+    org_id = request.args.get('org_id', type=int)
     plant_id = request.args.get('plant_id')
-    query = Department.query.filter_by(org_id=current_user.org_id)
+    
+    if current_user.role and current_user.role.name == 'SuperAdmin':
+        target_org = org_id or current_user.org_id
+        query = Department.query.filter_by(org_id=target_org) if target_org else Department.query
+    else:
+        query = Department.query.filter_by(org_id=current_user.org_id)
+
     if plant_id and str(plant_id).isdigit():
-        query = query.filter_by(plant_id=int(plant_id))
+        query = query.filter(db.or_(Department.plant_id == int(plant_id), Department.plant_id.is_(None)))
 
     from app.infrastructure.database.models.models import Project, ProjectMember
     depts = query.order_by(Department.name).all()
@@ -2615,6 +2622,10 @@ def get_role_permissions():
             if role_perms and isinstance(role_perms, dict) and role in role_perms and isinstance(role_perms[role], dict):
                 perms_to_return[role].update(role_perms[role])
 
+    # Enforce immutable system default: Admin MUST ALWAYS have access to Settings & Billing
+    if "Admin" in perms_to_return and isinstance(perms_to_return["Admin"], dict):
+        perms_to_return["Admin"]["settings"] = True
+
     return jsonify({
         "status": "success",
         "roles": ["Team Member", "CEO", "Facilitator", "Reviewer", "Admin"],
@@ -2692,6 +2703,10 @@ def update_role_permissions():
     new_perms = data.get('permissions')
     if not isinstance(new_perms, dict):
         return jsonify({"message": "Invalid permissions payload"}), 400
+
+    # Immutable system default: Admin MUST ALWAYS have access to Settings & Billing
+    if 'Admin' in new_perms and isinstance(new_perms['Admin'], dict):
+        new_perms['Admin']['settings'] = True
 
     sec = dict(getattr(org, 'security_settings', {}) or {})
     sec['role_permissions'] = new_perms

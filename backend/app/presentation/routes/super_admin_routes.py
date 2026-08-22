@@ -356,12 +356,27 @@ def list_companies():
         if sp.code:
             plan_type_map[sp.code.lower()] = pt
 
+    def _is_paid_plan(pname):
+        if not pname:
+            return False
+        p = str(pname).strip().lower()
+        return p not in ('trial', 'trialing', 'default trial plan', '')
+
+    def _get_effective_org_status(o):
+        st = (o.subscription_status or '').strip()
+        pl = (o.subscription_plan or '').strip()
+        if st in ('Suspended', 'On Hold', 'Expired'):
+            return st
+        if _is_paid_plan(pl):
+            return 'Active'
+        return st or 'Trialing'
+
     kpi = {
         "total": len(all_orgs_list),
-        "active": len([o for o in all_orgs_list if o.subscription_status == 'Active']),
-        "trialing": len([o for o in all_orgs_list if o.subscription_status in ('Trialing', 'Trial')]),
-        "suspended": len([o for o in all_orgs_list if o.subscription_status in ('Suspended', 'On Hold')]),
-        "expired": len([o for o in all_orgs_list if o.subscription_status == 'Expired']),
+        "active": len([o for o in all_orgs_list if _get_effective_org_status(o) == 'Active']),
+        "trialing": len([o for o in all_orgs_list if _get_effective_org_status(o) in ('Trialing', 'Trial', 'On Trial')]),
+        "suspended": len([o for o in all_orgs_list if _get_effective_org_status(o) in ('Suspended', 'On Hold')]),
+        "expired": len([o for o in all_orgs_list if _get_effective_org_status(o) == 'Expired']),
         "enterprise": len([o for o in all_orgs_list if _resolve_org_plan_type(o, plan_type_map).lower() == 'enterprise']),
         "white_label": len([o for o in all_orgs_list if o.is_white_label]),
         "expiring_soon": len([o for o in all_orgs_list if is_org_expiring_soon(o)]),
@@ -396,6 +411,7 @@ def list_companies():
         plan_limits = SubscriptionManager.get_organization_plan_limits(org.id)
         actual_plan = org.subscription_plan or plan_limits.get('plan_name') or p_type
         resolved_max_users = plan_limits.get('max_users') if plan_limits.get('max_users') is not None else (org.max_users or 50)
+        eff_status = _get_effective_org_status(org)
 
         output.append({
             "id": org.id,
@@ -409,7 +425,7 @@ def list_companies():
             "plan_type": actual_plan,
             "plan_name": actual_plan,
             "plan_category": p_type,
-            "status": org.subscription_status,
+            "status": eff_status,
             "user_count": user_count,
             "max_users": resolved_max_users,
             "dept_count": dept_count,
@@ -808,6 +824,15 @@ def update_company(org_id):
     # Update subscription details
     if 'plan' in sub_data:
         org.subscription_plan = sub_data['plan']
+        plan_name_clean = str(sub_data['plan']).strip().lower()
+        if plan_name_clean not in ('trial', 'trialing', 'default trial plan', ''):
+            if org.subscription_status in ('Trialing', 'Trial', 'On Trial', None, ''):
+                org.subscription_status = 'Active'
+            sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
+            if sub:
+                sub.plan_name = sub_data['plan']
+                if sub.subscription_status in ('Trial', 'Trialing'):
+                    sub.subscription_status = 'Active'
     if 'max_users' in sub_data:
         org.max_users = int(sub_data['max_users'])
     if 'storage_limit' in sub_data:
@@ -1439,6 +1464,15 @@ def update_company_plan(org_id):
 
     old_plan = org.subscription_plan
     org.subscription_plan = new_plan
+    plan_name_clean = str(new_plan).strip().lower()
+    if plan_name_clean not in ('trial', 'trialing', 'default trial plan', ''):
+        if org.subscription_status in ('Trialing', 'Trial', 'On Trial', None, ''):
+            org.subscription_status = 'Active'
+        sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
+        if sub:
+            sub.plan_name = new_plan
+            if sub.subscription_status in ('Trial', 'Trialing'):
+                sub.subscription_status = 'Active'
 
     clean_plan = new_plan.strip()
     saas_plan = SaaSPlan.query.filter(
@@ -2187,6 +2221,9 @@ def auth_kpis():
         session_count = db.session.query(func.count(SaaSUserSession.session_id)).scalar() or 0
         if session_count > login_attempts:
             login_attempts = session_count
+
+        from app.presentation.routes.audit_routes import cleanup_inactive_sessions
+        cleanup_inactive_sessions(inactivity_hours=2)
 
         active_sessions = db.session.query(func.count(SaaSUserSession.session_id)).filter(
             SaaSUserSession.status == 'Active'

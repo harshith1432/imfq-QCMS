@@ -553,7 +553,10 @@
                 let targetRole = userRole || userObj.role || 'Team Member';
                 if (targetRole === 'Team Leader' || targetRole === 'teamleader' || targetRole === 'team_leader') targetRole = 'Team Member';
                 
-                if (rolePerms && rolePerms[targetRole] && typeof rolePerms[targetRole][modKey] === 'boolean') {
+                // Settings is permanent system default for Admin/SuperAdmin to prevent lockout
+                if (['Admin', 'admin', 'SuperAdmin', 'superadmin', 'Owner'].includes(targetRole) && modKey === 'settings') {
+                    isDenied = false;
+                } else if (rolePerms && rolePerms[targetRole] && typeof rolePerms[targetRole][modKey] === 'boolean') {
                     if (rolePerms[targetRole][modKey] === false) {
                         console.warn(`[RBAC] Module "${modKey}" is disabled for role "${targetRole}". Access denied to "${page}".`);
                         isDenied = true;
@@ -1272,5 +1275,147 @@ window.QCMSFeatures = {
 document.addEventListener('DOMContentLoaded', () => {
     window.QCMSFeatures.init();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User Movement & 2-Hour Inactivity Auto-Termination Engine
+// ─────────────────────────────────────────────────────────────────────────────
+(function() {
+    const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000; // Exact 2 hours (7200000 ms)
+    const HEARTBEAT_INTERVAL_MS = 2 * 60 * 1000;      // Send heartbeat every 2 minutes while active
+    let lastUserMovementTime = Date.now();
+    let lastHeartbeatSentTime = 0;
+    let isTerminating = false;
+
+    function recordMovement() {
+        lastUserMovementTime = Date.now();
+        try {
+            localStorage.setItem('qcms_last_activity', String(lastUserMovementTime));
+            sessionStorage.setItem('qcms_last_activity', String(lastUserMovementTime));
+        } catch (e) {}
+    }
+
+    // Capture all human movement / input interactions across window & document
+    const movementEvents = [
+        'mousemove', 'mousedown', 'mouseup', 'keydown', 'keyup',
+        'touchstart', 'touchend', 'scroll', 'click', 'dblclick',
+        'wheel', 'pointerdown', 'pointermove', 'input', 'change', 'focus'
+    ];
+    movementEvents.forEach(evt => {
+        window.addEventListener(evt, recordMovement, { capture: true, passive: true });
+        document.addEventListener(evt, recordMovement, { capture: true, passive: true });
+    });
+
+    // Cross-tab synchronization: if user acts in another tab, sync activity time here
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'qcms_last_activity' && e.newValue) {
+            const remoteTime = Number(e.newValue);
+            if (!isNaN(remoteTime) && remoteTime > lastUserMovementTime) {
+                lastUserMovementTime = remoteTime;
+            }
+        }
+    });
+
+    // Intercept fetch API: ANY API request made by the user is counted as active work
+    try {
+        const _origFetch = window.fetch;
+        window.fetch = function(...args) {
+            recordMovement();
+            return _origFetch.apply(this, args);
+        };
+    } catch (e) {}
+
+    // Initialize activity timestamp safely on page load
+    const storedLast = localStorage.getItem('qcms_last_activity') || sessionStorage.getItem('qcms_last_activity');
+    const now = Date.now();
+    if (storedLast && !isNaN(Number(storedLast))) {
+        const parsed = Number(storedLast);
+        // If stored timestamp is within 2 hours, use it; otherwise, initialize freshly to now
+        if (now - parsed < INACTIVITY_TIMEOUT_MS) {
+            lastUserMovementTime = parsed;
+        } else {
+            recordMovement();
+        }
+    } else {
+        recordMovement();
+    }
+
+    function handleSessionExpiry(reason) {
+        if (isTerminating) return;
+        isTerminating = true;
+        console.warn('[SessionManager] Terminating session due to 2 hours of inactivity: ' + reason);
+
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('qcms_last_activity');
+        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('qcms_last_activity');
+
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('login.html') && !currentPath.includes('index.html') && currentPath !== '/') {
+            alert('Your session has automatically terminated due to 2 hours of inactivity.');
+            window.location.href = '/login.html?reason=inactivity_timeout';
+        }
+    }
+
+    async function sendHeartbeat() {
+        if (isTerminating) return;
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+        if (!token) return;
+
+        // Check latest cross-tab activity from localStorage
+        const latestStored = localStorage.getItem('qcms_last_activity');
+        if (latestStored && !isNaN(Number(latestStored))) {
+            const remoteTime = Number(latestStored);
+            if (remoteTime > lastUserMovementTime) {
+                lastUserMovementTime = remoteTime;
+            }
+        }
+
+        const currentTime = Date.now();
+        const timeSinceMovement = currentTime - lastUserMovementTime;
+
+        // Only terminate if user has been continuously inactive for 2 full hours (7200 seconds)
+        if (timeSinceMovement >= INACTIVITY_TIMEOUT_MS) {
+            handleSessionExpiry('2-hour continuous inactivity exceeded');
+            return;
+        }
+
+        // Send heartbeat ping to server if user has had active movement recently
+        if (timeSinceMovement < INACTIVITY_TIMEOUT_MS && (currentTime - lastHeartbeatSentTime) >= HEARTBEAT_INTERVAL_MS) {
+            lastHeartbeatSentTime = currentTime;
+            try {
+                const res = await fetch('/api/auth/heartbeat', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (res.status === 401) {
+                    const data = await res.json().catch(() => ({}));
+                    if (data.status === 'expired' && data.message && data.message.includes('inactivity')) {
+                        // Double check local activity before expiring
+                        if ((Date.now() - lastUserMovementTime) >= INACTIVITY_TIMEOUT_MS) {
+                            handleSessionExpiry('Server 2-hour inactivity timeout');
+                        } else {
+                            // User was actually active locally: send another heartbeat to re-activate
+                            lastHeartbeatSentTime = 0;
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore transient network issues
+            }
+        }
+    }
+
+    // Run heartbeat check every 60 seconds
+    setInterval(sendHeartbeat, 60 * 1000);
+})();
+
 
 

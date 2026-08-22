@@ -513,6 +513,17 @@
             if (existing) existing.remove();
         }
 
+        function toggleOtherIndustry(val) {
+            const container = document.getElementById('otherIndustryContainer');
+            const input = document.getElementById('other_industry');
+            if (container) {
+                container.style.display = (val === 'Other') ? 'block' : 'none';
+            }
+            if (val === 'Other' && input) {
+                input.focus();
+            }
+        }
+
         function togglePassword(inputId, btn) {
             const input = document.getElementById(inputId);
             if (!input) return;

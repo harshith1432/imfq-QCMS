@@ -181,15 +181,15 @@
         }
 
         .scope-pills-container {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: var(--ds-bg-card, #ffffff);
+            border: 1px solid var(--ds-border-color, #e2e8f0);
             box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             display: inline-flex;
             gap: 4px;
         }
 
         .scope-pills-container .nav-link {
-            color: #64748b;
+            color: var(--ds-text-secondary, #64748b);
             font-weight: 600;
             padding: 6px 14px;
             border-radius: 20px;
@@ -199,14 +199,194 @@
         }
 
         .scope-pills-container .nav-link:hover {
-            color: #1e293b;
-            background: #f8fafc;
+            color: var(--ds-text-main, #1e293b);
+            background: rgba(0, 0, 0, 0.04);
         }
 
         .scope-pills-container .nav-link.active {
             background: #2563eb !important;
             color: #ffffff !important;
-            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+        }
+
+        /* Dark Theme Support */
+        [data-theme="dark"] .scope-pills-container,
+        body.dark-mode .scope-pills-container,
+        [data-bs-theme="dark"] .scope-pills-container,
+        html.dark .scope-pills-container {
+            background: #1e293b !important;
+            border: 1px solid #334155 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        [data-theme="dark"] .scope-pills-container .nav-link,
+        body.dark-mode .scope-pills-container .nav-link,
+        [data-bs-theme="dark"] .scope-pills-container .nav-link,
+        html.dark .scope-pills-container .nav-link {
+            color: #94a3b8 !important;
+            background: transparent !important;
+        }
+
+        [data-theme="dark"] .scope-pills-container .nav-link:hover,
+        body.dark-mode .scope-pills-container .nav-link:hover,
+        [data-bs-theme="dark"] .scope-pills-container .nav-link:hover,
+        html.dark .scope-pills-container .nav-link:hover {
+            color: #f8fafc !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        [data-theme="dark"] .scope-pills-container .nav-link.active,
+        body.dark-mode .scope-pills-container .nav-link.active,
+        [data-bs-theme="dark"] .scope-pills-container .nav-link.active,
+        html.dark .scope-pills-container .nav-link.active {
+            background: #3b82f6 !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.45) !important;
+        }
+
+        [data-theme="dark"] #scopeBadgeText,
+        body.dark-mode #scopeBadgeText,
+        [data-bs-theme="dark"] #scopeBadgeText,
+        html.dark #scopeBadgeText {
+            background: rgba(59, 130, 246, 0.18) !important;
+            color: #93c5fd !important;
+            border-color: rgba(59, 130, 246, 0.35) !important;
+        }
+
+        [data-theme="dark"] .podium-card,
+        body.dark-mode .podium-card,
+        [data-bs-theme="dark"] .podium-card,
+        html.dark .podium-card {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        [data-theme="dark"] .podium-card.rank-1,
+        body.dark-mode .podium-card.rank-1,
+        [data-bs-theme="dark"] .podium-card.rank-1,
+        html.dark .podium-card.rank-1 {
+            border-color: rgba(245, 158, 11, 0.5) !important;
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.14) 0%, #1e293b 100%) !important;
+        }
+
+        [data-theme="dark"] .podium-card.rank-2,
+        body.dark-mode .podium-card.rank-2,
+        [data-bs-theme="dark"] .podium-card.rank-2,
+        html.dark .podium-card.rank-2 {
+            border-color: rgba(148, 163, 184, 0.5) !important;
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.14) 0%, #1e293b 100%) !important;
+        }
+
+        [data-theme="dark"] .podium-card.rank-3,
+        body.dark-mode .podium-card.rank-3,
+        [data-bs-theme="dark"] .podium-card.rank-3,
+        html.dark .podium-card.rank-3 {
+            border-color: rgba(217, 119, 6, 0.4) !important;
+            background: linear-gradient(180deg, rgba(217, 119, 6, 0.14) 0%, #1e293b 100%) !important;
+        }
+
+        [data-theme="dark"] .champion-card,
+        body.dark-mode .champion-card,
+        [data-bs-theme="dark"] .champion-card,
+        html.dark .champion-card {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        [data-theme="dark"] .champion-card .text-dark,
+        body.dark-mode .champion-card .text-dark,
+        [data-bs-theme="dark"] .champion-card .text-dark,
+        html.dark .champion-card .text-dark {
+            color: #f8fafc !important;
+        }
+
+        [data-theme="dark"] .champion-scope-header,
+        body.dark-mode .champion-scope-header,
+        [data-bs-theme="dark"] .champion-scope-header,
+        html.dark .champion-scope-header {
+            border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        [data-theme="dark"] .champion-scope-tag,
+        body.dark-mode .champion-scope-tag,
+        [data-bs-theme="dark"] .champion-scope-tag,
+        html.dark .champion-scope-tag {
+            color: #93c5fd !important;
+            background: rgba(59, 130, 246, 0.2) !important;
+        }
+
+        [data-theme="dark"] .point-counter,
+        body.dark-mode .point-counter,
+        [data-bs-theme="dark"] .point-counter,
+        html.dark .point-counter {
+            color: #f8fafc !important;
+        }
+
+        [data-theme="dark"] .glass-card,
+        body.dark-mode .glass-card,
+        [data-bs-theme="dark"] .glass-card,
+        html.dark .glass-card {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        [data-theme="dark"] .ds-table th,
+        body.dark-mode .ds-table th,
+        [data-bs-theme="dark"] .ds-table th,
+        html.dark .ds-table th {
+            background: #0f172a !important;
+            color: #94a3b8 !important;
+            border-bottom-color: #334155 !important;
+        }
+
+        [data-theme="dark"] .ds-table td,
+        body.dark-mode .ds-table td,
+        [data-bs-theme="dark"] .ds-table td,
+        html.dark .ds-table td {
+            color: #e2e8f0 !important;
+            border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+        }
+
+        [data-theme="dark"] .ds-table tbody tr:hover td,
+        body.dark-mode .ds-table tbody tr:hover td,
+        [data-bs-theme="dark"] .ds-table tbody tr:hover td,
+        html.dark .ds-table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        [data-theme="dark"] .card-footer,
+        body.dark-mode .card-footer,
+        [data-bs-theme="dark"] .card-footer,
+        html.dark .card-footer {
+            background: #1e293b !important;
+            border-top-color: #334155 !important;
+        }
+
+        [data-theme="dark"] .modal-content,
+        body.dark-mode .modal-content,
+        [data-bs-theme="dark"] .modal-content,
+        html.dark .modal-content {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            color: #f1f5f9 !important;
+        }
+
+        [data-theme="dark"] .modal-header,
+        body.dark-mode .modal-header,
+        [data-bs-theme="dark"] .modal-header,
+        html.dark .modal-header,
+        [data-theme="dark"] .modal-footer,
+        body.dark-mode .modal-footer,
+        [data-bs-theme="dark"] .modal-footer,
+        html.dark .modal-footer {
+            border-color: #334155 !important;
+        }
+
+        [data-theme="dark"] .btn-close,
+        body.dark-mode .btn-close,
+        [data-bs-theme="dark"] .btn-close,
+        html.dark .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
         }
     </style>
 </head>
@@ -543,7 +723,7 @@
                                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle text-xxs px-2 py-0.5 fw-bold">#1 Plant Lead</span>
                                             </div>
                                             <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" alt="${c.name}">
-                                            <h6 class="fw-bold mb-0 text-dark text-truncate">${c.name}</h6>
+                                            <h6 class="fw-bold mb-0 text-main text-truncate">${c.name}</h6>
                                             <div class="text-xxs text-muted mb-2">${c.department} &bull; ${c.role}</div>
                                             <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
                                             <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
@@ -576,7 +756,7 @@
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle text-xxs px-2 py-0.5 fw-bold">#1 Dept Lead</span>
                                             </div>
                                             <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" style="border-color:#10b981;" alt="${c.name}">
-                                            <h6 class="fw-bold mb-0 text-dark text-truncate">${c.name}</h6>
+                                            <h6 class="fw-bold mb-0 text-main text-truncate">${c.name}</h6>
                                             <div class="text-xxs text-muted mb-2">${c.plant} &bull; ${c.role}</div>
                                             <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
                                             <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
@@ -610,7 +790,7 @@
                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-xxs px-2 py-0.5 fw-bold">Top ${r.role_name}</span>
                                             </div>
                                             <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" style="border-color:#a855f7;" alt="${c.name}">
-                                            <h6 class="fw-bold mb-0 text-dark text-truncate">${c.name}</h6>
+                                            <h6 class="fw-bold mb-0 text-main text-truncate">${c.name}</h6>
                                             <div class="text-xxs text-muted mb-2">${c.department} &bull; ${c.plant}</div>
                                             <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
                                             <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>

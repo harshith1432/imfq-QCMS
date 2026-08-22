@@ -26,10 +26,12 @@ const Stage4 = {
                     </div>
                     <div class="ds-card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 1 - Root Causes: Suspect causes carried forward for root-cause testing">Section 1 - Root Causes (from Stage 3)</h6>
-                            <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[4].addVerifiedCauseRow()">
-                                <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Cause
-                            </button>
+                            <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Section 1 - Root Causes: Suspect causes carried forward for root-cause testing">Section 1 - Root Causes (from Stage 3.5)</h6>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[4].syncCausesFromStage3(true)" title="Fetch and sync root causes from Stage 3.5">
+                                    <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Fetch from Stage 3.5
+                                </button>
+                            </div>
                         </div>
                         <div id="s4_verifiedContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
@@ -332,16 +334,14 @@ const Stage4 = {
         const wf = projectData.workflows || [];
         const d = wf.find(w => w.stage_id === 4)?.data || {};
         
-        let ver = d.verified_causes || [];
+        let ver = (d.verified_causes || []).filter(r => r && r.cause && r.cause.trim());
         if (!ver.length) {
-            const s3Data = wf.find(w => w.stage_id === 3)?.data || {};
-            const s3DiagramData = s3Data.fishbone_l3?.diagram_data || [];
-            const selectedCauses = s3DiagramData.filter(r => r.status === 'Selected');
-            if (selectedCauses.length) {
-                ver = selectedCauses.map(sc => ({
-                    cause: sc.level1 + (sc.level2 ? ` - ${sc.level2}` : ''),
+            const s3Causes = this.extractStage3Causes();
+            if (s3Causes.length) {
+                ver = s3Causes.map(c => ({
+                    cause: c,
                     method: '',
-                    status: 'Awaiting Verification'
+                    status: 'In Progress'
                 }));
             }
         }
@@ -827,6 +827,121 @@ const Stage4 = {
         }
     },
 
+    extractStage3Causes() {
+        const wf = this.projectData?.workflows || window.currentProject?.workflows || [];
+        const s3 = wf.find(w => w.stage_id === 3)?.data || {};
+        let causes = [];
+
+        // 1. Primary source: Stage 3 Section 3.5 Fishbone Level 3 / Post-Verification
+        const l3 = s3.fishbone_l3 || {};
+        const l3Rows = Array.isArray(l3) ? l3 : (l3.diagram_data || s3.fishbone_l3_rows || []);
+        if (Array.isArray(l3Rows) && l3Rows.length) {
+            const selectedRows = l3Rows.filter(r => {
+                const stat = (r.status || '').toLowerCase().trim();
+                return stat === 'selected' || stat === 'verified' || !stat || stat !== 'rejected';
+            });
+            const targetRows = selectedRows.length ? selectedRows : l3Rows;
+            targetRows.forEach(sc => {
+                const l1 = (sc.level1 || sc.cause || '').trim();
+                const l2 = (sc.level2 || sc.sub_cause || '').trim();
+                if (l1) {
+                    const fullCause = l2 ? `${l1} - ${l2}` : l1;
+                    if (!causes.includes(fullCause)) causes.push(fullCause);
+                }
+            });
+        }
+
+        // 2. Fallback: Stage 3 Cause Verification (Section 3.4)
+        if (!causes.length && s3.cause_verification && Array.isArray(s3.cause_verification)) {
+            s3.cause_verification.forEach(cv => {
+                const c = (cv.cause || cv.suspect_cause || cv.level1 || '').trim();
+                if (c && !causes.includes(c)) causes.push(c);
+            });
+        }
+
+        // 3. Fallback: Stage 3 Cause Prioritization (Section 3.3)
+        if (!causes.length && s3.cause_prioritization && Array.isArray(s3.cause_prioritization)) {
+            s3.cause_prioritization.forEach(cp => {
+                const c = (cp.cause || cp.level1 || '').trim();
+                if (c && !causes.includes(c)) causes.push(c);
+            });
+        }
+
+        // 4. Fallback: Stage 3 Fishbone Level 2 (Section 3.2)
+        if (!causes.length && s3.fishbone_l2 && Array.isArray(s3.fishbone_l2)) {
+            s3.fishbone_l2.forEach(fb => {
+                const l1 = (fb.level1 || fb.cause || '').trim();
+                const l2 = (fb.level2 || '').trim();
+                if (l1) {
+                    const fullCause = l2 ? `${l1} - ${l2}` : l1;
+                    if (!causes.includes(fullCause)) causes.push(fullCause);
+                }
+            });
+        }
+
+        return causes;
+    },
+
+    syncCausesFromStage3(notify = false) {
+        const s3Causes = this.extractStage3Causes();
+        if (!s3Causes.length) {
+            if (notify) {
+                if (window.QCMS && QCMS.toast) QCMS.toast('No root causes found in Stage 3.5 to fetch.', 'info');
+                else alert('No root causes found in Stage 3.5 to fetch.');
+            }
+            return;
+        }
+
+        const verContainer = document.getElementById('s4_verifiedContainer');
+        if (!verContainer) return;
+
+        const existingRows = [...verContainer.querySelectorAll('.dyn-row')];
+        const existingCauses = existingRows.map(r => (r.querySelector('.r-cause')?.value || '').trim()).filter(Boolean);
+
+        if (existingCauses.length === 0) {
+            verContainer.innerHTML = `
+                <div class="row text-muted small fw-bold mb-2 px-2">
+                    <div class="col-4">Cause</div>
+                    <div class="col-4">Method</div>
+                    <div class="col-3">Status</div>
+                    <div class="col-1"></div>
+                </div>
+            `;
+            s3Causes.forEach(c => {
+                this.addVerifiedCauseRow({
+                    cause: c,
+                    method: '',
+                    status: 'In Progress'
+                });
+            });
+            if (notify && window.QCMS && QCMS.toast) {
+                QCMS.toast(`Successfully fetched ${s3Causes.length} root cause(s) from Stage 3.5!`, 'success');
+            }
+        } else {
+            let addedCount = 0;
+            s3Causes.forEach(c => {
+                if (!existingCauses.includes(c)) {
+                    this.addVerifiedCauseRow({
+                        cause: c,
+                        method: '',
+                        status: 'In Progress'
+                    });
+                    addedCount++;
+                }
+            });
+            if (notify) {
+                if (addedCount > 0) {
+                    if (window.QCMS && QCMS.toast) QCMS.toast(`Fetched ${addedCount} new cause(s) from Stage 3.5.`, 'success');
+                } else {
+                    if (window.QCMS && QCMS.toast) QCMS.toast('All root causes from Stage 3.5 are already present in Section 4.1.', 'info');
+                }
+            }
+        }
+
+        this.updateWhyCauseDropdowns();
+        if (window.ProjectApp && ProjectApp.saveDraft) ProjectApp.saveDraft();
+    },
+
     getStage4Causes() {
         // 1. Prioritize Stage 4 Section 1 Causes (.r-cause inputs in #s4_verifiedContainer)
         const verContainer = document.getElementById('s4_verifiedContainer');
@@ -837,28 +952,8 @@ const Stage4 = {
             }
         }
 
-        // 2. Only if Section 1 has no causes yet, load Stage 3 Verified / Selected Causes
-        let causes = [];
-        const s3 = (this.projectData?.workflows || []).find(w => w.stage_id === 3)?.data || {};
-        const s3DiagramData = s3.fishbone_l3?.diagram_data || [];
-        const selectedCauses = s3DiagramData.filter(r => r.status === 'Selected' || r.status === 'Verified');
-        if (selectedCauses.length) {
-            causes.push(...selectedCauses.map(sc => (sc.level1 || sc.cause || '') + (sc.level2 ? ` - ${sc.level2}` : '')).filter(Boolean));
-        }
-
-        if (!causes.length && s3DiagramData.length) {
-            causes.push(...s3DiagramData.map(sc => (sc.level1 || sc.cause || '') + (sc.level2 ? ` - ${sc.level2}` : '')).filter(Boolean));
-        }
-
-        if (!causes.length && s3.fishbone_l2 && Array.isArray(s3.fishbone_l2)) {
-            causes.push(...s3.fishbone_l2.map(x => x.level1 || x.cause || '').filter(Boolean));
-        }
-
-        if (!causes.length && s3.cause_verification && Array.isArray(s3.cause_verification)) {
-            causes.push(...s3.cause_verification.map(x => x.cause || x.level1 || '').filter(Boolean));
-        }
-
-        return [...new Set(causes)];
+        // 2. Fallback to Stage 3 causes
+        return this.extractStage3Causes();
     },
 
     buildWhyCauseOptions(selectedVal = '') {

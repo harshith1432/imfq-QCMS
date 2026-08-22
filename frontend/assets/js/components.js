@@ -226,6 +226,11 @@ const QCMS = {
                        (normRole === 'CEO' || normRole === 'ceo') ? 'CEO' :
                        (normRole === 'Admin' || normRole === 'admin' || normRole === 'SuperAdmin') ? 'Admin' :
                        'Team Member';
+
+            // Immutable safeguard: Admin and SuperAdmin must always have access to settings
+            if ((normRole === 'Admin' || normRole === 'SuperAdmin') && moduleKey === 'settings') {
+                return true;
+            }
                        
             if (perms && perms[normRole] && typeof perms[normRole][moduleKey] === 'boolean') {
                 return perms[normRole][moduleKey];
@@ -430,22 +435,26 @@ const QCMS = {
 
         const banner = document.createElement('div');
         banner.id = 'org-profile-completion-banner';
-        banner.className = 'container-fluid px-4 pt-2 pb-1';
+        banner.className = 'container-fluid px-2 px-sm-4 pt-2 pb-1';
         banner.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between px-3 py-1.5 rounded-3 fade-in" style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.22); font-size: 12px; min-height: 36px;">
-                <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
-                    <i data-lucide="alert-circle" class="text-warning flex-shrink-0" style="width:15px;height:15px;"></i>
-                    <span class="fw-semibold text-main text-nowrap" style="font-size:12px;">Corporate Profile Incomplete:</span>
-                    <span class="badge py-0.5 px-2 text-xxs flex-shrink-0" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; font-weight: 600;">
-                        <span id="opc-completed-pct">${comp.completed_pct}%</span> Complete &bull; <span id="opc-pending-pct">${comp.pending_pct}% Pending</span>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 px-2.5 px-sm-3 py-1.5 rounded-3 fade-in" style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.22); font-size: 12px; min-height: 36px;">
+                <div class="d-flex align-items-center gap-1.5 gap-sm-2 overflow-hidden flex-grow-1" style="min-width: 0;">
+                    <i data-lucide="alert-circle" class="text-warning flex-shrink-0" style="width:14px;height:14px;"></i>
+                    <span class="fw-semibold text-main text-truncate" style="font-size:11.5px;">
+                        <span class="d-none d-sm-inline">Corporate </span>Profile Incomplete
                     </span>
-                    <span class="text-secondary text-truncate d-none d-md-inline" style="max-width: 320px; font-size: 11px;">
+                    <span class="badge py-0.5 px-1.5 px-sm-2 text-xxs flex-shrink-0" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; font-weight: 600;">
+                        <span id="opc-completed-pct">${comp.completed_pct}%</span><span class="d-none d-md-inline"> Complete</span>
+                    </span>
+                    <span class="text-secondary text-truncate d-none d-lg-inline" style="max-width: 280px; font-size: 11px;">
                         Missing: ${comp.missing_fields.slice(0, 2).join(', ')}${comp.missing_fields.length > 2 ? '...' : ''}
                     </span>
                 </div>
-                <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                    <a href="/admin/settings.html?tab=profile" class="btn btn-sm btn-primary py-0.5 px-2.5 text-xs fw-bold d-inline-flex align-items-center gap-1 opc-complete-btn" style="border-radius:6px; font-size:11px; height: 26px; line-height: 1;">
-                        <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Complete Profile (${comp.pending_pct}% Left)
+                <div class="d-flex align-items-center flex-shrink-0 ms-auto">
+                    <a href="/admin/settings.html?tab=profile" class="btn btn-sm btn-primary py-0.5 px-2 px-sm-2.5 text-xs fw-bold d-inline-flex align-items-center gap-1 opc-complete-btn" style="border-radius:6px; font-size:11px; height: 26px; line-height: 1; white-space: nowrap;">
+                        <i data-lucide="edit-3" style="width:11px;height:11px;"></i>
+                        <span class="d-inline d-sm-none">Complete (${comp.pending_pct}%)</span>
+                        <span class="d-none d-sm-inline">Complete Profile (${comp.pending_pct}% Left)</span>
                     </a>
                 </div>
             </div>
@@ -1397,8 +1406,8 @@ const QCMS = {
         const rgbVar = `var(--ds-${color}-rgb, 37, 99, 235)`;
 
         const cardContent = `
-            <div class="glass-card fade-in h-100 ${link ? 'hover-shadow clickable' : ''}" style="${link ? 'transition: all 0.2s ease; cursor: pointer;' : ''}; border-radius: 12px;">
-                <div class="ds-card-body p-3" style="position: relative; z-index: 1; padding: 14px 16px !important;">
+            <div class="glass-card fade-in h-100 ${link ? 'hover-shadow clickable' : ''}" style="${link ? 'transition: all 0.2s ease; cursor: pointer;' : ''}; border-radius: 12px; min-width: 0;">
+                <div class="ds-card-body p-3 kpi-card-body" style="position: relative; z-index: 1;">
                     <div class="kpi-icon-row mb-2" style="display:flex; align-items:center; justify-content:space-between;">
                         <div class="kpi-icon-box" style="width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; background: rgba(${rgbVar}, 0.12); color: ${hexColor}; border: 1px solid rgba(${rgbVar}, 0.2)">
                             <i data-lucide="${icon || 'hash'}" style="width:16px; height:16px;"></i>

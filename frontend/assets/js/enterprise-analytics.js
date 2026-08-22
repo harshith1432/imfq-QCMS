@@ -24,9 +24,6 @@ const EnterpriseAnalytics = {
     userPermissions: {},
 
     _formatINR(num) {
-        if (window.QCMS && typeof QCMS.formatINR === 'function') {
-            return QCMS.formatINR(num);
-        }
         if (num === null || num === undefined || isNaN(num)) return '₹0';
         const val = Math.abs(Number(num));
         const sign = Number(num) < 0 ? '-' : '';
@@ -244,6 +241,8 @@ const EnterpriseAnalytics = {
 
     setDateRange(range) {
         this.filters.date_range = range;
+        this.filters.start_date = '';
+        this.filters.end_date = '';
         const el1 = document.getElementById('selectedDateRange');
         if (el1) el1.textContent = range;
         document.querySelectorAll('.topHeaderDateRangeLabel').forEach(el => el.textContent = range);
@@ -329,6 +328,10 @@ const EnterpriseAnalytics = {
                     if (val === null || val === undefined) return '0';
                     if (key.includes('revenue') || key === 'mrr' || key === 'arr') {
                         return this._formatINR(val);
+                    }
+                    if (key === 'storage_usage') {
+                        if (typeof val === 'number') return `${val.toFixed(2)} MB`;
+                        return String(val);
                     }
                     return val.toLocaleString ? val.toLocaleString() : String(val);
                 };
@@ -725,12 +728,9 @@ const EnterpriseAnalytics = {
                     <div class="row g-4 fade-in">
                         <div class="col-lg-5">
                             <div class="glass-card h-100 p-0">
-                                <div class="ds-card-header p-3 border-bottom d-flex align-items-center justify-content-between">
-                                    <div>
-                                        <h6 class="card-title mb-0">Ticket Volume by Priority</h6>
-                                        <p class="text-xxs text-muted mb-0">Distribution across urgency tiers</p>
-                                    </div>
-                                    <span class="badge bg-primary-subtle text-primary font-mono fw-bold" id="totalTicketsBadge">0 Tickets</span>
+                                <div class="ds-card-header p-3 border-bottom">
+                                    <h6 class="card-title mb-0">Ticket Volume by Priority</h6>
+                                    <p class="text-xxs text-muted mb-0">Distribution across urgency tiers</p>
                                 </div>
                                 <div class="ds-card-body p-3 d-flex align-items-center justify-content-center">
                                     <div style="height:250px; width:100%; position:relative;">
@@ -777,9 +777,6 @@ const EnterpriseAnalytics = {
                 if (document.getElementById('closedTickets')) document.getElementById('closedTickets').textContent = (supRes.resolved || 0) + (supRes.closed || 0);
                 if (document.getElementById('slaCompliance')) document.getElementById('slaCompliance').textContent = `${supRes.sla_compliance_rate ?? 100}%`;
                 
-                if (document.getElementById('totalTicketsBadge')) {
-                    document.getElementById('totalTicketsBadge').textContent = `${supRes.total || 0} Ticket${(supRes.total || 0) === 1 ? '' : 's'}`;
-                }
                 if (document.getElementById('avgResTime')) {
                     document.getElementById('avgResTime').textContent = supRes.average_resolution_time_hrs > 0 ? `${supRes.average_resolution_time_hrs} hrs` : '< 24 hrs';
                 }

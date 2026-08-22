@@ -25,7 +25,7 @@ const Stage7 = {
                         </div>
                         <div id="s7_kpiContainer" class="mb-0">
                             <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Metric: Name of Key Performance Indicator (e.g. Defect Rate, Scrap Loss)">Metric</div>
+                                <div class="col-3 ds-tooltip-trigger" title="Metric: Name of Key Performance Indicator (Mandatory)">Metric <span class="text-danger">*</span></div>
                                 <div class="col-2 ds-tooltip-trigger" title="Baseline: Measured starting level prior to improvement">Baseline</div>
                                 <div class="col-2 ds-tooltip-trigger" title="Target: Desired achievement goal metric level">Target</div>
                                 <div class="col-2 ds-tooltip-trigger" title="Actual: Final measured performance metric post-countermeasures">Actual</div>
@@ -842,13 +842,39 @@ const Stage7 = {
     },
 
     addKpiRow(d = {}) {
+        const hasMetric = !!(d && d.metric && String(d.metric).trim().length > 0);
+        const disabledAttr = hasMetric ? '' : 'disabled';
+        const titleAttr = hasMetric ? '' : 'Enter Metric first to unlock baseline, target, and actual fields';
         const calc = "const p=this.closest('.dyn-row'); if(p){ p.querySelector('.r-var').value = ((parseFloat(p.querySelector('.r-act').value)||0) - (parseFloat(p.querySelector('.r-tgt').value)||0)).toFixed(2); } StageModules[7].updateDashboard();";
+        const onMetricInput = "StageModules[7].handleMetricChange(this);";
         this.addRowTemplate('s7_kpiContainer', d, `
-            <div class="col-3"><input type="text" class="ds-input r-met" placeholder="e.g. Crimp Defect Rate" value="${d.metric || ''}" required></div>
-            <div class="col-2"><input type="number" step="any" class="ds-input r-base" placeholder="e.g. 4.2" value="${d.baseline || ''}" oninput="${calc}" onchange="${calc}" required></div>
-            <div class="col-2"><input type="number" step="any" class="ds-input r-tgt" placeholder="e.g. 0.5" value="${d.target || ''}" oninput="${calc}" onchange="${calc}" required></div>
-            <div class="col-2"><input type="number" step="any" class="ds-input r-act" placeholder="e.g. 0.3" value="${d.actual || ''}" oninput="${calc}" onchange="${calc}" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-met" placeholder="e.g. Crimp Defect Rate *" value="${d.metric || ''}" oninput="${onMetricInput}" title="Metric (Mandatory)" required></div>
+            <div class="col-2"><input type="number" step="any" class="ds-input r-base" placeholder="e.g. 4.2" value="${d.baseline || ''}" oninput="${calc}" onchange="${calc}" ${disabledAttr} title="${titleAttr}" required></div>
+            <div class="col-2"><input type="number" step="any" class="ds-input r-tgt" placeholder="e.g. 0.5" value="${d.target || ''}" oninput="${calc}" onchange="${calc}" ${disabledAttr} title="${titleAttr}" required></div>
+            <div class="col-2"><input type="number" step="any" class="ds-input r-act" placeholder="e.g. 0.3" value="${d.actual || ''}" oninput="${calc}" onchange="${calc}" ${disabledAttr} title="${titleAttr}" required></div>
             <div class="col-2"><input type="number" step="any" class="ds-input r-var" readonly style="background:var(--ds-surface-raised)" value="${d.variance || ''}"></div>`);
+    },
+
+    handleMetricChange(input) {
+        const row = input.closest('.dyn-row');
+        if (!row) return;
+        const val = (input.value || '').trim();
+        const hasVal = val.length > 0;
+        
+        const inputsToToggle = row.querySelectorAll('.r-base, .r-tgt, .r-act');
+        inputsToToggle.forEach(inp => {
+            inp.disabled = !hasVal;
+            inp.title = hasVal ? '' : 'Enter Metric first to unlock baseline, target, and actual fields';
+            if (!hasVal) {
+                inp.value = '';
+                inp.classList.remove('is-invalid');
+            }
+        });
+        const varInput = row.querySelector('.r-var');
+        if (varInput && !hasVal) {
+            varInput.value = '';
+        }
+        this.updateDashboard();
     },
     addBeforeAfterRow(d = {}) {
         let initImp = (d.improvement_pct !== undefined && d.improvement_pct !== null && d.improvement_pct !== '') ? d.improvement_pct : '';

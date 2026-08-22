@@ -1517,7 +1517,7 @@
                                         <option value="Expiring Soon">Expiring Soon</option>
                                         <option value="Inactive 20d">Inactive (20d)</option>
                                         <option value="Suspended">On Hold</option>
-                                        <option value="Expired">Expired</option>
+                                        <option value="Expired">Expired Subscription</option>
                                     </select>
                                 </div>
                                 <div class="col-lg-2 col-md-3 col-6 text-end">
@@ -1544,7 +1544,7 @@
                     <!-- Organizations Table -->
                     <div class="ds-card fade-in section-spacing" style="position: relative; z-index: 10;">
                         <div class="ds-card-header d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">Registered Organizations</h5>
+                            <h5 class="card-title mb-0" id="registeredOrgsCardTitle">Registered Organizations</h5>
                             <div class="d-flex align-items-center gap-3">
                                 <span class="text-xs text-muted" id="orgTableCount">—</span>
                                 <!-- Column visibility selection dropdown -->
@@ -1984,6 +1984,70 @@
 
                 <!-- Stage Weightage Configuration View -->
                 <div id="stage-weightageView" class="view-section">
+                    <style>
+                    .stage-weightage-row {
+                        background: var(--ds-bg-card, var(--ds-surface, #ffffff));
+                        border: 1px solid var(--ds-border-color, #e2e8f0);
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+                        transition: all 0.2s ease;
+                    }
+                    .stage-weightage-row:hover {
+                        border-color: var(--ds-primary, #3b82f6);
+                    }
+                    .stage-weightage-num-input {
+                        background: var(--ds-surface, var(--ds-bg-card, #ffffff));
+                        color: var(--ds-text-main, #0f172a);
+                        border: 1px solid var(--ds-border-color, #cbd5e1);
+                    }
+                    .cum-stage-badge {
+                        background: var(--ds-surface-secondary, rgba(0,0,0,0.04));
+                        color: var(--ds-text-secondary, #64748b);
+                        border: 1px solid var(--ds-border-color, #e2e8f0);
+                    }
+                    [data-theme="dark"] #stage-weightageView .stage-weightage-row,
+                    body.dark-mode #stage-weightageView .stage-weightage-row,
+                    [data-bs-theme="dark"] #stage-weightageView .stage-weightage-row,
+                    html.dark #stage-weightageView .stage-weightage-row {
+                        background: #1e293b !important;
+                        border-color: #334155 !important;
+                    }
+                    [data-theme="dark"] #stage-weightageView .stage-weightage-row:hover,
+                    body.dark-mode #stage-weightageView .stage-weightage-row:hover,
+                    [data-bs-theme="dark"] #stage-weightageView .stage-weightage-row:hover,
+                    html.dark #stage-weightageView .stage-weightage-row:hover {
+                        border-color: #60a5fa !important;
+                    }
+                    [data-theme="dark"] #stage-weightageView .stage-weightage-num-input,
+                    body.dark-mode #stage-weightageView .stage-weightage-num-input,
+                    [data-bs-theme="dark"] #stage-weightageView .stage-weightage-num-input,
+                    html.dark #stage-weightageView .stage-weightage-num-input {
+                        background: #0f172a !important;
+                        color: #f8fafc !important;
+                        border-color: #334155 !important;
+                    }
+                    [data-theme="dark"] #stage-weightageView .cum-stage-badge,
+                    body.dark-mode #stage-weightageView .cum-stage-badge,
+                    [data-bs-theme="dark"] #stage-weightageView .cum-stage-badge,
+                    html.dark #stage-weightageView .cum-stage-badge {
+                        background: #0f172a !important;
+                        color: #94a3b8 !important;
+                        border-color: #334155 !important;
+                    }
+                    [data-theme="dark"] #stage-weightageView #weightProgressBar,
+                    body.dark-mode #stage-weightageView #weightProgressBar,
+                    [data-bs-theme="dark"] #stage-weightageView #weightProgressBar,
+                    html.dark #stage-weightageView #weightProgressBar {
+                        background: #334155 !important;
+                    }
+                    [data-theme="dark"] #stage-weightageView .form-range::-webkit-slider-runnable-track,
+                    body.dark-mode #stage-weightageView .form-range::-webkit-slider-runnable-track {
+                        background-color: #334155;
+                    }
+                    [data-theme="dark"] #stage-weightageView .form-range::-moz-range-track,
+                    body.dark-mode #stage-weightageView .form-range::-moz-range-track {
+                        background-color: #334155;
+                    }
+                    </style>
                     <div class="row g-4">
                         <!-- Top Summary / Live Matrix Card -->
                         <div class="col-12">
@@ -3082,8 +3146,20 @@
                                     </table>
                                 </div>
                                 <!-- Pagination -->
-                                <div class="p-3 border-top border-light border-opacity-10 h-stack justify-content-between">
-                                    <div class="text-xs text-muted" id="superPaginationInfo">Showing 0 to 0 of 0 logs</div>
+                                <div class="p-3 border-top border-light border-opacity-10 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="text-xs text-muted" id="superPaginationInfo">Showing 0 to 0 of 0 logs</div>
+                                        <div class="d-flex align-items-center gap-1 text-xs text-muted">
+                                            <span>Show:</span>
+                                            <select class="ds-input ds-select ds-select-sm py-0 px-2" style="width:auto; min-width:72px; height:28px; font-size:12px; border-radius:6px;" id="superAuditPageSize" onchange="SuperAdmin.changeAuditPageSize(this.value)">
+                                                <option value="10" selected>10</option>
+                                                <option value="25">25</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                            <span>per page</span>
+                                        </div>
+                                    </div>
                                     <div class="h-stack gap-2" id="superPaginationControls"></div>
                                 </div>
                             </div>
@@ -3119,8 +3195,20 @@
                                     </table>
                                 </div>
                                 <!-- Pagination -->
-                                <div class="p-3 border-top border-light border-opacity-10 h-stack justify-content-between">
-                                    <div class="text-xs text-muted" id="superSessionsPaginationInfo">Showing 0 to 0 of 0 sessions</div>
+                                <div class="p-3 border-top border-light border-opacity-10 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="text-xs text-muted" id="superSessionsPaginationInfo">Showing 0 to 0 of 0 sessions</div>
+                                        <div class="d-flex align-items-center gap-1 text-xs text-muted">
+                                            <span>Show:</span>
+                                            <select class="ds-input ds-select ds-select-sm py-0 px-2" style="width:auto; min-width:72px; height:28px; font-size:12px; border-radius:6px;" id="superSessionPageSize" onchange="SuperAdmin.changeSessionPageSize(this.value)">
+                                                <option value="10" selected>10</option>
+                                                <option value="25">25</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                            <span>per page</span>
+                                        </div>
+                                    </div>
                                     <div class="h-stack gap-2" id="superSessionsPaginationControls"></div>
                                 </div>
                             </div>
@@ -3543,7 +3631,7 @@
                                 <i data-lucide="calculator" style="width:13px;height:13px;color:#8b5cf6;"></i> Pay As You Go
                             </button>
                             <button class="ds-btn ds-btn-secondary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.planExportCSV()">
-                                <i data-lucide="download" style="width:13px;height:13px;"></i> Export Catalog
+                                <i data-lucide="download" style="width:13px;height:13px;"></i> Export
                             </button>
                             <button class="ds-btn ds-btn-primary btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.openPlanCreateWizard()">
                                 <i data-lucide="plus" style="width:13px;height:13px;"></i> New Plan

@@ -54,7 +54,8 @@ const Stage2 = {
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label class="ds-label ds-tooltip-trigger" title="Upload Diagram: Upload process flow diagram file (PNG, SVG, PDF)">Upload Diagram</label>
-                                <input type="file" class="ds-input" id="s2_flow_upload">
+                                <input type="file" class="ds-input" id="s2_flow_upload" accept=".png,.jpg,.jpeg,.svg,.pdf,.docx,.xlsx" onchange="StageModules[2].validateFileSize(this)">
+                                <div class="form-text text-muted mt-1" style="font-size:0.75rem;">Upload documents size is 2MB</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="ds-label ds-tooltip-trigger" title="Version: Document control revision number for process flow map">Version</label>
@@ -86,7 +87,11 @@ const Stage2 = {
                                 </select>
                             </div>
                             <div class="col-md-6"><label class="ds-label ds-tooltip-trigger" title="Description: Summary description of observation finding">Description</label><input type="text" class="ds-input" id="s2_pf_desc" required></div>
-                            <div class="col-12"><label class="ds-label ds-tooltip-trigger" title="Evidence Upload: Photos, video clips, or audit logs supporting finding">Evidence Upload (Images/Videos/Docs)</label><input type="file" multiple class="ds-input" id="s2_pf_evidence"></div>
+                            <div class="col-12">
+                                <label class="ds-label ds-tooltip-trigger" title="Evidence Upload: Photos, video clips, or audit logs supporting finding">Evidence Upload (Images/Videos/Docs)</label>
+                                <input type="file" multiple class="ds-input" id="s2_pf_evidence" onchange="StageModules[2].validateFileSize(this)">
+                                <div class="form-text text-muted mt-1" style="font-size:0.75rem;">Upload documents size is 2MB</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -443,11 +448,13 @@ const Stage2 = {
                             <div class="col-md-6 border-end">
                                 <h6 class="fw-bold mb-2 text-primary">Gemba (Actual Place)</h6>
                                 <textarea class="ds-input ds-textarea mb-2" id="g5_gemba_notes" rows="2" placeholder="e.g. Visited welding bay 3 during night shift. Noticed workspace clutter and poor lighting." required></textarea>
-                                <input type="file" class="ds-input mb-4" id="g5_gemba_ev">
+                                <input type="file" class="ds-input mb-1" id="g5_gemba_ev" accept=".png,.jpg,.jpeg,.svg,.pdf,.docx,.xlsx" onchange="StageModules[2].validateFileSize(this)">
+                                <div class="form-text text-muted mb-3" style="font-size:0.75rem;">Upload documents size is 2MB</div>
                                 
                                 <h6 class="fw-bold mb-2 text-primary">Gembutsu (Actual Item)</h6>
                                 <input type="text" class="ds-input mb-2" id="g5_gembutsu_item" placeholder="e.g. Crimping tool model CT-400, serial #9921" required>
-                                <input type="file" class="ds-input mb-4" id="g5_gembutsu_ev">
+                                <input type="file" class="ds-input mb-1" id="g5_gembutsu_ev" accept=".png,.jpg,.jpeg,.svg,.pdf,.docx,.xlsx" onchange="StageModules[2].validateFileSize(this)">
+                                <div class="form-text text-muted mb-3" style="font-size:0.75rem;">Upload documents size is 2MB</div>
  
                                 <h6 class="fw-bold mb-2 text-primary">Genjitsu (Actual Facts)</h6>
                                 <textarea class="ds-input ds-textarea mb-2" id="g5_genjitsu_facts" rows="2" placeholder="e.g. Shift production logs show 15 defective assemblies were discarded in the scrap bin on 2025-06-25." required></textarea>
@@ -490,6 +497,7 @@ const Stage2 = {
                                 <div class="ds-field mb-3">
                                     <label class="ds-label">Upload Before Images/Videos/Docs</label>
                                     <input type="file" multiple class="ds-input" id="cs_media" onchange="StageModules[2].uploadEvidenceFiles(this)">
+                                    <div class="form-text text-muted mt-1" style="font-size:0.75rem;">Upload documents size is 2MB</div>
                                     <div id="cs_uploaded_files_list" class="mt-2 v-stack gap-2"></div>
                                 </div>
                                 <div class="row g-2">
@@ -1989,8 +1997,31 @@ const Stage2 = {
         return lines;
     },
 
+    validateFileSize(input) {
+        if (!input.files || !input.files.length) return true;
+        const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+        for (let i = 0; i < input.files.length; i++) {
+            const file = input.files[i];
+            if (file.size > MAX_SIZE_BYTES) {
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                const msg = `File size exceeds 2MB limit (Selected "${file.name}": ${sizeMB} MB). Please upload documents up to 2MB.`;
+                if (window.QCMS && QCMS.toast) {
+                    QCMS.toast(msg, "warning");
+                } else {
+                    alert(msg);
+                }
+                input.value = '';
+                return false;
+            }
+        }
+        return true;
+    },
+
     async uploadEvidenceFiles(input) {
         if (!input.files || input.files.length === 0) return;
+        
+        // Strict 2MB check
+        if (!this.validateFileSize(input)) return;
         
         const listContainer = document.getElementById('cs_uploaded_files_list');
         if (listContainer) {

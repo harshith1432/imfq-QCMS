@@ -121,53 +121,7 @@
                                     <span id="dateRangeBtnLabel" class="fw-bold">FY 2026-27</span>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border p-2" style="min-width: 260px; border-radius: 12px; z-index: 100050 !important;" id="dateRangeDropdownMenu">
-                                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-2 pb-1"><i data-lucide="briefcase" style="width:12px;height:12px;" class="me-1"></i> Financial Years (FY)</li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center active" href="#" onclick="Analytics.setFinancialYear(2026, 'FY 2026-27 (Current FY)', this); return false;">
-                                        <span><i data-lucide="landmark" class="me-2 text-primary" style="width:13px;height:13px;"></i><strong>FY 2026-27</strong> <span class="badge bg-primary-soft text-primary ms-1 text-xxs">Current</span></span>
-                                        <span class="text-xxs text-muted">Apr 26 - Mar 27</span>
-                                    </a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center" href="#" onclick="Analytics.setFinancialYear(2025, 'FY 2025-26', this); return false;">
-                                        <span><i data-lucide="landmark" class="me-2 text-muted" style="width:13px;height:13px;"></i>FY 2025-26</span>
-                                        <span class="text-xxs text-muted">Apr 25 - Mar 26</span>
-                                    </a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center" href="#" onclick="Analytics.setFinancialYear(2024, 'FY 2024-25', this); return false;">
-                                        <span><i data-lucide="landmark" class="me-2 text-muted" style="width:13px;height:13px;"></i>FY 2024-25</span>
-                                        <span class="text-xxs text-muted">Apr 24 - Mar 25</span>
-                                    </a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center" href="#" onclick="Analytics.setFinancialYear(2023, 'FY 2023-24', this); return false;">
-                                        <span><i data-lucide="landmark" class="me-2 text-muted" style="width:13px;height:13px;"></i>FY 2023-24</span>
-                                        <span class="text-xxs text-muted">Apr 23 - Mar 24</span>
-                                    </a></li>
-                                    
-                                    <li><hr class="dropdown-divider my-1"></li>
-                                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-1 pb-1"><i data-lucide="pie-chart" style="width:12px;height:12px;" class="me-1"></i> FY 2026-27 Quarters</li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" href="#" onclick="Analytics.setQuarter(2026, 1, 'Q1 FY 26-27', this); return false;">
-                                        <span>Q1 (Apr – Jun 2026)</span><span class="text-xxs text-muted">Q1</span>
-                                    </a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" href="#" onclick="Analytics.setQuarter(2026, 2, 'Q2 FY 26-27', this); return false;">
-                                        <span>Q2 (Jul – Sep 2026)</span><span class="text-xxs text-muted">Q2</span>
-                                    </a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" href="#" onclick="Analytics.setQuarter(2026, 3, 'Q3 FY 26-27', this); return false;">
-                                        <span>Q3 (Oct – Dec 2026)</span><span class="text-xxs text-muted">Q3</span>
-                                    </a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" href="#" onclick="Analytics.setQuarter(2027, 4, 'Q4 FY 26-27', this); return false;">
-                                        <span>Q4 (Jan – Mar 2027)</span><span class="text-xxs text-muted">Q4</span>
-                                    </a></li>
-
-                                    <li><hr class="dropdown-divider my-1"></li>
-                                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-1 pb-1"><i data-lucide="clock" style="width:12px;height:12px;" class="me-1"></i> Quick Intervals</li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(7, 'Last 7 Days', this); return false;">Last 7 Days</a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(30, 'Last 30 Days', this); return false;">Last 30 Days</a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(90, 'Last 90 Days', this); return false;">Last 90 Days</a></li>
-                                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(0, 'All Time', this); return false;">All Time</a></li>
-
-                                    <li><hr class="dropdown-divider my-1"></li>
-                                    <li>
-                                        <a class="dropdown-item rounded-2 py-2 px-3 text-xs text-primary fw-bold d-flex align-items-center gap-2 bg-primary-soft" href="#" onclick="Analytics.openCustomDateModal(); return false;">
-                                            <i data-lucide="calendar-range" style="width:14px;height:14px;"></i>
-                                            <span>Custom Date Range...</span>
-                                        </a>
-                                    </li>
+                                    <!-- Dynamically populated by Analytics.renderFinancialYearDropdown() based on current date / year -->
                                 </ul>
                             </div>
                         </div>
@@ -274,16 +228,16 @@
                     </div>
 
                     <!-- Project Performance Roster Table -->
-                    <div class="glass-card mb-4">
+                    <div class="glass-card mb-4 overflow-hidden">
                         <div class="ds-card-header p-3 border-bottom">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                                <div>
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2.5">
+                                <div class="min-w-0" style="flex: 1 1 200px;">
                                     <h5 class="card-title mb-0">Project Performance</h5>
                                     <p class="text-xs text-secondary mb-0">Comprehensive tracking across status, priority, progress, and completion rate</p>
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="text" id="rosterSearchInput" class="form-control form-control-sm text-xs" style="width: 200px;" placeholder="Search title or UID..." oninput="Analytics.filterRosterTable()">
-                                    <select id="rosterFilterStatus" class="form-select form-select-sm text-xs" style="width: 130px;" onchange="Analytics.filterRosterTable()">
+                                <div class="d-flex align-items-center gap-2 flex-grow-1 flex-sm-grow-0 w-100 w-sm-auto">
+                                    <input type="text" id="rosterSearchInput" class="form-control form-control-sm text-xs flex-grow-1" style="min-width: 120px; max-width: 220px;" placeholder="Search title or UID..." oninput="Analytics.filterRosterTable()">
+                                    <select id="rosterFilterStatus" class="form-select form-select-sm text-xs flex-shrink-0" style="width: auto; min-width: 105px;" onchange="Analytics.filterRosterTable()">
                                         <option value="">All Status</option>
                                         <option value="In Progress">In Progress</option>
                                         <option value="Closed">Closed</option>
@@ -496,18 +450,180 @@
             currentDashboardData: null,
             currentFilter: {
                 days: 0,
-                fromDate: '2026-04-01',
-                toDate: '2027-03-31',
-                label: 'FY 2026-27',
-                subLabel: '(Apr 01, 2026 – Mar 31, 2027)'
+                fromDate: null,
+                toDate: null,
+                label: '',
+                subLabel: ''
             },
             rosterPage: 1,
             rosterPerPage: 5,
             rosterTotalPages: 1,
 
+            getFinancialYearInfo(dateObj = new Date()) {
+                const now = dateObj;
+                const year = now.getFullYear();
+                const month = now.getMonth(); // 0: Jan ... 3: Apr ... 11: Dec
+                
+                // FY starts April 1st (month index 3) and ends March 31st (month index 2 of next year)
+                const fyStartYear = month >= 3 ? year : year - 1;
+                const fyEndYear = fyStartYear + 1;
+                const fyShortEnd = String(fyEndYear).slice(-2);
+                const fyLabel = `FY ${fyStartYear}-${fyShortEnd}`;
+                const fyFromDate = `${fyStartYear}-04-01`;
+                const fyToDate = `${fyEndYear}-03-31`;
+                const fySubLabel = `(Apr 01, ${fyStartYear} – Mar 31, ${fyEndYear})`;
+                
+                let currentQuarter = 1;
+                if (month >= 3 && month <= 5) currentQuarter = 1;
+                else if (month >= 6 && month <= 8) currentQuarter = 2;
+                else if (month >= 9 && month <= 11) currentQuarter = 3;
+                else currentQuarter = 4;
+
+                return {
+                    fyStartYear,
+                    fyEndYear,
+                    fyLabel,
+                    fyFromDate,
+                    fyToDate,
+                    fySubLabel,
+                    currentQuarter,
+                    currentCalendarYear: year
+                };
+            },
+
+            renderFinancialYearDropdown() {
+                const fyInfo = this.getFinancialYearInfo();
+                const startYear = fyInfo.fyStartYear;
+                const endYear = fyInfo.fyEndYear;
+                const menuEl = document.getElementById('dateRangeDropdownMenu');
+                if (!menuEl) return;
+
+                // Generate 5 Financial Years dynamically: Current FY + 4 Previous FYs
+                const fyList = [];
+                for (let i = 0; i < 5; i++) {
+                    const sYear = startYear - i;
+                    const eYear = sYear + 1;
+                    const sShort = String(sYear).slice(-2);
+                    const eShort = String(eYear).slice(-2);
+                    const isCurrent = i === 0;
+                    fyList.push({
+                        startYear: sYear,
+                        endYear: eYear,
+                        label: `FY ${sYear}-${eShort}`,
+                        fullLabel: isCurrent ? `FY ${sYear}-${eShort} (Current FY)` : `FY ${sYear}-${eShort}`,
+                        dateRangeText: `Apr ${sShort} - Mar ${eShort}`,
+                        isCurrent
+                    });
+                }
+
+                // Generate Quarters for the Current Financial Year dynamically
+                const quarters = [
+                    { q: 1, name: `Q1 (Apr – Jun ${startYear})`, label: `Q1 FY ${String(startYear).slice(-2)}-${String(endYear).slice(-2)}`, year: startYear },
+                    { q: 2, name: `Q2 (Jul – Sep ${startYear})`, label: `Q2 FY ${String(startYear).slice(-2)}-${String(endYear).slice(-2)}`, year: startYear },
+                    { q: 3, name: `Q3 (Oct – Dec ${startYear})`, label: `Q3 FY ${String(startYear).slice(-2)}-${String(endYear).slice(-2)}`, year: startYear },
+                    { q: 4, name: `Q4 (Jan – Mar ${endYear})`, label: `Q4 FY ${String(startYear).slice(-2)}-${String(endYear).slice(-2)}`, year: endYear },
+                ];
+
+                menuEl.innerHTML = `
+                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-2 pb-1">
+                        <i data-lucide="briefcase" style="width:12px;height:12px;" class="me-1"></i> Financial Years (FY)
+                    </li>
+                    ${fyList.map((item, idx) => `
+                        <li>
+                            <a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between align-items-center ${item.isCurrent ? 'active' : ''}" 
+                               href="#" onclick="Analytics.setFinancialYear(${item.startYear}, '${item.fullLabel}', this); return false;">
+                                <span>
+                                    <i data-lucide="landmark" class="me-2 ${item.isCurrent ? 'text-primary' : 'text-muted'}" style="width:13px;height:13px;"></i>
+                                    <strong>${item.label}</strong>
+                                    ${item.isCurrent ? '<span class="badge bg-primary-soft text-primary ms-1 text-xxs">Current</span>' : ''}
+                                </span>
+                                <span class="text-xxs text-muted">${item.dateRangeText}</span>
+                            </a>
+                        </li>
+                    `).join('')}
+
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-1 pb-1">
+                        <i data-lucide="pie-chart" style="width:12px;height:12px;" class="me-1"></i> FY ${startYear}-${String(endYear).slice(-2)} Quarters
+                    </li>
+                    ${quarters.map(q => `
+                        <li>
+                            <a class="dropdown-item rounded-2 py-1.5 px-3 text-xs d-flex justify-content-between" 
+                               href="#" onclick="Analytics.setQuarter(${q.year}, ${q.q}, '${q.label}', this); return false;">
+                                <span>${q.name}</span>
+                                <span class="text-xxs text-muted">Q${q.q}</span>
+                            </a>
+                        </li>
+                    `).join('')}
+
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li class="dropdown-header text-xxs fw-bold text-uppercase text-muted px-3 pt-1 pb-1">
+                        <i data-lucide="clock" style="width:12px;height:12px;" class="me-1"></i> Quick Intervals
+                    </li>
+                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(7, 'Last 7 Days', this); return false;">Last 7 Days</a></li>
+                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(30, 'Last 30 Days', this); return false;">Last 30 Days</a></li>
+                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(90, 'Last 90 Days', this); return false;">Last 90 Days</a></li>
+                    <li><a class="dropdown-item rounded-2 py-1.5 px-3 text-xs" href="#" onclick="Analytics.setDateRange(0, 'All Time', this); return false;">All Time</a></li>
+
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li>
+                        <a class="dropdown-item rounded-2 py-2 px-3 text-xs text-primary fw-bold d-flex align-items-center gap-2 bg-primary-soft" 
+                           href="#" onclick="Analytics.openCustomDateModal(); return false;">
+                            <i data-lucide="calendar-range" style="width:14px;height:14px;"></i>
+                            <span>Custom Date Range...</span>
+                        </a>
+                    </li>
+                `;
+
+                // Update the button label and active period banner dynamically
+                const btnLabel = document.getElementById('dateRangeBtnLabel');
+                if (btnLabel) btnLabel.textContent = fyInfo.fyLabel;
+
+                const activeLabel = document.getElementById('activePeriodLabel');
+                if (activeLabel) activeLabel.textContent = fyInfo.fyLabel;
+
+                const activeDateRange = document.getElementById('activePeriodDateRange');
+                if (activeDateRange) activeDateRange.textContent = fyInfo.fySubLabel;
+
+                // Update custom preset buttons inside the modal
+                const presetContainer = document.getElementById('customPresetGroup');
+                if (presetContainer) {
+                    const prevStart = startYear - 1;
+                    const prevEnd = startYear;
+                    presetContainer.innerHTML = `
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="Analytics.fillCustomDates('today')">Today</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="Analytics.fillCustomDates('this_month')">This Month</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary active" onclick="Analytics.fillCustomDates('cur_fy')">Current FY (${String(startYear).slice(-2)}-${String(endYear).slice(-2)})</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="Analytics.fillCustomDates('prev_fy')">Previous FY (${String(prevStart).slice(-2)}-${String(prevEnd).slice(-2)})</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="Analytics.fillCustomDates('ytd')">YTD ${fyInfo.currentCalendarYear}</button>
+                    `;
+                }
+
+                // Update default input values in custom date modal
+                const fromInput = document.getElementById('customDateFrom');
+                if (fromInput) fromInput.value = fyInfo.fyFromDate;
+                const toInput = document.getElementById('customDateTo');
+                if (toInput) toInput.value = fyInfo.fyToDate;
+
+                if (window.lucide) lucide.createIcons({ container: menuEl });
+            },
+
             async init() {
                 if (window.QCMS) QCMS.init();
-                // Default to Financial Year 2026-27 (Current FY)
+
+                // Setup dynamic Financial Year based on system/calendar date
+                const fyInfo = this.getFinancialYearInfo();
+                this.currentFilter = {
+                    days: 0,
+                    fromDate: fyInfo.fyFromDate,
+                    toDate: fyInfo.fyToDate,
+                    label: fyInfo.fyLabel,
+                    subLabel: fyInfo.fySubLabel
+                };
+
+                this.renderFinancialYearDropdown();
+
+                // Load initial dashboard data for the dynamically active current Financial Year
                 await this.loadDashboardData(0, this.currentFilter.fromDate, this.currentFilter.toDate);
                 await this.loadProjectsList();
                 this.loadProjectRoster(1);
@@ -588,14 +704,22 @@
                 const empEl = document.getElementById('kpi-employees');
                 if (empEl) {
                     empEl.innerHTML = `
-                    <div class="glass-card kpi-card-item p-3" style="padding: 14px 10px !important; text-align: center; border-radius: 12px; min-height: 98px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;" title="Total registered employees in organization: ${totalEmp}">
-                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(37,99,235,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">
-                            <i data-lucide="users" style="width:16px;height:16px;color:#2563eb;"></i>
-                        </div>
-                        <div class="text-xl fw-bold" style="color:var(--ds-text-main); font-size: 1.35rem; line-height: 1.1;">${totalEmp}</div>
-                        <div class="text-xs text-muted mt-1" style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">Total Employees</div>
-                        <div class="mt-1 text-truncate" style="font-size: 10px; font-weight: 600; color: #10b981; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px; max-width: 100%;">
-                            <i data-lucide="user-check" style="width:10px;height:10px;flex-shrink:0;"></i> <span>${qcEmp} in QC Projects</span>
+                    <div class="glass-card fade-in h-100" style="border-radius: 12px; min-width: 0;" title="Total registered employees in organization: ${totalEmp}">
+                        <div class="ds-card-body p-3 kpi-card-body" style="position: relative; z-index: 1;">
+                            <div class="kpi-icon-row mb-2" style="display:flex; align-items:center; justify-content:space-between;">
+                                <div class="kpi-icon-box" style="width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; background: rgba(37,99,235, 0.12); color: #2563eb; border: 1px solid rgba(37,99,235, 0.2)">
+                                    <i data-lucide="users" style="width:16px; height:16px;"></i>
+                                </div>
+                                <div class="badge text-xxs" style="font-size: 10px; font-weight: 600; color: #10b981; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); padding: 2px 7px; border-radius: 10px; display: inline-flex; align-items: center; gap: 3px;">
+                                    <i data-lucide="user-check" style="width:10px;height:10px;"></i> ${qcEmp} in QC
+                                </div>
+                            </div>
+                            <div class="kpi-label mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ds-text-secondary);">
+                                Total Employees
+                            </div>
+                            <div class="kpi-value fw-bold" style="font-size: 1.4rem; letter-spacing: -0.02em; color: var(--ds-text-main);">
+                                ${totalEmp}
+                            </div>
                         </div>
                     </div>`;
                 }
@@ -604,14 +728,22 @@
                 const qcWorkforceEl = document.getElementById('kpi-qc-workforce');
                 if (qcWorkforceEl) {
                     qcWorkforceEl.innerHTML = `
-                    <div class="glass-card kpi-card-item p-3" style="padding: 14px 10px !important; text-align: center; border-radius: 12px; min-height: 98px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;" title="Employees actively assigned to QC project teams (${qcEmp} of ${totalEmp})">
-                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">
-                            <i data-lucide="award" style="width:16px;height:16px;color:#8b5cf6;"></i>
-                        </div>
-                        <div class="text-xl fw-bold" style="color:var(--ds-text-main); font-size: 1.35rem; line-height: 1.1;">${qcEmp} <span style="font-size: 0.85rem; font-weight: 500; color: var(--ds-text-muted);">/ ${totalEmp}</span></div>
-                        <div class="text-xs text-muted mt-1" style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">QC Workforce</div>
-                        <div class="mt-1 text-truncate" style="font-size: 10px; font-weight: 600; color: #8b5cf6; background: rgba(139,92,246,0.12); padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px; max-width: 100%;">
-                            <i data-lucide="activity" style="width:10px;height:10px;flex-shrink:0;"></i> <span>${qcRate}% Assigned</span>
+                    <div class="glass-card fade-in h-100" style="border-radius: 12px; min-width: 0;" title="Employees actively assigned to QC project teams (${qcEmp} of ${totalEmp})">
+                        <div class="ds-card-body p-3 kpi-card-body" style="position: relative; z-index: 1;">
+                            <div class="kpi-icon-row mb-2" style="display:flex; align-items:center; justify-content:space-between;">
+                                <div class="kpi-icon-box" style="width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; background: rgba(139,92,246, 0.12); color: #8b5cf6; border: 1px solid rgba(139,92,246, 0.2)">
+                                    <i data-lucide="award" style="width:16px; height:16px;"></i>
+                                </div>
+                                <div class="badge text-xxs" style="font-size: 10px; font-weight: 600; color: #8b5cf6; background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.25); padding: 2px 7px; border-radius: 10px; display: inline-flex; align-items: center; gap: 3px;">
+                                    <i data-lucide="activity" style="width:10px;height:10px;"></i> ${qcRate}% Assigned
+                                </div>
+                            </div>
+                            <div class="kpi-label mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ds-text-secondary);">
+                                QC Workforce
+                            </div>
+                            <div class="kpi-value fw-bold" style="font-size: 1.4rem; letter-spacing: -0.02em; color: var(--ds-text-main);">
+                                ${qcEmp} <span style="font-size: 0.85rem; font-weight: 500; color: var(--ds-text-muted);">/ ${totalEmp}</span>
+                            </div>
                         </div>
                     </div>`;
                 }
@@ -1270,6 +1402,7 @@
                 const now = new Date();
                 const pad = n => String(n).padStart(2, '0');
                 const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                const fyInfo = this.getFinancialYearInfo();
 
                 let from = '', to = fmt(now);
                 if (preset === 'today') {
@@ -1277,11 +1410,12 @@
                 } else if (preset === 'this_month') {
                     from = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`;
                 } else if (preset === 'cur_fy') {
-                    from = '2026-04-01';
-                    to = '2027-03-31';
+                    from = fyInfo.fyFromDate;
+                    to = fyInfo.fyToDate;
                 } else if (preset === 'prev_fy') {
-                    from = '2025-04-01';
-                    to = '2026-03-31';
+                    const prevStart = fyInfo.fyStartYear - 1;
+                    from = `${prevStart}-04-01`;
+                    to = `${fyInfo.fyStartYear}-03-31`;
                 } else if (preset === 'ytd') {
                     from = `${now.getFullYear()}-01-01`;
                 }

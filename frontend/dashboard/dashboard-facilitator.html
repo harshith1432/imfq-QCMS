@@ -42,6 +42,39 @@
                 <!-- Upcoming Meetings Widget -->
                 <div id="upcomingMeetingsFeed" class="glass-card fade-in section-spacing"></div>
 
+                <!-- Filters Bar -->
+                <div class="glass-card section-spacing p-3 mb-4">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-lg-3 col-md-4">
+                            <label class="ds-label mb-1 text-xs fw-bold text-muted d-flex align-items-center gap-1">
+                                <i data-lucide="map-pin" style="width:13px;height:13px;"></i> PLANT LOCATION
+                            </label>
+                            <select class="ds-input ds-select ds-input-sm" id="facPlantFilter" onchange="facDash.handlePlantFilterChange(this.value)">
+                                <option value="">All Plant Locations</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-3 col-md-4">
+                            <label class="ds-label mb-1 text-xs fw-bold text-muted d-flex align-items-center gap-1">
+                                <i data-lucide="building-2" style="width:13px;height:13px;"></i> DEPARTMENT
+                            </label>
+                            <select class="ds-input ds-select ds-input-sm" id="facDeptFilter" onchange="facDash.applyFilters()">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-4 col-md-4">
+                            <label class="ds-label mb-1 text-xs fw-bold text-muted d-flex align-items-center gap-1">
+                                <i data-lucide="search" style="width:13px;height:13px;"></i> SEARCH
+                            </label>
+                            <input type="text" class="ds-input ds-input-sm" id="facSearchInput" placeholder="Filter by project title, UID, requester..." oninput="facDash.handleSearchInput(this.value)">
+                        </div>
+                        <div class="col-lg-2 col-md-12 d-flex align-items-end pt-lg-3">
+                            <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm w-100 text-muted" onclick="facDash.resetFilters()">
+                                <i data-lucide="rotate-ccw" style="width:13px;height:13px;margin-right:4px;"></i> Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- TABS -->
                 <div class="fade-in section-spacing">
                     <div class="ds-tab-group mb-4" id="facTabs">
@@ -69,6 +102,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Project</th>
+                                                <th>Plant &amp; Department</th>
                                                 <th>Stage</th>
                                                 <th>Requested By</th>
                                                 <th>Message</th>
@@ -78,7 +112,7 @@
                                             </tr>
                                         </thead>
                                         <tbody id="assistanceBody">
-                                            <tr><td colspan="7" class="p-4 text-center text-muted">Loading assistance requests...</td></tr>
+                                            <tr><td colspan="8" class="p-4 text-center text-muted">Loading assistance requests...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -99,7 +133,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Project</th>
-                                                <th>Department</th>
+                                                <th>Plant &amp; Department</th>
                                                 <th>Stage</th>
                                                 <th>Status</th>
                                                 <th class="text-end">Action</th>
@@ -127,7 +161,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Project</th>
-                                                <th>Department</th>
+                                                <th>Plant &amp; Department</th>
                                                 <th>Stage</th>
                                                 <th>Requested By</th>
                                                 <th>Assistance Request</th>
@@ -214,11 +248,13 @@
         replyModal: null,
         assistedDetailsModal: null,
         
-        // Cache for search
+        // Cache for search and filter
         rcaData: [],
         pipelineData: [],
         assistanceData: [],
         assistedHistoryData: [],
+        allPlants: [],
+        allDepartments: [],
         currentSearchQuery: '',
 
         switchTab(tabId) {
@@ -265,37 +301,147 @@
 
             // Global search listener
             window.addEventListener('qcms-global-search', (e) => {
-                this.handleGlobalSearch(e.detail.query);
+                const sInp = document.getElementById('facSearchInput');
+                if (sInp) sInp.value = e.detail.query;
+                this.handleSearchInput(e.detail.query);
             });
 
+            await this.loadFilterOptions();
             this.loadStats();
             this.loadAssistanceRequests();
             this.loadPipeline();
             this.loadAssistedHistory();
         },
 
-        handleGlobalSearch(query) {
-            this.currentSearchQuery = query.toLowerCase();
+        // ─── Filter Options (Plants & Departments) ─────────────────
+        async loadFilterOptions() {
+            try {
+                // 1. Fetch Plants
+                const plants = await api.get('/projects/plants').catch(() => []);
+                this.allPlants = Array.isArray(plants) ? plants : [];
+                const plantSel = document.getElementById('facPlantFilter');
+                if (plantSel) {
+                    const currentPlant = plantSel.value;
+                    let pOpts = '<option value="">All Plant Locations</option>';
+                    this.allPlants.forEach(p => {
+                        const label = p.name + (p.location && p.location !== p.name ? ` (${p.location})` : '');
+                        pOpts += `<option value="${QCMS.escapeHtml(p.name)}">${QCMS.escapeHtml(label)}</option>`;
+                    });
+                    plantSel.innerHTML = pOpts;
+                    if (currentPlant) plantSel.value = currentPlant;
+                }
+
+                // 2. Fetch Departments
+                const depts = await api.get('/projects/departments').catch(() => []);
+                this.allDepartments = Array.isArray(depts) ? depts : [];
+                this.populateDepartmentOptions();
+            } catch (err) {
+                console.error("Failed to load filter options", err);
+            }
+        },
+
+        populateDepartmentOptions(selectedPlant = '') {
+            const deptSel = document.getElementById('facDeptFilter');
+            if (!deptSel) return;
+            const currentDept = deptSel.value;
+
+            let filteredDepts = this.allDepartments;
+            if (selectedPlant) {
+                const targetPlant = this.allPlants.find(p => 
+                    p.name.toLowerCase() === selectedPlant.toLowerCase() || 
+                    String(p.id) === String(selectedPlant) ||
+                    (p.location && p.location.toLowerCase() === selectedPlant.toLowerCase())
+                );
+                if (targetPlant) {
+                    filteredDepts = this.allDepartments.filter(d => !d.plant_id || d.plant_id === targetPlant.id);
+                }
+            }
+
+            let dOpts = '<option value="">All Departments</option>';
+            const seen = new Set();
+            filteredDepts.forEach(d => {
+                if (!seen.has(d.name)) {
+                    seen.add(d.name);
+                    dOpts += `<option value="${QCMS.escapeHtml(d.name)}">${QCMS.escapeHtml(d.name)}</option>`;
+                }
+            });
+            deptSel.innerHTML = dOpts;
+            if (currentDept && seen.has(currentDept)) {
+                deptSel.value = currentDept;
+            }
+        },
+
+        handlePlantFilterChange(plantVal) {
+            this.populateDepartmentOptions(plantVal);
+            this.applyFilters();
+        },
+
+        handleSearchInput(val) {
+            this.currentSearchQuery = (val || '').toLowerCase();
+            this.applyFilters();
+        },
+
+        applyFilters() {
             this.renderAssistanceRequests(this.filterData(this.assistanceData));
             this.renderPipeline(this.filterData(this.pipelineData));
             this.renderAssistedHistory(this.filterData(this.assistedHistoryData));
         },
 
+        resetFilters() {
+            const pSel = document.getElementById('facPlantFilter');
+            const dSel = document.getElementById('facDeptFilter');
+            const sInp = document.getElementById('facSearchInput');
+            if (pSel) pSel.value = '';
+            if (dSel) dSel.value = '';
+            if (sInp) sInp.value = '';
+            this.currentSearchQuery = '';
+            this.populateDepartmentOptions('');
+            this.applyFilters();
+        },
+
         filterData(data) {
-            if (!this.currentSearchQuery || !Array.isArray(data)) return data;
-            const q = this.currentSearchQuery;
-            return data.filter(p => 
-                (p.title && p.title.toLowerCase().includes(q)) ||
-                (p.project_title && p.project_title.toLowerCase().includes(q)) ||
-                (p.dept && p.dept.toLowerCase().includes(q)) ||
-                (p.uid && p.uid.toLowerCase().includes(q)) ||
-                (p.project_uid && p.project_uid.toLowerCase().includes(q)) ||
-                (p.user_name && p.user_name.toLowerCase().includes(q)) ||
-                (p.requested_by && p.requested_by.toLowerCase().includes(q)) ||
-                (p.message && p.message.toLowerCase().includes(q)) ||
-                (p.response && p.response.toLowerCase().includes(q)) ||
-                (p.status && p.status.toLowerCase().includes(q))
-            );
+            if (!Array.isArray(data)) return [];
+            const plantVal = (document.getElementById('facPlantFilter')?.value || '').toLowerCase().trim();
+            const deptVal = (document.getElementById('facDeptFilter')?.value || '').toLowerCase().trim();
+            const q = (this.currentSearchQuery || '').toLowerCase().trim();
+
+            return data.filter(p => {
+                // 1. Plant Location Match
+                if (plantVal) {
+                    const itemPlant = String(p.plant || p.plant_name || p.plant_location || '').toLowerCase();
+                    const itemPlantId = String(p.plant_id || '');
+                    const plantMatches = itemPlant.includes(plantVal) || itemPlantId === plantVal;
+                    if (!plantMatches) return false;
+                }
+
+                // 2. Department Match
+                if (deptVal) {
+                    const itemDept = String(p.dept || p.department || p.department_name || '').toLowerCase();
+                    const itemDeptId = String(p.department_id || '');
+                    const deptMatches = itemDept === deptVal || itemDept.includes(deptVal) || itemDeptId === deptVal;
+                    if (!deptMatches) return false;
+                }
+
+                // 3. Search Query Match
+                if (q) {
+                    const searchMatches = 
+                        (p.title && p.title.toLowerCase().includes(q)) ||
+                        (p.project_title && p.project_title.toLowerCase().includes(q)) ||
+                        (p.dept && p.dept.toLowerCase().includes(q)) ||
+                        (p.plant && p.plant.toLowerCase().includes(q)) ||
+                        (p.uid && p.uid.toLowerCase().includes(q)) ||
+                        (p.project_uid && p.project_uid.toLowerCase().includes(q)) ||
+                        (p.user_name && p.user_name.toLowerCase().includes(q)) ||
+                        (p.requested_by && p.requested_by.toLowerCase().includes(q)) ||
+                        (p.message && p.message.toLowerCase().includes(q)) ||
+                        (p.response && p.response.toLowerCase().includes(q)) ||
+                        (p.status && p.status.toLowerCase().includes(q)) ||
+                        (p.team_leader && p.team_leader.toLowerCase().includes(q));
+                    if (!searchMatches) return false;
+                }
+
+                return true;
+            });
         },
 
         // ─── Stats ───────────────────────────────────────────────
@@ -321,7 +467,7 @@
                 this.renderAssistanceRequests(this.filterData(this.assistanceData));
             } catch (err) {
                 console.error('Assistance requests failed', err);
-                if (body) body.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-danger">Failed to load assistance requests. Please refresh.</td></tr>`;
+                if (body) body.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-danger">Failed to load assistance requests. Please refresh.</td></tr>`;
             }
         },
 
@@ -330,8 +476,10 @@
             const countEl = document.getElementById('assistanceCount');
             if (countEl) countEl.textContent = `${requests.length} Request${requests.length === 1 ? '' : 's'}`;
             if (!requests || requests.length === 0) {
-                const msg = this.currentSearchQuery ? `No assistance requests matching "${this.currentSearchQuery}"` : 'No assistance requests received yet.';
-                body.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-muted">${QCMS.emptyState('help-circle', 'No Requests', msg)}</td></tr>`;
+                const msg = (this.currentSearchQuery || document.getElementById('facPlantFilter')?.value || document.getElementById('facDeptFilter')?.value)
+                    ? 'No assistance requests matching your selected plant, department, or search filters.'
+                    : 'No assistance requests received yet.';
+                body.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-muted">${QCMS.emptyState('help-circle', 'No Requests Found', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
@@ -348,6 +496,10 @@
                         <div class="fw-semibold">${r.project_title}</div>
                         <span class="text-xxs font-mono text-muted">${r.project_uid}</span>
                     </td>
+                    <td>
+                        <div class="fw-medium text-sm">${r.dept || 'General'}</div>
+                        <span class="text-xxs text-muted d-flex align-items-center gap-1 mt-0.5"><i data-lucide="map-pin" style="width:11px;height:11px;"></i> ${r.plant || 'Main Plant'}</span>
+                    </td>
                     <td><span class="ds-badge blue">Stage ${r.stage_id}</span></td>
                     <td>
                         <div class="fw-medium">${r.user_name}</div>
@@ -361,7 +513,7 @@
                     <td><span class="ds-badge ${statusBadge}">${r.status}</span></td>
                     <td class="text-end" style="white-space:nowrap;">
                         <a href="/projects/project-details.html?id=${r.project_id}&stage=${r.stage_id}" class="ds-btn ds-btn-sm ds-btn-ghost me-1">Open Stage ${r.stage_id}</a>
-                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.respondToRequest(${r.id}, '${r.project_title}', 'Stage ${r.stage_id}', '${r.user_name}', \`${(r.message || '').replace(/`/g,"'")}\`, '${r.status}', \`${(r.response || '').replace(/`/g,"'")}\`)">
+                        <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.respondToRequest(${r.id})">
                             ${r.status === 'Pending' ? 'Reply' : 'Update Reply'}
                         </button>
                     </td>
@@ -370,16 +522,17 @@
             if (window.lucide) lucide.createIcons();
         },
 
-        respondToRequest(reqId, projectTitle, stage, userName, message, currentStatus, currentReply) {
+        respondToRequest(reqId) {
+            const r = (this.assistanceData || []).find(x => x.id === reqId) || {};
             document.getElementById('replyReqId').value = reqId;
-            document.getElementById('replyProjectInfo').textContent = `${projectTitle} — ${stage}`;
-            document.getElementById('replyRequesterName').textContent = userName;
-            document.getElementById('replyOriginalMessage').textContent = message;
-            document.getElementById('replyText').value = currentReply || '';
+            document.getElementById('replyProjectInfo').textContent = `${r.project_title || 'Project'} — Stage ${r.stage_id || '1'}`;
+            document.getElementById('replyRequesterName').textContent = r.user_name || 'Team Member';
+            document.getElementById('replyOriginalMessage').textContent = r.message || '';
+            document.getElementById('replyText').value = r.response || '';
             // Pre-select current status
             const statusSelect = document.getElementById('replyStatus');
-            if (currentStatus && currentStatus !== 'Pending') {
-                statusSelect.value = currentStatus;
+            if (r.status && r.status !== 'Pending') {
+                statusSelect.value = r.status;
             } else {
                 statusSelect.value = 'Approved';
             }
@@ -422,8 +575,10 @@
             document.getElementById('pipelineCount').textContent = `${projects.length} Active Project${projects.length === 1 ? '' : 's'}`;
             const body = document.getElementById('pipelineBody');
             if (!projects.length) {
-                const msg = this.currentSearchQuery ? `No active projects matching "${this.currentSearchQuery}"` : 'No active projects found where you are assigned as facilitator.';
-                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${QCMS.emptyState('folder-open', 'No Active Projects', msg)}</td></tr>`;
+                const msg = (this.currentSearchQuery || document.getElementById('facPlantFilter')?.value || document.getElementById('facDeptFilter')?.value)
+                    ? 'No active projects matching your selected plant, department, or search filters.'
+                    : 'No active projects found where you are assigned as facilitator.';
+                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${QCMS.emptyState('folder-open', 'No Projects Found', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
@@ -442,8 +597,8 @@
                         <span class="text-xxs font-mono text-muted">${p.uid}</span>
                     </td>
                     <td>
-                        <div class="fw-medium">${p.dept}</div>
-                        <span class="text-xxs text-muted">TL: ${p.team_leader}</span>
+                        <div class="fw-medium text-sm">${p.dept}</div>
+                        <span class="text-xxs text-muted d-flex align-items-center gap-1 mt-0.5"><i data-lucide="map-pin" style="width:11px;height:11px;"></i> ${p.plant || 'Main Plant'} · TL: ${p.team_leader}</span>
                     </td>
                     <td><span class="ds-badge ${stageColors[p.stage] || 'blue'}">Stage ${p.stage}</span></td>
                     <td><span class="ds-badge ${statusBadge}">${p.status}</span></td>
@@ -472,8 +627,10 @@
             document.getElementById('assistedHistoryCount').textContent = `${items.length} Assisted`;
             const body = document.getElementById('assistedHistoryBody');
             if (!items || !items.length) {
-                const msg = this.currentSearchQuery ? `No assisted history matching "${this.currentSearchQuery}"` : 'No assisted project history found yet. As you provide guidance and respond to project assistance requests, your assistance history will be logged here.';
-                body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-muted">${QCMS.emptyState('history', 'No Assisted History', msg)}</td></tr>`;
+                const msg = (this.currentSearchQuery || document.getElementById('facPlantFilter')?.value || document.getElementById('facDeptFilter')?.value)
+                    ? 'No assisted history matching your selected plant, department, or search filters.'
+                    : 'No assisted project history found yet. As you provide guidance and respond to project assistance requests, your assistance history will be logged here.';
+                body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-muted">${QCMS.emptyState('history', 'No Assisted History Found', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
@@ -499,7 +656,10 @@
                         <div class="fw-semibold">${item.project_title}</div>
                         <span class="text-xxs font-mono text-muted">${item.project_uid}</span>
                     </td>
-                    <td><span class="text-sm">${item.dept}</span></td>
+                    <td>
+                        <div class="fw-medium text-sm">${item.dept}</div>
+                        <span class="text-xxs text-muted d-flex align-items-center gap-1 mt-0.5"><i data-lucide="map-pin" style="width:11px;height:11px;"></i> ${item.plant || 'Main Plant'}</span>
+                    </td>
                     <td><span class="ds-badge blue">Stage ${item.stage_id}</span></td>
                     <td>
                         <div class="fw-medium">${item.requested_by}</div>
@@ -534,7 +694,7 @@
 
             document.getElementById('adProjectTitle').textContent = item.project_title;
             document.getElementById('adProjectUid').textContent = item.project_uid;
-            document.getElementById('adProjectDept').textContent = item.dept || 'General';
+            document.getElementById('adProjectDept').textContent = `${item.dept || 'General'} (${item.plant || 'Main Plant'})`;
             document.getElementById('adProjectStage').textContent = `Stage ${item.stage_id}`;
             document.getElementById('adRequester').textContent = `${item.requested_by} ${item.user_email ? '(' + item.user_email + ')' : ''}`;
             
