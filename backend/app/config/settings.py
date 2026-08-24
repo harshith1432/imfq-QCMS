@@ -77,6 +77,11 @@ class Config:
                 except ImportError:
                     has_pg8000 = False
 
+                # Strip non-standard parameters like pgbouncer=true that break psycopg2
+                if query_string:
+                    qs_parts = [p for p in query_string.split('&') if not p.startswith('pgbouncer=') and p != 'pgbouncer']
+                    query_string = '&'.join(qs_parts)
+
                 if is_serverless and has_pg8000:
                     driver_prefix = "postgresql+pg8000"
                     if query_string:
