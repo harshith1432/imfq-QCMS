@@ -285,7 +285,7 @@ class SubscriptionManager:
             return False
             
         # Check trial expiry
-        if org.subscription_status == 'Trialing' and org.trial_ends_at and org.trial_ends_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        if org.subscription_status == 'Trialing' and org.trial_ends_at and make_naive_utc(org.trial_ends_at) < datetime.now(timezone.utc).replace(tzinfo=None):
             # Update status to Expired if we detected it here
             org.subscription_status = 'Expired'
             db.session.commit()

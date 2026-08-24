@@ -13,6 +13,13 @@ from werkzeug.utils import secure_filename
 from app.utils.avatar_utils import get_profile_picture_url
 from app.presentation.routes.error_helpers import internal_server_error
 
+def _to_naive_utc(dt):
+    if dt is None:
+        return None
+    if getattr(dt, 'tzinfo', None) is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'jfif', 'avif'}
 
 def allowed_file(filename):
@@ -436,7 +443,7 @@ def verify_registration_otp():
     if not verification:
         return jsonify({"msg": "Invalid verification code."}), 400
         
-    if verification.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if _to_naive_utc(verification.expires_at) < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({"msg": "Verification code has expired. Please request a new one."}), 400
         
     # Mark verified and immediately invalidate OTP to prevent reuse
@@ -647,7 +654,7 @@ def verify_phone_otp():
     if not verif:
         return jsonify({"msg": "Invalid phone verification code."}), 400
 
-    if verif.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if _to_naive_utc(verif.expires_at) < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({"msg": "Phone verification code has expired. Please request a new code."}), 400
 
     verif.is_verified = True
@@ -1525,7 +1532,7 @@ def change_password():
             return jsonify({"msg": "OTP is required"}), 400
         if user.otp_token != otp:
             return jsonify({"msg": "Invalid OTP code"}), 400
-        if user.otp_expiry and user.otp_expiry < datetime.now(timezone.utc).replace(tzinfo=None):
+        if user.otp_expiry and _to_naive_utc(user.otp_expiry) < datetime.now(timezone.utc).replace(tzinfo=None):
             return jsonify({"msg": "OTP has expired"}), 400
         
     user.password = new_password
@@ -1710,7 +1717,7 @@ def reset_password():
         if not user:
             return jsonify({"msg": "Invalid or expired reset token."}), 400
 
-        if not user.token_expiry or user.token_expiry < datetime.now(timezone.utc).replace(tzinfo=None):
+        if not user.token_expiry or _to_naive_utc(user.token_expiry) < datetime.now(timezone.utc).replace(tzinfo=None):
             return jsonify({"msg": "Password reset link has expired. Please request a new link."}), 400
 
     if not user:
@@ -1778,7 +1785,7 @@ def verify_email(token):
     if not user:
         return jsonify({"msg": "Invalid or expired verification token"}), 400
         
-    if user.token_expiry and user.token_expiry < datetime.now(timezone.utc).replace(tzinfo=None):
+    if user.token_expiry and _to_naive_utc(user.token_expiry) < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({"msg": "Verification token has expired"}), 400
         
     user.is_verified = True
