@@ -74,8 +74,11 @@ class CacheAdapter:
         return self._redis_client is not None
 
     def _ensure_security_available(self, operation_name: str):
-        """Fail closed in production if Redis is required for a security-critical operation."""
-        if self.is_production and not self._redis_client:
+        """Fail closed in production if Redis is explicitly configured/required but became unreachable."""
+        require_redis = os.getenv('REQUIRE_REDIS_SECURITY', '').lower() in ('true', '1')
+        has_redis_configured = bool(os.getenv('REDIS_URL') or os.getenv('REDISCLOUD_URL') or os.getenv('REDIS_HOST'))
+
+        if (require_redis or has_redis_configured) and self.is_production and not self._redis_client:
             # Attempt a quick reconnect if client dropped
             self._init_redis()
             if not self._redis_client:
