@@ -2,7 +2,7 @@ import os
 import json
 import csv
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
@@ -11,6 +11,7 @@ from app.infrastructure.database.models.models import (
     ProjectWorkflow, Department, Stage8Implementation, Stage7Impact, Plant, ProjectMember
 )
 from sqlalchemy import func, text
+from app.presentation.routes.error_helpers import internal_server_error
 
 super_admin_v1_bp = Blueprint('super_admin_v1', __name__)
 
@@ -49,7 +50,7 @@ def get_super_admin_user():
         uid = identity.get('id') or identity.get('user_id') or identity.get('sub')
         if uid:
             try:
-                user = User.query.get(int(uid))
+                user = db.session.get(User, int(uid))
             except Exception:
                 pass
         if not user and identity.get('email'):
@@ -60,7 +61,7 @@ def get_super_admin_user():
             user = User.query.filter_by(email=identity_str.lower()).first()
         else:
             try:
-                user = User.query.get(int(identity_str))
+                user = db.session.get(User, int(identity_str))
             except Exception:
                 pass
 
@@ -88,9 +89,10 @@ def get_super_admin_user():
     
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
     is_sa_flag = getattr(user, 'is_super_admin', False) or sys_role in ('superadmin', 'admin') or user.org_id is None
-    is_sa_email = getattr(user, 'email', '').lower() in ('harshithkd6@gmail.com', 'admin@qcms.io', 'admin@example.com')
+    sa_env_email = (os.getenv('SUPER_ADMIN_USERNAME') or '').strip().lower()
+    is_sa_email = bool(sa_env_email and getattr(user, 'email', '').lower() == sa_env_email)
 
-    if role_clean in ('superadmin', 'admin') or is_sa_custom or is_sa_flag or is_sa_email or True:
+    if role_clean in ('superadmin', 'admin') or is_sa_custom or is_sa_flag or is_sa_email:
         return user
     return None
 
@@ -116,7 +118,7 @@ def get_dashboard_stats():
     if not check_permission(user, 'view'):
         return jsonify({"error": "Insufficient permissions"}), 403
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     range_str = request.args.get('range', '30d').lower()
 
     if range_str in ['7d', '7days', 'last 7 days']:
@@ -257,33 +259,17 @@ def get_dashboard_stats():
     ).scalar() or 0.0
 
     # 9b. Real-time MRR and ARR from active customer tenant subscriptions
+    from app.domain.services.financial_metrics_engine import FinancialMetricsEngine
+    engine_kpis = FinancialMetricsEngine.get_consolidated_kpis()
+    mrr_val = engine_kpis["mrr"]
+    arr_val = engine_kpis["arr"]
+    active_paid_amount = mrr_val
+    
     active_subs = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
         Organization.is_deleted == False,
         Organization.is_platform_org == False,
         Subscription.subscription_status.in_(['Active', 'ACTIVE', 'Trialing', 'Trial'])
     ).all()
-
-    mrr_val = 0.0
-    active_paid_amount = 0.0
-    for s in active_subs:
-        p_price = float(s.final_amount or s.base_price or 0.0)
-        p_cycle = s.billing_cycle or 'Monthly'
-        if p_price == 0.0:
-            sp = SaaSPlan.query.filter(
-                db.or_(SaaSPlan.name == s.plan_name, SaaSPlan.code == s.plan_name)
-            ).first()
-            if sp:
-                pricing = SaaSPlanPricing.query.filter_by(plan_id=sp.id, is_active=True).first()
-                if pricing:
-                    p_price = float(pricing.price or 0.0)
-                    p_cycle = pricing.billing_cycle or p_cycle
-
-        cycle_title = (p_cycle or 'Monthly').title()
-        months = 12 if cycle_title == 'Yearly' else (3 if cycle_title in ['Quarterly', 'Quarter'] else 1)
-        mrr_val += p_price / months
-        active_paid_amount += p_price
-
-    arr_val = mrr_val * 12
     
     # Paid orgs: aggregate unique organizations with active paid subscriptions or completed payments
     paid_org_ids = set()
@@ -529,7 +515,7 @@ def calculate_org_realized_project_value(range_str='all'):
     """
     from app.presentation.routes.repository_routes import extract_project_kpi_and_savings
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     
     # 1. Query all non-deleted customer tenant organizations
     orgs = Organization.query.filter(
@@ -618,7 +604,7 @@ def calculate_org_realized_project_value(range_str='all'):
         # Process any KnowledgeRepository entries not caught above
         for p_id, kr in kr_map.items():
             if p_id not in seen_project_ids:
-                p = Project.query.get(p_id)
+                p = db.session.get(Project, p_id)
                 if p and p.status in ['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED']:
                     seen_project_ids.add(p_id)
                     savings = float(kr.cost_savings or 0.0)
@@ -764,7 +750,7 @@ def get_billing_kpis():
     if not user:
         return jsonify({"error": "Unauthorized"}), 403
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month_start = datetime(now.year, now.month, 1)
 
     # Active subscriptions (excluding platform org)
@@ -1088,8 +1074,8 @@ def create_org_v1():
             admin_name=admin_data.get('full_name', 'Admin'),
             subscription_plan=plan_id,
             subscription_status='Active',
-            license_start_date=datetime.utcnow(),
-            license_expiry_date=datetime.utcnow() + timedelta(days=365),
+            license_start_date=datetime.now(timezone.utc).replace(tzinfo=None),
+            license_expiry_date=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365),
             storage_used_mb=0.0
         )
         db.session.add(org)
@@ -1136,7 +1122,7 @@ def create_org_v1():
         }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": "Provisioning failed: " + str(e)}), 500
+        return internal_server_error(e, "Provisioning failed.")
 
 @super_admin_v1_bp.route('/dashboard/<int:org_id>', methods=['PUT'])
 @jwt_required()
@@ -1215,7 +1201,7 @@ def delete_org_v1(org_id):
     
     old_status = org.subscription_status
     org.is_deleted = True
-    org.deleted_at = datetime.utcnow()
+    org.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
     
     log_admin_action_v1(user, 'ORG_DELETED', 'Organization', org.id, old_status, 'Deleted (Recycle Bin)')
@@ -1238,7 +1224,7 @@ def get_storage_breakdown():
     return jsonify({
         "status": "success",
         "data": data,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     })
 
 @super_admin_v1_bp.route('/storage/update-limit', methods=['POST'])
@@ -1257,7 +1243,7 @@ def update_org_storage_limit():
     if not org_id or storage_limit_gb is None:
         return jsonify({"status": "error", "message": "org_id and storage_limit_gb are required"}), 400
 
-    org = Organization.query.get(org_id)
+    org = db.session.get(Organization, org_id)
     if not org:
         return jsonify({"status": "error", "message": "Organization not found"}), 404
 
@@ -1530,7 +1516,7 @@ def export_organizations_custom():
         writer.writerow(row_data)
 
     csv_bytes = csv_output.getvalue().encode('utf-8')
-    filename = f"qcms_organizations_custom_export_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+    filename = f"qcms_organizations_custom_export_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}.csv"
     return Response(
         csv_bytes,
         mimetype="text/csv",

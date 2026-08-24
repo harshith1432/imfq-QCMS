@@ -51,13 +51,38 @@ window.ensureRedAsterisksOnLabels = function(targetContainer) {
     }
 };
 
+// Global Helper: Annotate table cells with data-label for responsive stacked mobile cards
+window.ensureTableDataLabels = function(targetContainer) {
+    try {
+        const scope = targetContainer || document;
+        const tables = scope.querySelectorAll('table.ds-table, table.table, .table-responsive table, .ds-table-container table');
+        tables.forEach(table => {
+            if (table.classList.contains('keep-table-layout')) return;
+            const headers = Array.from(table.querySelectorAll('thead th, thead td')).map(th => th.textContent.trim());
+            if (!headers.length) return;
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                cells.forEach((td, idx) => {
+                    if (!td.hasAttribute('data-label') && headers[idx]) {
+                        td.setAttribute('data-label', headers[idx]);
+                    }
+                });
+            });
+        });
+    } catch (e) {
+        console.debug('Table data-label formatting warning:', e);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     window.ensureRedAsterisksOnLabels();
+    window.ensureTableDataLabels();
     if (window.QCMS && typeof window.QCMS.setActiveLink === 'function') {
         window.QCMS.setActiveLink();
     }
     setInterval(() => {
         window.ensureRedAsterisksOnLabels();
+        window.ensureTableDataLabels();
         if (window.QCMS && typeof window.QCMS.setActiveLink === 'function') {
             window.QCMS.setActiveLink();
         }
@@ -67,32 +92,91 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Theme Manager Integration
  */
+const DEFAULT_PALETTES = {
+    light: {
+        primary_color: '#002347',
+        secondary_color: '#476585',
+        accent_color: '#C4A25A',
+        gold_hover: '#AC8839',
+        violet_color: '#4809BD',
+        success_color: '#10B981',
+        warning_color: '#C4A25A',
+        danger_color: '#ef4444'
+    },
+    dark: {
+        primary_color: '#C4A25A',
+        secondary_color: '#DAE0E7',
+        accent_color: '#C4A25A',
+        gold_hover: '#AC8839',
+        violet_color: '#4809BD',
+        success_color: '#10B981',
+        warning_color: '#C4A25A',
+        danger_color: '#ef4444'
+    }
+};
+
 class ThemeManager {
     constructor() {
-        this.theme = localStorage.getItem('qcms-theme') || 'light';
+        this.theme = this.getSavedTheme();
         this.init();
+    }
+
+    getStorageKey() {
+        try {
+            const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+            if (userStr) {
+                const u = JSON.parse(userStr);
+                const uid = u.id || u.user_id;
+                if (uid) return `qcms-theme-user-${uid}`;
+                const role = (u.role && typeof u.role === 'object') ? u.role.name : u.role;
+                if (role) return `qcms-theme-role-${String(role).toLowerCase().replace(/\s+/g, '_')}`;
+            }
+        } catch(e) {}
+        return 'qcms-theme';
+    }
+
+    getSavedTheme() {
+        const userKey = this.getStorageKey();
+        const userSaved = localStorage.getItem(userKey);
+        if (userSaved) return userSaved;
+        return 'light';
     }
 
     init() {
         this.applyTheme(this.theme);
 
-        // Match system preference if not set
-        if (!localStorage.getItem('qcms-theme')) {
+        // Match system preference if not set for this user
+        const userKey = this.getStorageKey();
+        if (!localStorage.getItem(userKey)) {
             const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-            this.applyTheme(systemPrefersDark.matches ? 'dark' : 'light');
+            if (systemPrefersDark.matches) {
+                this.applyTheme('dark');
+            }
             systemPrefersDark.addEventListener('change', e => {
-                if (!localStorage.getItem('qcms-theme')) {
+                if (!localStorage.getItem(this.getStorageKey())) {
                     this.applyTheme(e.matches ? 'dark' : 'light');
                 }
             });
         }
     }
 
+    _hexToRgb(hex) {
+        if (!hex) return null;
+        let c = hex.replace('#', '').trim();
+        if (c.length === 3) c = c.split('').map(x => x + x).join('');
+        const num = parseInt(c, 16);
+        return isNaN(num) ? null : `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
+    }
+
     applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
+        const userKey = this.getStorageKey();
+        localStorage.setItem(userKey, theme);
         localStorage.setItem('theme', theme);
-        localStorage.setItem('qcms-theme', theme);
         this.theme = theme;
+
+        // Apply mode-isolated palette colors
+        this.applyModePalette(theme);
 
         // Broadcast theme change to all child iframes (e.g. Global Stage Templates)
         document.querySelectorAll('iframe').forEach(iframe => {
@@ -113,13 +197,97 @@ class ThemeManager {
         if (window.lucide) lucide.createIcons();
     }
 
+    applyModePalette(theme) {
+        const root = document.documentElement;
+        // Cleanly reset inline color overrides so default stylesheets don't get polluted across modes
+        const colorVars = [
+            '--ds-primary', '--ds-accent', '--primary', '--bs-primary',
+            '--ds-primary-rgb', '--ds-accent-rgb', '--primary-rgb',
+            '--ds-text-secondary', '--ds-gray-rgb',
+            '--ds-accent-highlight', '--accent',
+            '--ds-green-rgb', '--ds-orange-rgb', '--ds-red-rgb'
+        ];
+        colorVars.forEach(v => root.style.removeProperty(v));
+
+        let brandConfig = {};
+        try {
+            brandConfig = JSON.parse(localStorage.getItem('qcms_branding_config') || '{}');
+        } catch (e) {}
+
+        const activeMode = theme || this.theme || 'light';
+        let modePalette = null;
+        if (brandConfig[activeMode] && typeof brandConfig[activeMode] === 'object') {
+            modePalette = brandConfig[activeMode];
+        } else if (brandConfig.primary_color && !brandConfig.light && !brandConfig.dark) {
+            // Backward compatibility for flat legacy configs
+            modePalette = brandConfig;
+        }
+
+        if (modePalette) {
+            if (modePalette.primary_color) {
+                const rgb = this._hexToRgb(modePalette.primary_color);
+                root.style.setProperty('--ds-primary', modePalette.primary_color);
+                root.style.setProperty('--ds-accent', modePalette.primary_color);
+                root.style.setProperty('--primary', modePalette.primary_color);
+                root.style.setProperty('--bs-primary', modePalette.primary_color);
+                if (rgb) {
+                    root.style.setProperty('--ds-primary-rgb', rgb);
+                    root.style.setProperty('--ds-accent-rgb', rgb);
+                    root.style.setProperty('--primary-rgb', rgb);
+                }
+            }
+            if (modePalette.secondary_color) {
+                root.style.setProperty('--ds-text-secondary', modePalette.secondary_color);
+                const rgb = this._hexToRgb(modePalette.secondary_color);
+                if (rgb) root.style.setProperty('--ds-gray-rgb', rgb);
+            }
+            if (modePalette.accent_color) {
+                root.style.setProperty('--ds-accent-highlight', modePalette.accent_color);
+                root.style.setProperty('--accent', modePalette.accent_color);
+            }
+            if (modePalette.success_color) {
+                const rgb = this._hexToRgb(modePalette.success_color);
+                if (rgb) root.style.setProperty('--ds-green-rgb', rgb);
+            }
+            if (modePalette.warning_color) {
+                const rgb = this._hexToRgb(modePalette.warning_color);
+                if (rgb) root.style.setProperty('--ds-orange-rgb', rgb);
+            }
+            if (modePalette.danger_color) {
+                const rgb = this._hexToRgb(modePalette.danger_color);
+                if (rgb) root.style.setProperty('--ds-red-rgb', rgb);
+            }
+        }
+
+        // Global font and border radius
+        const globalBrand = brandConfig.global || brandConfig;
+        if (globalBrand.font_family) {
+            const fontStack = globalBrand.font_family === 'Roboto'
+                ? `'Roboto', system-ui, sans-serif`
+                : globalBrand.font_family === 'Outfit'
+                ? `'Outfit', 'Inter', system-ui, sans-serif`
+                : `'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+            root.style.setProperty('--ds-font-body', fontStack);
+            root.style.setProperty('--ds-font-heading', fontStack);
+            root.style.setProperty('--ds-font-title', fontStack);
+        }
+        if (globalBrand.border_radius) {
+            root.style.setProperty('--ds-radius-lg', globalBrand.border_radius);
+            const num = parseInt(globalBrand.border_radius);
+            if (!isNaN(num)) {
+                root.style.setProperty('--ds-radius-md', `${Math.max(6, num - 4)}px`);
+                root.style.setProperty('--ds-radius-sm', `${Math.max(4, num - 8)}px`);
+            }
+        }
+    }
+
     toggle() {
         const newTheme = this.theme === 'light' ? 'dark' : 'light';
-        localStorage.setItem('qcms-theme', newTheme);
         this.applyTheme(newTheme);
         return newTheme;
     }
 }
+window.DEFAULT_PALETTES = DEFAULT_PALETTES;
 window.themeManager = new ThemeManager();
 
 /**
@@ -246,7 +414,54 @@ const QCMS = {
         return true;
     },
 
+    isPublicOrAuthPage() {
+        const path = (window.location.pathname || '').toLowerCase();
+        const rawPage = path.split('/').pop() || 'index.html';
+        const page = rawPage.split('?')[0].split('#')[0].toLowerCase();
+        return (
+            path === '/' ||
+            path === '' ||
+            page === 'index.html' ||
+            page === '' ||
+            path.includes('/auth/') ||
+            page === 'login.html' ||
+            page === 'register.html' ||
+            page === 'register-org.html' ||
+            page === 'forgot-password.html' ||
+            page === 'reset-password.html' ||
+            page === 'verify-email.html' ||
+            page === 'accept-invite.html' ||
+            page === 'maintenance.html'
+        );
+    },
+
     init() {
+        if (typeof document !== 'undefined' && document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+            return;
+        }
+
+        // If this is a public landing or auth page, never render authenticated shell elements
+        if (this.isPublicOrAuthPage()) {
+            const nav = document.getElementById('qcms-mobile-bottom-nav');
+            if (nav) nav.remove();
+            const sidebar = document.getElementById('app-sidebar');
+            if (sidebar) sidebar.remove();
+            const navbar = document.getElementById('app-navbar');
+            if (navbar) navbar.remove();
+            const aiW = document.getElementById('ai-chat-widget');
+            if (aiW) aiW.remove();
+            const hdW = document.getElementById('helpdesk-widget');
+            if (hdW) hdW.remove();
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (backdrop) backdrop.remove();
+            document.body.classList.remove('sidebar-mobile-open');
+
+            this.refreshIcons();
+            this.applyBranding();
+            return;
+        }
+
         const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
         if (userStr) {
             try {
@@ -264,16 +479,83 @@ const QCMS = {
             }
         }
 
+        if (!this.user && !this.isPublicOrAuthPage()) {
+            const path = window.location.pathname.toLowerCase();
+            const fallbackRole = path.includes('super-admin') ? 'SuperAdmin' :
+                                 (path.includes('/admin/') ? 'Admin' : 'Team Member');
+            this.user = {
+                id: 'active_session',
+                full_name: 'Enterprise User',
+                role: fallbackRole,
+                org_name: 'QCMS Enterprise',
+                email: 'user@qcms.io'
+            };
+        }
+
         // Centralized Lucide config for premium look
         this.refreshIcons();
 
         // Apply white labeling / custom branding globally (from cached session)
         this.applyBranding();
 
+        // Detect layout mode (Mobile vs Desktop) and render bottom nav
+        this.updateLayoutMode();
+        if (!this._resizeBound) {
+            this._resizeBound = true;
+            window.addEventListener('resize', () => {
+                clearTimeout(this._resizeDebounce);
+                this._resizeDebounce = setTimeout(() => {
+                    this.updateLayoutMode();
+                }, 100);
+            });
+        }
+
+        // Global Top-Layer Dropdown Stacking Handler for Tables & Cards
+        if (!this._dropdownTopLayerBound) {
+            this._dropdownTopLayerBound = true;
+            document.addEventListener('show.bs.dropdown', (e) => {
+                const toggle = e.target;
+                const tr = toggle.closest('tr');
+                if (tr) {
+                    tr.classList.add('dropdown-open');
+                    tr.style.setProperty('z-index', '1050', 'important');
+                    tr.style.setProperty('position', 'relative', 'important');
+                }
+                const td = toggle.closest('td');
+                if (td) {
+                    td.classList.add('dropdown-open');
+                    td.style.setProperty('z-index', '1050', 'important');
+                    td.style.setProperty('position', 'relative', 'important');
+                }
+                const menu = toggle.nextElementSibling || (toggle.parentElement ? toggle.parentElement.querySelector('.dropdown-menu') : null);
+                if (menu) {
+                    menu.style.setProperty('z-index', '100050', 'important');
+                    menu.style.setProperty('opacity', '1', 'important');
+                }
+            });
+
+            document.addEventListener('hidden.bs.dropdown', (e) => {
+                const toggle = e.target;
+                const tr = toggle.closest('tr');
+                if (tr) {
+                    tr.classList.remove('dropdown-open');
+                    tr.style.removeProperty('z-index');
+                    tr.style.removeProperty('position');
+                }
+                const td = toggle.closest('td');
+                if (td) {
+                    td.classList.remove('dropdown-open');
+                    td.style.removeProperty('z-index');
+                    td.style.removeProperty('position');
+                }
+            });
+        }
+
         // Initialize UI components
         if (this.user) {
             this.renderSidebar();
             this.renderNavbar();
+            this.renderMobileBottomNav();
             const isSuperAdminPage = window.location.pathname.includes('super-admin.html') || window.location.href.includes('super-admin.html');
             if (!isSuperAdminPage) {
                 this.renderAIChatWidget();
@@ -301,7 +583,10 @@ const QCMS = {
 
         // Listen for theme changes to re-render
         window.addEventListener('qcms-theme-change', () => {
-            if (this.user) this.renderNavbar();
+            if (this.user) {
+                this.renderNavbar();
+                this.renderMobileBottomNav();
+            }
         });
 
         // Listen for language changes to re-render
@@ -349,13 +634,9 @@ const QCMS = {
     },
 
     exitImpersonation() {
-        const superToken = sessionStorage.getItem('super_admin_backup_token');
-        if (superToken) {
-            sessionStorage.setItem('token', superToken);
-            sessionStorage.removeItem('super_admin_backup_token');
-            sessionStorage.removeItem('user');
-            window.location.href = '/admin/super-admin.html';
-        }
+        sessionStorage.removeItem('super_admin_backup_token');
+        sessionStorage.removeItem('user');
+        window.location.href = '/admin/super-admin.html';
     },
 
     async checkProfileCompletion() {
@@ -492,11 +773,12 @@ const QCMS = {
      */
     async syncBrandingFromServer() {
         try {
-            const token = sessionStorage.getItem('token');
-            if (!token) return;
-
+            const currentToken = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+            const headers = {};
+            if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`;
             const response = await fetch('/api/auth/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers,
+                credentials: 'same-origin'
             });
             if (!response.ok) return;
 
@@ -506,6 +788,7 @@ const QCMS = {
             const userStr = sessionStorage.getItem('user');
             if (!userStr) return;
             const user = JSON.parse(userStr);
+            if (user.username && profile.username && user.username !== profile.username) return;
 
             let changed = false;
             const brandingFields = [
@@ -623,6 +906,365 @@ const QCMS = {
         }
     },
 
+    updateLayoutMode() {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            document.body.classList.add('is-mobile-layout');
+            document.body.classList.remove('is-desktop-layout');
+        } else {
+            document.body.classList.remove('is-mobile-layout');
+            document.body.classList.add('is-desktop-layout');
+            // Auto close mobile drawer if resized to desktop
+            const sidebar = document.getElementById('app-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (sidebar) sidebar.classList.remove('show');
+            if (backdrop) backdrop.classList.remove('show');
+            document.body.classList.remove('sidebar-mobile-open');
+        }
+        if (this.user && !this.isPublicOrAuthPage()) {
+            this.renderMobileBottomNav();
+        } else {
+            const nav = document.getElementById('qcms-mobile-bottom-nav');
+            if (nav) nav.remove();
+        }
+        if (window.ensureTableDataLabels) {
+            window.ensureTableDataLabels();
+        }
+    },
+
+    renderMobileBottomNav() {
+        if (!this.user || this.isPublicOrAuthPage()) {
+            const existingNav = document.getElementById('qcms-mobile-bottom-nav');
+            if (existingNav) existingNav.remove();
+            return;
+        }
+
+        let nav = document.getElementById('qcms-mobile-bottom-nav');
+        if (window.innerWidth > 768) {
+            if (nav) nav.remove();
+            return;
+        }
+
+        const roleName = this.normalizeRole(this.user.role);
+        const currentPath = (window.location.pathname || '').toLowerCase();
+        const currentSearch = (window.location.search || '').toLowerCase();
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentView = (urlParams.get('view') || 'overview').toLowerCase();
+
+        let navItems = [];
+
+        if (roleName === 'SuperAdmin') {
+            // ── SuperAdmin Platform Owner Bottom Navigation ──
+            const isOverviewActive = currentPath.includes('super-admin.html') && (currentView === 'overview' || !window.location.search);
+            const isOrgsActive = currentPath.includes('super-admin.html') && currentView === 'organizations';
+            const isPlansActive = currentPath.includes('super-admin.html') && (currentView === 'plans' || currentView === 'billing');
+            const isLogsActive = currentPath.includes('super-admin.html') && currentView === 'logs';
+            const isSettingsActive = currentPath.includes('super-admin.html') && ['settings', 'doc-identity', 'integrations', 'storage', 'stage-templates', 'stage-weightage', 'recycle-bin'].includes(currentView);
+
+            navItems = [
+                {
+                    label: 'Dashboard',
+                    url: '/admin/super-admin.html',
+                    icon: 'layout-dashboard',
+                    isActive: isOverviewActive
+                },
+                {
+                    label: 'Orgs',
+                    url: '/admin/super-admin.html?view=organizations',
+                    icon: 'building-2',
+                    isActive: isOrgsActive
+                },
+                {
+                    label: 'Plans',
+                    url: '/admin/super-admin.html?view=plans',
+                    icon: 'layers',
+                    isActive: isPlansActive
+                },
+                {
+                    label: 'Logs',
+                    url: '/admin/super-admin.html?view=logs',
+                    icon: 'scroll-text',
+                    isActive: isLogsActive
+                },
+                {
+                    label: 'Settings',
+                    url: '/admin/super-admin.html?view=settings',
+                    icon: 'settings-2',
+                    isActive: isSettingsActive
+                }
+            ];
+        } else if (roleName === 'Admin') {
+            // ── Organization Administrator ──
+            const canProj = this.isModuleAllowed(roleName, 'project_repo');
+            const canUsers = this.isModuleAllowed(roleName, 'user_management');
+            const canAudits = this.isModuleAllowed(roleName, 'audit_logs');
+            const canReports = this.isModuleAllowed(roleName, 'analytics');
+
+            navItems = [
+                {
+                    label: 'Dashboard',
+                    url: '/dashboard/dashboard-admin.html',
+                    icon: 'layout-dashboard',
+                    isActive: currentPath.includes('dashboard-admin.html') || (currentPath.endsWith('/dashboard/') && !currentPath.includes('reviewer') && !currentPath.includes('facilitator') && !currentPath.includes('team-member'))
+                }
+            ];
+            if (canProj) {
+                navItems.push({
+                    label: 'Projects',
+                    url: '/projects/projects-repository.html',
+                    icon: 'folder-kanban',
+                    isActive: currentPath.includes('/projects/') || currentPath.includes('repository') || currentPath.includes('workspace')
+                });
+            }
+            if (canUsers) {
+                navItems.push({
+                    label: 'Directory',
+                    url: '/admin/users.html',
+                    icon: 'users',
+                    isActive: currentPath.includes('users.html')
+                });
+            }
+            if (canAudits) {
+                navItems.push({
+                    label: 'Audits',
+                    url: '/admin/audit-queue.html',
+                    icon: 'shield-alert',
+                    isActive: currentPath.includes('audit-queue.html') || currentPath.includes('audit_logs')
+                });
+            } else if (canReports) {
+                navItems.push({
+                    label: 'Analytics',
+                    url: '/reports/analytics.html',
+                    icon: 'bar-chart-3',
+                    isActive: currentPath.includes('analytics.html') || currentPath.includes('/reports/')
+                });
+            }
+            navItems.push({
+                label: 'Settings',
+                url: '/admin/settings.html',
+                icon: 'settings',
+                isActive: currentPath.includes('/admin/settings') || currentPath.includes('settings.html')
+            });
+        } else if (roleName === 'CEO') {
+            // ── CEO / Executive ──
+            const canReports = this.isModuleAllowed(roleName, 'analytics');
+            const canRewards = this.isModuleAllowed(roleName, 'leaderboard');
+            const canUsers = this.isModuleAllowed(roleName, 'user_management');
+
+            navItems = [
+                {
+                    label: 'Executive',
+                    url: '/dashboard/dashboard-admin.html',
+                    icon: 'layout-dashboard',
+                    isActive: currentPath.includes('dashboard-admin.html')
+                }
+            ];
+            if (canReports) {
+                navItems.push({
+                    label: 'Analytics',
+                    url: '/reports/analytics.html',
+                    icon: 'bar-chart-3',
+                    isActive: currentPath.includes('analytics.html') || currentPath.includes('/reports/')
+                });
+            }
+            if (canRewards) {
+                navItems.push({
+                    label: 'Leaderboard',
+                    url: '/rewards/leaderboard.html',
+                    icon: 'trophy',
+                    isActive: currentPath.includes('leaderboard.html') || currentPath.includes('/rewards/')
+                });
+            }
+            if (canUsers) {
+                navItems.push({
+                    label: 'Directory',
+                    url: '/admin/users.html',
+                    icon: 'users',
+                    isActive: currentPath.includes('users.html')
+                });
+            }
+            navItems.push({
+                label: 'Profile',
+                url: '/auth/user-profile.html',
+                icon: 'user',
+                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+            });
+        } else if (roleName === 'Reviewer') {
+            // ── Stage Reviewer / Approver ──
+            const canProj = this.isModuleAllowed(roleName, 'project_repo');
+            const canReports = this.isModuleAllowed(roleName, 'analytics');
+
+            navItems = [
+                {
+                    label: 'Dashboard',
+                    url: '/dashboard/dashboard-reviewer.html',
+                    icon: 'layout-dashboard',
+                    isActive: currentPath.includes('dashboard-reviewer.html')
+                }
+            ];
+            if (canProj) {
+                navItems.push({
+                    label: 'Projects',
+                    url: '/projects/projects-repository.html',
+                    icon: 'folder-kanban',
+                    isActive: currentPath.includes('/projects/') || currentPath.includes('repository') || currentPath.includes('workspace')
+                });
+            }
+            if (canReports) {
+                navItems.push({
+                    label: 'Analytics',
+                    url: '/reports/analytics.html',
+                    icon: 'bar-chart-3',
+                    isActive: currentPath.includes('analytics.html') || currentPath.includes('/reports/')
+                });
+            }
+            navItems.push({
+                label: 'Profile',
+                url: '/auth/user-profile.html',
+                icon: 'user',
+                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+            });
+        } else if (roleName === 'Facilitator') {
+            // ── Gate Facilitator ──
+            const canProj = this.isModuleAllowed(roleName, 'project_repo');
+            const canTpl = this.isModuleAllowed(roleName, 'stage_template');
+
+            navItems = [
+                {
+                    label: 'Dashboard',
+                    url: '/dashboard/dashboard-facilitator.html',
+                    icon: 'layout-dashboard',
+                    isActive: currentPath.includes('dashboard-facilitator.html')
+                }
+            ];
+            if (canProj) {
+                navItems.push({
+                    label: 'Projects',
+                    url: '/projects/projects-repository.html',
+                    icon: 'folder-kanban',
+                    isActive: currentPath.includes('/projects/') || currentPath.includes('repository') || currentPath.includes('workspace')
+                });
+            }
+            if (canTpl) {
+                navItems.push({
+                    label: 'Templates',
+                    url: '/admin/stage-template.html',
+                    icon: 'layers',
+                    isActive: currentPath.includes('stage-template.html')
+                });
+            }
+            navItems.push({
+                label: 'Profile',
+                url: '/auth/user-profile.html',
+                icon: 'user',
+                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+            });
+        } else if (roleName === 'Team Leader') {
+            // ── Team Leader ──
+            const canProj = this.isModuleAllowed(roleName, 'project_repo');
+            const canRewards = this.isModuleAllowed(roleName, 'leaderboard');
+
+            navItems = [
+                {
+                    label: 'Dashboard',
+                    url: '/dashboard/dashboard-team-member.html',
+                    icon: 'layout-dashboard',
+                    isActive: currentPath.includes('dashboard-team-member.html')
+                }
+            ];
+            if (canProj) {
+                navItems.push({
+                    label: 'Projects',
+                    url: '/projects/projects-repository.html',
+                    icon: 'folder-kanban',
+                    isActive: currentPath.includes('/projects/') && !currentPath.includes('new-project.html')
+                });
+                navItems.push({
+                    label: 'Create',
+                    url: '/projects/new-project.html',
+                    icon: 'plus-circle',
+                    isActive: currentPath.includes('new-project.html')
+                });
+            }
+            if (canRewards) {
+                navItems.push({
+                    label: 'Rewards',
+                    url: '/rewards/leaderboard.html',
+                    icon: 'trophy',
+                    isActive: currentPath.includes('leaderboard.html') || currentPath.includes('/rewards/')
+                });
+            }
+            navItems.push({
+                label: 'Profile',
+                url: '/auth/user-profile.html',
+                icon: 'user',
+                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+            });
+        } else {
+            // ── Team Member (Default Contributor) ──
+            const canProj = this.isModuleAllowed(roleName, 'project_repo');
+            const canKB = this.isModuleAllowed(roleName, 'knowledge_base');
+            const canRewards = this.isModuleAllowed(roleName, 'leaderboard');
+
+            navItems = [
+                {
+                    label: 'Dashboard',
+                    url: '/dashboard/dashboard-team-member.html',
+                    icon: 'layout-dashboard',
+                    isActive: currentPath.includes('dashboard-team-member.html')
+                }
+            ];
+            if (canProj) {
+                navItems.push({
+                    label: 'Projects',
+                    url: '/projects/projects-repository.html',
+                    icon: 'folder-kanban',
+                    isActive: currentPath.includes('/projects/')
+                });
+            }
+            if (canKB) {
+                navItems.push({
+                    label: 'Knowledge',
+                    url: '/knowledge-base/repository.html',
+                    icon: 'book-open',
+                    isActive: currentPath.includes('/knowledge-base/')
+                });
+            }
+            if (canRewards) {
+                navItems.push({
+                    label: 'Leaderboard',
+                    url: '/rewards/leaderboard.html',
+                    icon: 'trophy',
+                    isActive: currentPath.includes('leaderboard.html') || currentPath.includes('/rewards/')
+                });
+            }
+            navItems.push({
+                label: 'Profile',
+                url: '/auth/user-profile.html',
+                icon: 'user',
+                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+            });
+        }
+
+        const navHtml = navItems.map(item => `
+            <a href="${item.url}" class="app-bottom-nav-item ${item.isActive ? 'active' : ''}">
+                <div class="app-bottom-nav-icon">
+                    <i data-lucide="${item.icon}"></i>
+                </div>
+                <span class="app-bottom-nav-label">${item.label}</span>
+            </a>
+        `).join('');
+
+        if (!nav) {
+            nav = document.createElement('nav');
+            nav.id = 'qcms-mobile-bottom-nav';
+            nav.className = 'app-bottom-nav';
+            document.body.appendChild(nav);
+        }
+        nav.innerHTML = navHtml;
+        this.refreshIcons();
+    },
+
     setupMobileSidebar() {
         let backdrop = document.getElementById('sidebar-backdrop');
         if (!backdrop) {
@@ -637,18 +1279,9 @@ const QCMS = {
             document.body.classList.add('sidebar-collapsed');
         }
 
-        // Delegate click for sidebar-toggle-btn globally on document
-        if (!this._sidebarToggleBound) {
-            this._sidebarToggleBound = true;
-            document.addEventListener('click', (e) => {
-                const btn = e.target.closest('#sidebar-toggle-btn');
-                if (btn) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    this.toggleSidebar(e);
-                }
-            });
-            // Auto-retreat mobile sidebar when choosing any navigation option
+        // Auto-retreat mobile sidebar when choosing any navigation option
+        if (!this._sidebarNavClickBound) {
+            this._sidebarNavClickBound = true;
             document.addEventListener('click', (e) => {
                 const sidebarLink = e.target.closest('#app-sidebar a, #app-sidebar .sidebar-link, #app-sidebar button');
                 if (sidebarLink && window.innerWidth <= 1024) {
@@ -656,16 +1289,58 @@ const QCMS = {
                     const bd = document.getElementById('sidebar-backdrop');
                     if (sidebar) sidebar.classList.remove('show');
                     if (bd) bd.classList.remove('show');
+                    document.body.classList.remove('sidebar-mobile-open');
                 }
             });
         }
 
         if (backdrop) {
-            backdrop.onclick = () => {
+            const closeDrawer = (e) => {
+                if (e && e.cancelable) e.preventDefault();
                 const sidebar = document.getElementById('app-sidebar');
                 if (sidebar) sidebar.classList.remove('show');
                 backdrop.classList.remove('show');
+                document.body.classList.remove('sidebar-mobile-open');
             };
+            backdrop.onclick = closeDrawer;
+            backdrop.ontouchstart = closeDrawer;
+        }
+
+        // Native Swipe-to-close Touch Gesture on Drawer
+        const sidebar = document.getElementById('app-sidebar');
+        if (sidebar && !this._sidebarSwipeBound) {
+            this._sidebarSwipeBound = true;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let isSwiping = false;
+
+            sidebar.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    isSwiping = true;
+                }
+            }, { passive: true });
+
+            sidebar.addEventListener('touchmove', (e) => {
+                if (!isSwiping || e.touches.length !== 1) return;
+                const currentX = e.touches[0].clientX;
+                const currentY = e.touches[0].clientY;
+                const deltaX = currentX - touchStartX;
+                const deltaY = Math.abs(currentY - touchStartY);
+
+                // If swipe to the left by > 50px with low vertical movement
+                if (deltaX < -50 && deltaY < 50) {
+                    sidebar.classList.remove('show');
+                    if (backdrop) backdrop.classList.remove('show');
+                    document.body.classList.remove('sidebar-mobile-open');
+                    isSwiping = false;
+                }
+            }, { passive: true });
+
+            sidebar.addEventListener('touchend', () => {
+                isSwiping = false;
+            }, { passive: true });
         }
     },
 
@@ -680,18 +1355,25 @@ const QCMS = {
             backdrop.id = 'sidebar-backdrop';
             backdrop.className = 'sidebar-backdrop';
             document.body.appendChild(backdrop);
-            backdrop.onclick = () => {
-                const sidebar = document.getElementById('app-sidebar');
-                if (sidebar) sidebar.classList.remove('show');
+            const closeDrawer = (e) => {
+                if (e && e.cancelable) e.preventDefault();
+                const sb = document.getElementById('app-sidebar');
+                if (sb) sb.classList.remove('show');
                 backdrop.classList.remove('show');
+                document.body.classList.remove('sidebar-mobile-open');
             };
+            backdrop.onclick = closeDrawer;
+            backdrop.ontouchstart = closeDrawer;
         }
 
         const sidebar = document.getElementById('app-sidebar');
 
         if (window.innerWidth <= 1024) {
-            if (sidebar) sidebar.classList.toggle('show');
-            if (backdrop) backdrop.classList.toggle('show');
+            const isCurrentlyOpen = sidebar ? sidebar.classList.contains('show') : false;
+            const willOpen = !isCurrentlyOpen;
+            if (sidebar) sidebar.classList.toggle('show', willOpen);
+            backdrop.classList.toggle('show', willOpen);
+            document.body.classList.toggle('sidebar-mobile-open', willOpen);
         } else {
             document.body.classList.toggle('sidebar-collapsed');
             localStorage.setItem('qcms-sidebar-collapsed', document.body.classList.contains('sidebar-collapsed'));
@@ -800,24 +1482,39 @@ const QCMS = {
      * Standardized Avatar Rendering
      */
     renderAvatar(user, size = 32) {
-        if (!user) return `<div class="avatar-fallback" style="width:${size}px;height:${size}px;">?</div>`;
-        
-        const name = user.full_name || user.username || 'User';
-        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        
-        if (user.profile_picture) {
-            // Check if it's already a full URL
-            let src = user.profile_picture;
-            if (!src.startsWith('http')) {
-                // Assume backend is on port 5000 if frontend is on different port, 
-                // but usually the proxy handles /api and /uploads.
-                // We fallback to relative path which is safest for most deployments.
-                src = src.startsWith('/') ? src : '/' + src;
-            }
-            return `<img src="${src}" alt="${name}" style="width:${size}px; height:${size}px; object-fit:cover;" onerror="this.outerHTML='<div class=\'avatar-initials\' style=\'width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:var(--ds-accent);color:white;font-weight:700;font-size:${size/2.5}px;\'>${initials}</div>';">`;
+        if (!user) {
+            return `<div class="avatar-fallback" style="width:${size}px; height:${size}px; min-width:${size}px; min-height:${size}px; max-width:${size}px; max-height:${size}px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:rgba(var(--ds-primary-rgb), 0.1); color:var(--ds-text-secondary); font-size:${Math.round(size/2.5)}px; flex-shrink:0;">?</div>`;
         }
         
-        return `<div class="avatar-initials" style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:var(--ds-accent);color:white;font-weight:700;font-size:${size/2.5}px;">${initials}</div>`;
+        const name = user.full_name || user.username || 'User';
+        const parts = name.trim().split(/\s+/);
+        const initials = parts.length > 1 
+            ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() 
+            : name.substring(0, 2).toUpperCase() || 'U';
+        
+        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#6366f1', '#14b8a6'];
+        let colorIdx = 0;
+        for (let i = 0; i < name.length; i++) {
+            colorIdx = (colorIdx + name.charCodeAt(i)) % colors.length;
+        }
+        const bgColor = colors[colorIdx];
+
+        if (user.profile_picture) {
+            let src = user.profile_picture;
+            if (!src.startsWith('http') && !src.startsWith('data:')) {
+                src = src.startsWith('/') ? src : '/' + src;
+            }
+            return `<div class="avatar-container" style="width:${size}px; height:${size}px; min-width:${size}px; min-height:${size}px; max-width:${size}px; max-height:${size}px; border-radius:50%; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; background:${bgColor}; flex-shrink:0; position:relative;">
+                <img src="${src}" alt="${QCMS.escapeHtml(name)}" style="width:100%; height:100%; object-fit:cover; display:block; border-radius:50%;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                <div class="avatar-initials" style="width:100%; height:100%; display:none; align-items:center; justify-content:center; background:${bgColor}; color:#ffffff; font-weight:700; font-size:${Math.round(size/2.4)}px; border-radius:50%;">
+                    ${initials}
+                </div>
+            </div>`;
+        }
+        
+        return `<div class="avatar-initials" style="width:${size}px; height:${size}px; min-width:${size}px; min-height:${size}px; max-width:${size}px; max-height:${size}px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:${bgColor}; color:#ffffff; font-weight:700; font-size:${Math.round(size/2.4)}px; flex-shrink:0;">
+            ${initials}
+        </div>`;
     },
 
     /**
@@ -894,18 +1591,66 @@ const QCMS = {
         const escDesc = (description || '').replace(/"/g, '&quot;');
         const timestamp = new Date().toLocaleTimeString();
         
-        return `<div class="glass-card position-relative clickable hover-shadow" style="padding: var(--ds-space-5); text-align: center; min-height: 140px; cursor: pointer;" ${extraAttrs}>
+        return `<div class="glass-card position-relative clickable hover-shadow" style="padding: var(--ds-space-5); text-align: center; min-height: 140px; cursor: pointer;" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>📊 ${label}</div><div class='text-white-50 mb-1'><strong>Data:</strong> ${escDesc || 'Real-time aggregated tenant metrics'}</div><div class='text-white-50 mb-1'><strong>Formula:</strong> ${escCal || 'Direct aggregation'}</div><div style='color:#93c5fd;'>👉 Click to filter records</div></div>" ${extraAttrs}>
             <div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;" onclick="event.stopPropagation()">
-                <i data-lucide="info" class="text-muted" style="width: 14px; height: 14px; cursor: help;"
-                   data-bs-toggle="tooltip" data-bs-html="true"
-                   title="<strong>Formula:</strong> ${escCal}<br/><small class='text-muted'>${escDesc}<br/>As of: ${timestamp} (polls every 15m)</small>"></i>
+                <i data-lucide="info" class="text-muted" style="width: 14px; height: 14px; opacity:0.6;"></i>
             </div>
             <div style="width:40px;height:40px;border-radius:12px;background:${c}1f;display:flex;align-items:center;justify-content:center;margin:0 auto var(--ds-space-3);">
                 <i data-lucide="${icon || 'hash'}" style="width:20px;height:20px;color:${c};"></i>
             </div>
             <div class="text-2xl fw-bold" style="color:var(--ds-text-main);">${value ?? '—'}</div>
-            <div class="text-xs text-muted mt-1">${label}</div>
+            <div class="text-xs text-muted mt-1" style="text-transform: uppercase; font-weight: 600; letter-spacing: 0.03em;">${label}</div>
         </div>`;
+    },
+
+    /**
+     * Cleans up lingering, orphaned, or stuck tooltips from the DOM
+     */
+    cleanTooltips(container = document) {
+        if (typeof bootstrap !== 'undefined' && bootstrap && bootstrap.Tooltip) {
+            try {
+                container.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                    try {
+                        const inst = bootstrap.Tooltip.getInstance(el);
+                        if (inst) {
+                            inst.hide();
+                            inst.dispose();
+                        }
+                    } catch (_) {}
+                });
+            } catch (_) {}
+        }
+        document.querySelectorAll('.tooltip').forEach(t => t.remove());
+    },
+
+    /**
+     * Initializes Bootstrap tooltips with hover-only trigger and auto-dismiss on click
+     */
+    initTooltips(container = document) {
+        this.cleanTooltips(container);
+        if (typeof bootstrap !== 'undefined' && bootstrap && bootstrap.Tooltip) {
+            const list = container.querySelectorAll('[data-bs-toggle="tooltip"]');
+            [...list].forEach(el => {
+                try {
+                    const tip = new bootstrap.Tooltip(el, {
+                        boundary: 'window',
+                        trigger: 'hover',
+                        delay: { show: 150, hide: 80 }
+                    });
+                    // Auto-hide tooltip on click so it doesn't get stuck at (0,0) during async re-renders
+                    el.addEventListener('click', () => {
+                        try {
+                            tip.hide();
+                            setTimeout(() => {
+                                document.querySelectorAll('.tooltip').forEach(t => t.remove());
+                            }, 50);
+                        } catch (_) {}
+                    }, { passive: true });
+                } catch (e) {
+                    try { new bootstrap.Tooltip(el); } catch (_) {}
+                }
+            });
+        }
     },
 
     /**
@@ -963,73 +1708,72 @@ const QCMS = {
             <div class="container-fluid d-flex align-items-center justify-content-between h-100 px-2 px-md-4">
                 <div class="d-flex align-items-center">
                     <!-- Sidebar Toggle -->
-                    <button class="ds-btn ds-btn-ghost p-1 me-2" id="sidebar-toggle-btn" onclick="QCMS.toggleSidebar(event)" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;" title="Toggle Navigation Sidebar">
-                        <i data-lucide="menu" style="width: 22px; height: 22px;"></i>
+                    <button class="ds-btn ds-btn-ghost p-1 me-2" id="sidebar-toggle-btn" onclick="QCMS.toggleSidebar(event)" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: #FFFFFF !important;" title="Toggle Navigation Sidebar">
+                        <i data-lucide="menu" style="width: 22px; height: 22px; color: #FFFFFF !important;"></i>
                     </button>
 
                     <!-- Breadcrumb Placeholder -->
-                    <div id="nav-breadcrumb-container" class="d-none d-lg-flex align-items-center px-3" style="min-width: 200px;"></div>
+                    <div id="nav-breadcrumb-container" class="d-none d-lg-flex align-items-center px-2" style="min-width: 200px;"></div>
                 </div>
 
                 <div class="d-flex gap-2 gap-md-3 align-items-center">
 
-
                     <!-- Theme Toggle -->
-                    <div class="theme-switcher-wrapper glass-panel p-1 d-flex gap-1" style="border-radius: 12px; background: rgba(var(--ds-primary-rgb), 0.03); border: 1px solid var(--ds-border-color);">
-                        <button class="ds-btn ds-btn-icon ${!isDark ? 'ds-btn-primary' : 'ds-btn-ghost text-muted'}" 
-                                style="width:32px; height:32px; border-radius: 8px; padding:0;" title="Light Mode"
+                    <div class="theme-switcher-wrapper">
+                        <button class="theme-toggle-btn ${!isDark ? 'theme-active-gold' : 'theme-inactive-ghost'}" 
+                                title="Light Mode"
                                 data-i18n-title="navbar.light_mode"
-                                onclick="window.themeManager.applyTheme('light'); localStorage.setItem('qcms-theme', 'light');">
-                            <i data-lucide="sun" style="width:15px; height:15px;"></i>
+                                onclick="window.themeManager.applyTheme('light');">
+                            <i data-lucide="sun"></i>
                         </button>
-                        <button class="ds-btn ds-btn-icon ${isDark ? 'ds-btn-primary' : 'ds-btn-ghost text-muted'}" 
-                                style="width:32px; height:32px; border-radius: 8px; padding:0;" title="Dark Mode"
+                        <button class="theme-toggle-btn ${isDark ? 'theme-active-gold' : 'theme-inactive-ghost'}" 
+                                title="Dark Mode"
                                 data-i18n-title="navbar.dark_mode"
-                                onclick="window.themeManager.applyTheme('dark'); localStorage.setItem('qcms-theme', 'dark');">
-                            <i data-lucide="moon" style="width:15px; height:15px;"></i>
+                                onclick="window.themeManager.applyTheme('dark');">
+                            <i data-lucide="moon"></i>
                         </button>
                     </div>
 
                     <!-- Language Selector -->
                     <div class="dropdown" id="lang-selector-dropdown">
                         <button class="ds-btn ds-btn-ghost" 
-                                style="width:42px; height:42px; border-radius:12px; padding:0; display:flex; align-items:center; justify-content:center; color:var(--ds-text-main); border: 1px solid transparent;" 
+                                style="width:38px; height:38px; border-radius:10px; padding:0; display:flex; align-items:center; justify-content:center; color:#FFFFFFCC; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.08);" 
                                 data-bs-toggle="dropdown" aria-expanded="false" title="Change Language" data-i18n-title="navbar.change_language">
-                            <i data-lucide="languages" style="width:20px; height:20px;"></i>
+                            <i data-lucide="languages" style="width:18px; height:18px;"></i>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end glass-dropdown" style="border-radius:12px; background:var(--ds-bg-surface); border: 1px solid var(--ds-glass-border); padding: 6px; box-shadow: var(--ds-shadow-lg);">
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'en' ? 'active' : ''}" onclick="window.i18n.setLanguage('en')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:var(--ds-text-main);"><span style="width: 20px; font-size:11px; opacity:0.6;">EN</span>English</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'hi' ? 'active' : ''}" onclick="window.i18n.setLanguage('hi')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:var(--ds-text-main);"><span style="width: 20px; font-size:11px; opacity:0.6;">HI</span>हिन्दी (Hindi)</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'mr' ? 'active' : ''}" onclick="window.i18n.setLanguage('mr')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:var(--ds-text-main);"><span style="width: 20px; font-size:11px; opacity:0.6;">MR</span>मराठी (Marathi)</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'kn' ? 'active' : ''}" onclick="window.i18n.setLanguage('kn')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:var(--ds-text-main);"><span style="width: 20px; font-size:11px; opacity:0.6;">KN</span>ಕನ್ನಡ (Kannada)</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'te' ? 'active' : ''}" onclick="window.i18n.setLanguage('te')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:var(--ds-text-main);"><span style="width: 20px; font-size:11px; opacity:0.6;">TE</span>తెలుగు (Telugu)</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'ta' ? 'active' : ''}" onclick="window.i18n.setLanguage('ta')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:var(--ds-text-main);"><span style="width: 20px; font-size:11px; opacity:0.6;">TA</span>தமிழ் (Tamil)</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'ml' ? 'active' : ''}" onclick="window.i18n.setLanguage('ml')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:var(--ds-text-main);"><span style="width: 20px; font-size:11px; opacity:0.6;">ML</span>മലയാളം (Malayalam)</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end glass-dropdown" style="border-radius:12px; background:#002347; border: 1px solid rgba(196, 162, 90, 0.3); padding: 6px; box-shadow: var(--ds-shadow-lg);">
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'en' ? 'active' : ''}" onclick="window.i18n.setLanguage('en')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:#FFFFFF;"><span style="width: 20px; font-size:11px; opacity:0.6; color:#C4A25A;">EN</span>English</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'hi' ? 'active' : ''}" onclick="window.i18n.setLanguage('hi')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:#FFFFFF;"><span style="width: 20px; font-size:11px; opacity:0.6; color:#C4A25A;">HI</span>हिन्दी (Hindi)</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'mr' ? 'active' : ''}" onclick="window.i18n.setLanguage('mr')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:#FFFFFF;"><span style="width: 20px; font-size:11px; opacity:0.6; color:#C4A25A;">MR</span>मराठी (Marathi)</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'kn' ? 'active' : ''}" onclick="window.i18n.setLanguage('kn')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:#FFFFFF;"><span style="width: 20px; font-size:11px; opacity:0.6; color:#C4A25A;">KN</span>ಕನ್ನಡ (Kannada)</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'te' ? 'active' : ''}" onclick="window.i18n.setLanguage('te')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:#FFFFFF;"><span style="width: 20px; font-size:11px; opacity:0.6; color:#C4A25A;">TE</span>తెలుగు (Telugu)</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'ta' ? 'active' : ''}" onclick="window.i18n.setLanguage('ta')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:#FFFFFF;"><span style="width: 20px; font-size:11px; opacity:0.6; color:#C4A25A;">TA</span>தமிழ் (Tamil)</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 clickable ${window.i18n && window.i18n.getLanguage() === 'ml' ? 'active' : ''}" onclick="window.i18n.setLanguage('ml')" style="border-radius: 8px; font-weight: 500; font-size:14px; color:#FFFFFF;"><span style="width: 20px; font-size:11px; opacity:0.6; color:#C4A25A;">ML</span>മലയാളം (Malayalam)</a></li>
                         </ul>
                     </div>
 
                     <!-- Notification Bell -->
                     <button id="notif-bell-btn" class="ds-btn ds-btn-ghost position-relative"
-                            style="width:42px; height:42px; border-radius:12px; padding:0; display:flex; align-items:center; justify-content:center; color:var(--ds-text-main); border: 1px solid transparent;"
+                            style="width:38px; height:38px; border-radius:10px; padding:0; display:flex; align-items:center; justify-content:center; color:#FFFFFFCC; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.08);"
                             title="Notifications" data-i18n-title="navbar.notifications" onclick="showNotificationsPanel()">
-                        <i data-lucide="bell" style="width:22px; height:22px;"></i>
-                        <span id="notif-badge" style="position:absolute; top:8px; right:8px; width:11px; height:11px; background:#ef4444; border-radius:50%; border:2px solid var(--ds-bg-surface); display:block;"></span>
+                        <i data-lucide="bell" style="width:18px; height:18px;"></i>
+                        <span id="notif-badge" style="position:absolute; top:6px; right:6px; width:9px; height:9px; background:#C4A25A; border-radius:50%; border:2px solid #002347; display:block;"></span>
                     </button>
 
-                    <div class="v-divider" style="height: 24px; width: 1px; background: var(--ds-border-color); opacity: 0.5;"></div>
+                    <div class="v-divider" style="height: 24px; width: 1px; background: rgba(255, 255, 255, 0.15);"></div>
 
-                    <!-- User Badge -->
-                    <div class="user-pill d-flex align-items-center gap-2 ps-1 pe-3 py-1 clickable glass-panel hover-shadow" 
-                         style="border-radius: 14px; background: rgba(var(--ds-primary-rgb), 0.04); border: 1px solid var(--ds-border-color); transition: all 0.2s;" 
+                    <!-- User Auth/Profile Pill: Translucent pill button (background: rgba(255,255,255,0.1), border-radius: 10px, padding: 8px 16px) -->
+                    <div class="user-pill d-flex align-items-center gap-2 px-3 py-2 clickable" 
+                         style="border-radius: 10px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.15); transition: all 0.2s;" 
                          onclick="if (window.SuperAdmin && typeof SuperAdmin.switchView === 'function') { SuperAdmin.switchView('settings'); setTimeout(() => window.PlatformSettings && PlatformSettings.switchTab('admin-logins'), 50); } else { window.location.href='${(user.role === 'SuperAdmin' || user.role === 'Super Admin') ? '/admin/super-admin.html?view=settings&tab=admin-logins' : '/admin/settings.html?tab=personal'}'; }">
-                        <div class="user-avatar-sm d-flex align-items-center justify-content-center text-white" 
-                             style="width:38px; height:38px; border-radius:12px; font-weight:700; font-size:15px; background: var(--ds-accent); overflow: hidden; border: 1px solid rgba(255,255,255,0.1);"
+                        <div class="user-avatar-sm d-flex align-items-center justify-content-center" 
+                             style="width:28px; height:28px; border-radius:8px; font-weight:700; font-size:13px; background: #C4A25A; color: #002347; overflow: hidden;"
                              id="nav-user-avatar">
-                            ${this.renderAvatar(user, 38)}
+                            ${this.renderAvatar(user, 28)}
                         </div>
                         <div class="user-meta d-none d-sm-block text-start" style="line-height: 1.2;">
-                            <div class="fw-bold" style="font-size: 14px; color: var(--ds-text-main);">${user.full_name || user.username || 'User'}</div>
-                            <div class="text-secondary" style="font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.6; letter-spacing: 0.05em;" data-i18n="roles.${(user.role || 'Team Member').toLowerCase().replace(' ', '_')}">${user.role || 'Member'}</div>
+                            <div class="fw-bold" style="font-size: 13px; color: #FFFFFF;">${user.full_name || user.username || 'User'}</div>
+                            <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; color: #C4A25A; letter-spacing: 0.05em;" data-i18n="roles.${(user.role || 'Team Member').toLowerCase().replace(' ', '_')}">${user.role || 'Member'}</div>
                         </div>
                     </div>
                 </div>
@@ -1055,7 +1799,16 @@ const QCMS = {
         }, 100);
 
         QCMS.refreshIcons();
-        if (window.Breadcrumbs) window.Breadcrumbs.init('nav-breadcrumb-container');
+        if (window.Breadcrumbs) {
+            window.Breadcrumbs.init('nav-breadcrumb-container');
+        } else {
+            const script = document.createElement('script');
+            script.src = '/assets/dist/breadcrumbs.58281b52.min.js';
+            script.onload = () => {
+                if (window.Breadcrumbs) window.Breadcrumbs.init('nav-breadcrumb-container');
+            };
+            document.head.appendChild(script);
+        }
         if (window.i18n) window.i18n.translatePage();
     },
 
@@ -1368,9 +2121,13 @@ const QCMS = {
         }
     },
 
-    logout() {
+    async logout() {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+        } catch (_) {}
         try {
             sessionStorage.clear();
+            localStorage.removeItem('qcms_authenticated');
             localStorage.removeItem('token');
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
@@ -1436,6 +2193,34 @@ const QCMS = {
 
     badge(text, color = 'blue') {
         return `<span class="ds-badge ${color}">${text}</span>`;
+    },
+
+    roleBadge(role) {
+        if (!role) return `<span class="ds-badge blue">Team Member</span>`;
+        const r = String(role).trim();
+        const lower = r.toLowerCase();
+        let color = 'blue';
+
+        if (lower.includes('superadmin') || lower.includes('super admin') || lower.includes('super_admin')) {
+            color = 'purple';
+        } else if (lower.includes('admin') || lower.includes('administrator')) {
+            color = 'red';
+        } else if (lower === 'ceo' || lower.includes('executive') || lower.includes('director')) {
+            color = 'gold';
+        } else if (lower.includes('facilitator')) {
+            color = 'orange';
+        } else if (lower.includes('reviewer') || lower.includes('auditor')) {
+            color = 'cyan';
+        } else if (lower.includes('leader') || lower.includes('lead') || lower.includes('manager')) {
+            color = 'green';
+        } else if (lower.includes('member') || lower.includes('user') || lower.includes('viewer')) {
+            color = 'blue';
+        } else {
+            color = 'gray';
+        }
+
+        const safeText = QCMS.escapeHtml ? QCMS.escapeHtml(r) : r;
+        return `<span class="ds-badge ${color}">${safeText}</span>`;
     },
 
     statusBadge(status) {
@@ -1770,13 +2555,12 @@ const QCMS = {
             messages.scrollTop = messages.scrollHeight;
 
             try {
-                const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
                 const response = await fetch('/api/rag/chat', {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Content-Type': 'application/json'
                     },
+                    credentials: 'same-origin',
                     body: JSON.stringify({ query })
                 });
 
@@ -1957,13 +2741,12 @@ const QCMS = {
                 submitBtn.innerHTML = `Submitting...`;
 
                 try {
-                    const token = sessionStorage.getItem('token');
                     const response = await fetch('/api/auth/support/tickets', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
+                            'Content-Type': 'application/json'
                         },
+                        credentials: 'same-origin',
                         body: JSON.stringify({ subject, category, priority, message })
                     });
                     const data = await response.json();
@@ -2004,9 +2787,8 @@ const QCMS = {
             contentArea.innerHTML = `<div class="text-center text-secondary py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading history...</div>`;
 
             try {
-                const token = sessionStorage.getItem('token') || localStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
                 const response = await fetch('/api/auth/support/tickets', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    credentials: 'same-origin'
                 });
                 const data = await response.json();
 

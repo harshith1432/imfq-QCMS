@@ -7,6 +7,7 @@ from app.infrastructure.database.models.models import (
 from app.domain.services.document_branding_service import DocumentBrandingService
 from app.domain.services.setting_usage_scanner_service import SettingUsageScannerService
 from app.presentation.middleware.middleware import super_admin_required
+from app.presentation.routes.error_helpers import internal_server_error
 
 document_branding_bp = Blueprint('document_branding', __name__, url_prefix='/api/document-identity')
 
@@ -23,6 +24,20 @@ def _get_user_and_org_id():
     except Exception:
         db.session.rollback()
         return None, None
+
+@document_branding_bp.route('/public-context', methods=['GET'])
+@document_branding_bp.route('/context', methods=['GET'])
+def get_public_document_branding_context():
+    """Public endpoint to fetch current global Document Identity & Branding context without requiring JWT auth."""
+    try:
+        ctx = DocumentBrandingService.get_branding_context(org_id=None)
+        return jsonify({
+            "status": "success",
+            "branding_context": ctx,
+            "branding": ctx
+        }), 200
+    except Exception as e:
+        return internal_server_error(e, "Document branding operation failed.")
 
 @document_branding_bp.route('/all', methods=['GET'])
 @jwt_required()
@@ -152,10 +167,7 @@ def update_document_identity():
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
+        return internal_server_error(e, "Document branding operation failed.")
 
 
 @document_branding_bp.route('/upload-logo', methods=['POST'])
@@ -511,32 +523,6 @@ def generate_live_preview():
             <div style="border-top:1px solid #e2e8f0; padding-top:12px; font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
                 <span>{tmpl['confidential_text']}</span>
                 <span>{tmpl['footer_text']}</span>
-            </div>
-        </div>
-        """
-
-    elif preview_type == 'certificate':
-        html = f"""
-        <div style="font-family: 'Georgia', serif; padding: 32px; border: 4px double #d97706; border-radius: 12px; background: #fffbf0; color: #78350f; text-align: center;">
-            <p style="margin:0; font-size:13px; font-weight:bold; letter-spacing:2px; color:#b45309;">{ctx['legal_company_name']}</p>
-            <h2 style="margin:12px 0 4px 0; color:#78350f; font-size:24px;">{tmpl['header_title']}</h2>
-            <p style="margin:0; font-size:13px; color:#92400e; font-style:italic;">{tmpl['subtitle']}</p>
-            
-            <div style="margin: 24px 0;">
-                <p style="margin:0; font-size:13px; color:#78350f;">This is to certify that</p>
-                <h3 style="margin:8px 0; font-size:20px; color:#1e293b;">{user.username if user else "Sample Admin User"}</h3>
-                <p style="margin:0; font-size:13px; color:#78350f;">has successfully completed training on <strong>Standard Operating Procedure (SOP-QUAL-001)</strong></p>
-            </div>
-            
-            <div style="display:flex; justify-content:space-around; align-items:center; margin-top: 30px; padding-top: 16px; border-top: 1px solid #fde68a;">
-                <div>
-                    <p style="margin:0; font-size:11px; font-weight:bold; color:#78350f;">OFFICIAL DIGITAL SEAL</p>
-                    <span style="font-size:10px; color:#b45309;">Verified Electronic Authority</span>
-                </div>
-                <div>
-                    <img src="{meta['qr_image_url']}" style="width:60px; height:60px;" />
-                    <p style="margin:2px 0 0 0; font-size:9px; color:#92400e;">Hash: {meta['document_hash']}</p>
-                </div>
             </div>
         </div>
         """

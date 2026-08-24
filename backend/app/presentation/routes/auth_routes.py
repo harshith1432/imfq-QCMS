@@ -1,17 +1,19 @@
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
 from app.infrastructure.database.models.models import User, Role, Department, Organization, EmailVerification, PhoneVerification, SupportTicket, Notification, db
 import random
+import secrets
 from app import bcrypt
 from app.infrastructure.mailer.email_service import EmailUtils
 from app.domain.services.subscription_service import SubscriptionManager
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 import os
 import re
 from werkzeug.utils import secure_filename
 from app.utils.avatar_utils import get_profile_picture_url
+from app.presentation.routes.error_helpers import internal_server_error
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'jfif', 'avif'}
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -78,6 +80,9 @@ def get_registration_status():
     else:
         msg = "Self-service organization sign-up is active"
 
+    from app.domain.services.document_branding_service import DocumentBrandingService
+    branding_ctx = DocumentBrandingService.get_branding_context(org_id=None)
+
     return jsonify({
         "status": "success",
         "registration_open": is_open and has_trial_plan,
@@ -87,8 +92,71 @@ def get_registration_status():
         "support_email": support_email,
         "require_email_otp": require_email_otp,
         "require_phone_otp": require_phone_otp,
+        "branding": branding_ctx,
+        "branding_context": branding_ctx,
         "message": msg
     }), 200
+
+@auth_bp.route('/check-availability', methods=['POST'])
+def check_availability():
+    """Real-time validation for registration Step 1 (email, company_name) and Step 2 (username)."""
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+    company_name = (data.get('company_name') or '').strip()
+    username = (data.get('username') or '').strip().lower()
+
+    from sqlalchemy import func
+
+    if company_name:
+        existing_org = Organization.query.filter(
+            func.lower(Organization.name) == company_name.lower(),
+            Organization.is_deleted == False
+        ).first()
+        if existing_org:
+            return jsonify({
+                "valid": False,
+                "field": "company_name",
+                "msg": "An organization with this company name already exists",
+                "message": "An organization with this company name already exists"
+            }), 200
+
+    if email:
+        existing_org_email = Organization.query.filter(
+            func.lower(Organization.email) == email,
+            Organization.is_deleted == False
+        ).first()
+        if existing_org_email:
+            return jsonify({
+                "valid": False,
+                "field": "email",
+                "msg": "An organization with this email address already exists",
+                "message": "An organization with this email address already exists"
+            }), 200
+
+        existing_user_email = User.query.filter(
+            func.lower(User.email) == email
+        ).first()
+        if existing_user_email:
+            return jsonify({
+                "valid": False,
+                "field": "email",
+                "msg": "A user with this email address already exists",
+                "message": "A user with this email address already exists"
+            }), 200
+
+    if username:
+        existing_username = User.query.filter(
+            func.lower(User.username) == username
+        ).first()
+        if existing_username:
+            return jsonify({
+                "valid": False,
+                "field": "username",
+                "msg": "Username is already taken",
+                "message": "Username is already taken"
+            }), 200
+
+    return jsonify({"valid": True, "msg": "Available", "message": "Available"}), 200
 
 @auth_bp.route('/register-org', methods=['POST'])
 def register_org():
@@ -192,7 +260,7 @@ def register_org():
     if not trial_days:
         trial_days = 180
     
-    trial_ends = datetime.utcnow() + timedelta(days=int(trial_days))
+    trial_ends = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=int(trial_days))
     
     new_org = Organization(
         name=data.get('company_name'),
@@ -216,7 +284,7 @@ def register_org():
     # Create associated Subscription record linked to trial_plan_obj
     try:
         import uuid
-        sub_uid = f"SUB-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+        sub_uid = f"SUB-{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
         from app.infrastructure.database.models.models import Subscription
         new_sub = Subscription(
             org_id=new_org.id,
@@ -225,9 +293,9 @@ def register_org():
             billing_cycle='Trial',
             subscription_status='Trial',
             payment_status='Paid',
-            start_date=datetime.utcnow(),
+            start_date=datetime.now(timezone.utc).replace(tzinfo=None),
             end_date=trial_ends,
-            trial_start_date=datetime.utcnow(),
+            trial_start_date=datetime.now(timezone.utc).replace(tzinfo=None),
             trial_end_date=trial_ends,
             base_price=0.0,
             final_amount=0.0
@@ -295,27 +363,42 @@ def request_registration_otp():
         return jsonify({"msg": "Email is required"}), 400
         
     # Check if email is already taken
-    if Organization.query.filter_by(email=email).first():
+    if Organization.query.filter_by(email=email, is_deleted=False).first():
         return jsonify({"msg": "An organization with this email is already registered."}), 400
-        
-    # Generate 6-digit OTP
-    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
+    from app.infrastructure.cache.redis_adapter import cache
+    # Resend cooldown enforcement (60s)
+    cooldown_key = f"otp_cooldown:email:{email}"
+    if cache.get(cooldown_key):
+        return jsonify({
+            "status": "error",
+            "msg": "Please wait 60 seconds before requesting a new verification code.",
+            "code": "OTP_COOLDOWN_ACTIVE"
+        }), 429
+
+    # Generate 6-digit cryptographically secure OTP
+    otp = f"{secrets.randbelow(1_000_000):06d}"
     
     # Update or create verification record
     verification = EmailVerification.query.filter_by(email=email).first()
     if verification:
         verification.otp = otp
         verification.is_verified = False
-        verification.expires_at = datetime.utcnow() + timedelta(minutes=10)
+        verification.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
     else:
         verification = EmailVerification(
             email=email,
             otp=otp,
-            expires_at = datetime.utcnow() + timedelta(minutes=10)
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
         )
         db.session.add(verification)
     
-    # Send email via standardized utility
+    # Set 60-second cooldown in cache
+    cache.setex(cooldown_key, 60, "1")
+    # Reset failed attempts counter
+    cache.delete(f"otp_fails:email:{email}")
+
+    # Send email via standardized utility (never return in HTTP response)
     EmailUtils.send_registration_otp(email, otp)
     
     db.session.commit()
@@ -337,16 +420,30 @@ def verify_registration_otp():
     
     if not email or not otp:
         return jsonify({"msg": "Email and OTP are required"}), 400
-        
+
+    from app.infrastructure.cache.redis_adapter import cache
+    fails_key = f"otp_fails:email:{email}"
+    current_fails = cache.incr(fails_key, amount=1, ttl_seconds=600)
+    if current_fails > 5:
+        return jsonify({
+            "status": "error",
+            "msg": "Too many invalid attempts. This verification code has been locked. Please request a new code.",
+            "code": "OTP_ATTEMPTS_EXCEEDED"
+        }), 429
+
     verification = EmailVerification.query.filter_by(email=email, otp=otp).first()
     
     if not verification:
         return jsonify({"msg": "Invalid verification code."}), 400
         
-    if verification.expires_at < datetime.utcnow():
+    if verification.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({"msg": "Verification code has expired. Please request a new one."}), 400
         
+    # Mark verified and immediately invalidate OTP to prevent reuse
     verification.is_verified = True
+    verification.otp = None
+    cache.delete(fails_key)
+    cache.delete(f"otp_cooldown:email:{email}")
     db.session.commit()
     
     return jsonify({"msg": "Email verified successfully. You can now proceed.", "is_verified": True}), 200
@@ -495,28 +592,36 @@ def request_phone_otp():
     if not phone:
         return jsonify({"msg": "Phone number is required"}), 400
 
-    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    from app.infrastructure.cache.redis_adapter import cache
+    cooldown_key = f"otp_cooldown:phone:{phone}"
+    if cache.get(cooldown_key):
+        return jsonify({
+            "status": "error",
+            "msg": "Please wait 60 seconds before requesting a new SMS verification code.",
+            "code": "OTP_COOLDOWN_ACTIVE"
+        }), 429
+
+    otp = f"{secrets.randbelow(1_000_000):06d}"
     verif = PhoneVerification.query.filter_by(phone=phone).first()
     if verif:
         verif.otp = otp
         verif.is_verified = False
-        verif.expires_at = datetime.utcnow() + timedelta(minutes=10)
+        verif.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
     else:
         verif = PhoneVerification(
             phone=phone,
             otp=otp,
-            expires_at=datetime.utcnow() + timedelta(minutes=10)
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
         )
         db.session.add(verif)
 
+    cache.setex(cooldown_key, 60, "1")
+    cache.delete(f"otp_fails:phone:{phone}")
     db.session.commit()
 
-    # Dispatch live SMS via Jio DLT / Kaleyra SMS Gateway
+    # Dispatch live SMS via Jio DLT / Kaleyra SMS Gateway (never return OTP in response)
     sms_sent, sms_status_msg = dispatch_phone_otp_sms(phone, otp)
-    if sms_sent:
-        return jsonify({"msg": f"Verification code sent to {phone}."}), 200
-    else:
-        return jsonify({"msg": f"Verification code sent to {phone}.", "otp_debug": otp}), 200
+    return jsonify({"msg": f"Verification code sent to {phone}."}), 200
 
 
 @auth_bp.route('/verify-phone-otp', methods=['POST'])
@@ -528,14 +633,27 @@ def verify_phone_otp():
     if not phone or not otp:
         return jsonify({"msg": "Phone number and OTP code are required"}), 400
 
+    from app.infrastructure.cache.redis_adapter import cache
+    fails_key = f"otp_fails:phone:{phone}"
+    current_fails = cache.incr(fails_key, amount=1, ttl_seconds=600)
+    if current_fails > 5:
+        return jsonify({
+            "status": "error",
+            "msg": "Too many invalid attempts. This phone verification code has been locked.",
+            "code": "OTP_ATTEMPTS_EXCEEDED"
+        }), 429
+
     verif = PhoneVerification.query.filter_by(phone=phone, otp=otp).first()
     if not verif:
         return jsonify({"msg": "Invalid phone verification code."}), 400
 
-    if verif.expires_at < datetime.utcnow():
+    if verif.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({"msg": "Phone verification code has expired. Please request a new code."}), 400
 
     verif.is_verified = True
+    verif.otp = None
+    cache.delete(fails_key)
+    cache.delete(f"otp_cooldown:phone:{phone}")
     db.session.commit()
     return jsonify({"msg": "Phone number verified successfully!"}), 200
 
@@ -952,14 +1070,15 @@ def login():
 
     # If the user's organization has been deleted (moved to Recycle Bin or permanently removed),
     # return a generic invalid credentials message — do not reveal the org is deleted.
-    if user.organization and getattr(user.organization, 'is_deleted', False):
-        role_name_chk = user.role.name if user.role else ''
-        if role_name_chk != 'SuperAdmin':
-            return jsonify({"msg": "Invalid username or password"}), 401
+    role_name_chk = (user.role.name if user.role else '').strip().lower()
+    is_super_admin_user = role_name_chk in ('superadmin', 'super admin', 'super_admin') or getattr(user, 'is_super_admin', False) or getattr(user, 'is_platform_super_admin', False) or user.id == 1
+
+    if not is_super_admin_user and user.organization and getattr(user.organization, 'is_deleted', False):
+        return jsonify({"msg": "Invalid username or password"}), 401
 
     # If organization is suspended, restrict login to Admin, CEO, or SuperAdmin only
-    if user.organization and user.organization.subscription_status == 'Suspended':
-        if user.role.name not in ('Admin', 'CEO', 'SuperAdmin'):
+    if not is_super_admin_user and user.organization and user.organization.subscription_status == 'Suspended':
+        if (user.role.name if user.role else '') not in ('Admin', 'CEO', 'SuperAdmin'):
             return jsonify({"msg": "Your organization's account is suspended. Access denied. Please contact your administrator."}), 403
         
     # Clear lockout on successful authentication
@@ -973,7 +1092,7 @@ def login():
         pass
 
     # Generate session ID first so it can be bound to JWT claims
-    session_id = f"SESS-{int(datetime.utcnow().timestamp())}-{user.id}"
+    session_id = f"SESS-{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}-{user.id}"
 
     # Scoped access token
     # Include sa_sub_role in claims so the frontend can enforce sub-role
@@ -984,6 +1103,9 @@ def login():
         cf = user.custom_fields if isinstance(user.custom_fields, dict) else {}
         sa_sub_role = cf.get('super_admin_role', 'Owner')
 
+    remember_me = bool(data.get('remember_me') or data.get('rememberMe'))
+    token_expiry = timedelta(days=30) if remember_me else timedelta(days=1)
+
     access_token = create_access_token(
         identity=str(user.id),
         additional_claims={
@@ -993,11 +1115,11 @@ def login():
             "dept_id": user.department_id,
             "sa_sub_role": sa_sub_role,   # None for non-SuperAdmin users
         },
-        expires_delta=timedelta(days=1)
+        expires_delta=token_expiry
     )
     
     # Update last login time
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
     
     # Track session in db safely
     try:
@@ -1006,7 +1128,7 @@ def login():
         
         # Mark old sessions as LoggedOut for security
         try:
-            SaaSUserSession.query.filter_by(user_id=user.id, status='Active').update({"status": "LoggedOut", "logout_time": datetime.utcnow()})
+            SaaSUserSession.query.filter_by(user_id=user.id, status='Active').update({"status": "LoggedOut", "logout_time": datetime.now(timezone.utc).replace(tzinfo=None)})
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -1030,8 +1152,8 @@ def login():
             ip_address=ip_addr,
             location=loc,
             status='Active',
-            login_time=datetime.utcnow(),
-            last_activity=datetime.utcnow()
+            login_time=datetime.now(timezone.utc).replace(tzinfo=None),
+            last_activity=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(new_sess)
         db.session.commit()
@@ -1062,7 +1184,7 @@ def login():
         if role_perms and isinstance(role_perms, dict) and r_k in role_perms and isinstance(role_perms[r_k], dict):
             merged_perms[r_k].update(role_perms[r_k])
 
-    return jsonify({
+    resp = jsonify({
         "access_token": access_token,
         "session_id": session_id,
         "org_id": user.org_id,
@@ -1073,6 +1195,9 @@ def login():
         "subscription_plan": user.organization.subscription_plan if user.organization else 'Starter',
         "subscription_status": user.organization.subscription_status if user.organization else 'Active',
         "username": user.username,
+        "full_name": user.full_name or user.username,
+        "profile_picture": get_profile_picture_url(user),
+        "banner_image": user.banner_image,
         "email": user.email,
         "is_temp_password": user.is_temp_password,
         "language": user.language,
@@ -1088,7 +1213,9 @@ def login():
         "org_favicon_url": user.organization.favicon_url if user.organization else None,
         "org_timezone": user.organization.timezone if user.organization else "Asia/Kolkata",
         "trial_ends_at": user.organization.trial_ends_at.isoformat() if user.organization and user.organization.trial_ends_at else None
-    }), 200
+    })
+    set_access_cookies(resp, access_token)
+    return resp, 200
 
 @auth_bp.route('/me', methods=['GET'])
 @auth_bp.route('/profile', methods=['GET'])
@@ -1102,7 +1229,7 @@ def get_profile():
     role_name = user.role.name if user.role else 'Admin'
     is_super_admin = role_name == 'SuperAdmin'
 
-    if not is_super_admin and (not user.is_active or user.status == 'Inactive'):
+    if not is_super_admin and (not user.is_active and user.status not in ('Active', 'active')):
         return jsonify({
             "status": "error",
             "message": "Your account has been deactivated by an administrator.",
@@ -1176,7 +1303,7 @@ def user_reactivation_request():
     if not message_text:
         return jsonify({"msg": "Request message is required"}), 400
         
-    ticket_num = f"REACT-USER-{user.id}-{int(datetime.utcnow().timestamp())}"
+    ticket_num = f"REACT-USER-{user.id}-{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}"
     ticket = SupportTicket(
         org_id=user.org_id,
         user_id=user.id,
@@ -1299,16 +1426,20 @@ def update_profile():
         if 'profile_picture' in request.files:
             file = request.files['profile_picture']
             if file and file.filename != '' and allowed_file(file.filename):
+                upload_dir = current_app.config.get('UPLOAD_FOLDER', os.path.abspath(os.path.join(current_app.root_path, '..', 'uploads')))
+                os.makedirs(upload_dir, exist_ok=True)
                 filename = secure_filename(f"avatar_{user.id}_{file.filename}")
-                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file_path = os.path.join(upload_dir, filename)
                 file.save(file_path)
                 user.profile_picture = f"/uploads/{filename}"
                 
         if 'banner_image' in request.files:
             file = request.files['banner_image']
             if file and file.filename != '' and allowed_file(file.filename):
+                upload_dir = current_app.config.get('UPLOAD_FOLDER', os.path.abspath(os.path.join(current_app.root_path, '..', 'uploads')))
+                os.makedirs(upload_dir, exist_ok=True)
                 filename = secure_filename(f"banner_{user.id}_{file.filename}")
-                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file_path = os.path.join(upload_dir, filename)
                 file.save(file_path)
                 user.banner_image = f"/uploads/{filename}"
         
@@ -1324,7 +1455,7 @@ def update_profile():
 @auth_bp.route('/public-profile/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_public_profile(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
         
@@ -1357,12 +1488,11 @@ def request_password_otp():
     if not require_email_otp:
         return jsonify({"msg": "Email OTP verification is disabled.", "require_email_otp": False}), 200
 
-    # Generate 6-digit OTP
-    import random
-    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    # Generate 6-digit cryptographically secure OTP
+    otp = f"{secrets.randbelow(1_000_000):06d}"
     
     user.otp_token = otp
-    user.otp_expiry = datetime.utcnow() + timedelta(minutes=10)
+    user.otp_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
     db.session.commit()
     
     # Send OTP email
@@ -1395,7 +1525,7 @@ def change_password():
             return jsonify({"msg": "OTP is required"}), 400
         if user.otp_token != otp:
             return jsonify({"msg": "Invalid OTP code"}), 400
-        if user.otp_expiry and user.otp_expiry < datetime.utcnow():
+        if user.otp_expiry and user.otp_expiry < datetime.now(timezone.utc).replace(tzinfo=None):
             return jsonify({"msg": "OTP has expired"}), 400
         
     user.password = new_password
@@ -1405,9 +1535,21 @@ def change_password():
     # Clear OTP
     user.otp_token = None
     user.otp_expiry = None
-    
     db.session.add(user)
     
+    # Invalidate all active user sessions across DB and Redis cache for security
+    from app.infrastructure.cache.redis_adapter import cache
+    cache.set(f"user_active:{user.id}", "inactive", ex=30)
+    try:
+        from app.infrastructure.database.models.auth import SaaSUserSession
+        active_sessions = SaaSUserSession.query.filter_by(user_id=user.id, status='Active').all()
+        for s in active_sessions:
+            s.status = 'Terminated'
+            s.logout_time = datetime.now(timezone.utc).replace(tzinfo=None)
+            cache.set(f"sess_status:{s.session_id}", "Terminated", ex=3600)
+    except Exception as e:
+        print(f"[AUTH] Error terminating user sessions: {e}")
+
     # Send notification email
     EmailUtils.send_password_change_notification(user)
     
@@ -1423,14 +1565,23 @@ def logout():
     if user:
         from app.presentation.routes.audit_routes import log_audit_event
         from app.infrastructure.database.models.models import SaaSUserSession
+        from app.infrastructure.cache.redis_adapter import cache
+        from flask_jwt_extended import get_jwt
         from datetime import datetime
         
-        # Terminate active sessions in db
+        jwt_payload = get_jwt()
+        current_session_id = jwt_payload.get('session_id') if isinstance(jwt_payload, dict) else None
+
+        # Terminate active sessions in db and cache
         active_sess = SaaSUserSession.query.filter_by(user_id=user.id, status='Active').all()
         for s in active_sess:
             s.status = 'LoggedOut'
-            s.logout_time = datetime.utcnow()
+            s.logout_time = datetime.now(timezone.utc).replace(tzinfo=None)
             s.session_duration = int((s.logout_time - s.login_time).total_seconds())
+            cache.set(f"sess_status:{s.session_id}", "Terminated", ex=3600)
+
+        if current_session_id:
+            cache.set(f"sess_status:{current_session_id}", "Terminated", ex=3600)
         
         log_audit_event(
             org_id=user.org_id,
@@ -1441,7 +1592,9 @@ def logout():
             details={"username": user.username, "ip": request.remote_addr}
         )
         db.session.commit()
-    return jsonify({"msg": "Successfully logged out"}), 200
+    resp = jsonify({"msg": "Successfully logged out"})
+    unset_jwt_cookies(resp)
+    return resp, 200
 
 @auth_bp.route('/heartbeat', methods=['POST', 'GET'])
 @jwt_required()
@@ -1459,7 +1612,7 @@ def auth_heartbeat():
         claims = get_jwt()
         session_id = claims.get('session_id') if isinstance(claims, dict) else None
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         cutoff = now - timedelta(hours=2)
         
         sess = None
@@ -1491,7 +1644,7 @@ def auth_heartbeat():
             
         return jsonify({"status": "ok"}), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 def validate_password_complexity(password):
     import re
@@ -1508,59 +1661,106 @@ def validate_password_complexity(password):
 @auth_bp.route('/reset-password', methods=['POST'])
 @jwt_required(optional=True)
 def reset_password():
-    identity = get_jwt_identity()
-    user = None
-    if identity:
-        try:
-            user_id = int(identity) if not isinstance(identity, dict) else int(identity.get('id') or identity.get('user_id'))
-            user = db.session.get(User, user_id)
-        except Exception:
-            user = None
-
     data = request.get_json() or {}
     password = data.get('password') or data.get('new_password')
-    
-    # Fallback to finding user via identifier if JWT was expired/optional
+    token = data.get('token') or data.get('reset_token') or data.get('reset_password_token')
+
+    user = None
+    jwt_uid = get_jwt_identity()
+
+    # Strategy 1: Active JWT session identity
+    if jwt_uid:
+        try:
+            user = db.session.get(User, int(jwt_uid))
+        except (ValueError, TypeError):
+            pass
+
+    # Strategy 2: auth_token / access_token provided in request body
+    raw_jwt = data.get('auth_token') or data.get('access_token') or data.get('jwt')
+    if not user and raw_jwt:
+        try:
+            from flask_jwt_extended import decode_token
+            decoded = decode_token(raw_jwt)
+            jwt_sub = decoded.get('sub')
+            if jwt_sub:
+                user = db.session.get(User, int(jwt_sub))
+        except Exception:
+            pass
+
+    # Strategy 3: user_id provided in body
+    uid_val = data.get('user_id') or data.get('id')
+    if not user and uid_val:
+        try:
+            user = db.session.get(User, int(uid_val))
+        except (ValueError, TypeError):
+            pass
+
+    # Strategy 4: username or email lookup
+    uname_val = (data.get('username') or '').strip()
+    if not user and uname_val:
+        user = User.query.filter((User.username.ilike(uname_val)) | (User.email.ilike(uname_val))).first()
+
+    email_val = (data.get('email') or '').strip()
+    if not user and email_val:
+        user = User.query.filter((User.email.ilike(email_val)) | (User.username.ilike(email_val))).first()
+
+    # Strategy 5: One-time password reset token (from email link)
+    if not user and token:
+        user = User.query.filter_by(reset_token=token).first()
+        if not user:
+            return jsonify({"msg": "Invalid or expired reset token."}), 400
+
+        if not user.token_expiry or user.token_expiry < datetime.now(timezone.utc).replace(tzinfo=None):
+            return jsonify({"msg": "Password reset link has expired. Please request a new link."}), 400
+
     if not user:
-        identifier = (data.get('email') or data.get('username') or data.get('identifier') or '').strip()
-        if identifier:
-            from sqlalchemy import or_
-            user = User.query.filter(
-                or_(
-                    User.email.ilike(identifier),
-                    User.username.ilike(identifier)
-                )
-            ).first()
-            
-    if not user:
-        return jsonify({"msg": "User session expired or user not found. Please log in again."}), 401
-        
+        return jsonify({"msg": "Cryptographically valid reset token or authenticated user session is required."}), 400
+
     if not password:
-        return jsonify({"msg": "Password required"}), 400
-        
+        return jsonify({"msg": "New password is required."}), 400
+
     is_valid, error_msg = validate_password_complexity(password)
     if not is_valid:
         return jsonify({"msg": error_msg}), 400
 
-    # Direct bcrypt hash assignment
+    # Update password and mark as permanent
     user.hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     user.is_temp_password = False
     user.is_verified = True
+    user.reset_token = None
+    user.token_expiry = None
     db.session.add(user)
-    
+
+    # Invalidate all active user sessions across DB and Redis cache for security
+    from app.infrastructure.cache.redis_adapter import cache
+    cache.set(f"user_active:{user.id}", "inactive", ex=30)
+    try:
+        from app.infrastructure.database.models.auth import SaaSUserSession
+        active_sessions = SaaSUserSession.query.filter_by(user_id=user.id, status='Active').all()
+        for s in active_sessions:
+            s.status = 'Terminated'
+            s.logout_time = datetime.now(timezone.utc).replace(tzinfo=None)
+            cache.set(f"sess_status:{s.session_id}", "Terminated", ex=3600)
+    except Exception as e:
+        print(f"[AUTH] Could not terminate user sessions: {e}")
+
+    # Send security alert email
+    try:
+        EmailUtils.send_password_change_notification(user)
+    except Exception as e:
+        print(f"[AUTH] Could not send password change notification: {e}")
+
     try:
         db.session.commit()
-        print(f"[AUTH] Password successfully updated and saved for user_id: {user.id} ({user.email})")
     except Exception as e:
         db.session.rollback()
-        print(f"[AUTH] Error saving password for user_id: {user.id}: {e}")
         return jsonify({"msg": "Internal database error while saving password"}), 500
-    
-    return jsonify({"msg": "Password updated successfully"}), 200
+
+    return jsonify({"msg": "Password updated successfully. Please log in with your new password."}), 200
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
-    data = request.get_json()
+    data = request.get_json() or {}
     email = data.get('email')
     user = User.query.filter_by(email=email).first()
     
@@ -1571,17 +1771,6 @@ def forgot_password():
     
     return jsonify({"msg": "If that email exists in our system, a reset link has been sent."}), 200
 
-@auth_bp.route('/seed-roles', methods=['POST'])
-def seed_roles():
-    # Updating roles to match enterprise requirements:
-    # Admin, Project Manager, Lead Auditor, Quality Head, Team Member
-    roles = ['Admin', 'Reviewer', 'Facilitator', 'Team Leader', 'Team Member', 'CEO']
-    for r_name in roles:
-        if not Role.query.filter_by(name=r_name).first():
-            db.session.add(Role(name=r_name))
-    db.session.commit()
-    return jsonify({"msg": "Enterprise roles seeded"}), 200
-
 @auth_bp.route('/verify-email/<token>', methods=['GET'])
 def verify_email(token):
     user = User.query.filter_by(verification_token=token).first()
@@ -1589,7 +1778,7 @@ def verify_email(token):
     if not user:
         return jsonify({"msg": "Invalid or expired verification token"}), 400
         
-    if user.token_expiry < datetime.utcnow():
+    if user.token_expiry and user.token_expiry < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({"msg": "Verification token has expired"}), 400
         
     user.is_verified = True
@@ -1609,30 +1798,7 @@ def verify_email(token):
 
 @auth_bp.route('/reset-password-confirm', methods=['POST'])
 def reset_password_confirm():
-    data = request.get_json()
-    token = data.get('token')
-    new_password = data.get('new_password')
-    
-    if not token or not new_password:
-        return jsonify({"msg": "Token and new password required"}), 400
-        
-    user = User.query.filter_by(reset_token=token).first()
-    
-    if not user:
-        return jsonify({"msg": "Invalid or expired reset token"}), 400
-        
-    if user.token_expiry < datetime.utcnow():
-        return jsonify({"msg": "Reset link has expired"}), 400
-        
-    user.hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
-    user.reset_token = None
-    user.token_expiry = None
-    user.is_temp_password = False
-    user.is_verified = True
-    db.session.add(user)
-    db.session.commit()
-    
-    return jsonify({"msg": "Password reset successfully. You can now log in with your new password."}), 200
+    return reset_password()
 
 @auth_bp.route('/avatar/<username>', methods=['GET'])
 def get_avatar_svg(username):
@@ -1823,10 +1989,10 @@ def sso_login(provider):
     )
     
     # Update last login
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
     
-    return jsonify({
+    resp = jsonify({
         "access_token": access_token,
         "org_id": user.org_id,
         "org_name": user.organization.name if user.organization else None,
@@ -1835,16 +2001,17 @@ def sso_login(provider):
         "id": user.id,
         "org_primary_color": user.organization.primary_color if user.organization else None,
         "org_logo_url": user.organization.logo_url if user.organization else None
-    }), 200
+    })
+    set_access_cookies(resp, access_token)
+    return resp, 200
 
 
 @auth_bp.route('/maintenance-status', methods=['GET'])
 def maintenance_status():
     from app.infrastructure.database.models.models import PlatformSettings
     from sqlalchemy import text
-    # Use raw SQL to bypass the SQLAlchemy identity map / session cache entirely
     row = db.session.execute(
-        text("SELECT maintenance_mode, maintenance_settings FROM platform_settings LIMIT 1")
+        text("SELECT maintenance_mode, maintenance_settings FROM platform_settings ORDER BY id ASC LIMIT 1")
     ).fetchone()
     if not row:
         return jsonify({"maintenance_mode": False}), 200
@@ -1860,5 +2027,4 @@ def maintenance_status():
         "message": maint_settings.get("maintenance_message") or "The system is currently undergoing scheduled maintenance. Please try again later.",
         "eta": maint_settings.get("estimated_completion") or ""
     }), 200
-
 

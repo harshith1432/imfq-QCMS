@@ -2,148 +2,189 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QCMS Enterprise | Quality Management Reimagined</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
-            --primary: #2563eb;
-            --hero-bg: #f8fafc;
-            --primary-900: #0f172a;
-            --primary-50: #f0f9ff;
-            --primary-200: #bae6fd;
-            --radius-2xl: 24px;
+            --primary: #002347;
+            --primary-navy: #002347;
+            --accent-gold: #C4A25A;
+            --gold-hover: #AC8839;
+            --accent-violet: #4809BD;
+            --bg-default: #F8F9FA;
+            --surface-card: #FFFFFF;
+            --text-primary: #002347;
+            --text-muted: #476585;
+            --border-default: #DAE0E7;
+            --border-focus: rgba(196, 162, 90, 0.35);
+            --success-green: #10B981;
+            --hero-bg: #001830;
         }
 
         .lp-navbar {
-            padding: var(--ds-space-4) 0;
-            background: rgba(var(--ds-bg-main-rgb), 0.8);
+            padding: 16px 0;
+            background: #002347 !important;
             backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--ds-border-color);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
             position: sticky;
             top: 0;
-            z-index: 1000;
+            z-index: 1030;
+        }
+
+        .lp-navbar a.nav-link,
+        .lp-navbar a.nav-item-link {
+            color: #FFFFFFCC !important;
+            transition: color 0.2s ease;
+        }
+
+        .lp-navbar a.nav-link:hover,
+        .lp-navbar a.nav-item-link:hover {
+            color: #C4A25A !important;
+        }
+
+        .lp-navbar .auth-pill {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 10px !important;
+            padding: 8px 16px !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #FFFFFF !important;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lp-navbar .auth-pill:hover {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border-color: rgba(196, 162, 90, 0.4) !important;
+            color: #C4A25A !important;
         }
 
         .hero-section {
-            padding: 120px 0 80px;
-            background: radial-gradient(circle at 70% 30%, var(--primary-50) 0%, transparent 50%),
-                radial-gradient(circle at 10% 80%, #f0f9ff 0%, transparent 40%);
+            padding: 130px 0 90px;
+            background: radial-gradient(ellipse 80% 80% at 50% -20%, hsl(41 47% 56% / 0.1) 0%, transparent 50%), linear-gradient(180deg, #001830 0%, #002347 50%, #001830 100%);
+            color: #FFFFFF;
             overflow: hidden;
+            position: relative;
         }
 
         .hero-title {
-            font-size: clamp(2.2rem, 6vw, 4rem);
+            font-size: clamp(2.4rem, 6vw, 4.2rem);
             font-weight: 800;
             line-height: 1.1;
-            letter-spacing: -1.5px;
-            color: var(--ds-text-primary);
-            margin-bottom: var(--ds-space-6);
+            letter-spacing: -0.03em;
+            color: #FFFFFF;
+            margin-bottom: 24px;
         }
 
         .hero-subtitle {
-            font-size: 1.25rem;
-            color: var(--ds-text-secondary);
+            font-size: 1.2rem;
+            color: #DAE0E7;
             max-width: 600px;
-            margin-bottom: var(--ds-space-8);
+            margin-bottom: 32px;
             line-height: 1.6;
         }
 
-        .feature-card {
-            padding: var(--ds-space-8);
-            background: var(--ds-bg-surface);
-            border: 1px solid var(--ds-border-color);
-            border-radius: var(--ds-radius-lg);
-            transition: all 0.3s var(--ds-ease-out);
-            height: 100%;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-md);
-            border-color: var(--primary-200);
-        }
-
-        .icon-box {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: rgba(var(--ds-primary-rgb), 0.1);
-            color: var(--ds-primary);
-            display: flex;
+        .eyebrow-chip-hero {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: var(--ds-space-5);
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 9999px;
+            background: rgba(196, 162, 90, 0.12);
+            border: 1px solid rgba(196, 162, 90, 0.3);
+            color: #C4A25A;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        .eyebrow-chip-hero::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #C4A25A;
+            box-shadow: 0 0 8px rgba(196, 162, 90, 0.8);
         }
 
         .cta-banner {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%) !important;
-            color: #ffffff !important;
-            padding: 80px 40px;
-            border-radius: 24px;
-            margin: 80px 0;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
-        }
-        .cta-banner h2, .cta-banner p, .cta-banner span {
-            color: #ffffff !important;
-        }
-        .cta-banner .ds-btn-ghost,
-        #lp-cta-banner-btn2 {
-            color: #ffffff !important;
-            border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
-            background: rgba(255, 255, 255, 0.1) !important;
-            backdrop-filter: blur(8px);
-            font-weight: 600;
-        }
-        .cta-banner .ds-btn-ghost:hover,
-        #lp-cta-banner-btn2:hover {
-            background: rgba(255, 255, 255, 0.2) !important;
-            color: #ffffff !important;
-            border-color: #ffffff !important;
+            background: linear-gradient(135deg, #001830 0%, #002347 100%) !important;
+            border: 1px solid rgba(196, 162, 90, 0.3) !important;
+            border-radius: 16px !important;
+            padding: 56px 40px !important;
+            color: #FFFFFF !important;
         }
 
-        @media (max-width: 991px) {
-            .hero-title {
-                font-size: 3rem;
-            }
+        /* Guaranteed Landing Page Contrast & Visibility */
+        .stat-module {
+            background: #FFFFFF !important;
+            border: 1px solid #DAE0E7 !important;
+            box-shadow: 0 4px 14px rgba(0, 35, 71, 0.06) !important;
         }
-        @media (max-width: 576px) {
-            .cta-banner {
-                padding: 40px 20px;
-                margin: 40px 0;
-            }
-            .cta-banner .ds-btn {
-                width: 100%;
-                text-align: center;
-                justify-content: center;
-            }
+        .stat-module .stat-counter,
+        .stat-counter {
+            color: #002347 !important;
+            font-weight: 800 !important;
+        }
+        .stat-module .stat-label,
+        .stat-label {
+            color: #476585 !important;
+            font-weight: 500 !important;
+        }
+        .feature-card {
+            background: #FFFFFF !important;
+            border: 1px solid #DAE0E7 !important;
+        }
+        .feature-card h3, .feature-card h4, .feature-card h5 {
+            color: #002347 !important;
+            font-weight: 700 !important;
+        }
+        .feature-card p, .feature-card li {
+            color: #476585 !important;
+        }
+        #features h2, #how-it-works h2, #pricing h2, #faq h2 {
+            color: #002347 !important;
+        }
+        #features p, #how-it-works p, #pricing p, #faq p {
+            color: #476585 !important;
+        }
+        .ds-badge.gold {
+            background: rgba(196, 162, 90, 0.15) !important;
+            color: #AC8839 !important;
+            border: 1px solid rgba(196, 162, 90, 0.35) !important;
+            font-weight: 700 !important;
         }
     </style>
 </head>
 
-<body>
+<body class="lp-landing-page">
     <nav class="lp-navbar glass-navbar">
         <div class="container d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-2">
-                <div class="icon-box mb-0"
-                    style="width:36px; height:36px; border-radius:8px; background:var(--ds-primary);">
-                    <i data-lucide="shield-check" style="width:20px; height:20px; color:var(--ds-bg-main);"></i>
+                <div class="icon-box mb-0" id="lp-navbar-logo-slot"
+                    style="width:36px; height:36px; border-radius:10px; background: #C4A25A; display:flex; align-items:center; justify-content:center;">
+                    <i data-lucide="shield-check" style="width:20px; height:20px; color:#002347;"></i>
                 </div>
-                <span class="fw-extrabold fs-4 text-primary tracking-tight"
-                    style="color:var(--ds-primary) !important;">QCMS <span
-                        class="text-muted fw-normal">Enterprise</span></span>
+                <span class="fw-extrabold fs-4 tracking-tight" id="lp-navbar-brand-name"
+                    style="color:#FFFFFF !important;">QCMS <span
+                        style="color:#C4A25A; font-weight:400;">Enterprise</span></span>
             </div>
-            <div class="d-flex gap-3 align-items-center">
-                <a href="/auth/login.html?logout=true" onclick="sessionStorage.clear();localStorage.removeItem('token');localStorage.removeItem('access_token');localStorage.removeItem('user');" class="ds-btn ds-btn-ghost ds-btn-sm text-primary fw-bold">Sign In</a>
-                <a href="/auth/register-org.html" class="ds-btn ds-btn-primary ds-btn-sm px-4">Get Started</a>
+            <div class="d-flex gap-2 gap-md-3 align-items-center">
+                <a href="/auth/login.html" class="auth-pill">Sign In</a>
+                <a href="/auth/register-org.html" class="ds-btn ds-btn-primary ds-btn-sm px-3.5 py-2 text-xs">Get Started</a>
             </div>
         </div>
     </nav>
@@ -152,30 +193,36 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6 fade-in">
-                    <div class="ds-badge blue mb-4" id="lp-hero-badge">Version 3.0 Now Live</div>
-                    <h1 class="hero-title" id="lp-hero-title">Precision Quality <br><span class="text-primary">Management</span> at Scale.
+                    <div class="eyebrow-chip-hero" id="lp-hero-badge">Institutional Quality Excellence • v3.0</div>
+                    <h1 class="hero-title" id="lp-hero-title">Precision Quality <br><span style="color:#C4A25A;">Management</span> at Scale.
                     </h1>
                     <p class="hero-subtitle" id="lp-hero-subtitle">Optimize your organizational efficiency with our structured 8-stage
-                        workflow engine. Built for enterprise excellence, designed for modern teams.</p>
-                    <div class="d-flex gap-3">
-                        <a href="register-org.html" id="lp-cta-primary" class="glass-btn glass-btn-primary px-5 py-3 fs-5"
-                            style="border-radius: 12px; font-weight: 700;">Start Free Trial</a>
-                        <a href="#features" id="lp-cta-secondary" class="glass-btn px-4 py-3 fs-5"
-                            style="border-radius: 12px; font-weight: 600;">Watch Demo</a>
+                        workflow engine. Built for enterprise excellence, designed for modern industrial operations.</p>
+                    <div class="d-flex gap-3 align-items-center flex-wrap" id="lp-hero-cta-group">
+                        <a href="/auth/register-org.html" id="lp-cta-primary" class="ds-btn ds-btn-primary d-inline-flex align-items-center justify-content-center gap-2"
+                            style="background: #C4A25A; color: #002347; font-weight: 600; border-radius: 12px; padding: 12px 28px; text-decoration: none;">
+                            <span>Start Free Trial</span>
+                            <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                        </a>
+                        <a href="#features" id="lp-cta-secondary" class="ds-btn d-inline-flex align-items-center justify-content-center gap-2"
+                            style="background: transparent; border: 1.5px solid rgba(255, 255, 255, 0.35); color: #FFFFFF; font-weight: 600; border-radius: 10px; padding: 10px 24px; text-decoration: none;">
+                            <i data-lucide="play-circle" style="width:16px;height:16px; color: #C4A25A;"></i>
+                            <span>Explore Platform</span>
+                        </a>
                     </div>
-                    <div class="mt-5">
-                        <div class="d-flex align-items-center gap-4 opacity-60">
+                    <div class="mt-4 mt-md-5 pt-2">
+                        <div class="d-flex align-items-center justify-content-between flex-nowrap gap-1 gap-md-4" style="color:#DAE0E7;" id="lp-hero-features-bar">
                             <div class="d-flex align-items-center gap-2">
-                                <i data-lucide="shield-check" class="text-primary" style="width:18px;"></i>
-                                <span class="text-xs fw-bold text-uppercase tracking-widest">Enterprise Secure</span>
+                                <i data-lucide="shield-check" style="width:18px;height:18px; color:#C4A25A;"></i>
+                                <span class="text-xs fw-semibold" id="lp-hero-feature1">Enterprise Secure</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <i data-lucide="globe" class="text-primary" style="width:18px;"></i>
-                                <span class="text-xs fw-bold text-uppercase tracking-widest">Global Scale</span>
+                                <i data-lucide="globe" style="width:18px;height:18px; color:#C4A25A;"></i>
+                                <span class="text-xs fw-semibold" id="lp-hero-feature2">Global Scale</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <i data-lucide="zap" class="text-primary" style="width:18px;"></i>
-                                <span class="text-xs fw-bold text-uppercase tracking-widest">High Precision</span>
+                                <i data-lucide="zap" style="width:18px;height:18px; color:#C4A25A;"></i>
+                                <span class="text-xs fw-semibold" id="lp-hero-feature3">High Precision</span>
                             </div>
                         </div>
                     </div>
@@ -184,95 +231,62 @@
                     <div class="position-relative">
                         <!-- Mockup Image / Illustration -->
                         <div class="glass-card"
-                            style="padding: 20px; box-shadow: var(--glass-shadow-lg); border: 1px solid rgba(255,255,255,0.15);">
+                            style="padding: 20px; box-shadow: var(--glass-shadow-lg); border: 1px solid rgba(255,255,255,0.15); background: rgba(0, 35, 71, 0.6) !important; border-radius: 16px;">
                             <div class="d-flex gap-2 mb-3">
-                                <div
-                                    style="width:12px; height:12px; border-radius:50%; background:#ff5f56; opacity:0.8;">
-                                </div>
-                                <div
-                                    style="width:12px; height:12px; border-radius:50%; background:#ffbd2e; opacity:0.8;">
-                                </div>
-                                <div
-                                    style="width:12px; height:12px; border-radius:50%; background:#27c93f; opacity:0.8;">
-                                </div>
+                                <div style="width:12px; height:12px; border-radius:50%; background:#ff5f56; opacity:0.8;"></div>
+                                <div style="width:12px; height:12px; border-radius:50%; background:#ffbd2e; opacity:0.8;"></div>
+                                <div style="width:12px; height:12px; border-radius:50%; background:#27c93f; opacity:0.8;"></div>
                             </div>
-                            <div
-                                style="height: 380px; background: rgba(255,255,255,0.03); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+                            <div style="height: 380px; background: rgba(255,255,255,0.03); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
                                 <div class="p-3 border-bottom d-flex gap-3"
                                     style="border-color: rgba(255,255,255,0.05) !important;">
-                                    <div
-                                        style="width:120px; height:10px; background:rgba(255,255,255,0.1); border-radius:5px;">
-                                    </div>
-                                    <div
-                                        style="width:80px; height:10px; background:rgba(255,255,255,0.1); border-radius:5px;">
-                                    </div>
+                                    <div style="width:120px; height:10px; background:rgba(255,255,255,0.1); border-radius:5px;"></div>
+                                    <div style="width:80px; height:10px; background:rgba(255,255,255,0.1); border-radius:5px;"></div>
                                 </div>
                                 <div class="p-3 d-flex flex-wrap gap-3">
-                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px;">
-                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" id="lp-hero-stat1-lbl">Efficiency</div>
-                                        <div class="fs-4 fw-black text-success" id="lp-hero-stat1-val">98.2%</div>
-                                        <div class="progress mt-2"
-                                            style="height:4px; background: rgba(var(--ds-primary-rgb), 0.1);">
-                                            <div class="progress-bar bg-success" style="width: 98%;"></div>
+                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" style="color:#DAE0E7;" id="lp-hero-stat1-lbl">Efficiency</div>
+                                        <div class="fs-4 fw-black" style="color:#10B981;" id="lp-hero-stat1-val">98.2%</div>
+                                        <div class="progress mt-2" style="height:4px; background: rgba(255,255,255,0.1);">
+                                            <div class="progress-bar" style="width: 98%; background:#10B981;"></div>
                                         </div>
                                     </div>
-                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px;">
-                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" id="lp-hero-stat2-lbl">Quality Score</div>
-                                        <div class="fs-4 fw-black text-primary" id="lp-hero-stat2-val">A+</div>
+                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" style="color:#DAE0E7;" id="lp-hero-stat2-lbl">Quality Score</div>
+                                        <div class="fs-4 fw-black" style="color:#C4A25A;" id="lp-hero-stat2-val">A+</div>
                                         <div class="d-flex gap-1 mt-2">
-                                            <div
-                                                style="width:15px; height:4px; background:var(--ds-primary); border-radius:2px;">
-                                            </div>
-                                            <div
-                                                style="width:15px; height:4px; background:var(--ds-primary); border-radius:2px;">
-                                            </div>
-                                            <div
-                                                style="width:15px; height:4px; background:var(--ds-primary); border-radius:2px;">
-                                            </div>
-                                            <div
-                                                style="width:15px; height:4px; background:rgba(var(--ds-primary-rgb), 0.1); border-radius:2px;">
-                                            </div>
+                                            <div style="width:15px; height:4px; background:#C4A25A; border-radius:2px;"></div>
+                                            <div style="width:15px; height:4px; background:#C4A25A; border-radius:2px;"></div>
+                                            <div style="width:15px; height:4px; background:#C4A25A; border-radius:2px;"></div>
                                         </div>
                                     </div>
-                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px;">
-                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" id="lp-hero-stat3-lbl">Active Nodes</div>
-                                        <div class="fs-4 fw-black text-primary" id="lp-hero-stat3-val">1,204</div>
-                                        <div class="text-xxs text-muted mt-1" id="lp-hero-stat3-sub">+12 this hour</div>
+                                    <div class="glass-panel p-3" style="width:30%; height:110px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+                                        <div class="text-xxs fw-bold opacity-50 uppercase mb-2" style="color:#DAE0E7;" id="lp-hero-stat3-lbl">Active Nodes</div>
+                                        <div class="fs-4 fw-black" style="color:#FFFFFF;" id="lp-hero-stat3-val">1,204</div>
+                                        <div class="text-xxs mt-1" style="color:#C4A25A;" id="lp-hero-stat3-sub">+12 this hour</div>
                                     </div>
-                                    <div class="glass-panel p-4" style="width:100%; height:190px; border-radius:12px;">
-                                        <div class="h-stack justify-content-between mb-4">
-                                            <div class="fw-bold fs-6">Global Quality Pipeline</div>
-                                            <div class="ds-badge blue text-xxs">Real-time</div>
+                                    <div class="glass-panel p-4" style="width:100%; height:190px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+                                        <div class="d-flex justify-content-between align-items-center mb-4">
+                                            <div class="fw-bold fs-6" style="color:#FFFFFF;">Global Quality Pipeline</div>
+                                            <div class="eyebrow-chip-hero mb-0" style="padding: 2px 10px; font-size: 11px;">Real-time</div>
                                         </div>
-                                        <div class="v-stack gap-3">
-                                            <div class="h-stack gap-3">
-                                                <div
-                                                    style="width:40px; height:8px; background:rgba(var(--ds-primary-rgb), 0.1); border-radius:4px;">
-                                                </div>
-                                                <div class="flex-grow-1"
-                                                    style="height:8px; background:rgba(var(--ds-primary-rgb), 0.05); border-radius:4px; overflow:hidden;">
-                                                    <div style="width:75%; height:100%; background:var(--ds-primary);">
-                                                    </div>
+                                        <div class="d-flex flex-column gap-3">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div style="width:50px; height:8px; background:rgba(255,255,255,0.15); border-radius:4px;"></div>
+                                                <div class="flex-grow-1" style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+                                                    <div style="width:85%; height:100%; background:#C4A25A;"></div>
                                                 </div>
                                             </div>
-                                            <div class="h-stack gap-3">
-                                                <div
-                                                    style="width:40px; height:8px; background:rgba(var(--ds-primary-rgb), 0.1); border-radius:4px;">
-                                                </div>
-                                                <div class="flex-grow-1"
-                                                    style="height:8px; background:rgba(var(--ds-primary-rgb), 0.05); border-radius:4px; overflow:hidden;">
-                                                    <div style="width:45%; height:100%; background:var(--ds-primary);">
-                                                    </div>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div style="width:50px; height:8px; background:rgba(255,255,255,0.15); border-radius:4px;"></div>
+                                                <div class="flex-grow-1" style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+                                                    <div style="width:60%; height:100%; background:#10B981;"></div>
                                                 </div>
                                             </div>
-                                            <div class="h-stack gap-3">
-                                                <div
-                                                    style="width:40px; height:8px; background:rgba(var(--ds-primary-rgb), 0.1); border-radius:4px;">
-                                                </div>
-                                                <div class="flex-grow-1"
-                                                    style="height:8px; background:rgba(var(--ds-primary-rgb), 0.05); border-radius:4px; overflow:hidden;">
-                                                    <div style="width:90%; height:100%; background:var(--ds-primary);">
-                                                    </div>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div style="width:50px; height:8px; background:rgba(255,255,255,0.15); border-radius:4px;"></div>
+                                                <div class="flex-grow-1" style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+                                                    <div style="width:95%; height:100%; background:#C4A25A;"></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -282,23 +296,21 @@
                         </div>
                         <!-- Floating Activity Notification -->
                         <div class="position-absolute"
-                            style="top: 40px; left: -40px; background: white; padding: 12px 20px; border-radius: 12px; box-shadow: var(--ds-shadow-lg); border: 1px solid rgba(0,0,0,0.05); animation: float 3s ease-in-out infinite;">
+                            style="top: 40px; left: -40px; background: #FFFFFF; padding: 12px 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); border: 1px solid #DAE0E7; animation: float 3s ease-in-out infinite;">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="bg-success rounded-circle"
-                                    style="width:8px; height:8px; box-shadow: 0 0 10px var(--success);"></div>
-                                <div class="v-stack">
-                                    <span class="fw-bold text-xs">New Quality Audit</span>
-                                    <span class="text-xxs text-muted">Plant #124 • 2m ago</span>
+                                    style="width:8px; height:8px; box-shadow: 0 0 10px #10B981;"></div>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-xs" style="color:#002347;">New Quality Audit</span>
+                                    <span class="text-xxs" style="color:#476585;">Plant #124 • 2m ago</span>
                                 </div>
                             </div>
                         </div>
                         <!-- Floating Badge -->
                         <div class="position-absolute"
-                            style="bottom: -20px; right: -20px; background: var(--ds-primary); color: white; padding: 15px 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(var(--ds-primary-rgb), 0.4);">
-                            <div class="d-flex align-items-center gap-2">
-                                <i data-lucide="award" style="width:18px;"></i>
-                                <span class="fw-bold">ISO 9001 Verified</span>
-                            </div>
+                            style="bottom: -20px; right: -20px; background: #C4A25A; color: #002347; padding: 12px 24px; border-radius: 12px; font-weight: 700; box-shadow: 0 8px 24px -6px rgba(196, 162, 90, 0.45); display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="award" style="width:20px; height:20px;"></i>
+                            <span>ISO 9001 Verified</span>
                         </div>
                     </div>
                 </div>
@@ -306,271 +318,271 @@
         </div>
     </header>
 
-
-    <section class="py-5" id="lp-ticker-section"
-        style="background: rgba(var(--ds-primary-rgb), 0.02); border-top: 1px solid var(--ds-border-color); border-bottom: 1px solid var(--ds-border-color);">
+    <!-- Enterprise Statistics / Counter Modules Section -->
+    <section class="py-5" style="background: #F8F9FA; border-bottom: 1px solid #DAE0E7;">
         <div class="container">
-            <div class="row align-items-center justify-content-center text-center g-4">
-                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-1-col">
-                    <h5 class="fw-bold mb-0" id="lp-ticker-1">99.9% Uptime</h5>
+            <div class="row g-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-module">
+                        <div class="stat-icon-wrap">
+                            <i data-lucide="award"></i>
+                        </div>
+                        <div class="stat-counter">99.9%</div>
+                        <div class="stat-label">Quality Compliance & Audit Readiness</div>
+                    </div>
                 </div>
-                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-2-col">
-                    <h5 class="fw-bold mb-0" id="lp-ticker-2">ISO 9001 Ready</h5>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-module">
+                        <div class="stat-icon-wrap">
+                            <i data-lucide="activity"></i>
+                        </div>
+                        <div class="stat-counter">8-Stage</div>
+                        <div class="stat-label">Systematic Problem-Solving Engine</div>
+                    </div>
                 </div>
-                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-3-col">
-                    <h5 class="fw-bold mb-0" id="lp-ticker-3">Enterprise Grade</h5>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-module">
+                        <div class="stat-icon-wrap">
+                            <i data-lucide="trending-up"></i>
+                        </div>
+                        <div class="stat-counter">42.8%</div>
+                        <div class="stat-label">Average Defect Reduction per Plant</div>
+                    </div>
                 </div>
-                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-4-col">
-                    <h5 class="fw-bold mb-0" id="lp-ticker-4">Audit Secure</h5>
-                </div>
-                <div class="col-6 col-md-2 opacity-50" id="lp-ticker-5-col">
-                    <h5 class="fw-bold mb-0" id="lp-ticker-5">24/7 Support</h5>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-module">
+                        <div class="stat-icon-wrap">
+                            <i data-lucide="shield-check"></i>
+                        </div>
+                        <div class="stat-counter">ISO 9001</div>
+                        <div class="stat-label">Enterprise Certified Governance Matrix</div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Value Pillars Section -->
-    <section class="py-5 border-bottom bg-white" id="lp-badges-section">
+    <section class="py-4 border-bottom bg-white" id="lp-badges-section">
         <div class="container">
-            <div class="row align-items-center justify-content-center text-center g-5">
-                <div class="col-md-3" id="lp-badge-1-col">
-                    <div class="v-stack gap-2 opacity-60">
-                        <i id="lp-badge-1-icon" data-lucide="award" class="mx-auto" style="width:32px; height:32px;"></i>
-                        <h6 class="fw-bold mb-0" id="lp-badge-1-label">ISO 9001 Compliant</h6>
+            <div class="row row-cols-2 row-cols-md-4 align-items-center justify-content-center text-center g-3">
+                <div class="col" id="lp-badge-1-col">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <div class="stat-icon-wrap" style="width:36px; height:36px; min-width:36px; min-height:36px;">
+                            <i data-lucide="award" style="width:18px; height:18px;"></i>
+                        </div>
+                        <span class="fw-bold text-sm" style="color:#002347;" id="lp-badge-1-label">ISO 9001 Compliant</span>
                     </div>
                 </div>
-                <div class="col-md-3" id="lp-badge-2-col">
-                    <div class="v-stack gap-2 opacity-60">
-                        <i id="lp-badge-2-icon" data-lucide="shield-check" class="mx-auto" style="width:32px; height:32px;"></i>
-                        <h6 class="fw-bold mb-0" id="lp-badge-2-label">Bank-Grade Security</h6>
+                <div class="col" id="lp-badge-2-col">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <div class="stat-icon-wrap" style="width:36px; height:36px; min-width:36px; min-height:36px;">
+                            <i data-lucide="shield-check" style="width:18px; height:18px;"></i>
+                        </div>
+                        <span class="fw-bold text-sm" style="color:#002347;" id="lp-badge-2-label">Bank-Grade Security</span>
                     </div>
                 </div>
-                <div class="col-md-3" id="lp-badge-3-col">
-                    <div class="v-stack gap-2 opacity-60">
-                        <i id="lp-badge-3-icon" data-lucide="clock" class="mx-auto" style="width:32px; height:32px;"></i>
-                        <h6 class="fw-bold mb-0" id="lp-badge-3-label">99.9% Platform Uptime</h6>
+                <div class="col" id="lp-badge-3-col">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <div class="stat-icon-wrap" style="width:36px; height:36px; min-width:36px; min-height:36px;">
+                            <i data-lucide="clock" style="width:18px; height:18px;"></i>
+                        </div>
+                        <span class="fw-bold text-sm" style="color:#002347;" id="lp-badge-3-label">99.9% Platform Uptime</span>
                     </div>
                 </div>
-                <div class="col-md-3" id="lp-badge-4-col">
-                    <div class="v-stack gap-2 opacity-60">
-                        <i id="lp-badge-4-icon" data-lucide="headset" class="mx-auto" style="width:32px; height:32px;"></i>
-                        <h6 class="fw-bold mb-0" id="lp-badge-4-label">24/7 Priority Support</h6>
+                <div class="col" id="lp-badge-4-col">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <div class="stat-icon-wrap" style="width:36px; height:36px; min-width:36px; min-height:36px;">
+                            <i data-lucide="headset" style="width:18px; height:18px;"></i>
+                        </div>
+                        <span class="fw-bold text-sm" style="color:#002347;" id="lp-badge-4-label">24/7 Priority Support</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-
-    <section id="features" class="py-5" style="background: white;">
+    <!-- Core Capabilities / Feature Cards -->
+    <section id="features" class="py-5" style="background: #FFFFFF;">
         <div class="container py-5">
             <div class="text-center mb-5">
-                <div class="ds-badge blue mb-3">Core Capabilities</div>
-                <h2 class="fw-extrabold fs-1 mb-3" id="lp-features-title">Engineered for Quality</h2>
-                <p class="text-muted fs-5 mx-auto" style="max-width: 600px;" id="lp-features-subtitle">Every tool you need to maintain the highest
-                    standards across your industrial operations.</p>
+                <div class="ds-badge gold mb-3">Institutional Excellence</div>
+                <h2 class="fw-extrabold fs-1 mb-3" style="color:#002347;" id="lp-features-title">Engineered for Quality</h2>
+                <p class="fs-5 mx-auto" style="max-width: 600px; color:#476585;" id="lp-features-subtitle">Every tool you need to maintain the highest standards across your industrial operations.</p>
             </div>
             <div class="row g-4" id="lp-features-grid">
                 <div class="col-md-4">
-                    <div class="feature-card glass-card shimmer-effect">
-                        <div class="icon-box"><i data-lucide="git-branch" size="24"></i></div>
-                        <h4 class="fw-bold">8-Stage Workflow</h4>
-                        <p class="text-muted">Structured project lifecycle from problem identification to
-                            standardization.</p>
+                    <div class="feature-card h-100 p-4">
+                        <div class="stat-icon-wrap mb-3"><i data-lucide="git-branch"></i></div>
+                        <h4 class="fw-bold" style="color:#002347;">8-Stage Workflow</h4>
+                        <p style="color:#476585; line-height:1.6;">Structured project lifecycle from problem identification and root cause analysis to institutional standardization.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="feature-card glass-card shimmer-effect">
-                        <div class="icon-box"><i data-lucide="layers" size="24"></i></div>
-                        <h4 class="fw-bold">Role-Based Dashboards</h4>
-                        <p class="text-muted">Custom workspaces for Admins, Reviewers, Facilitators, and Team members.
-                        </p>
+                    <div class="feature-card h-100 p-4">
+                        <div class="stat-icon-wrap mb-3"><i data-lucide="layers"></i></div>
+                        <h4 class="fw-bold" style="color:#002347;">Role-Based Dashboards</h4>
+                        <p style="color:#476585; line-height:1.6;">Dedicated workspaces for Plant Admins, Quality Reviewers, Facilitators, and Team members.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="feature-card glass-card shimmer-effect">
-                        <div class="icon-box"><i data-lucide="database" size="24"></i></div>
-                        <h4 class="fw-bold">Knowledge Repo</h4>
-                        <p class="text-muted">Centralized repository for SOPs, lessons learned, and project history.</p>
-                    </div>
-                </div>
-                <!-- Extended Features -->
-                <div class="col-md-4">
-                    <div class="feature-card glass-card shimmer-effect">
-                        <div class="icon-box" style="background:rgba(16, 185, 129, 0.1); color:var(--success);"><i
-                                data-lucide="bar-chart-3" size="24"></i></div>
-                        <h4 class="fw-bold">Real-time Analytics</h4>
-                        <p class="text-muted">Live KPI tracking with automated reporting and visual data insights.</p>
+                    <div class="feature-card h-100 p-4">
+                        <div class="stat-icon-wrap mb-3"><i data-lucide="database"></i></div>
+                        <h4 class="fw-bold" style="color:#002347;">Knowledge Repository</h4>
+                        <p style="color:#476585; line-height:1.6;">Centralized repository for SOPs, lessons learned, historical project archives, and AI-assisted search.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="feature-card glass-card shimmer-effect">
-                        <div class="icon-box" style="background:rgba(245, 158, 11, 0.1); color:var(--warning);"><i
-                                data-lucide="shield-check" size="24"></i></div>
-                        <h4 class="fw-bold">Automated Compliance</h4>
-                        <p class="text-muted">Stay ISO ready with automated audit logs and version-controlled documents.
-                        </p>
+                    <div class="feature-card h-100 p-4">
+                        <div class="stat-icon-wrap mb-3"><i data-lucide="bar-chart-3"></i></div>
+                        <h4 class="fw-bold" style="color:#002347;">Real-time Analytics</h4>
+                        <p style="color:#476585; line-height:1.6;">Live KPI tracking with automated multi-plant reporting and institutional visual data metrics.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="feature-card glass-card shimmer-effect">
-                        <div class="icon-box" style="background:rgba(99, 102, 241, 0.1); color:var(--primary);"><i
-                                data-lucide="smartphone" size="24"></i></div>
-                        <h4 class="fw-bold">Mobile Readiness</h4>
-                        <p class="text-muted">Access your quality management engine from anywhere, on any device.</p>
+                    <div class="feature-card h-100 p-4">
+                        <div class="stat-icon-wrap mb-3"><i data-lucide="shield-check"></i></div>
+                        <h4 class="fw-bold" style="color:#002347;">Automated Compliance</h4>
+                        <p style="color:#476585; line-height:1.6;">Stay ISO audit-ready with tamper-proof audit trails, version-controlled documents, and e-signatures.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card h-100 p-4">
+                        <div class="stat-icon-wrap mb-3"><i data-lucide="smartphone"></i></div>
+                        <h4 class="fw-bold" style="color:#002347;">Mobile Readiness</h4>
+                        <p style="color:#476585; line-height:1.6;">Access your quality management engine from anywhere, across plant floors and executive tablets.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="how-it-works" class="py-5 bg-light">
+    <!-- Onboarding Section -->
+    <section id="how-it-works" class="py-5" style="background: #F8F9FA;">
         <div class="container py-5">
             <div class="text-center mb-5">
-                <div class="ds-badge purple mb-3">Onboarding Flow</div>
-                <h2 class="fw-extrabold fs-1 mb-3" id="lp-steps-title">How It Works</h2>
-                <p class="text-muted fs-5 mx-auto" style="max-width: 600px;" id="lp-steps-subtitle">Deploy your enterprise-grade QMS in four
-                    simple steps.</p>
+                <div class="ds-badge gold mb-3" id="lp-steps-badge">Onboarding Flow</div>
+                <h2 class="fw-extrabold fs-1 mb-3" style="color:#002347;" id="lp-steps-title">How It Works</h2>
+                <p class="fs-5 mx-auto" style="max-width: 600px; color:#476585;" id="lp-steps-subtitle">Deploy your enterprise-grade QMS in four simple steps.</p>
             </div>
-            <div class="row g-5" id="lp-steps-grid">
+            <div class="row g-4" id="lp-steps-grid">
                 <div class="col-md-3 text-center">
-                    <div class="icon-box mx-auto mb-4"
-                        style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
-                        <h3 class="mb-0 fw-black text-primary">1</h3>
+                    <div class="stat-icon-wrap mx-auto mb-3" style="width:52px; height:52px; font-size:20px; font-weight:800; border-radius:12px;">
+                        1
                     </div>
-                    <h5 class="fw-bold">Register Company</h5>
-                    <p class="text-muted small">Set up your unique organizational instance and security parameters.</p>
+                    <h5 class="fw-bold" style="color:#002347;">Register Company</h5>
+                    <p class="small" style="color:#476585;">Set up your unique organizational instance and security parameters.</p>
                 </div>
                 <div class="col-md-3 text-center">
-                    <div class="icon-box mx-auto mb-4"
-                        style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
-                        <h3 class="mb-0 fw-black text-primary">2</h3>
+                    <div class="stat-icon-wrap mx-auto mb-3" style="width:52px; height:52px; font-size:20px; font-weight:800; border-radius:12px;">
+                        2
                     </div>
-                    <h5 class="fw-bold">Setup Team</h5>
-                    <p class="text-muted small">Configure departments and assign role-based access to your workforce.
-                    </p>
+                    <h5 class="fw-bold" style="color:#002347;">Setup Team</h5>
+                    <p class="small" style="color:#476585;">Configure departments and assign role-based access to your workforce.</p>
                 </div>
                 <div class="col-md-3 text-center">
-                    <div class="icon-box mx-auto mb-4"
-                        style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
-                        <h3 class="mb-0 fw-black text-primary">3</h3>
+                    <div class="stat-icon-wrap mx-auto mb-3" style="width:52px; height:52px; font-size:20px; font-weight:800; border-radius:12px;">
+                        3
                     </div>
-                    <h5 class="fw-bold">Launch Projects</h5>
-                    <p class="text-muted small">Initiate quality improvement projects using our 8-stage engine.</p>
+                    <h5 class="fw-bold" style="color:#002347;">Launch Projects</h5>
+                    <p class="small" style="color:#476585;">Initiate quality improvement projects using our 8-stage engine.</p>
                 </div>
                 <div class="col-md-3 text-center">
-                    <div class="icon-box mx-auto mb-4"
-                        style="width:64px; height:64px; background:white; box-shadow: var(--ds-shadow-sm);">
-                        <h3 class="mb-0 fw-black text-primary">4</h3>
+                    <div class="stat-icon-wrap mx-auto mb-3" style="width:52px; height:52px; font-size:20px; font-weight:800; border-radius:12px;">
+                        4
                     </div>
-                    <h5 class="fw-bold">Track KPI</h5>
-                    <p class="text-muted small">Monitor real-time improvements in efficiency, cost, and safety.</p>
+                    <h5 class="fw-bold" style="color:#002347;">Track KPI</h5>
+                    <p class="small" style="color:#476585;">Monitor real-time improvements in efficiency, cost, and safety.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="pricing" class="py-5">
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-5" style="background: #FFFFFF;">
         <div class="container py-5">
             <div class="text-center mb-5">
-                <div class="ds-badge green mb-3">Simple Pricing</div>
-                <h2 class="fw-extrabold fs-1 mb-3" id="lp-pricing-title">Flexible Plans for Every Stage</h2>
-                <p class="text-muted fs-5 mx-auto" style="max-width: 600px;" id="lp-pricing-subtitle">Scale your quality operations without
-                    complexity.</p>
+                <div class="ds-badge gold mb-3" id="lp-pricing-badge">Simple Pricing</div>
+                <h2 class="fw-extrabold fs-1 mb-3" style="color:#002347;" id="lp-pricing-title">Flexible Plans for Every Stage</h2>
+                <p class="fs-5 mx-auto" style="max-width: 600px; color:#476585;" id="lp-pricing-subtitle">Scale your quality operations without complexity.</p>
             </div>
             <div class="row g-4 justify-content-center" id="lp-pricing-grid">
                 <div class="col-lg-4">
-                    <div class="feature-card glass-card h-100">
+                    <div class="feature-card h-100 p-4">
                         <div class="mb-4">
-                            <h3 class="fw-black mb-1">Starter</h3>
-                            <p class="text-muted mb-4">For small focused teams</p>
+                            <h3 class="fw-black mb-1" style="color:#002347;">Starter</h3>
+                            <p class="mb-4" style="color:#476585;">For small focused teams</p>
                             <div class="d-flex align-items-baseline gap-1 mb-4">
-                                <span class="fs-1 fw-black">₹0</span>
-                                <span class="text-muted">/month (14d Trial)</span>
+                                <span class="fs-1 fw-black" style="color:#002347;">₹0</span>
+                                <span style="color:#476585;">/month (14d Trial)</span>
                             </div>
                         </div>
                         <ul class="list-unstyled mb-5 v-stack gap-3">
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> 50 Users Max</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Basic QC Workflow</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Limited Reports</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> 14 Days Free Trial</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> 50 Users Max</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Basic QC Workflow</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Limited Reports</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> 14 Days Free Trial</li>
                         </ul>
-                        <a href="register-org.html?plan=Starter" class="ds-btn ds-btn-secondary w-100 py-3">Start Free
-                            Trial</a>
+                        <a href="/auth/register-org.html?plan=Starter" class="ds-btn ds-btn-secondary w-100 py-3 text-center">Start Free Trial</a>
                     </div>
                 </div>
                 <div class="col-lg-4 position-relative">
                     <div class="position-absolute w-100 text-center" style="top: -15px; left: 0; z-index: 10;">
-                        <span class="ds-badge px-3 py-1" style="background: #2563eb !important; color: #ffffff !important; border-radius: 20px; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.05em; padding: 4px 14px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); border: 1px solid rgba(255,255,255,0.25); display: inline-block;">MOST POPULAR</span>
+                        <span class="ds-badge gold px-3 py-1" style="border-radius: 20px; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.05em; display: inline-block;">MOST POPULAR</span>
                     </div>
-                    <div class="feature-card glass-card border-primary h-100" style="border-width: 2px;">
+                    <div class="feature-card h-100 p-4" style="border: 2px solid #C4A25A;">
                         <div class="mb-4">
-                            <h3 class="fw-black mb-1">Professional</h3>
-                            <p class="text-muted mb-4">Complete enterprise engine</p>
+                            <h3 class="fw-black mb-1" style="color:#002347;">Professional</h3>
+                            <p class="mb-4" style="color:#476585;">Complete enterprise engine</p>
                             <div class="d-flex align-items-baseline gap-1 mb-4">
-                                <span class="fs-1 fw-black">₹199</span>
-                                <span class="text-muted">/month</span>
+                                <span class="fs-1 fw-black" style="color:#002347;">₹199</span>
+                                <span style="color:#476585;">/month</span>
                             </div>
                         </div>
                         <ul class="list-unstyled mb-5 v-stack gap-3">
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> 500 Users</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Full Workflow Engine</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Analytics Dashboard</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Repository + AI Assistant</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Reports + Audit Logs</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> 500 Users</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Full Workflow Engine</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Analytics Dashboard</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Repository + AI Assistant</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Reports + Audit Logs</li>
                         </ul>
-                        <a href="register-org.html?plan=Professional" class="ds-btn ds-btn-primary w-100 py-3">Start
-                            Free Trial</a>
+                        <a href="/auth/register-org.html?plan=Professional" class="ds-btn ds-btn-primary w-100 py-3 text-center">Start Free Trial</a>
                     </div>
                 </div>
                 <div class="col-lg-4">
-                    <div class="feature-card glass-card h-100">
+                    <div class="feature-card h-100 p-4">
                         <div class="mb-4">
-                            <h3 class="fw-black mb-1">Enterprise</h3>
-                            <p class="text-muted mb-4">For global scale manufacturing</p>
+                            <h3 class="fw-black mb-1" style="color:#002347;">Enterprise</h3>
+                            <p class="mb-4" style="color:#476585;">For global scale manufacturing</p>
                             <div class="d-flex align-items-baseline gap-1 mb-4">
-                                <span class="fs-1 fw-black">Custom</span>
+                                <span class="fs-1 fw-black" style="color:#002347;">Custom</span>
                             </div>
                         </div>
                         <ul class="list-unstyled mb-5 v-stack gap-3">
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Unlimited Users</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Multi Plant Support</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> White Label Branding</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> API Integration</li>
-                            <li class="d-flex gap-2"><i data-lucide="check" class="text-success"
-                                    style="width:20px;"></i> Dedicated Support</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Unlimited Users</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Multi Plant Support</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> White Label Branding</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> API Integration</li>
+                            <li class="d-flex gap-2 align-items-center" style="color:#476585;"><i data-lucide="check" style="color:#10B981; width:20px; height:20px;"></i> Dedicated Support</li>
                         </ul>
-                        <a href="#" class="ds-btn ds-btn-secondary w-100 py-3">Contact Sales</a>
+                        <a href="javascript:void(0)" onclick="openTalkToSalesModal()" class="ds-btn ds-btn-secondary w-100 py-3 text-center">Contact Sales</a>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="faq" class="py-5 bg-light">
+    <!-- FAQ Section -->
+    <section id="faq" class="py-5" style="background: #F8F9FA;">
         <div class="container py-5">
             <div class="row">
                 <div class="col-lg-4">
-                    <div class="ds-badge orange mb-3">Support</div>
-                    <h2 class="fw-extrabold fs-1 mb-3" id="lp-faq-title">Frequently Asked Questions</h2>
-                    <p class="text-muted fs-5" id="lp-faq-subtitle">Everything you need to know about QCMS Enterprise.</p>
+                    <div class="ds-badge gold mb-3">Support</div>
+                    <h2 class="fw-extrabold fs-1 mb-3" style="color:#002347;" id="lp-faq-title">Frequently Asked Questions</h2>
+                    <p class="fs-5" style="color:#476585;" id="lp-faq-subtitle">Everything you need to know about QCMS Enterprise.</p>
                 </div>
                 <div class="col-lg-8">
-                    <div class="accordion accordion-flush glass-card p-4" id="faqAccordion">
+                    <div class="accordion accordion-flush ds-card p-4" id="faqAccordion">
                         <div class="accordion-item bg-transparent border-bottom">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed bg-transparent fw-bold" type="button"
@@ -647,103 +659,123 @@
         </div>
     </section>
 
-    <div class="container" id="lp-cta-banner-container">
-        <div class="cta-banner shimmer-effect">
-            <div class="ds-badge mb-4"
-                style="background:rgba(255,255,255,0.1); color:white; border-color:rgba(255,255,255,0.2);">Limited Time
-                Offer</div>
-            <h2 class="fw-extrabold fs-1 mb-3" id="lp-cta-banner-title">Start Your 14-Day Free Trial</h2>
-            <p class="opacity-80 fs-5 mb-5 mx-auto" style="max-width:600px;" id="lp-cta-banner-subtitle">No Credit Card Required. Get instant access
-                to admin dashboard, workflow engine, and analytics.</p>
-            <div class="d-flex flex-wrap justify-content-center gap-4 mb-5">
-                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px;"></i>
-                    <span>Instant Setup</span></div>
-                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px;"></i>
-                    <span>Full Workflow</span></div>
-                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px;"></i>
-                    <span>AI Assistant</span></div>
+    <div class="container my-5" id="lp-cta-banner-container">
+        <div class="cta-banner shimmer-effect text-center" style="background: linear-gradient(135deg, #001830 0%, #002347 100%); border: 1px solid rgba(196, 162, 90, 0.3); border-radius: 16px; padding: 60px 30px;">
+            <div class="eyebrow-chip-hero mx-auto mb-4" id="lp-cta-banner-badge">Enterprise Production Ready</div>
+            <h2 class="fw-extrabold fs-1 mb-3 text-white" id="lp-cta-banner-title">Start Your 14-Day Free Trial</h2>
+            <p class="fs-5 mb-4 mx-auto" style="max-width:600px; color:#DAE0E7;" id="lp-cta-banner-subtitle">No Credit Card Required. Get instant access to multi-plant workflow engine, audit trails, and executive dashboards.</p>
+            <div class="d-flex flex-wrap justify-content-center gap-4 mb-5" style="color:#DAE0E7;">
+                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px; height:18px; color:#10B981;"></i>
+                    <span id="lp-cta-feature-1">Instant Deployment</span></div>
+                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px; height:18px; color:#10B981;"></i>
+                    <span id="lp-cta-feature-2">Full 8-Stage Engine</span></div>
+                <div class="d-flex align-items-center gap-2"><i data-lucide="check-circle" style="width:18px; height:18px; color:#10B981;"></i>
+                    <span id="lp-cta-feature-3">Automated ISO Audit Trail</span></div>
             </div>
             <div class="d-flex flex-wrap justify-content-center gap-3">
-                <a href="register-org.html" class="ds-btn ds-btn-secondary px-4 px-sm-5 py-3 fs-5"
-                    style="border-radius: 12px; background: white; color: var(--primary-900); font-weight:700;" id="lp-cta-banner-btn1">Launch
-                    Your Instance</a>
-                <a href="javascript:void(0)" onclick="openTalkToSalesModal()" class="ds-btn ds-btn-ghost px-4 px-sm-5 py-3 fs-5"
-                    style="border-radius: 12px; color: #ffffff !important; border: 1.5px solid rgba(255, 255, 255, 0.7) !important; background: rgba(255, 255, 255, 0.1); font-weight:600;" id="lp-cta-banner-btn2">Talk to Sales</a>
+                <a href="/auth/register-org.html" class="ds-btn ds-btn-primary px-4 px-sm-5 py-3 fs-6 d-inline-flex align-items-center gap-2"
+                    style="border-radius: 12px; background: #C4A25A; color: #002347; font-weight:700; text-decoration:none;" id="lp-cta-banner-btn1">
+                    <span>Launch Your Instance</span>
+                    <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+                </a>
+                <a href="javascript:void(0)" onclick="openTalkToSalesModal()" class="ds-btn px-4 px-sm-5 py-3 fs-6 d-inline-flex align-items-center gap-2"
+                    style="border-radius: 10px; color: #ffffff !important; border: 1.5px solid rgba(255, 255, 255, 0.35) !important; background: transparent; font-weight:600; text-decoration:none;" id="lp-cta-banner-btn2">
+                    <i data-lucide="phone-call" style="width:18px;height:18px; color:#C4A25A;"></i>
+                    <span>Talk to Sales</span>
+                </a>
             </div>
         </div>
     </div>
 
-    <footer class="py-5 border-top bg-light">
+    <footer class="py-5" style="background: #001830; color: #DAE0E7; border-top: 1px solid rgba(255, 255, 255, 0.08);">
         <div class="container py-5">
             <div class="row g-5">
                 <div class="col-lg-4">
                     <div class="d-flex align-items-center gap-2 mb-4">
-                        <div
-                            style="width:40px; height:40px; border-radius:10px; background:var(--ds-primary); color:white; display:flex; align-items:center; justify-content:center;">
+                        <div id="lp-footer-logo-slot"
+                            style="width:40px; height:40px; border-radius:10px; background:#C4A25A; color:#002347; display:flex; align-items:center; justify-content:center;">
                             <i data-lucide="shield-check" style="width:24px; height:24px;"></i>
                         </div>
-                        <span class="fw-extrabold fs-4 text-primary">QCMS <span
-                                class="text-muted fw-normal">Enterprise</span></span>
+                        <span class="fw-extrabold fs-4 text-white" id="lp-footer-brand-name">QCMS <span
+                                style="color:#C4A25A; font-weight:400;">Enterprise</span></span>
                     </div>
-                    <p class="text-muted mb-4" id="lp-footer-desc" style="max-width: 320px;">The world's most advanced quality management
-                        system for modern manufacturing and enterprise excellence. Built for scale, security, and
-                        precision.</p>
+                    <p class="mb-4" id="lp-footer-desc" style="max-width: 320px; color:#DAE0E7; line-height: 1.6;">The world's most advanced quality management system for modern manufacturing and enterprise excellence. Built for scale, security, and precision.</p>
                     <div class="d-flex gap-3">
-                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="twitter"
-                                style="width:20px;"></i></a>
-                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="linkedin"
-                                style="width:20px;"></i></a>
-                        <a href="#" class="ds-btn ds-btn-ghost ds-btn-sm p-2"><i data-lucide="github"
-                                style="width:20px;"></i></a>
+                        <a href="https://twitter.com" target="_blank" rel="noopener" class="footer-social-btn" title="Twitter / X" aria-label="Twitter">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 24.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                        </a>
+                        <a href="https://linkedin.com" target="_blank" rel="noopener" class="footer-social-btn" title="LinkedIn" aria-label="LinkedIn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.45a1.62 1.62 0 1 0 0 3.24 1.62 1.62 0 0 0 0-3.24z"/></svg>
+                        </a>
+                        <a href="https://github.com" target="_blank" rel="noopener" class="footer-social-btn" title="GitHub" aria-label="GitHub">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
+                        </a>
                     </div>
                 </div>
                 <div class="col-md-8">
                     <div class="row g-4">
                         <div class="col-6 col-md-3">
-                            <h6 class="fw-bold mb-4">Product</h6>
-                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-product">
-                                <!-- Dynamic Links -->
+                            <h6 class="fw-bold mb-4 text-white">Product</h6>
+                            <ul class="list-unstyled v-stack gap-3 small" style="color:#DAE0E7;" id="footer-col-product">
+                                <li><a href="#features" class="text-decoration-none" style="color:#DAE0E7;">Features</a></li>
+                                <li><a href="#how-it-works" class="text-decoration-none" style="color:#DAE0E7;">8-Stage Flow</a></li>
+                                <li><a href="#pricing" class="text-decoration-none" style="color:#DAE0E7;">Pricing</a></li>
+                                <li><a href="/auth/login.html" class="text-decoration-none" style="color:#DAE0E7;">Sign In</a></li>
                             </ul>
                         </div>
                         <div class="col-6 col-md-3">
-                            <h6 class="fw-bold mb-4">Resources</h6>
-                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-resources">
-                                <!-- Dynamic Links -->
+                            <h6 class="fw-bold mb-4 text-white">Resources</h6>
+                            <ul class="list-unstyled v-stack gap-3 small" style="color:#DAE0E7;" id="footer-col-resources">
+                                <li><a href="#faq" class="text-decoration-none" style="color:#DAE0E7;">FAQ & Help</a></li>
+                                <li><a href="/page.html?slug=security" class="text-decoration-none" style="color:#DAE0E7;">Security</a></li>
+                                <li><a href="#lp-badges-section" class="text-decoration-none" style="color:#DAE0E7;">Standards</a></li>
+                                <li><a href="javascript:void(0)" onclick="openTalkToSalesModal()" class="text-decoration-none" style="color:#DAE0E7;">Support</a></li>
                             </ul>
                         </div>
                         <div class="col-6 col-md-3">
-                            <h6 class="fw-bold mb-4">Company</h6>
-                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-company">
-                                <!-- Dynamic Links -->
+                            <h6 class="fw-bold mb-4 text-white">Company</h6>
+                            <ul class="list-unstyled v-stack gap-3 small" style="color:#DAE0E7;" id="footer-col-company">
+                                <li><a href="/page.html?slug=about-us" class="text-decoration-none" style="color:#DAE0E7;">About Us</a></li>
+                                <li><a href="/auth/register-org.html" class="text-decoration-none" style="color:#DAE0E7;">Free Trial</a></li>
+                                <li><a href="javascript:void(0)" onclick="openTalkToSalesModal()" class="text-decoration-none" style="color:#DAE0E7;">Contact Sales</a></li>
                             </ul>
                         </div>
                         <div class="col-6 col-md-3">
-                            <h6 class="fw-bold mb-4">Legal</h6>
-                            <ul class="list-unstyled v-stack gap-3 text-muted small" id="footer-col-legal">
-                                <!-- Dynamic Links -->
+                            <h6 class="fw-bold mb-4 text-white">Legal</h6>
+                            <ul class="list-unstyled v-stack gap-3 small" style="color:#DAE0E7;" id="footer-col-legal">
+                                <li><a href="/page.html?slug=privacy-policy" class="text-decoration-none" style="color:#DAE0E7;">Privacy Policy</a></li>
+                                <li><a href="/page.html?slug=terms-of-service" class="text-decoration-none" style="color:#DAE0E7;">Terms of Service</a></li>
+                                <li><a href="/page.html?slug=security" class="text-decoration-none" style="color:#DAE0E7;">Compliance</a></li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
             <div
-                class="mt-5 pt-5 border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 text-muted small">
-                <p class="mb-0" id="lp-footer-copy">&copy; 2026 QCMS Precision Core. Engineered for Excellence.</p>
+                class="mt-5 pt-5 d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 small" style="border-top: 1px solid rgba(255,255,255,0.08); color:#DAE0E7;">
+                <p class="mb-0" id="lp-footer-copy">&copy; 2026 QCMS Precision Core. Engineered for Enterprise Excellence.</p>
                 <div class="d-flex gap-4">
-                    <span class="d-flex align-items-center gap-2"><i data-lucide="globe" style="width:14px;"></i>
-                        <span data-i18n-lang-name>English (US)</span></span>
+                    <span class="d-flex align-items-center gap-2"><i data-lucide="globe" style="width:14px; color:#C4A25A;"></i>
+                        <span data-i18n-lang-name id="lp-footer-lang">English (US)</span></span>
                     <span class="d-flex align-items-center gap-2"><span
                             class="ds-status-indicator ds-status-active"></span> System Status: <span
                             class="text-success fw-bold" id="lp-footer-status">Operational</span></span>
-                </div>
+                </div>  </div>
             </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
+            // Clean up any stray authenticated shell elements on public landing page
+            ['qcms-mobile-bottom-nav', 'sidebar-backdrop', 'ai-chat-widget', 'helpdesk-widget', 'app-sidebar', 'app-navbar'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.remove();
+            });
+            document.body.classList.remove('sidebar-mobile-open');
+
             if (window.lucide) {
                 lucide.createIcons();
             }
@@ -788,17 +820,71 @@
                 const res = await fetch('/api/super-admin/public/landing-content');
                 if(res.ok) {
                     const data = await res.json();
-                        const cms = data.data;
+                        const cms = data.data || {};
+                        let branding = data.branding || data.branding_context;
+
+                        if (!branding) {
+                            try {
+                                const bRes = await fetch('/api/document-identity/public-context');
+                                if (bRes.ok) {
+                                    const bData = await bRes.json();
+                                    branding = bData.branding || bData.branding_context || {};
+                                }
+                            } catch(e) {}
+                        }
+                        branding = branding || {};
+
+                        // Apply Dynamic Document Identity & Platform Branding
+                        const brandShort = (branding.software_short_name || branding.software_name || 'QCMS').trim();
+                        const appSoftName = (branding.software_display_name || branding.software_name || 'QCMS Enterprise').trim();
+                        document.title = `${appSoftName} | Quality Management Reimagined`;
+
+                        const _txt = (id, val) => {
+                            const el = document.getElementById(id);
+                            if (!el || val === undefined || val === null) return;
+                            const span = el.querySelector('span');
+                            if (span) {
+                                span.textContent = val;
+                            } else {
+                                el.textContent = val;
+                            }
+                        };
+                        const _html = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.innerHTML = val; };
+
+                        // Update Navbar Brand Text & Logo
+                        const brandParts = brandShort.split(' ');
+                        const brandHtml = brandParts.length > 1 
+                            ? `${brandParts[0]} <span class="text-muted fw-normal">${brandParts.slice(1).join(' ')}</span>`
+                            : brandShort;
+                        _html('lp-navbar-brand-name', brandHtml);
+                        _html('lp-footer-brand-name', brandHtml);
+
+                        const logoSrc = branding.platform_logo_url || branding.logo_url;
+                        if (logoSrc && !logoSrc.includes('/assets/img/logo.png') && !logoSrc.includes('null')) {
+                            const navLogoSlot = document.getElementById('lp-navbar-logo-slot');
+                            if (navLogoSlot) {
+                                navLogoSlot.innerHTML = `<img src="${logoSrc}" alt="${brandShort} Logo" style="height:26px; max-width:120px; object-fit:contain;" onerror="this.outerHTML='<i data-lucide=\\'shield-check\\' style=\\'width:20px;height:20px;color:var(--ds-bg-main);\\'></i>'; if(window.lucide) lucide.createIcons();">`;
+                            }
+                            const footerLogoSlot = document.getElementById('lp-footer-logo-slot');
+                            if (footerLogoSlot) {
+                                footerLogoSlot.innerHTML = `<img src="${logoSrc}" alt="${brandShort} Logo" style="height:28px; max-width:140px; object-fit:contain;" onerror="this.outerHTML='<i data-lucide=\\'shield-check\\' style=\\'width:24px;height:24px;\\'></i>'; if(window.lucide) lucide.createIcons();">`;
+                            }
+                        }
+
+                        if (branding.footer_copyright || branding.copyright_text) {
+                            _txt('lp-footer-copy', branding.footer_copyright || branding.copyright_text);
+                        }
+
+                        if (branding.primary_color) {
+                            document.documentElement.style.setProperty('--ds-primary', branding.primary_color);
+                            document.documentElement.style.setProperty('--primary', branding.primary_color);
+                        }
 
                         // Check if Landing Page is disabled by administrator
                         if (cms.enable_landing_page === false || String(cms.enable_landing_page).toLowerCase() === 'false') {
                             window.location.replace('/auth/login.html');
                             return;
                         }
-
-                        // Helper for text assignment
-                        const _txt = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.textContent = val; };
-                        const _html = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.innerHTML = val; };
 
                         // 1. Hero
                         if(cms.hero_badge) _txt('lp-hero-badge', cms.hero_badge);
@@ -808,6 +894,9 @@
                         if(cms.cta_primary_url) { const el = document.getElementById('lp-cta-primary'); if(el) el.href = cms.cta_primary_url; }
                         if(cms.cta_secondary_text) _txt('lp-cta-secondary', cms.cta_secondary_text);
                         if(cms.cta_secondary_url) { const el = document.getElementById('lp-cta-secondary'); if(el) el.href = cms.cta_secondary_url; }
+                        if(cms.hero_feature_1 !== undefined) _txt('lp-hero-feature1', cms.hero_feature_1);
+                        if(cms.hero_feature_2 !== undefined) _txt('lp-hero-feature2', cms.hero_feature_2);
+                        if(cms.hero_feature_3 !== undefined) _txt('lp-hero-feature3', cms.hero_feature_3);
 
                         // Hero Stats
                         [1, 2, 3].forEach(n => {
@@ -897,6 +986,7 @@
                             if (stepsSec) stepsSec.style.display = 'none';
                         } else {
                             if (stepsSec) stepsSec.style.display = '';
+                            if (cms.steps_badge !== undefined) _txt('lp-steps-badge', cms.steps_badge);
                             if (cms.steps_title !== undefined) _txt('lp-steps-title', cms.steps_title);
                             if (cms.steps_subtitle !== undefined) _txt('lp-steps-subtitle', cms.steps_subtitle);
                             if (stepsList.length > 0) {
@@ -921,12 +1011,27 @@
                             if (pricingSec) pricingSec.style.display = 'none';
                         } else {
                             if (pricingSec) pricingSec.style.display = '';
+                            if (cms.pricing_badge !== undefined) _txt('lp-pricing-badge', cms.pricing_badge);
                             if (cms.pricing_title !== undefined) _txt('lp-pricing-title', cms.pricing_title);
                             if (cms.pricing_subtitle !== undefined) _txt('lp-pricing-subtitle', cms.pricing_subtitle);
                             if (plansList.length > 0) {
                                 const grid = document.getElementById('lp-pricing-grid');
                                 if (grid) {
-                                    grid.innerHTML = plansList.map(p => `
+                                    grid.innerHTML = plansList.map(p => {
+                                        let ctaHref = (p.cta_url || '').trim();
+                                        let ctaClick = '';
+                                        if (!ctaHref) {
+                                            if ((p.cta || '').toLowerCase().includes('contact') || (p.cta || '').toLowerCase().includes('sales')) {
+                                                ctaHref = 'javascript:void(0)';
+                                                ctaClick = 'onclick="openTalkToSalesModal()"';
+                                            } else {
+                                                ctaHref = `/auth/register-org.html?plan=${encodeURIComponent(p.name || '')}`;
+                                            }
+                                        } else if (ctaHref.includes('openTalkToSalesModal') || ctaHref === 'contact-sales' || ctaHref === '#contact-sales') {
+                                            ctaHref = 'javascript:void(0)';
+                                            ctaClick = 'onclick="openTalkToSalesModal()"';
+                                        }
+                                        return `
                                     <div class="col-lg-4 position-relative">
                                         ${p.badge ? `<div class="position-absolute w-100 text-center" style="top: -15px; left: 0; z-index: 10;">
                                             <span class="ds-badge px-3 py-1" style="background: #2563eb !important; color: #ffffff !important; border-radius: 20px; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.05em; padding: 4px 14px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); border: 1px solid rgba(255,255,255,0.25); display: inline-block;">${p.badge}</span>
@@ -943,9 +1048,10 @@
                                             <ul class="list-unstyled mb-5 v-stack gap-3">
                                                 ${(p.features || []).map(feat => `<li class="d-flex gap-2"><i data-lucide="check" class="text-success" style="width:20px;"></i> ${feat}</li>`).join('')}
                                             </ul>
-                                            <a href="register-org.html?plan=${encodeURIComponent(p.name || '')}" class="ds-btn ds-btn-${p.badge ? 'primary' : 'secondary'} w-100 py-3">${p.cta || 'Start Free Trial'}</a>
+                                            <a href="${ctaHref}" ${ctaClick} class="ds-btn ds-btn-${p.badge ? 'primary' : 'secondary'} w-100 py-3">${p.cta || 'Start Free Trial'}</a>
                                         </div>
-                                    </div>`).join('');
+                                    </div>`;
+                                    }).join('');
                                 }
                             }
                         }
@@ -987,15 +1093,46 @@
                             if (ctaContainer) ctaContainer.style.display = 'none';
                         } else {
                             if (ctaContainer) ctaContainer.style.display = '';
+                            if (cms.cta_banner_badge !== undefined) _txt('lp-cta-banner-badge', cms.cta_banner_badge);
                             if (cms.cta_banner_title !== undefined) _txt('lp-cta-banner-title', cms.cta_banner_title);
                             if (cms.cta_banner_subtitle !== undefined) _txt('lp-cta-banner-subtitle', cms.cta_banner_subtitle);
+                            if (cms.cta_feature_1 !== undefined) _txt('lp-cta-feature-1', cms.cta_feature_1);
+                            if (cms.cta_feature_2 !== undefined) _txt('lp-cta-feature-2', cms.cta_feature_2);
+                            if (cms.cta_feature_3 !== undefined) _txt('lp-cta-feature-3', cms.cta_feature_3);
+                            
+                            // Primary Button
                             if (cms.cta_banner_btn1 !== undefined) _txt('lp-cta-banner-btn1', cms.cta_banner_btn1);
+                            const btn1El = document.getElementById('lp-cta-banner-btn1');
+                            if (btn1El) {
+                                const btn1Url = (cms.cta_banner_btn1_url || '/auth/register-org.html').trim();
+                                if (btn1Url.includes('openTalkToSalesModal') || btn1Url === 'contact-sales' || btn1Url === '#contact-sales') {
+                                    btn1El.href = 'javascript:void(0)';
+                                    btn1El.setAttribute('onclick', 'openTalkToSalesModal()');
+                                } else {
+                                    btn1El.href = btn1Url;
+                                    btn1El.removeAttribute('onclick');
+                                }
+                            }
+
+                            // Secondary Button
                             if (cms.cta_banner_btn2 !== undefined) _txt('lp-cta-banner-btn2', cms.cta_banner_btn2);
+                            const btn2El = document.getElementById('lp-cta-banner-btn2');
+                            if (btn2El) {
+                                const btn2Url = (cms.cta_banner_btn2_url || 'openTalkToSalesModal()').trim();
+                                if (btn2Url.includes('openTalkToSalesModal') || btn2Url === 'contact-sales' || btn2Url === '#contact-sales') {
+                                    btn2El.href = 'javascript:void(0)';
+                                    btn2El.setAttribute('onclick', 'openTalkToSalesModal()');
+                                } else {
+                                    btn2El.href = btn2Url;
+                                    btn2El.removeAttribute('onclick');
+                                }
+                            }
                         }
 
                         // 7. Footer
                         if (cms.footer_description !== undefined) _txt('lp-footer-desc', cms.footer_description);
                         if (cms.footer_copyright !== undefined) _txt('lp-footer-copy', cms.footer_copyright);
+                        if (cms.footer_lang !== undefined) _txt('lp-footer-lang', cms.footer_lang);
                         if (cms.footer_status !== undefined) _txt('lp-footer-status', cms.footer_status);
 
                         if (cms.footer_pages && Object.keys(cms.footer_pages).length > 0) {
@@ -1120,40 +1257,40 @@
     </script>
 
     <!-- Talk to Sales Modal -->
-    <div class="modal fade" id="talkToSalesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="talkToSalesModal" tabindex="-1" aria-hidden="true" style="z-index: 1080;">
         <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
-            <div class="modal-content glass-card p-4" style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: #fff;">
+            <div class="modal-content p-4" style="background: #FFFFFF; border: 1px solid #DAE0E7; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 35, 71, 0.25); color: #002347;">
                 <div class="modal-header border-0 pb-2">
                     <div>
-                        <h4 class="modal-title fw-bold text-white mb-1"><i data-lucide="phone-call" class="text-primary me-2" style="width:24px;height:24px;"></i>Talk to Sales</h4>
-                        <p class="text-xs text-muted mb-0">Fill in your details below and our team will get back to you shortly.</p>
+                        <h4 class="modal-title fw-bold mb-1 d-flex align-items-center gap-2" style="color: #002347;"><i data-lucide="phone-call" style="width:24px; height:24px; color:#C4A25A;"></i>Talk to Sales</h4>
+                        <p class="text-xs mb-0" style="color: #476585;">Fill in your details below and our team will get back to you shortly.</p>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body pt-3">
                     <div id="salesModalAlert" class="alert alert-danger text-xs d-none" style="border-radius:10px;"></div>
                     <form id="talkToSalesForm">
                         <div class="mb-3">
-                            <label class="form-label text-xs fw-semibold text-white">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control text-sm bg-dark text-white border-secondary" id="salesName" placeholder="e.g. Alex Morgan" required style="border-radius: 10px; padding: 10px 14px;">
+                            <label class="form-label text-xs fw-semibold" style="color: #002347;">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control text-sm" id="salesName" placeholder="e.g. Alex Morgan" required style="border-radius: 10px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #DAE0E7; color: #002347;">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-xs fw-semibold text-white">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control text-sm bg-dark text-white border-secondary" id="salesEmail" placeholder="e.g. alex@gmail.com or alex@company.com" required style="border-radius: 10px; padding: 10px 14px;">
+                            <label class="form-label text-xs fw-semibold" style="color: #002347;">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control text-sm" id="salesEmail" placeholder="e.g. alex@gmail.com or alex@company.com" required style="border-radius: 10px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #DAE0E7; color: #002347;">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-xs fw-semibold text-white">Phone Number (Indian / International) <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control text-sm bg-dark text-white border-secondary" id="salesPhone" placeholder="e.g. +91 98765 43210" required style="border-radius: 10px; padding: 10px 14px;">
+                            <label class="form-label text-xs fw-semibold" style="color: #002347;">Phone Number (Indian / International) <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control text-sm" id="salesPhone" placeholder="e.g. +91 98765 43210" required style="border-radius: 10px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #DAE0E7; color: #002347;">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-xs fw-semibold text-white">Company Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control text-sm bg-dark text-white border-secondary" id="salesCompany" placeholder="e.g. Acme Corp" required style="border-radius: 10px; padding: 10px 14px;">
+                            <label class="form-label text-xs fw-semibold" style="color: #002347;">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control text-sm" id="salesCompany" placeholder="e.g. Acme Corp" required style="border-radius: 10px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #DAE0E7; color: #002347;">
                         </div>
                         <div class="mb-4">
-                            <label class="form-label text-xs fw-semibold text-white">Message / Notes <span class="text-muted fw-normal">(Optional)</span></label>
-                            <textarea class="form-control text-sm bg-dark text-white border-secondary" id="salesMessage" rows="3" placeholder="Tell us about your team size or specific requirements..." style="border-radius: 10px; padding: 10px 14px;"></textarea>
+                            <label class="form-label text-xs fw-semibold" style="color: #002347;">Message / Notes <span class="fw-normal" style="color: #476585;">(Optional)</span></label>
+                            <textarea class="form-control text-sm" id="salesMessage" rows="3" placeholder="Tell us about your team size or specific requirements..." style="border-radius: 10px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #DAE0E7; color: #002347;"></textarea>
                         </div>
-                        <button type="submit" class="ds-btn ds-btn-primary w-100 py-3 text-sm fw-bold" id="salesSubmitBtn" style="border-radius: 12px;">
+                        <button type="submit" class="ds-btn ds-btn-primary w-100 py-3 text-sm fw-bold" id="salesSubmitBtn" style="border-radius: 12px; background: #C4A25A; color: #002347;">
                             Submit Inquiry
                         </button>
                     </form>
@@ -1161,8 +1298,8 @@
                         <div class="mb-3" style="width: 56px; height: 56px; background: rgba(16, 185, 129, 0.15); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #10b981;">
                             <i data-lucide="check-circle-2" style="width:32px; height:32px;"></i>
                         </div>
-                        <h5 class="fw-bold text-white mb-2">Inquiry Received!</h5>
-                        <p class="text-xs text-muted mb-4">Thank you for reaching out. A sales specialist will review your request and get in touch shortly.</p>
+                        <h5 class="fw-bold mb-2" style="color: #002347;">Inquiry Received!</h5>
+                        <p class="text-xs mb-4" style="color: #476585;">Thank you for reaching out. A sales specialist will review your request and get in touch shortly.</p>
                         <button type="button" class="ds-btn ds-btn-secondary px-4 py-2 text-xs" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>

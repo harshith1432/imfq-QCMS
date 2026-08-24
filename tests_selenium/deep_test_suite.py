@@ -239,7 +239,10 @@ def run_all_deep_tests():
             try:
                 logout(driver)
                 success = login_as(driver, udata["email"], udata["pass"])
-                time.sleep(2)
+                try:
+                    WebDriverWait(driver, 10).until(lambda d: "login" not in d.current_url.lower())
+                except Exception:
+                    time.sleep(2)
                 token = driver.execute_script("return localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token');")
                 current_url = driver.current_url
                 scr = capture_screen(driver, f"login_{role_key.lower()}")

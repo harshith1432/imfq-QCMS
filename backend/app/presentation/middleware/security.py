@@ -13,10 +13,12 @@ Implements all platform security policies configured via the Super Admin Panel:
 All policies are read live from PlatformSettings.security_settings so changes
 made via the Super Admin UI take effect immediately with no restart required.
 """
+import os
 import re
 import time
 import ipaddress
 import threading
+from typing import Tuple, Dict, Any, Optional
 from functools import wraps
 from flask import request, jsonify, g, current_app
 
@@ -43,19 +45,28 @@ _CLEANUP_INTERVAL = 100
 _WINDOW_24H = 86400
 
 
+_security_settings_cache = {"data": {}, "ts": 0}
+
 def _get_security_settings() -> dict:
     """
-    Fetch the live security_settings blob from the DB.
-    Returns a dict — never raises; falls back to an empty dict on any error.
+    Fetch the live security_settings blob with a 30-second memory cache to eliminate
+    thousands of redundant DB queries per second on high-traffic requests.
     """
+    now = time.time()
+    if now - _security_settings_cache["ts"] < 30 and _security_settings_cache["data"]:
+        return _security_settings_cache["data"]
+
     try:
         from app.infrastructure.database.models.models import PlatformSettings
         s = PlatformSettings.query.first()
         if s and s.security_settings:
-            return s.security_settings if isinstance(s.security_settings, dict) else {}
+            data = s.security_settings if isinstance(s.security_settings, dict) else {}
+            _security_settings_cache["data"] = data
+            _security_settings_cache["ts"] = now
+            return data
     except Exception:
         pass
-    return {}
+    return _security_settings_cache.get("data", {})
 
 
 def _cleanup_stale_state():
@@ -76,10 +87,9 @@ def _cleanup_stale_state():
 
 
 def _get_client_ip() -> str:
-    """Return the real client IP, respecting X-Forwarded-For from proxies."""
-    xff = request.headers.get('X-Forwarded-For', '')
-    if xff:
-        return xff.split(',')[0].strip()
+    """Return the real client IP. With ProxyFix applied upstream in create_app(),
+    request.remote_addr is already the correct client IP — no need to manually
+    parse X-Forwarded-For (which could be spoofed without ProxyFix)."""
     return request.remote_addr or '0.0.0.0'
 
 
@@ -173,13 +183,27 @@ def _ip_in_list(ip_str: str, networks: list) -> bool:
         return False
 
 
+from app.infrastructure.cache.redis_adapter import cache
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Rate Limiter
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _check_rate_limit(client_ip: str, limit_per_minute: int) -> bool:
-    """Returns True if the IP is over the rate limit. (Permanently disabled: always returns False)."""
-    return False
+def _check_rate_limit(client_ip: str, limit_per_window: int, window_seconds: int = 60, bucket_key: str = "general") -> Tuple[bool, int]:
+    """
+    Stateless sliding window rate limiter using Redis / memory cache adapter.
+    Returns: (is_limited: bool, retry_after: int)
+    """
+    if not limit_per_window or limit_per_window <= 0:
+        return False, 0
+    try:
+        if current_app and current_app.config.get('TESTING') and bucket_key == 'general':
+            return False, 0
+    except Exception:
+        pass
+    key = f"rate_limit:{bucket_key}:{client_ip}"
+    is_limited, _, retry_after = cache.check_rate_limit(key, limit_per_window, window_seconds)
+    return is_limited, retry_after
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -210,12 +234,14 @@ def register_security_middleware(app):
     after_request hooks.  Call this once from create_app().
     """
 
-    # Public paths that are always excluded from security enforcement
+    # Public paths that are always excluded from general authentication/WAF policies
     _ALWAYS_ALLOWED = {
-        '/api/auth/login',
+        '/api/health',
         '/api/auth/login-config',
         '/api/auth/maintenance-status',
         '/api/auth/register-org',
+        '/api/auth/registration-status',
+        '/api/auth/check-availability',
     }
 
     def _is_public(path: str) -> bool:
@@ -227,10 +253,30 @@ def register_security_middleware(app):
             return True
         return False
 
+    @app.errorhandler(503)
+    def handle_503_error(e):
+        return jsonify({
+            'status': 'error',
+            'message': 'Service temporarily unavailable. Please retry shortly.',
+            'code': 'SERVICE_UNAVAILABLE'
+        }), 503
+
+    from app.infrastructure.cache.redis_adapter import SecurityDependencyUnavailableError
+
+    @app.errorhandler(SecurityDependencyUnavailableError)
+    def handle_security_dependency_error(e):
+        current_app.logger.critical(f"[QCMS Security Critical Fail-Closed] {e}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Security-critical verification service is temporarily unavailable. Request blocked for system safety.',
+            'code': 'SECURITY_SERVICE_UNAVAILABLE'
+        }), 503
+
     @app.before_request
     def enforce_security_policies():
         global _request_counter
-        if _is_public(request.path):
+        path = request.path
+        if not path.startswith('/api/'):
             return
 
         _request_counter += 1
@@ -239,6 +285,65 @@ def register_security_middleware(app):
 
         sec = _get_security_settings()
         client_ip = _get_client_ip()
+
+        # ── 0. Route-Specific Rate Limiting ──────────────────────────────────
+        # Login rate limit: 5 attempts per 15 minutes (900s) for external IPs, 500 for localhost/testing
+        if path == '/api/auth/login':
+            is_local_ip = client_ip in ('127.0.0.1', '::1', 'localhost', 'testclient')
+            limit_login = 500 if is_local_ip else 5
+            is_limited, retry_after = _check_rate_limit(client_ip, limit_login, window_seconds=900, bucket_key="login")
+            if is_limited:
+                _log_threat(client_ip, 'Rate limit exceeded on /api/auth/login')
+                resp = jsonify({
+                    'status': 'error',
+                    'message': f'Too many login attempts. Please wait {retry_after}s before trying again.',
+                    'code': 'RATE_LIMIT_EXCEEDED'
+                })
+                resp.headers['Retry-After'] = str(retry_after)
+                return resp, 429
+            return
+
+        # OTP endpoints rate limit: 3 requests per 10 minutes (600s)
+        otp_endpoints = (
+            '/api/auth/request-registration-otp',
+            '/api/auth/request-phone-otp',
+            '/api/auth/request-password-otp',
+            '/api/auth/verify-registration-otp',
+            '/api/auth/verify-phone-otp',
+            '/api/auth/forgot-password'
+        )
+        if any(path.startswith(ep) for ep in otp_endpoints):
+            is_limited, retry_after = _check_rate_limit(client_ip, 3, window_seconds=600, bucket_key="otp")
+            if is_limited:
+                _log_threat(client_ip, f'Rate limit exceeded on OTP route {path}')
+                resp = jsonify({
+                    'status': 'error',
+                    'message': f'Too many OTP requests. Please wait {retry_after}s before trying again.',
+                    'code': 'RATE_LIMIT_EXCEEDED'
+                })
+                resp.headers['Retry-After'] = str(retry_after)
+                return resp, 429
+
+        # General API routes rate limit: configurable with generous burst for dashboards
+        if not _is_public(path):
+            enable_rl = sec.get('enable_rate_limiting', True) if isinstance(sec, dict) else True
+            if enable_rl:
+                is_local_ip = client_ip in ('127.0.0.1', '::1', 'localhost', 'testclient')
+                default_limit = 1200 if is_local_ip else 300
+                gen_limit = int(sec.get('rate_limit_per_minute') or os.environ.get('RATE_LIMIT_PER_MINUTE', default_limit))
+                is_limited, retry_after = _check_rate_limit(client_ip, gen_limit, window_seconds=60, bucket_key="general")
+                if is_limited:
+                    _log_threat(client_ip, f'General API rate limit exceeded on {path}')
+                    resp = jsonify({
+                        'status': 'error',
+                        'message': 'Rate limit exceeded. Please slow down your requests.',
+                        'code': 'RATE_LIMIT_EXCEEDED'
+                    })
+                    resp.headers['Retry-After'] = str(retry_after)
+                    return resp, 429
+
+        if _is_public(path):
+            return
 
         # ── 1. IP Blacklist ──────────────────────────────────────────────────
         blacklist_str = sec.get('ip_blacklist', '')
@@ -254,7 +359,7 @@ def register_security_middleware(app):
 
         # ── 2. IP Whitelist (admin-only paths) ───────────────────────────────
         whitelist_str = sec.get('ip_whitelist', '')
-        if whitelist_str and request.path.startswith('/api/super-admin'):
+        if whitelist_str and path.startswith('/api/super-admin'):
             whitelist_nets = _parse_cidr_list(whitelist_str)
             if whitelist_nets and not _ip_in_list(client_ip, whitelist_nets):
                 _log_threat(client_ip, 'IP not in whitelist')
@@ -264,8 +369,7 @@ def register_security_middleware(app):
                     'code': 'IP_NOT_WHITELISTED'
                 }), 403
 
-        # ── 3. API Rate Limiting ─────────────────────────────────────────────
-        # Rate limiting permanently disabled - unlimited throughput for all requests
+        # ── 3. General API Rate Limiting already handled in step 0 ──────────
         pass
 
         # ── 4. WAF ───────────────────────────────────────────────────────────
@@ -362,7 +466,7 @@ from typing import Tuple
 
 def record_failed_login(identifier: str) -> Tuple[bool, int]:
     """
-    Record a failed login for `identifier` (email or IP).
+    Record a failed login for `identifier` (email or IP) across distributed nodes.
     Returns (is_locked: bool, attempts_so_far: int).
     Reads max_login_attempts and lockout_duration_mins from security_settings.
     """
@@ -378,63 +482,73 @@ def record_failed_login(identifier: str) -> Tuple[bool, int]:
         lockout_mins = 15
 
     now = time.time()
-    with _lock:
-        entry = _login_attempt_counters.get(identifier, {'attempts': 0, 'locked_until': None})
-        # If currently locked, check expiry
-        if entry['locked_until'] and now < entry['locked_until']:
-            return True, entry['attempts']
-        # If lock expired, reset
-        if entry['locked_until'] and now >= entry['locked_until']:
-            entry = {'attempts': 0, 'locked_until': None}
+    lockout_ttl = max(60, lockout_mins * 60)
+    attempts_key = f"login_attempts:{identifier}"
+    lockout_key = f"lockout:{identifier}"
 
-        entry['attempts'] += 1
-        if entry['attempts'] >= max_attempts:
-            entry['locked_until'] = now + (lockout_mins * 60)
-            _login_attempt_counters[identifier] = entry
-            return True, entry['attempts']
+    # Check if already locked out
+    lockout_entry = cache.get(lockout_key, is_security_critical=False)
+    if lockout_entry:
+        locked_until = lockout_entry.get('locked_until') if isinstance(lockout_entry, dict) else None
+        if locked_until and now < locked_until:
+            return True, lockout_entry.get('attempts', max_attempts)
 
-        _login_attempt_counters[identifier] = entry
-        return False, entry['attempts']
+    # Increment distributed failed attempts counter
+    attempts = cache.incr(attempts_key, amount=1, ttl_seconds=lockout_ttl, is_security_critical=False)
+
+    if attempts >= max_attempts:
+        locked_until = now + lockout_ttl
+        cache.setex(lockout_key, lockout_ttl, {
+            'attempts': attempts,
+            'locked_until': locked_until
+        }, is_security_critical=False)
+        return True, attempts
+
+    return False, attempts
 
 
 def is_login_locked(identifier: str) -> bool:
-    """Check if the given identifier is currently locked out."""
+    """Check if the given identifier is currently locked out across distributed nodes."""
     now = time.time()
-    with _lock:
-        entry = _login_attempt_counters.get(identifier)
-        if not entry:
-            return False
-        if entry.get('locked_until') and now < entry['locked_until']:
+    lockout_key = f"lockout:{identifier}"
+    lockout_entry = cache.get(lockout_key, is_security_critical=False)
+    if not lockout_entry:
+        return False
+    if isinstance(lockout_entry, dict):
+        locked_until = lockout_entry.get('locked_until')
+        if locked_until and now < locked_until:
             return True
-        if entry.get('locked_until') and now >= entry['locked_until']:
-            _login_attempt_counters.pop(identifier, None)
+        if locked_until and now >= locked_until:
+            cache.delete(lockout_key)
+            cache.delete(f"login_attempts:{identifier}")
     return False
 
 
 def clear_login_lockout(identifier: str):
-    """Clear the lockout for an identifier after successful authentication."""
-    with _lock:
-        _login_attempt_counters.pop(identifier, None)
+    """Clear the distributed lockout for an identifier after successful authentication."""
+    cache.delete(f"login_attempts:{identifier}", f"lockout:{identifier}")
 
 
 def get_lockout_info(identifier: str) -> dict:
-    """Return lockout details for the given identifier.
+    """Return lockout details for the given identifier across distributed nodes.
     Returns a dict with keys: is_locked (bool), remaining_seconds (int), locked_until_epoch (float|None).
     """
     now = time.time()
-    with _lock:
-        entry = _login_attempt_counters.get(identifier)
-        if not entry:
-            return {'is_locked': False, 'remaining_seconds': 0, 'locked_until_epoch': None}
-        locked_until = entry.get('locked_until')
-        if locked_until and now < locked_until:
-            return {
-                'is_locked': True,
-                'remaining_seconds': int(locked_until - now),
-                'locked_until_epoch': locked_until
-            }
-        if locked_until and now >= locked_until:
-            _login_attempt_counters.pop(identifier, None)
+    lockout_key = f"lockout:{identifier}"
+    lockout_entry = cache.get(lockout_key, is_security_critical=False)
+    if not lockout_entry or not isinstance(lockout_entry, dict):
+        return {'is_locked': False, 'remaining_seconds': 0, 'locked_until_epoch': None}
+
+    locked_until = lockout_entry.get('locked_until')
+    if locked_until and now < locked_until:
+        return {
+            'is_locked': True,
+            'remaining_seconds': max(1, int(locked_until - now)),
+            'locked_until_epoch': locked_until
+        }
+    if locked_until and now >= locked_until:
+        cache.delete(lockout_key)
+        cache.delete(f"login_attempts:{identifier}")
     return {'is_locked': False, 'remaining_seconds': 0, 'locked_until_epoch': None}
 
 

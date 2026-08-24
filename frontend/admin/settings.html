@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
     <link rel="stylesheet" href="/assets/css/compliance-enterprise.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -4218,10 +4216,8 @@ console.log(data);
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
-    <script src="/assets/js/platform-settings.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
+    <script src="/assets/dist/platform-settings.db365a31.min.js"></script>
     <script>
     const settingsManager = {
         isDirty: false,
@@ -6327,7 +6323,7 @@ ET`;
     </div>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="/assets/js/compliance-enterprise.js"></script>
+    <script src="/assets/dist/compliance-enterprise.00805cc2.min.js"></script>
     <script>
         let currentPlanPrice = 7999;
         let activeGateways = {};
@@ -6771,32 +6767,35 @@ ET`;
         }
 
         async function submitOfflineProof() {
-            const txnId = document.getElementById('proofTxnId')?.value || '';
+            const txnId = (document.getElementById('proofTxnId')?.value || '').trim();
             const fileInput = document.getElementById('proofFile');
-            const notes = document.getElementById('proofNotes')?.value || '';
+            const notes = (document.getElementById('proofNotes')?.value || '').trim();
             const planRadio = document.querySelector('input[name="planSelect"]:checked');
-            const plan = (planRadio && planRadio.value) ? planRadio.value : (selectedPlanObj ? (selectedPlanObj.name || selectedPlanObj.plan_name) : '');
-
+            let plan = (planRadio && planRadio.value) ? planRadio.value : (selectedPlanObj ? (selectedPlanObj.name || selectedPlanObj.plan_name) : '');
             if (!plan) {
-                alert('Please select a plan before submitting payment proof.');
-                return;
+                plan = document.getElementById('summaryPlan')?.innerText?.trim() || 'Professional';
             }
-            if (!txnId || (!txnId.strip?.() && !txnId.trim())) {
-                alert('Please enter your Transaction ID / UTR Number.');
+
+            if (!txnId) {
+                if (typeof QCMS !== 'undefined' && QCMS.toast) QCMS.toast('Please enter your Transaction ID / UTR Number.', 'warning');
+                else alert('Please enter your Transaction ID / UTR Number.');
                 return;
             }
             if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Please upload your payment screenshot/receipt image.');
+                if (typeof QCMS !== 'undefined' && QCMS.toast) QCMS.toast('Please upload your payment screenshot/receipt image.', 'warning');
+                else alert('Please upload your payment screenshot/receipt image.');
                 return;
             }
 
             const btn = document.getElementById('btnSubmitProof');
-            btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="loader-2" class="spinner me-1"></i>Submitting...';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader-2" class="spinner me-1"></i>Submitting...';
+            }
 
             const formData = new FormData();
             formData.append('plan_name', plan);
-            formData.append('transaction_id', txnId.trim());
+            formData.append('transaction_id', txnId);
             formData.append('notes', notes);
             formData.append('file', fileInput.files[0]);
 
@@ -6804,6 +6803,7 @@ ET`;
                 const token = (window.api && window.api.token) || sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
                 const currentOrgId = sessionStorage.getItem('current_org_id') || localStorage.getItem('current_org_id') || '';
                 if (currentOrgId) formData.append('org_id', currentOrgId);
+                
                 const res = await fetch('/api/billing/offline-payment/submit', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -6814,10 +6814,7 @@ ET`;
                     data = await res.json();
                 } catch (_) {}
 
-                btn.disabled = false;
-                btn.innerHTML = 'Submit Proof';
-
-                if (res.ok && data.status === 'success') {
+                if (res.ok && (data.status === 'success' || data.message)) {
                     const successMsg = data.message || 'Your payment reference has been submitted successfully! Your plan will be activated within 24 hours after verification.';
                     if (typeof QCMS !== 'undefined' && QCMS.toast) {
                         QCMS.toast(successMsg, 'success');
@@ -6826,19 +6823,18 @@ ET`;
                     }
                     const modalEl = document.getElementById('checkoutModal');
                     if (modalEl) {
-                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
                         if (modal) modal.hide();
                     }
-                    fetchOfflinePaymentStatus();
+                    if (typeof fetchOfflinePaymentStatus === 'function') {
+                        fetchOfflinePaymentStatus();
+                    }
                 } else {
                     const errorMsg = data.message || data.error || (res.statusText ? `Request failed (${res.status}): ${res.statusText}` : 'Submission failed. Please verify your details.');
                     if (typeof QCMS !== 'undefined' && QCMS.toast) {
                         QCMS.toast(errorMsg, 'error');
                     } else {
                         alert(errorMsg);
-                    }
-                    if (data.redirect) {
-                        setTimeout(() => { window.location.href = data.redirect; }, 2500);
                     }
                 }
             } catch (err) {
@@ -6848,8 +6844,11 @@ ET`;
                 } else {
                     alert('Error submitting payment proof: ' + errMsg);
                 }
-                btn.disabled = false;
-                btn.innerHTML = 'Submit Proof';
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Submit Proof';
+                }
             }
         }
         
@@ -7113,6 +7112,6 @@ ET`;
             }
         }
     </script>
-    <script src="/assets/js/document-branding-manager.js"></script>
+    <script src="/assets/dist/document-branding-manager.39b3ff56.min.js"></script>
 </body>
 </html>

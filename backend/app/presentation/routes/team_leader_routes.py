@@ -8,7 +8,7 @@ from app.infrastructure.database.models.models import (
 )
 from app import db as root_db
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 
 team_leader_bp = Blueprint('team_leader', __name__)
@@ -29,7 +29,7 @@ def team_leader_or_admin_required(f):
 
 def check_project_access(user_id, project_id):
     """Reusable: checks if user is creator or member of the project."""
-    project = Project.query.get(project_id)
+    project = db.session.get(Project, project_id)
     if not project:
         return False
     if str(project.creator_id) == str(user_id):
@@ -58,7 +58,7 @@ def get_stats():
     
     completed_statuses = {'Closed', 'Completed', 'Stage 8 Approved', 'Archived'}
     inactive_statuses = {'Rejected', 'Cancelled', 'On Hold'}
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    seven_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
 
     completed_count = sum(
         1 for p in projects 
@@ -96,6 +96,8 @@ def get_stats():
             Project.current_stage.in_([2, 5, 7])
         ).count()
     
+    rejected_count = sum(1 for p in projects if p.status in {'Rejected', 'Stage 1 Rejected', 'Cancelled'})
+
     return jsonify({
         "total_projects": len(projects),
         "active_projects": active_count,
@@ -103,7 +105,8 @@ def get_stats():
         "queue_count": pending_validations,
         "completed_projects": completed_count,
         "stalled_projects": inactive_count,
-        "inactive_projects": inactive_count
+        "inactive_projects": inactive_count,
+        "rejected_projects": rejected_count
     })
 
 # ============================
@@ -113,7 +116,7 @@ def get_stats():
 @team_leader_or_admin_required
 def get_department_members():
     """Returns users assigned to projects led by this team leader (My Team Status)."""
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
 
     page = request.args.get('page', type=int)
     per_page = request.args.get('per_page', default=10, type=int)
@@ -230,7 +233,7 @@ def list_department_projects():
 @team_leader_bp.route('/projects/<int:project_id>', methods=['GET'])
 @team_leader_or_admin_required
 def get_project_details(project_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     project = Project.query.get_or_404(project_id)
     
     if project.org_id != user.org_id:
@@ -280,7 +283,7 @@ def get_project_details(project_id):
 @team_leader_bp.route('/queue', methods=['GET'])
 @team_leader_or_admin_required
 def get_queue():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     if user.role.name == 'Admin':
         queue = Project.query.filter(
             Project.org_id == user.org_id,
@@ -332,7 +335,7 @@ def upload_evidence():
 @team_leader_or_admin_required
 def get_team_workload():
     import math
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     
     # Read pagination parameters
     page = request.args.get('page', 1, type=int)

@@ -3,7 +3,7 @@ import json
 import base64
 import hmac
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func, or_, and_, text
@@ -52,7 +52,7 @@ PLAN_CATALOGUE = {
 
 def _get_current_user():
     user_id = get_jwt_identity()
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
 
 def _require_role(user, allowed_capabilities):
     if not user:
@@ -127,7 +127,7 @@ def get_license_stats():
     if err:
         return err
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     query = Organization.query.filter(Organization.is_deleted == False)
 
     total = query.count()
@@ -218,7 +218,7 @@ def list_licenses():
             target_plans.update(['Trial', 'Trialing', 'Default Trial Plan'])
         query = query.filter(db.or_(*[Organization.subscription_plan.ilike(p) for p in target_plans]))
         
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if expiry_window == '7d':
         query = query.filter(Organization.license_expiry_date >= now, Organization.license_expiry_date <= now + timedelta(days=7))
     elif expiry_window == '30d':
@@ -295,7 +295,7 @@ def get_license_details(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     
     active_users = len(org.users)
     active_projects = len(org.projects)
@@ -368,14 +368,14 @@ def create_license():
     if not org_id:
         return jsonify({'error': 'Organization ID is required'}), 422
         
-    org = Organization.query.get(org_id)
+    org = db.session.get(Organization, org_id)
     if not org:
         return jsonify({'error': 'Organization not found'}), 404
 
-    if org.subscription_status == 'Active' and org.license_expiry_date and org.license_expiry_date > datetime.utcnow():
+    if org.subscription_status == 'Active' and org.license_expiry_date and org.license_expiry_date > datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({'error': 'Organization already has a valid active license'}), 409
 
-    start_date = datetime.utcnow()
+    start_date = datetime.now(timezone.utc).replace(tzinfo=None)
     
     expiry_date = start_date + timedelta(days=365)
     if license_type == 'Lifetime':
@@ -426,7 +426,7 @@ def update_license(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     data = request.get_json() or {}
 
     old_val = {
@@ -469,7 +469,7 @@ def activate_license(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     old_status = org.subscription_status
     
     org.subscription_status = 'Active'
@@ -486,7 +486,7 @@ def suspend_license(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     data = request.get_json() or {}
     reason = data.get('reason', 'Administrative suspension')
     
@@ -505,7 +505,7 @@ def resume_license(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     old_status = org.subscription_status
     
     org.subscription_status = 'Active'
@@ -522,9 +522,9 @@ def renew_license(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     current_expiry = org.license_expiry_date or now
     if current_expiry < now:
         current_expiry = now
@@ -554,11 +554,11 @@ def extend_license(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     data = request.get_json() or {}
     days = int(data.get('days', 30))
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     current_expiry = org.license_expiry_date or now
     new_expiry = current_expiry + timedelta(days=days)
     old_expiry = org.license_expiry_date
@@ -584,7 +584,7 @@ def revoke_license(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     old_status = org.subscription_status
     
     org.subscription_status = 'Revoked'
@@ -601,7 +601,7 @@ def regenerate_key(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     old_key = org.license_number
     
     new_key = _generate_key()
@@ -623,7 +623,7 @@ def download_license_file(org_id):
     if err:
         return err
 
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     if not org.license_number:
         return jsonify({'error': 'Organization has no license key generated'}), 400
 
@@ -637,7 +637,7 @@ def download_license_file(org_id):
         "storage_limit_mb": org.storage_limit_mb,
         "enabled_modules": org.enabled_modules or [],
         "expiry_date": org.license_expiry_date.isoformat() if org.license_expiry_date else None,
-        "issued_at": datetime.utcnow().isoformat()
+        "issued_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     }
     
     payload_str = json.dumps(payload, sort_keys=True)

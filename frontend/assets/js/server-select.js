@@ -96,7 +96,7 @@ class ServerSelect {
         if (resultsEl) resultsEl.innerHTML = `<div class="text-xs text-muted text-center py-2"><span class="spinner-border spinner-border-sm me-1"></span>Loading...</div>`;
 
         try {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            const token = window.api ? window.api.token : null;
             const headers = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 

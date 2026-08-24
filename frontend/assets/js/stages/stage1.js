@@ -251,7 +251,7 @@ const Stage1 = {
                             </button>
                         </div>
                         <div id="milestonesContainer">
-                            <div class="milestone-row mb-1"><small class="ds-label ds-tooltip-trigger" title="Stage / Milestone: Name of QC Circle Stage (Stages 1 to 8)">Stage / Milestone</small><small class="ds-label ds-tooltip-trigger" title="Planned Date: Target completion date for the stage">Planned Date</small><span></span></div>
+                            <div class="milestone-row mb-1" style="display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;"><small class="ds-label ds-tooltip-trigger" title="Stage / Milestone: Name of QC Circle Stage (Stages 1 to 8)">Stage / Milestone</small><small class="ds-label ds-tooltip-trigger" title="Planned Date: Target completion date for the stage">Planned Date</small><span style="width:32px;"></span></div>
                         </div>
                     </div>
                 </div>

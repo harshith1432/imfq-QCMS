@@ -33,8 +33,9 @@ backend/cleanup_log.txt
 backend/*.pyc
 migrations/
 
-.vercel
-.env*
 !.env.example
 !backend/.env.example
 scratch/
+node_modules/
+frontend/node_modules/
+dist/

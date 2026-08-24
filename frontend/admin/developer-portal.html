@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- App JS Utilities -->
-    <script src="/assets/js/api.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script src="/assets/js/qcms-common.js"></script>
 
     <style>
@@ -1725,6 +1725,15 @@ export function ImportIdeaButton({ apiKey }) {
                 onScroll();
             }
         }
+
+        window.copyCode = function(btn) {
+            const container = btn.closest('.code-block-container');
+            const code = (container ? container.querySelector('pre')?.innerText : null) || btn.parentElement.innerText;
+            navigator.clipboard.writeText(code.trim());
+            if (window.QCMS && QCMS.toast) {
+                QCMS.toast('Code copied!', 'success');
+            }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             initLangTabs();

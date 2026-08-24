@@ -1,7 +1,12 @@
+from flask import jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app import db
+from app.infrastructure.database.models.models import User
+
 @dashboard_bp.route('/activity', methods=['GET'])
 @jwt_required()
 def get_dashboard_activity():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     from app.infrastructure.database.models.models import AuditLog, Project
     
     query = AuditLog.query.join(Project, AuditLog.project_id == Project.id).filter(AuditLog.org_id == user.org_id)

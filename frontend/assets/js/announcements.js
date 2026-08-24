@@ -492,7 +492,7 @@ const AnnouncementsModule = {
                         </tbody>
                     </table>
                 </div>
-                <div class="d-flex align-items-center justify-content-between p-3 border-top" style="border-color:var(--ds-border-color)!important;" id="annRegistryPagination">
+                <div id="annRegistryPagination" class="w-100">
                     <!-- Dynamic pagination footer -->
                 </div>
             </div>
@@ -575,14 +575,17 @@ const AnnouncementsModule = {
             `).join('') || '<tr><td colspan="10" class="py-4 text-secondary"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">No broadcasts recorded.</div></td></tr>';
 
             const pagination = document.getElementById('annRegistryPagination');
-            if (pagination && meta) {
-                pagination.innerHTML = `
-                    <div class="text-xs text-secondary">Showing page ${meta.page} of ${meta.pages} (${meta.total} items)</div>
-                    <div class="h-stack gap-2">
-                        <button class="ds-btn ds-btn-outline ds-btn-sm" ${meta.page === 1 ? 'disabled' : ''} onclick="AnnouncementsModule.setPage(${meta.page - 1})">Prev</button>
-                        <button class="ds-btn ds-btn-outline ds-btn-sm" ${meta.page === meta.pages ? 'disabled' : ''} onclick="AnnouncementsModule.setPage(${meta.page + 1})">Next</button>
-                    </div>
-                `;
+            if (pagination && meta && typeof window.createStandardPagination === 'function') {
+                window.createStandardPagination({
+                    containerId: 'annRegistryPagination',
+                    entityName: 'broadcasts',
+                    totalItems: meta.total || 0,
+                    currentPage: meta.page || 1,
+                    pageSize: meta.per_page || 10,
+                    pageSizeOptions: [5, 10, 25, 50, 100],
+                    onPageChange: (p) => { AnnouncementsModule.setPage(p); },
+                    onPageSizeChange: (sz) => { AnnouncementsModule.perPage = sz; AnnouncementsModule.setPage(1); }
+                });
             }
 
             if (window.lucide) lucide.createIcons();

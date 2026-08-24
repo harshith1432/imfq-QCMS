@@ -2,16 +2,14 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Custom Floating Tooltip for Ref Number */
@@ -108,6 +106,37 @@
             border: 1px solid var(--ds-border-color);
             border-radius: var(--ds-radius-lg);
             padding: var(--ds-space-6);
+        }
+
+        @media (max-width: 768px) {
+            .project-item {
+                padding: 12px 14px;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .project-item-info {
+                max-width: 60%;
+            }
+            .project-name {
+                font-size: 0.82rem;
+                line-height: 1.25;
+            }
+            .project-item-meta {
+                margin-left: auto;
+            }
+            .workstation-preview {
+                padding: 12px 10px;
+            }
+            .workstation-details {
+                padding: 14px 12px;
+            }
+            .workstation-details h6 {
+                font-size: 0.7rem !important;
+            }
+            .workstation-details p {
+                font-size: 0.82rem !important;
+                line-height: 1.4 !important;
+            }
         }
 
         /* Kanban Pipeline styling */
@@ -307,7 +336,7 @@
                 <!-- ── TAB 2: TEAM PERFORMANCE CONTENT ── -->
                 <div id="teamTabContent" style="display: none;">
                     <!-- KPI Cards for Team -->
-                    <div class="kpi-grid fade-in section-spacing" id="teamKpiGrid">
+                    <div class="kpi-grid kpi-grid-5 fade-in section-spacing" id="teamKpiGrid">
                         <div class="kpi-card">
                             <div class="skeleton-card skeleton"></div>
                         </div>
@@ -473,7 +502,7 @@
                 <!-- Body -->
                 <div class="modal-body px-4 py-4" style="max-height:75vh;overflow-y:auto;">
                     <form id="initProjectForm">
-                        <!-- ── Section 1: Project Identity ── -->
+                        <!-- ?? Section 1: Project Identity ?? -->
                         <div class="mb-4">
                             <div class="d-flex align-items-center gap-2 mb-3">
                                 <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
@@ -481,7 +510,7 @@
                                 <div style="flex:1;height:1px;background:var(--ds-border-color);"></div>
                             </div>
                             <div class="row g-3">
-                                <div class="col-md-7">
+                                <div class="col-md-6">
                                     <div class="ds-field">
                                         <label class="ds-label"><i data-lucide="type"></i> Project Title *</label>
                                         <input type="text" class="ds-input" id="projTitle" placeholder="e.g. Reduce Assembly Line Defects by 60%" required>
@@ -498,7 +527,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-3">
                                     <div class="ds-field">
                                         <label class="ds-label d-flex align-items-center justify-content-between mb-1">
                                             <span class="d-flex align-items-center gap-1"><i data-lucide="hash"></i> Ref. Number</span>
@@ -511,9 +540,9 @@
                                                     </div>
                                                     <div style="font-size: 10.5px; color: #94a3b8; line-height: 1.5;">
                                                         <strong class="text-white">Examples:</strong><br/>
-                                                        • <span class="text-info font-monospace">Idea Bank:</span> IDEA-2026-042 / KZ-102<br/>
-                                                        • <span class="text-warning font-monospace">Audit Log:</span> AUD-Q3-09 / NC-881<br/>
-                                                        • <span class="text-danger font-monospace">Ticket:</span> TKT-4050
+                                                        ? <span class="text-info font-monospace">Idea Bank:</span> IDEA-2026-042 / KZ-102<br/>
+                                                        ? <span class="text-warning font-monospace">Audit Log:</span> AUD-Q3-09 / NC-881<br/>
+                                                        ? <span class="text-danger font-monospace">Ticket:</span> TKT-4050
                                                     </div>
                                                 </div>
                                             </div>
@@ -524,7 +553,7 @@
                             </div>
                         </div>
 
-                        <!-- ── Section 2: Location & Source ── -->
+                        <!-- ?? Section 2: Location & Source ?? -->
                         <div class="mb-4">
                             <div class="d-flex align-items-center gap-2 mb-3">
                                 <span style="width:6px;height:6px;border-radius:50%;background:var(--ds-primary);display:inline-block;"></span>
@@ -715,9 +744,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
         const tmDash = {
             projects: [], // Personal workstation projects
@@ -973,11 +1000,11 @@
                                 <h6 class="text-xs fw-bold text-muted text-uppercase mb-3">Action Required</h6>
                                 <p class="text-sm mb-4">You are currently in the <strong>${stageNames[stage]}</strong> phase. Please update the necessary documents and data to progress this project.</p>
                                 
-                                <div class="d-flex gap-2">
-                                    <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-primary">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-primary flex-grow-1 flex-sm-grow-0 d-inline-flex align-items-center justify-content-center">
                                         <i data-lucide="play" style="width:14px;height:14px;"></i> Open Workspace
                                     </a>
-                                    <button class="ds-btn ds-btn-outline" onclick="tmDash.showGuidelines(${stage})">
+                                    <button class="ds-btn ds-btn-outline flex-grow-1 flex-sm-grow-0 d-inline-flex align-items-center justify-content-center" onclick="tmDash.showGuidelines(${stage})">
                                         <i data-lucide="info" style="width:14px;height:14px;"></i> Stage Guidelines
                                     </button>
                                 </div>
@@ -1083,7 +1110,8 @@
                         QCMS.kpiCard('Total Projects Assigned Till Now', stats.total_projects || 0, 'folder-kanban', 'blue', null, "javascript:tmDash.filterBy('all')") +
                         QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'activity', 'green', null, "javascript:tmDash.filterBy('progress')") +
                         QCMS.kpiCard('Total Completed Projects Till Now', stats.completed_projects || 0, 'award', 'cyan', null, "javascript:tmDash.filterBy('completed')") +
-                        QCMS.kpiCard('Inactive Projects', stats.stalled_projects || 0, 'clock', 'red', null, "javascript:tmDash.filterBy('inactive')");
+                        QCMS.kpiCard('Inactive Projects', stats.stalled_projects || stats.inactive_projects || 0, 'clock', 'orange', null, "javascript:tmDash.filterBy('inactive')") +
+                        QCMS.kpiCard('Total Projects Rejected', stats.rejected_projects || 0, 'x-circle', 'red', null, "javascript:tmDash.openRejectedProjectsModal()");
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error('Stats load failed', e);
@@ -1617,6 +1645,10 @@
                 const revSel = document.getElementById('projReviewer');
 
                 if (!deptId) {
+                    deptId = document.getElementById('projDepartmentId')?.value || null;
+                }
+
+                if (!deptId) {
                     if (facSel) facSel.innerHTML = '<option value="" disabled selected>Select department first</option>';
                     if (tlSel) tlSel.innerHTML = '<option value="" disabled selected>Select department first</option>';
                     if (revSel) revSel.innerHTML = '<option value="" disabled selected>Select department first</option>';
@@ -1635,25 +1667,53 @@
                         memUrl += `plant_name=${encodeURIComponent(plantName)}&`;
                     }
 
-                    const [facs, revs, members] = await Promise.all([
+                    const [facsRes, revsRes, memsRes] = await Promise.allSettled([
                         api.get(facUrl),
                         api.get(revUrl),
                         api.get(memUrl)
                     ]);
 
+                    let facs = facsRes.status === 'fulfilled' && Array.isArray(facsRes.value) ? facsRes.value : [];
+                    let revs = revsRes.status === 'fulfilled' && Array.isArray(revsRes.value) ? revsRes.value : [];
+                    let members = memsRes.status === 'fulfilled' && Array.isArray(memsRes.value) ? memsRes.value : [];
+
+                    // Fallback for facilitators
+                    if (!facs || facs.length === 0) {
+                        try {
+                            const fbFacs = await api.get(`/projects/facilitators?${plantName ? 'plant_name=' + encodeURIComponent(plantName) : ''}`);
+                            if (Array.isArray(fbFacs) && fbFacs.length > 0) facs = fbFacs;
+                        } catch(e) {}
+                    }
+
+                    // Fallback for reviewers
+                    if (!revs || revs.length === 0) {
+                        try {
+                            const fbRevs = await api.get(`/projects/potential-members?role=Reviewer&ignore_dept=true${plantName ? '&plant_name=' + encodeURIComponent(plantName) : ''}`);
+                            if (Array.isArray(fbRevs) && fbRevs.length > 0) revs = fbRevs;
+                        } catch(e) {}
+                    }
+
+                    // Fallback for team members
+                    if (!members || members.length === 0) {
+                        try {
+                            const fbMems = await api.get(`/projects/potential-members?role=Team Member&ignore_dept=true${plantName ? '&plant_name=' + encodeURIComponent(plantName) : ''}`);
+                            if (Array.isArray(fbMems) && fbMems.length > 0) members = fbMems;
+                        } catch(e) {}
+                    }
+
                     if (facSel) {
-                        facSel.innerHTML = '<option value="" disabled selected>Select Facilitator</option>' +
-                            (facs || []).map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                        facSel.innerHTML = '<option value="" disabled ' + (facs.length !== 1 ? 'selected' : '') + '>Select Facilitator</option>' +
+                            (facs || []).map(u => `<option value="${u.id}" ${facs.length === 1 ? 'selected' : ''}>${u.full_name || u.username}</option>`).join('');
                     }
 
                     if (tlSel) {
-                        tlSel.innerHTML = '<option value="" disabled selected>Select Team Leader</option>' +
-                            (members || []).map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                        tlSel.innerHTML = '<option value="" disabled ' + (members.length !== 1 ? 'selected' : '') + '>Select Team Leader</option>' +
+                            (members || []).map(u => `<option value="${u.id}" ${members.length === 1 ? 'selected' : ''}>${u.full_name || u.username}</option>`).join('');
                     }
 
                     if (revSel) {
-                        revSel.innerHTML = '<option value="" disabled selected>Select Reviewer</option>' +
-                            (revs || []).map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join('');
+                        revSel.innerHTML = '<option value="" disabled ' + (revs.length !== 1 ? 'selected' : '') + '>Select Reviewer</option>' +
+                            (revs || []).map(u => `<option value="${u.id}" ${revs.length === 1 ? 'selected' : ''}>${u.full_name || u.username}</option>`).join('');
                     }
                 } catch (e) {
                     console.error('Failed to load department members', e);

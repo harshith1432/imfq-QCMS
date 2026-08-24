@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Repository | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .stalled-row { background: rgba(239, 68, 68, 0.05) !important; border-left: 3px solid #ef4444 !important; }
@@ -140,7 +138,8 @@
                                 <select class="ds-input ds-select" id="statusFilter" onchange="repoUI.loadData(1)">
                                     <option value="">All Status</option>
                                     <option value="Active" selected>Active</option>
-                                    <option value="Inactive">Inactive</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Inactive">Inactive / Stalled</option>
                                     <option value="Pending Approval">Pending Approval</option>
                                 </select>
                             </div>
@@ -573,9 +572,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
     function esc(str) {
         if (!str) return '';
@@ -688,6 +685,56 @@
             } else {
                 await this.loadDepartments();
             }
+
+            // Apply URL query parameters if present (e.g. ?status=Active, ?status=Completed)
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const statusParam = urlParams.get('status');
+                const categoryParam = urlParams.get('category');
+                const plantParam = urlParams.get('plant');
+                const deptParam = urlParams.get('dept') || urlParams.get('department_id');
+                const stageParam = urlParams.get('stage');
+                const searchParam = urlParams.get('q') || urlParams.get('search');
+
+                if (statusParam) {
+                    const statusSel = document.getElementById('statusFilter');
+                    if (statusSel) {
+                        if (statusParam.toLowerCase() === 'all') {
+                            statusSel.value = '';
+                        } else if (['stalled', 'stopped', 'inactive'].includes(statusParam.toLowerCase())) {
+                            statusSel.value = 'Inactive';
+                        } else {
+                            const opt = Array.from(statusSel.options).find(o => o.value.toLowerCase() === statusParam.toLowerCase());
+                            if (opt) {
+                                statusSel.value = opt.value;
+                            } else {
+                                statusSel.innerHTML += `<option value="${statusParam}" selected>${statusParam}</option>`;
+                                statusSel.value = statusParam;
+                            }
+                        }
+                    }
+                }
+                if (categoryParam) {
+                    const catSel = document.getElementById('categoryFilter');
+                    if (catSel) catSel.value = categoryParam;
+                }
+                if (plantParam) {
+                    const plantSel = document.getElementById('plantFilter');
+                    if (plantSel) plantSel.value = plantParam;
+                }
+                if (deptParam) {
+                    const deptSel = document.getElementById('deptFilter');
+                    if (deptSel) deptSel.value = deptParam;
+                }
+                if (stageParam) {
+                    const stageSel = document.getElementById('stageFilter');
+                    if (stageSel) stageSel.value = stageParam;
+                }
+                if (searchParam) {
+                    const searchInput = document.getElementById('globalSearchInput');
+                    if (searchInput) searchInput.value = searchParam;
+                }
+            } catch (_) {}
 
             await this.loadData();
             
@@ -2113,16 +2160,22 @@
             const container = document.getElementById('repoStats');
             container.innerHTML = `
                 <div class="col-md-4 col-sm-6">
-                    ${QCMS.kpiCard('Total Projects', stats.total, 'layers', 'blue')}
+                    ${QCMS.kpiCard('Total Projects', stats.total, 'layers', 'blue', null, "javascript:repoUI.filterByStatus('')")}
                 </div>
                 <div class="col-md-4 col-sm-6">
-                    ${QCMS.kpiCard('Active Projects', stats.active, 'activity', 'green')}
+                    ${QCMS.kpiCard('Active Projects', stats.active, 'activity', 'green', null, "javascript:repoUI.filterByStatus('Active')")}
                 </div>
                 <div class="col-md-4 col-sm-6">
-                    ${QCMS.kpiCard('Inactive Projects', stats.stalled, 'clock', 'red')}
+                    ${QCMS.kpiCard('Inactive Projects', stats.stalled, 'clock', 'red', null, "javascript:repoUI.filterByStatus('Inactive')")}
                 </div>
             `;
             if (window.lucide) lucide.createIcons();
+        },
+
+        filterByStatus(status) {
+            const sel = document.getElementById('statusFilter');
+            if (sel) sel.value = status;
+            this.loadData(1);
         },
 
         renderTable() {
@@ -2188,10 +2241,10 @@
                     </td>
                     <td class="text-end" onclick="event.stopPropagation()">
                         <div class="dropdown d-inline-block">
-                            <button class="ds-btn ds-btn-xs ds-btn-ghost p-1 text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More Options">
+                            <button class="ds-btn ds-btn-xs ds-btn-ghost p-1 text-secondary" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" title="More Options">
                                 <i data-lucide="more-vertical" style="width:16px;height:16px;"></i>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-md py-1 border-0" style="min-width: 200px; border-radius: var(--ds-radius-md, 8px);">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg py-1 border" style="min-width: 200px; border-radius: var(--ds-radius-md, 8px); z-index: 100050 !important; background: #ffffff !important; background-color: #ffffff !important; opacity: 1 !important;">
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-xs fw-medium" href="/projects/project-details.html?id=${p.id}">
                                         <i data-lucide="eye" style="width:14px;height:14px;" class="text-primary"></i> View Workspace

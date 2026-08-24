@@ -21,7 +21,7 @@ from app.infrastructure.database.models.models import (
 )
 from functools import wraps
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 
 qc_tools_bp = Blueprint('qc_tools', __name__)
 
@@ -31,7 +31,7 @@ def project_member_required(f):
     def decorated(*args, **kwargs):
         user_id = get_jwt_identity()
         project_id = kwargs.get('project_id')
-        project = Project.query.get(project_id)
+        project = db.session.get(Project, project_id)
         
         user = db.session.get(User, user_id)
         if not user:
@@ -703,7 +703,7 @@ def save_checksheet(project_id):
         entry = QCCheckSheetEntry(
             check_sheet_id=sheet.id,
             row_id=row.id,
-            date=datetime.utcnow().date(),
+            date=datetime.now(timezone.utc).replace(tzinfo=None).date(),
             count=count,
             remarks=d.get("notes")
         )

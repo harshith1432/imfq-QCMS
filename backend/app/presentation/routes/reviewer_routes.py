@@ -10,8 +10,9 @@ from app.infrastructure.database.models.models import (
 from sqlalchemy.orm.attributes import flag_modified
 from app import db
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timezone
 from app.utils.avatar_utils import get_profile_picture_url
+from app.presentation.routes.error_helpers import internal_server_error
 
 STAGE_MODEL_MAP_REV = {
     2: Stage2ObservationDataCollection,
@@ -96,7 +97,7 @@ def reviewer_required(f):
     @jwt_required()
     def decorated_function(*args, **kwargs):
         current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
+        user = db.session.get(User, current_user_id)
         if not user or user.role.name not in ('Reviewer', 'Admin'):
             return jsonify({"msg": "Reviewer/Admin access required"}), 403
         return f(*args, **kwargs)
@@ -106,7 +107,7 @@ def reviewer_required(f):
 @reviewer_bp.route('/stats', methods=['GET'])
 @reviewer_required
 def get_stats():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     
     # Apply dept filter if user has a specific dept
     user_dept_id = None
@@ -155,34 +156,41 @@ def get_stats():
     pending_closure = closure_query.count()
 
     # Average improvement
-    impacts_query = Stage8Standardization.query.join(Project).filter(
-        Project.org_id == user.org_id,
-        Stage8Standardization.baseline_data.isnot(None),
-        Stage8Standardization.final_data.isnot(None)
-    )
-    if not is_admin:
-        if user_dept_id:
-            impacts_query = impacts_query.filter(Project.department_id == user_dept_id)
-        else:
-            impacts_query = impacts_query.filter(Project.reviewer_id == user.id)
-    impacts = impacts_query.all()
-    avg_improvement = 0
-    if impacts:
-        avg_improvement = round(sum([i.kpi_improvement_pct or 0 for i in impacts]) / len(impacts), 1)
+    try:
+        impacts_query = Stage8Standardization.query.join(Project).filter(
+            Project.org_id == user.org_id,
+            Stage8Standardization.kpi_improvement_pct.isnot(None),
+            Stage8Standardization.kpi_improvement_pct > 0
+        )
+        if not is_admin:
+            if user_dept_id:
+                impacts_query = impacts_query.filter(Project.department_id == user_dept_id)
+            else:
+                impacts_query = impacts_query.filter(Project.reviewer_id == user.id)
+        impacts = impacts_query.all()
+        avg_improvement = 0
+        if impacts:
+            avg_improvement = round(sum([i.kpi_improvement_pct or 0 for i in impacts]) / len(impacts), 1)
+    except Exception:
+        avg_improvement = 0
 
     # Approved count for this reviewer
-    approved_count = ProjectReview.query.filter_by(
-        org_id=user.org_id,
-        reviewer_id=user.id, 
-        decision='Approved'
-    ).count()
-
-    # Rejected count for this reviewer
-    rejected_count = ProjectReview.query.filter_by(
-        org_id=user.org_id,
-        reviewer_id=user.id, 
-        decision='Rejected'
-    ).count()
+    try:
+        if is_admin:
+            approved_count = ProjectReview.query.filter_by(org_id=user.org_id, decision='Approved').count()
+            rejected_count = ProjectReview.query.filter_by(org_id=user.org_id, decision='Rejected').count()
+        else:
+            approved_count = ProjectReview.query.filter(
+                ProjectReview.org_id == user.org_id,
+                ProjectReview.decision == 'Approved'
+            ).count()
+            rejected_count = ProjectReview.query.filter(
+                ProjectReview.org_id == user.org_id,
+                ProjectReview.decision == 'Rejected'
+            ).count()
+    except Exception:
+        approved_count = 0
+        rejected_count = 0
 
     return jsonify({
         "pending_count": pending_count,
@@ -196,7 +204,7 @@ def get_stats():
 @reviewer_bp.route('/approved-projects', methods=['GET'])
 @reviewer_required
 def get_approved_projects():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     is_admin = (user.role and user.role.name == 'Admin')
     
     # Fetch all discrete stage approval reviews made by this reviewer (or across org if Admin)
@@ -292,7 +300,7 @@ def get_approved_projects():
 @reviewer_bp.route('/rejected-projects', methods=['GET'])
 @reviewer_required
 def get_rejected_projects():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     is_admin = (user.role and user.role.name == 'Admin')
     
     if is_admin:
@@ -385,7 +393,7 @@ def get_rejected_projects():
 @reviewer_bp.route('/pending', methods=['GET'])
 @reviewer_required
 def get_pending_approvals():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     
     # Apply dept filter if user has a specific dept
     user_dept_id = None
@@ -399,8 +407,8 @@ def get_pending_approvals():
     
     result = []
     for p, stage, workflow in pending_data:
-        dept = Department.query.get(p.department_id) if p.department_id else None
-        tl = User.query.get(p.creator_id) if p.creator_id else None
+        dept = db.session.get(Department, p.department_id) if p.department_id else None
+        tl = db.session.get(User, p.creator_id) if p.creator_id else None
         
         # Build stage_data dict safely from the workflow's JSON data column.
         # For Admin closure review, pull lessons/preventive from SOP instead.
@@ -449,7 +457,7 @@ def get_pending_approvals():
 @reviewer_bp.route('/decision', methods=['POST'])
 @reviewer_required
 def process_decision():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     data = request.json or {}
     
     project_id = data.get('project_id')
@@ -534,8 +542,11 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
         else:
             is_early_closure = False
             if pending_stage == 2:
-                s2 = Stage2ObservationDataCollection.query.filter_by(project_id=project_id).first()
-                sv = s2.standard_verification or {} if s2 else {}
+                wf2 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=2).first()
+                sv = (wf2.data.get('standard_verification') or wf2.data.get('interim_verification') or {}) if (wf2 and isinstance(wf2.data, dict)) else {}
+                if not sv:
+                    s2 = Stage2ObservationDataCollection.query.filter_by(project_id=project_id).first()
+                    sv = s2.interim_verification or {} if s2 else {}
                 deviation_found = sv.get('sop_dev') or sv.get('spec_dev') or sv.get('cp_dev')
                 if not deviation_found:
                     is_early_closure = True
@@ -543,7 +554,7 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
             if is_early_closure:
                 if tracker:
                     tracker.status = 'Completed'
-                    tracker.completed_at = datetime.utcnow()
+                    tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 
                 project.status = 'Pending Closure'
                 
@@ -565,7 +576,7 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
             else:
                 if tracker:
                     tracker.status = 'Completed'
-                    tracker.completed_at = datetime.utcnow()
+                    tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 project.status = f'Stage {pending_stage} Approved'
                 project.current_stage = pending_stage + 1
                 
@@ -573,7 +584,7 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
                 next_tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=pending_stage + 1).first()
                 if next_tracker:
                     next_tracker.status = 'Incomplete'
-                    next_tracker.started_at = datetime.utcnow()
+                    next_tracker.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 action_label = f"Stage {pending_stage} Approved"
             
     elif decision_lower in ('reject', 'rejected'):
@@ -613,7 +624,7 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
         'decision': decision_lower,
         'comments': comments,
         'reviewer': user.username,
-        'reviewed_at': datetime.utcnow().isoformat()
+        'reviewed_at': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     }
     workflow.data = d
     flag_modified(workflow, 'data')
@@ -631,7 +642,7 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
         
     approval.decision = decision
     approval.comments = comments
-    approval.decided_at = datetime.utcnow()
+    approval.decided_at = datetime.now(timezone.utc).replace(tzinfo=None)
     approval.status = 'Completed' if decision == 'Approved' else 'Action Required'
 
     # Safely update legacy stage-specific models if they exist in the DB for backwards compatibility
@@ -648,12 +659,12 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
         elif pending_stage in (1, 3):
             record.facilitator_approved = (decision_lower in ('approve', 'approved'))
             record.facilitator_approver_id = user.id
-            record.facilitator_approved_at = datetime.utcnow()
+            record.facilitator_approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
             record.facilitator_comments = comments
         else:
             record.reviewer_approved = (decision_lower in ('approve', 'approved'))
             record.reviewer_id = user.id
-            record.reviewer_approved_at = datetime.utcnow()
+            record.reviewer_approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
             record.reviewer_comments = comments
 
     # Sync SOP status to match Stage 8 review decision
@@ -676,7 +687,7 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
                 role=user.role.name,
                 action=action_word,
                 comments=comments,
-                signature=f"Signed by {user.full_name or user.username} at {datetime.utcnow().isoformat()}"
+                signature=f"Signed by {user.full_name or user.username} at {datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}"
             )
             db.session.add(sop_approval)
 
@@ -726,7 +737,7 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
 @reviewer_bp.route('/history', methods=['GET'])
 @reviewer_required
 def get_history():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     
     # Only show review history for THIS reviewer's decisions
     query = ProjectReview.query.filter_by(org_id=user.org_id, reviewer_id=user.id)
@@ -737,7 +748,7 @@ def get_history():
     
     result = []
     for h in history:
-        p = Project.query.get(h.project_id)
+        p = db.session.get(Project, h.project_id)
         result.append({
             "project_title": p.title if p else "Deleted Project",
             "decision": h.decision,
@@ -754,7 +765,7 @@ def get_queue_alias():
 @reviewer_bp.route('/decision/<int:project_id>', methods=['POST'])
 @reviewer_required
 def process_decision_alias(project_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     data = request.json or {}
     decision = data.get('decision')
     comments = data.get('comments')
@@ -777,7 +788,7 @@ def log_action(org_id, user_id, action, project_id=None, details=None):
 @reviewer_bp.route('/impact-projects', methods=['GET'])
 @reviewer_required
 def get_impact_review():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     is_admin = user.role.name == 'Admin'
     
     approved_impact_ids = [s.project_id for s in Stage8Standardization.query.filter_by(status='Approved').all()]
@@ -807,21 +818,26 @@ def get_impact_review():
     for p in projects:
         impact = Stage8Standardization.query.filter_by(project_id=p.id).first()
         sop = SOP.query.filter_by(project_id=p.id).first()
-        has_sop = sop is not None
-        has_impact = bool(impact and impact.final_data is not None)
+        wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=8).first()
+        wf_data = wf.data if (wf and wf.data) else {}
 
-        kpi_pct = None
-        if impact and impact.baseline_data and impact.final_data:
+        has_sop = (sop is not None) or bool(impact and impact.sop_standardization) or bool(wf_data.get('sop_standardization'))
+        
+        baseline_data = getattr(impact, 'baseline_data', None) or wf_data.get('baseline') or wf_data.get('baseline_data')
+        final_data = getattr(impact, 'final_data', None) or wf_data.get('final') or wf_data.get('final_data') or wf_data.get('metrics')
+        has_impact = bool(final_data is not None)
+
+        kpi_pct = getattr(impact, 'kpi_improvement_pct', None)
+        if (kpi_pct is None or kpi_pct == 0) and baseline_data and final_data:
             try:
-                baseline_val = float(str(impact.baseline_data.get('value', 0)))
-                final_val = float(str(impact.final_data.get('value', 0)))
-                if baseline_val > 0:
-                    kpi_pct = round(((final_val - baseline_val) / baseline_val) * 100, 2)
-                    if kpi_pct != impact.kpi_improvement_pct:
-                        impact.kpi_improvement_pct = kpi_pct
-                        db.session.commit()
+                b_val = float(str(baseline_data.get('value', 0) if isinstance(baseline_data, dict) else baseline_data))
+                f_val = float(str(final_data.get('value', 0) if isinstance(final_data, dict) else final_data))
+                if b_val > 0:
+                    kpi_pct = round(((f_val - b_val) / b_val) * 100, 2)
             except (ValueError, TypeError, AttributeError):
                 pass
+        if kpi_pct is None:
+            kpi_pct = wf_data.get('kpi_improvement_pct', 0)
 
         # Fetch action_plan from Stage 7
         s7 = Stage7PerformanceVerificationBenefitsRealization.query.filter_by(project_id=p.id).first()
@@ -829,14 +845,14 @@ def get_impact_review():
         result.append({
             "id": p.id,
             "title": p.title,
-            "baseline": impact.baseline_data if impact else None,
-            "final": impact.final_data if impact else None,
-            "kpi_improvement_pct": kpi_pct or (impact.kpi_improvement_pct if impact else 0),
-            "kpi_target": s7.action_plan if s7 else {},
-            "cost_savings": impact.cost_savings if impact else 0,
+            "baseline": baseline_data,
+            "final": final_data,
+            "kpi_improvement_pct": kpi_pct or 0,
+            "kpi_target": s7.action_plan if (s7 and s7.action_plan) else {},
+            "cost_savings": impact.cost_savings if impact else (wf_data.get('cost_savings', 0) or 0),
             "status": p.status,
             "impact_status": impact.status if impact else "Pending",
-            "approved": impact.status == "Approved" if impact else False,
+            "approved": (impact.status == "Approved") if impact else False,
             "has_sop": has_sop,
             "sop_id": sop.id if sop else None,
             "has_impact": has_impact
@@ -846,7 +862,7 @@ def get_impact_review():
 @reviewer_bp.route('/stage8/<int:project_id>/approve-submission', methods=['POST'])
 @reviewer_required
 def approve_stage8_submission(project_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
 
     # Enforce department restriction for Reviewer
@@ -887,8 +903,8 @@ def approve_stage8_submission(project_id):
 @reviewer_bp.route('/impact/<int:project_id>/post-data', methods=['POST'])
 @reviewer_required
 def add_post_data(project_id):
-    user = User.query.get(get_jwt_identity())
-    data = request.get_json()
+    user = db.session.get(User, get_jwt_identity())
+    data = request.get_json() or {}
 
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
 
@@ -904,16 +920,20 @@ def add_post_data(project_id):
         impact = Stage8Standardization(project_id=project_id, org_id=project.org_id)
         db.session.add(impact)
 
+    wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=8).first()
+    if not wf:
+        wf = ProjectWorkflow(project_id=project_id, stage_id=8, org_id=project.org_id, data={})
+        db.session.add(wf)
+    wf_dict = dict(wf.data or {})
+
     metrics = data.get('metrics') or []
     if metrics and isinstance(metrics, list):
-        impact.results_data = metrics
-        impact.benefits_summary = metrics
-        # Set primary metric as first element for backward compatibility
+        wf_dict['metrics'] = metrics
+        wf_dict['benefits_summary'] = metrics
         first_metric = metrics[0]
-        impact.baseline_data = {"label": first_metric.get('label', 'KPI'), "value": first_metric.get('baseline', 0)}
-        impact.final_data = {"label": first_metric.get('label', 'KPI'), "value": first_metric.get('final', 0)}
+        wf_dict['baseline'] = {"label": first_metric.get('label', 'KPI'), "value": first_metric.get('baseline', 0)}
+        wf_dict['final'] = {"label": first_metric.get('label', 'KPI'), "value": first_metric.get('final', 0)}
 
-        # Calculate average improvement percentage across all valid metrics
         pct_sum = 0
         pct_cnt = 0
         for m in metrics:
@@ -928,26 +948,28 @@ def add_post_data(project_id):
                 pass
         if pct_cnt > 0:
             impact.kpi_improvement_pct = round(pct_sum / pct_cnt, 2)
+            wf_dict['kpi_improvement_pct'] = impact.kpi_improvement_pct
     else:
         if 'baseline_data' in data:
-            impact.baseline_data = data['baseline_data']
+            wf_dict['baseline'] = data['baseline_data']
         if 'final_data' in data:
-            impact.final_data = data['final_data']
+            wf_dict['final'] = data['final_data']
+        if 'baseline_data' in data and 'final_data' in data:
+            try:
+                b_val = float(str(data['baseline_data'].get('value', 0) if isinstance(data['baseline_data'], dict) else data['baseline_data']))
+                f_val = float(str(data['final_data'].get('value', 0) if isinstance(data['final_data'], dict) else data['final_data']))
+                if b_val > 0:
+                    impact.kpi_improvement_pct = round(((f_val - b_val) / b_val) * 100, 2)
+                    wf_dict['kpi_improvement_pct'] = impact.kpi_improvement_pct
+            except (ValueError, TypeError, AttributeError):
+                pass
 
     if 'impact_vouchers' in data:
-        impact.impact_vouchers = data['impact_vouchers']
+        wf_dict['impact_vouchers'] = data['impact_vouchers']
 
-    # Auto-calculate KPI improvement if baseline & final set
-    if impact.baseline_data and impact.final_data and not (metrics and isinstance(metrics, list)):
-        try:
-            baseline_val = float(str(impact.baseline_data.get('value', 0)))
-            final_val = float(str(impact.final_data.get('value', 0)))
-            if baseline_val > 0:
-                impact.kpi_improvement_pct = round(((final_val - baseline_val) / baseline_val) * 100, 2)
-        except (ValueError, TypeError, AttributeError):
-            pass
+    wf.data = wf_dict
+    flag_modified(wf, 'data')
 
-    # Automatically mark impact as approved and update project status
     project.status = 'Impact Approved'
     impact.status = 'Approved'
     impact.approved_by = user.id
@@ -959,7 +981,7 @@ def add_post_data(project_id):
 @reviewer_bp.route('/closure-projects', methods=['GET'])
 @reviewer_required
 def get_closure_projects():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     is_admin = user.role.name == 'Admin'
     
     query = Project.query.filter(
@@ -990,18 +1012,25 @@ def get_closure_projects():
 
         if sop:
             sop_status = sop.status
-        elif std and std.sop_details:
+        elif std and (std.sop_standardization or getattr(std, 'sop_details', None)):
+            sop_status = "Uploaded"
+        elif wf_data.get('sop_standardization'):
             sop_status = "Uploaded"
         else:
             sop_status = "Pending"
 
         has_lessons = bool((std and std.lessons_learned) or wf_data.get('lessons_learned'))
-        has_training = bool((std and (std.training_records or std.training_adoption)) or wf_data.get('training_adoption'))
+        has_training = bool(
+            (std and (getattr(std, 'horizontal_deployment', None) or getattr(std, 'training_records', None) or getattr(std, 'training_adoption', None))) 
+            or wf_data.get('training_adoption') 
+            or wf_data.get('training_records')
+            or wf_data.get('horizontal_deployment')
+        )
         result.append({
             "id": p.id,
             "title": p.title,
             "status": p.status,
-            "is_pending_ceo": p.status == 'Pending CEO Review',
+            "is_pending_ceo": p.status in ['Pending CEO Review', 'Pending CEO Closure'],
             "sop_status": sop_status,
             "sop_id": sop.id if sop else None,
             "has_training_records": has_training,
@@ -1014,7 +1043,7 @@ def get_closure_projects():
 @reviewer_bp.route('/closure/<int:project_id>/complete', methods=['POST'])
 @reviewer_required
 def complete_closure(project_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     data = request.get_json() or {}
 
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
@@ -1084,71 +1113,29 @@ def complete_closure(project_id):
             "pending_ceo": True
         }), 200
 
-    # Direct Reviewer Closure: Move project to Closed stage directly
-    project.status = 'Closed'
-    project.end_date = datetime.utcnow().date()
-    
-    # Sign-offs
-    s8.facilitator_validation = True
-    s8.admin_closure = True
-    s8.final_approval = True
-    s8.final_comments = f"Reviewer signed off. Project closed."
-
-    # Mark stage 8 tracker completed
-    tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=8).first()
-    if tracker:
-        tracker.status = 'Completed'
-        tracker.completed_at = datetime.utcnow()
-
-    # Flush session so all changes are visible in db nested transaction
-    db.session.flush()
-
-    # Auto-archive project to repository
-    from app.presentation.routes.repository_routes import auto_archive_project_to_repository
+    # Direct Reviewer Closure via Domain Service
+    from app.domain.services.project_closure_service import ProjectClosureService
     try:
-        auto_archive_project_to_repository(project_id, user.org_id)
-    except Exception as archive_err:
-        print(f"[QCMS Reviewer] Auto-archiving failed: {archive_err}")
-
-    # Notify Facilitator and Team
-    from app.presentation.routes.notification_routes import create_notification
-    
-    notify_ids = set()
-    if project.team_leader_id: notify_ids.add(project.team_leader_id)
-    if project.creator_id: notify_ids.add(project.creator_id)
-    if project.facilitator_id: notify_ids.add(project.facilitator_id)
-    
-    for uid in notify_ids:
-        if uid != user.id:
-            create_notification(
-                user.org_id, uid,
-                "Project Officially Closed",
-                f"Reviewer signed off and closed project '{project.title}'.",
-                f"/projects/project-details.html?id={project_id}",
-                commit=False
-            )
-
-    log_action(project.org_id, user.id, "Stage 8 Closure Signed Off and Closed by Reviewer", project_id, str(data))
-    db.session.commit()
-
-    # Send Automated Project Completion & Congratulatory Report Email to all team participants & Admins
-    try:
-        from app.domain.services.email_notification_engine import EmailNotificationEngine
-        EmailNotificationEngine.trigger_project_completed_notification(project.id)
-    except Exception as email_err:
-        print(f"[QCMS EMAIL] Non-blocking project completed email dispatch error: {email_err}")
-
-    return jsonify({
-        "msg": "Reviewer closure sign-off complete. Project has been officially closed and archived.",
-        "facilitator_validation": True,
-        "closed": True
-    }), 200
+        res = ProjectClosureService.execute_closure(
+            project_id=project_id,
+            user_id=user.id,
+            comments="Reviewer signed off. Project closed.",
+            sign_off_by_role="Reviewer"
+        )
+        return jsonify({
+            "msg": res["message"],
+            "facilitator_validation": True,
+            "closed": True
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return internal_server_error(e, "Failed to complete project closure.")
 
 # --- Reviewer Notes ---
 @reviewer_bp.route('/notes', methods=['POST'])
 @reviewer_required
 def add_note():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     data = request.get_json()
 
     project_id = data.get('project_id')
@@ -1174,4 +1161,3 @@ def add_note():
         "msg": "Note added successfully",
         "id": note.id
     }), 201
-

@@ -7,9 +7,8 @@ const DocIdentityManager = {
 
     async init() {
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/all', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'same-origin'
             });
             const result = await res.json();
 
@@ -138,13 +137,12 @@ const DocIdentityManager = {
         }
 
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/update', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({ section, payload })
             });
 
@@ -175,13 +173,12 @@ const DocIdentityManager = {
         };
 
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/update', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({ section: 'template', payload })
             });
 
@@ -197,13 +194,12 @@ const DocIdentityManager = {
 
     async openLivePreview(type) {
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/preview', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({ type })
             });
 
@@ -226,9 +222,8 @@ const UsageExplorer = {
 
     async init() {
         try {
-            const token = sessionStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/usage-map', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'same-origin'
             });
             const result = await res.json();
 
@@ -302,9 +297,8 @@ const UsageExplorer = {
 
     async showImpact(setting_key) {
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch(`/api/document-identity/impact-analysis?setting_key=${setting_key}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'same-origin'
             });
             const result = await res.json();
 
@@ -323,10 +317,9 @@ const UsageExplorer = {
 
     async rescanCodebase() {
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
             const res = await fetch('/api/document-identity/scan-dependencies', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'same-origin'
             });
             const result = await res.json();
             if (result.status === 'success') {
@@ -338,6 +331,9 @@ const UsageExplorer = {
         }
     }
 };
+
+window.DocIdentityManager = DocIdentityManager;
+window.UsageExplorer = UsageExplorer;
 
 // Auto-initialize when Document Identity or Usage Mapping tab is selected
 document.addEventListener('DOMContentLoaded', () => {

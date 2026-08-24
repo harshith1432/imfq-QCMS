@@ -7,7 +7,7 @@ from app.infrastructure.database.models.models import (
     Module, ModuleDependency, ModuleAssignment, ModulePermission,
     ModuleUsageAnalytics, ModuleAuditLog, User, Organization, SaaSPlan, SaaSPlanModules
 )
-from datetime import datetime
+from datetime import datetime, timezone
 
 modules_bp = Blueprint('modules_routes', __name__)
 
@@ -19,7 +19,7 @@ def _log_module_action(module_id, action, details, admin_name="SuperAdmin"):
         admin_name=admin_name,
         action=action,
         details=details,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
     )
     db.session.add(log)
     try:
@@ -39,7 +39,7 @@ def get_active_features():
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
         if user_id:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
     except Exception:
         pass
 
@@ -576,7 +576,7 @@ def enable_module(module_id):
     # If this module depends on others, they should be Active.
     for dep in m.dependencies:
         if dep.dependency_type == 'Required':
-            target = Module.query.get(dep.dependency_module_id)
+            target = db.session.get(Module, dep.dependency_module_id)
             if not target or target.status != 'Active':
                 return jsonify({
                     "status": "error",
@@ -605,7 +605,7 @@ def disable_module(module_id):
     dependents = ModuleDependency.query.filter_by(dependency_module_id=m.id, dependency_type='Required').all()
     active_dependents = []
     for d in dependents:
-        parent = Module.query.get(d.module_id)
+        parent = db.session.get(Module, d.module_id)
         if parent and parent.status == 'Active':
             active_dependents.append(parent.name)
             
@@ -715,7 +715,7 @@ def duplicate_module(module_id):
     nav_route = f"{m.navigation_route}-copy" if m.navigation_route else None
     
     if Module.query.filter_by(code=code).first():
-        code = f"{code}-{int(datetime.utcnow().timestamp())}"
+        code = f"{code}-{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}"
         
     dup = Module(
         name=name, code=code, description=m.description, category=m.category,

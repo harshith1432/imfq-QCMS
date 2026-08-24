@@ -37,7 +37,6 @@ class SettingUsageScannerService:
         default_templates = [
             ("invoice", "Invoice & Billing Receipt Template", "TAX INVOICE", "Official Subscription Billing Receipt", "Terms: Payment due within 30 days. All taxes calculated as per local regulation."),
             ("qc_story", "QC Story Report Template", "QC STORY PROJECT REPORT", "Quality Control Project Problem Solving Report", "Confidential QC Story document. Unauthorized distribution prohibited."),
-            ("certificate", "Training & SOP Certificate Template", "CERTIFICATE OF COMPLETION", "Official SOP Training & Assessment Certificate", "Certified digital credential issued under ISO 9001/27001 Quality Standards."),
             ("analytics", "Analytics & Executive Report Template", "EXECUTIVE ANALYTICS REPORT", "Platform Usage & Financial Performance Summary", "Strictly Confidential — Executive Leadership Dashboard Summary."),
             ("audit", "Audit & Compliance Report Template", "COMPLIANCE AUDIT REPORT", "ISO & Regulatory Compliance Verification Summary", "Official Quality Audit Document. Validated under ISO 9001:2015 Standards."),
             ("project", "Project Summary Report Template", "PROJECT STATUS SUMMARY", "Detailed Project Milestone & Task Ledger", "Internal project management milestone report."),
@@ -72,13 +71,11 @@ class SettingUsageScannerService:
             ("software_name", "Software Name", "Platform Identity", "Branding Header", "Header Bar & Navigation", "/admin/super-admin.html", "/api/system/settings", "BrandingService", "Web App", "Header Template", "Web", "frontend/admin/super-admin.html"),
             ("software_name", "Software Name", "Billing & Subscriptions", "Invoice PDF", "Tax Invoice Header", "/admin/settings.html", "/api/billing/invoice/download", "InvoiceGenerator", "Invoice", "Invoice Template", "PDF", "backend/app/presentation/routes/billing_routes.py"),
             ("software_name", "Software Name", "QC Story Module", "QC Story PDF", "QC Story Header", "/admin/qc-story.html", "/api/reports/qc-story/export", "QCStoryGenerator", "QC Story Report", "QC Story Template", "PDF", "backend/app/presentation/routes/reports_routes.py"),
-            ("software_name", "Software Name", "Training & SOPs", "Training Certificate", "Certificate Header", "/admin/training.html", "/api/training/certificate", "CertificateGenerator", "Certificate", "Certificate Template", "PDF", "backend/app/presentation/routes/training_routes.py"),
             ("software_name", "Software Name", "Notifications & Email", "Email Service", "Welcome Email Header", "N/A", "/api/users/invite", "EmailService", "Email", "Welcome Email Template", "Email", "backend/app/infrastructure/mailer/email_service.py"),
             ("software_name", "Software Name", "Analytics & Reports", "Excel Exporters", "Excel Metadata Author", "/admin/super-admin.html?view=analytics", "/api/reports/analytics/export", "ReportExporter", "Analytics Report", "Excel Template", "Excel", "backend/app/presentation/routes/reports_routes.py"),
 
             # Company Legal Name
             ("legal_company_name", "Legal Company Name", "Company Info", "Invoice PDF", "Billed From / Issued By", "/admin/settings.html", "/api/billing/invoice/download", "InvoiceGenerator", "Invoice", "Invoice Template", "PDF", "backend/app/presentation/routes/billing_routes.py"),
-            ("legal_company_name", "Legal Company Name", "Training & SOPs", "Training Certificate", "Issuing Authority", "/admin/training.html", "/api/training/certificate", "CertificateGenerator", "Certificate", "Certificate Template", "PDF", "backend/app/presentation/routes/training_routes.py"),
             ("legal_company_name", "Legal Company Name", "Notifications & Email", "Email Footers", "Legal Disclaimer Footer", "N/A", "/api/users/invite", "EmailService", "Email", "Email Footer Template", "Email", "backend/app/infrastructure/mailer/email_service.py"),
             ("legal_company_name", "Legal Company Name", "Compliance & Audit", "Compliance Reports", "ISO Regulatory Disclaimer", "/admin/super-admin.html?view=compliance", "/api/reports/compliance", "ComplianceService", "Compliance Report", "Audit Template", "PDF", "backend/app/presentation/routes/reports_routes.py"),
 

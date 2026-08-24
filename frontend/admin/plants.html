@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plant Locations | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Radio-choice card styles for delete modal */
@@ -123,10 +121,10 @@
                         <h5 class="mb-0 fw-bold">Active Plant Locations</h5>
                         <p class="text-xs ds-text-secondary mb-0">Organizational facilities and operational units</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <input type="text" class="ds-input ds-input-sm" id="plantSearch" placeholder="Search plants..." oninput="plantManager.filterTable()" style="width: 220px;">
-                        <button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap" onclick="plantManager.openAddModal()">
-                            <i data-lucide="plus"></i> Add Plant Location
+                    <div class="d-flex align-items-center flex-wrap gap-2 ms-auto w-100 w-sm-auto justify-content-start justify-content-sm-end">
+                        <input type="text" class="ds-input ds-input-sm flex-grow-1 flex-sm-grow-0" id="plantSearch" placeholder="Search plants..." oninput="plantManager.filterTable()" style="min-width: 140px; width: auto; max-width: 100%;">
+                        <button class="ds-btn ds-btn-primary ds-btn-sm text-nowrap d-flex align-items-center gap-1.5" onclick="plantManager.openAddModal()">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Plant Location
                         </button>
                     </div>
                 </div>
@@ -302,9 +300,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
     const plantManager = {
         allPlants: [],
@@ -682,6 +678,7 @@
             }
         }
     };
+    window.plantManager = plantManager;
 
     document.addEventListener('DOMContentLoaded', () => plantManager.init());
     </script>

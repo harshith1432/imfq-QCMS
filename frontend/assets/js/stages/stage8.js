@@ -129,13 +129,15 @@ const Stage8 = {
                             </button>
                         </div>
 
-                        <div id="s8_stdContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Document Link / Reference</div>
-                                <div class="col-3">Previous Version</div>
-                                <div class="col-2">New Version</div>
-                                <div class="col-2">Update Date</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s8_stdContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4">Document Link / Reference</div>
+                                    <div class="col-3">Previous Version</div>
+                                    <div class="col-2">New Version</div>
+                                    <div class="col-2">Update Date</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -159,13 +161,15 @@ const Stage8 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Training
                             </button>
                         </div>
-                        <div id="s8_trainingContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Target Group</div>
-                                <div class="col-3">Training Date</div>
-                                <div class="col-2">Attendance %</div>
-                                <div class="col-2">Adoption Status</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s8_trainingContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4">Target Group</div>
+                                    <div class="col-3">Training Date</div>
+                                    <div class="col-2">Attendance %</div>
+                                    <div class="col-2">Adoption Status</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -189,13 +193,15 @@ const Stage8 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Deployment
                             </button>
                         </div>
-                        <div id="s8_deployContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Area/Plant</div>
-                                <div class="col-2">Target Date</div>
-                                <div class="col-2">Status</div>
-                                <div class="col-3">Owner</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s8_deployContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4">Area/Plant</div>
+                                    <div class="col-2">Target Date</div>
+                                    <div class="col-2">Status</div>
+                                    <div class="col-3">Owner</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -219,12 +225,14 @@ const Stage8 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Lesson
                             </button>
                         </div>
-                        <div id="s8_lessonContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Category</div>
-                                <div class="col-4">Lesson</div>
-                                <div class="col-4">Future Recommendation</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s8_lessonContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3">Category</div>
+                                    <div class="col-4">Lesson</div>
+                                    <div class="col-4">Future Recommendation</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -248,13 +256,15 @@ const Stage8 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Benefit
                             </button>
                         </div>
-                        <div id="s8_benefitContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Metric</div>
-                                <div class="col-2">Baseline</div>
-                                <div class="col-2">Final</div>
-                                <div class="col-4">Total Savings/Benefit</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s8_benefitContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3">Metric</div>
+                                    <div class="col-2">Baseline</div>
+                                    <div class="col-2">Final</div>
+                                    <div class="col-4">Total Savings/Benefit</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -278,12 +288,14 @@ const Stage8 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Opportunity
                             </button>
                         </div>
-                        <div id="s8_oppContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-5">Identified Problem</div>
-                                <div class="col-2">Priority</div>
-                                <div class="col-4">Next Steps</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s8_oppContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-5">Identified Problem</div>
+                                    <div class="col-2">Priority</div>
+                                    <div class="col-4">Next Steps</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -307,12 +319,14 @@ const Stage8 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Asset
                             </button>
                         </div>
-                        <div id="s8_repoContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3">Keyword/Tag</div>
-                                <div class="col-4">Summary</div>
-                                <div class="col-4">Link to Asset</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s8_repoContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3">Keyword/Tag</div>
+                                    <div class="col-4">Summary</div>
+                                    <div class="col-4">Link to Asset</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -336,11 +350,13 @@ const Stage8 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Member
                             </button>
                         </div>
-                        <div id="s8_teamContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">Member</div>
-                                <div class="col-7">Member Contribution</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s8_teamContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4">Member</div>
+                                    <div class="col-7">Member Contribution</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -790,6 +806,14 @@ const Stage8 = {
         const i = c.querySelectorAll('.w-step-row').length;
         const r = document.createElement('div');
         r.className = 'w-step-row p-3 mb-2 border rounded dyn-step-row';
+
+        const cleanVal = (v) => (v === undefined || v === null || v === 'undefined' || v === 'null') ? '' : v;
+        const stepTitle = cleanVal(d.step_title || d.title || d.name);
+        const instructions = cleanVal(d.instructions || d.instruction || d.desc || d.description);
+        const safetyNotes = cleanVal(d.safety_notes || d.safety);
+        const qualityCheckpoints = cleanVal(d.quality_checkpoints || d.quality);
+        const esc = (s) => (window.QCMS && QCMS.escapeHtml) ? QCMS.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
+
         r.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="fw-bold text-xs" style="color:var(--ds-text-tertiary);">Step ${i + 1}</span>
@@ -799,20 +823,20 @@ const Stage8 = {
             </div>
             <div class="row g-2">
                 <div class="col-md-12">
-                    <label class="ds-label text-xs">Step Title *</label>
-                    <input type="text" class="ds-input w-step-title" required placeholder="e.g. Set calibration pressure to 5.5 bar" value="${d.step_title || ''}">
+                    <label class="ds-label text-xs">Step Title <span class="text-danger" style="color: #ef4444 !important; font-weight: bold;">*</span></label>
+                    <input type="text" class="ds-input w-step-title" required placeholder="e.g. Set calibration pressure to 5.5 bar" value="${esc(stepTitle)}">
                 </div>
                 <div class="col-md-12">
-                    <label class="ds-label text-xs">Instructions *</label>
-                    <textarea class="ds-input ds-textarea w-step-instructions" rows="2" required placeholder="e.g. 1. Access pneumatic control panel. 2. Verify pressure gauge reads 5.5 bar. 3. Adjust regulator knob if reading is outside 5.3-5.7 bar.">${d.instructions || ''}</textarea>
+                    <label class="ds-label text-xs">Instructions <span class="text-danger" style="color: #ef4444 !important; font-weight: bold;">*</span></label>
+                    <textarea class="ds-input ds-textarea w-step-instructions" rows="2" required placeholder="e.g. 1. Access pneumatic control panel. 2. Verify pressure gauge reads 5.5 bar. 3. Adjust regulator knob if reading is outside 5.3-5.7 bar.">${esc(instructions)}</textarea>
                 </div>
                 <div class="col-md-6">
                     <label class="ds-label text-xs">Safety Notes</label>
-                    <input type="text" class="ds-input w-step-safety" placeholder="e.g. Wear safety glasses; isolate electric power before adjustment" value="${d.safety_notes || ''}" required>
+                    <input type="text" class="ds-input w-step-safety" placeholder="e.g. Wear safety glasses; isolate electric power before adjustment" value="${esc(safetyNotes)}">
                 </div>
                 <div class="col-md-6">
                     <label class="ds-label text-xs">Quality Checkpoints</label>
-                    <input type="text" class="ds-input w-step-quality" placeholder="e.g. Pressure tolerance: 5.5 ±0.2 bar; check crimp jaws for alignment" value="${d.quality_checkpoints || ''}" required>
+                    <input type="text" class="ds-input w-step-quality" placeholder="e.g. Pressure tolerance: 5.5 ±0.2 bar; check crimp jaws for alignment" value="${esc(qualityCheckpoints)}">
                 </div>
             </div>
         `;

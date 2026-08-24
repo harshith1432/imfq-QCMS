@@ -1,6 +1,6 @@
 from app.infrastructure.database.models.models import Organization, Project, User, Plant
 from app import db
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 PLAN_LIMITS = {
     'Trial': {
@@ -99,7 +99,7 @@ class SubscriptionManager:
         from app.infrastructure.database.models.models import Organization, Subscription, SaaSPlan, SaaSPlanLimits
         from sqlalchemy import func
 
-        org = Organization.query.get(org_id)
+        org = db.session.get(Organization, org_id)
         if not org:
             return {
                 'plan_name': 'Trial',
@@ -115,24 +115,44 @@ class SubscriptionManager:
 
         # 1. Check active subscription record
         sub = Subscription.query.filter_by(org_id=org_id).order_by(Subscription.id.desc()).first()
-        if sub and hasattr(sub, 'plan_id') and sub.plan_id:
-            plan_obj = SaaSPlan.query.get(sub.plan_id)
+        if sub and getattr(sub, 'plan_name', None) and sub.plan_name.strip():
+            sub_pname = sub.plan_name.strip().lower()
+            plan_obj = SaaSPlan.query.filter(
+                (func.lower(func.trim(SaaSPlan.name)) == sub_pname) |
+                (func.lower(func.trim(SaaSPlan.code)) == sub_pname)
+            ).first()
+            if not plan_obj:
+                plan_obj = SaaSPlan.query.filter(
+                    func.lower(func.trim(SaaSPlan.plan_type)) == sub_pname
+                ).first()
 
         # 2. Prioritize default trial plan if organization is on trial
         if not plan_obj and is_trial_status:
-            plan_obj = SaaSPlan.query.filter(
-                (SaaSPlan.is_default_trial == True) |
-                (func.lower(func.trim(SaaSPlan.plan_type)) == 'trial') |
-                (func.lower(func.trim(SaaSPlan.name)) == 'trial')
-            ).first()
+            if raw_plan_name and raw_plan_name.lower() not in ['trial', 't1']:
+                plan_obj = SaaSPlan.query.filter(
+                    (func.lower(func.trim(SaaSPlan.name)) == raw_plan_name.lower()) |
+                    (func.lower(func.trim(SaaSPlan.code)) == raw_plan_name.lower())
+                ).first()
+            if not plan_obj:
+                plan_obj = SaaSPlan.query.filter(
+                    (SaaSPlan.is_default_trial == True) |
+                    (func.lower(func.trim(SaaSPlan.name)) == 'trial') |
+                    (func.lower(func.trim(SaaSPlan.code)) == 'trial')
+                ).first()
+                if not plan_obj:
+                    plan_obj = SaaSPlan.query.filter(func.lower(func.trim(SaaSPlan.plan_type)) == 'trial').first()
 
-        # 3. Query SaaSPlan by stripped name / code / plan_type
+        # 3. Query SaaSPlan by stripped name / code FIRST
         if not plan_obj and raw_plan_name:
             plan_obj = SaaSPlan.query.filter(
                 (func.lower(func.trim(SaaSPlan.name)) == raw_plan_name.lower()) |
-                (func.lower(func.trim(SaaSPlan.plan_type)) == raw_plan_name.lower()) |
                 (func.lower(func.trim(SaaSPlan.code)) == raw_plan_name.lower())
             ).first()
+            # Fallback to plan_type only if no exact name/code match found
+            if not plan_obj:
+                plan_obj = SaaSPlan.query.filter(
+                    func.lower(func.trim(SaaSPlan.plan_type)) == raw_plan_name.lower()
+                ).first()
 
         max_projects = None
         max_users = None
@@ -183,9 +203,12 @@ class SubscriptionManager:
             from sqlalchemy import func
             db_plan = SaaSPlan.query.filter(
                 (func.lower(func.trim(SaaSPlan.name)) == clean_name.lower()) |
-                (func.lower(func.trim(SaaSPlan.plan_type)) == clean_name.lower()) |
                 (func.lower(func.trim(SaaSPlan.code)) == clean_name.lower())
             ).first()
+            if not db_plan:
+                db_plan = SaaSPlan.query.filter(
+                    func.lower(func.trim(SaaSPlan.plan_type)) == clean_name.lower()
+                ).first()
             if db_plan and db_plan.limits:
                 base = PLAN_LIMITS.get(db_plan.plan_type, PLAN_LIMITS.get('Trial', PLAN_LIMITS['Starter'])).copy()
                 base['max_users'] = db_plan.limits.max_users
@@ -251,7 +274,7 @@ class SubscriptionManager:
 
     @staticmethod
     def has_feature(org_id, feature_name):
-        org = Organization.query.get(org_id)
+        org = db.session.get(Organization, org_id)
         if not org:
             return False
         
@@ -262,7 +285,7 @@ class SubscriptionManager:
             return False
             
         # Check trial expiry
-        if org.subscription_status == 'Trialing' and org.trial_ends_at and org.trial_ends_at < datetime.utcnow():
+        if org.subscription_status == 'Trialing' and org.trial_ends_at and org.trial_ends_at < datetime.now(timezone.utc).replace(tzinfo=None):
             # Update status to Expired if we detected it here
             org.subscription_status = 'Expired'
             db.session.commit()
@@ -321,7 +344,6 @@ class SubscriptionManager:
 
 
 import math
-from datetime import timezone
 
 def make_naive_utc(dt):
     if dt is None:
@@ -342,7 +364,7 @@ def get_org_effective_expiry_and_start(org):
     if not org:
         return None, None
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     status = (getattr(org, 'subscription_status', '') or '').strip().lower()
 
     from app.infrastructure.database.models.models import Subscription, SaaSPlan
@@ -413,7 +435,7 @@ def is_org_expiring_soon(org):
     if not expiry_date:
         return False
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     exp_naive = make_naive_utc(expiry_date)
     start_naive = make_naive_utc(start_date)
 
@@ -462,7 +484,7 @@ def apply_new_plan_to_organization(org, plan_name, billing_cycle=None, approved_
 
     import secrets
     import math
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     pname = str(plan_name).strip()
 
     from app.infrastructure.database.models.models import db, SaaSPlan, SaaSPlanPricing, Subscription, User

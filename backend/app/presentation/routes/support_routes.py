@@ -6,15 +6,16 @@ from app.infrastructure.database.models.models import (
     SupportAttachment, SupportSLA, SupportEscalation, SupportRating,
     SupportKnowledge, SupportAudit, Subscription, SalesEnquiry
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, or_, desc
 import random
+from app.presentation.routes.error_helpers import internal_server_error
 
 support_bp = Blueprint('support_bp', __name__)
 
 def get_current_user_and_check_rbac(required_roles=None, required_subroles=None):
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
     if not user:
         return None, "User not found"
     
@@ -58,7 +59,7 @@ def get_dashboard():
     days_map = {'Today': 1, 'Yesterday': 2, 'Last 7 Days': 7, 'Last 30 Days': 30, 'Last 90 Days': 90}
     days = days_map.get(date_range, 30)
     
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
     prev_start_date = start_date - timedelta(days=days)
     
     # Scoping based on Role
@@ -148,7 +149,7 @@ def get_dashboard():
         "avg_resolution_time": {"value": avg_res_time, "suffix": " hrs", "icon": "activity", "tooltip": "Avg time from creation to resolution"}
     }
     
-    return jsonify({"status": "success", "data": data, "last_updated": datetime.utcnow().isoformat()})
+    return jsonify({"status": "success", "data": data, "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()})
 
 # --- 2. LIST TICKETS (SEARCH, SORT, PAGINATE, FILTER) ---
 @support_bp.route('/tickets', methods=['GET'])
@@ -335,7 +336,7 @@ def create_ticket():
         ticket.status = 'Assigned'
 
     # SLA config calculations
-    org = Organization.query.get(target_org_id)
+    org = db.session.get(Organization, target_org_id)
     plan_name = org.subscription_plan if org else 'Starter'
     
     # Priority & Plan Based SLAs
@@ -351,8 +352,8 @@ def create_ticket():
         
     sla = SupportSLA(
         ticket_id=ticket.id,
-        first_response_due=datetime.utcnow() + timedelta(hours=first_resp_limit),
-        resolution_due=datetime.utcnow() + timedelta(hours=resolution_limit)
+        first_response_due=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=first_resp_limit),
+        resolution_due=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=resolution_limit)
     )
     db.session.add(sla)
 
@@ -513,11 +514,11 @@ def update_ticket(ticket_id):
         if ticket.sla:
             if new_status == 'Waiting for Customer' and not ticket.sla.is_paused:
                 ticket.sla.is_paused = True
-                ticket.sla.paused_at = datetime.utcnow()
+                ticket.sla.paused_at = datetime.now(timezone.utc).replace(tzinfo=None)
             elif new_status != 'Waiting for Customer' and ticket.sla.is_paused:
                 # Resume
                 ticket.sla.is_paused = False
-                pause_secs = (datetime.utcnow() - ticket.sla.paused_at).total_seconds()
+                pause_secs = (datetime.now(timezone.utc).replace(tzinfo=None) - ticket.sla.paused_at).total_seconds()
                 ticket.sla.accumulated_paused_seconds += int(pause_secs)
                 # Extend due dates
                 if ticket.sla.first_response_due:
@@ -527,7 +528,7 @@ def update_ticket(ticket_id):
 
         # Record resolution timestamp
         if new_status in ['Resolved', 'Closed']:
-            ticket.resolved_at = datetime.utcnow()
+            ticket.resolved_at = datetime.now(timezone.utc).replace(tzinfo=None)
             res_val = data.get('resolution')
             if res_val and str(res_val).strip():
                 ticket.resolution = str(res_val).strip()
@@ -539,9 +540,9 @@ def update_ticket(ticket_id):
                     ticket.resolution = f"Ticket marked as {new_status}."
 
             if ticket.sla:
-                ticket.sla.resolution_completed_at = datetime.utcnow()
+                ticket.sla.resolution_completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 # Check if resolved within SLA bounds
-                if ticket.sla.resolution_due and datetime.utcnow() > ticket.sla.resolution_due:
+                if ticket.sla.resolution_due and datetime.now(timezone.utc).replace(tzinfo=None) > ticket.sla.resolution_due:
                     ticket.sla.sla_status = 'Breached'
                     ticket.sla_status = 'Breached'
 
@@ -591,8 +592,8 @@ def add_comment(ticket_id):
     if ticket.sla and not ticket.sla.first_response_responded_at and not is_internal:
         # Check if commenter is support staff/engineer
         if user.role.name in ['SuperAdmin', 'Support Engineer', 'Support Manager']:
-            ticket.sla.first_response_responded_at = datetime.utcnow()
-            if datetime.utcnow() > ticket.sla.first_response_due:
+            ticket.sla.first_response_responded_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            if datetime.now(timezone.utc).replace(tzinfo=None) > ticket.sla.first_response_due:
                 ticket.sla.sla_status = 'Breached'
                 ticket.sla_status = 'Breached'
             db.session.commit()
@@ -706,7 +707,7 @@ def handle_knowledge():
                 )
             )
         
-        articles = articles_q.all()
+        articles = articles_q.order_by(SupportKnowledge.created_at.desc()).all()
         return jsonify({
             "status": "success",
             "articles": [{
@@ -715,7 +716,13 @@ def handle_knowledge():
                 "category": a.category,
                 "content": a.content,
                 "is_internal": a.is_internal,
-                "views_count": a.views_count
+                "views_count": a.views_count,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "author_id": a.created_by_id,
+                "author_name": (a.created_by.full_name or a.created_by.username or a.created_by.email) if a.created_by else "Super Admin",
+                "author_email": a.created_by.email if a.created_by else "",
+                "can_edit": bool(user.role.name in ['SuperAdmin', 'CEO', 'Admin'] or a.created_by_id == user.id),
+                "can_delete": bool(user.role.name in ['SuperAdmin', 'CEO', 'Admin'] or a.created_by_id == user.id)
             } for a in articles]
         })
 
@@ -734,15 +741,106 @@ def handle_knowledge():
             return jsonify({"status": "error", "message": "Title, category, and content are required"}), 400
 
         article = SupportKnowledge(
-            title=title,
-            category=category,
-            content=content,
-            is_internal=is_internal,
+            title=title.strip(),
+            category=category.strip(),
+            content=content.strip(),
+            is_internal=bool(is_internal),
             created_by_id=user.id
         )
         db.session.add(article)
         db.session.commit()
-        return jsonify({"status": "success", "article_id": article.id}), 201
+        return jsonify({
+            "status": "success",
+            "message": "Knowledge article published successfully",
+            "article_id": article.id,
+            "author_name": user.full_name or user.username or user.email
+        }), 201
+
+
+@support_bp.route('/knowledge/<int:article_id>', methods=['GET', 'PUT', 'DELETE'])
+@jwt_required()
+def handle_knowledge_detail(article_id):
+    user, err = get_current_user_and_check_rbac()
+    if err:
+        return jsonify({"status": "error", "message": err}), 403
+
+    article = SupportKnowledge.query.get(article_id)
+    if not article:
+        return jsonify({"status": "error", "message": "Article not found"}), 404
+
+    if request.method == 'GET':
+        article.views_count = (article.views_count or 0) + 1
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "article": {
+                "id": article.id,
+                "title": article.title,
+                "category": article.category,
+                "content": article.content,
+                "is_internal": article.is_internal,
+                "views_count": article.views_count,
+                "created_at": article.created_at.isoformat() if article.created_at else None,
+                "author_id": article.created_by_id,
+                "author_name": (article.created_by.full_name or article.created_by.username or article.created_by.email) if article.created_by else "Super Admin",
+                "author_email": article.created_by.email if article.created_by else "",
+                "can_edit": bool(user.role.name in ['SuperAdmin', 'CEO', 'Admin'] or article.created_by_id == user.id),
+                "can_delete": bool(user.role.name in ['SuperAdmin', 'CEO', 'Admin'] or article.created_by_id == user.id)
+            }
+        })
+
+    # Permission check for PUT/DELETE: Author or SuperAdmin/Admin/CEO
+    can_modify = (user.role.name in ['SuperAdmin', 'CEO', 'Admin'] or article.created_by_id == user.id)
+    if not can_modify:
+        return jsonify({"status": "error", "message": "Permission denied. Only the author or Super Admin can edit/delete this article."}), 403
+
+    if request.method == 'PUT':
+        data = request.get_json() or {}
+        title = data.get('title')
+        category = data.get('category')
+        content = data.get('content')
+        is_internal = data.get('is_internal')
+
+        if title is not None:
+            if not str(title).strip():
+                return jsonify({"status": "error", "message": "Title cannot be empty"}), 400
+            article.title = str(title).strip()
+
+        if category is not None:
+            if not str(category).strip():
+                return jsonify({"status": "error", "message": "Category cannot be empty"}), 400
+            article.category = str(category).strip()
+
+        if content is not None:
+            if not str(content).strip():
+                return jsonify({"status": "error", "message": "Content cannot be empty"}), 400
+            article.content = str(content).strip()
+
+        if is_internal is not None:
+            article.is_internal = bool(is_internal)
+
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "message": "Knowledge article updated successfully",
+            "article": {
+                "id": article.id,
+                "title": article.title,
+                "category": article.category,
+                "content": article.content,
+                "is_internal": article.is_internal,
+                "author_id": article.created_by_id,
+                "author_name": (article.created_by.full_name or article.created_by.username or article.created_by.email) if article.created_by else "Super Admin"
+            }
+        })
+
+    elif request.method == 'DELETE':
+        db.session.delete(article)
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "message": "Knowledge article deleted successfully"
+        })
 
 # --- 10. AI ASSISTANCE ---
 @support_bp.route('/ai', methods=['POST'])
@@ -830,8 +928,8 @@ def submit_public_enquiry():
         message=message if message else None,
         source=source,
         status='New',
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        updated_at=datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     db.session.add(enquiry)
@@ -880,7 +978,7 @@ def submit_public_enquiry():
                             </tr>
                             <tr style="border-bottom: 1px solid #f1f5f9;">
                                 <td style="padding: 10px 0; color: #64748b;"><strong>Submitted At:</strong></td>
-                                <td style="padding: 10px 0; color: #475569;">{datetime.utcnow().strftime('%d %b %Y, %I:%M %p UTC')}</td>
+                                <td style="padding: 10px 0; color: #475569;">{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%d %b %Y, %I:%M %p UTC')}</td>
                             </tr>
                             <tr>
                                 <td style="padding: 12px 0 6px 0; color: #64748b; vertical-align: top;"><strong>Message / Notes:</strong></td>
@@ -1056,7 +1154,7 @@ def update_enquiry(enquiry_id):
     if 'notes' in data:
         enquiry.notes = data['notes']
 
-    enquiry.updated_at = datetime.utcnow()
+    enquiry.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
 
     return jsonify({
@@ -1139,7 +1237,7 @@ def send_enquiry_email(enquiry_id):
         )
 
         # Log email dispatch in enquiry notes and update status to Contacted if New
-        now_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+        now_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M UTC')
         log_note = f"[{now_str}] Email sent to {recipient_email} by {getattr(user, 'username', 'Admin')}:\nSubject: {subject}\nMessage: {message_content[:200]}..."
         if enquiry.notes:
             enquiry.notes = log_note + "\n\n" + enquiry.notes
@@ -1149,7 +1247,7 @@ def send_enquiry_email(enquiry_id):
         if enquiry.status == 'New':
             enquiry.status = 'Contacted'
 
-        enquiry.updated_at = datetime.utcnow()
+        enquiry.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.session.commit()
 
         return jsonify({
@@ -1163,7 +1261,7 @@ def send_enquiry_email(enquiry_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": f"Failed to send email: {str(e)}"}), 500
+        return internal_server_error(e, "Failed to send email.")
 
 
 # --- FILE UPLOAD FOR SUPPORT TICKET ATTACHMENTS ---
@@ -1200,19 +1298,14 @@ def upload_ticket_attachment(ticket_id):
         }), 400
 
     try:
+        from app.infrastructure.storage import storage
         filename = secure_filename(file.filename)
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-        filename = f"ticket_{ticket_id}_{timestamp}_{filename}"
+        timestamp = datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')
+        target_name = f"ticket_{ticket_id}_{timestamp}_{filename}"
+        result = storage.save_file(file, filename=target_name, subfolder="support_attachments")
 
-        upload_dir = os.path.join(
-            current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'support_attachments'
-        )
-        os.makedirs(upload_dir, exist_ok=True)
-        file_path = os.path.join(upload_dir, filename)
-        file.save(file_path)
-
-        file_url = f"/uploads/support_attachments/{filename}"
-        file_size = os.path.getsize(file_path)
+        file_url = result['url']
+        file_size = result['size_bytes']
 
         # Save record in DB linked to this ticket
         att = SupportAttachment(
@@ -1241,4 +1334,4 @@ def upload_ticket_attachment(ticket_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": f"Upload failed: {str(e)}"}), 500
+        return internal_server_error(e, "Upload failed.")

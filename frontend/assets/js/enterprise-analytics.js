@@ -813,14 +813,15 @@ const EnterpriseAnalytics = {
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             
+                            const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.body.classList.contains('dark-mode');
                             // Total Count Number
                             ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                            ctx.fillStyle = '#0f172a';
+                            ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a';
                             ctx.fillText(totalCount, centerX, centerY - 6);
                             
                             // Total Label
                             ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                            ctx.fillStyle = '#64748b';
+                            ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
                             ctx.fillText('TOTAL TICKETS', centerX, centerY + 16);
                             ctx.restore();
                         }
@@ -1022,7 +1023,7 @@ const EnterpriseAnalytics = {
             }
             
             this._toast(`Generating ${fmt} file...`, 'info');
-            const token = api.token || sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+            const token = api.token || '';
             const reportType = this.currentTab || 'overview';
             const downloadUrl = `/api/reports/download-mock?type=${reportType}&format=${fmt}`;
 

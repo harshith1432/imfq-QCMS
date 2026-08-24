@@ -123,10 +123,15 @@ def capture_screen(driver, name):
         return ""
 
 def login_as(driver, email, password):
-    driver.get(f"{BASE_URL}/auth/login.html")
-    time.sleep(1.2)
     try:
-        user_inp = driver.find_element(By.CSS_SELECTOR, "#username, input[type='text'], input[type='email']")
+        driver.get(f"{BASE_URL}/auth/login.html")
+        driver.execute_script("localStorage.clear(); sessionStorage.clear();")
+        driver.get(f"{BASE_URL}/auth/login.html")
+        time.sleep(1.0)
+        
+        user_inp = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "#username, input[type='text'], input[type='email']"))
+        )
         pass_inp = driver.find_element(By.CSS_SELECTOR, "#password, input[type='password']")
         btn = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], #loginBtn, .btn-primary")
         
@@ -134,8 +139,17 @@ def login_as(driver, email, password):
         user_inp.send_keys(email)
         pass_inp.clear()
         pass_inp.send_keys(password)
-        btn.click()
-        time.sleep(2.5)
+        try:
+            btn.click()
+        except Exception:
+            driver.execute_script("document.getElementById('loginForm').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}));")
+        
+        try:
+            WebDriverWait(driver, 10).until(
+                lambda d: ("login" not in d.current_url.lower() and ("admin" in d.current_url.lower() or "dashboard" in d.current_url.lower() or "project" in d.current_url.lower()))
+            )
+        except Exception:
+            time.sleep(2)
         return True
     except Exception as e:
         print(f"[!] Login error for {email}: {e}")
@@ -145,6 +159,6 @@ def logout(driver):
     try:
         driver.execute_script("localStorage.clear(); sessionStorage.clear();")
         driver.get(f"{BASE_URL}/auth/login.html")
-        time.sleep(1)
+        time.sleep(0.5)
     except Exception:
         pass

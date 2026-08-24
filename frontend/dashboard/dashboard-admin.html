@@ -2,16 +2,14 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .leader-radio:checked+span {
@@ -586,9 +584,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
         const adminDash = {
             allProjects: [],
@@ -774,36 +770,11 @@
                     const stats = await api.get('/admin/stats');
                     if (grid) {
                         grid.innerHTML =
-                            QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'folder-kanban', 'blue', null) +
+                            QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'folder-kanban', 'blue', null, '/projects/projects-repository.html?status=Active') +
                             QCMS.kpiCard('Team Stakeholders', stats.total_members || 0, 'users', 'purple', null, '/admin/users.html') +
-                            QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green', null, '/analytics/analytics.html') +
-                            QCMS.kpiCard('Stopped Projects', stats.rejected_projects || 0, 'x-circle', 'red', null) +
-                            QCMS.kpiCard('Total Plants', stats.total_plants || 0, 'building-2', 'amber', null);
-
-                        // Wire Active Pipeline card, Stopped Projects card & Plant Locations card
-                        const kpiCols = document.querySelectorAll('#kpiGrid > div, #kpiGrid > a');
-                        if (kpiCols[0]) {
-                            kpiCols[0].style.cursor = 'pointer';
-                            kpiCols[0].addEventListener('click', () => {
-                                const sel = document.getElementById('statusFilter');
-                                if (sel) { sel.value = 'Active'; adminDash.filterProjects(); }
-                                document.querySelector('.ds-card.fade-in.section-spacing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            });
-                        }
-                        if (kpiCols[3]) {
-                            kpiCols[3].style.cursor = 'pointer';
-                            kpiCols[3].addEventListener('click', (e) => {
-                                e.preventDefault();
-                                adminDash.openRejectedProjectsModal();
-                            });
-                        }
-                        if (kpiCols[4]) {
-                            kpiCols[4].style.cursor = 'pointer';
-                            kpiCols[4].addEventListener('click', (e) => {
-                                e.preventDefault();
-                                adminDash.openPlantDirectoryModal();
-                            });
-                        }
+                            QCMS.kpiCard('Projects Completed', stats.completed_projects || 0, 'check-circle', 'green', null, '/projects/projects-repository.html?status=Completed') +
+                            QCMS.kpiCard('Stopped Projects', stats.rejected_projects || 0, 'x-circle', 'red', null, 'javascript:adminDash.openRejectedProjectsModal()') +
+                            QCMS.kpiCard('Total Plants', stats.total_plants || 0, 'building-2', 'amber', null, '/admin/plants.html');
                     }
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
@@ -1273,19 +1244,22 @@
                         const centerY = (chartArea.top + chartArea.bottom) / 2;
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
+                        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.body.classList.contains('dark-mode');
                         
                         // Total Count Number
                         ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                        ctx.fillStyle = '#0f172a';
+                        ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a';
                         ctx.fillText(totalProjectsCount, centerX, centerY - 6);
                         
                         // Total Label
                         ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                        ctx.fillStyle = '#64748b';
+                        ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
                         ctx.fillText('TOTAL', centerX, centerY + 16);
                         ctx.restore();
                     }
                 };
+
+                const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark' || document.body.classList.contains('dark-mode');
 
                 new Chart(ctx, {
                     type: 'doughnut',
@@ -1295,7 +1269,7 @@
                             data: Object.values(cats),
                             backgroundColor: bgColors,
                             borderWidth: 3,
-                            borderColor: '#ffffff',
+                            borderColor: isDarkTheme ? '#1e293b' : '#ffffff',
                             hoverOffset: 8
                         }]
                     },
@@ -1358,6 +1332,8 @@
                     '#4F46E5', '#2563EB', '#0891B2', '#059669', '#D97706', '#EA580C', '#7C3AED', '#DB2777'
                 ];
 
+                const isDarkStage = document.documentElement.getAttribute('data-theme') === 'dark' || document.body.classList.contains('dark-mode');
+
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -1377,10 +1353,13 @@
                         scales: {
                             y: { 
                                 beginAtZero: true, 
-                                ticks: { stepSize: 1, precision: 0 },
-                                grid: { color: 'rgba(0, 0, 0, 0.04)' } 
+                                ticks: { stepSize: 1, precision: 0, color: isDarkStage ? '#cbd5e1' : '#64748b' },
+                                grid: { color: isDarkStage ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' } 
                             },
-                            x: { grid: { display: false } }
+                            x: { 
+                                ticks: { color: isDarkStage ? '#cbd5e1' : '#64748b' },
+                                grid: { display: false } 
+                            }
                         },
                         plugins: { legend: { display: false } }
                     }

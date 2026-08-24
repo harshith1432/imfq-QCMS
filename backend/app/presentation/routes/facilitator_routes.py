@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.infrastructure.database.models.models import (
     User, Project, Department,
     Stage5RootCause, Stage7Development, Stage8Implementation,
@@ -17,7 +17,7 @@ def facilitator_required(f):
     @jwt_required()
     def decorated_function(*args, **kwargs):
         current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
+        user = db.session.get(User, current_user_id)
         if not user or user.role.name not in ('Facilitator', 'Admin', 'SuperAdmin'):
             return jsonify({"msg": "Facilitator or Admin access required"}), 403
         return f(*args, **kwargs)
@@ -70,7 +70,7 @@ def get_stats():
 
     # Inactive Projects (assigned to this facilitator):
     # Projects with status in inactive_statuses OR active projects with no AuditLog activity in > 7 days
-    stalled_cutoff = datetime.utcnow() - timedelta(days=7)
+    stalled_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
     inactive_projects_count = 0
     for p in projects:
         if p.status in inactive_statuses:
@@ -122,7 +122,7 @@ def get_stats():
 @facilitator_bp.route('/projects', methods=['GET'])
 @facilitator_required
 def get_all_projects():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     # Show all active projects where this user is the assigned facilitator.
     # Exclude closed and archived projects so only active projects appear.
     query = Project.query.filter(
@@ -135,9 +135,9 @@ def get_all_projects():
 
     result = []
     for p in projects:
-        creator = User.query.get(p.creator_id) if p.creator_id else None
-        leader = User.query.get(p.team_leader_id) if p.team_leader_id else creator
-        dept = Department.query.get(p.department_id) if p.department_id else None
+        creator = db.session.get(User, p.creator_id) if p.creator_id else None
+        leader = db.session.get(User, p.team_leader_id) if p.team_leader_id else creator
+        dept = db.session.get(Department, p.department_id) if p.department_id else None
         dept_name = dept.name if dept else (p.plant or "General")
         plant_name = p.plant or (dept.plant.name if dept and dept.plant else "Main Plant")
         plant_id = (dept.plant_id if dept and dept.plant_id else None)
@@ -159,7 +159,7 @@ def get_all_projects():
 @facilitator_bp.route('/assisted-history', methods=['GET'])
 @facilitator_required
 def get_assisted_history():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     from app.infrastructure.database.models.models import FacilitatorAssistanceRequest
     
     # Query all assistance records handled/assisted by this facilitator (where responded or non-pending)
@@ -174,9 +174,9 @@ def get_assisted_history():
 
     res = []
     for r in requests:
-        req_user = User.query.get(r.user_id) if r.user_id else None
-        proj = Project.query.get(r.project_id) if r.project_id else None
-        dept = Department.query.get(proj.department_id) if (proj and proj.department_id) else None
+        req_user = db.session.get(User, r.user_id) if r.user_id else None
+        proj = db.session.get(Project, r.project_id) if r.project_id else None
+        dept = db.session.get(Department, proj.department_id) if (proj and proj.department_id) else None
         dept_name = dept.name if dept else ((proj.plant if proj and proj.plant else "General"))
         plant_name = (proj.plant or (dept.plant.name if dept and dept.plant else "Main Plant")) if proj else "Main Plant"
         plant_id = (dept.plant_id if dept and dept.plant_id else None)
@@ -205,7 +205,7 @@ def get_assisted_history():
 @facilitator_bp.route('/completed-projects', methods=['GET'])
 @facilitator_required
 def get_completed_projects():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     # Show closed projects where this user is the assigned facilitator.
     projects = Project.query.filter(
         Project.org_id == user.org_id,
@@ -215,8 +215,8 @@ def get_completed_projects():
 
     result = []
     for p in projects:
-        creator = User.query.get(p.creator_id)
-        dept = Department.query.get(p.department_id)
+        creator = db.session.get(User, p.creator_id)
+        dept = db.session.get(Department, p.department_id)
         result.append({
             "id": p.id,
             "uid": p.project_uid,
@@ -234,7 +234,7 @@ def get_completed_projects():
 @facilitator_bp.route('/rca-projects', methods=['GET'])
 @facilitator_required
 def get_rca_workspace():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     # Only Stage-5 projects assigned to THIS facilitator
     query = Project.query.filter(
         Project.org_id == user.org_id,
@@ -246,7 +246,7 @@ def get_rca_workspace():
     for p in projects:
         from app.infrastructure.database.models.models import Stage5RootCause
         rca = Stage5RootCause.query.filter_by(project_id=p.id).first()
-        dept = Department.query.get(p.department_id)
+        dept = db.session.get(Department, p.department_id)
 
         qc_tools = {}
         if rca:
@@ -283,7 +283,7 @@ def get_rca_workspace():
 @facilitator_bp.route('/impact-projects', methods=['GET'])
 @facilitator_required
 def get_impact_review():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     # Only Stage-8 projects assigned to THIS facilitator that have been submitted or further in the flow
     query = Project.query.filter(
         Project.org_id == user.org_id,
@@ -295,39 +295,42 @@ def get_impact_review():
     projects = query.all()
     result = []
     for p in projects:
-        from app.infrastructure.database.models.models import Stage8Implementation, Stage7Development, SOP
+        from app.infrastructure.database.models.models import Stage8Implementation, Stage7Development, SOP, ProjectWorkflow
         impact = Stage8Implementation.query.filter_by(project_id=p.id).first()
         s7 = Stage7Development.query.filter_by(project_id=p.id).first()
         sop = SOP.query.filter_by(project_id=p.id).first()
-        has_sop = sop is not None
-        has_impact = bool(impact and impact.final_data is not None)
+        wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=8).first()
+        wf_data = wf.data if (wf and wf.data) else {}
 
-        # Auto-calculate KPI improvement %
-        kpi_pct = None
-        if impact and impact.baseline_data and impact.final_data:
+        has_sop = (sop is not None) or bool(impact and impact.sop_standardization) or bool(wf_data.get('sop_standardization'))
+        
+        baseline_data = getattr(impact, 'baseline_data', None) or wf_data.get('baseline') or wf_data.get('baseline_data')
+        final_data = getattr(impact, 'final_data', None) or wf_data.get('final') or wf_data.get('final_data') or wf_data.get('metrics')
+        has_impact = bool(final_data is not None)
+
+        kpi_pct = getattr(impact, 'kpi_improvement_pct', None)
+        if (kpi_pct is None or kpi_pct == 0) and baseline_data and final_data:
             try:
-                baseline_val = float(str(impact.baseline_data.get('value', 0)))
-                final_val = float(str(impact.final_data.get('value', 0)))
-                if baseline_val > 0:
-                    kpi_pct = round(((final_val - baseline_val) / baseline_val) * 100, 2)
-                    # Save the computed value back
-                    if kpi_pct != impact.kpi_improvement_pct:
-                        impact.kpi_improvement_pct = kpi_pct
-                        db.session.commit()
+                b_val = float(str(baseline_data.get('value', 0) if isinstance(baseline_data, dict) else baseline_data))
+                f_val = float(str(final_data.get('value', 0) if isinstance(final_data, dict) else final_data))
+                if b_val > 0:
+                    kpi_pct = round(((f_val - b_val) / b_val) * 100, 2)
             except (ValueError, TypeError, AttributeError):
                 pass
+        if kpi_pct is None:
+            kpi_pct = wf_data.get('kpi_improvement_pct', 0)
 
         result.append({
             "id": p.id,
             "title": p.title,
-            "baseline": impact.baseline_data if impact else None,
-            "final": impact.final_data if impact else None,
-            "kpi_improvement_pct": kpi_pct or (impact.kpi_improvement_pct if impact else 0),
-            "kpi_target": s7.action_plan if s7 else {},
-            "cost_savings": impact.cost_savings if impact else 0,
+            "baseline": baseline_data,
+            "final": final_data,
+            "kpi_improvement_pct": kpi_pct or 0,
+            "kpi_target": s7.action_plan if (s7 and s7.action_plan) else {},
+            "cost_savings": impact.cost_savings if impact else (wf_data.get('cost_savings', 0) or 0),
             "status": p.status,
             "impact_status": impact.status if impact else "Pending",
-            "approved": impact.status == "Approved" if impact else False,
+            "approved": (impact.status == "Approved") if impact else False,
             "has_sop": has_sop,
             "sop_id": sop.id if sop else None,
             "has_impact": has_impact
@@ -339,7 +342,7 @@ def get_impact_review():
 @facilitator_bp.route('/stage8/<int:project_id>/approve-submission', methods=['POST'])
 @facilitator_required
 def approve_stage8_submission(project_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     project = Project.query.get_or_404(project_id)
 
     if project.facilitator_id != user.id:
@@ -361,7 +364,7 @@ def approve_stage8_submission(project_id):
 @facilitator_bp.route('/closure-projects', methods=['GET'])
 @facilitator_required
 def get_closure_projects():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     # Only Stage-8 closure projects assigned to THIS facilitator
     query = Project.query.filter(
         Project.org_id == user.org_id,
@@ -406,23 +409,31 @@ def get_closure_projects():
 
 # ─── 6. Facilitator Notes (Read) ──────────────────────────────
 @facilitator_bp.route('/notes/<int:project_id>', methods=['GET'])
-@facilitator_required
+@jwt_required()
 def get_notes(project_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    project = db.session.get(Project, project_id)
+    if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
+        return jsonify({"msg": "Project not found"}), 404
+
     notes = FacilitatorNote.query.filter_by(project_id=project_id).order_by(FacilitatorNote.created_at.desc()).all()
     return jsonify([{
         "id": n.id,
         "stage_number": n.stage_number,
         "note_text": n.note_text,
-        "created_by": User.query.get(n.created_by).full_name if User.query.get(n.created_by) else "Unknown",
+        "created_by": db.session.get(User, n.created_by).full_name if db.session.get(User, n.created_by) else "Unknown",
         "created_at": n.created_at.isoformat() + "Z"
-    } for n in notes])
+    } for n in notes]), 200
 
 
 # ─── 7. Facilitator Notes (Add) ───────────────────────────────
 @facilitator_bp.route('/notes', methods=['POST'])
 @facilitator_required
 def add_note():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     data = request.get_json()
 
     project_id = data.get('project_id')
@@ -451,7 +462,7 @@ def add_note():
 @facilitator_bp.route('/rca/<int:project_id>/validate', methods=['POST'])
 @facilitator_required
 def validate_rca(project_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     data = request.get_json()
     validation_note = data.get('validation_note', '').strip()
 
@@ -494,7 +505,7 @@ def validate_rca(project_id):
 @facilitator_bp.route('/impact/<int:project_id>/post-data', methods=['POST'])
 @facilitator_required
 def add_post_data(project_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     data = request.get_json()
 
     project = Project.query.get_or_404(project_id)
@@ -539,7 +550,7 @@ def add_post_data(project_id):
 @facilitator_bp.route('/impact/<int:project_id>/approve', methods=['POST'])
 @facilitator_required
 def approve_impact(project_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
 
     project = Project.query.get_or_404(project_id)
     if project.current_stage != 8:
@@ -642,25 +653,25 @@ def complete_closure(project_id):
 
     # Close the project workflow
     project.status = 'Closed'
-    project.end_date = datetime.utcnow().date()
+    project.end_date = datetime.now(timezone.utc).replace(tzinfo=None).date()
     
     # Activate linked SOP
     sop.status = 'Active'
-    sop.effective_date = datetime.utcnow().date()
-    sop.review_date = datetime.utcnow().date()
+    sop.effective_date = datetime.now(timezone.utc).replace(tzinfo=None).date()
+    sop.review_date = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
     # Complete Stage 8 tracker
     tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=8).first()
     if tracker:
         tracker.status = 'Completed'
-        tracker.completed_at = datetime.utcnow()
+        tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Facilitator sign-off
     s8.facilitator_validation = True
     s8.admin_closure = True
     s8.final_approval = True
     s8.final_approval_by = user.id
-    s8.final_approval_at = datetime.utcnow()
+    s8.final_approval_at = datetime.now(timezone.utc).replace(tzinfo=None)
     s8.final_comments = f"Final closure approved by Facilitator {user.username}."
 
     # Flush session so all changes are visible in db nested transaction
@@ -704,7 +715,7 @@ def complete_closure(project_id):
 @facilitator_bp.route('/assistance-requests', methods=['GET'])
 @facilitator_required
 def get_assistance_requests():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     from app.infrastructure.database.models.models import FacilitatorAssistanceRequest
     requests = FacilitatorAssistanceRequest.query.filter_by(
         org_id=user.org_id,
@@ -713,9 +724,9 @@ def get_assistance_requests():
 
     res = []
     for r in requests:
-        req_user = User.query.get(r.user_id) if r.user_id else None
-        proj = Project.query.get(r.project_id) if r.project_id else None
-        dept = Department.query.get(proj.department_id) if (proj and proj.department_id) else None
+        req_user = db.session.get(User, r.user_id) if r.user_id else None
+        proj = db.session.get(Project, r.project_id) if r.project_id else None
+        dept = db.session.get(Department, proj.department_id) if (proj and proj.department_id) else None
         dept_name = dept.name if dept else ((proj.plant if proj and proj.plant else "General"))
         plant_name = (proj.plant or (dept.plant.name if dept and dept.plant else "Main Plant")) if proj else "Main Plant"
         plant_id = (dept.plant_id if dept and dept.plant_id else None)
@@ -741,7 +752,7 @@ def get_assistance_requests():
 @facilitator_bp.route('/assistance-requests/<int:req_id>/respond', methods=['POST'])
 @facilitator_required
 def respond_assistance_request(req_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     from app.infrastructure.database.models.models import FacilitatorAssistanceRequest
     req_obj = db.session.get(FacilitatorAssistanceRequest, req_id)
     if not req_obj or req_obj.facilitator_id != user.id:
@@ -749,11 +760,11 @@ def respond_assistance_request(req_id):
     data = request.get_json() or {}
     req_obj.response = data.get('response', '')
     req_obj.status = data.get('status', 'Responded')
-    req_obj.updated_at = datetime.utcnow()
+    req_obj.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Notify requester
     from app.presentation.routes.notification_routes import create_notification
-    proj = Project.query.get(req_obj.project_id)
+    proj = db.session.get(Project, req_obj.project_id)
     proj_title = proj.title if proj else "your project"
     create_notification(
         user.org_id,

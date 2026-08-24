@@ -2,16 +2,14 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Subscription Management | QCMS Enterprise OS</title>
     <meta name="description" content="Enterprise subscription lifecycle management — billing, invoices, renewals, trials, and plan management for all QCMS tenants.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
@@ -900,10 +898,8 @@
 
 <!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/assets/js/components.js"></script>
-<script src="/assets/js/api.js"></script>
-
-<script>
+<script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
+    <script>
 /* ═══════════════════════════════════════════════════════════════════════════
    SubMgr — Enterprise Subscription Management Controller
    Talks exclusively to /api/subscriptions/*
@@ -939,7 +935,7 @@ const SubMgr = {
 
     /* ── API Helpers ─────────────────────────────────────────────────── */
     async get(path) {
-        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = (window.api && window.api.token) || '';
         const r = await fetch(`/api/subscriptions${path}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -948,7 +944,7 @@ const SubMgr = {
     },
 
     async post(path, body={}) {
-        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = (window.api && window.api.token) || '';
         const r = await fetch(`/api/subscriptions${path}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -960,7 +956,7 @@ const SubMgr = {
     },
 
     async put(path, body={}) {
-        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = (window.api && window.api.token) || '';
         const r = await fetch(`/api/subscriptions${path}`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -1700,7 +1696,7 @@ const SubMgr = {
         if (typeof inv === 'string') inv = JSON.parse(inv.replace(/&quot;/g, '"'));
         let ctx = {}, tmpl = {};
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+            const token = (window.api && window.api.token) || '';
             const res = await fetch('/api/document-identity/all', { headers: { 'Authorization': `Bearer ${token}` } });
             const result = await res.json();
             if (result.status === 'success') {
@@ -1915,7 +1911,7 @@ const SubMgr = {
     async searchOrgs(q) {
         if (!q || q.length < 2) { document.getElementById('wizOrgResults').innerHTML=''; return; }
         try {
-            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const token = (window.api && window.api.token) || '';
             const r = await fetch(`/api/super-admin/companies?search=${encodeURIComponent(q)}&per_page=8`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -2044,7 +2040,7 @@ const SubMgr = {
 
     /* ── Export ──────────────────────────────────────────────────────── */
     exportCSV() {
-        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = (window.api && window.api.token) || '';
         window.location.href = `/api/subscriptions/export?format=csv&token=${encodeURIComponent(token)}`;
     },
 
@@ -2118,6 +2114,7 @@ const SubMgr = {
         this.toast('Column visibility panel — coming soon', 'info');
     },
 };
+window.SubMgr = SubMgr;
 
 /* ── Bootstrap CSS spinner keyframe ── */
 const style = document.createElement('style');

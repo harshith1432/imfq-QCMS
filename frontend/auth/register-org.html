@@ -2,14 +2,13 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body {
@@ -399,8 +398,7 @@
         </div>
     </div>
 
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
         if (window.lucide) lucide.createIcons();
 
@@ -426,24 +424,64 @@
             if (window.lucide) lucide.createIcons();
         }
 
-        function tryNextStep() {
+        async function tryNextStep() {
             const companyName = document.getElementById('company_name').value.trim();
             const email = document.getElementById('email').value.trim();
             const phone = document.getElementById('phone').value.trim();
 
+            hideError();
+            hideOtpWarning();
+
             if (!companyName) {
-                showOtpWarning('Please enter your Company Name before continuing.');
+                showError('Please enter your Company Name before continuing.');
                 document.getElementById('company_name').focus();
                 triggerShake();
                 return;
             }
 
             if (!email) {
-                showOtpWarning('Please enter your Work Email address.');
+                showError('Please enter your Work Email address.');
                 document.getElementById('email').focus();
                 triggerShake();
                 return;
             }
+
+            // Real-time pre-validation check against database before step 2
+            const btn = document.getElementById('nextToStep2');
+            const origText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Checking...`;
+
+            try {
+                if (typeof api !== 'undefined') {
+                    const checkRes = await api.post('/auth/check-availability', {
+                        email: email,
+                        company_name: companyName
+                    });
+
+                    if (checkRes && checkRes.valid === false) {
+                        showError(checkRes.msg || checkRes.message || 'Email or company name already exists.');
+                        triggerShake();
+                        if (checkRes.field === 'email') {
+                            document.getElementById('email').classList.add('is-invalid');
+                            document.getElementById('email').focus();
+                        } else if (checkRes.field === 'company_name') {
+                            document.getElementById('company_name').classList.add('is-invalid');
+                            document.getElementById('company_name').focus();
+                        }
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('Availability pre-check error:', e);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origText;
+                if (window.lucide) lucide.createIcons();
+            }
+
+            document.getElementById('email').classList.remove('is-invalid');
+            document.getElementById('company_name').classList.remove('is-invalid');
 
             const emailOk = !requireEmailOtp || isEmailVerified;
             const phoneOk = !requirePhoneOtp || isPhoneVerified;
@@ -451,6 +489,7 @@
             if (emailOk && phoneOk) {
                 // All required OTPs verified — proceed to Step 2
                 hideOtpWarning();
+                hideError();
                 nextStep(2);
                 return;
             }
@@ -467,6 +506,28 @@
 
             showOtpWarning(warningMsg);
             triggerShake();
+        }
+
+        let emailCheckTimeout = null;
+        async function checkEmailFieldAvailability() {
+            const emailInput = document.getElementById('email');
+            const email = emailInput ? emailInput.value.trim() : '';
+            if (!email || !email.includes('@')) return;
+
+            try {
+                if (typeof api !== 'undefined') {
+                    const res = await api.post('/auth/check-availability', { email });
+                    if (res && res.valid === false && res.field === 'email') {
+                        showError(res.msg || res.message);
+                        emailInput.classList.add('is-invalid');
+                    } else {
+                        if (emailInput.classList.contains('is-invalid')) {
+                            emailInput.classList.remove('is-invalid');
+                            hideError();
+                        }
+                    }
+                }
+            } catch (e) {}
         }
 
         function triggerShake() {
@@ -744,6 +805,16 @@
                             if (hdr) hdr.textContent = 'Create your organization account to get started.';
                         }
 
+                        // Apply dynamic branding from Document Identity & Branding
+                        if (res.branding) {
+                            const b = res.branding;
+                            const softName = b.software_name || b.software_display_name || 'QCMS Enterprise';
+                            document.title = `Register | ${softName}`;
+                            if (b.primary_color) {
+                                document.documentElement.style.setProperty('--ds-primary', b.primary_color);
+                            }
+                        }
+
                         // Apply OTP verification flags dynamically
                         requireEmailOtp = res.require_email_otp !== false;
                         requirePhoneOtp = !!res.require_phone_otp;
@@ -777,6 +848,15 @@
                 requireEmailOtp = true;
                 requirePhoneOtp = false;
                 checkCanProceedToStep2();
+            }
+
+            const emailInput = document.getElementById('email');
+            if (emailInput) {
+                emailInput.addEventListener('blur', checkEmailFieldAvailability);
+                emailInput.addEventListener('input', () => {
+                    clearTimeout(emailCheckTimeout);
+                    emailCheckTimeout = setTimeout(checkEmailFieldAvailability, 800);
+                });
             }
         });
 

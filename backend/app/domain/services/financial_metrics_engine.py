@@ -3,7 +3,7 @@ Centralized Financial Metrics Engine (Single Source of Truth)
 Unified Financial Ledger & Analytics Engine for QCMS Enterprise OS.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, or_
 from app.infrastructure.database.models.models import (
     db, Organization, Subscription, SubscriptionPayment, SubscriptionInvoice, SubscriptionRefund, SaaSPlan, SaaSPlanPricing
@@ -22,7 +22,7 @@ class FinancialMetricsEngine:
         - arr: mrr * 12.
         - trends: Dynamically bucketed revenue series matching the requested date range.
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         if not end_date:
             end_date = now
         if not start_date:
@@ -379,7 +379,7 @@ class FinancialMetricsEngine:
             try:
                 last_date = datetime.strptime(last_lbl, '%b %Y')
             except ValueError:
-                last_date = datetime.utcnow()
+                last_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
             for i in range(1, 4):
                 nxt = (last_date.replace(day=28) + timedelta(days=30 * i)).replace(day=1)

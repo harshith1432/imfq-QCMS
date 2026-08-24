@@ -33,12 +33,14 @@ const Stage4 = {
                                 </button>
                             </div>
                         </div>
-                        <div id="s4_verifiedContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4 ds-tooltip-trigger" title="Cause: Suspect cause under analysis">Cause</div>
-                                <div class="col-4 ds-tooltip-trigger" title="Method: Root-cause validation method">Method</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Status: Validation status">Status</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s4_verifiedContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4 ds-tooltip-trigger" title="Cause: Suspect cause under analysis">Cause</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Method: Root-cause validation method">Method</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Status: Validation status">Status</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -84,13 +86,15 @@ const Stage4 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Hypothesis
                             </button>
                         </div>
-                        <div id="s4_hypothesisContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Hypothesis: Statement defining suspect cause-effect link">Hypothesis</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Null Hyp (H0): Baseline assumption that cause has no effect">Null Hyp (H0)</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Alt Hyp (H1): Alternative assumption that cause has statistically significant effect">Alt Hyp (H1)</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Test Used: Statistical test protocol executed">Test Used</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s4_hypothesisContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Hypothesis: Statement defining suspect cause-effect link">Hypothesis</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Null Hyp (H0): Baseline assumption that cause has no effect">Null Hyp (H0)</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Alt Hyp (H1): Alternative assumption that cause has statistically significant effect">Alt Hyp (H1)</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Test Used: Statistical test protocol executed">Test Used</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -114,13 +118,15 @@ const Stage4 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Factor
                             </button>
                         </div>
-                        <div id="s4_goodBadContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Factor: Process variable, machine setting, or environmental condition under analysis">Factor</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Good Condition: Parameter value measured during defect-free production">Good Condition</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Bad Condition: Parameter value measured during defective production">Bad Condition</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Difference: Delta between good and bad condition parameter settings">Difference</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s4_goodBadContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Factor: Process variable, machine setting, or environmental condition under analysis">Factor</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Good Condition: Parameter value measured during defect-free production">Good Condition</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Bad Condition: Parameter value measured during defective production">Bad Condition</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Difference: Delta between good and bad condition parameter settings">Difference</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -144,13 +150,15 @@ const Stage4 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Validation
                             </button>
                         </div>
-                        <div id="s4_validationContainer" class="mb-4">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Test Type: Name of statistical hypothesis test executed (e.g. Chi-Square Test, 2-Sample t-Test, ANOVA, Regression)">Test Type</div>
-                                <div class="col-2 ds-tooltip-trigger" title="p-Value: Calculated significance level (p < 0.05 indicates statistical significance)">p-Value</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Confidence Level: Degree of statistical certainty (e.g. 95%, 99%)">Confidence Level</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Conclusion: Statistical outcome and inference (e.g. Statistically Significant, Correlation Confirmed)">Conclusion</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s4_validationContainer" class="mb-4" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Test Type: Name of statistical hypothesis test executed (e.g. Chi-Square Test, 2-Sample t-Test, ANOVA, Regression)">Test Type</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="p-Value: Calculated significance level (p < 0.05 indicates statistical significance)">p-Value</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Confidence Level (%): Degree of statistical certainty (e.g. 95, 99)">Confidence Level (%)</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Conclusion: Statistical outcome and inference (e.g. Statistically Significant, Correlation Confirmed)">Conclusion</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -219,13 +227,15 @@ const Stage4 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Data Set
                             </button>
                         </div>
-                        <div id="s4_reconfirmContainer" class="mb-4">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Data Set: Sample batch or dataset under reconfirmation test">Data Set</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Sample Size: Number of physical parts or process samples audited">Sample Size</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Result: Measured empirical outcome or defect count">Result</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Validated (Yes/No): Validation status confirming whether root cause is verified">Validated (Yes/No)</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s4_reconfirmContainer" class="mb-4" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Data Set: Sample batch or dataset under reconfirmation test">Data Set</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Sample Size: Number of physical parts or process samples audited">Sample Size</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Result: Measured empirical outcome or defect count">Result</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Validated (Yes/No): Validation status confirming whether root cause is verified">Validated (Yes/No)</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -285,12 +295,14 @@ const Stage4 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Root Cause
                             </button>
                         </div>
-                        <div id="s4_rootRegisterContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-2">ID</div>
-                                <div class="col-6">Root Cause</div>
-                                <div class="col-3">Source (Stats/Why-Why)</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s4_rootRegisterContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-2">ID</div>
+                                    <div class="col-6">Root Cause</div>
+                                    <div class="col-3">Source (Stats/Why-Why)</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -314,13 +326,15 @@ const Stage4 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Ranking
                             </button>
                         </div>
-                        <div id="s4_rankingContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-5">Root Cause</div>
-                                <div class="col-2">Impact (1-10)</div>
-                                <div class="col-2">Ease of Fix (1-10)</div>
-                                <div class="col-2">Score</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s4_rankingContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-5">Root Cause</div>
+                                    <div class="col-2">Impact (1-10)</div>
+                                    <div class="col-2">Ease of Fix (1-10)</div>
+                                    <div class="col-2">Score</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1016,10 +1030,14 @@ const Stage4 = {
         const causeOptions = this.buildWhyCauseOptions(d.problem || '');
 
         r.innerHTML = `
-            <button class="ds-btn ds-btn-ghost text-danger p-1" style="position:absolute; top:.5rem; right:.5rem;" onclick="this.closest('.dyn-why-row').remove()"><i data-lucide="trash-2" style="width:14px;"></i></button>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="ds-label mb-0 fw-semibold">Select Suspect Cause (from Stage 3 Fishbone)</label>
+                <button type="button" class="ds-btn ds-btn-ghost text-danger p-1 flex-shrink-0" onclick="this.closest('.dyn-why-row').remove()" title="Remove Sequence">
+                    <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
             <div class="row g-2 mb-2">
                 <div class="col-12">
-                    <label class="ds-label">Select Suspect Cause (from Stage 3 Fishbone)</label>
                     <select class="ds-input ds-select r-prob" required>
                         ${causeOptions}
                     </select>
@@ -1131,11 +1149,19 @@ const Stage4 = {
             <div class="col-2"><input type="text" class="ds-input r-diff" placeholder="e.g. 1.0 bar drop" value="${d.difference || ''}" required></div>`);
     },
     addValidationRow(d = {}) {
+        const cleanVal = (v) => (v === undefined || v === null || v === 'undefined' || v === 'null') ? '' : v;
+        const testType = cleanVal(d.test_type || d.test || d.type);
+        const pVal = cleanVal(d.p_value || d.pval || d.p_val);
+        const conf = cleanVal(d.confidence_level || d.confidence || d.conf_level);
+        const conc = cleanVal(d.conclusion || d.result);
+        const cleanConf = String(conf).replace('%', '').trim();
+        const esc = (s) => (window.QCMS && QCMS.escapeHtml) ? QCMS.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
+
         this.addRowTemplate('s4_validationContainer', d, `
-            <div class="col-3"><input type="text" class="ds-input r-test" placeholder="e.g. Chi-Square Test" value="${d.test_type || ''}" required></div>
-            <div class="col-2"><input type="text" class="ds-input r-pval" placeholder="e.g. 0.034" value="${d.p_value || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-conf" placeholder="e.g. 95%" value="${d.confidence_level || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-conc" placeholder="e.g. Statistically Significant" value="${d.conclusion || ''}" required></div>`);
+            <div class="col-3"><input type="text" class="ds-input r-test" placeholder="e.g. Chi-Square Test" value="${esc(testType)}" required></div>
+            <div class="col-2"><input type="number" step="any" min="0" max="1" class="ds-input r-pval" placeholder="e.g. 0.034" value="${esc(pVal)}" required></div>
+            <div class="col-3"><input type="number" step="any" min="0" max="100" class="ds-input r-conf" placeholder="e.g. 95" value="${esc(cleanConf)}" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-conc" placeholder="e.g. Statistically Significant" value="${esc(conc)}" required></div>`);
     },
     addReconfirmRow(d = {}) {
         this.addRowTemplate('s4_reconfirmContainer', d, `

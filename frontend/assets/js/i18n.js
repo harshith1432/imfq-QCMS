@@ -617,7 +617,7 @@ class LanguageManager {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                                /* cookie auth */
                             },
                             body: JSON.stringify({ language: lang })
                         });

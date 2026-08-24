@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import db, User, Plant, Department, AuditLog
 from app.presentation.routes.admin_routes import admin_required, log_action
-from datetime import datetime
+from datetime import datetime, timezone
+from app.presentation.routes.error_helpers import internal_server_error
 
 plant_bp = Blueprint('plant_bp', __name__)
 
@@ -13,7 +14,7 @@ def get_current_user():
             uid = uid.get('id')
         if uid and str(uid).isdigit():
             uid = int(uid)
-        return User.query.get(uid)
+        return db.session.get(User, uid)
     except Exception:
         return None
 
@@ -76,7 +77,7 @@ def get_plants():
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @plant_bp.route('', methods=['POST'])
 @plant_bp.route('/', methods=['POST'])
@@ -125,7 +126,7 @@ def create_plant():
             name=name,
             code=code,
             location=location,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(new_plant)
         db.session.commit()
@@ -144,7 +145,7 @@ def create_plant():
         }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @plant_bp.route('/<int:plant_id>', methods=['PUT'])
 @jwt_required()
@@ -202,7 +203,7 @@ def update_plant(plant_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @plant_bp.route('/<int:plant_id>/stats', methods=['GET'])
 @jwt_required()
@@ -225,7 +226,7 @@ def get_plant_stats(plant_id):
             "user_count": user_count
         }), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @plant_bp.route('/<int:plant_id>', methods=['DELETE'])
 @jwt_required()
@@ -316,7 +317,7 @@ def delete_plant(plant_id):
                 org_id=current_user.org_id,
                 name=new_name,
                 code=(data.get('new_plant_code') or '').strip(),
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc).replace(tzinfo=None)
             )
             db.session.add(new_plant)
             db.session.flush()
@@ -341,5 +342,4 @@ def delete_plant(plant_id):
         return jsonify({"status": "success", "message": "Plant location deleted successfully"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-
+        return internal_server_error(e, "An internal server error occurred.")

@@ -9,7 +9,7 @@ New:    Subscription, SubscriptionInvoice
 import uuid
 import csv
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func, or_, and_, text
@@ -23,6 +23,7 @@ from app.presentation.middleware.middleware import super_admin_required
 
 import threading
 from sqlalchemy.orm.attributes import flag_modified
+from app.presentation.routes.error_helpers import internal_server_error
 
 subscription_bp = Blueprint('subscriptions', __name__)
 
@@ -89,7 +90,7 @@ BILLING_CYCLE_MONTHS = {
 
 def _get_current_user():
     user_id = get_jwt_identity()
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
 
 
 def _require_super_admin(user):
@@ -104,14 +105,14 @@ def _require_super_admin(user):
 
 def _sub_uid():
     """Generate a unique subscription UID like SUB-2026-000123"""
-    year = datetime.utcnow().year
+    year = datetime.now(timezone.utc).replace(tzinfo=None).year
     count = Subscription.query.count() + 1
     return f"SUB-{year}-{count:06d}"
 
 
 def _inv_uid():
     """Generate a unique invoice UID like INV-2026-000123"""
-    year = datetime.utcnow().year
+    year = datetime.now(timezone.utc).replace(tzinfo=None).year
     count = SubscriptionInvoice.query.count() + 1
     return f"INV-{year}-{count:06d}"
 
@@ -247,7 +248,7 @@ def _serialize_subscription(sub):
             days = max(1, (sub.trial_end_date - sub.trial_start_date).days)
             display_cycle = f"Trial ({days} Days)"
         elif getattr(sub, 'trial_end_date', None):
-            days = max(1, (sub.trial_end_date - datetime.utcnow()).days)
+            days = max(1, (sub.trial_end_date - datetime.now(timezone.utc).replace(tzinfo=None)).days)
             display_cycle = f"Trial ({days} Days)"
         else:
             display_cycle = "Trial Duration"
@@ -268,7 +269,7 @@ def _serialize_subscription(sub):
         'renewal_date': sub.renewal_date.isoformat() if sub.renewal_date else None,
         'trial_start_date': sub.trial_start_date.isoformat() if sub.trial_start_date else None,
         'trial_end_date': sub.trial_end_date.isoformat() if sub.trial_end_date else None,
-        'trial_days_remaining': max(0, (sub.trial_end_date - datetime.utcnow()).days) if sub.trial_end_date and sub.subscription_status == 'Trial' else None,
+        'trial_days_remaining': max(0, (sub.trial_end_date - datetime.now(timezone.utc).replace(tzinfo=None)).days) if sub.trial_end_date and sub.subscription_status == 'Trial' else None,
         'base_price': sub.base_price,
         'discount_percent': sub.discount_percent,
         'discount_amount': sub.discount_amount,
@@ -360,7 +361,7 @@ def _sync_org(sub):
         org.license_start_date = sub.start_date
     if not org.license_number:
         import uuid
-        org.license_number = f"LIC-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+        org.license_number = f"LIC-{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
 
 
 def _notify_org_admins(org_id, title, message, link=None):
@@ -379,7 +380,7 @@ def _notify_org_admins(org_id, title, message, link=None):
                 message=message,
                 is_read=False,
                 link=link or '/admin/dashboard.html',
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc).replace(tzinfo=None)
             )
             db.session.add(notif)
         db.session.commit()
@@ -480,7 +481,7 @@ def create_razorpay_order():
             }
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return internal_server_error(e, "Subscription operation failed.")
 
 def _ensure_org_subscriptions():
     """Ensure every non-deleted tenant Organization has a corresponding Subscription record.
@@ -498,7 +499,7 @@ def _ensure_org_subscriptions():
         if not orgs_without_sub:
             return
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         for org in orgs_without_sub:
             raw_status = (org.subscription_status or 'Active').strip()
             norm_status = 'Active'
@@ -566,7 +567,7 @@ def get_subscription_dashboard():
     try:
         _ensure_org_subscriptions()
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         month_start = datetime(now.year, now.month, 1)
         prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
         thirty_days_later = now + timedelta(days=30)
@@ -831,7 +832,7 @@ def list_subscriptions():
             pstatus = [s.strip() for s in payment_status_filter.split(',')]
             query = query.filter(Subscription.payment_status.in_(pstatus))
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         start_window = now - timedelta(days=1)
         if renewal_window == '7d':
             end_window = now + timedelta(days=7)
@@ -926,7 +927,7 @@ def create_subscription():
     if not org_id:
         return jsonify({'error': 'org_id is required'}), 422
 
-    org = Organization.query.get(org_id)
+    org = db.session.get(Organization, org_id)
     if not org:
         return jsonify({'error': 'Organization not found'}), 404
 
@@ -953,7 +954,7 @@ def create_subscription():
     discount_amount, gst_amount, final_amount, calc_base = _calc_pricing(base_price, discount_percent, gst_percent, is_tax_inclusive)
 
     # ── Dates ──
-    start_date = datetime.utcnow()
+    start_date = datetime.now(timezone.utc).replace(tzinfo=None)
     renewal_date = _compute_renewal_date(start_date, billing_cycle)
     end_date = renewal_date
 
@@ -1000,7 +1001,7 @@ def create_subscription():
         subscription_id=sub.id,
         org_id=org_id,
         invoice_uid=_inv_uid(),
-        invoice_number=f"INV/{datetime.utcnow().year}/{sub.id:04d}",
+        invoice_number=f"INV/{datetime.now(timezone.utc).replace(tzinfo=None).year}/{sub.id:04d}",
         invoice_date=start_date,
         due_date=start_date + timedelta(days=7),
         billing_period_start=start_date,
@@ -1173,7 +1174,7 @@ def renew_subscription(sub_id):
     old_end = sub.end_date
 
     # Renew from today or from end_date (whichever is later)
-    renew_from = max(datetime.utcnow(), sub.end_date or datetime.utcnow())
+    renew_from = max(datetime.now(timezone.utc).replace(tzinfo=None), sub.end_date or datetime.now(timezone.utc).replace(tzinfo=None))
     new_end = _compute_renewal_date(renew_from, sub.billing_cycle)
 
     sub.start_date = renew_from
@@ -1208,9 +1209,9 @@ def renew_subscription(sub_id):
         subscription_id=sub.id,
         org_id=sub.org_id,
         invoice_uid=_inv_uid(),
-        invoice_number=f"INV/{datetime.utcnow().year}/{sub.id:04d}R{len(sub.invoices)+1}",
-        invoice_date=datetime.utcnow(),
-        due_date=datetime.utcnow() + timedelta(days=7),
+        invoice_number=f"INV/{datetime.now(timezone.utc).replace(tzinfo=None).year}/{sub.id:04d}R{len(sub.invoices)+1}",
+        invoice_date=datetime.now(timezone.utc).replace(tzinfo=None),
+        due_date=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7),
         billing_period_start=renew_from,
         billing_period_end=new_end,
         plan_name=sub.plan_name,
@@ -1447,7 +1448,7 @@ def cancel_subscription(sub_id):
 
     old_status = sub.subscription_status
     sub.subscription_status = 'Cancelled'
-    sub.cancelled_at = datetime.utcnow()
+    sub.cancelled_at = datetime.now(timezone.utc).replace(tzinfo=None)
     sub.cancellation_reason = reason
     sub.auto_renewal = False
     _sync_org(sub)
@@ -1477,7 +1478,7 @@ def extend_subscription(sub_id):
     if days <= 0:
         return jsonify({'error': 'days must be positive'}), 422
 
-    base = sub.end_date or datetime.utcnow()
+    base = sub.end_date or datetime.now(timezone.utc).replace(tzinfo=None)
     sub.end_date = base + timedelta(days=days)
     sub.renewal_date = sub.end_date
     sub.subscription_status = 'Active'
@@ -1573,9 +1574,9 @@ def generate_invoice(sub_id):
         subscription_id=sub.id,
         org_id=sub.org_id,
         invoice_uid=_inv_uid(),
-        invoice_number=data.get('invoice_number', f"INV/{datetime.utcnow().year}/{sub.id:04d}M{len(sub.invoices)+1}"),
-        invoice_date=datetime.utcnow(),
-        due_date=datetime.utcnow() + timedelta(days=data.get('due_days', 7)),
+        invoice_number=data.get('invoice_number', f"INV/{datetime.now(timezone.utc).replace(tzinfo=None).year}/{sub.id:04d}M{len(sub.invoices)+1}"),
+        invoice_date=datetime.now(timezone.utc).replace(tzinfo=None),
+        due_date=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=data.get('due_days', 7)),
         billing_period_start=sub.start_date,
         billing_period_end=sub.end_date,
         plan_name=sub.plan_name,
@@ -1704,11 +1705,11 @@ def convert_trial(sub_id):
     sub.subscription_status = 'Active'
     sub.payment_status = 'Paid'
     sub.billing_cycle = billing_cycle
-    sub.start_date = datetime.utcnow()
+    sub.start_date = datetime.now(timezone.utc).replace(tzinfo=None)
     sub.end_date = _compute_renewal_date(sub.start_date, billing_cycle)
     sub.renewal_date = sub.end_date
     sub.trial_start_date = sub.trial_start_date or sub.start_date
-    sub.trial_end_date = sub.trial_end_date or datetime.utcnow()
+    sub.trial_end_date = sub.trial_end_date or datetime.now(timezone.utc).replace(tzinfo=None)
 
     _sync_org(sub)
     db.session.commit()
@@ -1738,7 +1739,7 @@ def extend_trial(sub_id):
     data = request.get_json(silent=True) or {}
     days = int(data.get('days', 14))
 
-    base = sub.trial_end_date or datetime.utcnow()
+    base = sub.trial_end_date or datetime.now(timezone.utc).replace(tzinfo=None)
     sub.trial_end_date = base + timedelta(days=days)
     sub.end_date = sub.trial_end_date
     _sync_org(sub)
@@ -1770,7 +1771,7 @@ def auto_approve_trial_extension_task(app_obj, org_id):
             days = pending.get('days', 14)
             current_count = getattr(org, 'trial_extension_count', 0) or 0
             org.trial_extension_count = current_count + 1
-            org.trial_ends_at = datetime.utcnow() + timedelta(days=days)
+            org.trial_ends_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
             org.license_expiry_date = org.trial_ends_at
             org.subscription_status = 'Trialing'
 
@@ -1786,7 +1787,7 @@ def auto_approve_trial_extension_task(app_obj, org_id):
                 sub.subscription_status = 'Trial'
 
             pending['status'] = 'Approved'
-            pending['approved_at'] = datetime.utcnow().isoformat()
+            pending['approved_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             pending['approval_type'] = 'Auto-Approved'
             sec_settings['pending_trial_extension'] = pending
             org.security_settings = sec_settings
@@ -1813,11 +1814,11 @@ def check_and_apply_pending_trial_extensions(org):
         if not req_at_str:
             return
         req_at = datetime.fromisoformat(req_at_str)
-        if (datetime.utcnow() - req_at).total_seconds() >= 300: # 5 minutes = 300 seconds
+        if (datetime.now(timezone.utc).replace(tzinfo=None) - req_at).total_seconds() >= 300: # 5 minutes = 300 seconds
             days = pending.get('days', 14)
             current_count = getattr(org, 'trial_extension_count', 0) or 0
             org.trial_extension_count = current_count + 1
-            org.trial_ends_at = datetime.utcnow() + timedelta(days=days)
+            org.trial_ends_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
             org.license_expiry_date = org.trial_ends_at
             org.subscription_status = 'Trialing'
 
@@ -1833,7 +1834,7 @@ def check_and_apply_pending_trial_extensions(org):
                 sub.subscription_status = 'Trial'
 
             pending['status'] = 'Approved'
-            pending['approved_at'] = datetime.utcnow().isoformat()
+            pending['approved_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             pending['approval_type'] = 'Auto-Approved'
             sec_settings['pending_trial_extension'] = pending
             org.security_settings = sec_settings
@@ -1858,7 +1859,7 @@ def request_trial_extension():
     if not org_id:
         return jsonify({'error': 'Organization ID not found for user'}), 404
         
-    org = Organization.query.get(org_id)
+    org = db.session.get(Organization, org_id)
     if not org:
         return jsonify({'error': 'Organization not found'}), 404
 
@@ -1870,7 +1871,7 @@ def request_trial_extension():
     default_days = (ps.trial_period_days if ps and hasattr(ps, 'trial_period_days') and ps.trial_period_days else 14)
 
     days = int(data.get('days', default_days))
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     current_count = getattr(org, 'trial_extension_count', 0) or 0
     is_auto_eligible = bool(current_count < max_auto)
 
@@ -1930,7 +1931,7 @@ def cancel_trial(sub_id):
 
     data = request.get_json(silent=True) or {}
     sub.subscription_status = 'Cancelled'
-    sub.cancelled_at = datetime.utcnow()
+    sub.cancelled_at = datetime.now(timezone.utc).replace(tzinfo=None)
     sub.cancellation_reason = data.get('reason', 'Trial cancelled')
     _sync_org(sub)
     db.session.commit()
@@ -1958,12 +1959,12 @@ def bulk_renew():
 
     results = {'success': [], 'failed': []}
     for sid in ids:
-        sub = Subscription.query.get(sid)
+        sub = db.session.get(Subscription, sid)
         if not sub:
             results['failed'].append({'id': sid, 'reason': 'Not found'})
             continue
         try:
-            renew_from = max(datetime.utcnow(), sub.end_date or datetime.utcnow())
+            renew_from = max(datetime.now(timezone.utc).replace(tzinfo=None), sub.end_date or datetime.now(timezone.utc).replace(tzinfo=None))
             sub.end_date = _compute_renewal_date(renew_from, sub.billing_cycle)
             sub.renewal_date = sub.end_date
             sub.subscription_status = 'Active'
@@ -1978,7 +1979,8 @@ def bulk_renew():
             )
             results['success'].append(sid)
         except Exception as e:
-            results['failed'].append({'id': sid, 'reason': str(e)})
+            logger.error(f'Subscription bulk renewal failed for {sid}: {e}', exc_info=True)
+            results['failed'].append({'id': sid, 'reason': 'Failed to process renewal'})
 
     db.session.commit()
     _log(user, 'BULK_RENEWED', 'Subscription', None,
@@ -2000,12 +2002,12 @@ def bulk_cancel():
 
     results = {'success': [], 'failed': []}
     for sid in ids:
-        sub = Subscription.query.get(sid)
+        sub = db.session.get(Subscription, sid)
         if not sub:
             results['failed'].append({'id': sid, 'reason': 'Not found'})
             continue
         sub.subscription_status = 'Cancelled'
-        sub.cancelled_at = datetime.utcnow()
+        sub.cancelled_at = datetime.now(timezone.utc).replace(tzinfo=None)
         sub.cancellation_reason = reason
         _sync_org(sub)
         results['success'].append(sid)
@@ -2033,7 +2035,7 @@ def bulk_assign_plan():
     plan_info = PLAN_CATALOGUE[plan_name]
     results = {'success': [], 'failed': []}
     for sid in ids:
-        sub = Subscription.query.get(sid)
+        sub = db.session.get(Subscription, sid)
         if not sub:
             results['failed'].append({'id': sid, 'reason': 'Not found'})
             continue
@@ -2068,7 +2070,7 @@ def bulk_send_reminders():
 
     sent_count = 0
     for sid in ids:
-        sub = Subscription.query.get(sid)
+        sub = db.session.get(Subscription, sid)
         if sub and sub.org_id:
             expiry_str = sub.end_date.strftime('%d %b %Y') if sub.end_date else 'N/A'
             title = f"Subscription Renewal Reminder ({sub.plan_name} Plan)"
@@ -2139,8 +2141,8 @@ def export_subscriptions():
 @jwt_required()
 def get_plan_catalogue():
     user = _get_current_user()
-    role_name = user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))
-    is_super_admin = user and (role_name == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False) or getattr(user, 'is_platform_super_admin', False))
+    role_name = (user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))).strip().lower()
+    is_super_admin = bool(user and (role_name in ('superadmin', 'super admin', 'super_admin') or getattr(user, 'system_role', '').lower() in ('superadmin', 'super_admin') or getattr(user, 'is_super_admin', False) or getattr(user, 'is_platform_super_admin', False) or getattr(user, 'id', 0) == 1))
 
     billing_cycle = request.args.get('billing_cycle', '')
     status_filter = request.args.get('status', '') # Active, Inactive, Deprecated, Coming Soon
@@ -2190,7 +2192,12 @@ def get_plan_catalogue():
         elif status_filter:
             plans_query = plans_query.filter(SaaSPlan.status == status_filter)
         if type_filter:
-            plans_query = plans_query.filter(SaaSPlan.plan_type == type_filter)
+            plans_query = plans_query.filter(or_(
+                SaaSPlan.plan_type.ilike(type_filter),
+                SaaSPlan.name.ilike(type_filter),
+                SaaSPlan.code.ilike(type_filter),
+                SaaSPlan.name.ilike(f'%{type_filter}%')
+            ))
         if search_q:
             plans_query = plans_query.filter(or_(
                 SaaSPlan.name.ilike(f'%{search_q}%'),
@@ -2357,8 +2364,7 @@ def get_plan_detail(plan_id):
         'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0,
         'api_limit': plan.limits.api_limit if plan.limits else 10000,
         'reports_limit': plan.limits.reports_limit if plan.limits else 100,
-        'dashboards_limit': plan.limits.dashboards_limit if plan.limits else 10,
-        'backups_limit': plan.limits.backups_limit if plan.limits else 5
+        'dashboards_limit': plan.limits.dashboards_limit if plan.limits else 10
     }
 
     modules = [{
@@ -2493,8 +2499,7 @@ def create_plan():
         storage_limit_gb=float(lim.get('storage_limit_gb', 10.0)),
         api_limit=int(lim.get('api_limit', 10000)),
         reports_limit=int(lim.get('reports_limit', 100)),
-        dashboards_limit=int(lim.get('dashboards_limit', 10)),
-        backups_limit=int(lim.get('backups_limit', 5))
+        dashboards_limit=int(lim.get('dashboards_limit', 10))
     )
     db.session.add(limits)
 
@@ -2780,8 +2785,7 @@ def duplicate_plan(plan_id):
             storage_limit_gb=parent.limits.storage_limit_gb,
             api_limit=parent.limits.api_limit,
             reports_limit=parent.limits.reports_limit,
-            dashboards_limit=parent.limits.dashboards_limit,
-            backups_limit=parent.limits.backups_limit
+            dashboards_limit=parent.limits.dashboards_limit
         )
         db.session.add(limits)
 
@@ -3202,6 +3206,5 @@ def sub_payg_preview_single():
 def sub_payg_generate_bills():
     from app.presentation.routes.billing_routes import generate_payg_monthly_bills
     return generate_payg_monthly_bills()
-
 
 

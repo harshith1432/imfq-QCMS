@@ -1,9 +1,7 @@
 (function () {
-    const token = sessionStorage.getItem('token')
-        || localStorage.getItem('token')
-        || localStorage.getItem('access_token')
-        || sessionStorage.getItem('access_token');
+    const isAuthed = (sessionStorage.getItem('qcms_authenticated') === 'true') || (localStorage.getItem('qcms_authenticated') === 'true');
     const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+    const token = sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
 
     function safeBase64Decode(str) {
         if (!str) return null;
@@ -45,26 +43,14 @@
 
     let userRole = null;
 
-    if (token) {
+    if (userStr) {
         try {
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                if (user) {
-                    const rawRole = user.role || user.role_name || (typeof user.role === 'object' ? (user.role.name || user.role.role_name) : null);
-                    if (rawRole) {
-                        userRole = normalizeRole(rawRole);
-                    }
+            const user = JSON.parse(userStr);
+            if (user) {
+                const rawRole = user.role || user.role_name || (typeof user.role === 'object' ? (user.role.name || user.role.role_name) : null);
+                if (rawRole) {
+                    userRole = normalizeRole(rawRole);
                 }
-            }
-            if (!userRole && token.includes('.')) {
-                try {
-                    const jsonStr = safeBase64Decode(token.split('.')[1]);
-                    if (jsonStr) {
-                        const payload = JSON.parse(jsonStr);
-                        if (payload.role) userRole = normalizeRole(payload.role);
-                        else if (payload.sa_sub_role || window.location.pathname.includes('super-admin.html')) userRole = 'SuperAdmin';
-                    }
-                } catch (_) {}
             }
         } catch (e) {
             console.warn('[AuthGuard] Non-fatal auth parse error:', e);
@@ -125,25 +111,34 @@
     // ── Active Session Termination Heartbeat ──────────────────────────────
     // Periodically verify session validity so if a Super Admin terminates this user's
     // active session, the user is immediately kicked back to the login page.
-    if (token && !isLandingPage && page !== 'login.html') {
+    if (isAuthed && !isLandingPage && page !== 'login.html') {
         let sessionCheckInProgress = false;
+        let lastCheckTime = Date.now();
         const verifySessionStatus = async () => {
             if (sessionCheckInProgress) return;
             sessionCheckInProgress = true;
+            lastCheckTime = Date.now();
             try {
+                const currentToken = sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+                if (!currentToken) return;
+                const headers = {
+                    'Authorization': `Bearer ${currentToken}`
+                };
                 const res = await fetch('/api/auth/me', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers,
+                    credentials: 'same-origin'
                 });
                 if (res.status === 401) {
                     const data = await res.json().catch(() => ({}));
-                    console.warn('[AuthGuard] 401 received during session check:', data);
-                    sessionStorage.clear();
-                    localStorage.clear();
-                    if (!window.location.pathname.includes('login.html')) {
-                        if (data && (data.session_terminated || (data.message && (data.message.toLowerCase().includes('terminated') || data.message.toLowerCase().includes('deactivated'))))) {
-                            window.location.href = '/auth/login.html?reason=session_terminated';
-                        } else {
-                            window.location.href = '/auth/login.html';
+                    if (data && (data.session_terminated || data.message?.includes('deactivated') || data.message?.includes('expired') || data.message?.includes('Invalid token') || data.message?.includes('User account not found'))) {
+                        console.warn('[AuthGuard] 401 received during session check:', data);
+                        sessionStorage.clear();
+                        localStorage.removeItem('qcms_authenticated');
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('access_token');
+                        if (!window.location.pathname.includes('login.html')) {
+                            window.location.href = '/auth/login.html?reason=' + (data.session_terminated ? 'session_terminated' : 'expired');
                         }
                     }
                 }
@@ -153,11 +148,13 @@
             }
         };
 
-        // Run initial check after 3s, repeat every 30s & on tab focus
-        setTimeout(verifySessionStatus, 3000);
+        // Run initial check after 5s, repeat every 30s & on tab focus if >15s elapsed
+        setTimeout(verifySessionStatus, 5000);
         setInterval(verifySessionStatus, 30000);
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') verifySessionStatus();
+            if (document.visibilityState === 'visible' && (Date.now() - lastCheckTime > 15000)) {
+                verifySessionStatus();
+            }
         });
     }
 
@@ -462,31 +459,10 @@
     const isPublic = publicPages.includes(page) || path === '/' || path.endsWith('/');
     const isAuthPage = page === 'login.html';
 
-    if (!token && !isPublic) {
+    if (!isAuthed && !isPublic) {
         console.log('Access denied. Redirecting to login...');
         window.location.replace('/auth/login.html');
         return;
-    }
-
-    // Check token expiration if JWT format
-    if (token && token.includes('.')) {
-        try {
-            const jsonStr = safeBase64Decode(token.split('.')[1]);
-            if (jsonStr) {
-                const payload = JSON.parse(jsonStr);
-                if (payload.exp && payload.exp * 1000 < Date.now()) {
-                    console.warn('[AuthGuard] Token expired. Clearing session and redirecting to login...');
-                    sessionStorage.clear();
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('access_token');
-                    localStorage.removeItem('user');
-                    if (!isPublic) {
-                        window.location.replace('/auth/login.html');
-                        return;
-                    }
-                }
-            }
-        } catch (e) {}
     }
 
     // ── Role-to-Dashboard mapping ──────────────────────────────────
@@ -521,7 +497,7 @@
 
     if (isAuthPage) {
         const urlParams = new URLSearchParams(window.location.search);
-        // Clear session on explicit logout, administrative session termination, or default direct landing without auto flag
+        // Clear session on explicit logout or administrative session termination
         if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
             try {
                 sessionStorage.clear();
@@ -529,13 +505,12 @@
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('user');
                 localStorage.removeItem('role_permissions');
+                localStorage.removeItem('qcms_authenticated');
+                localStorage.removeItem('qcms_remember_me');
                 sessionStorage.removeItem('role_permissions');
             } catch (_) {}
-        } else if (urlParams.get('auto') === 'true' && token && userRole) {
-            console.log('Auto-login requested on login page. Redirecting to role dashboard...');
-            redirectByRole(userRole);
-            return;
         }
+        return;
     } else if (token && !isSuperAdminUser) {
         let isDenied = false;
 
@@ -591,12 +566,17 @@
         })
         .then(res => {
             if (res.status === 401) {
-                console.warn('[Auth Check] 401 Unauthorized session. Clearing token and redirecting to login...');
-                sessionStorage.clear();
-                localStorage.removeItem('token');
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('user');
-                window.location.replace('/auth/login.html');
+                res.json().then(data => {
+                    if (data && (data.session_terminated || data.message?.includes('deactivated') || data.message?.includes('expired') || data.message?.includes('Invalid token') || data.message?.includes('User account not found'))) {
+                        console.warn('[Auth Check] 401 Unauthorized session. Clearing token and redirecting to login...');
+                        sessionStorage.clear();
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('qcms_authenticated');
+                        window.location.replace('/auth/login.html' + (data.session_terminated ? '?reason=session_terminated' : ''));
+                    }
+                }).catch(() => {});
                 return null;
             }
             if (!res.ok) {
@@ -882,13 +862,12 @@
         }
 
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token');
             const res = await fetch('/api/auth/request-reactivation', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({ message: msg })
             });
             const data = await res.json();
@@ -1152,13 +1131,12 @@
         }
 
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token');
             const res = await fetch('/api/auth/user-reactivation-request', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({ message: msg })
             });
             const data = await res.json();
@@ -1183,9 +1161,13 @@
     };
 
     // Export logout globally
-    window.logout = function () {
+    window.logout = async function () {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+        } catch (_) {}
         try {
             sessionStorage.clear();
+            localStorage.removeItem('qcms_authenticated');
             localStorage.removeItem('token');
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
@@ -1210,11 +1192,8 @@ window.QCMSFeatures = {
     flags: {},
     loaded: false,
     async init() {
-        const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
         try {
-            const headers = {};
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-            const res = await fetch('/api/feature-engine/flags', { headers });
+            const res = await fetch('/api/feature-engine/flags', { credentials: 'same-origin' });
             if (res.ok) {
                 const json = await res.json();
                 this.flags = json.flags || json.data || {};
@@ -1362,8 +1341,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function sendHeartbeat() {
         if (isTerminating) return;
-        const token = sessionStorage.getItem('token') || localStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
-        if (!token) return;
+        const isAuthed = sessionStorage.getItem('qcms_authenticated') === 'true' || localStorage.getItem('qcms_authenticated') === 'true';
+        if (!isAuthed) return;
 
         // Check latest cross-tab activity from localStorage
         const latestStored = localStorage.getItem('qcms_last_activity');
@@ -1387,12 +1366,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (timeSinceMovement < INACTIVITY_TIMEOUT_MS && (currentTime - lastHeartbeatSentTime) >= HEARTBEAT_INTERVAL_MS) {
             lastHeartbeatSentTime = currentTime;
             try {
+                const currentToken = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (currentToken) {
+                    headers['Authorization'] = `Bearer ${currentToken}`;
+                }
                 const res = await fetch('/api/auth/heartbeat', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
+                    headers,
+                    credentials: 'same-origin'
                 });
 
                 if (res.status === 401) {

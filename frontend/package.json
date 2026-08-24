@@ -1,0 +1,23 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "description": "The QCMS frontend is a lightweight, responsive Single Page Application (SPA) architecture built with vanilla ES6+ JavaScript, HTML5, and CSS3. It prioritizes performance and maintainability without the overhead of heavy frameworks.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "build:html": "node build.js --update-html",
+    "restore:html": "node build.js --restore-html",
+    "test": "echo \"No test specified\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "clean-css": "^5.3.3",
+    "terser": "^5.50.0"
+  }
+}

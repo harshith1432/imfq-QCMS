@@ -23,15 +23,18 @@ const Stage6 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Task
                             </button>
                         </div>
-                        <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-3 ds-tooltip-trigger" title="Countermeasure: Specific action item being executed">Countermeasure</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Owner: Assigned person responsible for task execution">Owner</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Task: Task description or milestone step">Task</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Due Date: Target completion deadline">Due Date</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Comp %: Completion percentage progress (0-100%)">Comp %</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_taskContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Countermeasure: Specific action item being executed">Countermeasure</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Owner: Assigned person responsible for task execution">Owner</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Task: Task description or milestone step">Task</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Due Date: Target completion deadline">Due Date</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Comp %: Completion percentage progress (0-100%)">Comp %</div>
+                                    <div class="col-1"></div>
+                                </div>
+                                <div id="s6_taskContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -54,15 +57,18 @@ const Stage6 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Resource
                             </button>
                         </div>
-                        <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-3 ds-tooltip-trigger" title="Resource Required: Description of equipment, tool, material, or manpower">Resource Required</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Budget Allocation: Allocated financial budget or cost">Budget Allocation</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Source: Internal department, vendor, or supplier">Source</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Due Date: Target date for procurement/allocation">Due Date</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Status: Current allocation/deployment status">Status</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_resourceContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Resource Required: Description of equipment, tool, material, or manpower">Resource Required</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Budget Allocation: Allocated financial budget or cost">Budget Allocation</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Source: Internal department, vendor, or supplier">Source</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Due Date: Target date for procurement/allocation">Due Date</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Status: Current allocation/deployment status">Status</div>
+                                    <div class="col-1"></div>
+                                </div>
+                                <div id="s6_resourceContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -86,14 +92,17 @@ const Stage6 = {
                             </button>
                         </div>
 
-                        <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-5 ds-tooltip-trigger" title="Change Description: Description of standard procedure or work instruction change">Change Description</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Owner: Person or role responsible for executing and standardizing this change">Owner</div>
-                            <div class="col-2 ds-tooltip-trigger" title="SOP Updated (Y/N): Confirmation whether formal SOP documentation was revised">SOP Updated (Y/N)</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Date: Implementation date of standard revision">Date</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_changeContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-5 ds-tooltip-trigger" title="Change Description: Description of standard procedure or work instruction change">Change Description</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Owner: Person or role responsible for executing and standardizing this change">Owner</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="SOP Updated (Y/N): Confirmation whether formal SOP documentation was revised">SOP Updated (Y/N)</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Date: Implementation date of standard revision">Date</div>
+                                    <div class="col-1"></div>
+                                </div>
+                                <div id="s6_changeContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -116,13 +125,16 @@ const Stage6 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Risk
                             </button>
                         </div>
-                        <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-5 ds-tooltip-trigger" title="Anticipated Risk/Resistance: Potential hurdle or user resistance factor">Anticipated Risk/Resistance</div>
-                            <div class="col-4 ds-tooltip-trigger" title="Strategy Executed: Action taken to overcome risk or resistance">Strategy Executed</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Status: Current resolution status">Status</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_riskContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-5 ds-tooltip-trigger" title="Anticipated Risk/Resistance: Potential hurdle or user resistance factor">Anticipated Risk/Resistance</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Strategy Executed: Action taken to overcome risk or resistance">Strategy Executed</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Status: Current resolution status">Status</div>
+                                    <div class="col-1"></div>
+                                </div>
+                                <div id="s6_riskContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -154,14 +166,17 @@ const Stage6 = {
                             </div>
                         </div>
 
-                        <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-4 ds-tooltip-trigger" title="Side Effect Description: Description of secondary issue or negative operational outcome">Side Effect Description</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Impact Level: Severity rating of side effect (Low, Medium, High, Critical)">Impact Level</div>
-                            <div class="col-3 ds-tooltip-trigger" title="Mitigation Strategy: Corrective action taken to mitigate secondary impact">Mitigation Strategy</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Plan Modification: Flag whether countermeasure action plan requires modification">Plan Modification</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_sideEffectContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4 ds-tooltip-trigger" title="Side Effect Description: Description of secondary issue or negative operational outcome">Side Effect Description</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Impact Level: Severity rating of side effect (Low, Medium, High, Critical)">Impact Level</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Mitigation Strategy: Corrective action taken to mitigate secondary impact">Mitigation Strategy</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Plan Modification: Flag whether countermeasure action plan requires modification">Plan Modification</div>
+                                    <div class="col-1"></div>
+                                </div>
+                                <div id="s6_sideEffectContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -184,14 +199,17 @@ const Stage6 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Evidence
                             </button>
                         </div>
-                        <div class="row text-muted small fw-bold mb-2 px-2 align-items-center">
-                            <div class="col-3 ds-tooltip-trigger" title="Document/Photo Name: Title of verification file or photo evidence">Document/Photo Name</div>
-                            <div class="col-3 ds-tooltip-trigger" title="Link/Reference: External drive link or document reference ID">Link/Reference</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Uploaded By: Team member uploading proof">Uploaded By</div>
-                            <div class="col-3 ds-tooltip-trigger" title="Attachment (Max 2MB): Uploaded image or PDF file">Attachment (Max 2MB)</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_evidenceContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 820px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2 align-items-center">
+                                    <div class="col-3 ds-tooltip-trigger" title="Document/Photo Name: Title of verification file or photo evidence">Document/Photo Name</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Link/Reference: External drive link or document reference ID">Link/Reference</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Uploaded By: Team member uploading proof">Uploaded By</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Attachment (Max 2MB): Uploaded image or PDF file">Attachment (Max 2MB)</div>
+                                    <div class="col-1 text-center"></div>
+                                </div>
+                                <div id="s6_evidenceContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -213,14 +231,17 @@ const Stage6 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Comm
                             </button>
                         </div>
-                        <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-3 ds-tooltip-trigger" title="Stakeholder: Target audience or team receiving communication">Stakeholder</div>
-                            <div class="col-4 ds-tooltip-trigger" title="Message: Summary of communication brief or shift announcement">Message</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Date: Communication date">Date</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Channel: Delivery channel (Meeting, Email, Noticeboard)">Channel</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_commContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Stakeholder: Target audience or team receiving communication">Stakeholder</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Message: Summary of communication brief or shift announcement">Message</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Date: Communication date">Date</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Channel: Delivery channel (Meeting, Email, Noticeboard)">Channel</div>
+                                    <div class="col-1 text-center"></div>
+                                </div>
+                                <div id="s6_commContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,15 +263,18 @@ const Stage6 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Training
                             </button>
                         </div>
-                        <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-3 ds-tooltip-trigger" title="Target Group: Audience or department receiving training (e.g. Line A Operators)">Target Group</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Training Module: Course title or skill module name">Training Module</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Date: Training completion date">Date</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Attend %: Attendance percentage of target operators">Attend %</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Attachment (Max 2MB): Attendance sheet or training slide upload">Attachment (Max 2MB)</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_trainingContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 820px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2 align-items-center">
+                                    <div class="col-3 ds-tooltip-trigger" title="Target Group: Audience or department receiving training (e.g. Line A Operators)">Target Group</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Training Module: Course title or skill module name">Training Module</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Date: Training completion date">Date</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Attend %: Attendance percentage of target operators">Attend %</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Attachment (Max 2MB): Attendance sheet or training slide upload">Attachment (Max 2MB)</div>
+                                    <div class="col-1 text-center"></div>
+                                </div>
+                                <div id="s6_trainingContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -273,13 +297,16 @@ const Stage6 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Check
                             </button>
                         </div>
-                        <div class="row text-muted small fw-bold mb-2 px-2">
-                            <div class="col-6 ds-tooltip-trigger" title="Item: Specific readiness condition being verified">Item</div>
-                            <div class="col-3 ds-tooltip-trigger" title="Verified By: Auditor or supervisor conducting verification">Verified By</div>
-                            <div class="col-2 ds-tooltip-trigger" title="Status: Readiness status (Ready, Pending, Failed)">Status</div>
-                            <div class="col-1"></div>
-                        </div>
-                        <div id="s6_readinessContainer" class="mb-0">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-6 ds-tooltip-trigger" title="Item: Specific readiness condition being verified">Item</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Verified By: Auditor or supervisor conducting verification">Verified By</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Status: Readiness status (Ready, Pending, Failed)">Status</div>
+                                    <div class="col-1"></div>
+                                </div>
+                                <div id="s6_readinessContainer" class="mb-0"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -580,31 +607,33 @@ const Stage6 = {
     },
 
     addEvidenceRow(d = {}) {
+        const cleanVal = (v) => (!v || String(v).trim().toLowerCase() === 'undefined' || String(v).trim().toLowerCase() === 'null') ? '' : String(v).trim();
+        const docName = cleanVal(d.document_name);
+        const link = cleanVal(d.link);
+        const upBy = cleanVal(d.uploaded_by);
+
         const rowEl = this.addRowTemplate('s6_evidenceContainer', d, `
-            <div class="col-3"><input type="text" class="ds-input r-nam" placeholder="e.g. Calibration Report #CR-2025" value="${d.document_name || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-lnk" placeholder="e.g. /uploads/... or URL" value="${d.link || ''}"></div>
-            <div class="col-2"><input type="text" class="ds-input r-upb" placeholder="e.g. Rajesh Kumar" value="${d.uploaded_by || ''}" required></div>
-            <div class="col-2 d-flex align-items-center">
-                <button type="button" class="btn btn-outline-primary text-xs w-100 d-flex align-items-center justify-content-center gap-1 btn-upload-ev py-2 px-2" style="height:38px; border-style:dashed; border-width:1.5px; border-radius:8px; font-weight:600; white-space:nowrap;" title="Upload PDF, PPT, Photo, Document (Max 2MB)">
-                    <i data-lucide="upload-cloud" style="width:15px;height:15px;"></i>
-                    <span>Upload (Max 2MB)</span>
+            <div class="col-3"><input type="text" class="ds-input r-nam" placeholder="e.g. Calibration Report #CR-2025" value="${docName}" required></div>
+            <div class="col-3"><input type="text" class="ds-input r-lnk" placeholder="e.g. /uploads/... or URL" value="${link}"></div>
+            <div class="col-2"><input type="text" class="ds-input r-upb" placeholder="e.g. Rajesh Kumar" value="${upBy}" required></div>
+            <div class="col-3 d-flex align-items-center gap-1">
+                <button type="button" class="btn btn-outline-primary text-xs flex-grow-1 d-flex align-items-center justify-content-center gap-1 btn-upload-ev py-1 px-2" style="height:36px; border-style:dashed; border-width:1.5px; border-radius:8px; font-weight:600; white-space:nowrap; font-size:0.75rem;" title="Upload PDF, PPT, Photo, Document (Max 2MB)">
+                    <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i>
+                    <span>Upload</span>
                 </button>
-                <input type="file" class="d-none r-file-input" accept=".pdf,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt">
-            </div>
-            <div class="col-auto d-flex align-items-center">
-                <a href="${d.link || '#'}" target="_blank" class="btn btn-primary text-xs d-flex align-items-center justify-content-center gap-1 btn-view-ev ${d.link ? '' : 'd-none'} py-2 px-3" style="height:38px; border-radius:8px; text-decoration:none; font-weight:600; white-space:nowrap;" title="View Uploaded Document">
-                    <i data-lucide="external-link" style="width:14px;height:14px;"></i> View
+                <a href="${link || '#'}" target="_blank" class="btn btn-primary text-xs d-flex align-items-center justify-content-center gap-1 btn-view-ev ${link ? '' : 'd-none'} py-1 px-2" style="height:36px; border-radius:8px; text-decoration:none; font-weight:600; white-space:nowrap; font-size:0.75rem;" title="View Uploaded Document">
+                    <i data-lucide="external-link" style="width:13px;height:13px;"></i> View
                 </a>
+                <input type="file" class="d-none r-file-input" accept=".pdf,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt">
             </div>`);
 
-
         if (!rowEl) return;
-        rowEl.classList.add('flex-nowrap'); // prevent delete button from wrapping to next line
 
         const btnUpload = rowEl.querySelector('.btn-upload-ev');
         const fileInput = rowEl.querySelector('.r-file-input');
         const linkInput = rowEl.querySelector('.r-lnk');
         const nameInput = rowEl.querySelector('.r-nam');
+        const upbInput = rowEl.querySelector('.r-upb');
         const btnView = rowEl.querySelector('.btn-view-ev');
 
         if (btnUpload && fileInput) {
@@ -635,6 +664,14 @@ const Stage6 = {
                     if (fileUrl) {
                         if (linkInput) linkInput.value = fileUrl;
                         if (nameInput && !nameInput.value.trim()) nameInput.value = file.name;
+                        if (upbInput && !upbInput.value.trim()) {
+                            try {
+                                const currUser = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                                if (currUser.name || currUser.full_name || currUser.username) {
+                                    upbInput.value = currUser.name || currUser.full_name || currUser.username;
+                                }
+                            } catch (_) {}
+                        }
                         if (btnView) {
                             btnView.href = fileUrl;
                             btnView.classList.remove('d-none');
@@ -652,7 +689,7 @@ const Stage6 = {
                     }
                 } finally {
                     btnUpload.disabled = false;
-                    btnUpload.innerHTML = '<i data-lucide="upload-cloud" style="width:16px;height:16px;"></i> <span>Upload (Max 2MB)</span>';
+                    btnUpload.innerHTML = '<i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> <span>Upload</span>';
                     if (window.lucide) lucide.createIcons();
                 }
             });
@@ -690,13 +727,13 @@ const Stage6 = {
             <div class="col-2"><input type="text" class="ds-input r-mod" placeholder="e.g. Torque Sensor Operation & Alerts" value="${d.training_module || ''}" required></div>
             <div class="col-2"><input type="date" class="ds-input r-dt" value="${d.date || ''}" required></div>
             <div class="col-2"><input type="number" class="ds-input r-att" placeholder="%" min="0" max="100" value="${d.attendance_pct || ''}" required></div>
-            <div class="col-2 d-flex flex-column justify-content-center gap-1">
-                <button type="button" class="btn btn-outline-primary text-xs w-100 d-flex align-items-center justify-content-center gap-1 btn-upload-tr py-1 px-1" style="height:32px; border-style:dashed; border-width:1.5px; border-radius:6px; font-weight:600; white-space:nowrap; font-size:0.7rem;" title="Upload PDF, PPT, Photo, Document (Max 2MB)">
+            <div class="col-2 d-flex align-items-center gap-1">
+                <button type="button" class="btn btn-outline-primary text-xs flex-grow-1 d-flex align-items-center justify-content-center gap-1 btn-upload-tr py-1 px-1" style="height:34px; border-style:dashed; border-width:1.5px; border-radius:6px; font-weight:600; white-space:nowrap; font-size:0.72rem;" title="Upload PDF, PPT, Photo, Document (Max 2MB)">
                     <i data-lucide="upload-cloud" style="width:13px;height:13px;"></i>
-                    <span>Upload (Max 2MB)</span>
+                    <span>Upload</span>
                 </button>
-                <a href="${fileUrl || '#'}" target="_blank" class="btn btn-primary text-xs w-100 d-flex align-items-center justify-content-center gap-1 btn-view-tr ${fileUrl ? '' : 'd-none'} py-1 px-1" style="height:28px; border-radius:6px; text-decoration:none; font-weight:600; white-space:nowrap; font-size:0.7rem;" title="${fileName || 'View Document'}">
-                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> View File
+                <a href="${fileUrl || '#'}" target="_blank" class="btn btn-primary text-xs d-flex align-items-center justify-content-center gap-1 btn-view-tr ${fileUrl ? '' : 'd-none'} py-1 px-2" style="height:34px; border-radius:6px; text-decoration:none; font-weight:600; white-space:nowrap; font-size:0.72rem;" title="${fileName || 'View Document'}">
+                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> View
                 </a>
                 <input type="file" class="d-none r-doc-file" accept=".pdf,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt">
                 <input type="hidden" class="r-doc-name" value="${fileName}">

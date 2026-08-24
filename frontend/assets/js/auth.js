@@ -62,6 +62,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
     const username = (document.getElementById('username')?.value || '').trim();
     const password = document.getElementById('password')?.value || '';
+    const rememberMe = document.getElementById('rememberMe')?.checked || false;
     const errorMsg = document.getElementById('errorMsg');
 
     let isLoggingIn = false;
@@ -87,15 +88,33 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 loginBtn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Authenticating...</span>';
             }
 
-            const data = await api.post('/auth/login', { username, password }, { button: null });
-            if (!data || !data.access_token) {
+            const data = await api.post('/auth/login', { username, password, remember_me: rememberMe }, { button: null });
+            if (!data || (!data.access_token && !data.id && !data.username)) {
                 throw new Error(data?.msg || data?.message || "Invalid username or password");
             }
-            sessionStorage.setItem('token', data.access_token);
-            localStorage.setItem('token', data.access_token);
+            if (data.access_token) {
+                if (window.api) window.api.token = data.access_token;
+                sessionStorage.setItem('token', data.access_token);
+                sessionStorage.setItem('access_token', data.access_token);
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('access_token', data.access_token);
+            }
+            sessionStorage.setItem('qcms_authenticated', 'true');
+            localStorage.setItem('qcms_authenticated', 'true');
+
+            if (rememberMe) {
+                localStorage.setItem('qcms_remember_me', 'true');
+                localStorage.setItem('qcms_remembered_username', username);
+            } else {
+                localStorage.removeItem('qcms_remember_me');
+                localStorage.removeItem('qcms_remembered_username');
+            }
 
             const userPayload = JSON.stringify({
                 username: data.username,
+                full_name: data.full_name || data.username,
+                profile_picture: data.profile_picture || null,
+                banner_image: data.banner_image || null,
                 email: data.email,
                 role: data.role,
                 role_name: data.role_name || data.role,
@@ -123,6 +142,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
             sessionStorage.setItem('user', userPayload);
             localStorage.setItem('user', userPayload);
+
             if (data.role_permissions) {
                 sessionStorage.setItem('role_permissions', JSON.stringify(data.role_permissions));
                 localStorage.setItem('role_permissions', JSON.stringify(data.role_permissions));
@@ -141,7 +161,9 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             }
 
             if (data.is_temp_password) {
-                window.location.replace('/auth/reset-password.html');
+                setTimeout(() => {
+                    window.location.href = '/auth/reset-password.html';
+                }, 50);
                 return;
             }
 
@@ -155,7 +177,10 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             else if (role === 'Team Leader') targetDashboard = '/dashboard/dashboard-team-member.html';
             else if (role === 'CEO') targetDashboard = '/dashboard/dashboard-ceo.html';
             
-            window.location.replace(targetDashboard);
+            // Brief micro-timeout to ensure storage is flushed in iOS WebKit before navigation
+            setTimeout(() => {
+                window.location.href = targetDashboard;
+            }, 60);
         } catch (err) {
             isLoggingIn = false;
             if (err.isTimeout) {
@@ -249,9 +274,17 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
     }
 });
 
-function logout() {
+async function logout() {
+    try {
+        if (window.api && typeof window.api.post === 'function') {
+            await window.api.post('/auth/logout', {}).catch(() => {});
+        } else {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+        }
+    } catch (_) {}
     try {
         sessionStorage.clear();
+        localStorage.removeItem('qcms_authenticated');
         localStorage.removeItem('token');
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
@@ -262,7 +295,7 @@ function logout() {
 }
 
 function checkAuth() {
-    const token = sessionStorage.getItem('token');
+    const isAuthed = sessionStorage.getItem('qcms_authenticated') === 'true' || localStorage.getItem('qcms_authenticated') === 'true';
     const path = window.location.pathname;
 
     // Improved detection including extensionless paths
@@ -270,15 +303,15 @@ function checkAuth() {
         path.includes('register') ||
         path.includes('reset-password');
 
-    if (!token && !isAuthPage && !path.endsWith('/') && !path.includes('index.html')) {
+    if (!isAuthed && !isAuthPage && !path.endsWith('/') && !path.includes('index.html')) {
         window.location.href = '/auth/login.html';
         return;
     }
 
     // Force password reset if flagged
-    if (token && !path.includes('reset-password.html')) {
+    if (isAuthed && !path.includes('reset-password.html')) {
         try {
-            const user = JSON.parse(sessionStorage.getItem('user'));
+            const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user'));
             if (user && user.is_temp_password) {
                 window.location.href = '/auth/reset-password.html';
             }
@@ -290,14 +323,14 @@ function checkAuth() {
 
 // Redirect if already logged in on login/register page
 function handleStaticRedirects() {
-    const token = sessionStorage.getItem('token');
+    const isAuthed = sessionStorage.getItem('qcms_authenticated') === 'true' || localStorage.getItem('qcms_authenticated') === 'true';
     const path = window.location.pathname;
     const isLoginPage = path.includes('login.html') || (path.endsWith('/login'));
     const isRegisterPage = path.includes('register.html') || (path.endsWith('/register'));
 
-    if ((isLoginPage || isRegisterPage) && token) {
+    if ((isLoginPage || isRegisterPage) && isAuthed) {
         try {
-            const user = JSON.parse(sessionStorage.getItem('user'));
+            const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user'));
             if (user && user.role) {
                 const role = user.role;
                 if (role === 'SuperAdmin') window.location.href = '/admin/super-admin.html';
@@ -308,9 +341,10 @@ function handleStaticRedirects() {
                 else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
                 else window.location.href = '/dashboard/dashboard-team-member.html';
             } else {
-                // Token exists but user object is corrupt/missing — clear it
-                sessionStorage.removeItem('token');
+                sessionStorage.removeItem('qcms_authenticated');
+                localStorage.removeItem('qcms_authenticated');
                 sessionStorage.removeItem('user');
+                localStorage.removeItem('user');
             }
         } catch (e) {
             sessionStorage.clear();

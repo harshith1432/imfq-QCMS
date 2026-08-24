@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Details | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css?v=2.8">
-    <link rel="stylesheet" href="/assets/css/glass.css?v=2.8">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css?v=2.8">
-    <script src="/assets/js/ux/breadcrumbs.js?v=2.8"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .stage-section { border-left: 3px solid var(--ds-primary); padding-left: 1rem; margin-bottom: 2rem; }
@@ -70,7 +68,8 @@
                         <h1 class="ds-title mb-0" id="projectTitleDisplay">Loading Project...</h1>
                         <p class="ds-text-secondary mb-0 mt-1" id="projectMeta">Loading...</p>
                     </div>
-                    <div class="h-stack gap-2">
+                    <div class="h-stack gap-2 align-items-center">
+                        <div id="projectPresenceAvatars" class="live-presence-avatar-stack me-2"></div>
                         <button class="ds-btn ds-btn-ghost d-none" id="qcAnalysisBtn" onclick="ProjectApp.openQcAnalysisModal()">
                             <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> QC Tools Analysis
                         </button>
@@ -200,6 +199,9 @@
 
             <div class="row g-4">
                 <div class="col-lg-9 col-12">
+                    <!-- Real-Time Collaborative Presence Banner -->
+                    <div id="stageLivePresenceBanner" class="mb-3" style="display:none;"></div>
+
                     <div id="stageContentContainer"></div>
 
                     <!-- Bottom Action Bar for Stage Data Submission & Saving -->
@@ -725,19 +727,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/js/api.js?v=2.8"></script>
-    <script src="/assets/js/i18n.js?v=3.3"></script>
-    <script src="/assets/js/components.js?v=3.3"></script>
-    <script src="/assets/js/stages/stage1.js?v=3.3"></script>
-    <script src="/assets/js/stages/stage2.js?v=3.3"></script>
-    <script src="/assets/js/stages/stage3.js?v=3.3"></script>
-    <script src="/assets/js/stages/stage4.js?v=3.3"></script>
-    <script src="/assets/js/stages/stage5.js?v=3.3"></script>
-    <script src="/assets/js/stages/stage6.js?v=3.3"></script>
-    <script src="/assets/js/stages/stage7.js?v=3.3"></script>
-    <script src="/assets/js/stages/stage8.js?v=3.3"></script>
-    <script src="/assets/js/stages/dynamic_renderer.js?v=3.3"></script>
-    <script src="/assets/js/project-details-app.js?v=3.3"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
+    <script src="/assets/dist/stages-bundle.2fec1a68.min.js"></script>
+    <script src="/assets/dist/live-presence.a35d616b.min.js"></script>
+    <script src="/assets/dist/project-details-app.af57b193.min.js"></script>
 </body>
 </html>
 

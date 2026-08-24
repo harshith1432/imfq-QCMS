@@ -1,23 +1,35 @@
 import os
 from flask import current_app
 
-def get_profile_picture_url(user):
-    if not user or not user.profile_picture:
-        username = user.username if user else 'User'
-        return f"/api/auth/avatar/{username}"
+def get_profile_picture_url(user_or_path):
+    if not user_or_path:
+        return "/api/auth/avatar/User"
     
+    if isinstance(user_or_path, str):
+        path = user_or_path
+        username = 'User'
+    else:
+        path = getattr(user_or_path, 'profile_picture', None)
+        username = getattr(user_or_path, 'username', 'User') or 'User'
+
+    if not path:
+        return f"/api/auth/avatar/{username}"
+        
+    if path.startswith('http://') or path.startswith('https://') or path.startswith('data:'):
+        return path
+
     # Strip any prepended /uploads/ or uploads/ to get clean filename
-    path = user.profile_picture
     if path.startswith('/uploads/'):
         filename = path[len('/uploads/'):]
     elif path.startswith('uploads/'):
         filename = path[len('uploads/'):]
     else:
         filename = path
-        
-    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-    if os.path.exists(file_path):
-        return f"/uploads/{filename}"
-    else:
-        username = user.username if user else 'User'
-        return f"/api/auth/avatar/{username}"
+
+    upload_folder = current_app.config.get('UPLOAD_FOLDER') if current_app else None
+    if upload_folder and filename:
+        file_path = os.path.join(upload_folder, filename)
+        if os.path.exists(file_path):
+            return f"/uploads/{filename}"
+
+    return f"/api/auth/avatar/{username}"

@@ -23,14 +23,16 @@ const Stage7 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add KPI
                             </button>
                         </div>
-                        <div id="s7_kpiContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Metric: Name of Key Performance Indicator (Mandatory)">Metric <span class="text-danger">*</span></div>
-                                <div class="col-2 ds-tooltip-trigger" title="Baseline: Measured starting level prior to improvement">Baseline</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Target: Desired achievement goal metric level">Target</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Actual: Final measured performance metric post-countermeasures">Actual</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Variance: Difference between actual and target performance">Variance</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s7_kpiContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Metric: Name of Key Performance Indicator (Mandatory)">Metric <span class="text-danger">*</span></div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Baseline: Measured starting level prior to improvement">Baseline</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Target: Desired achievement goal metric level">Target</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Actual: Final measured performance metric post-countermeasures">Actual</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Variance: Difference between actual and target performance">Variance</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-3 p-2 border rounded bg-light text-xs fw-bold d-flex align-items-center justify-content-between">
@@ -58,13 +60,15 @@ const Stage7 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Item
                             </button>
                         </div>
-                        <div id="s7_beforeAfterContainer" class="mb-2">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Metric/Process: Quality characteristic or process parameter being compared">Metric/Process</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Before Condition: Initial baseline defect rate or measured process parameter before countermeasure">Before Condition</div>
-                                <div class="col-3 ds-tooltip-trigger" title="After Condition: Measured defect rate or process parameter after countermeasure implementation">After Condition</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Improvement %: Percentage defect reduction = ((Before - After) / Before) * 100">Improvement %</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s7_beforeAfterContainer" class="mb-2" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Metric/Process: Quality characteristic or process parameter being compared">Metric/Process</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Before Condition: Initial baseline defect rate or measured process parameter before countermeasure">Before Condition</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="After Condition: Measured defect rate or process parameter after countermeasure implementation">After Condition</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Improvement %: Percentage defect reduction = ((Before - After) / Before) * 100">Improvement %</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-2 p-2 border rounded bg-light text-xs fw-bold d-flex align-items-center justify-content-between mb-4">
@@ -76,10 +80,10 @@ const Stage7 = {
                         <div class="p-3 border rounded mb-4 shadow-sm qc-tool-card" style="border-radius: var(--radius-md); background: var(--ds-bg-card, #ffffff);">
                             <label class="ds-label mb-1 ds-tooltip-trigger" title="Upload QC Tools Data (Excel/CSV): Import raw measurement log to generate Before vs After Histogram & Control Chart">Upload QC Tools Data (Excel/CSV)</label>
                             <div class="text-xs text-muted mb-2">Upload data for both the Process Variation Histogram and the Control Chart.</div>
-                            <div class="d-flex align-items-center gap-2">
-                                <input type="file" class="ds-input py-1" id="s7_upload" accept=".csv" style="flex-grow:1;" onchange="StageModules[7].handleCSVUpload(this)">
-                                <button type="button" class="ds-btn ds-btn-ghost text-primary py-1 px-3" style="font-size:0.85rem; font-weight:bold; white-space:nowrap; border:1px solid var(--ds-primary);" onclick="StageModules[7].downloadTemplate()">
-                                    <i data-lucide="download" style="width:14px;height:14px;margin-right:6px;vertical-align:text-bottom;"></i> Download CSV Template
+                            <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
+                                <input type="file" class="ds-input py-1" id="s7_upload" accept=".csv" style="flex-grow:1; min-width:0;" onchange="StageModules[7].handleCSVUpload(this)">
+                                <button type="button" class="ds-btn ds-btn-ghost text-primary py-2 py-sm-1 px-3 d-flex align-items-center justify-content-center" style="font-size:0.85rem; font-weight:bold; white-space:nowrap; border:1px solid var(--ds-primary);" onclick="StageModules[7].downloadTemplate()">
+                                    <i data-lucide="download" style="width:14px;height:14px;margin-right:6px;flex-shrink:0;"></i> Download CSV Template
                                 </button>
                             </div>
                         </div>
@@ -87,7 +91,7 @@ const Stage7 = {
                         <!-- QC Tool: Histogram Comparison -->
                         <div class="p-3 border rounded mb-4 shadow-sm qc-tool-card" style="border-radius: var(--radius-md); background: var(--ds-bg-card, #ffffff);">
                             <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2 ds-tooltip-trigger" title="Process Variation Histogram: Visual distribution comparison of process data standard deviation before vs after">
-                                <i data-lucide="bar-chart-3" style="width:16px;height:16px;"></i> QC Tool Comparison: Process Variation Histogram (Before vs After)
+                                <i data-lucide="bar-chart-3" style="width:16px;height:16px;flex-shrink:0;"></i> <span>QC Tool Comparison: Process Variation Histogram (Before vs After)</span>
                             </h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
@@ -164,12 +168,14 @@ const Stage7 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Stat Check
                             </button>
                         </div>
-                        <div id="s7_statContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4 ds-tooltip-trigger" title="Test Type: Name of statistical hypothesis test executed (e.g. 2-Sample t-Test, Chi-Square)">Test Type</div>
-                                <div class="col-3 ds-tooltip-trigger" title="p-Value: Calculated probability value (p < 0.05 indicates statistically significant improvement)">p-Value</div>
-                                <div class="col-4 ds-tooltip-trigger" title="Conclusion: Statistical interpretation (e.g. Reject H0; defect reduction is statistically significant)">Conclusion</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s7_statContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4 ds-tooltip-trigger" title="Test Type: Name of statistical hypothesis test executed (e.g. 2-Sample t-Test, Chi-Square)">Test Type</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="p-Value: Calculated probability value (p < 0.05 indicates statistically significant improvement)">p-Value</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Conclusion: Statistical interpretation (e.g. Reject H0; defect reduction is statistically significant)">Conclusion</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -193,13 +199,15 @@ const Stage7 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Benefit
                             </button>
                         </div>
-                        <div id="s7_benefitContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4 ds-tooltip-trigger" title="Benefit Category: Financial category (e.g. Scrap Reduction, Rework Cost, Warranty Savings)">Benefit Category</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Expected: Projected annual monetary savings estimated in Stage 5">Expected</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Actual: Verified actual monetary savings achieved after countermeasure implementation">Actual</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Variance: Difference between actual savings achieved and expected savings projection">Variance</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s7_benefitContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4 ds-tooltip-trigger" title="Benefit Category: Financial category (e.g. Scrap Reduction, Rework Cost, Warranty Savings)">Benefit Category</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Expected: Projected annual monetary savings estimated in Stage 5">Expected</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Actual: Verified actual monetary savings achieved after countermeasure implementation">Actual</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Variance: Difference between actual savings achieved and expected savings projection">Variance</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -271,13 +279,15 @@ const Stage7 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Check
                             </button>
                         </div>
-                        <div id="s7_sustainContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4 ds-tooltip-trigger" title="Check Item: Inspection item or process parameter audited for stability">Check Item</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Auditor: Person conducting the sustainability audit">Auditor</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Result: Audit finding (e.g. Pass, Fail, Stable, Reverting)">Result</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Action Required: Corrective action taken if performance shows signs of reversion">Action Required</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s7_sustainContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4 ds-tooltip-trigger" title="Check Item: Inspection item or process parameter audited for stability">Check Item</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Auditor: Person conducting the sustainability audit">Auditor</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Result: Audit finding (e.g. Pass, Fail, Stable, Reverting)">Result</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Action Required: Corrective action taken if performance shows signs of reversion">Action Required</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -301,12 +311,14 @@ const Stage7 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Verification
                             </button>
                         </div>
-                        <div id="s7_sideEffectContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4 ds-tooltip-trigger" title="Process Area: Workstation or shop floor area audited for secondary side effects">Process Area</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Negative Impact?: Status indicating whether any negative side effect occurred">Negative Impact?</div>
-                                <div class="col-5 ds-tooltip-trigger" title="Details: Explanation of audit findings and corrective adjustments">Details</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s7_sideEffectContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4 ds-tooltip-trigger" title="Process Area: Workstation or shop floor area audited for secondary side effects">Process Area</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Negative Impact?: Status indicating whether any negative side effect occurred">Negative Impact?</div>
+                                    <div class="col-5 ds-tooltip-trigger" title="Details: Explanation of audit findings and corrective adjustments">Details</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -330,12 +342,14 @@ const Stage7 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Lesson
                             </button>
                         </div>
-                        <div id="s7_lessonContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Category: Insight domain (e.g. Technical, Process, Governance, Training)">Category</div>
-                                <div class="col-4 ds-tooltip-trigger" title="Lesson: Key takeaway or observation during execution">Lesson</div>
-                                <div class="col-4 ds-tooltip-trigger" title="Actionable Insight: Concrete recommendation for future QC Circle projects">Actionable Insight</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s7_lessonContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Category: Insight domain (e.g. Technical, Process, Governance, Training)">Category</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Lesson: Key takeaway or observation during execution">Lesson</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Actionable Insight: Concrete recommendation for future QC Circle projects">Actionable Insight</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -836,7 +850,7 @@ const Stage7 = {
         const c = document.getElementById(containerId);
         const r = document.createElement('div');
         r.className = 'row g-2 mb-2 align-items-center dyn-row';
-        r.innerHTML = html + '<div class="col-1"><button class="ds-btn ds-btn-ghost text-danger p-1" onclick="this.closest(\'.dyn-row\').remove(); StageModules[7].updateDashboard();"><i data-lucide="trash-2" style="width:14px;"></i></button></div>';
+        r.innerHTML = html + '<div class="col-1 text-center"><button type="button" class="ds-btn ds-btn-ghost text-danger p-1" onclick="this.closest(\'.dyn-row\').remove(); StageModules[7].updateDashboard();"><i data-lucide="trash-2" style="width:14px;"></i></button></div>';
         c.appendChild(r);
         if (window.lucide) lucide.createIcons();
     },
@@ -894,10 +908,16 @@ const Stage7 = {
             <div class="col-2"><input type="number" step="any" class="ds-input r-imp" value="${initImp}" onchange="StageModules[7].updateDashboard()" required></div>`);
     },
     addStatRow(d = {}) {
+        const cleanVal = (v) => (v === undefined || v === null || v === 'undefined' || v === 'null') ? '' : v;
+        const testType = cleanVal(d.test_type || d.test || d.type);
+        const pVal = cleanVal(d.p_value || d.pval || d.p_val);
+        const conc = cleanVal(d.conclusion || d.result);
+        const esc = (s) => (window.QCMS && QCMS.escapeHtml) ? QCMS.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
+
         this.addRowTemplate('s7_statContainer', d, `
-            <div class="col-4"><input type="text" class="ds-input r-tst" placeholder="e.g. Two-Sample Proportion Test" value="${d.test_type || ''}" required></div>
-            <div class="col-3"><input type="text" class="ds-input r-pval" placeholder="e.g. 0.0001" value="${d.p_value || ''}" required></div>
-            <div class="col-4"><input type="text" class="ds-input r-conc" placeholder="e.g. Reject H0; defect rate reduction is significant" value="${d.conclusion || ''}" required></div>`);
+            <div class="col-4"><input type="text" class="ds-input r-tst" placeholder="e.g. Two-Sample Proportion Test" value="${esc(testType)}" required></div>
+            <div class="col-3"><input type="number" step="any" min="0" max="1" class="ds-input r-pval" placeholder="e.g. 0.0001" value="${esc(pVal)}" required></div>
+            <div class="col-4"><input type="text" class="ds-input r-conc" placeholder="e.g. Reject H0; defect rate reduction is significant" value="${esc(conc)}" required></div>`);
     },
     addBenefitRow(d = {}) {
         const calc = "const p=this.closest('.dyn-row'); p.querySelector('.r-var').value = ((parseFloat(p.querySelector('.r-act').value)||0) - (parseFloat(p.querySelector('.r-exp').value)||0)).toFixed(2);";

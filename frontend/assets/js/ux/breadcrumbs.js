@@ -15,17 +15,27 @@ const Breadcrumbs = {
         'projects-repository.html': 'Project Repository',
         'project-details.html': 'Project Details',
         'standards.html': 'Standards & SOPs',
-        'audit-logs.html': 'System Audit Logs',
+        'audit-logs.html': 'Audit Logs',
+        'audit-queue.html': 'Audit Queue',
         'settings.html': 'Platform Settings',
         'user-management.html': 'User Management',
-        'users.html': 'Directory',
+        'users.html': 'User Directory',
         'departments.html': 'Department Registry',
+        'plants.html': 'Plant Locations',
+        'sop-masters.html': 'SOP Masters',
+        'stage-template.html': '8-Stage Template',
+        'super-admin-stage-template.html': 'Global Stage Template',
+        'subscriptions.html': 'Subscriptions & Plans',
+        'developer-portal.html': 'Developer Portal',
         'profile.html': 'My Profile',
-        'audit-queue.html': 'Audit Queue',
+        'user-profile.html': 'User Profile',
         'analytics.html': 'Performance Analytics',
+        'leaderboard.html': 'Rewards & Leaderboard',
+        'sop-deviation-analysis.html': 'SOP Deviation Analysis',
+        'additional-sources.html': 'Additional Sources',
         'login.html': 'Portal Access',
         'register.html': 'Account Creation',
-        'super-admin.html': 'Super Admin'
+        'super-admin.html': 'Super Admin Dashboard'
     },
 
     getOrgName() {
@@ -145,23 +155,29 @@ const Breadcrumbs = {
             style.id = 'breadcrumb-styles';
             style.textContent = `
                 .glass-breadcrumb .breadcrumb-item {
-                    font-size: 0.85rem;
+                    font-size: 0.875rem;
                     font-weight: 500;
-                    color: var(--ds-text-tertiary);
+                    color: #DAE0E7 !important;
                 }
-                .glass-breadcrumb .breadcrumb-item a {
-                    color: var(--ds-text-secondary);
+                .glass-breadcrumb .breadcrumb-item a,
+                .glass-breadcrumb .org-breadcrumb-root {
+                    color: #DAE0E7 !important;
                     text-decoration: none;
-                    transition: color 0.2s;
+                    transition: color 0.2s ease;
+                    opacity: 0.85;
                 }
-                .glass-breadcrumb .breadcrumb-item a:hover {
-                    color: var(--ds-primary);
+                .glass-breadcrumb .breadcrumb-item a:hover,
+                .glass-breadcrumb .org-breadcrumb-root:hover {
+                    color: #C4A25A !important;
+                    opacity: 1;
                 }
                 .glass-breadcrumb .breadcrumb-item.active {
-                    color: var(--ds-text-main);
+                    color: #FFFFFF !important;
+                    font-weight: 600;
+                    opacity: 1;
                 }
                 .glass-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
-                    color: var(--ds-text-tertiary);
+                    color: rgba(255, 255, 255, 0.4) !important;
                     content: "/";
                     padding: 0 10px;
                 }

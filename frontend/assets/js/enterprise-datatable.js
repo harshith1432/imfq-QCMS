@@ -58,7 +58,7 @@ class EnterpriseDataTable {
             ...params.filters
         });
 
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = window.api ? window.api.token : null;
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -388,64 +388,77 @@ if (typeof window !== 'undefined') {
         const isPrevDisabled = currentPage <= 1;
         const isNextDisabled = currentPage >= totalPages;
 
-        const elementId = typeof containerId === 'string' ? containerId : (container.id || 'qcms_pag');
+        const elementId = (typeof containerId === 'string' && containerId)
+            ? containerId
+            : (container.id || `qcms_pag_${Math.random().toString(36).slice(2, 9)}`);
 
         container.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 pb-2 px-3 border-top mt-2" style="font-size: 13px; color: var(--ds-text-secondary, #64748b);">
-                <!-- Left: Showing Info -->
-                <div class="text-muted fw-medium text-xs">
-                    Showing <strong class="text-dark fw-bold">${startItem.toLocaleString()}-${endItem.toLocaleString()}</strong> of <strong class="text-dark fw-bold">${totalItems.toLocaleString()}</strong> ${entityName}
-                </div>
-
-                <!-- Right: Controls Group -->
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 pb-2 px-3 border-top mt-2 w-100" style="font-size: 13px; color: var(--ds-text-secondary, #64748b); width: 100%;">
+                <!-- Left: Showing Info & Page Size -->
                 <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <!-- Page Size Dropdown -->
+                    <div class="text-muted fw-medium text-xs">
+                        Showing <strong class="text-dark fw-bold">${startItem.toLocaleString()}-${endItem.toLocaleString()}</strong> of <strong class="text-dark fw-bold">${totalItems.toLocaleString()}</strong> ${entityName}
+                    </div>
                     <div class="d-flex align-items-center gap-1">
                         <select class="form-select form-select-sm shadow-none border rounded-2 px-2 py-1" style="width: auto; font-size: 12.5px; height: 32px; font-weight: 500; cursor: pointer; background-color: var(--ds-input-bg, #fff);" id="${elementId}_pageSize">
                             ${pageSizeOptions.map(size => `<option value="${size}" ${size === pageSize ? 'selected' : ''}>${size}</option>`).join('')}
                         </select>
                         <span class="text-muted text-xs ms-1">per page</span>
                     </div>
+                </div>
 
-                    <!-- Prev / Page / Next Buttons -->
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
-                                id="${elementId}_prevBtn" ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
-                            <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev
-                        </button>
-                        
-                        <span class="fw-semibold text-dark text-xs px-1" style="white-space: nowrap;">
-                            Page ${currentPage} of ${totalPages}
-                        </span>
+                <!-- Right: Prev / Page / Next Buttons -->
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                            id="${elementId}_prevBtn" ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+                        <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev
+                    </button>
+                    
+                    <span class="fw-semibold text-dark text-xs px-1" style="white-space: nowrap;">
+                        Page ${currentPage} of ${totalPages}
+                    </span>
 
-                        <button class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
-                                id="${elementId}_nextBtn" ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
-                            Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                            id="${elementId}_nextBtn" ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+                        Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                    </button>
                 </div>
             </div>
         `;
 
         if (window.lucide) window.lucide.createIcons();
 
-        // Event Bindings
-        document.getElementById(`${elementId}_pageSize`)?.addEventListener('change', (e) => {
-            if (typeof onPageSizeChange === 'function') {
-                onPageSizeChange(parseInt(e.target.value, 10));
-            }
-        });
+        // Scoped Event Bindings
+        const pageSizeSelect = container.querySelector(`#${elementId}_pageSize`);
+        const prevBtn = container.querySelector(`#${elementId}_prevBtn`);
+        const nextBtn = container.querySelector(`#${elementId}_nextBtn`);
 
-        document.getElementById(`${elementId}_prevBtn`)?.addEventListener('click', () => {
-            if (currentPage > 1 && typeof onPageChange === 'function') {
-                onPageChange(currentPage - 1);
-            }
-        });
+        if (pageSizeSelect) {
+            pageSizeSelect.onchange = (e) => {
+                if (typeof onPageSizeChange === 'function') {
+                    onPageSizeChange(parseInt(e.target.value, 10));
+                }
+            };
+        }
 
-        document.getElementById(`${elementId}_nextBtn`)?.addEventListener('click', () => {
-            if (currentPage < totalPages && typeof onPageChange === 'function') {
-                onPageChange(currentPage + 1);
-            }
-        });
+        if (prevBtn) {
+            prevBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (currentPage > 1 && typeof onPageChange === 'function') {
+                    onPageChange(currentPage - 1);
+                }
+            };
+        }
+
+        if (nextBtn) {
+            nextBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (currentPage < totalPages && typeof onPageChange === 'function') {
+                    onPageChange(currentPage + 1);
+                }
+            };
+        }
     };
 }

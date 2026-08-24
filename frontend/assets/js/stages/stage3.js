@@ -180,6 +180,9 @@ const Stage3 = {
                             </div>
                         </div>
 
+                        <!-- Mobile Vertical Accordion Mode (for mobile viewports) -->
+                        <div id="fishboneMobileAccordion" class="fishbone-mobile-accordion d-md-none mb-4"></div>
+
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0 text-primary ds-tooltip-trigger" title="Detailed Causes List: Level 1 primary causes and Level 2 sub-causes">Detailed Causes List (Level 1 & 2)</h6>
                             <button class="ds-btn ds-btn-ghost" style="font-size:.75rem;padding:.25rem .75rem;" onclick="StageModules[3].addFishboneRow()">
@@ -187,13 +190,15 @@ const Stage3 = {
                             </button>
                         </div>
                         
-                        <div id="s3_fishboneContainer" class="mb-4">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-2 ds-tooltip-trigger" title="Category (6M): Man, Machine, Material, Method, Measurement, Environment">Category (6M)</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Cause (Level 1): Primary suspect cause factor">Cause (Level 1)</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Sub-Cause (Level 2): Detailed sub-cause factor contributing to primary cause">Sub-Cause (Level 2)</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Probability / Status: Likelihood rating (High, Medium, Low)">Probability / Status</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Actions: Row edit and delete controls">Actions</div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s3_fishboneContainer" class="mb-4" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-2 ds-tooltip-trigger" title="Category (6M): Man, Machine, Material, Method, Measurement, Environment">Category (6M)</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Cause (Level 1): Primary suspect cause factor">Cause (Level 1)</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Sub-Cause (Level 2): Detailed sub-cause factor contributing to primary cause">Sub-Cause (Level 2)</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Probability / Status: Likelihood rating (High, Medium, Low)">Probability / Status</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Actions: Row edit and delete controls">Actions</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -217,13 +222,15 @@ const Stage3 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Register Entry
                             </button>
                         </div>
-                        <div id="s3_registerContainer" class="mb-4">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-2 ds-tooltip-trigger" title="ID: Unique identifier tag for cause entry">ID</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Category: 6M category classification">Category</div>
-                                <div class="col-4 ds-tooltip-trigger" title="Cause Description: Full description of suspect cause">Cause Description</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Origin: Brainstorming or Pareto source origin">Origin</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s3_registerContainer" class="mb-4" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-2 ds-tooltip-trigger" title="ID: Unique identifier tag for cause entry">ID</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Category: 6M category classification">Category</div>
+                                    <div class="col-4 ds-tooltip-trigger" title="Cause Description: Full description of suspect cause">Cause Description</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Origin: Brainstorming or Pareto source origin">Origin</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -247,14 +254,16 @@ const Stage3 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Cause to Rank
                             </button>
                         </div>
-                        <div id="s3_priorityContainer" class="mb-4">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Cause: Suspect cause description being evaluated">Cause</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Impact (1-10): Severity score of cause impact on defect (1=low, 10=critical)">Impact (1-10)</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Freq (1-10): Occurrence frequency score (1=rare, 10=continuous)">Freq (1-10)</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Control (1-10): Team ability to control or influence cause (1=no control, 10=full control)">Control (1-10)</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Total Score: Calculated risk priority score = Impact x Freq x Control">Total Score</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s3_priorityContainer" class="mb-4" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Cause: Suspect cause description being evaluated">Cause</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Impact (1-10): Severity score of cause impact on defect (1=low, 10=critical)">Impact (1-10)</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Freq (1-10): Occurrence frequency score (1=rare, 10=continuous)">Freq (1-10)</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Control (1-10): Team ability to control or influence cause (1=no control, 10=full control)">Control (1-10)</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Total Score: Calculated risk priority score = Impact x Freq x Control">Total Score</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -278,14 +287,16 @@ const Stage3 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Verification
                             </button>
                         </div>
-                        <div id="s3_verificationContainer" class="mb-4">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-2 ds-tooltip-trigger" title="Cause: Suspect cause undergoing empirical verification test">Cause</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Method: Verification testing protocol (e.g. Audit, Measurement, DOE)">Method</div>
-                                <div class="col-3 ds-tooltip-trigger" title="Data Source: Log sheet, measurement gauge, or observation record">Data Source</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Result: Test observation and numerical result">Result</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Conclusion: Verification conclusion (True Cause vs Invalidated)">Conclusion</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s3_verificationContainer" class="mb-4" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-2 ds-tooltip-trigger" title="Cause: Suspect cause undergoing empirical verification test">Cause</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Method: Verification testing protocol (e.g. Audit, Measurement, DOE)">Method</div>
+                                    <div class="col-3 ds-tooltip-trigger" title="Data Source: Log sheet, measurement gauge, or observation record">Data Source</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Result: Test observation and numerical result">Result</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Conclusion: Verification conclusion (True Cause vs Invalidated)">Conclusion</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -385,13 +396,15 @@ const Stage3 = {
                             </button>
                         </div>
                         
-                        <div id="s3_fishboneL3Container" class="mb-4">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-2">Category (6M)</div>
-                                <div class="col-3">Cause (Level 1)</div>
-                                <div class="col-3">Sub-Cause (Level 2)</div>
-                                <div class="col-2">Probability / Status</div>
-                                <div class="col-2">Actions</div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s3_fishboneL3Container" class="mb-4" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-2">Category (6M)</div>
+                                    <div class="col-3">Cause (Level 1)</div>
+                                    <div class="col-3">Sub-Cause (Level 2)</div>
+                                    <div class="col-2">Probability / Status</div>
+                                    <div class="col-2">Actions</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -853,6 +866,46 @@ const Stage3 = {
                     g.appendChild(subTxt);
                 }
             });
+        }
+
+        // Render Mobile Accordion View for 6M Fishbone
+        const mobileAccordion = document.getElementById('fishboneMobileAccordion');
+        if (mobileAccordion) {
+            const catColors = {
+                Man: '#3b82f6', Machine: '#ca8a04', Material: '#16a34a',
+                Method: '#db2777', Measurement: '#ea580c', Environment: '#0891b2'
+            };
+            const categories = ['Man', 'Machine', 'Material', 'Method', 'Measurement', 'Environment'];
+            mobileAccordion.innerHTML = categories.map(cat => {
+                const causes = groups[cat] || [];
+                const color = catColors[cat] || '#2563eb';
+                let itemsHtml = '';
+                if (!causes.length) {
+                    itemsHtml = `<p class="text-xs text-muted mb-0 italic">No causes recorded under ${cat}.</p>`;
+                } else {
+                    itemsHtml = causes.map(c => `
+                        <div class="fishbone-cause-item">
+                            <div class="fishbone-cause-title">${QCMS.escapeHtml(c.level1 || '')}</div>
+                            ${c.level2 ? `<div><span class="fishbone-subcause-tag">↳ ${QCMS.escapeHtml(c.level2)}</span></div>` : ''}
+                        </div>
+                    `).join('');
+                }
+                return `
+                    <div class="fishbone-cat-card">
+                        <div class="fishbone-cat-header" onclick="const b = this.nextElementSibling; b.classList.toggle('d-none');">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fishbone-cat-badge" style="background:${color}">${cat}</span>
+                                <span class="text-xs text-muted">(${causes.length} items)</span>
+                            </div>
+                            <i data-lucide="chevron-down" style="width:16px;height:16px;color:var(--ds-text-secondary);"></i>
+                        </div>
+                        <div class="fishbone-cat-body ${!causes.length ? 'd-none' : ''}">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            if (window.lucide) lucide.createIcons();
         }
     },
 

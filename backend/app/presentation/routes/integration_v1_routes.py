@@ -10,7 +10,7 @@ import time
 import json
 import hashlib
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from flask import Blueprint, request, jsonify, g, current_app
 from app.infrastructure.database.models.models import (
@@ -60,7 +60,7 @@ def _log_api_request(org_id, ip_address, key_prefix, endpoint, status_code, star
             organization_id=org_id,
             ip_address=ip_address,
             api_key_used=key_prefix,
-            request_time=datetime.utcnow(),
+            request_time=datetime.now(timezone.utc).replace(tzinfo=None),
             response_time_ms=response_time_ms,
             endpoint=endpoint,
             status_code=status_code
@@ -101,7 +101,7 @@ def require_api_key(f):
         pass
 
         # Update usage statistics
-        api_key_rec.last_used = datetime.utcnow()
+        api_key_rec.last_used = datetime.now(timezone.utc).replace(tzinfo=None)
         api_key_rec.usage_count = (api_key_rec.usage_count or 0) + 1
         db.session.commit()
 
@@ -178,7 +178,7 @@ def import_idea_post():
         impact_level=data.get('impactLevel') or 'Medium',
         status=data.get('status') or 'Approved',
         source='Ideation Tool',
-        imported_at=datetime.utcnow()
+        imported_at=datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     db.session.add(new_idea)
@@ -205,7 +205,7 @@ def get_api_status():
         "status": "online",
         "organization_id": g.org_id,
         "service": "QCMS Integration Engine v1",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z"
     }), 200
 
 

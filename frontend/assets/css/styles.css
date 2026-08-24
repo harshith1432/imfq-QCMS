@@ -1,17 +1,22 @@
 :root {
-    /* Precision Core Light Theme (Neutralized) */
-    --primary: #334155;
-    --primary-hover: #1e293b;
+    /* Institutional Navy & Ochre Gold Theme */
+    --primary: #002347;
+    --primary-navy: #002347;
+    --primary-hover: #001830;
+    --accent: #C4A25A;
+    --gold: #C4A25A;
+    --gold-hover: #AC8839;
     --bg-app: #F8F9FA;
-    --bg-sidebar: #1E2632;
+    --bg-sidebar: #002347;
     --bg-card: #FFFFFF;
-    --text-primary: #1F2937;
-    --text-muted: #6B7280;
-    --border: #E5E7EB;
+    --text-primary: #002347;
+    --text-muted: #476585;
+    --border: #DAE0E7;
+    --border-hover: rgba(196, 162, 90, 0.35);
     --sidebar-width: 260px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --transition: all 0.3s ease;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 35, 71, 0.05);
+    --shadow-md: 0 2px 8px -2px rgba(0, 35, 71, 0.08);
 }
 
 * {

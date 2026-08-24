@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performance Analytics | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -51,33 +49,107 @@
         .glass-card {
             padding: 1.25rem !important;
             border-radius: 14px !important;
-            background: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+            background: var(--ds-bg-card, #ffffff);
+            border: 1px solid var(--ds-border-color, #e2e8f0);
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            color: var(--ds-text-main, #0f172a);
         }
         .team-member-item {
             transition: all 0.2s ease;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: var(--ds-bg-surface, #ffffff);
+            border: 1px solid var(--ds-border-color, #e2e8f0);
             padding: 10px 14px !important;
             border-radius: 10px !important;
             margin-bottom: 8px !important;
+            color: var(--ds-text-main, #0f172a);
         }
         .team-member-item:hover {
-            border-color: #cbd5e1;
+            border-color: var(--ds-primary, #3b82f6);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             transform: translateY(-1px);
         }
         .governance-item {
             transition: all 0.2s ease;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: var(--ds-bg-surface, #ffffff);
+            border: 1px solid var(--ds-border-color, #e2e8f0);
             padding: 12px 14px !important;
             border-radius: 10px !important;
+            color: var(--ds-text-main, #0f172a);
         }
         .governance-item:hover {
-            border-color: #cbd5e1;
+            border-color: var(--ds-primary, #3b82f6);
             box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+
+        #auditLogFilterGroup {
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            display: inline-flex;
+            gap: 2px;
+        }
+        #auditLogFilterGroup .btn {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.76rem;
+            padding: 5px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        #auditLogFilterGroup .btn:hover {
+            color: #0f172a;
+            background: rgba(255,255,255,0.6);
+        }
+        #auditLogFilterGroup .btn.active {
+            background: #ffffff;
+            color: #1e293b;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        [data-theme="dark"] #auditLogFilterGroup {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        [data-theme="dark"] #auditLogFilterGroup .btn {
+            color: #94a3b8;
+        }
+        [data-theme="dark"] #auditLogFilterGroup .btn.active {
+            background: rgba(30, 41, 59, 0.9);
+            color: #f8fafc;
+        }
+
+        [data-theme="dark"] .glass-card,
+        [data-theme="dark"] .governance-item,
+        [data-theme="dark"] .team-member-item {
+            background: rgba(30, 41, 59, 0.7) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #f8fafc !important;
+        }
+
+        [data-theme="dark"] .governance-item .text-dark,
+        [data-theme="dark"] .team-member-item .text-dark,
+        [data-theme="dark"] .glass-card .text-dark {
+            color: #f8fafc !important;
+        }
+
+        [data-theme="dark"] .governance-item .text-muted,
+        [data-theme="dark"] .team-member-item .text-muted {
+            color: #94a3b8 !important;
+        }
+
+        [data-theme="dark"] .bg-white {
+            background-color: rgba(30, 41, 59, 0.7) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #f8fafc !important;
+        }
+
+        [data-theme="dark"] .bg-light-soft {
+            background-color: rgba(15, 23, 42, 0.5) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f8fafc !important;
         }
 
         /* Print styles */
@@ -133,10 +205,10 @@
                     <div class="d-flex align-items-center gap-3 flex-grow-1" style="max-width: 600px;">
                         <div class="d-flex align-items-center gap-2 pe-3 border-end">
                             <i data-lucide="layers" class="text-primary" style="width: 18px; height: 18px;"></i>
-                            <span class="text-xs fw-bold text-secondary text-uppercase" style="letter-spacing:0.5px;">Analytics Scope:</span>
+                            <span class="text-xs fw-bold text-uppercase" style="letter-spacing:0.5px; color: var(--ds-text-secondary, #64748b);">Analytics Scope:</span>
                             <div class="dropdown">
-                                <button class="btn btn-sm border shadow-sm dropdown-toggle fw-bold d-flex align-items-center gap-2 py-1 px-3" type="button" id="scopeDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <span id="scopeSelectedText"><i data-lucide="globe" class="text-primary me-1" style="width:14px;height:14px;"></i> Overall Projects</span>
+                                <button class="ds-btn ds-btn-outline ds-btn-sm dropdown-toggle fw-bold d-flex align-items-center gap-2 py-1 px-3 shadow-sm" type="button" id="scopeDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span id="scopeSelectedText" class="d-inline-flex align-items-center gap-1"><i data-lucide="globe" class="text-primary me-1" style="width:14px;height:14px;"></i> Overall Projects</span>
                                 </button>
                                 <ul class="dropdown-menu shadow-lg border p-2" id="scopeDropdownMenu" style="min-width: 240px; border-radius: 12px; z-index: 99999;">
                                     <li>
@@ -165,14 +237,14 @@
                         <div id="individualProjectContainer" class="d-none flex-grow-1 position-relative" style="min-width: 280px; max-width: 450px;">
                             <input type="hidden" id="projectSelector" value="">
                             <div class="dropdown" id="projectDropdownWrapper">
-                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 fw-bold text-xs d-flex align-items-center justify-content-between text-truncate bg-white border"
+                                <button class="ds-btn ds-btn-outline ds-btn-sm dropdown-toggle w-100 fw-bold text-xs d-flex align-items-center justify-content-between text-truncate"
                                         type="button" 
                                         id="projectDropdownBtn" 
                                         data-bs-toggle="dropdown" 
                                         data-bs-auto-close="true"
                                         aria-expanded="false" 
-                                        style="height: 31px; border-color: var(--ds-border-color) !important; border-radius: 8px;">
-                                    <span id="selectedProjectLabel" class="text-truncate text-main">-- Select Target Project --</span>
+                                        style="height: 31px; border-radius: 8px;">
+                                    <span id="selectedProjectLabel" class="text-truncate">-- Select Target Project --</span>
                                 </button>
                                 <div class="dropdown-menu p-2 shadow-lg border-0" aria-labelledby="projectDropdownBtn" style="min-width: 340px; width: 100%; border-radius: 12px; z-index: 1050; background: var(--ds-card-bg, #ffffff);">
                                     <div class="p-1 mb-2 border-bottom pb-2">
@@ -304,7 +376,7 @@
                         <div class="col-lg-4">
                             <div class="glass-card p-4 h-100 d-flex flex-column" style="padding: 1.35rem !important;">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-dark">
+                                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-main">
                                         <i data-lucide="shield-check" class="text-success" style="width:18px;"></i> Project Governance
                                     </h6>
                                     <span class="badge bg-success-subtle text-success border border-success-subtle text-xxs px-2 py-0.5">Leadership</span>
@@ -319,7 +391,7 @@
                                         <div class="d-flex align-items-center gap-2.5">
                                             <img id="indLeaderAvatar" src="https://ui-avatars.com/api/?name=Team+Leader" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Leader">
                                             <div class="min-w-0">
-                                                <div id="indLeaderName" class="fw-bold text-dark text-xs text-truncate">Assigned Team Leader</div>
+                                                <div id="indLeaderName" class="fw-bold text-main text-xs text-truncate">Assigned Team Leader</div>
                                                 <div id="indLeaderEmail" class="text-xxs text-muted text-truncate">leader@qcms.internal</div>
                                             </div>
                                         </div>
@@ -333,7 +405,7 @@
                                         <div class="d-flex align-items-center gap-2.5">
                                             <img id="indFacilAvatar" src="https://ui-avatars.com/api/?name=Facilitator" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Facil">
                                             <div class="min-w-0">
-                                                <div id="indFacilName" class="fw-bold text-dark text-xs text-truncate">Assigned Facilitator</div>
+                                                <div id="indFacilName" class="fw-bold text-main text-xs text-truncate">Assigned Facilitator</div>
                                                 <div id="indFacilEmail" class="text-xxs text-muted text-truncate">facilitator@qcms.internal</div>
                                             </div>
                                         </div>
@@ -347,7 +419,7 @@
                                         <div class="d-flex align-items-center gap-2.5">
                                             <img id="indRevAvatar" src="https://ui-avatars.com/api/?name=Reviewer" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Rev">
                                             <div class="min-w-0">
-                                                <div id="indRevName" class="fw-bold text-dark text-xs text-truncate">Assigned Reviewer</div>
+                                                <div id="indRevName" class="fw-bold text-main text-xs text-truncate">Assigned Reviewer</div>
                                                 <div id="indRevEmail" class="text-xxs text-muted text-truncate">reviewer@qcms.internal</div>
                                             </div>
                                         </div>
@@ -360,7 +432,7 @@
                         <div class="col-lg-5">
                             <div class="glass-card p-4 h-100 d-flex flex-column" style="padding: 1.35rem !important;">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-dark">
+                                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-main">
                                         <i data-lucide="users" class="text-primary" style="width:18px;"></i> Team Members & Contributors
                                     </h6>
                                     <span id="indTeamCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 text-xxs">1 Active Member</span>
@@ -375,7 +447,7 @@
                         <div class="col-lg-3">
                             <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between" style="padding: 1.35rem !important;">
                                 <div>
-                                    <h6 class="fw-bold mb-3 d-flex align-items-center gap-2 text-dark">
+                                    <h6 class="fw-bold mb-3 d-flex align-items-center gap-2 text-main">
                                         <i data-lucide="video" class="text-info" style="width:18px;"></i> Meetings & Engagement
                                     </h6>
                                     <div class="p-3 rounded-3 border bg-white shadow-xs mb-3 text-center">
@@ -384,7 +456,7 @@
                                     </div>
                                     <div class="p-2.5 rounded-3 border bg-light-soft text-center">
                                         <div class="text-xxs text-muted">Last Activity Recorded</div>
-                                        <div id="indLastActivityDate" class="fw-bold text-xs text-dark mt-0.5">--</div>
+                                        <div id="indLastActivityDate" class="fw-bold text-xs text-main mt-0.5">--</div>
                                     </div>
                                 </div>
                             </div>
@@ -438,10 +510,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
-
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
         const Analytics = {
             currentScope: 'overall',
@@ -1029,7 +1098,7 @@
                                         <img src="${mAvatar}" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="${QCMS.escapeHtml(mName)}">
                                         <div class="min-w-0 flex-grow-1">
                                             <div class="d-flex align-items-center gap-1.5 mb-0.5 flex-wrap">
-                                                <span class="fw-bold text-dark text-xs text-truncate" title="${QCMS.escapeHtml(mName)}">${QCMS.escapeHtml(mName)}</span>
+                                                <span class="fw-bold text-main text-xs text-truncate" title="${QCMS.escapeHtml(mName)}">${QCMS.escapeHtml(mName)}</span>
                                                 <span class="badge ${badgeClass} text-xxs flex-shrink-0 px-2 py-0.5">${QCMS.escapeHtml(statusLabel)}</span>
                                             </div>
                                             <div class="text-xxs text-muted text-truncate" title="${QCMS.escapeHtml(mEmail)}">
@@ -1183,6 +1252,7 @@
                 if (hiddenSelector) hiddenSelector.value = projectId;
 
                 this.updateSelectedProjectLabel(projectId);
+                this.renderProjectDropdown(this.projects || []);
                 this.onProjectSelect(projectId);
 
                 // Close dropdown menu
@@ -1197,7 +1267,7 @@
                 const proj = (this.projects || []).find(p => String(p.id) === String(projectId));
                 const labelEl = document.getElementById('selectedProjectLabel');
                 if (proj && labelEl) {
-                    const uid = proj.project_uid || ('PRJ-' + proj.id);
+const uid = proj.project_uid || ('PRJ-' + proj.id);
                     labelEl.textContent = `${uid} - ${proj.title}`;
                 } else if (labelEl && !projectId) {
                     labelEl.textContent = '-- Select Target Project --';
@@ -1224,39 +1294,221 @@
                     return;
                 }
 
-                const getBadge = (eventType, badgeColor) => {
-                    if (eventType === 'member_lifecycle') return `<span class="badge bg-purple-soft text-purple border border-purple-subtle text-xxs"><i data-lucide="user-check" style="width:11px;height:11px;" class="me-1"></i>Member Transition</span>`;
-                    if (eventType === 'data_entry') return `<span class="badge bg-primary-soft text-primary border border-primary-subtle text-xxs"><i data-lucide="edit-3" style="width:11px;height:11px;" class="me-1"></i>Data Entered</span>`;
-                    if (eventType === 'governance') return `<span class="badge bg-success-soft text-success border border-success-subtle text-xxs"><i data-lucide="shield-check" style="width:11px;height:11px;" class="me-1"></i>Approval / Closure</span>`;
-                    if (eventType === 'meeting') return `<span class="badge bg-info-soft text-info border border-info-subtle text-xxs"><i data-lucide="video" style="width:11px;height:11px;" class="me-1"></i>Meeting</span>`;
-                    return `<span class="badge bg-secondary-soft text-secondary border text-xxs">Activity</span>`;
+                // Helper: render details as human-readable HTML — no raw JSON braces
+                const formatDetailsHtml = (details) => {
+                    if (!details) return '';
+                    let parsed = null;
+                    try { parsed = JSON.parse(details); } catch(e) {}
+                    if (!parsed) {
+                        return `<div class="text-xxs text-secondary mt-1" style="white-space:pre-wrap;max-width:650px;">${QCMS.escapeHtml(details)}</div>`;
+                    }
+                    const renderVal = (v) => {
+                        if (v === null || v === undefined) return '<em class="text-muted">—</em>';
+                        if (typeof v === 'boolean') return v ? '✔ Yes' : '✘ No';
+                        if (typeof v === 'number') return QCMS.escapeHtml(String(v));
+                        if (typeof v === 'string') return QCMS.escapeHtml(v);
+                        if (Array.isArray(v)) return `<em class="text-muted">${v.length} item${v.length !== 1 ? 's' : ''}</em>`;
+                        return QCMS.escapeHtml(JSON.stringify(v));
+                    };
+                    const buildMetricTable = (arr) => {
+                        const rows = arr.map(r => {
+                            const lbl = r.label || r.name || '';
+                            const base = r.baseline !== undefined ? r.baseline : (r.before !== undefined ? r.before : null);
+                            const fin = r.final !== undefined ? r.final : (r.after !== undefined ? r.after : null);
+                            const pctRaw = r.kpi_improvement_pct !== undefined ? r.kpi_improvement_pct : null;
+                            let cols = `<td class="pe-3 text-xxs text-dark fw-medium">${QCMS.escapeHtml(String(lbl))}</td>`;
+                            if (base !== null) cols += `<td class="pe-3 text-xxs text-muted">Before: <strong>${QCMS.escapeHtml(String(base))}</strong></td>`;
+                            if (fin !== null) cols += `<td class="pe-3 text-xxs text-muted">After: <strong>${QCMS.escapeHtml(String(fin))}</strong></td>`;
+                            if (pctRaw !== null) {
+                                const pct = Number(pctRaw);
+                                const c = pct >= 0 ? 'success' : 'danger';
+                                cols += `<td class="text-xxs text-${c} fw-semibold">${pct >= 0 ? '▲' : '▼'} ${QCMS.escapeHtml(String(Math.abs(pct)))}%</td>`;
+                            }
+                            return `<tr>${cols}</tr>`;
+                        }).join('');
+                        return `<div class="mt-1 overflow-auto" style="max-width:650px;"><table class="table table-sm table-borderless mb-0" style="font-size:0.72rem;">${rows}</table></div>`;
+                    };
+                    if (Array.isArray(parsed)) {
+                        if (!parsed.length) return '';
+                        const hasShape = typeof parsed[0] === 'object' && parsed[0] !== null
+                            && parsed.every(r => r && (r.label !== undefined || r.name !== undefined));
+                        if (hasShape) return buildMetricTable(parsed);
+                        const items = parsed.map(item => `<li class="text-xxs">${typeof item === 'object' ? QCMS.escapeHtml(JSON.stringify(item)) : QCMS.escapeHtml(String(item))}</li>`).join('');
+                        return `<ul class="mt-1 mb-0 ps-3" style="max-width:650px;">${items}</ul>`;
+                    }
+                    if (typeof parsed === 'object') {
+                        const skip = new Set(['id', 'org_id', 'project_id', 'type', 'member_name', 'member_role', 'member_avatar', 'joined_at', 'left_at', 'working_period', 'duration', 'actor_name', 'actor_role', 'status', 'action_label']);
+                        const kvRows = Object.entries(parsed)
+                            .filter(([k, v]) => !skip.has(k) && typeof v !== 'object')
+                            .map(([k, v]) => {
+                                const lbl = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                return `<span class="me-3 text-xxs"><span class="text-muted">${QCMS.escapeHtml(lbl)}:</span> <span class="text-dark fw-medium">${renderVal(v)}</span></span>`;
+                            });
+                        const mKey = Object.keys(parsed).find(k => Array.isArray(parsed[k]) && parsed[k].length && parsed[k][0] && parsed[k][0].label);
+                        const mBlock = mKey ? buildMetricTable(parsed[mKey]) : '';
+                        const kvHtml = kvRows.length ? `<div class="mt-1 d-flex flex-wrap gap-1" style="max-width:650px;">${kvRows.join('')}</div>` : '';
+                        return (kvHtml + mBlock) || `<div class="text-xxs text-secondary mt-1">${QCMS.escapeHtml(details)}</div>`;
+                    }
+                    return `<div class="text-xxs text-secondary mt-1">${QCMS.escapeHtml(String(parsed))}</div>`;
                 };
 
-                container.innerHTML = `
-                    <div class="v-stack gap-2">
-                        ${logs.map(log => `
-                            <div class="p-3 bg-white rounded-3 border shadow-xs d-flex align-items-start justify-content-between flex-wrap gap-2 hover-row">
-                                <div class="d-flex align-items-start gap-3">
-                                    <img src="${log.user_avatar || `https://ui-avatars.com/api/?name=${(log.user_name || 'U').replace(/ /g, '+')}&background=2563eb&color=fff`}" class="rounded-circle mt-0.5" style="width:34px;height:34px;" alt="User">
-                                    <div>
-                                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <span class="fw-bold text-dark text-xs">${QCMS.escapeHtml(log.user_name || 'User')}</span>
-                                            <span class="text-xxs text-muted">(${QCMS.escapeHtml(log.user_role || 'Member')})</span>
-                                            ${getBadge(log.event_type, log.badge_color)}
-                                        </div>
-                                        <div class="text-xs fw-semibold text-main mt-0.5">${QCMS.escapeHtml(log.action || '')}</div>
-                                        <div class="text-xxs text-secondary mt-1" style="white-space:pre-wrap; max-width: 650px;">${QCMS.escapeHtml(log.details || '')}</div>
+                const getBadge = (eventType, log) => {
+                    const badgeBase = "font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;";
+                    if (eventType === 'member_lifecycle') {
+                        const act = (log.action || '').toLowerCase();
+                        if (log.transition_type === 'left' || act.includes('left') || act.includes('removed') || act.includes('replaced') || act.includes('departed')) {
+                            const isFac = act.includes('facilitator');
+                            const isRev = act.includes('reviewer');
+                            const isTl = act.includes('leader');
+                            const lbl = isFac ? 'Facilitator Replaced' : (isRev ? 'Reviewer Transition' : (isTl ? 'TL Handover' : 'Member Left'));
+                            return `<span class="badge" style="${badgeBase} background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;"><i data-lucide="user-minus" style="width:12px;height:12px;"></i>${lbl}</span>`;
+                        }
+                        if (act.includes('facilitator')) {
+                            return `<span class="badge" style="${badgeBase} background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"><i data-lucide="user-check" style="width:12px;height:12px;"></i>Quality Facilitator</span>`;
+                        }
+                        if (act.includes('reviewer')) {
+                            return `<span class="badge" style="${badgeBase} background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff;"><i data-lucide="user-check" style="width:12px;height:12px;"></i>Project Reviewer</span>`;
+                        }
+                        if (act.includes('leader')) {
+                            return `<span class="badge" style="${badgeBase} background: #fef3c7; color: #92400e; border: 1px solid #fde68a;"><i data-lucide="award" style="width:12px;height:12px;"></i>Team Leader</span>`;
+                        }
+                        return `<span class="badge" style="${badgeBase} background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe;"><i data-lucide="user-plus" style="width:12px;height:12px;"></i>Member Joined</span>`;
+                    }
+                    if (eventType === 'data_entry') return `<span class="badge" style="${badgeBase} background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;"><i data-lucide="edit-3" style="width:12px;height:12px;"></i>Data Entered</span>`;
+                    if (eventType === 'governance') return `<span class="badge" style="${badgeBase} background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Approval / Gate</span>`;
+                    if (eventType === 'meeting') return `<span class="badge" style="${badgeBase} background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd;"><i data-lucide="video" style="width:12px;height:12px;"></i>Meeting</span>`;
+                    return `<span class="badge" style="${badgeBase} background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;">Activity</span>`;
+                };
+
+                const cards = logs.map(log => {
+                    let detailsHtml = '';
+                    let displayAvatar = log.user_avatar || `https://ui-avatars.com/api/?name=${(log.user_name || 'U').replace(/ /g, '+')}&background=2563eb&color=fff`;
+                    let displayName = log.user_name || 'User';
+                    let displayRole = log.user_role || 'Member';
+
+                    if (log.event_type === 'governance') {
+                        const parts = (log.details || '').split(' | ');
+                        const stagePart = parts.find(p => p.startsWith('Stage:'));
+                        const decisionPart = parts.find(p => p.startsWith('Decision:'));
+                        const remarksPart = parts.find(p => p.startsWith('Remarks:'));
+                        const decision = decisionPart ? decisionPart.replace('Decision:', '').trim() : '';
+                        const remarks = remarksPart ? remarksPart.replace('Remarks:', '').trim() : '';
+                        const stageText = stagePart ? stagePart.replace('Stage:', '').trim() : '';
+                        const decLower = decision.toLowerCase();
+                        const isApproved = decLower.includes('approv') || decLower.includes('complet');
+                        const isRejected = decLower.includes('reject') || decLower.includes('sent back') || decLower.includes('revision');
+                        const decColor = isApproved ? '#047857' : (isRejected ? '#b91c1c' : '#b45309');
+                        const decBg = isApproved ? '#ecfdf5' : (isRejected ? '#fef2f2' : '#fffbeb');
+                        const decBorder = isApproved ? '#a7f3d0' : (isRejected ? '#fecaca' : '#fde68a');
+                        const decIcon = isApproved ? 'check-circle' : (isRejected ? 'x-circle' : 'alert-circle');
+
+                        detailsHtml = `
+                            <div class="mt-2.5 p-3 rounded-3" style="background:${decBg}; border:1px solid ${decBorder}; border-left:4px solid ${decColor};">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1.5">
+                                    <div class="d-flex align-items-center gap-2">
+                                        ${stageText ? `<span class="badge" style="background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:600; font-size:0.72rem;">${QCMS.escapeHtml(stageText)}</span>` : ''}
+                                        ${decision ? `<span class="badge" style="background:#ffffff; color:${decColor}; border:1px solid ${decBorder}; font-weight:700; font-size:0.74rem;"><i data-lucide="${decIcon}" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(decision)}</span>` : ''}
                                     </div>
                                 </div>
-                                <div class="text-end">
-                                    <span class="text-xxs text-muted d-flex align-items-center gap-1">
-                                        <i data-lucide="clock" style="width:11px;height:11px;"></i> ${QCMS.escapeHtml(log.timestamp || '')}
-                                    </span>
-                                </div>
+                                ${remarks ? `<div class="mt-1.5 pt-1.5" style="border-top:1px solid ${decBorder}; font-size:0.78rem; color:#1e293b;"><strong style="color:#64748b;">Remarks:</strong> ${QCMS.escapeHtml(remarks)}</div>` : ''}
                             </div>
-                        `).join('')}
-                    </div>
-                `;
+                        `;
+                    } else if (log.event_type === 'member_lifecycle') {
+                        let mData = null;
+                        try {
+                            if (typeof log.details === 'object' && log.details !== null) mData = log.details;
+                            else if (typeof log.details === 'string' && log.details.trim().startsWith('{')) mData = JSON.parse(log.details);
+                        } catch(e) {}
+
+                        if (mData) {
+                            if (mData.member_name) displayName = mData.member_name;
+                            if (mData.member_role) displayRole = mData.member_role;
+                            if (mData.member_avatar) displayAvatar = mData.member_avatar;
+
+                            const isLeft = (mData.type === 'left' || mData.left_at || (log.action && (log.action.toLowerCase().includes('left') || log.action.toLowerCase().includes('removed'))));
+                            const themeColor = isLeft ? { bg: '#fef2f2', border: '#fecaca', accent: '#ef4444', text: '#991b1b', badgeBg: '#fee2e2', badgeText: '#b91c1c' }
+                                : (mData.type === 'leader' ? { bg: '#fffbeb', border: '#fde68a', accent: '#f59e0b', text: '#92400e', badgeBg: '#fef3c7', badgeText: '#92400e' }
+                                : (mData.type === 'facilitator' ? { bg: '#f0f9ff', border: '#bae6fd', accent: '#0ea5e9', text: '#0369a1', badgeBg: '#e0f2fe', badgeText: '#0369a1' }
+                                : (mData.type === 'reviewer' ? { bg: '#faf5ff', border: '#e9d5ff', accent: '#a855f7', text: '#6b21a8', badgeBg: '#f3e8ff', badgeText: '#7e22ce' }
+                                : { bg: '#f8fafc', border: '#e2e8f0', accent: '#6366f1', text: '#3730a3', badgeBg: '#ede9fe', badgeText: '#5b21b6' })));
+
+                            const roleTitle = mData.member_role || (mData.type === 'leader' ? 'Team Leader' : (mData.type === 'facilitator' ? 'Quality Facilitator' : (mData.type === 'reviewer' ? 'Project Reviewer' : 'Team Member')));
+                            const statusText = isLeft ? 'Left Project in Middle' : (mData.status || 'Active Member');
+                            const effectiveDate = isLeft ? (mData.left_at || log.timestamp || 'Mid-Project') : (mData.joined_at || log.timestamp || 'Project Inception');
+                            const durationText = mData.working_period || mData.duration || (isLeft ? 'Tenure Ended' : 'Active Contributor');
+                            const actorText = mData.actor_name ? `${mData.actor_name} (${mData.actor_role || (isLeft ? 'Admin' : 'Lead')})` : '';
+
+                            detailsHtml = `
+                                <div class="mt-2.5 p-3 rounded-3" style="background:${themeColor.bg}; border:1px solid ${themeColor.border}; border-left:4px solid ${themeColor.accent};">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2" style="border-bottom:1px solid ${themeColor.border};">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge" style="background:${themeColor.badgeBg}; color:${themeColor.badgeText}; font-weight:700; font-size:0.72rem; padding:3px 8px; border-radius:6px; border:1px solid ${themeColor.border};">
+                                                <i data-lucide="${isLeft ? 'user-minus' : 'user-check'}" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(statusText)}
+                                            </span>
+                                            <span style="color:${themeColor.text}; font-size:0.76rem; font-weight:600;">${QCMS.escapeHtml(roleTitle)}</span>
+                                        </div>
+                                        <div style="font-size:0.74rem; color:#475569; font-weight:500;">
+                                            <i data-lucide="${isLeft ? 'calendar-x' : 'calendar'}" style="width:12px;height:12px;" class="me-1 ${isLeft ? 'text-danger' : 'text-primary'}"></i>
+                                            <strong>${isLeft ? 'Departure Date:' : 'Effective Date:'}</strong> ${QCMS.escapeHtml(effectiveDate)}
+                                        </div>
+                                    </div>
+                                    <div class="row g-2" style="font-size:0.76rem;">
+                                        <div class="col-sm-6">
+                                            <div style="color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">Working Tenure & Duration</div>
+                                            <div class="fw-semibold text-dark mt-0.5 d-flex align-items-center gap-1">
+                                                <i data-lucide="clock" style="width:12px;height:12px;" class="${isLeft ? 'text-danger' : 'text-secondary'}"></i>
+                                                <span>${QCMS.escapeHtml(durationText)}</span>
+                                            </div>
+                                            ${isLeft && mData.joined_at ? `
+                                            <div class="mt-1" style="font-size:0.7rem; color:#64748b;">
+                                                <span>Joined: <strong>${QCMS.escapeHtml(mData.joined_at)}</strong></span> &rarr; <span>Left: <strong class="text-danger">${QCMS.escapeHtml(mData.left_at || log.timestamp || 'Mid-Project')}</strong></span>
+                                            </div>` : ''}
+                                        </div>
+                                        ${actorText ? `
+                                        <div class="col-sm-6">
+                                            <div style="color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">${isLeft ? 'Removed / Replaced By' : 'Assigned / Enrolled By'}</div>
+                                            <div class="fw-semibold text-dark mt-0.5 d-flex align-items-center gap-1">
+                                                <i data-lucide="user" style="width:12px;height:12px;" class="text-secondary"></i>
+                                                <span>${QCMS.escapeHtml(actorText)}</span>
+                                            </div>
+                                            ${mData.reason ? `
+                                            <div class="mt-1" style="font-size:0.7rem; color:#b91c1c;">
+                                                <em>${QCMS.escapeHtml(mData.reason)}</em>
+                                            </div>` : ''}
+                                        </div>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            detailsHtml = formatDetailsHtml(log.details || '');
+                        }
+                    } else {
+                        detailsHtml = formatDetailsHtml(log.details || '');
+                    }
+
+                    return `
+                    <div class="p-3 bg-white rounded-3 border shadow-xs d-flex align-items-start justify-content-between flex-wrap gap-2 hover-row mb-2.5" style="border-radius:10px; transition:all 0.2s ease;">
+                        <div class="d-flex align-items-start gap-3" style="flex:1; min-width:0;">
+                            <img src="${displayAvatar}" class="rounded-circle mt-0.5 flex-shrink-0" style="width:38px; height:38px; object-fit:cover; border:2px solid #e2e8f0;" alt="User">
+                            <div style="min-width:0; flex:1;">
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                    <span class="fw-bold text-dark" style="font-size:0.9rem;">${QCMS.escapeHtml(displayName)}</span>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:6px;">${QCMS.escapeHtml(displayRole)}</span>
+                                    ${getBadge(log.event_type, log)}
+                                </div>
+                                <div class="fw-semibold text-dark" style="font-size:0.84rem; color:#1e293b;">${QCMS.escapeHtml(log.action || '')}</div>
+                                ${detailsHtml}
+                            </div>
+                        </div>
+                        <div class="text-end flex-shrink-0 ps-2">
+                            <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-2" style="background:#f8fafc; border:1px solid #e2e8f0; color:#64748b; font-size:0.72rem; font-weight:500;">
+                                <i data-lucide="clock" style="width:11px; height:11px; color:#94a3b8;"></i> ${QCMS.escapeHtml(log.timestamp || '')}
+                            </span>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                container.innerHTML = `<div class="v-stack gap-1">${cards}</div>`;
                 if (window.lucide) lucide.createIcons();
             },
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import db, User, Notification
-from datetime import datetime
+from datetime import datetime, timezone
 
 notification_bp = Blueprint('notification', __name__)
 
@@ -46,7 +46,7 @@ def get_notifications():
             "message": n.message,
             "is_read": bool(n.is_read),
             "is_starred": bool(getattr(n, 'is_starred', False)),
-            "created_at": n.created_at.isoformat() + "Z" if n.created_at else datetime.utcnow().isoformat() + "Z",
+            "created_at": n.created_at.isoformat() + "Z" if n.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "link": n.link,
             "is_announcement": is_ann,
             "announcement_id": ann_id

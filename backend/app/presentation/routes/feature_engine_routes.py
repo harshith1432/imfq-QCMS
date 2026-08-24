@@ -29,7 +29,7 @@ def get_user_flags():
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
         if user_id:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
     except Exception:
         pass
 
@@ -53,7 +53,7 @@ def check_single_flag(module_code):
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
         if user_id:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
     except Exception:
         pass
 
@@ -89,7 +89,7 @@ def track_usage():
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
         if user_id:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
     except Exception:
         pass
 

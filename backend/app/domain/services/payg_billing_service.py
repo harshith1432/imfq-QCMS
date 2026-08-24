@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger('qcms.payg_billing_service')
 """
 Pay-As-You-Go (PAYG) Metered Billing Service
 Calculates real-time organization usage (active users, storage, projects, API calls, QC circles),
@@ -5,7 +7,7 @@ evaluates custom metered pricing rules, generates itemized SubscriptionInvoices,
 and dispatches monthly bills to tenant dashboards and via email.
 """
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.infrastructure.database.models.models import (
     db, Organization, User, Project, Department, Plant, Subscription,
     SubscriptionInvoice, SaaSPlan, Notification
@@ -56,7 +58,7 @@ class PaygBillingService:
                 rules.update(sub.payg_rules)
                 return rules
             
-            org = Organization.query.get(org_id)
+            org = db.session.get(Organization, org_id)
             if org and org.subscription_plan:
                 sp = SaaSPlan.query.filter(
                     (SaaSPlan.name == org.subscription_plan) | 
@@ -82,12 +84,12 @@ class PaygBillingService:
         Computes accurate real-time usage metrics for an organization within a date window.
         """
         if not end_date:
-            end_date = datetime.utcnow()
+            end_date = datetime.now(timezone.utc).replace(tzinfo=None)
         if not start_date:
             # Default to first day of the current month
             start_date = datetime(end_date.year, end_date.month, 1)
 
-        org = Organization.query.get(org_id)
+        org = db.session.get(Organization, org_id)
         if not org:
             return {
                 "active_users": 0,
@@ -359,12 +361,12 @@ class PaygBillingService:
         Generates an official SubscriptionInvoice record for the monthly Pay-As-You-Go bill,
         dispatches in-app notification, and sends branded email bill to org admins.
         """
-        org = Organization.query.get(org_id)
+        org = db.session.get(Organization, org_id)
         if not org:
             raise ValueError(f"Organization ID {org_id} does not exist.")
 
         if not end_date:
-            end_date = datetime.utcnow()
+            end_date = datetime.now(timezone.utc).replace(tzinfo=None)
         if not start_date:
             start_date = end_date - timedelta(days=30)
 
@@ -374,8 +376,8 @@ class PaygBillingService:
         sub = Subscription.query.filter_by(org_id=org_id, subscription_status='Active').first()
         sub_id = sub.id if sub else None
 
-        invoice_uid = f"INV-PAYG-{datetime.utcnow().strftime('%Y%m')}-{org_id:03d}-{uuid.uuid4().hex[:4].upper()}"
-        base_inv_number = f"QCMS-PAYG-{datetime.utcnow().strftime('%Y%m%d')}-{org_id}"
+        invoice_uid = f"INV-PAYG-{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m')}-{org_id:03d}-{uuid.uuid4().hex[:4].upper()}"
+        base_inv_number = f"QCMS-PAYG-{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}-{org_id}"
         existing_inv = SubscriptionInvoice.query.filter_by(invoice_number=base_inv_number).first()
         if existing_inv:
             invoice_number = f"{base_inv_number}-{uuid.uuid4().hex[:4].upper()}"
@@ -387,8 +389,8 @@ class PaygBillingService:
             org_id=org_id,
             invoice_uid=invoice_uid,
             invoice_number=invoice_number,
-            invoice_date=datetime.utcnow(),
-            due_date=datetime.utcnow() + timedelta(days=15),
+            invoice_date=datetime.now(timezone.utc).replace(tzinfo=None),
+            due_date=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=15),
             billing_period_start=start_date,
             billing_period_end=end_date,
             plan_name="Pay-As-You-Go",
@@ -409,7 +411,7 @@ class PaygBillingService:
 
         db.session.add(invoice)
         if sub:
-            sub.last_metered_billing_at = datetime.utcnow()
+            sub.last_metered_billing_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         db.session.commit()
 
@@ -427,7 +429,7 @@ class PaygBillingService:
                 db.session.add(notif)
             db.session.commit()
         except Exception as e:
-            print(f"[PaygBillingService] Notification dispatch error: {e}")
+            logger.info(f"[PaygBillingService] Notification dispatch error: {e}")
 
         # Email Dispatch
         email_sent = False
@@ -435,7 +437,7 @@ class PaygBillingService:
             try:
                 email_sent = cls.send_payg_invoice_email(org, invoice, breakdown, target_email=recipient_email, cc_email=cc_email, custom_subject=subject)
             except Exception as e:
-                print(f"[PaygBillingService] Email dispatch failed: {e}")
+                logger.info(f"[PaygBillingService] Email dispatch failed: {e}")
 
         return {
             "status": "success",
@@ -581,7 +583,7 @@ class PaygBillingService:
         ).first()
 
         if rule and not rule.is_active:
-            print(f"[PaygBillingService] PAYG Monthly Invoice Email Notification Rule is disabled (OFF). Skipping email dispatch.")
+            logger.info(f"[PaygBillingService] PAYG Monthly Invoice Email Notification Rule is disabled (OFF). Skipping email dispatch.")
             return False
 
         if target_email:
@@ -602,7 +604,7 @@ class PaygBillingService:
             recipient_emails.append(cc_email.strip())
 
         if not recipient_emails:
-            print(f"[PaygBillingService] No admin emails found for Org {org.id} ({org.name})")
+            logger.info(f"[PaygBillingService] No admin emails found for Org {org.id} ({org.name})")
             return False
 
         subject = custom_subject or f"📄 Monthly Pay-As-You-Go Invoice #{invoice.invoice_number} ({org.name})"
@@ -775,9 +777,9 @@ class PaygBillingService:
                 "name":      pdf_filename,
                 "mime_type": "application/pdf"
             }]
-            print(f"[PaygBillingService] PDF invoice generated: {pdf_filename} ({len(pdf_bytes)} bytes)")
+            logger.info(f"[PaygBillingService] PDF invoice generated: {pdf_filename} ({len(pdf_bytes)} bytes)")
         except Exception as pdf_err:
-            print(f"[PaygBillingService] PDF attachment error: {pdf_err}. Sending email without attachment.")
+            logger.info(f"[PaygBillingService] PDF attachment error: {pdf_err}. Sending email without attachment.")
 
         all_sent = True
         for email in recipient_emails:
@@ -852,7 +854,7 @@ class PaygBillingService:
                 )
                 generated_invoices.append(inv_res)
             except Exception as e:
-                print(f"[PaygBillingService] Batch billing error for org {org.id}: {e}")
+                logger.info(f"[PaygBillingService] Batch billing error for org {org.id}: {e}")
 
         return {
             "status": "success",

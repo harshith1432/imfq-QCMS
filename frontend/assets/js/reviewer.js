@@ -563,6 +563,8 @@ const reviewer = {
     }
 };
 
+window.reviewer = reviewer;
+
 // Initialize the reviewer module
 document.addEventListener('DOMContentLoaded', () => {
     reviewer.init();

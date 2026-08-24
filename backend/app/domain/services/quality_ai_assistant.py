@@ -579,37 +579,23 @@ class QualityAIAssistant:
     @classmethod
     def _handle_knowledge_repository_lookup(cls, query: str, org_id: int):
         try:
-            query_words = [w.lower() for w in re.split(r'\W+', query) if len(w) > 2]
-            if not query_words:
+            from app.infrastructure.vector_db import VectorSearchService
+            results = VectorSearchService.search_by_text(query, org_id, limit=4)
+            if not results:
                 return None
-
-            kr_items = KnowledgeRepository.query.filter_by(org_id=org_id).all()
-            scored_items = []
-
-            for item in kr_items:
-                text_corpus = f"{item.title or ''} {item.category or ''} {item.problem_summary or ''} {item.root_cause or ''} {item.solution_summary or ''} {item.keywords or ''}".lower()
-                score = sum(1 for qw in query_words if qw in text_corpus)
-                if score > 0:
-                    scored_items.append((item, score))
-
-            if not scored_items:
-                return None
-
-            scored_items.sort(key=lambda x: x[1], reverse=True)
-            top_results = [item[0] for item in scored_items[:4]]
 
             lines = ["### 📚 Relevant Organization Quality Records\n"]
             sources = []
 
-            for i, res in enumerate(top_results):
-                title = getattr(res, 'title', 'Untitled Project')
-                category = getattr(res, 'category', 'Quality')
-                prob = getattr(res, 'problem_summary', '') or ''
-                cause = getattr(res, 'root_cause', '') or ''
-                sol = getattr(res, 'solution_summary', '') or ''
-                kpi = getattr(res, 'kpi_improvement_pct', 0)
-                savings = getattr(res, 'cost_savings', 0)
-                proj_id = getattr(res, 'project_id', res.id)
+            for i, res in enumerate(results):
+                title = res.get('title', 'Untitled Project')
+                category = res.get('category', 'Quality')
+                prob = res.get('problem_summary', '') or ''
+                cause = res.get('root_cause', '') or ''
+                sol = res.get('solution_summary', '') or ''
+                kpi = res.get('kpi_improvement_pct', 0)
+                savings = res.get('cost_savings', 0)
+                proj_id = res.get('project_id', res.get('id'))
 
                 sources.append({
                     'project_id': proj_id,

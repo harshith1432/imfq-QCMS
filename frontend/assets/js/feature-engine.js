@@ -36,7 +36,7 @@ class FeatureEngineClient {
      */
     async loadFlags() {
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+            const token = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('token') : null) || (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null) || '';
             const headers = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -375,7 +375,7 @@ class FeatureEngineClient {
     trackUsage(moduleCode, eventType = 'action') {
         if (!moduleCode) return;
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+            // Cookie authentication handled via credentials: 'include'
             fetch('/api/feature-engine/track-usage', {
                 method: 'POST',
                 headers: {

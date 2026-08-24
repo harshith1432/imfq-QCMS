@@ -21,6 +21,7 @@ Usage:
 import time
 import threading
 from typing import Optional, Dict, Tuple
+from app import db
 
 # ─────────────────────────────────────────────────────────────────────────────
 # In-Memory Cache
@@ -82,7 +83,7 @@ class FeatureEngine:
         org_enabled_modules = None
 
         if org_id:
-            org = Organization.query.get(org_id)
+            org = db.session.get(Organization, org_id)
             if org:
                 # 1. Resolve subscription plan name from active Subscription or Organization.subscription_plan
                 active_sub = Subscription.query.filter_by(org_id=org_id, subscription_status='Active').first()
@@ -92,9 +93,13 @@ class FeatureEngine:
                 # 2. Load modules explicitly disabled for this SaaSPlan template
                 if plan_name:
                     saas_plan = SaaSPlan.query.filter(
-                        (func.lower(SaaSPlan.name) == plan_name.lower()) | 
-                        (func.lower(SaaSPlan.plan_type) == plan_name.lower())
+                        (func.lower(func.trim(SaaSPlan.name)) == plan_name.strip().lower()) | 
+                        (func.lower(func.trim(SaaSPlan.code)) == plan_name.strip().lower())
                     ).first()
+                    if not saas_plan:
+                        saas_plan = SaaSPlan.query.filter(
+                            func.lower(func.trim(SaaSPlan.plan_type)) == plan_name.strip().lower()
+                        ).first()
                     if saas_plan:
                         disabled_rows = SaaSPlanModules.query.filter_by(plan_id=saas_plan.id, is_enabled=False).all()
                         for pm in disabled_rows:
@@ -380,7 +385,7 @@ class FeatureEngine:
         def _do_track():
             try:
                 from app.infrastructure.database.models.models import Module, ModuleUsageAnalytics, db
-                import datetime
+                from datetime import datetime, timezone
                 m = Module.query.filter_by(code=module_code).first()
                 if not m:
                     return
@@ -398,7 +403,7 @@ class FeatureEngine:
                 else:
                     analytics.api_calls = (analytics.api_calls or 0) + 1
 
-                analytics.last_used_at = datetime.datetime.utcnow()
+                analytics.last_used_at = datetime.datetime.now(timezone.utc).replace(tzinfo=None)
                 analytics.total_requests = (analytics.total_requests or 0) + 1
                 db.session.commit()
             except Exception:
@@ -435,7 +440,7 @@ def feature_module_required(module_code: str):
                 verify_jwt_in_request()
                 user_id = int(get_jwt_identity())
                 from app.infrastructure.database.models.models import User
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
             except Exception:
                 user = None
 

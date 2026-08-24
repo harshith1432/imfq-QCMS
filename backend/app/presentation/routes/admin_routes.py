@@ -16,7 +16,7 @@ from app.infrastructure.database.models.models import (
 )
 from app.domain.services.subscription_service import SubscriptionManager
 from app.infrastructure.mailer.email_service import EmailUtils
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import copy
 from sqlalchemy.orm.attributes import flag_modified
@@ -408,27 +408,38 @@ def create_user():
     if not phone:
         return jsonify({"message": "Phone Number is required (compulsory)"}), 400
     
-    # Optional phone format check (10 digits or E.164)
+    # Phone format check (7 to 15 digits or E.164)
     phone_clean = phone.replace(' ', '').replace('-', '')
     import re
+    from sqlalchemy import func as sqlfunc
     if not re.match(r'^(\+?[0-9]{7,15})$', phone_clean):
-        return jsonify({"message": "Please enter a valid phone number"}), 400
+        return jsonify({"message": "Please enter a valid phone number (e.g. 9876543210 or +919876543210)"}), 400
+
+    # Enforce phone number uniqueness across all users
+    existing_phone_user = User.query.filter(
+        (User.phone == phone) | (User.phone == phone_clean)
+    ).first()
+    if existing_phone_user:
+        owner_name = existing_phone_user.full_name or existing_phone_user.username or existing_phone_user.email or 'another user'
+        return jsonify({"message": f"Phone number '{phone}' is already registered with {owner_name}. Each user must have a unique phone number."}), 400
 
     email = (data.get('email') or '').strip()
     if email:
         if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
             return jsonify({"message": "Invalid email address format"}), 400
-        if User.query.filter_by(email=email).first():
-            return jsonify({"message": "Email already exists"}), 400
+        existing_email_user = User.query.filter(sqlfunc.lower(User.email) == email.lower()).first()
+        if existing_email_user:
+            owner_name = existing_email_user.full_name or existing_email_user.username or 'another user'
+            return jsonify({"message": f"Email '{email}' is already registered with {owner_name}. Each user must have a unique email address."}), 400
     else:
         email = None
     
     username = (data.get('username') or '').strip()
     if not username:
-        return jsonify({"message": "Username is required"}), 400
+        return jsonify({"message": "Username  / Display Name is required"}), 400
         
     if User.query.filter_by(username=username).first():
-        return jsonify({"message": "Username already taken"}), 400
+        return jsonify({"message": f"Username  / Display Name '{username}' is already taken."}), 400
     
     role_name = data.get('role')
     role = Role.query.filter_by(name=role_name).first() if role_name else None
@@ -485,7 +496,8 @@ def create_user():
             "error_code": "USER_LIMIT_REACHED"
         }), 403
 
-    password = data.get('password', 'Welcome@123')
+    import secrets
+    password = data.get('password') or os.getenv('DEFAULT_USER_PASSWORD') or secrets.token_urlsafe(12)
     
     plant_input = data.get('plant_id') or data.get('plant_location') or data.get('plant')
     user_plant_id = None
@@ -515,6 +527,7 @@ def create_user():
             department_id=dept.id if dept else None,
             plant_id=user_plant_id,
             org_id=org_id,
+            is_active=True,
             is_temp_password=True,
             is_verified=True,
             status='Active',
@@ -532,7 +545,7 @@ def create_user():
             db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": "Failed to create user", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to create user.")
     
     # Send credentials email (Asynchronous Background Dispatch) if email provided
     if email:
@@ -565,17 +578,11 @@ def get_custom_fields():
         org_id = first_org.id if first_org else 1
         
     fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
-    # If legacy email system field is present, convert it to deletable custom field (is_system=False)
-    legacy_email = UserCustomField.query.filter_by(org_id=org_id, field_key='email', is_system=True).first()
-    if legacy_email:
-        legacy_email.is_system = False
-        legacy_email.is_required = False
-        db.session.commit()
-        fields = UserCustomField.query.filter_by(org_id=org_id).order_by(UserCustomField.created_at).all()
 
     # Check if system fields are properly initialized
     system_fields = [
         ('username', 'User', True, True, 'both'),
+        ('email', 'Email Address', False, True, 'email'),
         ('phone', 'Phone Number', True, True, 'phone'),
         ('role', 'User Role', True, True, 'both'),
         ('department', 'Department', True, True, 'both'),
@@ -637,6 +644,10 @@ def add_custom_field():
     field_key = re.sub(r'[^a-zA-Z0-9_]', '', display_name.lower().replace(' ', '_'))
     if not field_key:
         return jsonify({"message": "Invalid display name format"}), 400
+
+    core_keys = ('email', 'email_address', 'enterprise_email', 'phone', 'phone_number', 'username', 'role', 'department', 'plant_location', 'plant_id', 'plant')
+    if field_key in core_keys or display_name.lower() in ('email', 'email address', 'phone', 'phone number', 'role', 'department', 'plant location'):
+        return jsonify({"message": f"'{display_name}' is a built-in core field and cannot be added as a custom field."}), 400
         
     forbidden_keys = {'id', 'username', 'role', 'department', 'plant_location', 'org_id', 'hashed_password', 'password', 'is_active', 'status', 'created_at', 'custom_fields'}
     if field_key in forbidden_keys:
@@ -652,7 +663,7 @@ def add_custom_field():
             db.session.commit()
     except Exception as ddl_err:
         db.session.rollback()
-        return jsonify({"message": "Failed to update database schema", "error": str(ddl_err)}), 500
+        return internal_server_error(ddl_err, "Failed to update database schema.")
         
     new_field = UserCustomField(
         org_id=org_id,
@@ -700,7 +711,7 @@ def delete_custom_field(field_id):
             db.session.commit()
     except Exception as ddl_err:
         db.session.rollback()
-        return jsonify({"message": "Failed to update database schema", "error": str(ddl_err)}), 500
+        return internal_server_error(ddl_err, "Failed to update database schema.")
         
     db.session.delete(field)
     db.session.commit()
@@ -965,7 +976,7 @@ def export_users_csv():
         writer.writerow(row)
 
     csv_data = "\ufeff" + output.getvalue()  # UTF-8 BOM
-    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')
     filename = f"QCMS_Users_Export_{timestamp}.csv"
 
     response = Response(csv_data, mimetype='text/csv')
@@ -1023,6 +1034,8 @@ def bulk_upload_users():
     async_welcome_creds = []
     valid_roles = {r.name.strip().lower(): r for r in Role.query.all()}
     custom_field_defs = UserCustomField.query.filter_by(org_id=org_id).all()
+    seen_phones = set()
+    seen_emails = set()
 
     start_row_num = request.form.get('start_row_num', type=int) or 2
     row_num = start_row_num - 1
@@ -1032,10 +1045,10 @@ def bulk_upload_users():
         phone         = (row.get('phone') or row.get('Phone') or row.get('Phone Number') or row.get('phone_number') or '').strip()
         email         = (row.get('email') or row.get('Email Address') or '').strip()
         role_name     = (row.get('role') or row.get('Role') or '').strip()
-        plant_raw     = (row.get('plant_location') or row.get('plant') or row.get('location') or row.get('Plant') or row.get('Location') or row.get('Plant / Location') or '').strip()
+        plant_raw     = (row.get('plant_location') or row.get('plant') or row.get('location') or row.get('Plant') or row.get('Location') or row.get('Plant  / Location') or '').strip()
         dept_raw      = (row.get('department') or row.get('dept') or row.get('Department') or row.get('Dept') or row.get('Department Name') or '').strip()
         full_name     = (row.get('full_name') or row.get('Full Name') or '').strip() or username
-        password      = (row.get('password') or row.get('Password') or '').strip() or 'Welcome@123'
+        password      = (row.get('password') or row.get('Password') or '').strip() or os.getenv('DEFAULT_USER_PASSWORD') or secrets.token_urlsafe(12)
 
         def reject(reason):
             nonlocal rejected_count
@@ -1124,12 +1137,37 @@ def bulk_upload_users():
             reject(f"Invalid role: '{role_name}'.")
             continue
 
-        # ── 5. Duplicate email / username check ──────────────────────────────
-        if email and User.query.filter_by(email=email).first():
-            reject("Email already exists in the system.")
+        # ── 5. Duplicate phone, email, and username check ──────────────────────────────
+        import re
+        phone_clean = phone.replace(' ', '').replace('-', '')
+        if not re.match(r'^(\+?[0-9]{7,15})$', phone_clean):
+            reject(f"Invalid phone number format: '{phone}'. Must be 7-15 digits.")
             continue
+
+        if phone_clean in seen_phones:
+            reject(f"Duplicate phone number '{phone}' in uploaded CSV batch.")
+            continue
+
+        existing_phone = User.query.filter((User.phone == phone) | (User.phone == phone_clean)).first()
+        if existing_phone:
+            owner = existing_phone.full_name or existing_phone.username or existing_phone.email
+            reject(f"Phone number '{phone}' is already registered with {owner}.")
+            continue
+        seen_phones.add(phone_clean)
+
+        if email:
+            if email.lower() in seen_emails:
+                reject(f"Duplicate email '{email}' in uploaded CSV batch.")
+                continue
+            existing_email = User.query.filter(sqlfunc.lower(User.email) == email.lower()).first()
+            if existing_email:
+                owner = existing_email.full_name or existing_email.username or existing_email.email
+                reject(f"Email '{email}' is already registered with {owner}.")
+                continue
+            seen_emails.add(email.lower())
+
         if User.query.filter_by(username=username).first():
-            reject("Username is already taken.")
+            reject(f"Username '{username}' is already taken.")
             continue
 
         # ── 6. Subscription limit ──────────────────────────────────────
@@ -1174,6 +1212,7 @@ def bulk_upload_users():
                 plant_id=matched_plant.id if matched_plant else None,
                 department_id=matched_dept.id if matched_dept else None,
                 org_id=org_id,
+                is_active=True,
                 is_temp_password=True,
                 is_verified=True,
                 status='Active',
@@ -1287,14 +1326,37 @@ def update_user(user_id):
             user.username = val
 
     if 'phone' in data or 'phone_number' in data:
-        user.phone = (data.get('phone') or data.get('phone_number') or '').strip()
+        phone = (data.get('phone') or data.get('phone_number') or '').strip()
+        if phone:
+            phone_clean = phone.replace(' ', '').replace('-', '')
+            import re
+            if not re.match(r'^(\+?[0-9]{7,15})$', phone_clean):
+                return jsonify({"message": "Please enter a valid phone number (e.g. 9876543210 or +919876543210)"}), 400
+            existing_phone = User.query.filter(
+                ((User.phone == phone) | (User.phone == phone_clean)),
+                User.id != user_id
+            ).first()
+            if existing_phone:
+                owner = existing_phone.full_name or existing_phone.username or existing_phone.email
+                return jsonify({"message": f"Phone number '{phone}' is already registered with {owner}. Each user must have a unique phone number."}), 400
+            user.phone = phone
+        else:
+            user.phone = ''
 
     if 'email' in data:
         email = (data.get('email') or '').strip()
         if email:
-            existing = User.query.filter(User.email == email, User.id != user_id).first()
-            if existing:
-                return jsonify({"message": "Email already in use"}), 400
+            import re
+            if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+                return jsonify({"message": "Invalid email address format"}), 400
+            from sqlalchemy import func as sqlfunc
+            existing_email = User.query.filter(
+                sqlfunc.lower(User.email) == email.lower(),
+                User.id != user_id
+            ).first()
+            if existing_email:
+                owner = existing_email.full_name or existing_email.username or existing_email.email
+                return jsonify({"message": f"Email '{email}' is already in use by {owner}. Each user must have a unique email address."}), 400
             user.email = email
         else:
             user.email = None
@@ -1335,14 +1397,14 @@ def update_user(user_id):
     if 'is_active' in data:
         user.is_active = data.get('is_active')
         if not user.is_active:
-            user.deactivated_at = datetime.utcnow()
+            user.deactivated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             user.deactivated_at = None
             # Auto-resolve pending reactivation tickets for this user
             try:
                 SupportTicket.query.filter_by(user_id=user.id, category='User Access', status='Open').update({
                     'status': 'Resolved',
-                    'resolved_at': datetime.utcnow(),
+                    'resolved_at': datetime.now(timezone.utc).replace(tzinfo=None),
                     'resolution': 'Account reactivated by Organization Administrator.'
                 })
                 notif = Notification(
@@ -1350,7 +1412,7 @@ def update_user(user_id):
                     user_id=user.id,
                     title="Account Reactivated",
                     message="Your account has been reactivated by your administrator. You now have full access to your dashboard.",
-                    link="/dashboard/dashboard.html"
+                    link="/dashboard / dashboard.html"
                 )
                 db.session.add(notif)
             except Exception as e:
@@ -1394,7 +1456,7 @@ def update_user(user_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": "Failed to update user", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to update user.")
 
 
 @admin_bp.route('/users/<int:user_id>/regenerate-credentials', methods=['POST'])
@@ -1429,7 +1491,7 @@ def regenerate_credentials(user_id):
         return jsonify({"message": "New temporary credentials generated and emailed in background successfully."}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": "Failed to regenerate credentials", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to regenerate credentials.")
 
 def disassociate_and_delete_user(target_user, admin_user_id=None):
     """
@@ -1441,7 +1503,7 @@ def disassociate_and_delete_user(target_user, admin_user_id=None):
     org_id = target_user.org_id
     uname = target_user.username
     uemail = target_user.email
-    now_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+    now_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S UTC')
 
     import app.infrastructure.database.models.models as models_mod
     from app.infrastructure.database.models.models import AuditLog
@@ -1535,7 +1597,6 @@ def disassociate_and_delete_user(target_user, admin_user_id=None):
         ('SOPComment', 'user_id'),
         ('SOPFeedback', 'user_id'),
         ('SOPQuizAttempt', 'user_id'),
-        ('SOPCertificate', 'user_id'),
         ('AnnouncementDelivery', 'user_id'),
         ('AnnouncementRead', 'user_id'),
         ('AnnouncementAudit', 'user_id'),
@@ -1579,7 +1640,7 @@ def delete_user(user_id):
         return jsonify({"message": "User permanently deleted."}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": "Failed to delete user", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to delete user.")
 
 
 @admin_bp.route('/users/bulk-action', methods=['POST'])
@@ -1895,9 +1956,9 @@ def get_plant_directory_breakdown():
 
         plant_data_list.append({
             "id": 0,
-            "name": "General / Unassigned Location",
+            "name": "General  / Unassigned Location",
             "code": "HQ-GENERAL",
-            "location": "Global / Unassigned",
+            "location": "Global  / Unassigned",
             "total_departments": len(unassigned_depts),
             "total_members": len(u_members_set),
             "running_projects": u_running_total,
@@ -2088,7 +2149,7 @@ def get_departments():
             "id": d.id, 
             "name": d.name,
             "plant_id": d.plant_id,
-            "plant_name": d.plant.name if d.plant else "All Plants / Unassigned",
+            "plant_name": d.plant.name if d.plant else "All Plants  / Unassigned",
             "user_count": len(d_users),
             "employee_count": len(d_users),
             "qc_user_count": len(d_qc_users),
@@ -2188,7 +2249,7 @@ def get_department_detail(dept_id):
         "id": dept.id, 
         "name": dept.name,
         "plant_id": dept.plant_id,
-        "plant_name": dept.plant.name if dept.plant else "All Plants / Unassigned"
+        "plant_name": dept.plant.name if dept.plant else "All Plants  / Unassigned"
     }), 200
 
 @admin_bp.route('/departments/<int:dept_id>/stats', methods=['GET'])
@@ -2306,9 +2367,25 @@ def get_org_settings():
     org_id = current_user.org_id
     print(f"[QCMS ADMIN] Fetching settings for User ID {current_user_id}, Org ID {org_id}")
     
-    org = db.session.get(Organization, org_id)
+    org = db.session.get(Organization, org_id) if org_id else None
     if not org:
-        print(f"[QCMS ADMIN] ERROR: Organization with ID {org_id} not found in database.")
+        print(f"[QCMS ADMIN] INFO: No organization associated with User ID {current_user_id} (Org ID: {org_id})")
+        return jsonify({
+            "id": None,
+            "name": "QCMS Platform",
+            "org_code": "PLATFORM",
+            "industry": "Software",
+            "admin_name": current_user.full_name or current_user.username,
+            "email": current_user.email,
+            "profile_completion": {
+                "completed_pct": 100,
+                "pending_pct": 0,
+                "filled_count": 13,
+                "total_count": 13,
+                "is_complete": True,
+                "missing_fields": []
+            }
+        }), 200
     # Auto-approve any pending trial extensions if 5 minutes passed
     try:
         from app.presentation.routes.subscription_routes import check_and_apply_pending_trial_extensions
@@ -2335,7 +2412,7 @@ def get_org_settings():
 
     filled_count = sum(1 for _, v, _ in fields_to_check if v and str(v).strip())
     total_count = len(fields_to_check)
-    completed_pct = int(round((filled_count / total_count) * 100))
+    completed_pct = int(round((filled_count / total_count) * 100)) if total_count > 0 else 0
     pending_pct = 100 - completed_pct
     is_complete = (completed_pct == 100)
 
@@ -2457,7 +2534,7 @@ def update_org_settings():
         if 'country' in data: org.country = data['country']
         if 'zip_code' in data:
             if data['zip_code']:
-                org.zip_code = validate_pincode(data['zip_code'], "ZIP / PIN Code", required=False)
+                org.zip_code = validate_pincode(data['zip_code'], "ZIP  / PIN Code", required=False)
             else:
                 org.zip_code = None
     except ValidationError as ve:
@@ -2504,7 +2581,7 @@ def update_org_settings():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Database commit failed: {str(e)}"}), 500
+        return internal_server_error(e, "Database operation failed.")
 
     new_settings = {
         "maintenance_mode": org.maintenance_mode,
@@ -2630,7 +2707,7 @@ def get_role_permissions():
         "status": "success",
         "roles": ["Team Member", "CEO", "Facilitator", "Reviewer", "Admin"],
         "modules": [
-            {"key": "overview", "label": "Dashboard / Overview", "icon": "layout-dashboard"},
+            {"key": "overview", "label": "Dashboard  / Overview", "icon": "layout-dashboard"},
             {"key": "project_repo", "label": "Project Repository", "icon": "layers"},
             {"key": "knowledge_base", "label": "Knowledge Base", "icon": "database"},
             {"key": "leaderboard", "label": "Leaderboard & Rewards", "icon": "award"},
@@ -2670,7 +2747,7 @@ def reset_role_permissions_defaults():
         "message": "Role Access Control reset to platform defaults successfully.",
         "roles": ["Team Member", "CEO", "Facilitator", "Reviewer", "Admin"],
         "modules": [
-            {"key": "overview", "label": "Dashboard / Overview", "icon": "layout-dashboard"},
+            {"key": "overview", "label": "Dashboard  / Overview", "icon": "layout-dashboard"},
             {"key": "project_repo", "label": "Project Repository", "icon": "layers"},
             {"key": "knowledge_base", "label": "Knowledge Base", "icon": "database"},
             {"key": "leaderboard", "label": "Leaderboard & Rewards", "icon": "award"},
@@ -2716,7 +2793,7 @@ def update_role_permissions():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Database commit failed: {str(e)}"}), 500
+        return internal_server_error(e, "Database operation failed.")
 
     log_action(user.id, "UPDATE_ROLE_PERMISSIONS", user.org_id, "organizations", org.id, {"permissions": new_perms})
     return jsonify({"status": "success", "message": "Role Access Control matrix updated successfully", "permissions": new_perms}), 200
@@ -2744,7 +2821,7 @@ def upgrade_plan():
                 f"your {fields} before proceeding."
             ),
             "missing_fields": missing,
-            "redirect": "/admin/settings.html?tab=personal"
+            "redirect": "/admin / settings.html?tab=personal"
         }), 422
 
     data = request.get_json()
@@ -2829,7 +2906,7 @@ def get_billing_history():
                 "currency": inv.currency or 'INR',
                 "plan": inv.plan_name or 'Pay-As-You-Go Metered',
                 "status": inv.invoice_status,
-                "date": (inv.created_at or datetime.utcnow()).isoformat() + "Z",
+                "date": (inv.created_at or datetime.now(timezone.utc).replace(tzinfo=None)).isoformat() + "Z",
                 "transaction_id": inv.invoice_number or inv.invoice_uid or f"INV-{inv.id}",
                 "is_invoice": True,
                 "is_payable": is_payable
@@ -2844,7 +2921,7 @@ def get_billing_history():
             "currency": p.currency or 'INR',
             "plan": p.plan_name or 'SaaS Subscription',
             "status": p.payment_status,
-            "date": (p.created_at or datetime.utcnow()).isoformat() + "Z",
+            "date": (p.created_at or datetime.now(timezone.utc).replace(tzinfo=None)).isoformat() + "Z",
             "transaction_id": p.transaction_id or f"TXN-{p.id}",
             "is_invoice": False,
             "is_payable": False
@@ -2907,15 +2984,9 @@ def upload_evidence():
         return jsonify({"message": "No selected file"}), 400
     
     if file:
-        filename = secure_filename(file.filename)
-        # Add timestamp to filename to avoid collisions
-        filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        
-        # Return the URL to access the file
-        file_url = f"/uploads/{filename}"
-        return jsonify({"url": file_url}), 200
+        from app.infrastructure.storage import storage
+        result = storage.save_file(file, subfolder="evidence")
+        return jsonify({"url": result['url'], "filename": result['filename']}), 200
 
 # --- Enterprise Branding & Settings ---
 
@@ -2943,16 +3014,11 @@ def upload_branding():
             return jsonify({"message": "Company logo upload module is temporarily disabled. Please contact the Support team to enable this."}), 403
 
     if file:
-        filename = secure_filename(file.filename)
-        ext = os.path.splitext(filename)[1]
-        new_filename = f"org_{org.id}_{asset_type}{ext}"
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], new_filename)
-        
-        # Ensure upload folder exists
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        
-        file.save(file_path)
-        file_url = f"/uploads/{new_filename}"
+        from app.infrastructure.storage import storage
+        ext = os.path.splitext(file.filename)[1]
+        target_name = f"org_{org.id}_{asset_type}{ext}"
+        result = storage.save_file(file, filename=target_name, subfolder="branding")
+        file_url = result['url']
         
         if asset_type == 'logo':
             org.logo_url = file_url
@@ -2962,7 +3028,13 @@ def upload_branding():
         db.session.commit()
         log_action(current_user.id, "UPDATE_BRANDING", org.id, "organizations", org.id, {"type": asset_type})
         
-        return jsonify({"url": file_url}), 200
+        return jsonify({"url": file_url, "storage_backend": result.get('backend', 'local')}), 200
+
+@admin_bp.route('/storage/status', methods=['GET'])
+@admin_required
+def get_storage_status():
+    from app.infrastructure.storage import storage
+    return jsonify(storage.get_info()), 200
 
 @admin_bp.route('/audit-logs', methods=['GET'])
 @admin_required
@@ -2988,94 +3060,22 @@ def get_audit_logs():
 def reject_project(project_id):
     """Admin rejects a project closure — resets progress to Stage 1, unlocks stages, notifies team."""
     try:
-        current_user_id = get_jwt_identity()
-        current_user = db.session.get(User, current_user_id)
-        if not current_user:
-            return jsonify({"message": "User not found"}), 404
-        
-        project = Project.query.filter_by(id=project_id, org_id=current_user.org_id).first_or_404()
-        
-        if project.status == 'Closed':
-            return jsonify({"message": "Project is already closed"}), 400
-            
+        current_user_id = int(get_jwt_identity())
         data = request.get_json() or {}
         comments = data.get('comments', 'Rejected by Admin. Please revise all stages as needed.').strip()
         
-        # Reset project status and current stage
-        project.status = 'Rejected'
-        project.current_stage = 1
+        from app.domain.services.project_closure_service import ProjectClosureService
+        res = ProjectClosureService.reject_closure(project_id, current_user_id, comments=comments)
+        return jsonify(res), 200
         
-        # Reset all stage trackers so progress is re-tracked from Stage 1
-        # Set Stage 1 to In Progress and all others to Pending/Started/Completed = None
-        for tracker in project.stage_tracker:
-            if tracker.stage_number == 1:
-                tracker.status = 'In Progress'
-                tracker.completed_at = None
-            else:
-                tracker.status = 'Pending'
-                tracker.started_at = None
-                tracker.completed_at = None
-                
-        # Reset Stage 8 closure validations
-        from app.infrastructure.database.models.models import Stage8StandardizationKnowledgeSharingProjectClosure
-        s8 = Stage8StandardizationKnowledgeSharingProjectClosure.query.filter_by(project_id=project_id).first()
-        if s8:
-            s8.facilitator_validation = False
-            s8.admin_closure = False
-            s8.final_approval = False
-            s8.final_comments = f"Rejected by Admin. Comments: {comments}"
-            
-        # Add a rejection review entry
-        from app.infrastructure.database.models.models import ProjectReview
-        review = ProjectReview(
-            org_id=current_user.org_id,
-            project_id=project_id,
-            stage_number=8,
-            reviewer_id=current_user.id,
-            status='Approved',
-            decision='Rejected',
-            comments=comments,
-            decided_at=datetime.utcnow()
-        )
-        db.session.add(review)
-        
-        # Notify team, facilitator and reviewer
-        from app.presentation.routes.notification_routes import create_notification
-        notify_ids = set()
-        if project.team_leader_id: notify_ids.add(project.team_leader_id)
-        if project.facilitator_id: notify_ids.add(project.facilitator_id)
-        if project.reviewer_id: notify_ids.add(project.reviewer_id)
-        if project.creator_id: notify_ids.add(project.creator_id)
-        
-        for uid in notify_ids:
-            if uid != current_user.id:
-                create_notification(
-                    current_user.org_id, uid,
-                    "Project Rejected & Reset",
-                    f"Admin rejected closure for '{project.title}': {comments}",
-                    f"/projects/project-details.html?id={project_id}",
-                    commit=False
-                )
-            
-        log_action(
-            user_id=current_user.id,
-            action="PROJECT_REJECTED",
-            target_table="projects",
-            target_id=project_id,
-            details={"title": project.title, "comments": comments},
-            org_id=current_user.org_id
-        )
-        
-        db.session.commit()
-        return jsonify({"message": "Project rejected and reset to Stage 1 successfully"}), 200
-        
+    except ValueError as val_err:
+        return jsonify({"message": str(val_err)}), 400
+    except PermissionError as perm_err:
+        return jsonify({"message": str(perm_err)}), 403
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error in reject_project: {str(e)}")
-        return jsonify({
-            "message": "Internal error during project rejection",
-            "error": str(e)
-        }), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -3117,6 +3117,29 @@ def save_stages_template():
     stages = data.get('stages')
     if not stages or not isinstance(stages, list) or len(stages) < 1 or len(stages) > 20:
         return jsonify({"message": "Stages list must contain between 1 and 20 stages."}), 400
+
+    # Ensure Stage 1 is Initiation and Last Stage is Closure
+    if len(stages) >= 2:
+        closure_idx = None
+        for i, s in enumerate(stages):
+            if s.get('original_id') == 8 or 'closure' in s.get('title', '').lower() or 'congratulat' in s.get('title', '').lower():
+                closure_idx = i
+                break
+        if closure_idx is not None and closure_idx != len(stages) - 1:
+            closure_stage = stages.pop(closure_idx)
+            stages.append(closure_stage)
+
+        init_idx = None
+        for i, s in enumerate(stages):
+            if s.get('original_id') == 1 or 'initiat' in s.get('title', '').lower():
+                init_idx = i
+                break
+        if init_idx is not None and init_idx != 0:
+            init_stage = stages.pop(init_idx)
+            stages.insert(0, init_stage)
+
+        for idx, s in enumerate(stages):
+            s['stage_id'] = idx + 1
 
     # Validate each entry
     required_keys = {'stage_id', 'original_id', 'title', 'icon'}
@@ -3567,7 +3590,7 @@ def update_compliance_standard(code):
 
     # Re-derive status
     record.status = record.compute_status()
-    record.updated_at = datetime.utcnow()
+    record.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     db.session.commit()
     log_action(user_id, 'COMPLIANCE_STANDARD_UPDATED', org_id,
@@ -3599,7 +3622,7 @@ def toggle_compliance_standard(code):
 
     data = request.get_json() or {}
     record.is_enabled = bool(data.get('is_enabled', not record.is_enabled))
-    record.updated_at = datetime.utcnow()
+    record.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
     log_action(user_id, 'COMPLIANCE_STANDARD_TOGGLED', org_id,
                target_table='compliance_standard_records', target_id=record.id,
@@ -3613,6 +3636,7 @@ def toggle_compliance_standard(code):
 import secrets
 import hashlib
 from app.infrastructure.database.models.models import OrgApiKey, Organization
+from app.presentation.routes.error_helpers import internal_server_error
 
 def _hash_api_key(key: str) -> str:
     return hashlib.sha256(key.encode('utf-8')).hexdigest()
@@ -3691,7 +3715,7 @@ def generate_org_api_key():
         existing.api_key_hash = key_hash
         existing.secret_key_masked = raw_key
         existing.status = 'Active'
-        existing.created_at = datetime.utcnow()
+        existing.created_at = datetime.now(timezone.utc).replace(tzinfo=None)
         key_rec = existing
     else:
         key_rec = OrgApiKey(
@@ -3751,7 +3775,7 @@ def regenerate_org_api_key():
         key_rec.api_key_hash = key_hash
         key_rec.secret_key_masked = raw_key
         key_rec.status = 'Active'
-        key_rec.updated_at = datetime.utcnow()
+        key_rec.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     db.session.commit()
     log_action(user_id, 'ORG_API_KEY_REGENERATED', org_id, details={"masked": raw_key})
@@ -3792,7 +3816,7 @@ def toggle_org_api_key_status():
         new_status = 'Disabled' if key_rec.status == 'Active' else 'Active'
 
     key_rec.status = new_status
-    key_rec.updated_at = datetime.utcnow()
+    key_rec.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
 
     log_action(user_id, 'ORG_API_KEY_STATUS_CHANGED', org_id, details={"new_status": new_status})
@@ -3845,7 +3869,7 @@ def get_additional_sources_ideas():
     
     # 1. Attempt live sync from configured external API endpoint
     base_url = (os.environ.get('INTEGRATION_BASE_URL') or os.environ.get('BASE_URL') or request.host_url).rstrip('/')
-    external_url = f"{base_url}/api/v1/integrations/ideas"
+    external_url = f"{base_url}/api / v1/integrations/ideas"
     try:
         import requests
         resp = requests.get(external_url, headers={"Accept": "application/json"}, timeout=3)
@@ -3885,7 +3909,7 @@ def get_additional_sources_ideas():
     return jsonify({
         "status": "success",
         "total": len(ideas),
-        "api_endpoint": f"{base_url}/api/v1/integrations/ideas",
+        "api_endpoint": f"{base_url}/api / v1/integrations/ideas",
         "ideas": [i.to_dict() for i in ideas]
     }), 200
 
@@ -3958,7 +3982,7 @@ DEFAULT_SIGNOFF_HIERARCHY = [
         "enabled": True,
         "name": "",
         "department": "",
-        "notes": "Auto-filled from assigned Reviewer / Technical Lead"
+        "notes": "Auto-filled from assigned Reviewer  / Technical Lead"
     },
     {
         "id": "team_members",
@@ -3971,7 +3995,7 @@ DEFAULT_SIGNOFF_HIERARCHY = [
     },
     {
         "id": "custom_hr",
-        "role": "HR Manager / Representative",
+        "role": "HR Manager  / Representative",
         "type": "custom",
         "enabled": True,
         "name": "",
@@ -3980,7 +4004,7 @@ DEFAULT_SIGNOFF_HIERARCHY = [
     },
     {
         "id": "custom_fin",
-        "role": "Finance / Costing Head",
+        "role": "Finance  / Costing Head",
         "type": "custom",
         "enabled": True,
         "name": "",
@@ -3989,7 +4013,7 @@ DEFAULT_SIGNOFF_HIERARCHY = [
     },
     {
         "id": "custom_qa",
-        "role": "Plant / Quality Head",
+        "role": "Plant  / Quality Head",
         "type": "custom",
         "enabled": True,
         "name": "",
@@ -4055,5 +4079,4 @@ def update_signoff_hierarchy():
         "message": "Sign-off hierarchy configuration saved successfully.",
         "hierarchy": hierarchy
     }), 200
-
 

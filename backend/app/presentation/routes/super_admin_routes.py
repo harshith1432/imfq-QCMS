@@ -1,10 +1,10 @@
 import os
 from flask import Blueprint, jsonify, request, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
+from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token, set_access_cookies
 from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, Subscription, SubscriptionPayment, SubscriptionInvoice, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
 from app.presentation.middleware.middleware import super_admin_required, sub_role_write_required, sub_role_required, get_sa_permissions, _get_sa_sub_role
 from app import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, text, or_
 import math
 import random
@@ -20,6 +20,7 @@ import time
 import platform
 import re
 from app.shared.validation import validate_email, ValidationError
+from app.presentation.routes.error_helpers import internal_server_error
 try:
     import psutil
 except ImportError:
@@ -37,7 +38,7 @@ def _tenant_filter(query):
 
 @super_admin_bp.route('/public/landing-content', methods=['GET'])
 def get_landing_content():
-    """Public endpoint to fetch landing CMS content"""
+    """Public endpoint to fetch landing CMS content and centralized platform branding."""
     try:
         db.session.expire_all()
         s = PlatformSettings.query.first()
@@ -46,9 +47,19 @@ def get_landing_content():
         from copy import deepcopy
         defaults = deepcopy(_DEFAULTS.get('landing_cms_settings', {}))
         defaults.update(raw_settings)
-        return jsonify({"success": True, "data": defaults}), 200
+
+        from app.domain.services.document_branding_service import DocumentBrandingService
+        branding_ctx = DocumentBrandingService.get_branding_context(org_id=None)
+
+        return jsonify({
+            "success": True,
+            "status": "success",
+            "data": defaults,
+            "branding": branding_ctx,
+            "branding_context": branding_ctx
+        }), 200
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 def log_admin_action(action, target_type=None, target_id=None, details=None):
     admin_id = get_jwt_identity()
@@ -73,7 +84,7 @@ def log_admin_action(action, target_type=None, target_id=None, details=None):
 def get_my_permissions():
     """Returns the current Super Admin's sub-role and full permission map."""
     user_id = get_jwt_identity()
-    user = User.query.get(int(user_id))
+    user = db.session.get(User, int(user_id))
     sub_role = _get_sa_sub_role(user)
     permissions = get_sa_permissions(sub_role)
     return jsonify({
@@ -104,7 +115,7 @@ def get_global_stats():
     total_revenue = kpis["total_revenue"]
     
     # Growth metrics (last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
     new_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.created_at >= thirty_days_ago)).count()
     
     # Support metrics
@@ -140,12 +151,18 @@ def get_global_stats():
 @jwt_required()
 @super_admin_required()
 def get_company_filter_options():
-    """Return distinct options for Industry, Country, State, and City filter dropdowns based strictly on created organizations"""
+    """Return distinct options for Industry, Country, State, City, and Plan filter dropdowns based strictly on created plans and organizations"""
     try:
         industries = sorted([r[0] for r in db.session.query(Organization.industry.distinct()).filter(Organization.industry.isnot(None), Organization.industry != '', Organization.is_deleted == False).all() if r[0]])
         countries = sorted([r[0] for r in db.session.query(Organization.country.distinct()).filter(Organization.country.isnot(None), Organization.country != '', Organization.is_deleted == False).all() if r[0]])
         states = sorted([r[0] for r in db.session.query(Organization.state.distinct()).filter(Organization.state.isnot(None), Organization.state != '', Organization.is_deleted == False).all() if r[0]])
         cities = sorted([r[0] for r in db.session.query(Organization.city.distinct()).filter(Organization.city.isnot(None), Organization.city != '', Organization.is_deleted == False).all() if r[0]])
+        
+        saas_plans = [r[0] for r in db.session.query(SaaSPlan.name.distinct()).filter(SaaSPlan.name.isnot(None), SaaSPlan.name != '').all() if r[0]]
+        org_plans = [r[0] for r in db.session.query(Organization.subscription_plan.distinct()).filter(Organization.subscription_plan.isnot(None), Organization.subscription_plan != '', Organization.is_deleted == False).all() if r[0]]
+        
+        # Strictly only created plans from database records
+        created_plans = sorted(list(set(saas_plans + org_plans)), key=lambda x: str(x).lower())
         
         return jsonify({
             "status": "success",
@@ -153,11 +170,12 @@ def get_company_filter_options():
                 "industries": industries,
                 "countries": countries,
                 "states": states,
-                "cities": cities
+                "cities": cities,
+                "plans": created_plans
             }
         })
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 def _resolve_org_plan_type(org, plan_type_map=None):
     p_name = (getattr(org, 'subscription_plan', '') or '').strip()
@@ -177,10 +195,13 @@ def _resolve_org_plan_type(org, plan_type_map=None):
 
     if p_name:
         plan_obj = SaaSPlan.query.filter(
-            (func.lower(SaaSPlan.name) == p_name.lower()) |
-            (func.lower(SaaSPlan.code) == p_name.lower()) |
-            (func.lower(SaaSPlan.plan_type) == p_name.lower())
+            (func.lower(func.trim(SaaSPlan.name)) == p_name.lower()) |
+            (func.lower(func.trim(SaaSPlan.code)) == p_name.lower())
         ).first()
+        if not plan_obj:
+            plan_obj = SaaSPlan.query.filter(
+                func.lower(func.trim(SaaSPlan.plan_type)) == p_name.lower()
+            ).first()
         if plan_obj and plan_obj.plan_type:
             return plan_obj.plan_type
 
@@ -282,7 +303,7 @@ def list_companies():
     elif feature_filter == 'multi_plant':
         query = query.filter(Organization.multi_plant == True)
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     cutoff_20d = now - timedelta(days=20)
     
     def _to_naive_utc(dt):
@@ -396,7 +417,7 @@ def list_companies():
         trial_days = None
         if expiry_dt:
             exp_n = _to_naive_utc(expiry_dt)
-            rem_sec = (exp_n - datetime.utcnow()).total_seconds()
+            rem_sec = (exp_n - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds()
             trial_days = max(int(math.ceil(rem_sec / 86400.0)), 0)
 
         admin_disp_name = org.admin_name
@@ -435,7 +456,7 @@ def list_companies():
             "multi_plant": org.multi_plant,
             "trial_ends_at": expiry_dt.isoformat() if expiry_dt else (org.trial_ends_at.isoformat() if org.trial_ends_at else None),
             "trial_days_left": trial_days,
-            "created_at": org.created_at.isoformat() if org.created_at else datetime.utcnow().isoformat(),
+            "created_at": org.created_at.isoformat() if org.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "city": org.city or '—',
             "state": org.state or '—',
             "country": org.country or '—',
@@ -486,7 +507,7 @@ def get_company_details(org_id):
     expiry_dt, _ = get_org_effective_expiry_and_start(org)
     trial_days = None
     if expiry_dt:
-        rem_sec = (expiry_dt - datetime.utcnow()).total_seconds()
+        rem_sec = (expiry_dt - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds()
         trial_days = max(int(math.ceil(rem_sec / 86400.0)), 0)
 
     sec_settings = getattr(org, 'security_settings', {}) or {}
@@ -639,7 +660,7 @@ def create_company():
 
     existing_user_email = User.query.filter_by(email=email).first()
     if existing_user_email:
-        u_org = Organization.query.get(existing_user_email.org_id) if existing_user_email.org_id else None
+        u_org = db.session.get(Organization, existing_user_email.org_id) if existing_user_email.org_id else None
         if u_org and not u_org.is_deleted:
             return jsonify({"status": "error", "message": "Admin email already exists"}), 400
         else:
@@ -648,7 +669,7 @@ def create_company():
 
     existing_user_uname = User.query.filter_by(username=username).first()
     if existing_user_uname:
-        u_org = Organization.query.get(existing_user_uname.org_id) if existing_user_uname.org_id else None
+        u_org = db.session.get(Organization, existing_user_uname.org_id) if existing_user_uname.org_id else None
         if u_org and not u_org.is_deleted:
             return jsonify({"status": "error", "message": "Admin username already exists"}), 400
         else:
@@ -671,10 +692,10 @@ def create_company():
         else:
             plan = plan or 'Starter'
     trial_duration = int(sub_data.get('trial_duration') or default_trial)
-    start_date = datetime.utcnow()
+    start_date = datetime.now(timezone.utc).replace(tzinfo=None)
     end_date = start_date + timedelta(days=trial_duration)
     
-    license_num = f"LIC-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    license_num = f"LIC-{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
     org_code = comp_data.get('org_code') or f"ORG-{uuid.uuid4().hex[:6].upper()}"
     enabled_mods = sub_data.get('enabled_modules', ['7-qc-tools'])
     
@@ -966,7 +987,6 @@ def _hard_delete_organization(org):
             db.session.execute(text(f"DELETE FROM training_acknowledgements WHERE user_id IN {u_clause};"))
             db.session.execute(text(f"DELETE FROM training_archive WHERE archived_by_id IN {u_clause};"))
             db.session.execute(text(f"DELETE FROM training_assignments WHERE user_id IN {u_clause} OR assigned_by_id IN {u_clause};"))
-            db.session.execute(text(f"DELETE FROM training_certificates WHERE user_id IN {u_clause};"))
             db.session.execute(text(f"DELETE FROM training_notifications WHERE user_id IN {u_clause};"))
         db.session.execute(text(f"DELETE FROM training_audit_reports WHERE org_id = {org_id};"))
 
@@ -1047,7 +1067,7 @@ def _purge_expired_recycle_bin():
     are NOT purged — we back-fill deleted_at=NOW() so they get a fresh 30-day
     grace window rather than being silently destroyed.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Back-fill deleted_at for any is_deleted orgs that don't have it yet
     # so they start their 30-day countdown from now, not from created_at.
@@ -1081,7 +1101,7 @@ def delete_company(org_id):
     """Soft delete an organization — moves to Recycle Bin for 30 days"""
     org = Organization.query.get_or_404(org_id)
     org.is_deleted = True
-    org.deleted_at = datetime.utcnow()
+    org.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
     
     log_admin_action(
@@ -1119,7 +1139,7 @@ def restore_company(org_id):
 def get_recycle_bin():
     """List soft-deleted organizations in Recycle Bin with 30-day countdown"""
     _purge_expired_recycle_bin()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     
     _del_q = Organization.query.filter(Organization.is_deleted == True, Organization.is_platform_org == False)
     deleted_orgs = _del_q.order_by(Organization.deleted_at.desc().nullslast()).all()
@@ -1153,9 +1173,62 @@ def get_recycle_bin():
 @super_admin_required()
 @sub_role_write_required('organizations')
 def permanent_delete_company(org_id):
-    """Permanently delete an organization and all associated records"""
+    """Permanently delete an organization and all associated records with confirmation and backup safeguards."""
+    from app.infrastructure.cache.redis_adapter import cache
+    from flask_jwt_extended import get_jwt_identity
+    import json
+    
     org = Organization.query.get_or_404(org_id)
     org_name = org.name
+
+    # Require super admin password verification if provided in request
+    data = request.get_json(silent=True) or {}
+    admin_password = data.get('admin_password')
+    confirm_name = data.get('confirm_name')
+    
+    # If confirm_name is provided, it must match org.name
+    if confirm_name and confirm_name.strip() != org_name.strip():
+        return jsonify({
+            "status": "error",
+            "message": f"Organization name confirmation mismatch. Expected '{org_name}', got '{confirm_name}'."
+        }), 400
+
+    # Verify admin password if supplied
+    identity = get_jwt_identity()
+    admin_user = db.session.get(User, int(identity)) if identity else None
+    if admin_password and admin_user:
+        from app import bcrypt
+        if not bcrypt.check_password_hash(admin_user.hashed_password, admin_password):
+            return jsonify({"status": "error", "message": "Invalid SuperAdmin password. Deletion aborted."}), 401
+
+    # Take snapshot archive of critical org metadata before purge
+    try:
+        backup_snapshot = {
+            "id": org.id,
+            "name": org.name,
+            "email": org.email,
+            "org_code": org.org_code,
+            "subscription_plan": org.subscription_plan,
+            "created_at": org.created_at.isoformat() if org.created_at else None,
+            "deleted_at": org.deleted_at.isoformat() if org.deleted_at else None,
+            "user_count": len(org.users) if org.users else 0,
+            "users": [{"id": u.id, "email": u.email, "username": u.username} for u in (org.users or [])]
+        }
+        log_admin_action(
+            action="Pre-Deletion Snapshot",
+            target_type="OrganizationBackup",
+            target_id=org_id,
+            details=json.dumps(backup_snapshot)
+        )
+    except Exception as e:
+        current_app.logger.warning(f"Failed to record pre-deletion snapshot for org {org_id}: {e}")
+
+    # Invalidate all org cache keys in Redis
+    try:
+        cache.invalidate_org_cache(org_id)
+    except Exception:
+        pass
+
     _hard_delete_organization(org)
     
     log_admin_action(
@@ -1190,7 +1263,7 @@ def empty_recycle_bin():
 @super_admin_required()
 def reset_admin_password(org_id):
     """Resets password of the main Admin user(s) of this organization to Welcome@123"""
-    org = db.session.get(Organization, org_id) if hasattr(db.session, 'get') else Organization.query.get(org_id)
+    org = db.session.get(Organization, org_id) if hasattr(db.session, 'get') else db.session.get(Organization, org_id)
     if not org:
         return jsonify({"status": "error", "message": "Organization not found"}), 404
         
@@ -1223,7 +1296,8 @@ def reset_admin_password(org_id):
         db.session.flush()
         target_users.add(new_admin)
 
-    temp_password = "Welcome@123"
+    import secrets
+    temp_password = os.getenv('DEFAULT_ADMIN_PASSWORD') or secrets.token_urlsafe(12)
     hashed_pw = bcrypt.generate_password_hash(temp_password).decode('utf-8')
     
     for u in target_users:
@@ -1240,7 +1314,7 @@ def reset_admin_password(org_id):
         action="Reset Admin Password",
         target_type="Organization",
         target_id=org.id,
-        details=f"Temporary password set to Welcome@123 for organization admin(s): {org.name} ({len(target_users)} user(s) updated)"
+        details=f"Temporary password reset generated for organization admin(s): {org.name} ({len(target_users)} user(s) updated)"
     )
     
     return jsonify({
@@ -1263,6 +1337,7 @@ def impersonate_company_admin(org_id):
     admin_user = User.query.filter_by(org_id=org.id).first()
     
     if not admin_user:
+        import secrets
         role = Role.query.filter_by(name='Admin').first() or Role.query.first()
         admin_email = org.email or f"admin@{org.org_code.lower() if org.org_code else 'tenant'}.com"
         admin_user = User(
@@ -1272,7 +1347,8 @@ def impersonate_company_admin(org_id):
             full_name=org.admin_name or admin_email.split('@')[0].title(),
             role_id=role.id if role else None
         )
-        admin_user.set_password('Admin@123')
+        gen_pw = os.getenv('DEFAULT_ADMIN_PASSWORD') or secrets.token_urlsafe(16)
+        admin_user.set_password(gen_pw)
         db.session.add(admin_user)
         db.session.commit()
         
@@ -1294,7 +1370,7 @@ def impersonate_company_admin(org_id):
         details=f"Impersonating admin '{admin_user.email}' of organization '{org.name}'"
     )
     
-    return jsonify({
+    resp = jsonify({
         "status": "success",
         "token": token,
         "data": {
@@ -1303,6 +1379,8 @@ def impersonate_company_admin(org_id):
         },
         "admin_name": admin_user.full_name or admin_user.username
     })
+    set_access_cookies(resp, token)
+    return resp
 
 @super_admin_bp.route('/companies/bulk-action', methods=['POST'])
 @jwt_required()
@@ -1322,7 +1400,7 @@ def bulk_action_companies():
     for org in orgs:
         if action == 'suspend':
             org.subscription_status = 'Suspended'
-            User.query.filter_by(org_id=org.id).update({'is_active': False, 'deactivated_at': datetime.utcnow()})
+            User.query.filter_by(org_id=org.id).update({'is_active': False, 'deactivated_at': datetime.now(timezone.utc).replace(tzinfo=None)})
             count += 1
         elif action == 'activate':
             org.subscription_status = 'Active'
@@ -1330,7 +1408,7 @@ def bulk_action_companies():
             count += 1
         elif action == 'delete':
             org.is_deleted = True
-            User.query.filter_by(org_id=org.id).update({'is_active': False, 'deactivated_at': datetime.utcnow()})
+            User.query.filter_by(org_id=org.id).update({'is_active': False, 'deactivated_at': datetime.now(timezone.utc).replace(tzinfo=None)})
             count += 1
         elif action == 'assign_plan':
             plan_input = data.get('plan')
@@ -1342,8 +1420,8 @@ def bulk_action_companies():
                 if not dur or dur <= 0:
                     dur = 365 if c_lower in ('yearly', 'annual') else (90 if c_lower in ('quarterly', 'quarter') else 30)
                 org.subscription_plan = sp.name if sp else plan_input
-                org.license_start_date = datetime.utcnow()
-                org.license_expiry_date = datetime.utcnow() + timedelta(days=dur)
+                org.license_start_date = datetime.now(timezone.utc).replace(tzinfo=None)
+                org.license_expiry_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=dur)
                 count += 1
         elif action == 'assign_modules':
             modules = data.get('modules') or data.get('enabled_modules') or []
@@ -1480,9 +1558,14 @@ def update_company_plan(org_id):
         (func.lower(func.trim(SaaSPlan.code)) == clean_plan.lower())
     ).first()
     if saas_plan:
-        if hasattr(saas_plan, 'max_users') and saas_plan.max_users:
+        limits = getattr(saas_plan, 'limits', None)
+        if limits and getattr(limits, 'max_users', None) is not None:
+            org.max_users = limits.max_users
+        elif hasattr(saas_plan, 'max_users') and saas_plan.max_users:
             org.max_users = saas_plan.max_users
-        if hasattr(saas_plan, 'storage_limit_gb') and saas_plan.storage_limit_gb:
+        if limits and getattr(limits, 'storage_limit_gb', None) is not None:
+            org.storage_limit_mb = limits.storage_limit_gb * 1024
+        elif hasattr(saas_plan, 'storage_limit_gb') and saas_plan.storage_limit_gb:
             org.storage_limit_mb = saas_plan.storage_limit_gb * 1024
     else:
         plan_features = {
@@ -1534,7 +1617,7 @@ def get_trial_extension_requests():
             if req_at_str and is_auto_eligible:
                 try:
                     req_at = datetime.fromisoformat(req_at_str)
-                    elapsed = (datetime.utcnow() - req_at).total_seconds()
+                    elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - req_at).total_seconds()
                     if elapsed < 300:
                         is_auto_approving = True
                         seconds_remaining = max(0, int(300 - elapsed))
@@ -1544,7 +1627,7 @@ def get_trial_extension_requests():
         if pending or total_reqs > 0 or org.subscription_status in ['Trialing', 'Trial', 'Expired']:
             rem_days = None
             if org.trial_ends_at:
-                rem_sec = (org.trial_ends_at - datetime.utcnow()).total_seconds()
+                rem_sec = (org.trial_ends_at - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds()
                 rem_days = max(int(math.ceil(rem_sec / 86400.0)), 0)
 
             results.append({
@@ -1582,7 +1665,7 @@ def extend_company_trial(org_id):
     if days is not None:
         try:
             days = int(days)
-            new_date = datetime.utcnow() + timedelta(days=days)
+            new_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
         except ValueError:
             return jsonify({"msg": "Invalid days value"}), 400
     elif new_date_str:
@@ -1606,7 +1689,7 @@ def extend_company_trial(org_id):
     pending = sec_settings.get('pending_trial_extension')
     if pending and pending.get('status') == 'Pending':
         pending['status'] = 'Approved'
-        pending['approved_at'] = datetime.utcnow().isoformat()
+        pending['approved_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         pending['approved_by'] = 'SuperAdmin'
         sec_settings['pending_trial_extension'] = pending
         
@@ -1652,7 +1735,7 @@ def update_company_status(org_id):
     if new_status in ['Active', 'Trialing']:
         User.query.filter_by(org_id=org.id).update({'is_active': True, 'deactivated_at': None})
     else:
-        User.query.filter_by(org_id=org.id).update({'is_active': False, 'deactivated_at': datetime.utcnow()})
+        User.query.filter_by(org_id=org.id).update({'is_active': False, 'deactivated_at': datetime.now(timezone.utc).replace(tzinfo=None)})
     db.session.commit()
     
     log_admin_action(
@@ -1671,7 +1754,7 @@ def activate_company_subscription(org_id):
     
     old_status = org.subscription_status
     org.subscription_status = 'Active'
-    org.trial_ends_at = datetime.utcnow() + timedelta(days=30)
+    org.trial_ends_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30)
     User.query.filter_by(org_id=org.id).update({'is_active': True, 'deactivated_at': None})
     db.session.commit()
     
@@ -1748,11 +1831,22 @@ def _get_settings() -> PlatformSettings:
 # Default structures for each JSON category
 _DEFAULTS = {
     'branding_settings': {
-        'primary_color': '#3b82f6', 'secondary_color': '#1e293b',
-        'accent_color': '#6366f1', 'logo_url': '', 'dark_logo_url': '',
+        'light': {
+            'primary_color': '#2563eb', 'secondary_color': '#64748b',
+            'accent_color': '#10b981', 'success_color': '#16a34a',
+            'warning_color': '#f59e0b', 'danger_color': '#ef4444'
+        },
+        'dark': {
+            'primary_color': '#3b82f6', 'secondary_color': '#94a3b8',
+            'accent_color': '#34d399', 'success_color': '#22c55e',
+            'warning_color': '#fbbf24', 'danger_color': '#f87171'
+        },
+        'primary_color': '#2563eb', 'secondary_color': '#64748b',
+        'accent_color': '#10b981', 'logo_url': '', 'dark_logo_url': '',
         'light_logo_url': '', 'favicon_url': '', 'login_background': '',
         'dashboard_banner': '', 'watermark': False, 'custom_css': '',
-        'email_branding': {'header_color': '#3b82f6', 'footer_text': 'QCMS Enterprise OS'},
+        'font_family': 'Inter', 'font_size': '14px', 'border_radius': '10px',
+        'email_branding': {'header_color': '#2563eb', 'footer_text': 'QCMS Enterprise OS'},
         'pdf_branding': {'page_size': 'A4', 'watermark_text': 'CONFIDENTIAL'}
     },
     'localization_settings': {
@@ -1806,11 +1900,6 @@ _DEFAULTS = {
         'total_capacity_gb': 1000.0, 'storage_alerts_percent': 80,
         'storage_provider': 'local', 's3_bucket': '', 'max_upload_limit_mb': 100,
         'storage_used_gb': 0.0
-    },
-    'backup_settings': {
-        'auto_backup_enabled': False, 'backup_schedule': '0 2 * * *',
-        'backup_destination': 'Local', 's3_bucket': '', 's3_region': '',
-        's3_access_key': '', 's3_secret_key': '', 'backup_history': []
     },
     'compliance_settings': {
         'retention_period_days': 365, 'log_encryption_enabled': False,
@@ -1880,6 +1969,9 @@ _DEFAULTS = {
         'hero_stat_2_lbl': 'Active Nodes',
         'hero_stat_3_val': '1,204',
         'hero_stat_3_lbl': '+12 this hour',
+        'hero_feature_1': 'Enterprise Secure',
+        'hero_feature_2': 'Global Scale',
+        'hero_feature_3': 'High Precision',
         
         'features_title': 'Engineered for Quality',
         'features_subtitle': 'Every tool you need to maintain the highest standards across your industrial operations.',
@@ -1892,6 +1984,7 @@ _DEFAULTS = {
             {'icon': 'smartphone', 'title': 'Mobile Readiness', 'desc': 'Access your quality management engine from anywhere, on any device.'}
         ],
 
+        'steps_badge': 'Onboarding Flow',
         'steps_title': 'How It Works',
         'steps_subtitle': 'Deploy your enterprise-grade QMS in four simple steps.',
         'steps_list': [
@@ -1901,12 +1994,13 @@ _DEFAULTS = {
             {'num': '4', 'title': 'Track KPI', 'desc': 'Monitor real-time improvements in efficiency, cost, and safety.'}
         ],
 
+        'pricing_badge': 'Simple Pricing',
         'pricing_title': 'Flexible Plans for Every Stage',
         'pricing_subtitle': 'Scale your quality operations without complexity.',
         'pricing_plans': [
-            {'name': 'Starter', 'badge': '', 'price': '₹0', 'period': '/month (14d Trial)', 'desc': 'For small focused teams', 'features': ['50 Users Max', 'Basic QC Workflow', 'Limited Reports', '14 Days Free Trial'], 'cta': 'Start Free Trial'},
-            {'name': 'Professional', 'badge': 'MOST POPULAR', 'price': '₹199', 'period': '/month', 'desc': 'Complete enterprise engine', 'features': ['500 Users', 'Full Workflow Engine', 'Analytics Dashboard', 'Repository + AI Assistant', 'Reports + Audit Logs'], 'cta': 'Start Free Trial'},
-            {'name': 'Enterprise', 'badge': '', 'price': 'Custom', 'period': '', 'desc': 'For global scale manufacturing', 'features': ['Unlimited Users', 'Multi Plant Support', 'White Label Branding', 'API Integration', 'Dedicated Support'], 'cta': 'Contact Sales'}
+            {'name': 'Starter', 'badge': '', 'price': '₹0', 'period': '/month (14d Trial)', 'desc': 'For small focused teams', 'features': ['50 Users Max', 'Basic QC Workflow', 'Limited Reports', '14 Days Free Trial'], 'cta': 'Start Free Trial', 'cta_url': '/auth/register-org.html?plan=Starter'},
+            {'name': 'Professional', 'badge': 'MOST POPULAR', 'price': '₹199', 'period': '/month', 'desc': 'Complete enterprise engine', 'features': ['500 Users', 'Full Workflow Engine', 'Analytics Dashboard', 'Repository + AI Assistant', 'Reports + Audit Logs'], 'cta': 'Start Free Trial', 'cta_url': '/auth/register-org.html?plan=Professional'},
+            {'name': 'Enterprise', 'badge': '', 'price': 'Custom', 'period': '', 'desc': 'For global scale manufacturing', 'features': ['Unlimited Users', 'Multi Plant Support', 'White Label Branding', 'API Integration', 'Dedicated Support'], 'cta': 'Contact Sales', 'cta_url': 'openTalkToSalesModal()'}
         ],
 
         'faq_title': 'Frequently Asked Questions',
@@ -1919,13 +2013,20 @@ _DEFAULTS = {
             {'q': 'Can we integrate with ERP/SAP?', 'a': 'Yes, we offer two-way sync with SAP S/4HANA, Oracle, and Microsoft Dynamics.'}
         ],
 
+        'cta_banner_badge': 'Limited Time Offer',
         'cta_banner_title': 'Start Your 14-Day Free Trial',
         'cta_banner_subtitle': 'No Credit Card Required. Get instant access to admin dashboard, workflow engine, and analytics.',
+        'cta_feature_1': 'Instant Setup',
+        'cta_feature_2': 'Full Workflow',
+        'cta_feature_3': 'AI Assistant',
         'cta_banner_btn1': 'Launch Your Instance',
+        'cta_banner_btn1_url': '/auth/register-org.html',
         'cta_banner_btn2': 'Talk to Sales',
+        'cta_banner_btn2_url': 'openTalkToSalesModal()',
 
         'footer_description': "The world's most advanced quality management system for modern manufacturing and enterprise excellence. Built for scale, security, and precision.",
         'footer_copyright': '© 2026 QCMS Precision Core. Engineered for Excellence.',
+        'footer_lang': 'English (US)',
         'footer_status': 'Operational',
         'footer_pages': {
             'product': [
@@ -1960,7 +2061,6 @@ SENSITIVE_FIELDS = {
     'email_settings': ['smtp_password'],
     'sms_settings': ['auth_token', 'msg91_api_key'],
     'push_settings': ['firebase_api_key', 'onesignal_api_key'],
-    'backup_settings': ['s3_secret_key'],
     'integrations_settings': ['stripe.secret_key', 'razorpay.key_secret', 'openai.api_key',
                               'anthropic.api_key', 'aws.secret_key', 'zapier.api_key']
 }
@@ -2058,7 +2158,6 @@ def settings_dashboard():
     security_score = _calc_security_score(s)
     email = _get_category(s, 'email_settings')
     auth = _get_category(s, 'authentication_settings')
-    backup = _get_category(s, 'backup_settings')
     compliance = _get_category(s, 'compliance_settings')
     notif = _get_category(s, 'notification_settings')
     storage = _get_category(s, 'storage_settings')
@@ -2102,13 +2201,12 @@ def settings_dashboard():
     if not sec.get('db_encryption_enabled'): improvements.append('Enable AES-256 field-level DB encryption')
 
     perf_suggestions = []
-    if not backup.get('auto_backup_enabled'): perf_suggestions.append('Enable automatic database backups')
     if not compliance.get('log_encryption_enabled'): perf_suggestions.append('Enable audit log encryption')
     if total_integrations == 0: perf_suggestions.append('Connect integrations for enhanced platform workflows')
 
     config_health = min(100, 40 + (20 if email.get('smtp_host') else 0) +
-                        (15 if backup.get('auto_backup_enabled') else 0) +
-                        (15 if auth_providers > 1 else 0) + (10 if notif_channels >= 2 else 0))
+                        (15 if auth_providers > 1 else 0) + (10 if notif_channels >= 2 else 0) +
+                        (15 if compliance.get('log_encryption_enabled') else 0))
 
     # Encryption status label
     enc_label = 'AES-256 & TLS 1.3' if sec.get('db_encryption_enabled') else 'TLS 1.3 Only'
@@ -2122,7 +2220,6 @@ def settings_dashboard():
                 "active_integrations": active_integrations,
                 "active_email_services": 1 if email.get('smtp_host') else 0,
                 "active_auth_providers": auth_providers,
-                "active_backup_jobs": 1 if backup.get('auto_backup_enabled') else 0,
                 "storage_used_gb": used_gb,
                 "storage_total_gb": total_gb,
                 "storage_percent": round(used_gb / total_gb * 100, 1) if total_gb else 0,
@@ -2140,7 +2237,6 @@ def settings_dashboard():
                 "config_health_score": config_health,
                 "integration_health_score": round(active_integrations / total_integrations * 100, 0) if total_integrations else 0,
                 "storage_forecast": f"At current growth rate, storage will be full in ~{max(1, int((total_gb - used_gb) / max(0.01, used_gb / max(1, total_orgs)))) } months",
-                "backup_health": "Healthy" if backup.get('auto_backup_enabled') else "Warning — No automatic backups configured",
                 "recommended_security_improvements": improvements,
                 "recommended_performance_improvements": perf_suggestions,
                 "platform_optimization_suggestions": [
@@ -2152,6 +2248,69 @@ def settings_dashboard():
             "security_threat_log": sec_kpis['recent_threat_events']
         }
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REAL-TIME SYSTEM ALERTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@super_admin_bp.route('/alerts', methods=['GET'])
+@jwt_required()
+@super_admin_required()
+def super_admin_alerts():
+    """Return real-time alerts across the platform for SuperAdmin dashboard:
+       - Expiring subscriptions (within 7 days)
+       - Expired subscriptions
+       - Security threat alerts
+    """
+    alerts = []
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # 1. Expiring Organizations (within 7 days)
+    expiring_soon = Organization.query.filter(
+        Organization.is_deleted == False,
+        Organization.license_expiry_date.isnot(None),
+        Organization.license_expiry_date <= now + timedelta(days=7),
+        Organization.license_expiry_date >= now
+    ).all()
+    for org in expiring_soon:
+        days_left = max(0, (org.license_expiry_date - now).days)
+        alerts.append({
+            "id": f"org-expire-{org.id}",
+            "type": "warning",
+            "category": "Subscription",
+            "title": f"Subscription Expiring Soon: {org.name}",
+            "message": f"Organization '{org.name}' ({org.org_code}) plan expires in {days_left} day(s) on {org.license_expiry_date.strftime('%Y-%m-%d')}.",
+            "created_at": now.isoformat(),
+            "action_url": f"/admin/super-admin.html?org={org.id}",
+            "org_id": org.id,
+            "org_name": org.name
+        })
+
+    # 2. Expired Organizations
+    expired = Organization.query.filter(
+        Organization.is_deleted == False,
+        Organization.license_expiry_date.isnot(None),
+        Organization.license_expiry_date < now
+    ).all()
+    for org in expired:
+        alerts.append({
+            "id": f"org-expired-{org.id}",
+            "type": "danger",
+            "category": "Subscription",
+            "title": f"Subscription Expired: {org.name}",
+            "message": f"Organization '{org.name}' subscription has expired.",
+            "created_at": now.isoformat(),
+            "action_url": f"/admin/super-admin.html?org={org.id}",
+            "org_id": org.id,
+            "org_name": org.name
+        })
+
+    return jsonify({
+        "status": "success",
+        "count": len(alerts),
+        "data": alerts
+    }), 200
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2229,7 +2388,7 @@ def auth_kpis():
             SaaSUserSession.status == 'Active'
         ).scalar() or 0
 
-        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        twenty_four_hours_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
         if active_sessions == 0:
             active_sessions = db.session.query(func.count(User.id)).filter(
                 User.is_active == True,
@@ -2264,16 +2423,7 @@ def auth_kpis():
             }
         })
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"Failed to compute auth KPIs: {str(e)}",
-            "data": {
-                "login_attempts": 0,
-                "active_sessions": 0,
-                "failed_logins_24h": 0,
-                "locked_accounts": 0
-            }
-        }), 500
+        return internal_server_error(e, "Failed to compute auth KPIs.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2311,7 +2461,6 @@ def platform_settings():
         email_d = _mask_category(_get_category(s, 'email_settings'), 'email_settings')
         sms_d = _mask_category(_get_category(s, 'sms_settings'), 'sms_settings')
         push_d = _mask_category(_get_category(s, 'push_settings'), 'push_settings')
-        backup_d = _mask_category(_get_category(s, 'backup_settings'), 'backup_settings')
         integrations_d = _mask_category(_get_category(s, 'integrations_settings'), 'integrations_settings')
 
         return jsonify({
@@ -2353,7 +2502,6 @@ def platform_settings():
                 "sms_settings": sms_d,
                 "push_settings": push_d,
                 "storage_settings": _get_category(s, 'storage_settings'),
-                "backup_settings": backup_d,
                 "api_settings": _get_category(s, 'api_settings'),
                 "webhook_settings": _get_category(s, 'webhook_settings'),
                 "integrations_settings": integrations_d,
@@ -2371,7 +2519,7 @@ def platform_settings():
 
     # PUT — update settings
     user_id = get_jwt_identity()
-    user = User.query.get(int(user_id))
+    user = db.session.get(User, int(user_id))
     sub_role = _get_sa_sub_role(user)
     if sub_role != 'Owner' and sub_role != 'Platform Operations':
         return jsonify({
@@ -2407,7 +2555,7 @@ def platform_settings():
     for cat in ['branding_settings', 'localization_settings', 'authentication_settings',
                 'organizations_settings', 'billing_settings', 'modules_settings',
                 'security_settings', 'compliance_settings', 'notification_settings', 'email_settings',
-                'sms_settings', 'push_settings', 'storage_settings', 'backup_settings',
+                'sms_settings', 'push_settings', 'storage_settings',
                 'compliance_settings', 'api_settings', 'webhook_settings',
                 'integrations_settings', 'ai_settings', 'feature_flags',
                 'developer_settings', 'audit_logs_settings', 'system_health_settings', 'about_settings',
@@ -2455,7 +2603,8 @@ def test_email_config():
             log_admin_action("Tested email configuration (Resend)", target_type="SystemSetting")
             return jsonify({"status": "success", "message": f"Test email sent to {to_email} via Resend"})
         except Exception as e:
-            return jsonify({"status": "error", "message": f"Resend error: {str(e)}"}), 400
+            logger.error(f"Resend test error: {e}", exc_info=True)
+            return jsonify({"status": "error", "message": "Email delivery via Resend failed. Please verify API configuration."}), 400
 
     # Standard SMTP
     host = email_cfg.get('smtp_host', '')
@@ -2494,7 +2643,8 @@ def test_email_config():
         log_admin_action(f"Tested SMTP email to {to_email}", target_type="SystemSetting")
         return jsonify({"status": "success", "message": f"Test email successfully sent to {to_email}"})
     except Exception as e:
-        return jsonify({"status": "error", "message": f"SMTP error: {str(e)}"}), 400
+        logger.error(f"SMTP test error: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": "SMTP connection or authentication failed. Please verify your credentials and host settings."}), 400
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2514,7 +2664,7 @@ def test_webhook():
         payload = json.dumps({
             "event": "webhook.test",
             "platform": "QCMS Enterprise OS",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "message": "This is a test webhook ping from QCMS"
         }).encode()
         req = urlreq.Request(url, data=payload, method='POST',
@@ -2524,7 +2674,8 @@ def test_webhook():
         log_admin_action(f"Tested webhook: {url}", target_type="WebhookSetting")
         return jsonify({"status": "success", "message": f"Webhook responded with HTTP {status_code}", "http_status": status_code})
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Webhook test failed: {str(e)}"}), 400
+        logger.error(f"Webhook test error: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": "Webhook delivery failed. Please verify the destination URL and connectivity."}), 400
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2620,55 +2771,10 @@ def integration_health_check():
                 status = resp.getcode()
             return jsonify({"status": "success", "message": f"{integration_name} endpoint reachable (HTTP {status})", "http_status": status})
         except Exception as e:
-            return jsonify({"status": "error", "message": f"Health check failed: {str(e)}"}), 400
+            logger.error(f"Health check error: {e}", exc_info=True)
+            return jsonify({"status": "error", "message": "Integration endpoint health check failed."}), 400
 
     return jsonify({"status": "success", "message": f"{integration_name} configuration looks valid — no remote health endpoint available"})
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# BACKUP MANAGEMENT
-# ─────────────────────────────────────────────────────────────────────────────
-
-@super_admin_bp.route('/settings/backup', methods=['GET', 'POST'])
-@jwt_required()
-@super_admin_required()
-def manage_backup():
-    s = _get_settings()
-
-    if request.method == 'GET':
-        backup_cfg = _get_category(s, 'backup_settings')
-        history = backup_cfg.get('backup_history', [])
-        return jsonify({"status": "success", "data": {"history": history, "config": {
-            "auto_backup_enabled": backup_cfg.get('auto_backup_enabled', False),
-            "backup_schedule": backup_cfg.get('backup_schedule', '0 2 * * *'),
-            "backup_destination": backup_cfg.get('backup_destination', 'Local')
-        }}})
-
-    # POST — trigger a manual backup
-    backup_cfg = _get_category(s, 'backup_settings')
-    backup_id = str(uuid.uuid4())[:8].upper()
-    # Gather basic stats for the backup record
-    total_orgs = Organization.query.count()
-    total_users = User.query.count()
-
-    backup_record = {
-        "id": backup_id,
-        "type": "Manual",
-        "status": "Completed",
-        "created_at": datetime.utcnow().isoformat(),
-        "destination": backup_cfg.get('backup_destination', 'Local'),
-        "size_mb": round(total_orgs * 2.5 + total_users * 0.1, 2),
-        "records": {"organizations": total_orgs, "users": total_users}
-    }
-
-    history = backup_cfg.get('backup_history', [])
-    history.insert(0, backup_record)
-    backup_cfg['backup_history'] = history[:50]  # Keep last 50 records
-    s.backup_settings = backup_cfg
-    db.session.commit()
-
-    log_admin_action(f"Manual backup triggered — ID: {backup_id}", target_type="BackupSetting")
-    return jsonify({"status": "success", "message": f"Backup {backup_id} completed successfully", "data": backup_record})
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2706,8 +2812,8 @@ def manage_api_keys(key_id=None):
             "scopes": body.get('scopes', ['read']),
             "rate_limit": body.get('rate_limit', 60),
             "hashed_secret": hashed,
-            "created_at": datetime.utcnow().isoformat(),
-            "expires_at": (datetime.utcnow() + timedelta(days=365)).isoformat()
+            "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+            "expires_at": (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365)).isoformat()
         }
         keys.append(new_key)
         api_cfg['api_keys_active'] = keys
@@ -2754,7 +2860,7 @@ def toggle_feature_flag(flag_key):
 @super_admin_required()
 def super_admin_profile():
     admin_id = get_jwt_identity()
-    admin = User.query.get(admin_id)
+    admin = db.session.get(User, admin_id)
     
     if request.method == 'GET':
         return jsonify({
@@ -2847,7 +2953,7 @@ def manage_ticket(ticket_id):
     ticket.status = data.get('status', ticket.status)
     ticket.resolution = data.get('resolution', ticket.resolution)
     if ticket.status == 'Resolved':
-        ticket.resolved_at = datetime.utcnow()
+        ticket.resolved_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     db.session.commit()
     log_admin_action(f"Updated ticket #{ticket.id} status to {ticket.status}", target_type="SupportTicket", target_id=ticket.id)
@@ -2985,7 +3091,7 @@ def get_system_health():
             "disk_total_gb": disk_total_gb,
             "uptime": uptime_str,
             "api_latency": f"{max(12, int(db_ping_ms + 10))}ms",
-            "server_time": datetime.utcnow().isoformat()
+            "server_time": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         }
     })
 
@@ -3032,7 +3138,7 @@ def list_admin_logins():
 def update_own_admin_credentials():
     """Allows current logged-in Super Admin to update their own Email and Password"""
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
     if not user:
         return jsonify({"status": "error", "message": "User account not found"}), 404
         
@@ -3144,7 +3250,7 @@ def create_new_admin_login():
 @super_admin_required()
 def update_admin_login(admin_id):
     """Updates an existing Super Admin account details or password"""
-    target = User.query.get(admin_id)
+    target = db.session.get(User, admin_id)
     if not target:
         return jsonify({"status": "error", "message": "Admin user not found"}), 404
         
@@ -3189,7 +3295,7 @@ def delete_admin_login(admin_id):
     if int(current_user_id) == admin_id:
         return jsonify({"status": "error", "message": "You cannot delete your own active Super Admin login"}), 400
         
-    target = User.query.get(admin_id)
+    target = db.session.get(User, admin_id)
     if not target:
         return jsonify({"status": "error", "message": "Admin user not found"}), 404
         
@@ -3246,14 +3352,14 @@ def get_storage_breakdown_sa():
     return jsonify({
         "status": "success",
         "data": data,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     })
 
 @super_admin_bp.route('/storage/update-limit', methods=['POST'])
 @jwt_required()
 def update_org_storage_limit_sa():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id) if user_id else None
+    user = db.session.get(User, user_id) if user_id else None
     role_name = user.role.name if user and user.role else ''
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role')) if user else False
     if not user or (role_name not in ('SuperAdmin', 'Admin') and not is_sa_custom):
@@ -3266,7 +3372,7 @@ def update_org_storage_limit_sa():
     if not org_id or storage_limit_gb is None:
         return jsonify({"status": "error", "message": "org_id and storage_limit_gb are required"}), 400
 
-    org = Organization.query.get(org_id)
+    org = db.session.get(Organization, org_id)
     if not org:
         return jsonify({"status": "error", "message": "Organization not found"}), 404
 
@@ -3327,6 +3433,29 @@ def save_global_stages_template():
     stages = data.get('stages')
     if not stages or not isinstance(stages, list) or len(stages) < 1 or len(stages) > 20:
         return jsonify({"status": "error", "message": "Stages list must contain between 1 and 20 stages."}), 400
+
+    # Ensure Stage 1 is Initiation and Last Stage is Closure
+    if len(stages) >= 2:
+        closure_idx = None
+        for i, s in enumerate(stages):
+            if s.get('original_id') == 8 or 'closure' in s.get('title', '').lower() or 'congratulat' in s.get('title', '').lower():
+                closure_idx = i
+                break
+        if closure_idx is not None and closure_idx != len(stages) - 1:
+            closure_stage = stages.pop(closure_idx)
+            stages.append(closure_stage)
+
+        init_idx = None
+        for i, s in enumerate(stages):
+            if s.get('original_id') == 1 or 'initiat' in s.get('title', '').lower():
+                init_idx = i
+                break
+        if init_idx is not None and init_idx != 0:
+            init_stage = stages.pop(init_idx)
+            stages.insert(0, init_stage)
+
+        for idx, s in enumerate(stages):
+            s['stage_id'] = idx + 1
 
     required_keys = {'stage_id', 'original_id', 'title', 'icon'}
     seen_seq = set()
@@ -3390,9 +3519,19 @@ def save_global_stages_template():
 
     ps.global_stages_config = stages
     ps.global_template_version = (ps.global_template_version or 1) + 1
-    ps.global_template_updated_at = datetime.utcnow()
+    ps.global_template_updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     ps.global_template_release_notes = release_notes or None
     ps.global_template_preview_image = preview_image_url or None
+
+    # Rebalance stage weightages if count of stages changed
+    if ps.stage_weightage_config and isinstance(ps.stage_weightage_config, list):
+        if len(ps.stage_weightage_config) != len(stages):
+            base_w = round(100.0 / len(stages), 1)
+            new_weights = [base_w] * len(stages)
+            diff = round(100.0 - sum(new_weights), 1)
+            if diff != 0:
+                new_weights[-1] = round(new_weights[-1] + diff, 1)
+            ps.stage_weightage_config = new_weights
 
     # Compute structured change highlights
     change_highlights = []
@@ -3621,40 +3760,83 @@ def save_global_stages_template():
 # SUPER ADMIN — STAGE WEIGHTAGE CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────────────
 
-DEFAULT_STAGE_WEIGHTS = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5]  # 8 × 12.5 = 100
-
 STAGE_DEFAULT_LABELS = [
-    "S1 Plan & Establish Team",
-    "S2 Define Problem",
-    "S3 Interim Containment",
-    "S4 Determine Root Causes",
-    "S5 Choose Permanent Corrections",
-    "S6 Implement Corrective Actions",
-    "S7 Take Preventive Measures",
-    "S8 Congratulate Team & Closure",
+    {"stage": 1, "label": "S1 Plan & Establish Team", "name": "Plan & Establish Team", "icon": "users", "desc": "Team formation, problem background (5W2H) & schedule targets", "color": "#3b82f6"},
+    {"stage": 2, "label": "S2 Define Problem", "name": "Define Problem", "icon": "search", "desc": "Stratification, Pareto analysis & Gemba data collection", "color": "#6366f1"},
+    {"stage": 3, "label": "S3 Interim Containment", "name": "Interim Containment", "icon": "shield", "desc": "Brainstorming, Fishbone analysis & Containment actions", "color": "#8b5cf6"},
+    {"stage": 4, "label": "S4 Determine Root Causes", "name": "Determine Root Causes", "icon": "git-branch", "desc": "5-Why analysis, Hypothesis verification & RCA register", "color": "#ec4899"},
+    {"stage": 5, "label": "S5 Choose Permanent Corrections", "name": "Choose Permanent Corrections", "icon": "sliders", "desc": "Solution matrix, Cost-benefit analysis & 3W1H plan", "color": "#f59e0b"},
+    {"stage": 6, "label": "S6 Implement Corrective Actions", "name": "Implement Corrective Actions", "icon": "wrench", "desc": "Countermeasure tasks, training, change & deployment", "color": "#10b981"},
+    {"stage": 7, "label": "S7 Take Preventive Measures", "name": "Take Preventive Measures", "icon": "shield-check", "desc": "Before vs after analysis, statistical & ROI verification", "color": "#06b6d4"},
+    {"stage": 8, "label": "S8 Congratulate Team & Closure", "name": "Congratulate Team & Closure", "icon": "award", "desc": "Standardization, SOP adoption & Final project closure", "color": "#84cc16"},
 ]
+
+PALETTE_STAGE_COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#84cc16', '#f97316', '#14b8a6', '#a855f7', '#64748b']
+
+def _get_configured_stages_list(ps=None):
+    if not ps:
+        ps = PlatformSettings.query.first()
+    raw_stages = (ps and ps.global_stages_config) or None
+    if raw_stages and isinstance(raw_stages, list) and len(raw_stages) > 0:
+        sorted_raw = sorted(raw_stages, key=lambda s: int(s.get('stage_id') or 1))
+        stages_out = []
+        for idx, s in enumerate(sorted_raw):
+            sid = int(s.get('stage_id') or (idx + 1))
+            title = s.get('title') or s.get('name') or f"Stage {sid}"
+            icon = s.get('icon') or 'layers'
+            desc = s.get('desc') or s.get('description') or f"Stage {sid} execution & verification"
+            label = title if (title.startswith(f"S{sid} ") or title.startswith(f"Stage {sid} ")) else f"S{sid} {title}"
+            color = s.get('color') or PALETTE_STAGE_COLORS[idx % len(PALETTE_STAGE_COLORS)]
+            stages_out.append({
+                "stage": sid,
+                "label": label,
+                "name": title,
+                "icon": icon,
+                "desc": desc,
+                "color": color
+            })
+        return stages_out
+    return STAGE_DEFAULT_LABELS
 
 
 @super_admin_bp.route('/stage-weightage', methods=['GET'])
 @jwt_required()
 @super_admin_required()
 def get_stage_weightage():
-    """Return the current per-stage progress weightage configuration."""
+    """Return the current per-stage progress weightage configuration matching global stage templates."""
     ps = PlatformSettings.query.first()
-    weights = (ps and ps.stage_weightage_config) or DEFAULT_STAGE_WEIGHTS
-    # Ensure we always return exactly 8 entries (back-fill with equal if shorter)
-    while len(weights) < 8:
-        weights.append(round((100 - sum(weights)) / (8 - len(weights)), 4))
-    weights = weights[:8]
-    stages = [
-        {"stage": i + 1, "label": STAGE_DEFAULT_LABELS[i], "weight": weights[i]}
-        for i in range(8)
-    ]
+    stages_info = _get_configured_stages_list(ps)
+    num_stages = len(stages_info)
+    
+    saved_weights = (ps and ps.stage_weightage_config) or None
+    if saved_weights and isinstance(saved_weights, list) and len(saved_weights) == num_stages:
+        weights = [round(float(w), 2) for w in saved_weights]
+    else:
+        # Re-balance equal weights across all configured stages
+        base_w = round(100.0 / num_stages, 1)
+        weights = [base_w] * num_stages
+        diff = round(100.0 - sum(weights), 1)
+        if diff != 0:
+            weights[-1] = round(weights[-1] + diff, 1)
+
+    stages = []
+    for i, info in enumerate(stages_info):
+        stages.append({
+            "stage": info["stage"],
+            "label": info["label"],
+            "name": info["name"],
+            "icon": info["icon"],
+            "desc": info["desc"],
+            "color": info["color"],
+            "weight": weights[i]
+        })
+
     return jsonify({
         "status": "success",
         "weights": weights,
         "stages": stages,
-        "is_customized": bool(ps and ps.stage_weightage_config),
+        "total_stages": num_stages,
+        "is_customized": bool(ps and ps.stage_weightage_config and len(ps.stage_weightage_config) == num_stages),
         "total": round(sum(weights), 4)
     }), 200
 
@@ -3670,37 +3852,46 @@ def save_stage_weightage():
         db.session.add(ps)
         db.session.commit()
 
+    stages_info = _get_configured_stages_list(ps)
+    num_stages = len(stages_info)
+
     data = request.get_json() or {}
 
     # Handle reset
     if data.get('reset'):
         ps.stage_weightage_config = None
         db.session.commit()
-        log_admin_action("Reset Stage Weightage to equal defaults (12.5% × 8)", target_type="StageWeightage")
+        base_w = round(100.0 / num_stages, 1)
+        default_weights = [base_w] * num_stages
+        diff = round(100.0 - sum(default_weights), 1)
+        if diff != 0:
+            default_weights[-1] = round(default_weights[-1] + diff, 1)
+        log_admin_action(f"Reset Stage Weightage to equal defaults ({num_stages} stages)", target_type="StageWeightage")
         return jsonify({
             "status": "success",
-            "message": "Stage weightage reset to equal defaults (12.5% per stage).",
-            "weights": DEFAULT_STAGE_WEIGHTS
+            "message": f"Stage weightage reset to equal defaults ({num_stages} stages).",
+            "weights": default_weights,
+            "total_stages": num_stages
         }), 200
 
     weights = data.get('weights')
     if not weights or not isinstance(weights, list):
-        return jsonify({"status": "error", "message": "Provide a 'weights' array of 8 numbers."}), 400
-    if len(weights) != 8:
-        return jsonify({"status": "error", "message": "Exactly 8 weight values are required (one per stage)."}), 400
+        return jsonify({"status": "error", "message": f"Provide a 'weights' array of {num_stages} numbers."}), 400
+    if len(weights) != num_stages:
+        return jsonify({"status": "error", "message": f"Exactly {num_stages} weight values are required (one per configured stage)."}), 400
 
     # Validate each weight
     parsed = []
     for i, w in enumerate(weights):
         try:
-            val = round(float(w), 4)
+            val = round(float(w), 2)
         except (TypeError, ValueError):
             return jsonify({"status": "error", "message": f"Stage {i+1} weight must be a number."}), 400
         if val < 0:
             return jsonify({"status": "error", "message": f"Stage {i+1} weight must be ≥ 0."}), 400
         parsed.append(val)
 
-    total = round(sum(parsed), 4)
+    total = round(sum(parsed), 2)
     if abs(total - 100.0) > 0.5:
         return jsonify({
             "status": "error",
@@ -3710,10 +3901,11 @@ def save_stage_weightage():
     ps.stage_weightage_config = parsed
     db.session.commit()
     log_admin_action("Updated Stage Weightage Configuration", target_type="StageWeightage",
-                     details={"weights": parsed, "total": total})
+                     details={"weights": parsed, "total": total, "total_stages": num_stages})
     return jsonify({
         "status": "success",
         "message": "Stage weightage configuration saved successfully.",
         "weights": parsed,
-        "total": total
+        "total": total,
+        "total_stages": num_stages
     }), 200

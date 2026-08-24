@@ -39,7 +39,7 @@ def _get_user_projects(user):
 @feature_module_required('reports.excel')
 def export_excel():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
         
@@ -313,6 +313,203 @@ def export_pdf(project_id):
         )
 
 
+# ── Asynchronous Background PDF Report Generation ─────────────────────────────
+import threading
+import uuid
+from datetime import datetime, timezone
+from flask import current_app
+from app.infrastructure.cache.redis_adapter import cache
+from app.presentation.routes.error_helpers import internal_server_error
+
+def _set_pdf_job(job_id: str, data: dict):
+    cache.setex(f"pdf_job:{job_id}", 7200, data)
+
+def _get_pdf_job(job_id: str) -> dict:
+    return cache.get(f"pdf_job:{job_id}")
+
+@reports_bp.route('/projects/<int:project_id>/export-pdf-async', methods=['POST'])
+@reports_bp.route('/export/pdf/<int:project_id>/async', methods=['POST'])
+@jwt_required()
+@feature_module_required('reports.pdf')
+def export_pdf_async(project_id):
+    """
+    Spawns complete project PDF report generation in a background daemon thread.
+    Returns immediately with 202 Accepted and a polling job_id.
+    """
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+    if is_super_admin:
+        project = Project.query.filter_by(id=project_id).first()
+    else:
+        project = Project.query.filter_by(id=project_id, org_id=user.org_id).first()
+
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
+
+    job_id = f"job_pdf_{project_id}_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{uuid.uuid4().hex[:6]}"
+    tool_name = request.args.get('tool') or (request.get_json(silent=True) or {}).get('tool')
+
+    job_data = {
+        "job_id": job_id,
+        "project_id": project_id,
+        "project_uid": project.project_uid,
+        "tool_name": tool_name,
+        "status": "processing",
+        "progress": 10,
+        "created_at": datetime.now(timezone.utc).replace(tzinfo=None).timestamp(),
+        "completed_at": None,
+        "download_url": None,
+        "filename": None,
+        "error": None
+    }
+    _set_pdf_job(job_id, job_data)
+
+    app = current_app._get_current_object()
+
+    def _async_pdf_worker(target_app, pid, jid, tool, u_id, o_id):
+        with target_app.app_context():
+            from app.infrastructure.database.models.models import Project, KPIMetric, AuditLog, db
+            from app.infrastructure.storage import storage
+            try:
+                p = db.session.get(Project, pid)
+                if not p:
+                    j = _get_pdf_job(jid) or {}
+                    j["status"] = "failed"
+                    j["error"] = "Project not found"
+                    _set_pdf_job(jid, j)
+                    return
+
+                j = _get_pdf_job(jid) or {}
+                j["progress"] = 40
+                _set_pdf_job(jid, j)
+
+                pdf_data = None
+                filename = f"{p.project_uid}_QC_Story_Report.pdf"
+
+                if tool:
+                    from app.utils.report_gen import generate_qc_tool_report
+                    pdf_data = generate_qc_tool_report(p.id, tool)
+                    filename = f"{p.project_uid}_{tool}_report.pdf"
+                else:
+                    from app.utils.pdf_filler import generate_qc_story_closure_summary_pdf
+                    try:
+                        pdf_data = generate_qc_story_closure_summary_pdf(p.id)
+                    except Exception as gen_err:
+                        print(f"[Async PDF] Primary filler error: {gen_err}")
+
+                    if not pdf_data:
+                        from app.utils.report_gen import generate_pdf_summary
+                        kpi = KPIMetric.query.filter_by(project_id=p.id).first()
+                        pdf_out = generate_pdf_summary(p, kpi, p.org_id)
+                        if pdf_out:
+                            pdf_data = pdf_out.encode('latin-1') if isinstance(pdf_out, str) else bytes(pdf_out)
+
+                if not pdf_data:
+                    j = _get_pdf_job(jid) or {}
+                    j["status"] = "failed"
+                    j["error"] = "Could not generate PDF content"
+                    _set_pdf_job(jid, j)
+                    return
+
+                j = _get_pdf_job(jid) or {}
+                j["progress"] = 80
+                _set_pdf_job(jid, j)
+
+                saved = storage.save_file(
+                    pdf_data,
+                    filename=filename,
+                    subfolder="reports",
+                    content_type="application/pdf"
+                )
+
+                j = _get_pdf_job(jid) or {}
+                j["status"] = "completed"
+                j["progress"] = 100
+                j["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).timestamp()
+                j["download_url"] = saved.get("url")
+                j["filename"] = saved.get("filename")
+                _set_pdf_job(jid, j)
+
+                db.session.add(AuditLog(
+                    org_id=o_id,
+                    user_id=u_id,
+                    project_id=p.id,
+                    action=f"ASYNC_EXPORT_PDF_{tool.upper()}" if tool else "ASYNC_EXPORT_PDF_8D",
+                    target_table="projects",
+                    target_id=p.id,
+                    details={"job_id": jid, "url": saved.get("url")}
+                ))
+                db.session.commit()
+            except Exception as e:
+                print(f"[Async PDF Worker Error] {e}")
+    # Dispatch to Celery distributed worker queue with local fallback
+    try:
+        from app.infrastructure.tasks.report_tasks import generate_async_pdf_report
+        generate_async_pdf_report.apply_async(
+            args=[project_id, tool_name, user.id, user.org_id],
+            task_id=job_id
+        )
+    except Exception as celery_err:
+        current_app.logger.warning(f"[Async Reports] Celery dispatch fallback to direct worker: {celery_err}")
+        thread = threading.Thread(
+            target=_async_pdf_worker,
+            args=(app, project_id, job_id, tool_name, user.id, user.org_id)
+        )
+        thread.daemon = True
+        thread.start()
+
+    return jsonify({
+        "status": "processing",
+        "job_id": job_id,
+        "message": "Report generation started in background.",
+        "poll_url": f"/api/reports/jobs/{job_id}"
+    }), 202
+
+@reports_bp.route('/jobs/<string:job_id>', methods=['GET'])
+@jwt_required()
+def get_pdf_job_status(job_id):
+    """Poll the status of a background report generation job from Celery / Redis."""
+    try:
+        from celery.result import AsyncResult
+        task_res = AsyncResult(job_id)
+        if task_res.state == 'SUCCESS':
+            data = task_res.result or {}
+            return jsonify({
+                "job_id": job_id,
+                "status": "completed",
+                "progress": 100,
+                "download_url": data.get("download_url"),
+                "filename": data.get("filename"),
+                "completed_at": data.get("completed_at")
+            }), 200
+        elif task_res.state == 'PROGRESS':
+            meta = task_res.info or {}
+            return jsonify({
+                "job_id": job_id,
+                "status": "processing",
+                "progress": meta.get("progress", 50),
+                "message": meta.get("status", "Generating report in background...")
+            }), 200
+        elif task_res.state == 'FAILURE':
+            return jsonify({
+                "job_id": job_id,
+                "status": "failed",
+                "error": "Report generation failed. Please try again."
+            }), 200
+    except Exception:
+        pass
+
+    # Fallback to direct Redis job cache
+    job = _get_pdf_job(job_id)
+    if not job:
+        return jsonify({"status": "not_found", "message": "Job not found or expired"}), 404
+    return jsonify(job), 200
+
+
 @reports_bp.route('/download-mock', methods=['GET'])
 @jwt_required()
 def download_mock():
@@ -522,7 +719,7 @@ def download_mock():
                 self.set_x(10)
                 self.cell(0, 10, clean_str(b_tmpl['footer_text']), 0, 0, 'L')
                 self.set_x(-60)
-                self.cell(50, 10, clean_str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')), 0, 0, 'R')
+                self.cell(50, 10, clean_str(datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S UTC')), 0, 0, 'R')
 
         pdf = QCMS_Analytics_PDF()
         pdf.alias_nb_pages()
@@ -538,7 +735,7 @@ def download_mock():
         pdf.set_font('Helvetica', '', 9)
         pdf.set_text_color(100, 116, 139)
         pdf.cell(0, 5, clean_str(f"Document ID: {b_ctx['software_short_name']}-AR-{timestamp}-{report_type.upper()}"), 0, 1)
-        pdf.cell(0, 5, clean_str(f"Generated At: {datetime.utcnow().strftime('%B %d, %Y %H:%M:%S UTC')}"), 0, 1)
+        pdf.cell(0, 5, clean_str(f"Generated At: {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%B %d, %Y %H:%M:%S UTC')}"), 0, 1)
         pdf.cell(0, 5, clean_str(f"Organization: {b_ctx['legal_company_name']} | Classification: {b_tmpl['confidential_text']}"), 0, 1)
         pdf.line(10, pdf.get_y() + 4, 200, pdf.get_y() + 4)
         pdf.ln(8)
@@ -698,7 +895,7 @@ def download_mock():
             # ── Metadata rows ──
             ws.append([f"{b_ctx['software_name']} — {b_tmpl['header_title']} ({report_type.upper()})"])
             ws.append(["Report Segment", report_type.upper()])
-            ws.append(["Generated At (UTC)", datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')])
+            ws.append(["Generated At (UTC)", datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')])
             ws.append([])
 
             for r_idx in range(1, 4):
@@ -782,7 +979,7 @@ def download_mock():
             )
         except Exception as exc:
             import traceback; traceback.print_exc()
-            return jsonify({"error": f"Excel generation failed: {str(exc)}"}), 500
+            return internal_server_error(exc, "Excel generation failed.")
         
     # ─── CSV Format Generator ───
     elif fmt == 'CSV':
@@ -791,7 +988,7 @@ def download_mock():
         cw = _csv.writer(si)
         cw.writerow([f"{b_ctx['software_name']} - {b_tmpl['header_title']} ({report_type.upper()})"])
         cw.writerow(["Report Segment", report_type.upper()])
-        cw.writerow(["Generated At (UTC)", datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')])
+        cw.writerow(["Generated At (UTC)", datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')])
         cw.writerow([])
 
         if summary_metrics:
@@ -820,4 +1017,3 @@ def download_mock():
 
     else:
         return jsonify({"error": "Unsupported export format"}), 400
-

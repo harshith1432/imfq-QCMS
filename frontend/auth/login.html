@@ -2,14 +2,13 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body {
@@ -25,7 +24,6 @@
         .login-wrapper {
             display: flex;
             max-width: 1000px;
-            /* Widened */
             width: 100%;
             min-height: 600px;
             border-radius: 28px;
@@ -231,13 +229,14 @@
                 <div class="ds-field">
                     <label class="ds-label" id="identifierLabel"><i data-lucide="mail"></i> <span id="identifierLabelText">Email ID</span> <span class="text-danger">*</span></label>
                     <input type="text" class="ds-input" id="username"
-                        placeholder="Enter your Email ID" required autocomplete="username">
+                        placeholder="Enter your Email ID" required autocomplete="username"
+                        autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
                 </div>
                 <div class="ds-field">
                     <label class="ds-label"><i data-lucide="lock"></i> Password <span class="text-danger">*</span></label>
                     <div style="position: relative;">
                         <input type="password" class="ds-input" id="password" placeholder="**********" required
-                            autocomplete="current-password" style="padding-right: 40px;">
+                            autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" style="padding-right: 40px;">
                         <button type="button" id="togglePasswordBtn" 
                             style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; color: var(--ds-text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer;">
                             <i id="togglePasswordIcon" data-lucide="eye" style="width: 18px; height: 18px;"></i>
@@ -273,10 +272,9 @@
         </div>
     </div>
 
-    <script src="/assets/js/api.js?v=2.0.3"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/enterprise-validator.js"></script>
-    <script src="/assets/js/auth.js?v=2.0.3"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
+    <script src="/assets/dist/enterprise-validator.e89a83c2.min.js"></script>
+    <script src="/assets/dist/auth.e3a0c0ea.min.js"></script>
     <script>
         // Check for URL parameters to show messages
         window.addEventListener('DOMContentLoaded', () => {
@@ -289,6 +287,21 @@
                 localStorage.removeItem('token');
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('user');
+                localStorage.removeItem('role_permissions');
+                localStorage.removeItem('qcms_authenticated');
+                localStorage.removeItem('qcms_remember_me');
+            } else {
+                // Pre-fill remembered username/email and checkbox
+                const rememberedUser = localStorage.getItem('qcms_remembered_username');
+                const isRemembered = localStorage.getItem('qcms_remember_me') === 'true';
+                const userField = document.getElementById('username');
+                const remCheckbox = document.getElementById('rememberMe');
+                if (rememberedUser && userField && !userField.value) {
+                    userField.value = rememberedUser;
+                }
+                if (remCheckbox) {
+                    remCheckbox.checked = isRemembered;
+                }
             }
 
             if (urlParams.get('registered')) {
@@ -325,10 +338,6 @@
             }
 
             // ── Dynamic Login Label ───────────────────────────────────────
-            // When user blurs the identifier field, try to fetch the org's
-            // login options based on the email domain, then update the label
-            // and placeholder so the user knows what else they can type.
-
             const FIELD_LABELS = {
                 email:    'Email ID',
                 username: 'Username',
@@ -462,7 +471,7 @@
                     if (logoSlot) {
                         const logoSrc = b.platform_logo_url || b.logo_url;
                         if (logoSrc && !logoSrc.includes('/assets/img/logo.png')) {
-                            logoSlot.innerHTML = `<img src="${logoSrc}" alt="${shortName} Logo" style="height:22px; max-width:120px; object-fit:contain;" onerror="this.outerHTML='<i data-lucide=\\'shield-check\\' style=\\'width:20px;height:20px;\\'></i>'; if(window.lucide) lucide.createIcons();">`;
+                            logoSlot.innerHTML = `<img src="${logoSrc}" alt="${shortName} Logo" style="height:22px; max-width:120px; object-fit:contain;" onerror="this.outerHTML='<i data-lucide=\'shield-check\' style=\'width:20px;height:20px;\'></i>'; if(window.lucide) lucide.createIcons();">`;
                         } else {
                             logoSlot.innerHTML = `<i data-lucide="shield-check" style="width:20px; height:20px;"></i>`;
                         }
@@ -487,16 +496,13 @@
 
                     if (window.lucide) lucide.createIcons();
                 } catch (_) {
-                    // Silently ignore — login still works with any enabled field
+                    // Silently ignore
                 }
             }
 
             const identifierInput = document.getElementById('username');
             if (identifierInput) {
-                // Fetch initial configurations (returns union of all options across the system)
                 fetchAndApplyLoginOptions();
-
-                // Fetch specific org config when user types and blurs
                 identifierInput.addEventListener('blur', () => {
                     const val = identifierInput.value.trim();
                     if (val) {

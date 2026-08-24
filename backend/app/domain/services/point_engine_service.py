@@ -4,7 +4,7 @@ Handles point allocations, duplicate prevention, badge calculations,
 leaderboard rank synchronizations, and audit logs.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import func
 from app import db
 from app.infrastructure.database.models.models import (
@@ -119,7 +119,7 @@ class PointEngineService:
         final_desc = description if description else rule.get("description", activity_type.replace('_', ' ').title())
 
         # Prevent duplicates using activity_reference_id
-        ref_str = str(ref_id) if ref_id else f"auto_{int(datetime.utcnow().timestamp())}"
+        ref_str = str(ref_id) if ref_id else f"auto_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}"
         
         existing = EmployeePoints.query.filter_by(
             employee_id=employee_id,
@@ -140,7 +140,7 @@ class PointEngineService:
                 points=final_points,
                 description=final_desc,
                 created_by=created_by or employee_id,
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc).replace(tzinfo=None)
             )
             db.session.add(pt_entry)
             db.session.commit()
@@ -233,7 +233,7 @@ class PointEngineService:
         lb.knowledge_articles = know_art
         lb.meetings_attended = meet_att
         lb.badges = new_badge
-        lb.last_updated = datetime.utcnow()
+        lb.last_updated = datetime.now(timezone.utc).replace(tzinfo=None)
 
         db.session.commit()
 
@@ -272,49 +272,56 @@ class PointEngineService:
         db.session.commit()
 
     @staticmethod
-    def seed_initial_points_if_needed(org_id: int):
+    def seed_initial_points_if_needed(org_id: int = None):
         """
         Initializes leaderboard rows and points for all operational Quality Circle users in the organization
         by scanning real activity in Project, Stage trackers, SOPs, and Knowledge Repository.
         Guarantees NO fake numbers — only real historical actions!
         """
-        if not org_id:
-            return
-        users = User.query.filter_by(org_id=org_id).all()
-        EXCLUDED_ROLES = {'admin', 'ceo', 'superadmin', 'owner', 'system admin', 'administrator'}
+        if org_id:
+            users = User.query.filter_by(org_id=org_id).all()
+        else:
+            users = User.query.all()
+
+        EXCLUDED_ROLES = {'superadmin', 'system admin', 'system administrator'}
         for u in users:
+            if not u.org_id:
+                continue
+
             role_name = (u.role.name if u.role else '').strip().lower()
             if role_name in EXCLUDED_ROLES:
                 continue
 
+            effective_org_id = u.org_id
+
             # Ensure leaderboard row exists
             lb = EmployeeLeaderboard.query.filter_by(employee_id=u.id).first()
             if not lb:
-                lb = EmployeeLeaderboard(employee_id=u.id, organization_id=org_id, total_points=0, badges="Newbie")
+                lb = EmployeeLeaderboard(employee_id=u.id, organization_id=effective_org_id, total_points=0, badges="Newbie")
                 db.session.add(lb)
                 db.session.commit()
 
             # 1. Projects Created
-            created_projs = Project.query.filter_by(creator_id=u.id, org_id=org_id).all()
+            created_projs = Project.query.filter_by(creator_id=u.id).all()
             for p in created_projs:
                 PointEngineService.award_points(
-                    employee_id=u.id, org_id=org_id, activity_type="project_created",
+                    employee_id=u.id, org_id=p.org_id or effective_org_id, activity_type="project_created",
                     ref_id=f"proj_create_{p.id}", project_id=p.id, description=f"Created project '{p.title}'"
                 )
 
             # 2. Team Leaders
-            leader_projs = Project.query.filter_by(team_leader_id=u.id, org_id=org_id).all()
+            leader_projs = Project.query.filter_by(team_leader_id=u.id).all()
             for p in leader_projs:
                 PointEngineService.award_points(
-                    employee_id=u.id, org_id=org_id, activity_type="project_became_leader",
+                    employee_id=u.id, org_id=p.org_id or effective_org_id, activity_type="project_became_leader",
                     ref_id=f"proj_leader_{p.id}", project_id=p.id, description=f"Assigned Team Leader for '{p.title}'"
                 )
 
             # 3. Facilitators
-            facil_projs = Project.query.filter_by(facilitator_id=u.id, org_id=org_id).all()
+            facil_projs = Project.query.filter_by(facilitator_id=u.id).all()
             for p in facil_projs:
                 PointEngineService.award_points(
-                    employee_id=u.id, org_id=org_id, activity_type="project_became_facilitator",
+                    employee_id=u.id, org_id=p.org_id or effective_org_id, activity_type="project_became_facilitator",
                     ref_id=f"proj_facil_{p.id}", project_id=p.id, description=f"Assigned Facilitator for '{p.title}'"
                 )
 
@@ -322,23 +329,31 @@ class PointEngineService:
             comp_projs = Project.query.filter(Project.creator_id == u.id, Project.status.in_(['Completed', 'Closed'])).all()
             for p in comp_projs:
                 PointEngineService.award_points(
-                    employee_id=u.id, org_id=org_id, activity_type="project_completed",
+                    employee_id=u.id, org_id=p.org_id or effective_org_id, activity_type="project_completed",
                     ref_id=f"proj_completed_{p.id}", project_id=p.id, description=f"Completed project '{p.title}'"
                 )
 
             # 5. Knowledge Articles
             try:
                 from sqlalchemy.orm import defer
-                know_entries = KnowledgeRepository.query.options(defer(KnowledgeRepository.embedding)).filter_by(org_id=org_id).all()
+                know_query = KnowledgeRepository.query.options(defer(KnowledgeRepository.embedding))
+                if u.org_id:
+                    know_query = know_query.filter_by(org_id=u.org_id)
+                know_entries = know_query.all()
                 for k in know_entries:
                     if k.project_ref and k.project_ref.creator_id == u.id:
                         PointEngineService.award_points(
-                            employee_id=u.id, org_id=org_id, activity_type="knowledge_article_published",
+                            employee_id=u.id, org_id=k.org_id or effective_org_id, activity_type="knowledge_article_published",
                             ref_id=f"know_art_{k.id}", project_id=k.project_id, description=f"Published knowledge article for '{k.title}'"
                         )
             except Exception as k_err:
                 print(f"[PointEngine] Skipping knowledge articles points due to: {k_err}")
 
-            PointEngineService.sync_employee_metrics(u.id, org_id)
+            PointEngineService.sync_employee_metrics(u.id, effective_org_id)
 
-        PointEngineService.recalculate_ranks(org_id)
+        if org_id:
+            PointEngineService.recalculate_ranks(org_id)
+        else:
+            all_orgs = Organization.query.all()
+            for o in all_orgs:
+                PointEngineService.recalculate_ranks(o.id)

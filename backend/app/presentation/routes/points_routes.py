@@ -4,7 +4,9 @@ REST APIs for points management, leaderboard rankings, employee history, and adm
 """
 
 from datetime import datetime, timedelta
-from flask import Blueprint, request, jsonify
+import csv
+import io
+from flask import Blueprint, request, jsonify, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
 from app import db
@@ -126,13 +128,30 @@ def get_leaderboard():
     if not current_user:
         return jsonify({"message": "User not found"}), 404
 
-    # Ensure leaderboard is initialized for this organization
-    PointEngineService.seed_initial_points_if_needed(current_user.org_id)
+    is_superadmin = bool(current_user.role and current_user.role.name and current_user.role.name.lower() in ('superadmin', 'system admin', 'system administrator'))
+    req_org = request.args.get('org_id', type=int)
+
+    org_id = None
+    if req_org:
+        org_id = req_org
+    elif not is_superadmin:
+        org_id = current_user.org_id
+    elif current_user.org_id:
+        org_id = current_user.org_id
+
+    # Ensure leaderboard is initialized
+    PointEngineService.seed_initial_points_if_needed(org_id)
 
     search_q = (request.args.get('q') or '').strip()
+    if search_q.lower() in ('undefined', 'null'): search_q = ''
+
     dept_id = request.args.get('department_id', type=int)
     plant_param = (request.args.get('plant') or request.args.get('plant_name') or request.args.get('plant_id') or '').strip()
+    if plant_param.lower() in ('undefined', 'null'): plant_param = ''
+
     role_param = (request.args.get('role') or request.args.get('role_name') or '').strip()
+    if role_param.lower() in ('undefined', 'null'): role_param = ''
+
     time_filter = request.args.get('period', 'all')  # 'all', 'monthly', 'yearly'
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 5, type=int)
@@ -141,20 +160,19 @@ def get_leaderboard():
 
     from app.infrastructure.database.models.models import Role
     
-    # Leaderboards are strictly for operational Quality Circle participants: Team Members, Team Leaders, Facilitators, and Reviewers.
-    # Administrators and Executive Observers (Admin, SuperAdmin, CEO, Owner) are excluded.
-    EXCLUDED_ROLES = ['admin', 'ceo', 'superadmin', 'owner', 'system admin', 'administrator']
-
     query = db.session.query(EmployeeLeaderboard)\
         .join(User, User.id == EmployeeLeaderboard.employee_id)\
         .outerjoin(Role, User.role_id == Role.id)\
-        .outerjoin(Department, User.department_id == Department.id)\
-        .filter(EmployeeLeaderboard.organization_id == current_user.org_id)\
-        .filter(db.or_(
-            Role.name.in_(['Team Member', 'Team Leader', 'Facilitator', 'Reviewer']),
-            Role.id == None
-        ))\
-        .filter(db.not_(Role.name.in_(['Admin', 'admin', 'SuperAdmin', 'superadmin', 'CEO', 'ceo', 'Owner', 'owner', 'System Admin', 'Administrator'])))
+        .outerjoin(Department, User.department_id == Department.id)
+
+    if org_id:
+        query = query.filter(EmployeeLeaderboard.organization_id == org_id)
+
+    # Filter out only platform administration / superadmin accounts so all organizational contributors appear
+    query = query.filter(db.or_(
+        Role.id == None,
+        db.not_(Role.name.ilike('%superadmin%'))
+    ))
 
     if plant_param:
         from app.infrastructure.database.models.models import Plant
@@ -230,23 +248,24 @@ def get_leaderboard():
     podium = full_leaderboard[:3]
 
     # Compute Comprehensive Champions Summary (Overall, Plant-Level, Department-Level, Role-Level)
-    all_org_entries = db.session.query(EmployeeLeaderboard)\
+    all_org_query = db.session.query(EmployeeLeaderboard)\
         .join(User, User.id == EmployeeLeaderboard.employee_id)\
         .outerjoin(Role, User.role_id == Role.id)\
-        .outerjoin(Department, User.department_id == Department.id)\
-        .filter(EmployeeLeaderboard.organization_id == current_user.org_id)\
-        .filter(db.or_(
-            Role.name.in_(['Team Member', 'Team Leader', 'Facilitator', 'Reviewer']),
-            Role.id == None
-        ))\
-        .filter(db.not_(Role.name.in_(['Admin', 'admin', 'SuperAdmin', 'superadmin', 'CEO', 'ceo', 'Owner', 'owner', 'System Admin', 'Administrator'])))\
-        .order_by(
-            EmployeeLeaderboard.total_points.desc(),
-            EmployeeLeaderboard.projects_completed.desc(),
-            EmployeeLeaderboard.ideas_approved.desc(),
-            EmployeeLeaderboard.knowledge_articles.desc(),
-            User.created_at.asc()
-        ).all()
+        .outerjoin(Department, User.department_id == Department.id)
+
+    if org_id:
+        all_org_query = all_org_query.filter(EmployeeLeaderboard.organization_id == org_id)
+
+    all_org_entries = all_org_query.filter(db.or_(
+        Role.id == None,
+        db.not_(Role.name.ilike('%superadmin%'))
+    )).order_by(
+        EmployeeLeaderboard.total_points.desc(),
+        EmployeeLeaderboard.projects_completed.desc(),
+        EmployeeLeaderboard.ideas_approved.desc(),
+        EmployeeLeaderboard.knowledge_articles.desc(),
+        User.created_at.asc()
+    ).all()
 
     overall_champ = None
     plant_champs_dict = {}
@@ -268,7 +287,9 @@ def get_leaderboard():
             "username": u_item.username,
             "avatar": get_profile_picture_url(u_item),
             "department": d_name or "General",
+            "department_id": u_item.department_id,
             "plant": p_name or "Main Plant",
+            "plant_id": getattr(u_item, 'plant_id', None) or (u_item.dept.plant_id if u_item.dept else None),
             "role": r_name,
             "total_points": lb_item.total_points,
             "badge": lb_item.badges or PointEngineService.get_badge_for_points(lb_item.total_points),
@@ -290,9 +311,32 @@ def get_leaderboard():
 
     champions_summary = {
         "overall": overall_champ,
-        "plants": [{"plant_name": k, "champion": v} for k, v in plant_champs_dict.items()],
-        "departments": [{"department_name": k, "champion": v} for k, v in dept_champs_dict.items()],
-        "roles": [{"role_name": k, "champion": v} for k, v in role_champs_dict.items()]
+        "plants": [
+            {
+                "plant_id": v.get("plant_id") if v else None,
+                "plant_name": k,
+                "champion_name": v.get("name") if v else "N/A",
+                "total_points": v.get("total_points", 0) if v else 0,
+                "champion": v
+            } for k, v in plant_champs_dict.items()
+        ],
+        "departments": [
+            {
+                "department_id": v.get("department_id") if v else None,
+                "department_name": k,
+                "champion_name": v.get("name") if v else "N/A",
+                "total_points": v.get("total_points", 0) if v else 0,
+                "champion": v
+            } for k, v in dept_champs_dict.items()
+        ],
+        "roles": [
+            {
+                "role_name": k,
+                "champion_name": v.get("name") if v else "N/A",
+                "total_points": v.get("total_points", 0) if v else 0,
+                "champion": v
+            } for k, v in role_champs_dict.items()
+        ]
     }
 
     return jsonify({
@@ -313,6 +357,174 @@ def get_leaderboard():
             "pages": total_pages
         }
     }), 200
+
+
+
+# ─── 3b. GET /api/leaderboard/export & /api/points/leaderboard/export ─────────
+@points_bp.route('/leaderboard/export', methods=['GET'])
+@points_bp.route('/points/leaderboard/export', methods=['GET'])
+@jwt_required()
+def export_leaderboard():
+    current_user_id = get_jwt_identity()
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"message": "User not found"}), 404
+
+    # Enforce access control: Only Organization Administrators & SuperAdmins can export
+    user_role_name = (current_user.role.name if current_user.role else '').strip()
+    if user_role_name not in ['Admin', 'SuperAdmin', 'admin', 'superadmin']:
+        return jsonify({"message": "Forbidden: Only Organization Administrators can export employee leaderboard rankings."}), 403
+
+    search_q = (request.args.get('q') or '').strip()
+    dept_id = request.args.get('department_id', type=int)
+    plant_param = (request.args.get('plant') or request.args.get('plant_name') or request.args.get('plant_id') or '').strip()
+    role_param = (request.args.get('role') or request.args.get('role_name') or '').strip()
+    user_ids_param = (request.args.get('user_ids') or '').strip()
+    limit = request.args.get('limit', 0, type=int)
+    export_format = (request.args.get('format') or 'csv').lower()
+
+    from app.infrastructure.database.models.models import Role
+
+    query = db.session.query(EmployeeLeaderboard)\
+        .join(User, User.id == EmployeeLeaderboard.employee_id)\
+        .outerjoin(Role, User.role_id == Role.id)\
+        .outerjoin(Department, User.department_id == Department.id)\
+        .filter(EmployeeLeaderboard.organization_id == current_user.org_id)\
+        .filter(db.or_(
+            Role.name.in_(['Team Member', 'Team Leader', 'Facilitator', 'Reviewer']),
+            Role.id == None
+        ))\
+        .filter(db.not_(Role.name.in_(['Admin', 'admin', 'SuperAdmin', 'superadmin', 'CEO', 'ceo', 'Owner', 'owner', 'System Admin', 'Administrator'])))
+
+    if user_ids_param:
+        try:
+            target_ids = [int(x.strip()) for x in user_ids_param.split(',') if x.strip().isdigit()]
+            if target_ids:
+                query = query.filter(User.id.in_(target_ids))
+        except Exception:
+            pass
+
+    if plant_param:
+        from app.infrastructure.database.models.models import Plant
+        if plant_param.isdigit():
+            query = query.filter(db.or_(getattr(User, 'plant_id', None) == int(plant_param), Department.plant_id == int(plant_param)))
+        else:
+            query = query.outerjoin(Plant, getattr(User, 'plant_id', None) == Plant.id).filter(db.or_(
+                Plant.name.ilike(f"%{plant_param}%"),
+                Department.plant.has(Plant.name.ilike(f"%{plant_param}%"))
+            ))
+
+    if dept_id:
+        query = query.filter(User.department_id == dept_id)
+
+    if role_param:
+        query = query.filter(Role.name.ilike(f"%{role_param}%"))
+
+    if search_q:
+        pattern = f"%{search_q}%"
+        query = query.filter(
+            db.or_(
+                User.username.ilike(pattern),
+                User.full_name.ilike(pattern),
+                Department.name.ilike(pattern)
+            )
+        )
+
+    # Order using exact tie-breaking specification
+    query = query.order_by(
+        EmployeeLeaderboard.total_points.desc(),
+        EmployeeLeaderboard.projects_completed.desc(),
+        EmployeeLeaderboard.ideas_approved.desc(),
+        EmployeeLeaderboard.knowledge_articles.desc(),
+        User.created_at.asc()
+    )
+
+    if limit and limit > 0:
+        results = query.limit(limit).all()
+    else:
+        results = query.all()
+
+    ranked_data = []
+    for rank, lb in enumerate(results, start=1):
+        u = lb.employee
+        if not u:
+            continue
+        ranked_data.append({
+            "rank": rank,
+            "employee_id": u.id,
+            "name": u.full_name or u.username,
+            "username": u.username,
+            "email": u.email or "N/A",
+            "role": u.role.name if u.role else "Team Member",
+            "plant": u.plant.name if getattr(u, 'plant', None) else (u.dept.plant.name if u.dept and u.dept.plant else "Main Plant"),
+            "department": u.dept.name if u.dept else "General",
+            "badge": lb.badges or PointEngineService.get_badge_for_points(lb.total_points),
+            "total_points": lb.total_points,
+            "projects_completed": lb.projects_completed,
+            "projects_created": lb.projects_created,
+            "ideas_submitted": lb.ideas_submitted,
+            "ideas_approved": lb.ideas_approved,
+            "knowledge_articles": lb.knowledge_articles,
+            "meetings_attended": lb.meetings_attended
+        })
+
+    if export_format == 'json':
+        return jsonify({
+            "status": "success",
+            "count": len(ranked_data),
+            "items": ranked_data
+        }), 200
+
+    # Build CSV Response (with UTF-8 BOM for Microsoft Excel compatibility)
+    output = io.StringIO()
+    output.write('\ufeff')
+    writer = csv.writer(output, lineterminator='\n')
+
+    writer.writerow([
+        "Rank",
+        "Employee Name",
+        "Username",
+        "Email Address",
+        "Role",
+        "Plant Location",
+        "Department",
+        "Current Badge",
+        "Total Points (PTS)",
+        "Projects Completed",
+        "Projects Created",
+        "Ideas Submitted",
+        "Ideas Approved",
+        "Knowledge Articles",
+        "Meetings Attended"
+    ])
+
+    for r in ranked_data:
+        writer.writerow([
+            r["rank"],
+            r["name"],
+            r["username"],
+            r["email"],
+            r["role"],
+            r["plant"],
+            r["department"],
+            r["badge"],
+            r["total_points"],
+            r["projects_completed"],
+            r["projects_created"],
+            r["ideas_submitted"],
+            r["ideas_approved"],
+            r["knowledge_articles"],
+            r["meetings_attended"]
+        ])
+
+    csv_data = output.getvalue()
+    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    filename = f"QCMS_Leaderboard_Rankings_{limit or 'All'}_{timestamp}.csv"
+
+    response = Response(csv_data, mimetype='text/csv')
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    return response
 
 
 # ─── 4. GET /api/employee/<id>/points ─────────────────────────────────────────

@@ -1,6 +1,6 @@
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import request
 from app.infrastructure.database.models.models import (
     db, PlatformIdentityConfig, CompanyInformationConfig, CompanyContactsConfig,
@@ -206,7 +206,7 @@ class DocumentBrandingService:
     def generate_verification_metadata(doc_type, doc_id, user_name="System", org_id=None):
         """Generate verification QR code data, hash string, and document metadata."""
         ctx = DocumentBrandingService.get_branding_context(org_id)
-        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+        timestamp = datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S UTC')
         raw_token = f"{doc_type}:{doc_id}:{timestamp}:{ctx['software_name']}"
         doc_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()[:16].upper()
         

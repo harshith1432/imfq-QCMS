@@ -10,7 +10,8 @@ from app.infrastructure.database.models.models import (
 )
 from app.presentation.middleware.middleware import role_required
 from sqlalchemy import func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from app.presentation.routes.error_helpers import internal_server_error
 
 ceo_bp = Blueprint('ceo', __name__)
 
@@ -22,7 +23,7 @@ def get_top_contributors():
     """Return real top contributors ranked by EmployeeLeaderboard points & metrics."""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         org_id = user.org_id if user else None
         if not org_id:
             return jsonify({"status": "error", "message": "Org ID not found"}), 404
@@ -87,9 +88,7 @@ def get_top_contributors():
             "total_pages": total_pages
         }), 200
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @ceo_bp.route('/executive-summary', methods=['GET'])
 @jwt_required()
@@ -97,7 +96,7 @@ def get_top_contributors():
 def get_executive_summary():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         if not user or not user.org_id:
             return jsonify({"status": "error", "message": "User context not found"}), 404
             
@@ -105,7 +104,7 @@ def get_executive_summary():
 
         # Timeline parameter parsing
         timeline = (request.args.get('timeline') or '').strip().lower()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         timeline_start = None
         if timeline in ['3', '3m', 'this_quarter']:
             timeline_start = now - timedelta(days=90)
@@ -317,16 +316,16 @@ def get_executive_summary():
         #             cost_avoidance = realized savings – direct cost_reduction (prevention/avoidance)
         #             revenue_improvement = Stage 5 annual_savings (estimated benefit projection)
         #             waste_reduction = Stage8 productivity_gain sum
-        cost_reduction = real_cost_reduction if real_cost_reduction > 0 else total_savings * 0.65
+        cost_reduction = real_cost_reduction if real_cost_reduction > 0 else (total_savings * 0.65 if total_savings > 0 else 0.0)
 
         real_productivity = db.session.query(
             func.sum(Stage8Implementation.productivity_gain)
         ).filter_by(org_id=org_id).scalar() or 0.0
 
-        waste_reduction = real_productivity if real_productivity > 0 else total_savings * 0.22
-        revenue_improvement = real_annual_savings_s5 if real_annual_savings_s5 > 0 else total_savings * 0.15
+        waste_reduction = real_productivity if real_productivity > 0 else (total_savings * 0.22 if total_savings > 0 else 0.0)
+        revenue_improvement = real_annual_savings_s5 if real_annual_savings_s5 > 0 else (total_savings * 0.15 if total_savings > 0 else 0.0)
         cost_avoidance = max(0.0, total_savings - cost_reduction - waste_reduction - revenue_improvement)
-        if cost_avoidance == 0.0:
+        if cost_avoidance == 0.0 and total_savings > 0:
             cost_avoidance = total_savings * 0.35
 
         # Real investment = sum of actual_cost from Stage8 (implementation costs logged)
@@ -334,10 +333,10 @@ def get_executive_summary():
             func.sum(Stage8Implementation.actual_cost)
         ).filter_by(org_id=org_id).scalar() or 0.0
 
-        investment = real_actual_cost if real_actual_cost > 0 else total_savings * 0.12
-        net_gain = total_savings - investment
+        investment = real_actual_cost if real_actual_cost > 0 else (total_savings * 0.12 if total_savings > 0 else 0.0)
+        net_gain = max(0.0, total_savings - investment)
         roi_pct = round((net_gain / investment * 100), 1) if investment > 0 else 0.0
-        payback_months = round((investment / (total_savings / 12.0)), 1) if total_savings > 0 else 0.0
+        payback_months = round((investment / (total_savings / 12.0)), 1) if (total_savings > 0 and investment > 0) else 0.0
 
         # 10. Dynamic CEO Highlights feed
         highlights = []
@@ -399,7 +398,7 @@ def get_executive_summary():
             "savings_status": f"Ahead of Plan (+₹{(total_savings * 0.05 / 100000.0):.1f}L)",
             "quality_status": "Quality Index Stable",
             "attention_depts": [best_dept.name if best_dept else "Operations"],
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z"
         }
 
         # Calculate dynamic health score
@@ -554,9 +553,7 @@ def get_executive_summary():
         }), 200
     except Exception as e:
         print(f"[CEO API] Executive Summary Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @ceo_bp.route('/business-analytics', methods=['GET'])
 @jwt_required()
@@ -564,12 +561,12 @@ def get_executive_summary():
 def get_business_analytics():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         org_id = user.org_id if user else None
         if not org_id:
             return jsonify({"status": "error", "message": "Org ID not found"}), 404
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         timeline = (request.args.get('timeline') or '').strip().lower()
         months_param = request.args.get('months', type=int)
 
@@ -592,15 +589,15 @@ def get_business_analytics():
 
         # 2. Total actual investment
         total_actual_cost = db.session.query(func.sum(Stage8Implementation.actual_cost)).filter_by(org_id=org_id).scalar() or 0.0
-        investment = float(total_actual_cost) if total_actual_cost > 0 else (total_savings * 0.12 if total_savings > 0 else 50000.0)
+        investment = float(total_actual_cost) if total_actual_cost > 0 else (total_savings * 0.12 if total_savings > 0 else 0.0)
         net_profit = max(0.0, total_savings - investment)
         roi_pct = round((net_profit / investment * 100), 1) if investment > 0 else 0.0
         profit_margin_pct = round((net_profit / total_savings * 100), 1) if total_savings > 0 else 0.0
-        roi_multiplier = round(total_savings / investment, 2) if investment > 0 else 1.0
+        roi_multiplier = round(total_savings / investment, 2) if investment > 0 else 0.0
 
-        monthly_run_rate = (total_savings / 12.0) if total_savings > 0 else 10000.0
-        payback_months = round(investment / monthly_run_rate, 1) if monthly_run_rate > 0 else 0.0
-        is_recovered = total_savings >= investment
+        monthly_run_rate = (total_savings / 12.0) if total_savings > 0 else 0.0
+        payback_months = round(investment / monthly_run_rate, 1) if (monthly_run_rate > 0 and investment > 0) else 0.0
+        is_recovered = (total_savings >= investment) and (investment > 0 or total_savings > 0)
 
         # 3. Monthly cumulative cash flow & break-even curve
         months_list = []
@@ -642,10 +639,10 @@ def get_business_analytics():
             cumulative_investment.append(cum_inv_lakhs)
             net_cumulative_cashflow.append(cum_net_lakhs)
 
-            if cum_rev_lakhs >= cum_inv_lakhs and break_even_month_label is None and cum_inv_lakhs > 0:
+            if cum_rev_lakhs >= cum_inv_lakhs and break_even_month_label is None and cum_inv_lakhs > 0 and cum_rev_lakhs > 0:
                 break_even_month_label = m_str
 
-        if not break_even_month_label and is_recovered and cashflow_months:
+        if not break_even_month_label and is_recovered and cashflow_months and investment > 0:
             break_even_month_label = cashflow_months[min(1, len(cashflow_months) - 1)]
 
         # 4. Departmental Business ROI Matrix
@@ -654,15 +651,14 @@ def get_business_analytics():
         for d in departments:
             d_projects = Project.query.filter_by(org_id=org_id, department_id=d.id).all()
             d_p_ids = [p.id for p in d_projects]
-            d_sav = (db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter(KnowledgeRepository.org_id == org_id, KnowledgeRepository.project_id.in_(d_p_ids)).scalar() or 0.0) + \
-                    (db.session.query(func.sum(Stage8Implementation.cost_savings)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(d_p_ids)).scalar() or 0.0)
-            d_cost = db.session.query(func.sum(Stage8Implementation.actual_cost)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(d_p_ids)).scalar() or 0.0
-            if d_cost == 0.0 and d_sav > 0:
-                d_cost = d_sav * 0.12
-            elif d_cost == 0.0 and len(d_projects) > 0 and investment > 0:
-                d_cost = len(d_projects) * (investment / max(1, len(Project.query.filter_by(org_id=org_id).all())))
-            if d_sav == 0.0 and len(d_projects) > 0 and total_savings > 0:
-                d_sav = len(d_projects) * (total_savings / max(1, len(Project.query.filter_by(org_id=org_id).all())))
+            d_sav = 0.0
+            d_cost = 0.0
+            if d_p_ids:
+                d_sav = (db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter(KnowledgeRepository.org_id == org_id, KnowledgeRepository.project_id.in_(d_p_ids)).scalar() or 0.0) + \
+                        (db.session.query(func.sum(Stage8Implementation.cost_savings)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(d_p_ids)).scalar() or 0.0)
+                d_cost = db.session.query(func.sum(Stage8Implementation.actual_cost)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(d_p_ids)).scalar() or 0.0
+                if d_cost == 0.0 and d_sav > 0:
+                    d_cost = d_sav * 0.12
             d_net = float(d_sav) - float(d_cost)
             d_roi = round((d_net / d_cost * 100), 1) if d_cost > 0 else 0.0
             dept_analytics.append({
@@ -681,10 +677,10 @@ def get_business_analytics():
         for cat in categories:
             cat_projects = Project.query.filter(Project.org_id == org_id, Project.category.ilike(f"%{cat}%")).all()
             cat_p_ids = [p.id for p in cat_projects]
-            cat_sav = (db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter(KnowledgeRepository.org_id == org_id, KnowledgeRepository.project_id.in_(cat_p_ids)).scalar() or 0.0) + \
-                      (db.session.query(func.sum(Stage8Implementation.cost_savings)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(cat_p_ids)).scalar() or 0.0)
-            if cat_sav == 0.0 and len(cat_projects) > 0 and total_savings > 0:
-                cat_sav = len(cat_projects) * (total_savings / max(1, len(Project.query.filter_by(org_id=org_id).all())))
+            cat_sav = 0.0
+            if cat_p_ids:
+                cat_sav = (db.session.query(func.sum(KnowledgeRepository.cost_savings)).filter(KnowledgeRepository.org_id == org_id, KnowledgeRepository.project_id.in_(cat_p_ids)).scalar() or 0.0) + \
+                          (db.session.query(func.sum(Stage8Implementation.cost_savings)).filter(Stage8Implementation.org_id == org_id, Stage8Implementation.project_id.in_(cat_p_ids)).scalar() or 0.0)
             pillar_data.append({
                 "pillar": cat,
                 "projects_count": len(cat_projects),
@@ -730,7 +726,7 @@ def get_business_analytics():
                 "profit_margin_pct": profit_margin_pct,
                 "payback_months": payback_months,
                 "is_recovered": is_recovered,
-                "break_even_month": break_even_month_label or "Month 2",
+                "break_even_month": break_even_month_label or ("Achieved" if is_recovered else "N/A"),
                 "total_projects": len(all_projects),
                 "monetized_projects_count": len([p for p in projects_ledger if p["revenue_lakhs"] > 0])
             },
@@ -746,9 +742,7 @@ def get_business_analytics():
         }), 200
     except Exception as e:
         print(f"[CEO API] Business Analytics Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 @ceo_bp.route('/strategic-analytics', methods=['GET'])
@@ -757,7 +751,7 @@ def get_business_analytics():
 def get_strategic_analytics():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         org_id = user.org_id if user else None
         if not org_id:
             return jsonify({"status": "error", "message": "Org ID not found"}), 404
@@ -765,7 +759,7 @@ def get_strategic_analytics():
         timeline = (request.args.get('timeline') or '').strip().lower()
         months_param = request.args.get('months', type=int)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         months_count = 6
         if months_param in [3, 6, 12, 24]:
             months_count = months_param
@@ -843,7 +837,7 @@ def get_strategic_analytics():
             forecast.append(last_val)
 
         # 3. Weekly Quality Metrics Trend (real data, last 5 weeks)
-        now_dt = datetime.utcnow()
+        now_dt = datetime.now(timezone.utc).replace(tzinfo=None)
         quality_labels = []
         quality_index = []
         defect_rate = []
@@ -908,9 +902,7 @@ def get_strategic_analytics():
         }), 200
     except Exception as e:
         print(f"[CEO API] Strategic Analytics Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @ceo_bp.route('/org-health', methods=['GET'])
 @jwt_required()
@@ -918,7 +910,7 @@ def get_strategic_analytics():
 def get_org_health():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         org_id = user.org_id if user else None
         if not org_id:
             return jsonify({"status": "error", "message": "Org ID not found"}), 404
@@ -991,7 +983,7 @@ def get_org_health():
         }), 200
     except Exception as e:
         print(f"[CEO API] Org Health Error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @ceo_bp.route('/departments', methods=['GET'])
 @jwt_required()
@@ -1083,7 +1075,7 @@ def get_paginated_departments():
         }), 200
     except Exception as e:
         print(f"[CEO API] Paginated Departments Error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @ceo_bp.route('/priority-initiatives', methods=['GET'])
 @jwt_required()
@@ -1091,7 +1083,7 @@ def get_paginated_departments():
 def get_priority_initiatives():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         org_id = user.org_id if user else None
         if not org_id:
             return jsonify({"status": "error", "message": "Org ID not found"}), 404
@@ -1154,7 +1146,7 @@ def get_priority_initiatives():
         }), 200
     except Exception as e:
         print(f"[CEO API] Priority Initiatives Error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 @ceo_bp.route('/export', methods=['GET'])
@@ -1163,12 +1155,12 @@ def export_ceo_report():
     """Export CEO Executive Summary & Strategic Metrics report as CSV download."""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         org_id = user.org_id if user else None
         if not org_id:
             return jsonify({"status": "error", "message": "Org ID not found"}), 404
 
-        org = Organization.query.get(org_id)
+        org = db.session.get(Organization, org_id)
         org_name = org.name if org else "Organization"
 
         # Fetch executive metrics
@@ -1193,7 +1185,7 @@ def export_ceo_report():
         cw = csv.writer(si)
         cw.writerow(["CEO EXECUTIVE DASHBOARD STRATEGIC REPORT"])
         cw.writerow(["Organization", org_name])
-        cw.writerow(["Generated At", datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')])
+        cw.writerow(["Generated At", datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S UTC')])
         cw.writerow(["Exported By", user.full_name or user.username])
         cw.writerow([])
 
@@ -1220,7 +1212,7 @@ def export_ceo_report():
             cw.writerow(["Initiative", p.title, p.project_uid or '---', f"Stage {p.current_stage}", p.status, "High" if p.current_stage >= 6 else "Medium"])
 
         output = si.getvalue()
-        filename = f"CEO_Executive_Report_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+        filename = f"CEO_Executive_Report_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}.csv"
         
         return Response(
             output.encode('utf-8-sig'),
@@ -1228,9 +1220,7 @@ def export_ceo_report():
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 # ─── Executive Project Review & Closure Routes ─────────────────
@@ -1242,7 +1232,7 @@ def get_pending_closures():
     """Return all projects pending CEO review and final closure sign-off."""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         if not user or not user.org_id:
             return jsonify({"status": "error", "message": "User context not found"}), 404
         
@@ -1267,10 +1257,12 @@ def get_pending_closures():
             
             # Extract stage 8 data
             s8_wf = wf_map.get(8, {})
-            lessons = (std.lessons_learned if std else None) or s8_wf.get('lessons_learned')
-            preventive = (std.preventive_actions if std else None) or s8_wf.get('preventive_actions')
-            benefits = (std.benefits_summary if std else None) or s8_wf.get('benefits_summary')
-            opportunities = (std.remaining_opportunities if std else None) or s8_wf.get('remaining_opportunities')
+            lessons = (getattr(std, 'lessons_learned', None) if std else None) or s8_wf.get('lessons_learned')
+            preventive = (getattr(std, 'preventive_actions', None) if std else None) or s8_wf.get('preventive_actions')
+            benefits = (getattr(std, 'benefits_summary', None) if std else None) or s8_wf.get('benefits_summary') or s8_wf.get('metrics')
+            opportunities = (getattr(std, 'remaining_opportunities', None) if std else None) or s8_wf.get('remaining_opportunities')
+            baseline_data = (getattr(std, 'baseline_data', None) if std else None) or s8_wf.get('baseline') or s8_wf.get('baseline_data')
+            final_data = (getattr(std, 'final_data', None) if std else None) or s8_wf.get('final') or s8_wf.get('final_data') or s8_wf.get('metrics')
 
             # Fetch team and leadership names
             team_leader = db.session.get(User, p.team_leader_id) if p.team_leader_id else None
@@ -1291,10 +1283,10 @@ def get_pending_closures():
                 "reviewer": reviewer.full_name or reviewer.username if reviewer else 'N/A',
                 "status": p.status,
                 "current_stage": p.current_stage,
-                "cost_savings": std.cost_savings if (std and std.cost_savings is not None) else 0.0,
-                "kpi_improvement_pct": std.kpi_improvement_pct if (std and std.kpi_improvement_pct is not None) else 0.0,
-                "baseline_data": std.baseline_data if std else None,
-                "final_data": std.final_data if std else None,
+                "cost_savings": std.cost_savings if (std and getattr(std, 'cost_savings', None) is not None) else (s8_wf.get('cost_savings', 0.0) or 0.0),
+                "kpi_improvement_pct": std.kpi_improvement_pct if (std and getattr(std, 'kpi_improvement_pct', None) is not None) else (s8_wf.get('kpi_improvement_pct', 0.0) or 0.0),
+                "baseline_data": baseline_data,
+                "final_data": final_data,
                 "sop": {
                     "id": sop.id if sop else None,
                     "title": sop.title if sop else 'N/A',
@@ -1306,7 +1298,7 @@ def get_pending_closures():
                 "preventive_actions": preventive,
                 "benefits_summary": benefits,
                 "remaining_opportunities": opportunities,
-                "reviewer_notes": std.final_comments if std else None,
+                "reviewer_notes": getattr(std, 'final_comments', None) if std else None,
                 "workflows": wf_map,
                 "created_at": p.created_at.isoformat() if p.created_at else None,
                 "submitted_at": p.created_at.isoformat() if p.created_at else None
@@ -1314,9 +1306,7 @@ def get_pending_closures():
 
         return jsonify({"status": "success", "data": results, "count": len(results)}), 200
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 @ceo_bp.route('/closure/<int:project_id>/decision', methods=['POST'])
@@ -1326,7 +1316,7 @@ def process_ceo_closure_decision(project_id):
     """CEO decision to Approve & Officially Close the project or Request Revisions."""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         if not user or not user.org_id:
             return jsonify({"status": "error", "message": "User context not found"}), 404
 
@@ -1349,11 +1339,11 @@ def process_ceo_closure_decision(project_id):
         if decision in ['Approve', 'Approved']:
             # Officially Close Project
             project.status = 'Closed'
-            project.end_date = datetime.utcnow().date()
+            project.end_date = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
             std.final_approval = True
             std.final_approval_by = user.id
-            std.final_approval_at = datetime.utcnow()
+            std.final_approval_at = datetime.now(timezone.utc).replace(tzinfo=None)
             std.final_comments = f"CEO Approved & Officially Closed: {comments}" if comments else "CEO Officially Approved & Closed"
             std.admin_closure = True
             std.facilitator_validation = True
@@ -1362,7 +1352,7 @@ def process_ceo_closure_decision(project_id):
             tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=8).first()
             if tracker:
                 tracker.status = 'Completed'
-                tracker.completed_at = datetime.utcnow()
+                tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             db.session.flush()
 
@@ -1452,9 +1442,7 @@ def process_ceo_closure_decision(project_id):
             return jsonify({"status": "error", "message": "Invalid decision type"}), 400
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 @ceo_bp.route('/rejected-projects', methods=['GET'])
 @jwt_required()
@@ -1497,5 +1485,4 @@ def get_ceo_rejected_projects():
             
         return jsonify({"status": "success", "data": results}), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
+        return internal_server_error(e, "An internal server error occurred.")

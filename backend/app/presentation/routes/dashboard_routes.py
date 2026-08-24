@@ -13,12 +13,10 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
 
     User, Project, Stage4Solution, Stage6Implementation, Stage7Impact,
-
-    Stage8Standardization, KPIMetric, KPIDashboardCache, Department, db
-
+    Stage8Standardization, KPIMetric, KPIDashboardCache, Department, ProjectMeeting, db
 )
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func
 
@@ -36,7 +34,7 @@ def kpi_summary():
 
     """Aggregated KPI summary from completed Stage 7 data."""
 
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
 
     
 
@@ -118,7 +116,7 @@ def kpi_trends():
 
     """Monthly KPI growth trend data."""
 
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
 
     impacts = Stage7Impact.query.join(Project).filter(
 
@@ -176,7 +174,7 @@ def dept_comparison():
 
     """Department-wise KPI comparison."""
 
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
 
     departments = Department.query.filter_by(org_id=user.org_id).all()
 
@@ -230,7 +228,7 @@ def top_projects():
 
     """Top 5 projects by impact."""
 
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
 
     impacts = Stage7Impact.query.join(Project).filter(
 
@@ -270,7 +268,7 @@ def cost_variance():
 
     """Cost variance analysis: estimated vs actual."""
 
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
 
     proposals = Stage4Solution.query.filter_by(org_id=user.org_id).all()
 
@@ -323,7 +321,7 @@ def cost_variance():
 @dashboard_bp.route('/activity', methods=['GET'])
 @jwt_required()
 def get_dashboard_activity():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     from app.infrastructure.database.models.models import AuditLog, Project
     from sqlalchemy.orm import joinedload
     
@@ -361,34 +359,33 @@ def get_dashboard_activity():
 @jwt_required()
 def get_dashboard_meetings():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         # Fallback for old tokens where identity was email
         user = User.query.filter_by(email=user_id).first()
         if not user:
             return jsonify({"msg": "User not found"}), 404
 
-    from app.infrastructure.database.models.models import ProjectMeeting, Project, db
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
     
-    # Base query for future meetings in this org
-    from datetime import datetime
-    now = datetime.utcnow()
+    # Base query for future meetings
     query = ProjectMeeting.query.join(Project).filter(
-        Project.org_id == user.org_id,
         ProjectMeeting.scheduled_at >= now
     )
+    if not user_is_sa:
+        query = query.filter(Project.org_id == user.org_id)
     
-    if user.role.name in ('Team Leader', 'Team Member'):
+    role_name = user.role.name if user.role else 'User'
+    if role_name in ('Team Leader', 'Team Member'):
         query = query.filter(db.or_(
             Project.team_leader_id == user.id,
             Project.creator_id == user.id,
             Project.members.any(id=user.id)
         ))
-    elif user.role.name == 'Facilitator':
-        # Facilitators only see meetings for projects they are assigned to
+    elif role_name == 'Facilitator':
         query = query.filter(Project.facilitator_id == user.id)
-    elif user.role.name == 'Reviewer':
-        # Reviewers only see meetings for projects they are assigned to review
+    elif role_name == 'Reviewer':
         query = query.filter(Project.reviewer_id == user.id)
             
     # Order by nearest meeting first
@@ -400,7 +397,7 @@ def get_dashboard_meetings():
         "project_title": m.project.title if m.project else "Unknown",
         "stage_id": m.stage_id,
         "title": m.title,
-        "scheduled_at": m.scheduled_at.isoformat() + "Z",
+        "scheduled_at": m.scheduled_at.isoformat() + "Z" if m.scheduled_at else None,
         "duration": m.duration,
         "duration_minutes": m.duration,
         "meeting_type": m.meeting_type,

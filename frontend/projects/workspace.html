@@ -13,16 +13,14 @@
             }
         })();
     </script>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Workspace | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
 
@@ -62,9 +60,19 @@
                     </div>
                 </header>
 
-                <!-- Methodology Stepper -->
-                <div id="stepperContainer" class="fade-in section-spacing">
+                <!-- Methodology Stepper (Desktop) -->
+                <div id="stepperContainer" class="fade-in section-spacing d-none d-md-block">
                     <!-- QCMS.stageStepper will be injected here -->
+                </div>
+
+                <!-- Mobile Stage Selector (Pill Carousel & Status Badge for <= 768px) -->
+                <div id="stageMobileSelector" class="d-md-none fade-in mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-xs fw-bold text-muted text-uppercase tracking-wider">Methodology Stage</span>
+                        <span id="stageMobileActiveBadge" class="badge bg-primary-subtle text-primary">Stage 1</span>
+                    </div>
+                    <!-- Swipeable Stage Carousel Pills -->
+                    <div id="stageMobileCarousel" class="stage-carousel-container"></div>
                 </div>
 
                 <!-- 3-Panel Workspace -->
@@ -222,9 +230,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
         const STAGE_NAMES = [
             '', 
@@ -295,32 +301,70 @@
 
             renderStageNav() {
                 const list = document.getElementById('stageList');
+                const mobileCarousel = document.getElementById('stageMobileCarousel');
+                const mobileBadge = document.getElementById('stageMobileActiveBadge');
                 const stageIcons = ['users', 'search', 'shield', 'git-branch', 'sliders', 'wrench', 'shield-check', 'award'];
-                list.innerHTML = STAGE_NAMES.slice(1).map((name, i) => {
-                    const num = i + 1;
-                    let state = 'locked';
-                    if (num < this.currentStage) state = 'completed';
-                    else if (num === this.currentStage) state = 'active';
 
-                    const isSelected = num === this.viewingStage;
-                    const isDisabled = num > this.currentStage;
-                    const iconName = stageIcons[i];
-                    
-                    let iconHtml = `<i data-lucide="${iconName}" style="width: 12px; height: 12px;"></i>`;
-                    if (num < this.currentStage) {
-                        iconHtml = `<i data-lucide="check" style="width: 12px; height: 12px;"></i>`;
-                    }
+                if (mobileBadge) {
+                    mobileBadge.textContent = `Stage ${this.viewingStage}: ${(STAGE_NAMES[this.viewingStage] || '').split(' ')[0]}`;
+                }
 
-                    return `
-                    <button class="stage-nav-btn ${state} ${isSelected ? 'selected' : ''}" 
-                            onclick="workspace.viewStage(${num})" ${isDisabled ? 'disabled' : ''}>
-                        <div class="stage-nav-num" style="display: flex; align-items: center; justify-content: center;">
-                            ${iconHtml}
-                        </div>
-                        <div class="stage-nav-label">${name}</div>
-                    </button>
-                `;
-                }).join('');
+                if (list) {
+                    list.innerHTML = STAGE_NAMES.slice(1).map((name, i) => {
+                        const num = i + 1;
+                        let state = 'locked';
+                        if (num < this.currentStage) state = 'completed';
+                        else if (num === this.currentStage) state = 'active';
+
+                        const isSelected = num === this.viewingStage;
+                        const isDisabled = num > this.currentStage;
+                        const iconName = stageIcons[i];
+                        
+                        let iconHtml = `<i data-lucide="${iconName}" style="width: 12px; height: 12px;"></i>`;
+                        if (num < this.currentStage) {
+                            iconHtml = `<i data-lucide="check" style="width: 12px; height: 12px;"></i>`;
+                        }
+
+                        return `
+                        <button class="stage-nav-btn ${state} ${isSelected ? 'selected' : ''}" 
+                                onclick="workspace.viewStage(${num})" ${isDisabled ? 'disabled' : ''}>
+                            <div class="stage-nav-num" style="display: flex; align-items: center; justify-content: center;">
+                                ${iconHtml}
+                            </div>
+                            <div class="stage-nav-label">${name}</div>
+                        </button>
+                    `;
+                    }).join('');
+                }
+
+                if (mobileCarousel) {
+                    mobileCarousel.innerHTML = STAGE_NAMES.slice(1).map((name, i) => {
+                        const num = i + 1;
+                        let statusClass = 'locked';
+                        if (num < this.currentStage) statusClass = 'completed';
+                        else if (num === this.currentStage) statusClass = 'active';
+
+                        const isSelected = num === this.viewingStage;
+                        const isDisabled = num > this.currentStage;
+                        const iconName = stageIcons[i];
+
+                        let iconHtml = `<i data-lucide="${iconName}" style="width: 14px; height: 14px;"></i>`;
+                        if (num < this.currentStage) {
+                            iconHtml = `<i data-lucide="check" style="width: 14px; height: 14px;"></i>`;
+                        }
+
+                        return `
+                            <button type="button" class="stage-pill-item ${statusClass} ${isSelected ? 'selected' : ''}" 
+                                    onclick="workspace.viewStage(${num})" ${isDisabled ? 'disabled' : ''}>
+                                <div class="stage-pill-icon">${iconHtml}</div>
+                                <div class="stage-pill-text">
+                                    <div class="stage-pill-num">Stage ${num}</div>
+                                    <div class="stage-pill-title">${name}</div>
+                                </div>
+                            </button>
+                        `;
+                    }).join('');
+                }
             },
 
             async viewStage(num) {

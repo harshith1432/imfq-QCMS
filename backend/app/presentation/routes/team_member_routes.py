@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import User, Project, ProjectMember, ProjectWorkflow, AuditLog
 from app import db
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timezone
 
 team_member_bp = Blueprint('team_member', __name__)
 
@@ -12,7 +12,7 @@ def team_member_required(f):
     @jwt_required()
     def decorated_function(*args, **kwargs):
         current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
+        user = db.session.get(User, current_user_id)
         if not user or user.role.name not in ['Team Member', 'Team Leader', 'Admin', 'CEO', 'Facilitator', 'Reviewer']:
             return jsonify({"msg": "Team Member access required"}), 403
         return f(*args, **kwargs)
@@ -34,7 +34,7 @@ def list_my_projects():
     # Get all projects where the user is a member AND belongs to their org
     projects = Project.query.join(ProjectMember).filter(
         ProjectMember.user_id == user_id,
-        Project.org_id == User.query.get(user_id).org_id
+        Project.org_id == db.session.get(User, user_id).org_id
     ).all()
     
     return jsonify([{
@@ -65,7 +65,7 @@ def update_stage_data(stage_num):
     if not project_id:
         return jsonify({"msg": "Project ID required"}), 400
         
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not verify_membership(project_id, user_id, user.org_id):
         return jsonify({"msg": "Unauthorized: Not assigned to this project or wrong org"}), 403
         
@@ -91,7 +91,7 @@ def update_stage_data(stage_num):
     # In a real app we would validate the JSON payload schema depending on the stage_num
     wf.data = data.get('stage_data', {})
     wf.updated_by = user_id
-    wf.updated_at = datetime.utcnow()
+    wf.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     db.session.commit()
     

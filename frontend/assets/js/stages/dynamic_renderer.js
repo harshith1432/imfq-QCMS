@@ -377,6 +377,8 @@ const DynamicRenderer = {
                                 </svg>
                                 </div>
                             </div>
+                            <!-- Mobile Vertical Accordion Mode -->
+                            <div id="${sec.id}_mobileAccordion" class="fishbone-mobile-accordion d-md-none mb-3"></div>
                         </div>
                         <div class="col-md-12">
                             <div class="table-responsive">
@@ -1854,6 +1856,57 @@ const DynamicRenderer = {
                 }
             });
         });
+
+        // Update Mobile Accordion View for 6M Fishbone
+        const accordionEl = document.getElementById(`${secId}_mobileAccordion`);
+        if (accordionEl) {
+            const catColors = {
+                Man: '#3b82f6', Machine: '#ca8a04', Material: '#16a34a',
+                Method: '#db2777', Measurement: '#ea580c', Environment: '#0891b2'
+            };
+            accordionEl.innerHTML = categories.map(cat => {
+                const catRows = rows.filter(r => r.category === cat && r.cause && r.cause.trim());
+                const color = catColors[cat] || '#2563eb';
+                const causeMap = new Map();
+                catRows.forEach(r => {
+                    const key = r.cause.trim();
+                    if (!causeMap.has(key)) causeMap.set(key, []);
+                    if (r.sub_cause && r.sub_cause.trim()) causeMap.get(key).push(r.sub_cause.trim());
+                });
+
+                let itemsHtml = '';
+                if (causeMap.size === 0) {
+                    itemsHtml = `<p class="text-xs text-muted mb-0 italic">No causes recorded in this category.</p>`;
+                } else {
+                    itemsHtml = Array.from(causeMap.entries()).map(([c, subs]) => `
+                        <div class="fishbone-cause-item">
+                            <div class="fishbone-cause-title">${DynamicRenderer.escapeHtml(c)}</div>
+                            ${subs.length > 0 ? `
+                                <div>
+                                    ${subs.map(s => `<span class="fishbone-subcause-tag">↳ ${DynamicRenderer.escapeHtml(s)}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                }
+
+                return `
+                    <div class="fishbone-cat-card">
+                        <div class="fishbone-cat-header" onclick="const b = this.nextElementSibling; b.classList.toggle('d-none');">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fishbone-cat-badge" style="background:${color}">${cat}</span>
+                                <span class="text-xs text-muted">(${causeMap.size} causes)</span>
+                            </div>
+                            <i data-lucide="chevron-down" style="width:16px;height:16px;color:var(--ds-text-secondary);"></i>
+                        </div>
+                        <div class="fishbone-cat-body ${causeMap.size === 0 ? 'd-none' : ''}">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            if (window.lucide) lucide.createIcons();
+        }
     },
 
     async populateMappedSelects(projectId) {

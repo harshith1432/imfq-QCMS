@@ -4,7 +4,7 @@ from app.infrastructure.database.models.models import (
     db, User, IntegrationConfig, IntegrationApiKey, 
     IntegrationWebhook, IntegrationWebhookDelivery, IntegrationAuditLog
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import hashlib
 
@@ -134,7 +134,7 @@ def get_dashboard_stats():
     expired_keys = IntegrationApiKey.query.filter_by(status='Disabled').count()
     
     # Real-time counts computed from database logs for today
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0)
     
     from app.infrastructure.database.models.models import IntegrationApiLog
     api_requests_today = IntegrationApiLog.query.filter(IntegrationApiLog.request_time >= today_start).count()
@@ -203,7 +203,7 @@ def save_config(provider_id):
         elif cfg.status in ['Disabled', 'Disconnected']:
             cfg.health_score = 0
         
-    cfg.updated_at = datetime.utcnow()
+    cfg.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     action_label = "Credential Update" if 'settings' in data else "Status Toggle"
     audit = IntegrationAuditLog(
@@ -469,7 +469,7 @@ def generate_api_key():
     key_hash = hash_key(raw_key)
     masked = raw_key[:12] + "..." + raw_key[-4:]
     
-    expiration = datetime.utcnow() + timedelta(days=365) # 1 year expiry
+    expiration = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365) # 1 year expiry
     
     new_key = IntegrationApiKey(
         name=name,
@@ -606,7 +606,7 @@ def get_logs():
             "response_code": 200,
             "status": "Success",
             "latency_ms": 112.5,
-            "created_at": (datetime.utcnow() - timedelta(minutes=15)).isoformat() + "Z"
+            "created_at": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=15)).isoformat() + "Z"
         },
         {
             "id": 2,
@@ -615,7 +615,7 @@ def get_logs():
             "response_code": 500,
             "status": "Failed",
             "latency_ms": 320.0,
-            "created_at": (datetime.utcnow() - timedelta(hours=2)).isoformat() + "Z"
+            "created_at": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=2)).isoformat() + "Z"
         }
     ]
     
@@ -627,7 +627,7 @@ def get_logs():
             "client_ip": "192.168.1.50",
             "status_code": 201,
             "latency_ms": 45.2,
-            "created_at": (datetime.utcnow() - timedelta(minutes=5)).isoformat() + "Z"
+            "created_at": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=5)).isoformat() + "Z"
         },
         {
             "id": 102,
@@ -636,7 +636,7 @@ def get_logs():
             "client_ip": "203.0.113.195",
             "status_code": 401,
             "latency_ms": 12.1,
-            "created_at": (datetime.utcnow() - timedelta(minutes=12)).isoformat() + "Z"
+            "created_at": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=12)).isoformat() + "Z"
         }
     ]
     
@@ -715,7 +715,7 @@ def run_playground():
                 "organization_id": payload.get("organization_id", 3),
                 "plan": payload.get("plan", "Professional"),
                 "billing_cycle": "Monthly",
-                "created_at": datetime.utcnow().isoformat() + "Z"
+                "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z"
             }
         else:
             response_data = {

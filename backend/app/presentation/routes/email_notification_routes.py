@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
@@ -537,7 +537,7 @@ def update_sms_template(template_key):
     if 'target_plans' in data: tmpl.target_plans = data.get('target_plans', [])
     if 'target_statuses' in data: tmpl.target_statuses = data.get('target_statuses', [])
     if 'is_active' in data: tmpl.is_active = bool(data['is_active'])
-    tmpl.updated_at = datetime.utcnow()
+    tmpl.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     db.session.commit()
     return jsonify({
@@ -570,8 +570,8 @@ def send_test_sms_template(template_key):
         'user_name': user.full_name or user.username or 'Test User',
         'org_name': 'Acme Quality Corp',
         'plan_name': "Enterprise Scale Plan",
-        'expiry_date': datetime.utcnow().strftime('%d %b %Y'),
-        'maintenance_date': (datetime.utcnow() + timedelta(days=2)).strftime('%d %b %Y'),
+        'expiry_date': datetime.now(timezone.utc).replace(tzinfo=None).strftime('%d %b %Y'),
+        'maintenance_date': (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=2)).strftime('%d %b %Y'),
         'maintenance_window': '02:00 AM - 04:00 AM IST',
         'project_title': 'Short-Shot Defect Reduction',
         'project_code': 'PRJ-J2FJ',
@@ -610,11 +610,11 @@ def send_test_sms_template(template_key):
             gateway='Fast2SMS / Resend',
             status='Delivered',
             sent_by_id=user.id,
-            sent_at=datetime.utcnow()
+            sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(sms_log)
         tmpl.total_sent = (tmpl.total_sent or 0) + 1
-        tmpl.last_triggered_at = datetime.utcnow()
+        tmpl.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -670,7 +670,7 @@ def _seed_sample_sms_logs_if_empty():
         return
 
     from datetime import timedelta
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     sample_records = [
         {
             'template_key': 'phone_otp_verification',

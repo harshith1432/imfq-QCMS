@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise Activity Audit Logs | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -581,9 +580,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
         const Audit = {
             currentTab: 'logs',
@@ -802,29 +799,47 @@
                 
                 const start = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
                 const end = Math.min(pag.page * pag.per_page, pag.total);
-                info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${pag.total} sessions` : 'Showing 0 of 0 sessions';
+                info.innerHTML = `
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="text-muted text-xs">Showing <strong class="text-dark fw-bold">${start}–${end}</strong> of <strong class="text-dark fw-bold">${(pag.total || 0).toLocaleString()}</strong> sessions</span>
+                        <div class="d-flex align-items-center gap-1 ms-2">
+                            <select class="form-select form-select-sm shadow-none border rounded-2 px-2 py-0" style="width: auto; font-size: 12px; height: 28px; font-weight: 500; cursor: pointer; background-color: var(--ds-input-bg, #fff);" onchange="Audit.changeSessionPageSize(this.value)">
+                                <option value="5" ${pag.per_page == 5 ? 'selected' : ''}>5</option>
+                                <option value="10" ${pag.per_page == 10 ? 'selected' : ''}>10</option>
+                                <option value="20" ${pag.per_page == 20 ? 'selected' : ''}>20</option>
+                                <option value="50" ${pag.per_page == 50 ? 'selected' : ''}>50</option>
+                            </select>
+                            <span class="text-muted text-xs ms-1">per page</span>
+                        </div>
+                    </div>
+                `;
                 
-                let btnHtml = '';
-                if(pag.page > 1) {
-                    btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Audit.changeSessionPage(${pag.page - 1})">Prev</button>`;
-                }
-                
-                const maxPagesToShow = 5;
-                let startPage = Math.max(1, pag.page - 2);
-                let endPage = Math.min(pag.pages, startPage + maxPagesToShow - 1);
-                if(endPage - startPage + 1 < maxPagesToShow) {
-                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
-                }
+                const totalPages = pag.pages || Math.ceil((pag.total || 0) / (pag.per_page || 10)) || 1;
+                const isPrevDisabled = pag.page <= 1;
+                const isNextDisabled = pag.page >= totalPages;
 
-                for(let i = startPage; i <= endPage; i++) {
-                    const isAct = i === pag.page ? 'ds-btn-primary' : 'ds-btn-secondary';
-                    btnHtml += `<button class="ds-btn ${isAct} ds-btn-sm px-3" onclick="Audit.changeSessionPage(${i})">${i}</button>`;
-                }
+                controls.innerHTML = `
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                                ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : `onclick="Audit.changeSessionPage(${pag.page - 1})"`}>
+                            <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev
+                        </button>
+                        <span class="fw-semibold text-dark text-xs px-1" style="white-space: nowrap;">
+                            Page ${pag.page} of ${totalPages}
+                        </span>
+                        <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                                ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : `onclick="Audit.changeSessionPage(${pag.page + 1})"`}>
+                            Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
+                `;
+                if(window.lucide) lucide.createIcons();
+            },
 
-                if(pag.page < pag.pages) {
-                    btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Audit.changeSessionPage(${pag.page + 1})">Next</button>`;
-                }
-                controls.innerHTML = btnHtml;
+            changeSessionPageSize(size) {
+                this.sessionFilters.per_page = parseInt(size, 10) || 10;
+                this.sessionFilters.page = 1;
+                this.loadSessions();
             },
 
             changeSessionPage(p) {
@@ -1044,33 +1059,50 @@
                 const controls = document.getElementById('paginationControls');
                 if(!info || !controls) return;
                 
-                const start = (pag.page - 1) * pag.per_page + 1;
+                const start = pag.total > 0 ? (pag.page - 1) * pag.per_page + 1 : 0;
                 const end = Math.min(pag.page * pag.per_page, pag.total);
-                info.textContent = pag.total > 0 ? `Showing ${start} to ${end} of ${pag.total} events` : 'Showing 0 of 0 events';
+                info.innerHTML = `
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="text-muted text-xs">Showing <strong class="text-dark fw-bold">${start}–${end}</strong> of <strong class="text-dark fw-bold">${(pag.total || 0).toLocaleString()}</strong> events</span>
+                        <div class="d-flex align-items-center gap-1 ms-2">
+                            <select class="form-select form-select-sm shadow-none border rounded-2 px-2 py-0" style="width: auto; font-size: 12px; height: 28px; font-weight: 500; cursor: pointer; background-color: var(--ds-input-bg, #fff);" onchange="Audit.changePageSize(this.value)">
+                                <option value="5" ${pag.per_page == 5 ? 'selected' : ''}>5</option>
+                                <option value="10" ${pag.per_page == 10 ? 'selected' : ''}>10</option>
+                                <option value="20" ${pag.per_page == 20 ? 'selected' : ''}>20</option>
+                                <option value="50" ${pag.per_page == 50 ? 'selected' : ''}>50</option>
+                                <option value="100" ${pag.per_page == 100 ? 'selected' : ''}>100</option>
+                            </select>
+                            <span class="text-muted text-xs ms-1">per page</span>
+                        </div>
+                    </div>
+                `;
                 
-                let btnHtml = '';
-                if(pag.page > 1) {
-                    btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Audit.changePage(${pag.page - 1})">Prev</button>`;
-                }
-                
-                // Show standard page list
-                const maxPagesToShow = 5;
-                let startPage = Math.max(1, pag.page - 2);
-                let endPage = Math.min(pag.pages, startPage + maxPagesToShow - 1);
-                
-                if (endPage - startPage + 1 < maxPagesToShow) {
-                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
-                }
+                const totalPages = pag.pages || Math.ceil((pag.total || 0) / (pag.per_page || 10)) || 1;
+                const isPrevDisabled = pag.page <= 1;
+                const isNextDisabled = pag.page >= totalPages;
 
-                for(let i = startPage; i <= endPage; i++) {
-                    const isAct = i === pag.page ? 'ds-btn-primary' : 'ds-btn-secondary';
-                    btnHtml += `<button class="ds-btn ${isAct} ds-btn-sm px-3" onclick="Audit.changePage(${i})">${i}</button>`;
-                }
+                controls.innerHTML = `
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                                ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : `onclick="Audit.changePage(${pag.page - 1})"`}>
+                            <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev
+                        </button>
+                        <span class="fw-semibold text-dark text-xs px-1" style="white-space: nowrap;">
+                            Page ${pag.page} of ${totalPages}
+                        </span>
+                        <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                                ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : `onclick="Audit.changePage(${pag.page + 1})"`}>
+                            Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
+                `;
+                if(window.lucide) lucide.createIcons();
+            },
 
-                if(pag.page < pag.pages) {
-                    btnHtml += `<button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="Audit.changePage(${pag.page + 1})">Next</button>`;
-                }
-                controls.innerHTML = btnHtml;
+            changePageSize(size) {
+                this.filters.per_page = parseInt(size, 10) || 10;
+                this.filters.page = 1;
+                this.loadLogs();
             },
 
             changePage(p) {
@@ -1521,6 +1553,7 @@
                 }
             }
         };
+        window.Audit = Audit;
 
         document.addEventListener('DOMContentLoaded', () => Audit.init());
     </script>

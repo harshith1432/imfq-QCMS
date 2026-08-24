@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,17 +15,9 @@
 
     <!-- Bootstrap 5 & Lucide Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- QCMS Design System & Glassmorphism Styles -->
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-
-    <!-- App Engine & UX Scripts -->
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
-    <script src="/assets/js/module-map.js"></script>
-    <script src="/assets/js/feature-engine.js"></script>
 
     <style>
         /* Podium Custom Styling */
@@ -39,9 +31,9 @@
         }
 
         .podium-card {
-            background: var(--ds-bg-card);
-            border: 1px solid var(--ds-border-color);
-            border-radius: var(--ds-radius-xl);
+            background: var(--ds-bg-card, #ffffff);
+            border: 1px solid var(--ds-border-color, #e2e8f0);
+            border-radius: var(--ds-radius-xl, 16px);
             padding: 1.5rem 1rem;
             text-align: center;
             position: relative;
@@ -52,25 +44,25 @@
 
         .podium-card:hover {
             transform: translateY(-6px);
-            box-shadow: var(--ds-shadow-xl);
+            box-shadow: var(--ds-shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
         }
 
         .podium-card.rank-1 {
             border-color: rgba(245, 158, 11, 0.4);
-            background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, var(--ds-bg-card) 100%);
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, var(--ds-bg-card, #ffffff) 100%);
             order: 2;
             z-index: 2;
         }
 
         .podium-card.rank-2 {
             border-color: rgba(148, 163, 184, 0.4);
-            background: linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0%, var(--ds-bg-card) 100%);
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0%, var(--ds-bg-card, #ffffff) 100%);
             order: 1;
         }
 
         .podium-card.rank-3 {
             border-color: rgba(217, 119, 6, 0.3);
-            background: linear-gradient(180deg, rgba(217, 119, 6, 0.08) 0%, var(--ds-bg-card) 100%);
+            background: linear-gradient(180deg, rgba(217, 119, 6, 0.08) 0%, var(--ds-bg-card, #ffffff) 100%);
             order: 3;
         }
 
@@ -80,7 +72,7 @@
             border-radius: 50%;
             object-fit: cover;
             margin: 0 auto 0.75rem auto;
-            border: 3px solid var(--ds-border-color);
+            border: 3px solid var(--ds-border-color, #e2e8f0);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
@@ -156,50 +148,63 @@
             justify-content: space-between;
             margin-bottom: 0.75rem;
             padding-bottom: 0.5rem;
-            border-bottom: 1px dashed rgba(0,0,0,0.06);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
         }
 
         .champion-scope-tag {
-            font-size: 0.72rem;
+            font-size: 0.75rem;
             font-weight: 700;
+            color: #2563eb;
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            color: #1e40af;
-            background: rgba(59, 130, 246, 0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             padding: 2px 8px;
             border-radius: 6px;
+            background: rgba(37, 99, 235, 0.08);
         }
 
         .champion-avatar {
-            width: 60px;
-            height: 60px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
             object-fit: cover;
             margin: 0 auto 0.5rem auto;
-            border: 2.5px solid #3b82f6;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            border: 3px solid #3b82f6;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
         }
 
+        .point-counter {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--ds-text-main, #0f172a);
+        }
+
+        /* Scope Pills Switcher */
         .scope-pills-container {
-            background: var(--ds-bg-card, #ffffff);
-            border: 1px solid var(--ds-border-color, #e2e8f0);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             display: inline-flex;
-            gap: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .scope-pills-container .nav-link {
-            color: var(--ds-text-secondary, #64748b);
+            color: #64748b;
+            font-size: 0.8125rem;
             font-weight: 600;
-            padding: 6px 14px;
-            border-radius: 20px;
+            padding: 0.45rem 1.15rem;
+            border-radius: 50rem;
             transition: all 0.2s ease;
-            border: 0;
+            display: inline-flex;
+            align-items: center;
+            border: none;
             background: transparent;
+            cursor: pointer;
         }
 
         .scope-pills-container .nav-link:hover {
-            color: var(--ds-text-main, #1e293b);
+            color: #0f172a;
             background: rgba(0, 0, 0, 0.04);
         }
 
@@ -353,41 +358,6 @@
         html.dark .ds-table tbody tr:hover td {
             background: rgba(255, 255, 255, 0.03) !important;
         }
-
-        [data-theme="dark"] .card-footer,
-        body.dark-mode .card-footer,
-        [data-bs-theme="dark"] .card-footer,
-        html.dark .card-footer {
-            background: #1e293b !important;
-            border-top-color: #334155 !important;
-        }
-
-        [data-theme="dark"] .modal-content,
-        body.dark-mode .modal-content,
-        [data-bs-theme="dark"] .modal-content,
-        html.dark .modal-content {
-            background: #1e293b !important;
-            border-color: #334155 !important;
-            color: #f1f5f9 !important;
-        }
-
-        [data-theme="dark"] .modal-header,
-        body.dark-mode .modal-header,
-        [data-bs-theme="dark"] .modal-header,
-        html.dark .modal-header,
-        [data-theme="dark"] .modal-footer,
-        body.dark-mode .modal-footer,
-        [data-bs-theme="dark"] .modal-footer,
-        html.dark .modal-footer {
-            border-color: #334155 !important;
-        }
-
-        [data-theme="dark"] .btn-close,
-        body.dark-mode .btn-close,
-        [data-bs-theme="dark"] .btn-close,
-        html.dark .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
-        }
     </style>
 </head>
 
@@ -398,11 +368,11 @@
 
         <main class="app-main">
             <!-- Navbar injected by components.js -->
-            <header class="glass-navbar" id="app-navbar"></header>
+            <header class="app-navbar" id="app-navbar"></header>
 
             <div class="app-content-inner fade-in-up">
                 <!-- Page Header -->
-                <header class="ds-header-layout section-spacing">
+                <header class="ds-header-layout section-spacing px-0">
                     <div class="h-stack justify-content-between w-100 flex-wrap gap-3">
                         <div class="v-stack">
                             <h1 class="ds-title mb-1 d-flex align-items-center gap-2">
@@ -413,28 +383,26 @@
                             </p>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="rewardsApp.loadLeaderboard()">
+                            <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="rewardsApp && rewardsApp.loadLeaderboard()">
                                 <i data-lucide="refresh-cw" style="width:14px;height:14px;" class="me-1"></i> Refresh
                             </button>
                         </div>
                     </div>
                 </header>
 
-
-
                 <!-- Scope Hierarchy Switcher (Company-Wide / Plant Level / Department Level / By Role) -->
                 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
                     <div class="nav nav-pills scope-pills-container p-1 rounded-pill" id="scopePills" role="tablist">
-                        <button class="nav-link active" id="pillOverall" onclick="rewardsApp.setScope('overall')">
+                        <button class="nav-link active" id="pillOverall" onclick="rewardsApp && rewardsApp.setScope('overall')">
                             <i data-lucide="globe" style="width:14px;height:14px;" class="me-1"></i> Overall Company
                         </button>
-                        <button class="nav-link" id="pillPlant" onclick="rewardsApp.setScope('plant')">
+                        <button class="nav-link" id="pillPlant" onclick="rewardsApp && rewardsApp.setScope('plant')">
                             <i data-lucide="factory" style="width:14px;height:14px;" class="me-1"></i> Plant Champions
                         </button>
-                        <button class="nav-link" id="pillDept" onclick="rewardsApp.setScope('department')">
+                        <button class="nav-link" id="pillDept" onclick="rewardsApp && rewardsApp.setScope('department')">
                             <i data-lucide="building-2" style="width:14px;height:14px;" class="me-1"></i> Department Champions
                         </button>
-                        <button class="nav-link" id="pillRole" onclick="rewardsApp.setScope('role')">
+                        <button class="nav-link" id="pillRole" onclick="rewardsApp && rewardsApp.setScope('role')">
                             <i data-lucide="users" style="width:14px;height:14px;" class="me-1"></i> Champions by Role
                         </button>
                     </div>
@@ -443,7 +411,7 @@
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 text-xs fw-semibold" id="scopeBadgeText">
                             🏢 Overall Company Rankings (All Plants & Departments)
                         </span>
-                        <button class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2.5 text-xxs" id="resetFiltersBtn" onclick="rewardsApp.resetAllFilters()" style="display:none;">
+                        <button class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2.5 text-xxs" id="resetFiltersBtn" onclick="rewardsApp && rewardsApp.resetAllFilters()" style="display:none;">
                             <i data-lucide="x" style="width:12px;height:12px;" class="me-1"></i> Reset Filters
                         </button>
                     </div>
@@ -461,14 +429,14 @@
                     <div class="ds-card-header p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">
                         <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 360px;">
                             <div class="position-relative w-100">
-                                <input type="text" class="ds-input ps-5 text-xs" id="leaderboardSearch" placeholder="Search employee name, department, role..." oninput="rewardsApp.filterLeaderboard()">
+                                <input type="text" class="ds-input ps-5 text-xs" id="leaderboardSearch" placeholder="Search employee name, department, role..." oninput="rewardsApp && rewardsApp.filterLeaderboard()">
                                 <i data-lucide="search" class="position-absolute start-0 top-50 translate-middle-y ms-3 text-muted" style="width:15px;height:15px;"></i>
                             </div>
                         </div>
 
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             <!-- Role Filter -->
-                            <select class="ds-input ds-select py-1 px-3 text-xs" id="roleFilter" style="width:auto;" onchange="rewardsApp.loadLeaderboard(1)">
+                            <select class="ds-input ds-select py-1 px-3 text-xs" id="roleFilter" style="width:auto;" onchange="rewardsApp && rewardsApp.loadLeaderboard(1)">
                                 <option value="">All Roles</option>
                                 <option value="Team Member">Team Members</option>
                                 <option value="Facilitator">Facilitators</option>
@@ -477,13 +445,13 @@
 
                             <!-- Plant Filter -->
                             <div id="plantFilterCol" style="display:none;">
-                                <select class="ds-input ds-select py-1 px-3 text-xs" id="plantFilter" style="width:auto;" onchange="rewardsApp.handlePlantChange(this.value)">
+                                <select class="ds-input ds-select py-1 px-3 text-xs" id="plantFilter" style="width:auto;" onchange="rewardsApp && rewardsApp.handlePlantChange(this.value)">
                                     <option value="">All Plants</option>
                                 </select>
                             </div>
 
                             <!-- Department Filter -->
-                            <select class="ds-input ds-select py-1 px-3 text-xs" id="deptFilter" style="width:auto;" onchange="rewardsApp.loadLeaderboard(1)">
+                            <select class="ds-input ds-select py-1 px-3 text-xs" id="deptFilter" style="width:auto;" onchange="rewardsApp && rewardsApp.loadLeaderboard(1)">
                                 <option value="">All Departments</option>
                             </select>
                         </div>
@@ -515,6 +483,7 @@
                             </tbody>
                         </table>
                     </div>
+
                     <!-- Pagination Footer Bar -->
                     <div class="card-footer p-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-3" id="paginationBar">
                         <div class="d-flex flex-wrap align-items-center gap-3">
@@ -523,7 +492,7 @@
                             </div>
                             <div class="d-flex align-items-center gap-2 text-xs text-muted">
                                 <span>Per page:</span>
-                                <select class="form-select form-select-sm text-xs py-1 px-2 border" id="perPageSelect" style="width: auto; min-width: 65px; height: 30px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; background-color: var(--ds-bg-card, #fff);" onchange="rewardsApp.changePerPage(this.value)">
+                                <select class="form-select form-select-sm text-xs py-1 px-2 border" id="perPageSelect" style="width: auto; min-width: 65px; height: 30px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; background-color: var(--ds-bg-card, #fff);" onchange="rewardsApp && rewardsApp.changePerPage(this.value)">
                                     <option value="5" selected>5</option>
                                     <option value="10">10</option>
                                     <option value="25">25</option>
@@ -560,7 +529,7 @@
 
     <!-- Core Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/components.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <script>
         class LeaderboardManager {
             constructor() {
@@ -577,10 +546,11 @@
 
             getToken() {
                 return (window.api && window.api.token) 
-                    || localStorage.getItem('access_token') 
+                    || sessionStorage.getItem('token') 
                     || sessionStorage.getItem('access_token') 
                     || localStorage.getItem('token') 
-                    || sessionStorage.getItem('token');
+                    || localStorage.getItem('access_token')
+                    || '';
             }
 
             async init() {
@@ -591,22 +561,34 @@
 
             async loadPlants() {
                 try {
-                    const token = this.getToken();
                     let plants = [];
-                    try {
-                        const res = await fetch('/api/projects/plants', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
-                        if (res.ok) {
-                            const data = await res.json();
-                            plants = Array.isArray(data) ? data : (data.plants || []);
-                        }
-                    } catch (e) {
+                    if (window.api && typeof window.api.get === 'function') {
                         try {
-                            const res2 = await fetch('/api/admin/plants', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
-                            if (res2.ok) {
-                                const data2 = await res2.json();
-                                plants = Array.isArray(data2) ? data2 : (data2.plants || []);
+                            const data = await window.api.get('/projects/plants');
+                            plants = Array.isArray(data) ? data : (data && data.plants ? data.plants : []);
+                        } catch (e) {
+                            try {
+                                const data2 = await window.api.get('/admin/plants');
+                                plants = Array.isArray(data2) ? data2 : (data2 && data2.plants ? data2.plants : []);
+                            } catch (e2) {}
+                        }
+                    } else {
+                        const token = this.getToken();
+                        try {
+                            const res = await fetch('/api/projects/plants', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+                            if (res.ok) {
+                                const data = await res.json();
+                                plants = Array.isArray(data) ? data : (data.plants || []);
                             }
-                        } catch (e2) {}
+                        } catch (e) {
+                            try {
+                                const res2 = await fetch('/api/admin/plants', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+                                if (res2.ok) {
+                                    const data2 = await res2.json();
+                                    plants = Array.isArray(data2) ? data2 : (data2.plants || []);
+                                }
+                            } catch (e2) {}
+                        }
                     }
                     const plantCol = document.getElementById('plantFilterCol');
                     const plantSelect = document.getElementById('plantFilter');
@@ -631,23 +613,42 @@
             async loadDepartments(plantVal = '') {
                 try {
                     const select = document.getElementById('deptFilter');
-                    const token = this.getToken();
-                    let url = '/api/projects/departments';
+                    let url = '/projects/departments';
                     if (plantVal) url += '?plant_name=' + encodeURIComponent(plantVal);
 
-                    const res = await fetch(url, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
-                    if (res.ok) {
-                        this.departments = await res.json();
-                        if (select && Array.isArray(this.departments)) {
-                            select.disabled = false;
-                            select.innerHTML = '<option value="">All Departments</option>' + 
-                                this.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-                            select.value = '';
+                    let depts = [];
+                    if (window.api && typeof window.api.get === 'function') {
+                        try {
+                            const res = await window.api.get(url);
+                            depts = Array.isArray(res) ? res : (res && res.departments ? res.departments : []);
+                        } catch (e) {}
+                    }
+                    if (!depts.length) {
+                        const token = this.getToken();
+                        const res = await fetch('/api' + url, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+                        if (res.ok) {
+                            const data = await res.json();
+                            depts = Array.isArray(data) ? data : (data.departments || []);
                         }
+                    }
+                    this.departments = depts;
+                    if (select && Array.isArray(this.departments)) {
+                        select.disabled = false;
+                        select.innerHTML = '<option value="">All Departments</option>' + 
+                            this.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                        select.value = '';
                     }
                 } catch (e) {
                     console.error("Failed to load departments", e);
                 }
+            }
+
+            safeAvatar(url, name = 'User') {
+                const encodedName = encodeURIComponent(String(name || 'User').trim());
+                if (!url || url.includes('default-avatar.png') || url === 'undefined' || url === 'null') {
+                    return `/api/auth/avatar/${encodedName}`;
+                }
+                return url;
             }
 
             setScope(scope) {
@@ -690,10 +691,12 @@
                         <div class="podium-container" id="podiumSection">
                             ${top3.map((emp, i) => {
                                 const rankClass = `rank-${emp.rank || (i + 1)}`;
+                                const safeSrc = this.safeAvatar(emp.avatar, emp.name);
+                                const safeNameEsc = (emp.name || 'User').replace(/'/g, "\'");
                                 return `
                                     <div class="podium-card ${rankClass} fade-in">
                                         <div class="crown-badge">${crowns[i]}</div>
-                                        <img src="${emp.avatar || '/assets/img/default-avatar.png'}" class="podium-avatar" alt="${emp.name}" onerror="this.src='/assets/img/default-avatar.png'">
+                                        <img src="${safeSrc}" class="podium-avatar" alt="${emp.name}" onerror="this.onerror=null; this.src='/api/auth/avatar/' + encodeURIComponent('${safeNameEsc}');">
                                         <h6 class="fw-bold mb-1 text-main text-truncate">${emp.name}</h6>
                                         <p class="text-xs text-secondary mb-1">${emp.department || 'General'} &bull; ${emp.plant || 'Main Plant'}</p>
                                         <div class="mb-2"><span class="badge-pill badge-${emp.badge}">${emp.badge}</span></div>
@@ -714,21 +717,28 @@
                     container.innerHTML = `
                         <div class="champions-grid">
                             ${plants.map(p => {
-                                const c = p.champion;
+                                const c = p.champion || {};
+                                const name = p.champion_name || c.name || 'No Leader Yet';
+                                const safeSrc = this.safeAvatar(c.avatar || p.avatar, name);
+                                const safeNameEsc = (name || 'User').replace(/'/g, "\'");
+                                const pts = p.total_points !== undefined ? p.total_points : (c.total_points !== undefined ? c.total_points : 0);
+                                const badge = c.badge || p.badge || 'Participant';
+                                const dept = c.department || p.department || 'General';
+                                const role = c.role || p.role || 'Team Member';
                                 return `
                                     <div class="champion-card">
                                         <div>
-                                            <div class="champion-scope-header">
+                                             <div class="champion-scope-header">
                                                 <span class="champion-scope-tag"><i data-lucide="factory" style="width:12px;height:12px;" class="me-1"></i> ${p.plant_name}</span>
                                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle text-xxs px-2 py-0.5 fw-bold">#1 Plant Lead</span>
                                             </div>
-                                            <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" alt="${c.name}">
-                                            <h6 class="fw-bold mb-0 text-main text-truncate">${c.name}</h6>
-                                            <div class="text-xxs text-muted mb-2">${c.department} &bull; ${c.role}</div>
-                                            <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
-                                            <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
+                                            <img src="${safeSrc}" class="champion-avatar" alt="${name}" onerror="this.onerror=null; this.src='/api/auth/avatar/' + encodeURIComponent('${safeNameEsc}');">
+                                            <h6 class="fw-bold mb-0 text-main text-truncate">${name}</h6>
+                                            <div class="text-xxs text-muted mb-2">${dept} &bull; ${role}</div>
+                                            <div class="mb-2"><span class="badge-pill badge-${badge}">${badge}</span></div>
+                                            <div class="point-counter mb-2">${Number(pts).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
                                         </div>
-                                        <button class="btn btn-xs btn-outline-primary rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp.filterByPlant('${p.plant_name}')">
+                                        <button class="btn btn-xs btn-outline-primary rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp && rewardsApp.filterByPlant('${p.plant_name}')">
                                             <i data-lucide="filter" style="width:12px;height:12px;" class="me-1"></i> View Plant Leaderboard
                                         </button>
                                     </div>
@@ -747,7 +757,14 @@
                     container.innerHTML = `
                         <div class="champions-grid">
                             ${depts.map(d => {
-                                const c = d.champion;
+                                const c = d.champion || {};
+                                const name = d.champion_name || c.name || 'No Leader Yet';
+                                const pts = d.total_points !== undefined ? d.total_points : (c.total_points !== undefined ? c.total_points : 0);
+                                const safeSrc = this.safeAvatar(c.avatar || d.avatar, name);
+                                const safeNameEsc = (name || 'User').replace(/'/g, "\'");
+                                const badge = c.badge || d.badge || 'Participant';
+                                const plant = c.plant || d.plant || 'Main Plant';
+                                const role = c.role || d.role || 'Team Member';
                                 return `
                                     <div class="champion-card">
                                         <div>
@@ -755,13 +772,13 @@
                                                 <span class="champion-scope-tag" style="background:rgba(16, 185, 129, 0.1); color:#059669;"><i data-lucide="building-2" style="width:12px;height:12px;" class="me-1"></i> ${d.department_name}</span>
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle text-xxs px-2 py-0.5 fw-bold">#1 Dept Lead</span>
                                             </div>
-                                            <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" style="border-color:#10b981;" alt="${c.name}">
-                                            <h6 class="fw-bold mb-0 text-main text-truncate">${c.name}</h6>
-                                            <div class="text-xxs text-muted mb-2">${c.plant} &bull; ${c.role}</div>
-                                            <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
-                                            <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
+                                            <img src="${safeSrc}" class="champion-avatar" style="border-color:#10b981;" alt="${name}" onerror="this.onerror=null; this.src='/api/auth/avatar/' + encodeURIComponent('${safeNameEsc}');">
+                                            <h6 class="fw-bold mb-0 text-main text-truncate">${name}</h6>
+                                            <div class="text-xxs text-muted mb-2">${plant} &bull; ${role}</div>
+                                            <div class="mb-2"><span class="badge-pill badge-${badge}">${badge}</span></div>
+                                            <div class="point-counter mb-2">${Number(pts).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
                                         </div>
-                                        <button class="btn btn-xs btn-outline-success rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp.filterByDepartment('${d.department_name}')">
+                                        <button class="btn btn-xs btn-outline-success rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp && rewardsApp.filterByDepartment('${d.department_id || d.department_name}')">
                                             <i data-lucide="filter" style="width:12px;height:12px;" class="me-1"></i> View Dept Leaderboard
                                         </button>
                                     </div>
@@ -781,7 +798,14 @@
                     container.innerHTML = `
                         <div class="champions-grid">
                             ${roles.map(r => {
-                                const c = r.champion;
+                                const c = r.champion || {};
+                                const name = r.champion_name || c.name || 'No Leader Yet';
+                                const pts = r.total_points !== undefined ? r.total_points : (c.total_points !== undefined ? c.total_points : 0);
+                                const safeSrc = this.safeAvatar(c.avatar || r.avatar, name);
+                                const safeNameEsc = (name || 'User').replace(/'/g, "\'");
+                                const badge = c.badge || r.badge || 'Participant';
+                                const dept = c.department || r.department || 'General';
+                                const plant = c.plant || r.plant || 'Main Plant';
                                 return `
                                     <div class="champion-card">
                                         <div>
@@ -789,13 +813,13 @@
                                                 <span class="champion-scope-tag" style="background:rgba(168, 85, 247, 0.1); color:#7e22ce;"><i data-lucide="user-check" style="width:12px;height:12px;" class="me-1"></i> ${r.role_name}</span>
                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-xxs px-2 py-0.5 fw-bold">Top ${r.role_name}</span>
                                             </div>
-                                            <img src="${c.avatar || '/assets/img/default-avatar.png'}" class="champion-avatar" style="border-color:#a855f7;" alt="${c.name}">
-                                            <h6 class="fw-bold mb-0 text-main text-truncate">${c.name}</h6>
-                                            <div class="text-xxs text-muted mb-2">${c.department} &bull; ${c.plant}</div>
-                                            <div class="mb-2"><span class="badge-pill badge-${c.badge}">${c.badge}</span></div>
-                                            <div class="point-counter mb-2">${(c.total_points || 0).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
+                                            <img src="${safeSrc}" class="champion-avatar" style="border-color:#a855f7;" alt="${name}" onerror="this.onerror=null; this.src='/api/auth/avatar/' + encodeURIComponent('${safeNameEsc}');">
+                                            <h6 class="fw-bold mb-0 text-main text-truncate">${name}</h6>
+                                            <div class="text-xxs text-muted mb-2">${dept} &bull; ${plant}</div>
+                                            <div class="mb-2"><span class="badge-pill badge-${badge}">${badge}</span></div>
+                                            <div class="point-counter mb-2">${Number(pts).toLocaleString()} <span class="fs-6 fw-normal text-muted">PTS</span></div>
                                         </div>
-                                        <button class="btn btn-xs btn-outline-primary rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp.filterByRole('${r.role_name}')">
+                                        <button class="btn btn-xs btn-outline-primary rounded-pill py-1 px-3 text-xxs w-100 fw-semibold" onclick="rewardsApp && rewardsApp.filterByRole('${r.role_name}')">
                                             <i data-lucide="filter" style="width:12px;height:12px;" class="me-1"></i> Filter By Role
                                         </button>
                                     </div>
@@ -809,6 +833,7 @@
             }
 
             filterByPlant(plantName) {
+                if (!plantName || plantName === 'undefined' || plantName === 'null') return;
                 const plantSelect = document.getElementById('plantFilter');
                 if (plantSelect) {
                     plantSelect.value = plantName;
@@ -818,10 +843,11 @@
             }
 
             filterByDepartment(deptName) {
+                if (!deptName || deptName === 'undefined' || deptName === 'null') return;
                 const deptSelect = document.getElementById('deptFilter');
                 if (deptSelect) {
                     for (let opt of deptSelect.options) {
-                        if (opt.text.toLowerCase() === deptName.toLowerCase()) {
+                        if (String(opt.value) === String(deptName) || opt.text.toLowerCase() === String(deptName).toLowerCase()) {
                             deptSelect.value = opt.value;
                             break;
                         }
@@ -832,6 +858,7 @@
             }
 
             filterByRole(roleName) {
+                if (!roleName || roleName === 'undefined' || roleName === 'null') return;
                 const roleSelect = document.getElementById('roleFilter');
                 if (roleSelect) {
                     roleSelect.value = roleName;
@@ -872,26 +899,35 @@
             async loadLeaderboard(targetPage = 1) {
                 try {
                     this.page = targetPage;
-                    const token = this.getToken();
                     const search = (document.getElementById('leaderboardSearch')?.value || '').trim();
-                    const plantVal = document.getElementById('plantFilter')?.value || '';
-                    const deptId = document.getElementById('deptFilter')?.value || '';
-                    const roleVal = document.getElementById('roleFilter')?.value || '';
+                    const plantVal = (document.getElementById('plantFilter')?.value || '').trim();
+                    const deptId = (document.getElementById('deptFilter')?.value || '').trim();
+                    const roleVal = (document.getElementById('roleFilter')?.value || '').trim();
 
                     const currentPerPage = this.perPage || 5;
-                    let url = `/api/leaderboard?page=${this.page}&per_page=${currentPerPage}`;
-                    if (plantVal) url += `&plant_name=${encodeURIComponent(plantVal)}`;
-                    if (deptId) url += `&department_id=${deptId}`;
-                    if (roleVal) url += `&role=${encodeURIComponent(roleVal)}`;
-                    if (search) url += `&q=${encodeURIComponent(search)}`;
+                    let endpoint = `/leaderboard?page=${this.page}&per_page=${currentPerPage}`;
+                    if (plantVal && plantVal !== 'undefined' && plantVal !== 'null') endpoint += `&plant_name=${encodeURIComponent(plantVal)}`;
+                    if (deptId && deptId !== 'undefined' && deptId !== 'null') endpoint += `&department_id=${encodeURIComponent(deptId)}`;
+                    if (roleVal && roleVal !== 'undefined' && roleVal !== 'null') endpoint += `&role=${encodeURIComponent(roleVal)}`;
+                    if (search && search !== 'undefined' && search !== 'null') endpoint += `&q=${encodeURIComponent(search)}`;
 
-                    const res = await fetch(url, {
-                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                    });
+                    let data;
+                    if (window.api && typeof window.api.get === 'function') {
+                        try {
+                            data = await window.api.get(endpoint);
+                        } catch (apiErr) {
+                            console.warn("api.get failed, trying direct fetch:", apiErr);
+                        }
+                    }
+                    if (!data) {
+                        const token = this.getToken();
+                        const res = await fetch('/api' + endpoint, {
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                        });
+                        if (!res.ok) throw new Error("Failed to fetch leaderboard (HTTP " + res.status + ")");
+                        data = await res.json();
+                    }
 
-                    if (!res.ok) throw new Error("Failed to fetch leaderboard");
-
-                    const data = await res.json();
                     this.leaderboardData = data.leaderboard || [];
                     this.podiumData = data.podium || [];
                     this.championsSummary = data.champions_summary || {};
@@ -903,7 +939,7 @@
                     this.updateResetBtnVisibility();
                     if (window.lucide) lucide.createIcons();
                 } catch (err) {
-                    console.error(err);
+                    console.error("Leaderboard error:", err);
                     document.getElementById('leaderboardTbody').innerHTML = `
                         <tr><td colspan="10" class="text-center py-4 text-danger">Failed to load leaderboard data.</td></tr>
                     `;
@@ -918,14 +954,17 @@
                     return;
                 }
 
-                tbody.innerHTML = this.leaderboardData.map(e => `
+                tbody.innerHTML = this.leaderboardData.map(e => {
+                    const safeSrc = this.safeAvatar(e.avatar, e.name);
+                    const safeNameEsc = (e.name || 'User').replace(/'/g, "\'");
+                    return `
                     <tr>
                         <td class="text-center fw-bold fs-6">
                             ${e.rank === 1 ? '🥇 1' : (e.rank === 2 ? '🥈 2' : (e.rank === 3 ? '🥉 3' : `#${e.rank}`))}
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-3">
-                                <img src="${e.avatar || '/assets/img/default-avatar.png'}" class="rounded-circle border" style="width:36px;height:36px;object-fit:cover;" onerror="this.src='/assets/img/default-avatar.png'">
+                                <img src="${safeSrc}" class="rounded-circle border" style="width:36px;height:36px;object-fit:cover;" onerror="this.onerror=null; this.src='/api/auth/avatar/' + encodeURIComponent('${safeNameEsc}');">
                                 <div>
                                     <div class="fw-bold text-main">${e.name}</div>
                                     <div class="text-xs text-muted">@${e.username}</div>
@@ -945,12 +984,12 @@
                         <td class="text-center fw-bold">${e.ideas_approved}</td>
                         <td class="text-center fw-bold">${e.knowledge_articles}</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-outline-primary py-0.5 px-2.5 text-xs rounded-pill" onclick="rewardsApp.viewHistory(${e.employee_id}, '${e.name}')">
+                            <button class="btn btn-sm btn-outline-primary py-0.5 px-2.5 text-xs rounded-pill" onclick="rewardsApp && rewardsApp.viewHistory(${e.employee_id}, '${e.name}')">
                                 <i data-lucide="history" style="width:12px;height:12px;" class="me-1"></i> History
                             </button>
                         </td>
                     </tr>
-                `).join('');
+                `;}).join('');
             }
 
             renderPagination() {
@@ -977,7 +1016,7 @@
                 let html = [];
                 // Previous button
                 html.push(`
-                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs rounded-pill" onclick="rewardsApp.loadLeaderboard(${page - 1})" ${page <= 1 ? 'disabled' : ''}>
+                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs rounded-pill" onclick="rewardsApp && rewardsApp.loadLeaderboard(${page - 1})" ${page <= 1 ? 'disabled' : ''}>
                         ‹
                     </button>
                 `);
@@ -992,7 +1031,7 @@
 
                     for (let i = startPage; i <= endPage; i++) {
                         html.push(`
-                            <button class="ds-btn ${i === page ? 'ds-btn-primary' : 'ds-btn-secondary'} btn-sm px-3 text-xs fw-bold rounded-pill" onclick="rewardsApp.loadLeaderboard(${i})">
+                            <button class="ds-btn ${i === page ? 'ds-btn-primary' : 'ds-btn-secondary'} btn-sm px-3 text-xs fw-bold rounded-pill" onclick="rewardsApp && rewardsApp.loadLeaderboard(${i})">
                                 ${i}
                             </button>
                         `);
@@ -1005,7 +1044,7 @@
 
                 // Next button
                 html.push(`
-                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs rounded-pill" onclick="rewardsApp.loadLeaderboard(${page + 1})" ${page >= pages ? 'disabled' : ''}>
+                    <button class="ds-btn ds-btn-secondary btn-sm p-1 px-2 text-xs rounded-pill" onclick="rewardsApp && rewardsApp.loadLeaderboard(${page + 1})" ${page >= pages ? 'disabled' : ''}>
                         ›
                     </button>
                 `);
@@ -1029,12 +1068,23 @@
                 modal.show();
 
                 try {
-                    const token = this.getToken();
-                    const res = await fetch(`/api/points/history?employee_id=${empId}`, {
-                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
+                    let data;
+                    if (window.api && typeof window.api.get === 'function') {
+                        try {
+                            data = await window.api.get(`/points/history?employee_id=${empId}`);
+                        } catch (e) {}
+                    }
+                    if (!data) {
+                        const token = this.getToken();
+                        const res = await fetch(`/api/points/history?employee_id=${empId}`, {
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                        });
+                        if (res.ok) {
+                            data = await res.json();
+                        }
+                    }
+
+                    if (data) {
                         const items = data.items || [];
                         if (!items.length) {
                             list.innerHTML = '<div class="text-center py-3 text-muted">No point transaction history found.</div>';
@@ -1072,7 +1122,19 @@
             }
         }
 
-        const rewardsApp = new LeaderboardManager();
+        let rewardsApp;
+        function initLeaderboardApp() {
+            if (!window.rewardsApp) {
+                rewardsApp = new LeaderboardManager();
+                window.rewardsApp = rewardsApp;
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLeaderboardApp);
+        } else {
+            initLeaderboardApp();
+        }
     </script>
 </body>
 

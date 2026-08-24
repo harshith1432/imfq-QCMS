@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy.orm.exc import StaleDataError
 from app.infrastructure.database.models.models import (
     Project, db, AuditLog, ProjectReview, ProjectStageTracker, User,
     Stage1ProblemDefinitionProjectInitiation, Stage2ObservationDataCollection, Stage3CauseIdentification,
@@ -8,7 +9,7 @@ from app.infrastructure.database.models.models import (
 )
 from app.presentation.middleware.middleware import role_required
 from app.domain.services.subscription_service import SubscriptionManager
-from datetime import datetime
+from datetime import datetime, timezone
 
 workflow_bp = Blueprint('workflow', __name__)
 
@@ -54,7 +55,7 @@ def snapshot_stage_template(project, stage_number):
                 wf = ProjectWorkflow(project_id=project.id, stage_id=stage_number, org_id=project.org_id, data={})
                 db.session.add(wf)
             wf.template_snapshot = stage_def
-            wf.completed_at = datetime.utcnow()
+            wf.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     except Exception as e:
         print(f"[QCMS] Error snapshotting stage template: {e}")
 
@@ -92,7 +93,11 @@ def get_stage_data(project_id, stage_id):
     from app.infrastructure.database.models.models import ProjectWorkflow
     wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=stage_id).first()
     if wf and wf.data:
-        return jsonify({"data": wf.data}), 200
+        return jsonify({
+            "data": wf.data,
+            "version_id": getattr(wf, 'version_id', 1),
+            "updated_at": wf.updated_at.isoformat() if wf.updated_at else None
+        }), 200
 
     model = STAGE_MODEL_MAP.get(stage_id)
     if not model:
@@ -100,16 +105,16 @@ def get_stage_data(project_id, stage_id):
         
     data = model.query.filter_by(project_id=project_id).first()
     if not data:
-        return jsonify({"data": {}}), 200
+        return jsonify({"data": {}, "version_id": 1}), 200
         
     # Convert model to dict (excluding internal SQLAlchemy fields)
     result = {c.name: getattr(data, c.name) for c in data.__table__.columns}
-    return jsonify({"data": result}), 200
+    return jsonify({"data": result, "version_id": 1}), 200
 
-@workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['POST'])
+@workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['POST', 'PUT'])
 @jwt_required()
 def update_stage_data(project_id, stage_id):
-    data = request.get_json()
+    data = request.get_json() or {}
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
     
@@ -126,12 +131,29 @@ def update_stage_data(project_id, stage_id):
     if not wf:
         wf = ProjectWorkflow(project_id=project_id, stage_id=stage_id, org_id=project.org_id, data={})
         db.session.add(wf)
+    else:
+        # Optimistic locking: detect if client loaded an older version than current DB record
+        client_version = data.get('version_id') or data.get('client_version_id')
+        if client_version is not None and getattr(wf, 'version_id', None) is not None:
+            try:
+                if int(client_version) < wf.version_id:
+                    return jsonify({
+                        "status": "conflict",
+                        "message": "Another team member has updated this stage since you loaded it. Please reload to review their latest changes.",
+                        "code": "CONCURRENT_MODIFICATION_DETECTED",
+                        "current_version_id": wf.version_id,
+                        "current_data": wf.data
+                    }), 409
+            except (ValueError, TypeError):
+                pass
     
     current_data = dict(wf.data or {})
-    current_data.update(data)
+    # Strip internal version fields from stored stage data dictionary
+    clean_stage_data = {k: v for k, v in data.items() if k not in ('version_id', 'client_version_id')}
+    current_data.update(clean_stage_data)
     wf.data = current_data
     wf.updated_by = user_id
-    wf.updated_at = datetime.utcnow()
+    wf.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         
     model = STAGE_MODEL_MAP.get(stage_id)
     if not model:
@@ -155,20 +177,32 @@ def update_stage_data(project_id, stage_id):
 
     # Update fields from json
     for key, value in data.items():
-        if hasattr(record, key) and key not in ['id', 'project_id', 'org_id']:
+        if hasattr(record, key) and key not in ['id', 'project_id', 'org_id', 'version_id', 'client_version_id']:
             # Auto-parse dates from ISO string (YYYY-MM-DD)
             if ('date' in key or key in ['start_date', 'end_date']) and isinstance(value, str) and value:
                 try:
                     value = datetime.strptime(value.split('T')[0], '%Y-%m-%d').date()
                 except ValueError:
-                    pass # Keep as string if parsing fails, allow SQLAlchemy to handle or error
+                    pass
 
             setattr(record, key, value)
             
-    log_action(project.org_id, user_id, f"Updated Stage {stage_id}", project_id, str(data))
-    db.session.commit()
+    log_action(project.org_id, user_id, f"Updated Stage {stage_id}", project_id, str(clean_stage_data))
     
-    return jsonify({"msg": f"Stage {stage_id} data updated"}), 200
+    try:
+        db.session.commit()
+    except StaleDataError:
+        db.session.rollback()
+        return jsonify({
+            "status": "conflict",
+            "message": "Another team member has updated this stage since you loaded it. Please reload to review their latest changes.",
+            "code": "CONCURRENT_MODIFICATION_DETECTED"
+        }), 409
+    
+    return jsonify({
+        "msg": f"Stage {stage_id} data updated",
+        "version_id": getattr(wf, 'version_id', 1)
+    }), 200
 
 @workflow_bp.route('/<int:project_id>/submit-for-review', methods=['POST'])
 @jwt_required()
@@ -254,7 +288,7 @@ def approve_project(project_id):
     review.decision = data['status']
     review.comments = data.get('comments')
     review.reviewer_id = user_id
-    review.decided_at = datetime.utcnow()
+    review.decided_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     if data['status'] == 'Approved':
         project.status = 'In Progress'
@@ -295,28 +329,31 @@ def approve_stage_disciplines(project_id, stage_id):
     if stage_id == 1:
         record.facilitator_approved = is_approved
         record.facilitator_approver_id = user_id
-        record.facilitator_approved_at = datetime.utcnow()
+        record.facilitator_approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
         record.facilitator_comments = comments
     elif stage_id == 3:
         record.facilitator_approved = is_approved
         record.facilitator_approver_id = user_id
-        record.facilitator_approved_at = datetime.utcnow()
+        record.facilitator_approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
         record.facilitator_comments = comments
     elif stage_id == 8:
         record.final_approval = is_approved
         record.final_approval_by = user_id
-        record.final_approval_at = datetime.utcnow()
+        record.final_approval_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if is_approved:
             project.status = 'Completed'
-            project.end_date = datetime.utcnow().date()
+            project.end_date = datetime.now(timezone.utc).replace(tzinfo=None).date()
             tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=8).first()
             if tracker:
                 tracker.status = 'Completed'
-                tracker.completed_at = datetime.utcnow()
+                tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else: # Stages 2, 4, 5, 6, 7
         if stage_id == 2 and is_approved:
-            s2 = Stage2ObservationDataCollection.query.filter_by(project_id=project_id).first()
-            sv = s2.standard_verification or {} if s2 else {}
+            wf2 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=2).first()
+            sv = (wf2.data.get('standard_verification') or wf2.data.get('interim_verification') or {}) if (wf2 and isinstance(wf2.data, dict)) else {}
+            if not sv:
+                s2 = Stage2ObservationDataCollection.query.filter_by(project_id=project_id).first()
+                sv = s2.interim_verification or {} if s2 else {}
             not_followed = []
             if not sv.get('sop_follow'):
                 not_followed.append('SOP')
@@ -333,7 +370,7 @@ def approve_stage_disciplines(project_id, stage_id):
 
         record.reviewer_approved = is_approved
         record.reviewer_id = user_id
-        record.reviewer_approved_at = datetime.utcnow()
+        record.reviewer_approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
         record.reviewer_comments = comments
         
     # Write/Update ProjectReview record
@@ -345,7 +382,7 @@ def approve_stage_disciplines(project_id, stage_id):
     review.decision = 'Approved' if is_approved else 'Rejected'
     review.comments = comments
     review.reviewer_id = user_id
-    review.decided_at = datetime.utcnow()
+    review.decided_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     if not is_approved:
         project.status = 'Rejected'
@@ -360,64 +397,77 @@ def approve_stage_disciplines(project_id, stage_id):
 @workflow_bp.route('/projects/<int:project_id>/transitions', methods=['POST'])
 @jwt_required()
 def advance_stage(project_id):
-    data = request.get_json()
+    from app.domain.services.stage_validation_engine import StageValidationEngine
+    from app.infrastructure.cache.redis_adapter import cache
+    
+    data = request.get_json() or {}
+    expected_stage = data.get('expected_stage')  # for optimistic concurrency check
     new_stage = data.get('stage')
     user_id = get_jwt_identity()
+    if isinstance(user_id, dict):
+        user_id = user_id.get('id') or user_id.get('user_id')
+
     project = Project.query.get_or_404(project_id)
     
     if not new_stage:
         new_stage = project.current_stage + 1
-        
-    if new_stage > 8:
-        return jsonify({"msg": "Project has reached the final workflow stage (Stage 8). Final administrative closure must be performed by a Facilitator."}), 400
 
-    # ─── Subscription Gate: Plan Workflow Stages ────────────────
-    if not SubscriptionManager.can_access_stage(project.org_id, new_stage):
-        return jsonify({
-            "msg": f"Stage {new_stage} is not available on your current plan. Please upgrade to access full workflow features.",
-            "error_code": "STAGE_LOCKED"
-        }), 403
+    # Distributed Lock on project to avoid concurrent transition race conditions
+    lock_key = f"lock:project:{project_id}:stage_transition"
+    with cache.distributed_lock(lock_key, ttl=10):
+        # Refresh project state inside lock
+        db.session.refresh(project)
 
-    # ─── Workflow Gate: Stage 1 → 2 ─────────────────────────────
-    if new_stage == 2:
-        s1 = Stage1ProblemDefinitionProjectInitiation.query.filter_by(project_id=project_id).first()
-        if not s1 or not s1.management_approved or not s1.facilitator_approved:
+        # Optimistic Concurrency Check: ensure current stage has not changed
+        if expected_stage is not None and project.current_stage != expected_stage:
             return jsonify({
-                "msg": "Stage 1 Plan & Establish Team must have both Management and Facilitator approvals before advancing."
+                "status": "conflict",
+                "message": f"Conflict detected: project current stage is {project.current_stage}, but expected {expected_stage}. Please reload the project.",
+                "code": "CONCURRENT_MODIFICATION"
+            }), 409
+
+        # Run State Machine & Sequential Transition Validation
+        is_allowed, error_msg, status_code = StageValidationEngine.validate_transition(project, new_stage)
+        if not is_allowed:
+            return jsonify({"status": "error", "message": error_msg, "code": "VALIDATION_FAILED"}), status_code
+
+        # ─── Subscription Gate: Plan Workflow Stages ────────────────
+        if not SubscriptionManager.can_access_stage(project.org_id, new_stage):
+            return jsonify({
+                "msg": f"Stage {new_stage} is not available on your current plan. Please upgrade to access full workflow features.",
+                "error_code": "STAGE_LOCKED"
             }), 403
 
-    # Intermediate stages (Stages 2 to 8) do not require manual approval gates to advance.
+        # Update Project Current Stage
+        old_stage = project.current_stage
+        project.current_stage = new_stage
+        
+        # Update Tracker for Current (New) Stage
+        tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=new_stage).first()
+        if tracker:
+            tracker.status = 'In Progress'
+            tracker.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        else:
+            # Create if somehow missing
+            tracker = ProjectStageTracker(
+                project_id=project_id,
+                org_id=project.org_id,
+                stage_number=new_stage,
+                status='In Progress',
+                started_at=datetime.now(timezone.utc).replace(tzinfo=None)
+            )
+            db.session.add(tracker)
 
-    # Update Project Current Stage
-    old_stage = project.current_stage
-    project.current_stage = new_stage
-    
-    # Update Tracker for Current (New) Stage
-    tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=new_stage).first()
-    if tracker:
-        tracker.status = 'In Progress'
-        tracker.started_at = datetime.utcnow()
-    else:
-        # Create if somehow missing
-        tracker = ProjectStageTracker(
-            project_id=project_id,
-            org_id=project.org_id,
-            stage_number=new_stage,
-            status='In Progress',
-            started_at=datetime.utcnow()
-        )
-        db.session.add(tracker)
+        # Mark Old Stage as Completed in Tracker if it wasn't already
+        old_tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=old_stage).first()
+        if old_tracker and old_tracker.status != 'Completed':
+            old_tracker.status = 'Completed'
+            old_tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # Mark Old Stage as Completed in Tracker if it wasn't already
-    old_tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=old_stage).first()
-    if old_tracker and old_tracker.status != 'Completed':
-        old_tracker.status = 'Completed'
-        old_tracker.completed_at = datetime.utcnow()
+        snapshot_stage_template(project, old_stage)
 
-    snapshot_stage_template(project, old_stage)
-
-    log_action(project.org_id, user_id, f"Advanced from Stage {old_stage} to Stage {new_stage}", project_id)
-    db.session.commit()
+        log_action(project.org_id, user_id, f"Advanced from Stage {old_stage} to Stage {new_stage}", project_id)
+        db.session.commit()
 
     # Award points for stage completion
     try:
@@ -460,7 +510,7 @@ def advance_stage(project_id):
 @jwt_required()
 def get_project_reviews(project_id):
     user_id = get_jwt_identity()
-    user = db.session.get(Project.query.get(project_id).org_id if Project.query.get(project_id) else None) 
+    user = db.session.get(db.session.get(Project, project_id).org_id if db.session.get(Project, project_id) else None) 
     # Actually just check org match
     project = Project.query.get_or_404(project_id)
     reviews = ProjectReview.query.filter_by(project_id=project_id).order_by(ProjectReview.created_at.desc()).all()
@@ -485,3 +535,149 @@ def get_stage_data_alias(project_id, stage_id):
 @jwt_required()
 def update_stage_data_alias(project_id, stage_id):
     return update_stage_data(project_id, stage_id)
+
+
+# ==============================================================================
+# REAL-TIME COLLABORATIVE PRESENCE (HEARTBEAT & SSE STREAM)
+# ==============================================================================
+import time
+import json
+import threading
+
+STAGE_PRESENCE = {}
+_PRESENCE_LOCK = threading.Lock()
+PRESENCE_TTL = 15.0  # seconds until user is considered inactive if no heartbeat
+
+def _clean_and_get_stage_presence(project_id, stage_id):
+    now = time.time()
+    key = (int(project_id), int(stage_id))
+    with _PRESENCE_LOCK:
+        if key not in STAGE_PRESENCE:
+            return []
+        
+        active_dict = {}
+        active_list = []
+        for uid, udata in STAGE_PRESENCE[key].items():
+            if now - udata.get('last_seen', 0) < PRESENCE_TTL:
+                active_dict[uid] = udata
+                active_list.append({
+                    "user_id": udata["user_id"],
+                    "name": udata["name"],
+                    "role": udata["role"],
+                    "avatar": udata.get("avatar") or "",
+                    "email": udata.get("email") or "",
+                    "is_editing": bool(udata.get("is_editing", False)),
+                    "last_seen": udata.get("last_seen", now)
+                })
+        STAGE_PRESENCE[key] = active_dict
+        return active_list
+
+def _update_stage_presence(project_id, stage_id, user, is_editing=False):
+    now = time.time()
+    key = (int(project_id), int(stage_id))
+    with _PRESENCE_LOCK:
+        if key not in STAGE_PRESENCE:
+            STAGE_PRESENCE[key] = {}
+        
+        from app.utils.avatar_utils import get_profile_picture_url
+        avatar_url = get_profile_picture_url(user.profile_picture) if getattr(user, 'profile_picture', None) else ""
+        
+        user_name = getattr(user, 'full_name', None) or getattr(user, 'username', None) or "Team Member"
+        role_name = user.role.name if getattr(user, 'role', None) else "Team Member"
+
+        STAGE_PRESENCE[key][user.id] = {
+            "user_id": user.id,
+            "name": user_name,
+            "role": role_name,
+            "avatar": avatar_url,
+            "email": getattr(user, 'email', '') or "",
+            "is_editing": bool(is_editing),
+            "last_seen": now
+        }
+
+def _remove_stage_presence(project_id, stage_id, user_id):
+    key = (int(project_id), int(stage_id))
+    with _PRESENCE_LOCK:
+        if key in STAGE_PRESENCE:
+            STAGE_PRESENCE[key].pop(user_id, None)
+
+@workflow_bp.route('/<int:project_id>/stage/<int:stage_id>/presence-heartbeat', methods=['POST'])
+@jwt_required()
+def stage_presence_heartbeat(project_id, stage_id):
+    """Receive client heartbeat to maintain live collaborative presence."""
+    user_id = get_jwt_identity()
+    user = db.session.get(User, int(user_id)) if user_id else None
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    
+    data = request.get_json() or {}
+    is_editing = bool(data.get('is_editing', False))
+    
+    _update_stage_presence(project_id, stage_id, user, is_editing=is_editing)
+    active_users = _clean_and_get_stage_presence(project_id, stage_id)
+    
+    return jsonify({
+        "status": "ok",
+        "project_id": project_id,
+        "stage_id": stage_id,
+        "active_users": active_users
+    }), 200
+
+@workflow_bp.route('/<int:project_id>/stage/<int:stage_id>/presence-leave', methods=['POST'])
+@jwt_required()
+def stage_presence_leave(project_id, stage_id):
+    """Explicit leave signal when switching stages or navigating away."""
+    user_id = get_jwt_identity()
+    if user_id:
+        _remove_stage_presence(project_id, stage_id, int(user_id))
+    return jsonify({"status": "ok"}), 200
+
+@workflow_bp.route('/<int:project_id>/stage/<int:stage_id>/presence-stream', methods=['GET'])
+def stage_presence_stream(project_id, stage_id):
+    """Server-Sent Events (SSE) stream for live collaborative stage presence."""
+    from flask_jwt_extended import decode_token
+    token = request.args.get('token')
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        token = auth_header.split(' ', 1)[1]
+        
+    user_id = None
+    if token:
+        try:
+            decoded = decode_token(token)
+            user_id = decoded.get('sub')
+        except Exception:
+            user_id = None
+            
+    if not user_id:
+        return jsonify({"msg": "Unauthorized or missing token"}), 401
+    
+    user = db.session.get(User, int(user_id)) if user_id else None
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    # Initial register
+    _update_stage_presence(project_id, stage_id, user, is_editing=False)
+
+    from flask import Response, stream_with_context
+
+    def event_generator():
+        start_time = time.time()
+        # Stream for 60 seconds per connection cycle (browser EventSource will auto-reconnect)
+        while time.time() - start_time < 60:
+            _update_stage_presence(project_id, stage_id, user, is_editing=False)
+            active_users = _clean_and_get_stage_presence(project_id, stage_id)
+            payload = json.dumps(active_users)
+            yield f"data: {payload}\n\n"
+            time.sleep(3)
+
+    return Response(
+        stream_with_context(event_generator()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive"
+        }
+    )
+

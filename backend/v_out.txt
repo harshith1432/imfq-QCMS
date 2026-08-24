@@ -1,6 +1,0 @@
-=========================================
-Org ID: 3 ('youtube')
-Total Completed Projects: 3
-Individual Project Durations: [0.1, 0.2, 0.1]
-REAL-TIME AVG DELIVERY TIME: 0.1 Days
-=========================================

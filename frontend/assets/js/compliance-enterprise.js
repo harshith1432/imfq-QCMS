@@ -34,12 +34,9 @@
      * Fetch all standards for this org from the database
      * -------------------------------------------------------------------- */
     loadRealData: async function () {
-      const token = sessionStorage.getItem('token');
-      if (!token) return;
-
       try {
         const res = await fetch('/api/admin/compliance/standards', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'same-origin'
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -270,14 +267,14 @@
     },
 
     saveComplianceChanges: async function () {
-      const token = sessionStorage.getItem('token');
-      if (!token || !this._pendingToggles || Object.keys(this._pendingToggles).length === 0) return true;
+      if (!this._pendingToggles || Object.keys(this._pendingToggles).length === 0) return true;
 
       try {
         for (const [code, isEnabled] of Object.entries(this._pendingToggles)) {
           await fetch(`/api/admin/compliance/standards/${code}/toggle`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({ is_enabled: isEnabled })
           });
         }
@@ -322,8 +319,6 @@
     saveEditModal: async function () {
       const code = this._editCode;
       if (!code) return;
-      const token = sessionStorage.getItem('token');
-      if (!token) return;
 
       const payload = {
         certificate_number: document.getElementById('ce-edit-cert-no')?.value?.trim()     || '',
@@ -342,7 +337,8 @@
       try {
         const res = await fetch(`/api/admin/compliance/standards/${code}`, {
           method: 'PUT',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

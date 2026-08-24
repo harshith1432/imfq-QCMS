@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import current_app
 from sqlalchemy import func, or_
 from app import db
@@ -933,10 +933,10 @@ class EmailNotificationEngine:
             'created_by_name': context.get('created_by_name', 'Quality Operations Lead'),
             'project_id': str(context.get('project_id', '1')),
             'plan_name': context.get('plan_name', 'Small MSME\'s Plan'),
-            'expiry_date': context.get('expiry_date', (datetime.utcnow() + timedelta(days=7)).strftime('%d %b %Y')),
+            'expiry_date': context.get('expiry_date', (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7)).strftime('%d %b %Y')),
             'days_left': str(context.get('days_left', '7')),
             'trial_days': str(context.get('trial_days', '14')),
-            'trial_end_date': context.get('trial_end_date', (datetime.utcnow() + timedelta(days=14)).strftime('%d %b %Y')),
+            'trial_end_date': context.get('trial_end_date', (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=14)).strftime('%d %b %Y')),
             'max_users': str(context.get('max_users', '50')),
             'storage_limit_mb': str(context.get('storage_limit_mb', '5120')),
             'industry': context.get('industry', 'Manufacturing & Quality Operations'),
@@ -1146,12 +1146,12 @@ class EmailNotificationEngine:
             if getattr(org, 'subscription_end_date', None):
                 exp = org.subscription_end_date
                 expiry_date_str = exp.strftime('%d %b %Y')
-                delta = (exp.date() - datetime.utcnow().date()).days
+                delta = (exp.date() - datetime.now(timezone.utc).replace(tzinfo=None).date()).days
                 days_left = max(0, delta)
             elif getattr(org, 'trial_ends_at', None):
                 exp = org.trial_ends_at
                 expiry_date_str = exp.strftime('%d %b %Y')
-                delta = (exp.date() - datetime.utcnow().date()).days
+                delta = (exp.date() - datetime.now(timezone.utc).replace(tzinfo=None).date()).days
                 days_left = max(0, delta)
 
             ctx = {
@@ -1198,7 +1198,7 @@ class EmailNotificationEngine:
                 'user_email': test_email,
                 'role_name': 'Company Admin',
                 'plan_name': 'Enterprise Cloud Edition',
-                'expiry_date': (datetime.utcnow() + timedelta(days=rule.trigger_days_before or 7)).strftime('%d %b %Y'),
+                'expiry_date': (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=rule.trigger_days_before or 7)).strftime('%d %b %Y'),
                 'days_left': str(rule.trigger_days_before or 7),
                 'app_url': EmailUtils._get_app_url()
             }
@@ -1278,7 +1278,7 @@ class EmailNotificationEngine:
             recipients_summary=initial_summary,
             status="Queued",
             sent_by_id=current_user_id,
-            sent_at=datetime.utcnow()
+            sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(log_entry)
         db.session.commit()
@@ -1349,7 +1349,7 @@ class EmailNotificationEngine:
 
                 if r_obj:
                     r_obj.total_sent = (r_obj.total_sent or 0) + s_count
-                    r_obj.last_triggered_at = datetime.utcnow()
+                    r_obj.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
                 if l_obj:
                     o_status = "Delivered" if f_count == 0 else ("Partially Delivered" if s_count > 0 else "Failed")
@@ -1411,8 +1411,8 @@ class EmailNotificationEngine:
             branding = DocumentBrandingService.get_branding_context(org.id)
             tx = str(transaction_id or 'TXN-001')
             amt = float(amount or 0.0)
-            pdate = payment_date or datetime.utcnow()
-            exp_date_str = (datetime.utcnow() + timedelta(days=365 if str(billing_cycle) in ('Yearly', 'Annual') else 30)).strftime('%d %b %Y')
+            pdate = payment_date or datetime.now(timezone.utc).replace(tzinfo=None)
+            exp_date_str = (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365 if str(billing_cycle) in ('Yearly', 'Annual') else 30)).strftime('%d %b %Y')
 
             # Generate Invoice PDF bytes
             from app.utils.invoice_pdf_generator import generate_invoice_pdf_bytes
@@ -1636,7 +1636,7 @@ class EmailNotificationEngine:
             # Create Audit Log Entry
             if success_count > 0 and rule:
                 rule.total_sent = (rule.total_sent or 0) + success_count
-                rule.last_triggered_at = datetime.utcnow()
+                rule.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 log_entry = EmailNotificationLog(
                     rule_id=rule.id,
                     rule_name=rule.name,
@@ -1648,7 +1648,7 @@ class EmailNotificationEngine:
                     recipients_summary=delivery_summary,
                     status="Delivered",
                     sent_by_id=project.creator_id,
-                    sent_at=datetime.utcnow()
+                    sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.session.add(log_entry)
                 db.session.commit()
@@ -1759,7 +1759,7 @@ class EmailNotificationEngine:
             # Create Audit Log Entry
             if success_count > 0 and rule:
                 rule.total_sent = (rule.total_sent or 0) + success_count
-                rule.last_triggered_at = datetime.utcnow()
+                rule.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 log_entry = EmailNotificationLog(
                     rule_id=rule.id,
                     rule_name=rule.name,
@@ -1771,7 +1771,7 @@ class EmailNotificationEngine:
                     recipients_summary=delivery_summary,
                     status="Delivered",
                     sent_by_id=project.creator_id,
-                    sent_at=datetime.utcnow()
+                    sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.session.add(log_entry)
                 db.session.commit()
@@ -1828,7 +1828,7 @@ class EmailNotificationEngine:
             trial_end_str = org.trial_ends_at.strftime('%d %b %Y') if org.trial_ends_at else '14 Days from Registration'
             trial_days = '14'
             if org.trial_ends_at:
-                delta = (org.trial_ends_at - datetime.utcnow()).days
+                delta = (org.trial_ends_at - datetime.now(timezone.utc).replace(tzinfo=None)).days
                 trial_days = str(max(1, delta))
 
             user_name = admin_user.full_name or admin_user.username or admin_user.email.split('@')[0]
@@ -1884,11 +1884,11 @@ class EmailNotificationEngine:
                     status="Delivered" if sent else "Failed",
                     error_message=None if sent else "SMTP transmission failed",
                     sent_by_id=admin_user.id,
-                    sent_at=datetime.utcnow()
+                    sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 if rule and sent:
                     rule.total_sent = (rule.total_sent or 0) + 1
-                    rule.last_triggered_at = datetime.utcnow()
+                    rule.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.session.add(log_entry)
                 db.session.commit()
             except Exception as log_err:
@@ -2004,7 +2004,7 @@ class EmailNotificationEngine:
 
             if success_count > 0 and rule:
                 rule.total_sent = (rule.total_sent or 0) + success_count
-                rule.last_triggered_at = datetime.utcnow()
+                rule.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 log_entry = EmailNotificationLog(
                     rule_id=rule.id,
                     rule_name=rule.name,
@@ -2017,7 +2017,7 @@ class EmailNotificationEngine:
                     status="Delivered",
                     error_message=None,
                     sent_by_id=submitter_id,
-                    sent_at=datetime.utcnow()
+                    sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.session.add(log_entry)
                 db.session.commit()
@@ -2134,7 +2134,7 @@ class EmailNotificationEngine:
 
             if success_count > 0 and rule:
                 rule.total_sent = (rule.total_sent or 0) + success_count
-                rule.last_triggered_at = datetime.utcnow()
+                rule.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 log_entry = EmailNotificationLog(
                     rule_id=rule.id,
                     rule_name=rule.name,
@@ -2147,7 +2147,7 @@ class EmailNotificationEngine:
                     status="Delivered",
                     error_message=None,
                     sent_by_id=reviewer_id,
-                    sent_at=datetime.utcnow()
+                    sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.session.add(log_entry)
                 db.session.commit()
@@ -2261,7 +2261,7 @@ class EmailNotificationEngine:
 
             if success_count > 0 and rule:
                 rule.total_sent = (rule.total_sent or 0) + success_count
-                rule.last_triggered_at = datetime.utcnow()
+                rule.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 log_entry = EmailNotificationLog(
                     rule_id=rule.id,
                     rule_name=rule.name,
@@ -2274,7 +2274,7 @@ class EmailNotificationEngine:
                     status="Delivered",
                     error_message=None,
                     sent_by_id=requester_id,
-                    sent_at=datetime.utcnow()
+                    sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.session.add(log_entry)
                 db.session.commit()

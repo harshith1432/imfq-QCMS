@@ -1,0 +1,814 @@
+/**
+ * QCMS Enterprise - Dedicated Adaptive Mobile Layout Engine
+ * v1.0 - High-performance mobile UI system (Screens <= 768px & Touch Devices)
+ */
+
+/* ==========================================================================
+   1. Base Mobile Utilities & Visibility Helpers
+   ========================================================================== */
+
+:root {
+    --mobile-nav-height: 64px;
+    --mobile-nav-zindex: 1050;
+    --mobile-drawer-width: 290px;
+    --mobile-touch-target: 44px;
+}
+
+/* Touch usability & Smooth scrolling */
+@media (max-width: 768px) {
+    html {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        height: auto !important;
+        min-height: 100% !important;
+    }
+
+    body {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        -webkit-tap-highlight-color: transparent;
+        height: auto !important;
+        min-height: 100% !important;
+    }
+
+    body.is-mobile-layout {
+        font-size: 14px;
+    }
+
+    .hide-on-mobile,
+    .desktop-only {
+        display: none !important;
+    }
+
+    .mobile-only,
+    .show-on-mobile {
+        display: block !important;
+    }
+
+    .mobile-flex {
+        display: flex !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-only,
+    .show-on-mobile,
+    .app-bottom-nav {
+        display: none !important;
+    }
+
+    .hide-on-desktop {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
+   2. Native Mobile Bottom Navigation Bar (.app-bottom-nav)
+   ========================================================================== */
+
+.app-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--mobile-nav-height);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid var(--ds-border-color, rgba(0, 0, 0, 0.08));
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    z-index: var(--mobile-nav-zindex);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+    user-select: none;
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.3s ease;
+}
+
+[data-theme="dark"] .app-bottom-nav,
+body.dark-mode .app-bottom-nav {
+    background: rgba(15, 23, 42, 0.92);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.35);
+}
+
+.app-bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--ds-text-secondary, #64748b);
+    text-decoration: none !important;
+    font-size: 10.5px;
+    font-weight: 500;
+    min-width: 58px;
+    min-height: var(--mobile-touch-target);
+    padding: 4px 6px;
+    border-radius: 12px;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.app-bottom-nav-item .app-bottom-nav-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.app-bottom-nav-item .app-bottom-nav-icon i,
+.app-bottom-nav-item .app-bottom-nav-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2px;
+}
+
+.app-bottom-nav-item .app-bottom-nav-label {
+    line-height: 1;
+    white-space: nowrap;
+    letter-spacing: -0.2px;
+}
+
+/* Active & Focus States */
+.app-bottom-nav-item:active {
+    transform: scale(0.92);
+}
+
+.app-bottom-nav-item.active {
+    color: var(--ds-primary, #2563eb);
+    font-weight: 700;
+}
+
+.app-bottom-nav-item.active .app-bottom-nav-icon {
+    transform: translateY(-2px);
+    color: var(--ds-primary, #2563eb);
+}
+
+.app-bottom-nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    width: 16px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--ds-primary, #2563eb);
+    box-shadow: 0 0 8px rgba(var(--ds-primary-rgb, 37, 99, 235), 0.6);
+}
+
+/* Nav Badges */
+.app-bottom-nav-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--ds-danger, #ef4444);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border: 1.5px solid #ffffff;
+}
+
+[data-theme="dark"] .app-bottom-nav-badge {
+    border-color: #0f172a;
+}
+
+/* Bottom Nav Padding on App Content */
+@media (max-width: 768px) {
+    .app-main,
+    .app-content,
+    .app-content-inner,
+    main {
+        padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 16px) + 16px) !important;
+    }
+}
+
+/* ==========================================================================
+   3. Offcanvas Mobile Drawer with Swipe-to-Close
+   ========================================================================== */
+
+@media (max-width: 768px), (max-width: 1024px) {
+    .app-sidebar,
+    .glass-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: var(--mobile-drawer-width) !important;
+        max-width: 85vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 1060 !important;
+        background: var(--ds-bg-surface, #ffffff) !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.35s ease !important;
+        box-shadow: none !important;
+        visibility: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-right: 1px solid var(--ds-border-color) !important;
+    }
+
+    [data-theme="dark"] .app-sidebar,
+    [data-theme="dark"] .glass-sidebar,
+    body.dark-mode .app-sidebar {
+        background: var(--ds-bg-surface, #0f172a) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .app-sidebar.show,
+    .glass-sidebar.show,
+    body.sidebar-mobile-open .app-sidebar,
+    body.sidebar-mobile-open .glass-sidebar {
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        box-shadow: 20px 0 60px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    /* Swipe-to-close grab handle indicator on sidebar */
+    .app-sidebar::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: 4px;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 36px;
+        border-radius: 2px;
+        background: rgba(128, 128, 128, 0.25);
+        pointer-events: none;
+    }
+
+    /* Backdrop */
+    .sidebar-backdrop {
+        position: fixed !important;
+        inset: 0 !important;
+        background: rgba(15, 23, 42, 0.65) !important;
+        backdrop-filter: blur(6px) !important;
+        -webkit-backdrop-filter: blur(6px) !important;
+        z-index: 1055 !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.35s !important;
+    }
+
+    .sidebar-backdrop.show,
+    body.sidebar-mobile-open .sidebar-backdrop {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+
+    /* App Main Reset */
+    .app-main {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+/* ==========================================================================
+   4. Native Responsive Data Tables (.table-responsive, .ds-table)
+   ========================================================================== */
+
+.table-responsive,
+.ds-table-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    position: relative;
+    display: block !important;
+}
+
+@media (max-width: 768px) {
+    /* Maintain genuine table layout with smooth horizontal touch-scrolling */
+    .table-responsive,
+    .ds-table-container {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin-bottom: var(--ds-space-3, 12px);
+    }
+
+    .table-responsive table,
+    .table-responsive table.ds-table,
+    .table-responsive table.table,
+    .ds-table-container table,
+    .ds-table-container table.ds-table,
+    table.ds-table,
+    table.table {
+        display: table !important;
+        width: 100% !important;
+        min-width: 720px !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        background: transparent !important;
+    }
+
+    .table-responsive thead,
+    .ds-table-container thead,
+    table.ds-table thead,
+    table.table thead {
+        display: table-header-group !important;
+    }
+
+    .table-responsive thead tr,
+    .ds-table-container thead tr,
+    table.ds-table thead tr,
+    table.table thead tr {
+        display: table-row !important;
+        background: var(--ds-bg-surface-secondary, rgba(0, 0, 0, 0.02)) !important;
+    }
+
+    .table-responsive thead th,
+    .table-responsive thead td,
+    .ds-table-container thead th,
+    .ds-table-container thead td,
+    table.ds-table thead th,
+    table.table thead th {
+        display: table-cell !important;
+        white-space: nowrap !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px !important;
+        text-transform: uppercase !important;
+        padding: 10px 14px !important;
+        color: var(--ds-text-secondary, #64748b) !important;
+        border-bottom: 1px solid var(--ds-border-color, rgba(0, 0, 0, 0.08)) !important;
+        vertical-align: middle !important;
+    }
+
+    .table-responsive tbody,
+    .ds-table-container tbody,
+    table.ds-table tbody,
+    table.table tbody {
+        display: table-row-group !important;
+    }
+
+    .table-responsive tbody tr,
+    .ds-table-container tbody tr,
+    table.ds-table tbody tr,
+    table.table tbody tr {
+        display: table-row !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        border: none !important;
+        border-bottom: 1px solid var(--ds-border-color, rgba(0, 0, 0, 0.06)) !important;
+    }
+
+    .table-responsive tbody tr td,
+    .ds-table-container tbody tr td,
+    table.ds-table tbody tr td,
+    table.table tbody tr td {
+        display: table-cell !important;
+        white-space: nowrap !important;
+        font-size: 12px !important;
+        padding: 11px 14px !important;
+        vertical-align: middle !important;
+        text-align: left !important;
+        border: none !important;
+        border-bottom: 1px solid var(--ds-border-color, rgba(0, 0, 0, 0.06)) !important;
+        min-height: auto !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+
+    .table-responsive tbody tr td:last-child,
+    .ds-table-container tbody tr td:last-child,
+    table.ds-table tbody tr td:last-child,
+    table.table tbody tr td:last-child {
+        text-align: center !important;
+        white-space: nowrap !important;
+    }
+
+    /* Disable pseudo data-label injections completely */
+    .table-responsive tbody tr td[data-label]::before,
+    .ds-table-container tbody tr td[data-label]::before,
+    table.ds-table tbody tr td[data-label]::before,
+    table.table tbody tr td[data-label]::before {
+        display: none !important;
+        content: none !important;
+    }
+}
+
+/* ==========================================================================
+   5. Slide-up Mobile Bottom Sheets for Modals
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .modal:not(.show) {
+        display: none !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+    }
+
+    .modal.show {
+        padding: 0 !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
+    }
+
+    .modal-dialog {
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: translateY(100%) !important;
+        transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1) !important;
+        z-index: 1065 !important;
+        pointer-events: none !important;
+    }
+
+    .modal.show .modal-dialog {
+        transform: translateY(0) !important;
+        pointer-events: auto !important;
+    }
+
+    .modal-content {
+        border-radius: 20px 20px 0 0 !important;
+        max-height: 85vh !important;
+        max-height: 85dvh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        border: 1px solid var(--ds-border-color, rgba(0,0,0,0.1)) !important;
+        border-bottom: none !important;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3) !important;
+        background: var(--ds-bg-surface, #ffffff) !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+
+    [data-theme="dark"] .modal-content,
+    body.dark-mode .modal-content {
+        background: var(--ds-bg-surface, #0f172a) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Modal Grab Handle Bar */
+    .modal-header {
+        padding: 20px 18px 12px !important;
+        position: relative !important;
+        flex-shrink: 0 !important;
+        border-bottom: 1px solid var(--ds-border-color) !important;
+    }
+
+    .modal-header::before {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 5px;
+        border-radius: 3px;
+        background: rgba(128, 128, 128, 0.35);
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .modal-body {
+        padding: 16px 18px !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        flex: 1 1 auto !important;
+        max-height: calc(85vh - 135px) !important;
+        max-height: calc(85dvh - 135px) !important;
+    }
+
+    .modal-footer {
+        padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+        flex-shrink: 0 !important;
+        border-top: 1px solid var(--ds-border-color) !important;
+        background: var(--ds-bg-surface, #ffffff) !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .modal-footer > * {
+        flex: 1 !important;
+        justify-content: center !important;
+    }
+}
+
+/* ==========================================================================
+   6. 44px Minimum Touch Targets
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    /* Touch Target Dimensions */
+    .ds-btn,
+    .btn,
+    button:not(.btn-close):not(.ds-btn-xs):not(.btn-xs),
+    .ds-input,
+    .form-control,
+    .ds-select,
+    .form-select,
+    .stage-nav-btn {
+        min-height: var(--mobile-touch-target) !important;
+        font-size: 14px;
+    }
+
+    /* Small/Ghost action icon buttons touch zone expansion */
+    .ds-btn-ghost,
+    .ds-btn-icon,
+    .icon-btn,
+    #sidebar-toggle-btn {
+        min-width: var(--mobile-touch-target) !important;
+        min-height: var(--mobile-touch-target) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* Form Fields Spacing */
+    .ds-field,
+    .form-group,
+    .mb-3 {
+        margin-bottom: 16px !important;
+    }
+
+    .ds-label,
+    .form-label {
+        margin-bottom: 6px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Radios & Checkboxes */
+    input[type="checkbox"],
+    input[type="radio"] {
+        min-width: 22px;
+        min-height: 22px;
+        cursor: pointer;
+    }
+
+    /* Dropdown Items */
+    .dropdown-item {
+        min-height: var(--mobile-touch-target);
+        display: flex;
+        align-items: center;
+        padding: 10px 16px !important;
+        font-size: 14px !important;
+    }
+}
+
+/* ==========================================================================
+   7. Stage Workspace Mobile Adaptation (Carousel & Accordions)
+   ========================================================================== */
+
+/* Swipeable Stage Carousel Pills */
+.stage-carousel-container {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding: 6px 2px 10px 2px;
+    margin-bottom: 16px;
+}
+
+.stage-carousel-container::-webkit-scrollbar {
+    display: none;
+}
+
+.stage-pill-item {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 14px;
+    background: var(--ds-bg-surface, #ffffff);
+    border: 1.5px solid var(--ds-border-color, rgba(0, 0, 0, 0.08));
+    color: var(--ds-text-secondary, #64748b);
+    font-size: 12.5px;
+    font-weight: 600;
+    min-height: var(--mobile-touch-target);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.stage-pill-item.active {
+    background: var(--ds-primary, #2563eb);
+    border-color: var(--ds-primary, #2563eb);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(var(--ds-primary-rgb, 37, 99, 235), 0.35);
+}
+
+.stage-pill-item.completed {
+    border-color: #10b981;
+    color: #10b981;
+}
+
+.stage-pill-item.completed.active {
+    background: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.stage-pill-item.locked {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* 6M Fishbone Mobile Accordion Mode */
+.fishbone-mobile-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.fishbone-cat-card {
+    background: var(--ds-bg-surface, #ffffff);
+    border: 1px solid var(--ds-border-color, rgba(0, 0, 0, 0.08));
+    border-radius: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.fishbone-cat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13.5px;
+    user-select: none;
+    min-height: var(--mobile-touch-target);
+}
+
+.fishbone-cat-header .fishbone-cat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.fishbone-cat-body {
+    padding: 10px 14px 14px;
+    border-top: 1px solid var(--ds-border-color, rgba(0, 0, 0, 0.05));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fishbone-cause-item {
+    background: rgba(var(--ds-primary-rgb, 37, 99, 235), 0.04);
+    border-radius: 8px;
+    padding: 8px 12px;
+    border-left: 3px solid var(--ds-primary, #2563eb);
+}
+
+.fishbone-cause-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--ds-text-main, #0f172a);
+    margin-bottom: 4px;
+}
+
+.fishbone-subcause-tag {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--ds-text-secondary, #64748b);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    margin-right: 4px;
+    margin-top: 2px;
+}
+
+/* 5-Why Mobile Stepped Flow */
+.five-why-mobile-stepper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+    position: relative;
+}
+
+.five-why-step-card {
+    background: var(--ds-bg-surface, #ffffff);
+    border: 1.5px solid var(--ds-border-color, rgba(0, 0, 0, 0.08));
+    border-radius: 12px;
+    padding: 12px 14px;
+    position: relative;
+}
+
+.five-why-step-card.is-root-cause {
+    border-color: var(--ds-danger, #ef4444);
+    background: rgba(239, 68, 68, 0.04);
+}
+
+.five-why-step-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.five-why-step-num {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--ds-primary, #2563eb);
+    letter-spacing: 0.5px;
+}
+
+.five-why-step-card.is-root-cause .five-why-step-num {
+    color: var(--ds-danger, #ef4444);
+}
+
+.five-why-connector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--ds-text-secondary);
+    padding: 2px 0;
+}
+
+/* ==========================================================================
+   8. Mobile File Upload & Form Ergonomics
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    input[type="file"].ds-input,
+    input[type="file"].form-control {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        font-size: 13px !important;
+        padding: 8px 10px !important;
+        height: auto !important;
+        min-height: 44px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Headings with icons: prevent icon squishing on wrapped text */
+    h1, h2, h3, h4, h5, h6,
+    .card-title, .modal-title {
+        word-break: break-word;
+    }
+
+    h1 > i[data-lucide], h2 > i[data-lucide], h3 > i[data-lucide],
+    h4 > i[data-lucide], h5 > i[data-lucide], h6 > i[data-lucide],
+    .d-flex > i[data-lucide] {
+        flex-shrink: 0 !important;
+    }
+
+    /* 5-Why row wrapper responsiveness */
+    .dyn-why-row {
+        padding: 12px 14px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .dyn-why-row .row.g-2 {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .dyn-why-row .col-12,
+    .dyn-why-row .col-md-2,
+    .dyn-why-row .col-md-4 {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        width: 100% !important;
+    }
+}
+

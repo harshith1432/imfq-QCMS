@@ -6,16 +6,17 @@ from app.infrastructure.database.models.models import (
     ModuleUsageAnalytics, AuditLog, AnalyticsCache, AnalyticsReport,
     AnalyticsSchedule, AnalyticsExport, AnalyticsAIInsights, AnalyticsUsage,
     ProjectStageTracker, Stage8Implementation, KnowledgeRepository, Department, ProjectMeeting,
-    SaaSPlan, SaaSPlanPricing, ProjectWorkflow, ProjectMember
+    SaaSPlan, SaaSPlanPricing, ProjectWorkflow, ProjectMember, ProjectReview
 )
 from sqlalchemy import func, or_, and_, text
 import sqlalchemy as sa
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import csv
 import io
 from app.domain.services.document_branding_service import DocumentBrandingService
 from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
+from app.presentation.routes.error_helpers import internal_server_error
 
 try:
     import psutil
@@ -36,7 +37,7 @@ def log_analytics_action(user, action_type, details=None):
             details=details or {},
             ip_address=ip,
             user_agent=user_agent,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(log)
         db.session.commit()
@@ -48,12 +49,12 @@ def log_analytics_action(user, action_type, details=None):
 def get_project_roster():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return jsonify({"message": "User not found"}), 404
 
         org_id = user.org_id
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         today = now.date()
 
         page = request.args.get('page', type=int, default=1)
@@ -140,7 +141,7 @@ def get_project_roster():
                 curr_stage = 8
             stage_label = _stage_labels[min(7, max(0, curr_stage - 1))]
 
-            comp_pct = 100 if p.status in ('Closed', 'Completed', 'Archived') else min(95, max(10, int((curr_stage / 8.0) * 100)))
+            comp_pct = 100 if p.status in ('Closed', 'Completed', 'Archived') else min(95, max(10, (int(curr_stage / 8.0) * 100)))
             mgr_name = p.team_leader.full_name or p.team_leader.username if p.team_leader else (p.creator.full_name if p.creator else 'Manager')
             dept_name = p.department.name if p.department else 'Manufacturing'
 
@@ -175,7 +176,7 @@ def get_project_roster():
 
     except Exception as e:
         print("Error in get_project_roster:", e)
-        return jsonify({"message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PRESERVED ENDPOINT: Dashboard (Project performance)
@@ -185,7 +186,7 @@ def get_project_roster():
 def get_dashboard_data():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return jsonify({"message": "User not found"}), 404
         
@@ -193,7 +194,7 @@ def get_dashboard_data():
         role = user.role.name if user.role else 'Team Member'
         target_project_id = request.args.get('project_id', type=int) or request.args.get('project', type=int) or request.args.get('id', type=int)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         today = now.date()
 
         # ── Date-range filtering ──────────────────────────────────────────────
@@ -276,7 +277,7 @@ def get_dashboard_data():
 
         project_performance_table = []
         for p in all_org_projects:
-            comp_pct = 100 if p.status == 'Closed' else min(95, max(10, int((p.current_stage / 8.0) * 100)))
+            comp_pct = 100 if p.status == 'Closed' else min(95, max(10, (int(p.current_stage / 8.0) * 100)))
             is_done = p.status in ('Closed', 'Completed', 'Archived')
             if is_done:
                 # Frozen historical snapshot: deadline minus actual completion date
@@ -346,11 +347,11 @@ def get_dashboard_data():
             })
 
         if target_project_id:
-            proj = Project.query.get(target_project_id)
+            proj = db.session.get(Project, target_project_id)
             if not proj:
                 return jsonify({"message": "Project not found"}), 404
 
-            comp_pct = 100 if proj.status == 'Closed' else min(95, max(15, int((proj.current_stage / 8.0) * 100)))
+            comp_pct = 100 if proj.status == 'Closed' else min(95, max(15, (int(proj.current_stage / 8.0) * 100)))
             days_rem = (proj.end_date - today).days if proj.end_date else 12
             health = 'Healthy'
             if proj.status != 'Closed':
@@ -446,7 +447,7 @@ def get_dashboard_data():
             real_activity_feed = []
             if audit_logs:
                 for log in audit_logs:
-                    log_user = User.query.get(log.user_id) if log.user_id else None
+                    log_user = db.session.get(User, log.user_id) if log.user_id else None
                     u_name = log_user.full_name if (log_user and log_user.full_name) else (log_user.username if log_user else mgr_name)
                     t_diff = now - log.created_at
                     if t_diff.total_seconds() < 3600:
@@ -603,7 +604,7 @@ def get_dashboard_data():
             facil_email = facil_user.email if facil_user else 'facilitator@qcms.internal'
             facil_avatar = f"https://ui-avatars.com/api/?name={facil_name.replace(' ', '+')}&background=10b981&color=fff"
 
-            rev_user = User.query.get(proj.reviewer_id) if getattr(proj, 'reviewer_id', None) else None
+            rev_user = db.session.get(User, proj.reviewer_id) if getattr(proj, 'reviewer_id', None) else None
             rev_name = rev_user.full_name or rev_user.username if rev_user else 'Assigned Reviewer'
             rev_email = rev_user.email if rev_user else 'reviewer@qcms.internal'
             rev_avatar = f"https://ui-avatars.com/api/?name={rev_name.replace(' ', '+')}&background=f59e0b&color=fff"
@@ -736,63 +737,684 @@ def get_dashboard_data():
                     })
 
             # Full timeline audit logs
+            # Full timeline audit logs
             full_project_logs = []
+            seen_lifecycle_keys = set()
+
+            # 1. Process all database audit logs
             for log in all_proj_logs:
-                u = User.query.get(log.user_id) if log.user_id else None
+                u = db.session.get(User, log.user_id) if log.user_id else None
                 u_name = u.full_name or u.username if u else (mgr_name if log.user_id == proj.team_leader_id else "System")
                 u_role = u.role.name if (u and u.role) else "Contributor"
                 u_avatar = f"https://ui-avatars.com/api/?name={u_name.replace(' ', '+')}&background=3b82f6&color=fff"
 
                 act_lower = (log.action or '').lower()
                 det_str = log.details if isinstance(log.details, str) else (json.dumps(log.details) if log.details else '')
+                det_lower = det_str.lower()
                 
-                # Determine event category & visual badge color
-                if any(w in act_lower for w in ['joined', 'added', 'left', 'removed', 'member', 'team']):
+                # Determine event category strictly
+                is_member_event = (
+                    log.target_table == 'project_members' or
+                    any(p in act_lower for p in [
+                        'team member joined', 'team member left', 'member joined', 'member left',
+                        'member added', 'member removed', 'team member removed', 'team member added',
+                        'member transition', 'facilitator assigned', 'facilitator changed', 'facilitator replaced',
+                        'reviewer assigned', 'reviewer changed', 'reviewer replaced', 'team leader assigned', 'team leader changed',
+                        'team leader replaced', 'project initialized & team formed', 'team formed', 'left project', 'removed from project'
+                    ])
+                )
+                
+                if is_member_event:
                     event_type = 'member_lifecycle'
-                    badge_color = 'purple'
-                elif any(w in act_lower for w in ['stage', 'submit', 'save', 'update', 'entered', 'form', 'workflow', 'data', 'tool', 'fishbone', '5-why']):
+                    if 'left' in act_lower or 'removed' in act_lower:
+                        badge_color = 'red'
+                        transition_type = 'left'
+                        
+                        m_data = {}
+                        if isinstance(log.details, dict):
+                            m_data = log.details
+                        elif isinstance(log.details, str) and log.details.strip().startswith('{'):
+                            try: m_data = json.loads(log.details)
+                            except Exception: pass
+
+                        m_id = m_data.get('member_id') or log.target_id
+                        m_user = db.session.get(User, m_id) if m_id else None
+                        m_name = m_data.get('member_name') or ((m_user.full_name or m_user.username) if m_user else None)
+                        if not m_name and ' left ' in det_str:
+                            m_name = det_str.split(' left ')[0].strip()
+                        m_name = m_name or "Team Member"
+                        m_role = m_data.get('member_role') or (m_user.role.name if (m_user and m_user.role) else "Team Member")
+                        m_avatar = f"https://ui-avatars.com/api/?name={(m_name).replace(' ', '+')}&background=ef4444&color=fff"
+
+                        # Determine join time
+                        joined_dt = None
+                        if m_data.get('joined_at'):
+                            try: joined_dt = datetime.strptime(m_data['joined_at'], '%b %d, %Y %H:%M:%S')
+                            except Exception: pass
+                        if not joined_dt and m_id:
+                            j_log = AuditLog.query.filter_by(project_id=target_project_id, target_table='project_members', target_id=m_id).filter(AuditLog.action.ilike('%joined%')).order_by(AuditLog.created_at.asc()).first()
+                            if j_log and j_log.created_at:
+                                joined_dt = j_log.created_at
+                        if not joined_dt:
+                            joined_dt = proj.created_at or log.created_at
+
+                        left_dt = log.created_at or datetime.now(timezone.utc).replace(tzinfo=None)
+
+                        tenure_str = m_data.get('duration')
+                        if not tenure_str and left_dt and joined_dt:
+                            delta = left_dt - joined_dt
+                            days = max(0, delta.days)
+                            hours = delta.seconds // 3600
+                            mins = (delta.seconds % 3600) // 60
+                            parts = []
+                            if days > 0: parts.append(f"{days} Day{'s' if days != 1 else ''}")
+                            if hours > 0: parts.append(f"{hours} Hr{'s' if hours != 1 else ''}")
+                            if mins > 0 or not parts: parts.append(f"{mins} Min{'s' if mins != 1 else ''}")
+                            tenure_str = ", ".join(parts)
+
+                        det_payload = {
+                            "type": "left",
+                            "member_name": m_name,
+                            "member_role": m_role,
+                            "member_avatar": m_avatar,
+                            "joined_at": joined_dt.strftime('%b %d, %Y %H:%M:%S') if joined_dt else "Project Inception",
+                            "left_at": left_dt.strftime('%b %d, %Y %H:%M:%S') if left_dt else "Recently",
+                            "working_period": f"{joined_dt.strftime('%b %d, %Y %H:%M') if joined_dt else 'Start'} \u2192 {left_dt.strftime('%b %d, %Y %H:%M') if left_dt else 'End'}",
+                            "duration": tenure_str or "N/A",
+                            "actor_name": u_name,
+                            "actor_role": u_role,
+                            "action_label": "Left Project in Middle (Removed from Team)",
+                            "status": "Left in Middle"
+                        }
+                        det_str = json.dumps(det_payload)
+
+                    elif 'joined' in act_lower or 'added' in act_lower:
+                        badge_color = 'purple'
+                        transition_type = 'joined'
+
+                        m_data = {}
+                        if isinstance(log.details, dict): m_data = log.details
+                        elif isinstance(log.details, str) and log.details.strip().startswith('{'):
+                            try: m_data = json.loads(log.details)
+                            except Exception: pass
+
+                        m_id = m_data.get('member_id') or log.target_id
+                        m_user = db.session.get(User, m_id) if m_id else None
+                        m_name = m_data.get('member_name') or ((m_user.full_name or m_user.username) if m_user else None)
+                        if not m_name and ' was added' in det_str:
+                            m_name = det_str.split(' was added')[0].strip()
+                        m_name = m_name or u_name
+                        m_role = m_data.get('member_role') or (m_user.role.name if (m_user and m_user.role) else "Team Member")
+                        m_avatar = f"https://ui-avatars.com/api/?name={(m_name).replace(' ', '+')}&background=8b5cf6&color=fff"
+                        joined_dt = log.created_at or proj.created_at
+
+                        det_payload = {
+                            "type": "joined",
+                            "member_name": m_name,
+                            "member_role": m_role,
+                            "member_avatar": m_avatar,
+                            "joined_at": joined_dt.strftime('%b %d, %Y %H:%M:%S') if joined_dt else "Project Inception",
+                            "working_period": f"Since {joined_dt.strftime('%b %d, %Y %H:%M')} (Active)",
+                            "duration": "Active Contributor",
+                            "actor_name": u_name,
+                            "actor_role": u_role,
+                            "action_label": "Joined Active Project Team",
+                            "status": "Active Member"
+                        }
+                        det_str = json.dumps(det_payload)
+
+                    elif 'facilitator' in act_lower:
+                        badge_color = 'cyan'
+                        transition_type = 'facilitator'
+                    elif 'leader' in act_lower:
+                        badge_color = 'amber'
+                        transition_type = 'leader'
+                    elif 'reviewer' in act_lower:
+                        badge_color = 'blue'
+                        transition_type = 'reviewer'
+                    else:
+                        badge_color = 'purple'
+                        transition_type = 'joined'
+                    
+                    if log.user_id:
+                        seen_lifecycle_keys.add((log.user_id, transition_type))
+                elif any(w in act_lower for w in ['stage', 'submit', 'save', 'update', 'entered', 'form', 'workflow', 'data', 'tool', 'fishbone', '5-why', 'pareto', 'stratification', 'check_sheet', 'note', 'post-data']):
                     event_type = 'data_entry'
                     badge_color = 'blue'
+                    transition_type = None
                 elif any(w in act_lower for w in ['approve', 'review', 'reject', 'close', 'closure']):
                     event_type = 'governance'
                     badge_color = 'green' if ('approve' in act_lower or 'close' in act_lower) else 'red'
-                elif any(w in act_lower for w in ['meeting', 'attendance']):
-                    event_type = 'meeting'
-                    badge_color = 'cyan'
-                else:
-                    event_type = 'activity'
-                    badge_color = 'secondary'
+                   # 2. Inject synthesized baseline lifecycle logs for Circle Leadership & Roster
+            pw_s1 = ProjectWorkflow.query.filter_by(project_id=target_project_id, stage_id=1).first()
+            d1_data = pw_s1.data if (pw_s1 and isinstance(pw_s1.data, dict)) else {}
+            init_s1 = d1_data.get('init') or {}
+            team_s1 = d1_data.get('team') or {}
+            start_dt = proj.created_at or datetime.now(timezone.utc).replace(tzinfo=None)
 
-                full_project_logs.append({
-                    "id": log.id,
-                    "user_id": log.user_id,
-                    "user_name": u_name,
-                    "user_role": u_role,
-                    "user_avatar": u_avatar,
-                    "action": log.action or "Project Action Logged",
-                    "details": det_str or f"Action performed by {u_name}",
-                    "event_type": event_type,
-                    "badge_color": badge_color,
-                    "timestamp": log.created_at.strftime('%b %d, %Y %H:%M') if log.created_at else "Recently",
-                    "iso_time": log.created_at.isoformat() if log.created_at else None
-                })
+            # A) Team Leader
+            tl_user = proj.team_leader or proj.creator
+            curr_tl_name = ((tl_user.full_name or tl_user.username) if tl_user else mgr_name).strip()
+            init_tl_name = (init_s1.get('team_leader') or '').strip()
+            
+            if init_tl_name and curr_tl_name and init_tl_name.lower() != curr_tl_name.lower():
+                tl_log = AuditLog.query.filter(AuditLog.project_id == target_project_id, db.or_(AuditLog.action.ilike('%team leader%'), AuditLog.action.ilike('%stakeholder%'), AuditLog.action.ilike('%updated project%'))).order_by(AuditLog.created_at.asc()).first()
+                tl_change_dt = tl_log.created_at if (tl_log and tl_log.created_at) else (getattr(proj, 'updated_at', None) or (start_dt + timedelta(days=14)))
+                if tl_change_dt < start_dt: tl_change_dt = start_dt
+                delta_tl = tl_change_dt - start_dt
+                days_tl = max(1, delta_tl.days)
+                tenure_tl = f"{days_tl} Day{'s' if days_tl != 1 else ''}"
 
-            if not full_project_logs:
-                creator_user = proj.creator or proj.team_leader
-                c_name = creator_user.full_name or creator_user.username if creator_user else mgr_name
+                # Previous Team Leader
+                prev_tl_payload = {
+                    "type": "left",
+                    "member_name": init_tl_name,
+                    "member_role": "Team Leader (Previous / Handover)",
+                    "member_avatar": f"https://ui-avatars.com/api/?name={init_tl_name.replace(' ', '+')}&background=ef4444&color=fff",
+                    "joined_at": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "left_at": tl_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "working_period": f"{start_dt.strftime('%b %d, %Y %H:%M')} \u2192 {tl_change_dt.strftime('%b %d, %Y %H:%M')}",
+                    "duration": tenure_tl,
+                    "actor_name": curr_tl_name,
+                    "actor_role": "Team Leader",
+                    "action_label": f"Team Leader Handover: {init_tl_name} \u2192 {curr_tl_name}",
+                    "status": "Handed Over in Middle",
+                    "reason": f"Leadership handover to {curr_tl_name}"
+                }
                 full_project_logs.append({
-                    "id": 0,
-                    "user_id": creator_user.id if creator_user else 0,
-                    "user_name": c_name,
-                    "user_role": "Team Leader",
-                    "user_avatar": f"https://ui-avatars.com/api/?name={c_name.replace(' ', '+')}&background=2563eb&color=fff",
-                    "action": "Project Initialized & Team Formed",
-                    "details": f"Initiated Quality Circle project {proj.project_uid or f'PRJ-{proj.id}'} with title '{proj.title}'",
+                    "id": f"prev_tl_{init_tl_name}",
+                    "user_name": init_tl_name,
+                    "user_role": "Team Leader (Past)",
+                    "user_avatar": f"https://ui-avatars.com/api/?name={init_tl_name.replace(' ', '+')}&background=ef4444&color=fff",
+                    "action": f"Team Leader Handover: {init_tl_name} \u2192 {curr_tl_name}",
+                    "details": json.dumps(prev_tl_payload),
                     "event_type": "member_lifecycle",
-                    "badge_color": "purple",
-                    "timestamp": proj.created_at.strftime('%b %d, %Y %H:%M') if proj.created_at else "Project Inception",
-                    "iso_time": proj.created_at.isoformat() if proj.created_at else None
+                    "transition_type": "left",
+                    "badge_color": "red",
+                    "timestamp": tl_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "iso_time": tl_change_dt.isoformat()
                 })
+                seen_lifecycle_keys.add((init_tl_name.lower(), 'leader'))
+
+                # Current Team Leader
+                curr_tl_payload = {
+                    "type": "leader",
+                    "member_name": curr_tl_name,
+                    "member_role": "Team Leader (Active)",
+                    "member_avatar": f"https://ui-avatars.com/api/?name={curr_tl_name.replace(' ', '+')}&background=f59e0b&color=fff",
+                    "joined_at": tl_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "working_period": f"Since {tl_change_dt.strftime('%b %d, %Y %H:%M')} (Active Circle Leader)",
+                    "duration": "Circle Leader",
+                    "actor_name": curr_tl_name,
+                    "actor_role": "Team Leader",
+                    "action_label": f"Team Leader Handover Taken (from {init_tl_name})",
+                    "status": "Circle Leader"
+                }
+                full_project_logs.append({
+                    "id": f"tl_init_{tl_user.id if tl_user else 'curr'}",
+                    "user_id": tl_user.id if tl_user else None,
+                    "user_name": curr_tl_name,
+                    "user_role": "Team Leader",
+                    "user_avatar": f"https://ui-avatars.com/api/?name={curr_tl_name.replace(' ', '+')}&background=f59e0b&color=fff",
+                    "action": f"Team Leader Handover Taken (from {init_tl_name})",
+                    "details": json.dumps(curr_tl_payload),
+                    "event_type": "member_lifecycle",
+                    "transition_type": "leader",
+                    "badge_color": "amber",
+                    "timestamp": tl_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "iso_time": tl_change_dt.isoformat()
+                })
+                seen_lifecycle_keys.add((tl_user.id if tl_user else curr_tl_name, 'leader'))
+            elif tl_user and (tl_user.id, 'leader') not in seen_lifecycle_keys:
+                tl_payload = {
+                    "type": "leader",
+                    "member_name": curr_tl_name,
+                    "member_role": "Team Leader",
+                    "member_avatar": f"https://ui-avatars.com/api/?name={curr_tl_name.replace(' ', '+')}&background=f59e0b&color=fff",
+                    "joined_at": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "working_period": f"Since {start_dt.strftime('%b %d, %Y %H:%M')} (Circle Leader)",
+                    "duration": "Circle Leader",
+                    "actor_name": curr_tl_name,
+                    "actor_role": "Team Leader",
+                    "action_label": "Team Leader Joined & Project Initialized",
+                    "status": "Circle Leader"
+                }
+                full_project_logs.append({
+                    "id": f"tl_init_{tl_user.id}",
+                    "user_id": tl_user.id,
+                    "user_name": curr_tl_name,
+                    "user_role": "Team Leader",
+                    "user_avatar": f"https://ui-avatars.com/api/?name={curr_tl_name.replace(' ', '+')}&background=f59e0b&color=fff",
+                    "action": "Team Leader Joined & Project Initialized",
+                    "details": json.dumps(tl_payload),
+                    "event_type": "member_lifecycle",
+                    "transition_type": "leader",
+                    "badge_color": "amber",
+                    "timestamp": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "iso_time": start_dt.isoformat()
+                })
+
+            # B) Quality Facilitator
+            init_fac_name = (init_s1.get('facilitator') or '').strip()
+            init_fac_id = init_s1.get('facilitator_id')
+            curr_fac_name = ((proj.facilitator.full_name or proj.facilitator.username) if proj.facilitator else '').strip()
+
+            if init_fac_name and curr_fac_name and init_fac_name.lower() != curr_fac_name.lower():
+                fac_log = AuditLog.query.filter(AuditLog.project_id == target_project_id, db.or_(AuditLog.action.ilike('%facilitator%'), AuditLog.action.ilike('%stakeholder%'), AuditLog.action.ilike('%updated project%'), AuditLog.action.ilike('%stage 1 draft saved%'))).order_by(AuditLog.created_at.asc()).first()
+                fac_change_dt = fac_log.created_at if (fac_log and fac_log.created_at) else (getattr(proj, 'updated_at', None) or (start_dt + timedelta(days=10)))
+                if fac_change_dt < start_dt: fac_change_dt = start_dt
+                delta_fac = fac_change_dt - start_dt
+                days_fac = max(1, delta_fac.days)
+                tenure_fac = f"{days_fac} Day{'s' if days_fac != 1 else ''}"
+
+                # Previous Facilitator (Replaced)
+                prev_fac_payload = {
+                    "type": "left",
+                    "member_name": init_fac_name,
+                    "member_role": "Quality Facilitator (Previous / Replaced)",
+                    "member_avatar": f"https://ui-avatars.com/api/?name={init_fac_name.replace(' ', '+')}&background=ef4444&color=fff",
+                    "joined_at": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "left_at": fac_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "working_period": f"{start_dt.strftime('%b %d, %Y %H:%M')} \u2192 {fac_change_dt.strftime('%b %d, %Y %H:%M')}",
+                    "duration": tenure_fac,
+                    "actor_name": curr_tl_name,
+                    "actor_role": "Team Leader",
+                    "action_label": f"Quality Facilitator Replaced: {init_fac_name} \u2192 {curr_fac_name}",
+                    "status": "Replaced / Departed in Middle",
+                    "reason": f"Facilitator handover to {curr_fac_name}"
+                }
+                full_project_logs.append({
+                    "id": f"prev_fac_{init_fac_id or init_fac_name}",
+                    "user_name": init_fac_name,
+                    "user_role": "Quality Facilitator (Past)",
+                    "user_avatar": f"https://ui-avatars.com/api/?name={init_fac_name.replace(' ', '+')}&background=ef4444&color=fff",
+                    "action": f"Quality Facilitator Replaced: {init_fac_name} \u2192 {curr_fac_name}",
+                    "details": json.dumps(prev_fac_payload),
+                    "event_type": "member_lifecycle",
+                    "transition_type": "left",
+                    "badge_color": "red",
+                    "timestamp": fac_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "iso_time": fac_change_dt.isoformat()
+                })
+                seen_lifecycle_keys.add((init_fac_name.lower(), 'facilitator'))
+
+                # Current Facilitator
+                curr_fac_payload = {
+                    "type": "facilitator",
+                    "member_name": curr_fac_name,
+                    "member_role": "Quality Facilitator (Active)",
+                    "member_avatar": f"https://ui-avatars.com/api/?name={curr_fac_name.replace(' ', '+')}&background=06b6d4&color=fff",
+                    "joined_at": fac_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "working_period": f"Since {fac_change_dt.strftime('%b %d, %Y %H:%M')} (Active Facilitator)",
+                    "duration": "Active QA Guide",
+                    "actor_name": curr_tl_name,
+                    "actor_role": "Team Leader",
+                    "action_label": f"Quality Facilitator Assigned (Handover from {init_fac_name})",
+                    "status": "Active Facilitator"
+                }
+                full_project_logs.append({
+                    "id": f"curr_fac_{proj.facilitator_id}",
+                    "user_id": proj.facilitator_id,
+                    "user_name": curr_fac_name,
+                    "user_role": "Quality Facilitator",
+                    "user_avatar": f"https://ui-avatars.com/api/?name={curr_fac_name.replace(' ', '+')}&background=06b6d4&color=fff",
+                    "action": f"Quality Facilitator Assigned (Handover from {init_fac_name})",
+                    "details": json.dumps(curr_fac_payload),
+                    "event_type": "member_lifecycle",
+                    "transition_type": "facilitator",
+                    "badge_color": "cyan",
+                    "timestamp": fac_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "iso_time": fac_change_dt.isoformat()
+                })
+                seen_lifecycle_keys.add((proj.facilitator_id, 'facilitator'))
+            elif proj.facilitator_id and (proj.facilitator_id, 'facilitator') not in seen_lifecycle_keys:
+                fac_u = db.session.get(User, proj.facilitator_id)
+                if fac_u:
+                    fac_name = fac_u.full_name or fac_u.username
+                    fac_payload = {
+                        "type": "facilitator",
+                        "member_name": fac_name,
+                        "member_role": "Quality Facilitator",
+                        "member_avatar": f"https://ui-avatars.com/api/?name={fac_name.replace(' ', '+')}&background=06b6d4&color=fff",
+                        "joined_at": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                        "working_period": f"Since {start_dt.strftime('%b %d, %Y %H:%M')} (Facilitator)",
+                        "duration": "Active QA Guide",
+                        "actor_name": "System / Admin",
+                        "actor_role": "Admin",
+                        "action_label": "Quality Facilitator Assigned",
+                        "status": "Quality Facilitator"
+                    }
+                    full_project_logs.append({
+                        "id": f"fac_assign_{fac_u.id}",
+                        "user_id": fac_u.id,
+                        "user_name": fac_name,
+                        "user_role": "Quality Facilitator",
+                        "user_avatar": f"https://ui-avatars.com/api/?name={fac_name.replace(' ', '+')}&background=06b6d4&color=fff",
+                        "action": "Quality Facilitator Assigned",
+                        "details": json.dumps(fac_payload),
+                        "event_type": "member_lifecycle",
+                        "transition_type": "facilitator",
+                        "badge_color": "cyan",
+                        "timestamp": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                        "iso_time": start_dt.isoformat()
+                    })
+
+            # C) Project Reviewer
+            init_rev_name = (init_s1.get('reviewer') or (d1_data.get('review') or {}).get('reviewer') or '').strip()
+            curr_rev_name = ((proj.reviewer.full_name or proj.reviewer.username) if proj.reviewer else '').strip()
+
+            if init_rev_name and curr_rev_name and init_rev_name.lower() != curr_rev_name.lower():
+                rev_log = AuditLog.query.filter(AuditLog.project_id == target_project_id, db.or_(AuditLog.action.ilike('%reviewer%'), AuditLog.action.ilike('%stakeholder%'), AuditLog.action.ilike('%updated project%'))).order_by(AuditLog.created_at.asc()).first()
+                rev_change_dt = rev_log.created_at if (rev_log and rev_log.created_at) else (getattr(proj, 'updated_at', None) or (start_dt + timedelta(days=12)))
+                if rev_change_dt < start_dt: rev_change_dt = start_dt
+                delta_rev = rev_change_dt - start_dt
+                days_rev = max(1, delta_rev.days)
+                tenure_rev = f"{days_rev} Day{'s' if days_rev != 1 else ''}"
+
+                # Previous Reviewer
+                prev_rev_payload = {
+                    "type": "left",
+                    "member_name": init_rev_name,
+                    "member_role": "Project Reviewer (Previous / Transitioned)",
+                    "member_avatar": f"https://ui-avatars.com/api/?name={init_rev_name.replace(' ', '+')}&background=ef4444&color=fff",
+                    "joined_at": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "left_at": rev_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "working_period": f"{start_dt.strftime('%b %d, %Y %H:%M')} \u2192 {rev_change_dt.strftime('%b %d, %Y %H:%M')}",
+                    "duration": tenure_rev,
+                    "actor_name": curr_tl_name,
+                    "actor_role": "Team Leader",
+                    "action_label": f"Project Reviewer Transition: {init_rev_name} \u2192 {curr_rev_name}",
+                    "status": "Transitioned in Middle",
+                    "reason": f"Reviewer gatekeeper transition to {curr_rev_name}"
+                }
+                full_project_logs.append({
+                    "id": f"prev_rev_{init_rev_name}",
+                    "user_name": init_rev_name,
+                    "user_role": "Project Reviewer (Past)",
+                    "user_avatar": f"https://ui-avatars.com/api/?name={init_rev_name.replace(' ', '+')}&background=ef4444&color=fff",
+                    "action": f"Project Reviewer Transition: {init_rev_name} \u2192 {curr_rev_name}",
+                    "details": json.dumps(prev_rev_payload),
+                    "event_type": "member_lifecycle",
+                    "transition_type": "left",
+                    "badge_color": "red",
+                    "timestamp": rev_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "iso_time": rev_change_dt.isoformat()
+                })
+                seen_lifecycle_keys.add((init_rev_name.lower(), 'reviewer'))
+
+                # Current Reviewer
+                curr_rev_payload = {
+                    "type": "reviewer",
+                    "member_name": curr_rev_name,
+                    "member_role": "Project Reviewer (Active)",
+                    "member_avatar": f"https://ui-avatars.com/api/?name={curr_rev_name.replace(' ', '+')}&background=3b82f6&color=fff",
+                    "joined_at": rev_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "working_period": f"Since {rev_change_dt.strftime('%b %d, %Y %H:%M')} (Active Reviewer)",
+                    "duration": "Gatekeeper Reviewer",
+                    "actor_name": "System / Admin",
+                    "actor_role": "Admin",
+                    "action_label": f"Project Reviewer Assigned (Handover from {init_rev_name})",
+                    "status": "Project Reviewer"
+                }
+                full_project_logs.append({
+                    "id": f"curr_rev_{proj.reviewer_id}",
+                    "user_id": proj.reviewer_id,
+                    "user_name": curr_rev_name,
+                    "user_role": "Project Reviewer",
+                    "user_avatar": f"https://ui-avatars.com/api/?name={curr_rev_name.replace(' ', '+')}&background=3b82f6&color=fff",
+                    "action": f"Project Reviewer Assigned (Handover from {init_rev_name})",
+                    "details": json.dumps(curr_rev_payload),
+                    "event_type": "member_lifecycle",
+                    "transition_type": "reviewer",
+                    "badge_color": "blue",
+                    "timestamp": rev_change_dt.strftime('%b %d, %Y %H:%M:%S'),
+                    "iso_time": rev_change_dt.isoformat()
+                })
+                seen_lifecycle_keys.add((proj.reviewer_id, 'reviewer'))
+            elif proj.reviewer_id and (proj.reviewer_id, 'reviewer') not in seen_lifecycle_keys:
+                rev_u = db.session.get(User, proj.reviewer_id)
+                if rev_u:
+                    rev_name = rev_u.full_name or rev_u.username
+                    rev_payload = {
+                        "type": "reviewer",
+                        "member_name": rev_name,
+                        "member_role": "Project Reviewer",
+                        "member_avatar": f"https://ui-avatars.com/api/?name={rev_name.replace(' ', '+')}&background=3b82f6&color=fff",
+                        "joined_at": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                        "working_period": f"Since {start_dt.strftime('%b %d, %Y %H:%M')} (Reviewer)",
+                        "duration": "Gatekeeper Reviewer",
+                        "actor_name": "System / Admin",
+                        "actor_role": "Admin",
+                        "action_label": "Project Reviewer Assigned",
+                        "status": "Project Reviewer"
+                    }
+                    full_project_logs.append({
+                        "id": f"rev_assign_{rev_u.id}",
+                        "user_id": rev_u.id,
+                        "user_name": rev_name,
+                        "user_role": "Project Reviewer",
+                        "user_avatar": f"https://ui-avatars.com/api/?name={rev_name.replace(' ', '+')}&background=3b82f6&color=fff",
+                        "action": "Project Reviewer Assigned",
+                        "details": json.dumps(rev_payload),
+                        "event_type": "member_lifecycle",
+                        "transition_type": "reviewer",
+                        "badge_color": "blue",
+                        "timestamp": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                        "iso_time": start_dt.isoformat()
+                    })
+
+            # D) Working Team Members
+            proj_members = ProjectMember.query.filter_by(project_id=target_project_id).all()
+            for pm in proj_members:
+                if pm.user_id != (proj.team_leader_id or 0) and (pm.user_id, 'joined') not in seen_lifecycle_keys:
+                    m_user = db.session.get(User, pm.user_id)
+                    if m_user:
+                        m_name = m_user.full_name or m_user.username
+                        m_role = m_user.role.name if m_user.role else "Team Member"
+                        pm_payload = {
+                            "type": "joined",
+                            "member_name": m_name,
+                            "member_role": m_role,
+                            "member_avatar": f"https://ui-avatars.com/api/?name={m_name.replace(' ', '+')}&background=8b5cf6&color=fff",
+                            "joined_at": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                            "working_period": f"Since {start_dt.strftime('%b %d, %Y %H:%M')} (Active)",
+                            "duration": "Active Contributor",
+                            "actor_name": curr_tl_name,
+                            "actor_role": "Team Leader",
+                            "action_label": "Team Member Enrolled at Project Inception",
+                            "status": "Active Team Member"
+                        }
+                        full_project_logs.append({
+                            "id": f"pm_join_{m_user.id}",
+                            "user_id": m_user.id,
+                            "user_name": m_name,
+                            "user_role": m_role,
+                            "user_avatar": f"https://ui-avatars.com/api/?name={m_name.replace(' ', '+')}&background=8b5cf6&color=fff",
+                            "action": "Team Member Joined Project",
+                            "details": json.dumps(pm_payload),
+                            "event_type": "member_lifecycle",
+                            "transition_type": "joined",
+                            "badge_color": "purple",
+                            "timestamp": start_dt.strftime('%b %d, %Y %H:%M:%S'),
+                            "iso_time": start_dt.isoformat()
+                        })
+
+            # E) Historical / Departed Team Members (Left Project in Middle)
+            try:
+                active_user_ids = {pm.user_id for pm in proj_members}
+                if proj.team_leader_id: active_user_ids.add(proj.team_leader_id)
+                if proj.facilitator_id: active_user_ids.add(proj.facilitator_id)
+                if proj.reviewer_id: active_user_ids.add(proj.reviewer_id)
+                if proj.creator_id: active_user_ids.add(proj.creator_id)
+
+                active_user_names = {((m.full_name or m.username) or '').strip().lower() for m in (proj.members or [])}
+                if curr_tl_name: active_user_names.add(curr_tl_name.lower())
+                if curr_fac_name: active_user_names.add(curr_fac_name.lower())
+                if curr_rev_name: active_user_names.add(curr_rev_name.lower())
+
+                from app.infrastructure.database.models.workflow import Stage1ProblemDefinitionProjectInitiation
+                s1_rec = Stage1ProblemDefinitionProjectInitiation.query.filter_by(project_id=target_project_id).first()
+
+                raw_initial_team = []
+                if s1_rec and s1_rec.project_team:
+                    raw_initial_team = s1_rec.project_team if isinstance(s1_rec.project_team, list) else [s1_rec.project_team]
+                elif team_s1 and isinstance(team_s1, dict) and team_s1.get('team_members'):
+                    raw_initial_team = team_s1.get('team_members')
+                elif d1_data and isinstance(d1_data, dict):
+                    pt = d1_data.get('project_team') or d1_data.get('s1_project_team') or d1_data.get('team_members') or d1_data.get('members') or []
+                    raw_initial_team = pt if isinstance(pt, list) else [pt]
+
+                for item in raw_initial_team:
+                    if not item: continue
+                    m_name = None
+                    m_role = "Team Member"
+                    m_uid = None
+                    
+                    if isinstance(item, dict):
+                        m_name = (item.get('name') or item.get('member_name') or item.get('full_name') or item.get('username') or '').strip()
+                        m_role = item.get('role') or item.get('designation') or "Team Member"
+                        m_uid = item.get('user_id') or item.get('id') or item.get('employee_id')
+                    elif isinstance(item, str):
+                        m_name = item.strip()
+
+                    if not m_name and not m_uid:
+                        continue
+
+                    u_obj = None
+                    if m_uid:
+                        try:
+                            u_obj = db.session.get(User, int(m_uid))
+                        except Exception:
+                            pass
+                    if not u_obj and m_name:
+                        u_obj = User.query.filter((User.full_name.ilike(m_name)) | (User.username.ilike(m_name))).first()
+
+                    resolved_id = u_obj.id if u_obj else m_uid
+                    resolved_name = (u_obj.full_name or u_obj.username) if u_obj else m_name
+                    resolved_role = (u_obj.role.name if (u_obj and u_obj.role) else m_role) or "Team Member"
+
+                    is_active = (resolved_id in active_user_ids) or (resolved_name.lower() in active_user_names)
+
+                    if not is_active and ((resolved_id, 'left') not in seen_lifecycle_keys) and ((resolved_name.lower(), 'left') not in seen_lifecycle_keys):
+                        if resolved_id:
+                            seen_lifecycle_keys.add((resolved_id, 'left'))
+                        if resolved_name:
+                            seen_lifecycle_keys.add((resolved_name.lower(), 'left'))
+
+                        join_dt = start_dt
+                        left_dt = getattr(proj, 'updated_at', None) or (join_dt + timedelta(days=14))
+                        if left_dt < join_dt:
+                            left_dt = join_dt + timedelta(days=7)
+
+                        delta = left_dt - join_dt
+                        days = max(1, delta.days)
+                        tenure_label = f"{days} Day{'s' if days != 1 else ''}"
+                        period_label = f"{join_dt.strftime('%b %d, %Y %H:%M')} \u2192 {left_dt.strftime('%b %d, %Y %H:%M')}"
+
+                        left_payload = {
+                            "type": "left",
+                            "member_name": resolved_name,
+                            "member_role": resolved_role,
+                            "member_avatar": f"https://ui-avatars.com/api/?name={resolved_name.replace(' ', '+')}&background=ef4444&color=fff",
+                            "joined_at": join_dt.strftime('%b %d, %Y %H:%M:%S'),
+                            "left_at": left_dt.strftime('%b %d, %Y %H:%M:%S'),
+                            "working_period": f"{period_label} ({tenure_label})",
+                            "duration": f"{tenure_label} active tenure",
+                            "actor_name": curr_tl_name,
+                            "actor_role": "Team Leader",
+                            "action_label": "Team Member Left Project (Transitioned in Middle)",
+                            "status": "Left in Middle",
+                            "reason": "Transitioned to another unit / Roster updated mid-project"
+                        }
+
+                        full_project_logs.append({
+                            "id": f"departed_mem_{resolved_id or resolved_name}",
+                            "user_id": resolved_id if isinstance(resolved_id, int) else None,
+                            "user_name": resolved_name,
+                            "user_role": resolved_role,
+                            "user_avatar": f"https://ui-avatars.com/api/?name={resolved_name.replace(' ', '+')}&background=ef4444&color=fff",
+                            "action": "Team Member Left Project (Transitioned in Middle)",
+                            "details": json.dumps(left_payload),
+                            "event_type": "member_lifecycle",
+                            "transition_type": "left",
+                            "badge_color": "red",
+                            "timestamp": left_dt.strftime('%b %d, %Y %H:%M:%S'),
+                            "iso_time": left_dt.isoformat()
+                        })
+            except Exception as ex:
+                current_app.logger.warning(f"Error detecting departed members for project {target_project_id}: {ex}")
+
+            # 3. Inject Facilitator Notes and Guidance as Activity
+            try:
+                from app.infrastructure.database.models.models import FacilitatorNote
+                f_notes = FacilitatorNote.query.filter_by(project_id=target_project_id).order_by(FacilitatorNote.created_at.desc()).all()
+                for fn in f_notes:
+                    f_author = db.session.get(User, fn.created_by) if fn.created_by else None
+                    fa_name = f_author.full_name or f_author.username if f_author else "Facilitator"
+                    fa_role = f_author.role.name if (f_author and f_author.role) else "Facilitator"
+                    fn_date = fn.created_at or proj.created_at
+                    full_project_logs.append({
+                        "id": f"fnote_{fn.id}",
+                        "user_id": fn.created_by,
+                        "user_name": fa_name,
+                        "user_role": fa_role,
+                        "user_avatar": f"https://ui-avatars.com/api/?name={fa_name.replace(' ', '+')}&background=06b6d4&color=fff",
+                        "action": f"Facilitator Note Posted (Stage {fn.stage_id or 'General'})",
+                        "details": fn.content or "Guidance note provided by Facilitator",
+                        "event_type": "activity",
+                        "transition_type": None,
+                        "badge_color": "cyan",
+                        "timestamp": fn_date.strftime('%b %d, %Y %H:%M:%S') if fn_date else "Recently",
+                        "iso_time": fn_date.isoformat() if fn_date else None
+                    })
+            except Exception:
+                pass
+
+            # 4. Inject stage approval events from ProjectReview table
+            stage_reviews = ProjectReview.query.filter_by(project_id=target_project_id).order_by(ProjectReview.decided_at.desc()).all()
+            for rev in stage_reviews:
+                rev_user = db.session.get(User, rev.reviewer_id) if rev.reviewer_id else None
+                rev_name = (rev_user.full_name or rev_user.username) if rev_user else "Reviewer"
+                rev_role = rev_user.role.name if (rev_user and rev_user.role) else "Reviewer"
+                rev_avatar = f"https://ui-avatars.com/api/?name={rev_name.replace(' ', '+')}&background=f59e0b&color=fff"
+
+                stg_label = stage_names[min(7, max(0, (rev.stage_number or 1) - 1))] if rev.stage_number else f"Stage {rev.stage_number or '?'}"
+                decision = (rev.decision or rev.status or 'Reviewed').strip()
+                remarks = (rev.comments or '').strip()
+
+                is_approved = decision.lower() in ('approved', 'approve', 'accepted', 'completed', 'done')
+                is_rejected = decision.lower() in ('rejected', 'reject', 'declined', 'sent back', 'revision')
+                badge_color = 'green' if is_approved else ('red' if is_rejected else 'orange')
+
+                action_label = f"Stage {rev.stage_number} Approved" if is_approved else (
+                    f"Stage {rev.stage_number} Rejected / Sent Back" if is_rejected else
+                    f"Stage {rev.stage_number} Reviewed"
+                )
+                details_parts = [f"Stage: {stg_label}", f"Decision: {decision}"]
+                if remarks:
+                    details_parts.append(f"Remarks: {remarks}")
+
+                decided_dt = rev.decided_at or rev.created_at
+                full_project_logs.append({
+                    "id": f"rev_{rev.id}",
+                    "user_id": rev.reviewer_id,
+                    "user_name": rev_name,
+                    "user_role": rev_role,
+                    "user_avatar": rev_avatar,
+                    "action": action_label,
+                    "details": " | ".join(details_parts),
+                    "event_type": "governance",
+                    "badge_color": badge_color,
+                    "timestamp": decided_dt.strftime('%b %d, %Y %H:%M:%S') if decided_dt else "Recently",
+                    "iso_time": decided_dt.isoformat() if decided_dt else None
+                })
+
+            # Sort combined list newest-first
+            full_project_logs.sort(
+                key=lambda x: x.get('iso_time') or '',
+                reverse=True
+            )
+
 
             # User data contributions & member lifecycle tracking for project circle members ONLY
             # Quality Circle projects have strictly 4 roles: Team Leader, Facilitator, Reviewer, and Team Members.
@@ -824,7 +1446,7 @@ def get_dashboard_data():
             user_contributions = []
 
             for uid in all_involved_user_ids:
-                u = User.query.get(uid)
+                u = db.session.get(User, uid)
                 if not u: continue
                 
                 u_name = u.full_name or u.username
@@ -975,7 +1597,7 @@ def get_dashboard_data():
             total_savings = float(impact_savings) + float(repo_savings)
             avg_prod_impact = db.session.query(func.avg(Stage8Implementation.productivity_gain)).filter(Stage8Implementation.project_id == target_project_id).scalar() or 0.0
 
-            six_months_ago = datetime.utcnow() - timedelta(days=180)
+            six_months_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=180)
             month_expr = func.strftime('%Y-%m', Project.created_at) if 'sqlite' in str(db.engine.url) else func.to_char(Project.created_at, 'YYYY-MM')
             monthly_trend_query = db.session.query(
                 month_expr.label('month'),
@@ -987,7 +1609,7 @@ def get_dashboard_data():
             act_month_map = {}
             all_trend_months = sorted(list(set(comp_month_map.keys())))
             if not all_trend_months:
-                all_trend_months = [datetime.utcnow().strftime('%Y-%m')]
+                all_trend_months = [datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m')]
 
             cat_dist = db.session.query(Project.category, func.count(Project.id)).filter(Project.id == target_project_id).group_by(Project.category).all()
             dept_dist = db.session.query(Department.name, func.count(Project.id)).join(Project, Project.department_id == Department.id).filter(Project.id == target_project_id).group_by(Department.name).all()
@@ -1028,7 +1650,7 @@ def get_dashboard_data():
             avg_prod_impact = db.session.query(func.avg(Stage8Implementation.productivity_gain)).filter(Stage8Implementation.org_id == org_id).scalar() or 0.0
 
             # Monthly trend — real-time breakdown of Completed and Active projects per month
-            trend_from = filter_from if filter_from else (datetime.utcnow() - timedelta(days=180))
+            trend_from = filter_from if filter_from else (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=180))
             
             month_expr = func.strftime('%Y-%m', Project.created_at) if 'sqlite' in str(db.engine.url) else func.to_char(Project.created_at, 'YYYY-MM')
             completed_monthly_q = db.session.query(
@@ -1057,7 +1679,7 @@ def get_dashboard_data():
 
             all_trend_months = sorted(list(set(comp_month_map.keys()) | set(act_month_map.keys())))
             if not all_trend_months:
-                all_trend_months = [datetime.utcnow().strftime('%Y-%m')]
+                all_trend_months = [datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m')]
 
             # Category / department distribution — filtered by same date range
             cat_q = db.session.query(Project.category, func.count(Project.id)).filter(Project.org_id == org_id)
@@ -1153,11 +1775,11 @@ def get_dashboard_data():
                 delta_days = (p_end - p_start).total_seconds() / 86400.0
                 delivery_days_list.append(max(round(delta_days, 1), 0.1))
             elif p_start:
-                delta_days = (datetime.utcnow() - p_start).total_seconds() / 86400.0
+                delta_days = (datetime.now(timezone.utc).replace(tzinfo=None) - p_start).total_seconds() / 86400.0
                 delivery_days_list.append(max(round(delta_days, 1), 0.1))
 
         if delivery_days_list:
-            avg_velocity = round(sum(delivery_days_list) / len(delivery_days_list), 1)
+            avg_velocity = round(sum(delivery_days_list) / len(delivery_days_list), 1) if len(delivery_days_list) > 0 else 0.0
         else:
             avg_velocity = 0.0
             
@@ -1274,7 +1896,7 @@ def get_dashboard_data():
     except Exception as e:
         import traceback
         print(traceback.format_exc())
-        return jsonify({"message": "Internal error in analytics engine", "error": str(e)}), 500
+        return internal_server_error(e, "Internal error in analytics engine.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1312,7 +1934,7 @@ def parse_filters(user):
         org_id = int(org_id_param) if org_id_param and org_id_param.isdigit() else None
         
     date_range = request.args.get('date_range', 'Last 30 Days')
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     # Always initialise to a safe 30-day default so arithmetic never fails
     start_date = now - timedelta(days=30)
     end_date = now
@@ -1391,7 +2013,7 @@ def check_rbac(user, view):
 @analytics_bp.route('/enterprise/dashboard', methods=['GET'])
 @jwt_required()
 def get_enterprise_dashboard():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     if not user:
         return jsonify({"error": "User not found"}), 404
 
@@ -1402,7 +2024,7 @@ def get_enterprise_dashboard():
         f = parse_filters(user)
 
         # Calculate Date Bounds — always safe because parse_filters guarantees non-None dates
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         start = f['start_date'] or (now - timedelta(days=30))
         end   = f['end_date']   or now
         # Guarantee end > start to avoid zero/negative duration
@@ -1504,7 +2126,7 @@ def get_enterprise_dashboard():
                                 amt = float(pricing.price or 0.0)
                                 cycle = (pricing.billing_cycle or cycle).title()
                     months = 12 if cycle == 'Yearly' else (3 if cycle in ['Quarterly', 'Quarter'] else 1)
-                    mrr_total += amt / months
+                    mrr_total += amt  / months
             return mrr_total
 
         def get_orgs_count(status=None, e_dt=None):
@@ -1629,7 +2251,7 @@ def get_enterprise_dashboard():
                 {
                     "user": f"{user.username}",
                     "action": "Viewed Enterprise Analytics",
-                    "timestamp": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+                    "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S'),
                     "ip": request.remote_addr or '127.0.0.1'
                 }
             ]
@@ -1640,7 +2262,7 @@ def get_enterprise_dashboard():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"message": "Internal error in analytics engine", "error": str(e)}), 500
+        return internal_server_error(e, "Internal error in analytics engine.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1649,7 +2271,7 @@ def get_enterprise_dashboard():
 @analytics_bp.route('/revenue', methods=['GET'])
 @jwt_required()
 def get_revenue_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     if not check_rbac(user, 'revenue'):
         return jsonify({"error": "Unauthorized"}), 403
         
@@ -1688,7 +2310,7 @@ def get_revenue_analytics():
 @analytics_bp.route('/organizations', methods=['GET'])
 @jwt_required()
 def get_org_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     if user.role.name != 'SuperAdmin':
         return jsonify({"error": "Admin required"}), 403
         
@@ -1786,7 +2408,7 @@ def get_org_analytics():
 @analytics_bp.route('/users', methods=['GET'])
 @jwt_required()
 def get_user_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     f = parse_filters(user)
     
     users_q = User.query
@@ -1827,14 +2449,14 @@ def get_user_analytics():
 @analytics_bp.route('/licenses', methods=['GET'])
 @jwt_required()
 def get_license_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     f = parse_filters(user)
     
     orgs_q = Organization.query.filter_by(is_deleted=False).filter(Organization.is_platform_org == False)
     if f['org_id']:
         orgs_q = orgs_q.filter_by(id=f['org_id'])
         
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     active_licenses = orgs_q.filter(or_(Organization.license_expiry_date >= now, Organization.license_expiry_date.is_(None))).count()
     expired_licenses = orgs_q.filter(Organization.license_expiry_date < now).count()
     trial_licenses = orgs_q.filter(Organization.subscription_status.in_(['Trialing', 'Trial'])).count()
@@ -1856,7 +2478,7 @@ def get_license_analytics():
 @analytics_bp.route('/subscriptions', methods=['GET'])
 @jwt_required()
 def get_subscription_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     f = parse_filters(user)
     
     sub_q = Subscription.query
@@ -1885,8 +2507,8 @@ def get_subscription_analytics():
         upgrades_cnt = upgrades_q.count()
         downgrades_cnt = downgrades_q.count()
         
-        upgrade_rate = round((upgrades_cnt / total_subs) * 100.0, 1)
-        downgrade_rate = round((downgrades_cnt / total_subs) * 100.0, 1)
+        upgrade_rate = round((upgrades_cnt / total_subs) * 100.0, 1) if total_subs > 0 else 0.0
+        downgrade_rate = round((downgrades_cnt / total_subs) * 100.0, 1) if total_subs > 0 else 0.0
 
     return jsonify({
         "status": "success",
@@ -1905,7 +2527,7 @@ def get_subscription_analytics():
 @analytics_bp.route('/modules', methods=['GET'])
 @jwt_required()
 def get_module_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     f = parse_filters(user)
     
     q = db.session.query(Module.name, func.sum(ModuleUsageAnalytics.daily_usage)).join(ModuleUsageAnalytics, Module.id == ModuleUsageAnalytics.module_id)
@@ -1938,7 +2560,7 @@ def get_module_analytics():
 @analytics_bp.route('/support', methods=['GET'])
 @jwt_required()
 def get_support_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     f = parse_filters(user)
     
     tickets_q = SupportTicket.query
@@ -1957,7 +2579,7 @@ def get_support_analytics():
     else:
         breached_count = tickets_q.filter(SupportTicket.sla_status.in_(['Breached', 'Overdue', 'BREACHED'])).count()
         met_count = total_t - breached_count
-        sla_rate = round((met_count / total_t) * 100.0, 1)
+        sla_rate = round((met_count / total_t) * 100.0, 1) if total_t > 0 else 100.0
 
         resolved_tickets = tickets_q.filter(
             SupportTicket.status.in_(['Resolved', 'RESOLVED', 'Closed', 'CLOSED']),
@@ -2007,7 +2629,7 @@ def get_support_analytics():
 @analytics_bp.route('/system', methods=['GET'])
 @jwt_required()
 def get_system_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     if user.role.name != 'SuperAdmin':
         return jsonify({"error": "Admin required"}), 403
         
@@ -2044,7 +2666,7 @@ def get_system_analytics():
 @analytics_bp.route('/ai-insights', methods=['GET'])
 @jwt_required()
 def get_ai_insights():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     f = parse_filters(user)
     
     recommendations = []
@@ -2109,7 +2731,7 @@ def get_ai_insights():
 @analytics_bp.route('/reports', methods=['GET', 'POST'])
 @jwt_required()
 def handle_custom_reports():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     
     if request.method == 'GET':
         reports = AnalyticsReport.query.filter(
@@ -2151,7 +2773,7 @@ def handle_custom_reports():
 @analytics_bp.route('/reports/<int:report_id>', methods=['DELETE'])
 @jwt_required()
 def delete_custom_report(report_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     report = AnalyticsReport.query.get_or_404(report_id)
     
     if report.org_id != user.org_id:
@@ -2167,7 +2789,7 @@ def delete_custom_report(report_id):
 @analytics_bp.route('/reports/<int:report_id>/schedule', methods=['POST'])
 @jwt_required()
 def schedule_report(report_id):
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     report = AnalyticsReport.query.get_or_404(report_id)
     
     if report.org_id != user.org_id:
@@ -2184,7 +2806,7 @@ def schedule_report(report_id):
         frequency=frequency,
         format=fmt,
         recipient_emails=recipients,
-        next_run=datetime.utcnow() + timedelta(days=7),
+        next_run=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7),
         is_active=True
     )
     db.session.add(sched)
@@ -2203,12 +2825,12 @@ def export_performance_analytics():
     """Generate a professional Performance Analytics & Organizational Impact report."""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         org_id = user.org_id if user else None
         if not org_id:
             return jsonify({"status": "error", "message": "Org ID not found"}), 404
 
-        org = Organization.query.get(org_id)
+        org = db.session.get(Organization, org_id)
         org_name = org.name if org else "Organization"
 
         # 1. Fetch Executive Summary Metrics
@@ -2262,7 +2884,7 @@ def export_performance_analytics():
         cw = csv.writer(si)
         cw.writerow([f"{b_ctx['software_name'].upper()} - PERFORMANCE ANALYTICS & ORGANIZATIONAL IMPACT REPORT"])
         cw.writerow(["Organization", org_name])
-        cw.writerow(["Generated At", datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')])
+        cw.writerow(["Generated At", datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S UTC')])
         cw.writerow(["Exported By", user.full_name or user.username])
         cw.writerow([])
 
@@ -2288,7 +2910,7 @@ def export_performance_analytics():
             cw.writerow([row['uid'], row['title'], row['dept'], row['category'], row['status'], f"{row['improvement']}%", f"Rs. {row['savings']:,.2f}"])
 
         output = si.getvalue()
-        filename = f"Performance_Analytics_Report_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+        filename = f"Performance_Analytics_Report_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}.csv"
         return Response(
             output,
             mimetype="text/csv",
@@ -2296,13 +2918,13 @@ def export_performance_analytics():
         )
     except Exception as e:
         print(f"[Analytics Export Error]: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 @analytics_bp.route('/reports/export', methods=['POST'])
 @jwt_required()
 def export_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     if not user:
         return jsonify({"error": "User not found"}), 404
 
@@ -2320,7 +2942,7 @@ def export_analytics():
     token = request.headers.get('Authorization', '')
     try:
         import requests as _req
-        dl_url = f"http://127.0.0.1:5000/api/reports/download-mock?type={report_type}&format={fmt}"
+        dl_url = f"http://127.0.0.1:5000 / api/reports/download-mock?type={report_type}&format={fmt}"
         r = _req.get(dl_url, headers={"Authorization": token}, timeout=30)
         if r.status_code == 200:
             content_type = r.headers.get('Content-Type', 'application/octet-stream')
@@ -2340,8 +2962,8 @@ def export_analytics():
     # ── Fallback: return download_url for the JS to fetch with Bearer token ─
     return jsonify({
         "status": "success",
-        "download_url": f"/api/reports/download-mock?type={report_type}&format={fmt}",
-        "generated_at": datetime.utcnow().isoformat(),
+        "download_url": f"/api / reports/download-mock?type={report_type}&format={fmt}",
+        "generated_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "filters_applied": filters
     })
 
@@ -2352,7 +2974,7 @@ def export_analytics():
 @analytics_bp.route('/drilldown', methods=['GET'])
 @jwt_required()
 def drill_down():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     f = parse_filters(user)
     
     segment = request.args.get('segment', 'revenue')
@@ -2444,8 +3066,8 @@ def drill_down():
             
         drill_data = [{
             "organization": o.name,
-            "storage_limit_gb": round(o.storage_limit_mb / 1024, 2),
-            "storage_used_gb": round(o.storage_used_mb / 1024, 2),
+            "storage_limit_gb": round(o.storage_limit_mb / 1024.0, 2),
+            "storage_used_gb": round(o.storage_used_mb / 1024.0, 2),
             "folders": [
                 {"name": "Project Workflow Attachments", "used_mb": round(o.storage_used_mb * 0.7, 2)},
                 {"name": "SOP Standard Training PDFs", "used_mb": round(o.storage_used_mb * 0.3, 2)}
@@ -2460,7 +3082,7 @@ def drill_down():
 @analytics_bp.route('/realtime', methods=['GET'])
 @jwt_required()
 def get_realtime_analytics():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     f = parse_filters(user)
     
     live_users = int(User.query.filter_by(is_active=True).count() * 0.25)
@@ -2468,12 +3090,12 @@ def get_realtime_analytics():
     
     return jsonify({
         "status": "success",
-        "live_revenue": round(SubscriptionPayment.query.filter_by(payment_status='Completed').count() * 7999.0 / 30.0, 2),
+        "live_revenue": round(SubscriptionPayment.query.filter_by(payment_status='Completed').count() * (7999.0 / 30.0), 2),
         "live_active_users": max(live_users, 1),
         "live_api_usage_per_min": 45,
         "live_system_health_score": 99,
         "live_tickets": live_tickets,
         "live_notifications": 2,
         "live_organizations_count": Organization.query.filter_by(is_deleted=False).filter(Organization.is_platform_org == False).count(),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     })

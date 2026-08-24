@@ -2,16 +2,14 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Additional Sources — Ideation Repository | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="/assets/js/i18n.js"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
     <style>
         .idea-card {
             background: var(--ds-surface);
@@ -149,48 +147,48 @@
                 </header>
 
                 <!-- KPI Metric Cards Bar -->
-                <div class="row g-3 mb-4" id="kpiBar">
-                    <div class="col-md-3 col-sm-6">
-                        <div class="ds-card p-3 d-flex align-items-center gap-3">
-                            <div class="ds-icon-circle bg-primary-soft text-primary" style="width:44px;height:44px;">
-                                <i data-lucide="lightbulb" style="width:20px;height:20px;"></i>
+                <div class="row g-2 g-md-3 mb-4" id="kpiBar">
+                    <div class="col-6 col-md-3">
+                        <div class="glass-card ds-card p-2.5 p-md-3 d-flex flex-column flex-md-row align-items-center text-center text-md-start gap-2 gap-md-3 h-100">
+                            <div class="ds-icon-circle bg-primary-soft text-primary flex-shrink-0" style="width:36px;height:36px;">
+                                <i data-lucide="lightbulb" style="width:18px;height:18px;"></i>
                             </div>
-                            <div>
-                                <div class="text-xs text-secondary text-uppercase font-mono fw-bold">Imported Ideas</div>
-                                <div class="text-xl fw-bold text-main" id="kpiTotalIdeas">—</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="ds-card p-3 d-flex align-items-center gap-3">
-                            <div class="ds-icon-circle bg-success-soft text-success" style="width:44px;height:44px;">
-                                <i data-lucide="indian-rupee" style="width:20px;height:20px;"></i>
-                            </div>
-                            <div>
-                                <div class="text-xs text-secondary text-uppercase font-mono fw-bold">Est. Tangible Savings</div>
-                                <div class="text-xl fw-bold text-main" id="kpiTotalBenefits">—</div>
+                            <div class="min-w-0">
+                                <div class="text-xxs text-secondary text-uppercase font-mono fw-bold text-truncate" style="font-size: 10px; letter-spacing: 0.03em;">Imported Ideas</div>
+                                <div class="text-lg fw-bold text-main" style="font-size: 1.25rem; line-height: 1.15;" id="kpiTotalIdeas">—</div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="ds-card p-3 d-flex align-items-center gap-3">
-                            <div class="ds-icon-circle bg-warning-soft text-warning" style="width:44px;height:44px;">
-                                <i data-lucide="zap" style="width:20px;height:20px;"></i>
+                    <div class="col-6 col-md-3">
+                        <div class="glass-card ds-card p-2.5 p-md-3 d-flex flex-column flex-md-row align-items-center text-center text-md-start gap-2 gap-md-3 h-100">
+                            <div class="ds-icon-circle bg-success-soft text-success flex-shrink-0" style="width:36px;height:36px;">
+                                <i data-lucide="indian-rupee" style="width:18px;height:18px;"></i>
                             </div>
-                            <div>
-                                <div class="text-xs text-secondary text-uppercase font-mono fw-bold">High Impact Ideas</div>
-                                <div class="text-xl fw-bold text-main" id="kpiHighImpact">—</div>
+                            <div class="min-w-0">
+                                <div class="text-xxs text-secondary text-uppercase font-mono fw-bold text-truncate" style="font-size: 10px; letter-spacing: 0.03em;">Est. Tangible Savings</div>
+                                <div class="text-lg fw-bold text-main" style="font-size: 1.25rem; line-height: 1.15;" id="kpiTotalBenefits">—</div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="ds-card p-3 d-flex align-items-center gap-3">
-                            <div class="ds-icon-circle bg-info-soft text-info" style="width:44px;height:44px;">
-                                <i data-lucide="layers" style="width:20px;height:20px;"></i>
+                    <div class="col-6 col-md-3">
+                        <div class="glass-card ds-card p-2.5 p-md-3 d-flex flex-column flex-md-row align-items-center text-center text-md-start gap-2 gap-md-3 h-100">
+                            <div class="ds-icon-circle bg-warning-soft text-warning flex-shrink-0" style="width:36px;height:36px;">
+                                <i data-lucide="zap" style="width:18px;height:18px;"></i>
                             </div>
-                            <div>
-                                <div class="text-xs text-secondary text-uppercase font-mono fw-bold">QCMS Ready</div>
-                                <div class="text-xl fw-bold text-main" id="kpiApproved">—</div>
+                            <div class="min-w-0">
+                                <div class="text-xxs text-secondary text-uppercase font-mono fw-bold text-truncate" style="font-size: 10px; letter-spacing: 0.03em;">High Impact Ideas</div>
+                                <div class="text-lg fw-bold text-main" style="font-size: 1.25rem; line-height: 1.15;" id="kpiHighImpact">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="glass-card ds-card p-2.5 p-md-3 d-flex flex-column flex-md-row align-items-center text-center text-md-start gap-2 gap-md-3 h-100">
+                            <div class="ds-icon-circle bg-info-soft text-info flex-shrink-0" style="width:36px;height:36px;">
+                                <i data-lucide="layers" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-xxs text-secondary text-uppercase font-mono fw-bold text-truncate" style="font-size: 10px; letter-spacing: 0.03em;">QCMS Ready</div>
+                                <div class="text-lg fw-bold text-main" style="font-size: 1.25rem; line-height: 1.15;" id="kpiApproved">—</div>
                             </div>
                         </div>
                     </div>
@@ -279,9 +277,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/components.js"></script>
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script>
         const AdditionalSources = {
             ideas: [],

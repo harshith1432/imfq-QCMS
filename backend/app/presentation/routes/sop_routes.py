@@ -2,15 +2,16 @@ from flask import Blueprint, request, jsonify, send_file, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.infrastructure.database.models.models import (
     db, User, Department, Project, ProjectMember, AuditLog, SOP, SOPStep, SOPApproval, SOPVersion, SOPTraining, SOPComment,
-    SOPAcknowledgement, SOPAssessment, SOPAssessmentQuestion, SOPAssessmentResult, SOPCertificate, SOPAuditReport, SOPArchive, SOPNotification,
+    SOPAcknowledgement, SOPAssessment, SOPAssessmentQuestion, SOPAssessmentResult, SOPAuditReport, SOPArchive, SOPNotification,
     SOPCategory, SOPType
 )
 from app.presentation.middleware.middleware import role_required
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 import json
 import os
 import io
+from app.presentation.routes.error_helpers import internal_server_error
 
 sop_bp = Blueprint('sops', __name__)
 
@@ -122,7 +123,7 @@ def create_sop():
     import random
     import string
     random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-    sop_uid = f"SOP-{datetime.utcnow().year}-{random_suffix}"
+    sop_uid = f"SOP-{datetime.now(timezone.utc).replace(tzinfo=None).year}-{random_suffix}"
     
     try:
         # Create SOP Master
@@ -181,7 +182,7 @@ def create_sop():
             role=user.role.name,
             action='Draft Created',
             comments='Initial draft creation',
-            signature=f"Signed by {user.full_name or user.username} at {datetime.utcnow().isoformat()}"
+            signature=f"Signed by {user.full_name or user.username} at {datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}"
         )
         db.session.add(approval)
         
@@ -203,7 +204,7 @@ def create_sop():
         # advance project to 'SOP Created' so the Facilitator can proceed to closure
         if sop.project_id:
             from app.infrastructure.database.models.models import Project
-            linked_project = Project.query.get(sop.project_id)
+            linked_project = db.session.get(Project, sop.project_id)
             if linked_project and linked_project.status == 'Impact Approved':
                 linked_project.status = 'SOP Created'
                 db.session.commit()
@@ -212,7 +213,7 @@ def create_sop():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to create SOP", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to create SOP.")
 
 @sop_bp.route('', methods=['GET'])
 @jwt_required()
@@ -528,7 +529,7 @@ def update_sop(sop_id):
                 version_number=sop.version,
                 changes_made=changes_description,
                 changed_by_id=user_id,
-                approval_date=datetime.utcnow(),
+                approval_date=datetime.now(timezone.utc).replace(tzinfo=None),
                 sop_data=snapshot
             )
             db.session.add(archive_version)
@@ -609,7 +610,7 @@ def update_sop(sop_id):
             role=user.role.name,
             action='Revised' if is_revising_active else 'Updated',
             comments=changes_description,
-            signature=f"Signed by {user.full_name or user.username} at {datetime.utcnow().isoformat()}"
+            signature=f"Signed by {user.full_name or user.username} at {datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}"
         )
         db.session.add(approval)
         
@@ -629,7 +630,7 @@ def update_sop(sop_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to update SOP", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to update SOP.")
 
 @sop_bp.route('/<int:sop_id>/rename', methods=['PATCH'])
 @jwt_required()
@@ -677,7 +678,7 @@ def rename_sop(sop_id):
         return jsonify({"msg": "SOP renamed successfully", "id": sop.id, "title": sop.title}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to rename SOP", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to rename SOP.")
 
 # ============================
 # SOP APPROVAL WORKFLOW
@@ -732,7 +733,7 @@ def approve_sop(sop_id):
             role=user.role.name,
             action=action,
             comments=comments,
-            signature=f"Electronically signed by {user.full_name or user.username} ({user.role.name}) at {datetime.utcnow().isoformat()}"
+            signature=f"Electronically signed by {user.full_name or user.username} ({user.role.name}) at {datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}"
         )
         db.session.add(approval)
         
@@ -752,7 +753,7 @@ def approve_sop(sop_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Approval submission failed", "error": str(e)}), 500
+        return internal_server_error(e, "Approval submission failed.")
 
 # ============================
 # SOP VERSIONING AND ROLLBACKS
@@ -877,7 +878,7 @@ def restore_version(sop_id, version_number):
             role=user.role.name,
             action='Restored',
             comments=f"Restored to version {version_number} snapshot data.",
-            signature=f"Signed by {user.full_name or user.username} at {datetime.utcnow().isoformat()}"
+            signature=f"Signed by {user.full_name or user.username} at {datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}"
         )
         db.session.add(approval)
         
@@ -897,7 +898,7 @@ def restore_version(sop_id, version_number):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to restore version", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to restore version.")
 
 # ============================
 # SOP TRAINING & ACKNOWLEDGEMENT
@@ -953,8 +954,8 @@ def assign_training(sop_id):
             users_to_assign = User.query.filter(User.id.in_(list(member_ids)), User.org_id == user.org_id).all()
             
         count = 0
-        due_date = datetime.utcnow().date() + timedelta(days=sop.due_days)
-        expiry_date = datetime.utcnow().date() + timedelta(days=365) # default 1 year expiry
+        due_date = datetime.now(timezone.utc).replace(tzinfo=None).date() + timedelta(days=sop.due_days)
+        expiry_date = datetime.now(timezone.utc).replace(tzinfo=None).date() + timedelta(days=365) # default 1 year expiry
         
         for u in users_to_assign:
             # Check if already assigned
@@ -964,7 +965,7 @@ def assign_training(sop_id):
                     sop_id=sop.id,
                     user_id=u.id,
                     assigned_by_id=user_id,
-                    assigned_date=datetime.utcnow(),
+                    assigned_date=datetime.now(timezone.utc).replace(tzinfo=None),
                     due_date=due_date,
                     expiry_date=expiry_date,
                     attempts_left=sop.max_attempts or 3,
@@ -998,7 +999,7 @@ def assign_training(sop_id):
             else:
                 # Reset training record to allow retry
                 existing.assigned_by_id = user_id
-                existing.assigned_date = datetime.utcnow()
+                existing.assigned_date = datetime.now(timezone.utc).replace(tzinfo=None)
                 existing.due_date = due_date
                 existing.expiry_date = expiry_date
                 existing.attempts_left = sop.max_attempts or 3
@@ -1029,7 +1030,7 @@ def assign_training(sop_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Assignment failed", "error": str(e)}), 500
+        return internal_server_error(e, "Assignment failed.")
 
 @sop_bp.route('/training/dashboard', methods=['GET'])
 @jwt_required()
@@ -1147,8 +1148,8 @@ def track_reading(training_id):
     
     try:
         if not t.first_opened_at:
-            t.first_opened_at = datetime.utcnow()
-        t.last_viewed_at = datetime.utcnow()
+            t.first_opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        t.last_viewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         t.total_reading_time += reading_time
         t.reading_percentage = max(t.reading_percentage, reading_percentage)
         
@@ -1168,7 +1169,7 @@ def track_reading(training_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to track reading metrics", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to track reading metrics.")
 
 @sop_bp.route('/training/<int:training_id>/acknowledge', methods=['POST'])
 @jwt_required()
@@ -1202,7 +1203,7 @@ def acknowledge_training(training_id):
             statement=statement,
             ip_address=request.remote_addr,
             digital_signature=digital_signature.strip(),
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(ack)
         t.acknowledgement_status = True
@@ -1215,18 +1216,7 @@ def acknowledge_training(training_id):
             # Exempt from assessment, complete immediately
             t.status = 'Completed'
             t.training_completion_status = True
-            t.completed_at = datetime.utcnow()
-            
-            # Generate Certificate
-            import uuid
-            cert_no = f"CERT-{t.sop.sop_uid}-{uuid.uuid4().hex[:6].upper()}"
-            cert = SOPCertificate(
-                training_id=t.id,
-                user_id=user_id,
-                certificate_number=cert_no,
-                issue_date=datetime.utcnow()
-            )
-            db.session.add(cert)
+            t.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             
             # SOPNotification Completed
             notif = SOPNotification(
@@ -1244,7 +1234,7 @@ def acknowledge_training(training_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Acknowledgement failed", "error": str(e)}), 500
+        return internal_server_error(e, "Acknowledgement failed.")
 
 @sop_bp.route('/<int:sop_id>/assessment', methods=['GET'])
 @jwt_required()
@@ -1336,7 +1326,7 @@ def add_sop_assessment_questions(sop_id):
         return jsonify({"msg": "Assessment questions and configuration saved successfully"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to save assessment", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to save assessment.")
 
 @sop_bp.route('/training/<int:training_id>/assessment/submit', methods=['POST'])
 @jwt_required()
@@ -1392,7 +1382,7 @@ def submit_assessment(training_id):
             attempt_number=attempt_num,
             result=result_str,
             answers_submitted=user_answers,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(res)
         
@@ -1401,18 +1391,7 @@ def submit_assessment(training_id):
         if result_str == 'Pass':
             t.status = 'Completed'
             t.training_completion_status = True
-            t.completed_at = datetime.utcnow()
-            
-            # Generate Certificate
-            import uuid
-            cert_no = f"CERT-{t.sop.sop_uid}-{uuid.uuid4().hex[:6].upper()}"
-            cert = SOPCertificate(
-                training_id=t.id,
-                user_id=user_id,
-                certificate_number=cert_no,
-                issue_date=datetime.utcnow()
-            )
-            db.session.add(cert)
+            t.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             
             # In-app alert
             from app.presentation.routes.notification_routes import create_notification
@@ -1458,7 +1437,7 @@ def submit_assessment(training_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to submit assessment", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to submit assessment.")
 
 @sop_bp.route('/training/<int:training_id>/results', methods=['GET'])
 @jwt_required()
@@ -1523,64 +1502,6 @@ def get_training_results(training_id):
         
     return jsonify(response_data), 200
 
-@sop_bp.route('/training/<int:training_id>/certificate', methods=['GET'])
-@jwt_required()
-def download_certificate(training_id):
-    """Download landscape certificate PDF upon completion."""
-    user_id = int(get_jwt_identity())
-    user = db.session.get(User, user_id)
-    t = SOPTraining.query.filter_by(id=training_id).first_or_404()
-    
-    # Check permissions (Recipient user or Admin/Facilitator/Reviewer)
-    is_admin = user.role.name in ('Admin', 'SuperAdmin', 'CEO')
-    is_facilitator = user.role.name == 'Facilitator' and (t.sop.author_id == user_id or t.sop.owner_id == user_id)
-    is_reviewer = user.role.name == 'Reviewer' and (t.sop.author_id == user_id or (t.sop.project and t.sop.project.reviewer_id == user_id))
-    if t.user_id != user_id and not is_admin and not is_facilitator and not is_reviewer:
-        return jsonify({"msg": "Access denied. Cannot access another user's certificate."}), 403
-        
-    if not t.training_completion_status:
-        return jsonify({"msg": "Training is not completed yet."}), 400
-        
-    try:
-        from app.utils.report_gen import generate_sop_training_certificate
-        pdf_bytes = generate_sop_training_certificate(t)
-        
-        # Log to Audit Log
-        audit = AuditLog(
-            org_id=user.org_id,
-            user_id=user_id,
-            project_id=t.sop.project_id,
-            action='SOP_CERTIFICATE_DOWNLOADED',
-            target_table='training_certificates',
-            target_id=t.id,
-            details={"sop_uid": t.sop.sop_uid, "user_id": t.user_id}
-        )
-        db.session.add(audit)
-        db.session.commit()
-        
-        # Save pdf to certificate record if not already stored
-        cert = SOPCertificate.query.filter_by(training_id=t.id).first()
-        if cert and not cert.pdf_path:
-            filename = f"cert_{t.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
-            upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'certificates')
-            os.makedirs(upload_dir, exist_ok=True)
-            file_path = os.path.join(upload_dir, filename)
-            
-            # write PDF bytes
-            with open(file_path, 'wb') as f:
-                f.write(pdf_bytes)
-            cert.pdf_path = f"/uploads/certificates/{filename}"
-            db.session.commit()
-            
-        return send_file(
-            io.BytesIO(pdf_bytes),
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=f"Certificate_{t.sop.sop_uid}.pdf"
-        )
-    except Exception as e:
-        return jsonify({"msg": "Failed to generate certificate", "error": str(e)}), 500
-
 @sop_bp.route('/<int:sop_id>/archive', methods=['POST'])
 @jwt_required()
 @role_required(['Reviewer', 'Admin', 'SuperAdmin'])
@@ -1600,7 +1521,7 @@ def archive_sop(sop_id):
         archive = SOPArchive(
             sop_id=sop.id,
             archived_by_id=user_id,
-            archived_at=datetime.utcnow(),
+            archived_at=datetime.now(timezone.utc).replace(tzinfo=None),
             reason=reason
         )
         db.session.add(archive)
@@ -1621,7 +1542,7 @@ def archive_sop(sop_id):
         return jsonify({"msg": "SOP successfully archived. Records are now read-only."}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to archive SOP", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to archive SOP.")
 
 @sop_bp.route('/<int:sop_id>/restore-archive', methods=['POST'])
 @jwt_required()
@@ -1655,7 +1576,7 @@ def restore_sop(sop_id):
         return jsonify({"msg": "SOP successfully restored and activated."}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to restore SOP", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to restore SOP.")
 
 @sop_bp.route('/<int:sop_id>', methods=['DELETE'])
 @jwt_required()
@@ -1693,7 +1614,7 @@ def delete_sop(sop_id):
         return jsonify({"msg": "SOP and all associated training records deleted successfully."}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to delete SOP", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to delete SOP.")
 
 @sop_bp.route('/<int:sop_id>/audit', methods=['POST'])
 @jwt_required()
@@ -1755,7 +1676,7 @@ def download_audit_report(sop_id):
             download_name=f"AuditReport_{sop.sop_uid}.pdf"
         )
     except Exception as e:
-        return jsonify({"msg": "Failed to generate audit report", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to generate audit report.")
 
 @sop_bp.route('/<int:sop_id>/compliance/report', methods=['GET'])
 @jwt_required()
@@ -1787,7 +1708,7 @@ def download_compliance_report(sop_id):
             download_name=f"ComplianceReport_{sop.sop_uid}.pdf"
         )
     except Exception as e:
-        return jsonify({"msg": "Failed to generate compliance report", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to generate compliance report.")
 
 @sop_bp.route('/training/notifications', methods=['GET'])
 @jwt_required()
@@ -1843,7 +1764,7 @@ def get_sop_analytics():
     
     # 5. List of upcoming reviews (within 30 days)
     upcoming_reviews = []
-    limit_date = datetime.utcnow()
+    limit_date = datetime.now(timezone.utc).replace(tzinfo=None)
     review_alerts = SOP.query.filter(
         SOP.org_id == user.org_id,
         SOP.status == 'Active',
@@ -1907,7 +1828,7 @@ def add_sop_comment(sop_id):
         if role_name == 'Team Member':
             is_tl = False
             if sop.project_id:
-                proj = Project.query.get(sop.project_id)
+                proj = db.session.get(Project, sop.project_id)
                 if proj and proj.team_leader_id == user.id:
                     is_tl = True
             comment_type = 'Verification' if is_tl else 'Feedback'
@@ -1955,7 +1876,7 @@ def add_sop_comment(sop_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": "Failed to add comment", "error": str(e)}), 500
+        return internal_server_error(e, "Failed to add comment.")
 
 @sop_bp.route('/<int:sop_id>/comments', methods=['GET'])
 @jwt_required()
@@ -2005,16 +1926,16 @@ def upload_sop_file():
         size_mb = round(file_size / (1024 * 1024), 2)
         return jsonify({"msg": f"File size exceeds 2MB limit ({size_mb} MB). Please upload a document up to 2MB."}), 400
 
+    from app.infrastructure.storage import storage
     from werkzeug.utils import secure_filename
     filename = secure_filename(file.filename)
-    filename = f"sop_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
-    upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
-    os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    target_name = f"sop_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}_{filename}"
+    result = storage.save_file(file, filename=target_name, subfolder="sop")
     
-    file_url = f"/uploads/{filename}"
-    return jsonify({"url": file_url}), 200
+    return jsonify({
+        "url": result['url'],
+        "storage_backend": result.get('backend', 'local')
+    }), 200
 
 
 # ==========================================
@@ -2044,8 +1965,14 @@ DEFAULT_SOP_TYPES = [
 def get_sop_masters():
     """Retrieve or auto-seed organization's custom Categories and SOP Types."""
     user_id = get_jwt_identity()
-    user = db.session.get(User, user_id)
-    org_id = user.org_id if (user and user.org_id) else 1
+    user = db.session.get(User, int(user_id)) if user_id else None
+    org_id = user.org_id if (user and user.org_id) else None
+
+    if not org_id:
+        return jsonify({
+            "categories": [{"id": i + 1, "name": c["name"], "description": c["description"], "created_at": None} for i, c in enumerate(DEFAULT_SOP_CATEGORIES)],
+            "types": [{"id": i + 1, "name": t["name"], "description": t["description"], "created_at": None} for i, t in enumerate(DEFAULT_SOP_TYPES)]
+        }), 200
 
     cats = SOPCategory.query.filter_by(org_id=org_id).order_by(SOPCategory.name.asc()).all()
     if not cats:
@@ -2175,4 +2102,3 @@ def delete_sop_type(type_id):
     db.session.commit()
 
     return jsonify({"msg": "SOP Type deleted successfully"}), 200
-

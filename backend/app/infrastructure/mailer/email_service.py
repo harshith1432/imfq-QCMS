@@ -1,8 +1,10 @@
+import logging
+logger = logging.getLogger('qcms.email_service')
 import resend
 import os
 import secrets
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 from flask import current_app
 from app.domain.services.document_branding_service import DocumentBrandingService
@@ -21,7 +23,23 @@ class EmailUtils:
 
     @staticmethod
     def send_email_async(to_email, subject, html_content, provider_override=None, email_type='general', org_id=None, sender_email=None, sender_name=None, reply_to=None, attachments=None, app=None):
-        """Dispatches an email asynchronously in a background worker thread with full Flask app context without blocking the HTTP request."""
+        """Dispatches an email asynchronously via Celery distributed task queue (with in-process fallback)."""
+        # 1. Try Celery distributed worker dispatch
+        if not attachments and not provider_override:
+            try:
+                from app.infrastructure.tasks.email_tasks import send_async_email
+                send_async_email.delay(
+                    recipient=to_email,
+                    subject=subject,
+                    html_body=html_content,
+                    sender_name=sender_name,
+                    org_id=org_id
+                )
+                return True
+            except Exception as celery_err:
+                logger.warning(f"[Celery Dispatch Failed, using thread pool]: {celery_err}")
+
+        # 2. In-process fallback or attachment handling
         if not app:
             try:
                 app = current_app._get_current_object()
@@ -61,7 +79,7 @@ class EmailUtils:
                         attachments=attachments
                     )
                 except Exception as err:
-                    print(f"[AsyncEmail] Error sending background email to {to_email}: {err}")
+                    logger.info(f"[AsyncEmail] Error sending background email to {to_email}: {err}")
 
         email_executor.submit(_async_worker, app)
         return True
@@ -99,7 +117,7 @@ class EmailUtils:
                         if user and user.email:
                             EmailUtils.send_temp_password_email(user, temp_pass)
                     except Exception as err:
-                        print(f"[BulkEmail] Error in async welcome email: {err}")
+                        logger.info(f"[BulkEmail] Error in async welcome email: {err}")
 
         email_executor.submit(_bulk_worker, app, user_credentials_list)
         return True
@@ -253,7 +271,7 @@ class EmailUtils:
                 }
 
         if not provider_type:
-            print("[QCMS] Error: No active connected email integration provider (ZeptoMail/Resend) found.")
+            logger.info("[QCMS] Error: No active connected email integration provider (ZeptoMail/Resend) found.")
             return None
 
         # Determine dynamic sender email & sender display name directly from Contact Directory field & Integration Hub
@@ -295,29 +313,29 @@ class EmailUtils:
         # Log email dispatch in development/console
         if is_dev:
             try:
-                print("\n" + "="*50)
-                print(f"DEVELOPMENT MODE: EMAIL SENT VIA {provider_type.upper()}")
-                print(f"FROM: {sender_name} <{clean_from}>")
-                print(f"TO: {to_email}")
-                print(f"SUBJECT: {subject}".encode('ascii', errors='replace').decode('ascii'))
+                logger.info("\n" + "="*50)
+                logger.info(f"DEVELOPMENT MODE: EMAIL SENT VIA {provider_type.upper()}")
+                logger.info(f"FROM: {sender_name} <{clean_from}>")
+                logger.info(f"TO: {to_email}")
+                logger.info(f"SUBJECT: {subject}".encode('ascii', errors='replace').decode('ascii'))
                 if reply_to:
-                    print(f"REPLY-TO: {reply_to}")
-                print("-" * 50)
+                    logger.info(f"REPLY-TO: {reply_to}")
+                logger.info("-" * 50)
 
                 otp_match = re.search(r'>\s*(\d{6})\s*<', html_content)
                 if otp_match:
-                    print(f"OTP CODE: {otp_match.group(1)}")
+                    logger.info(f"OTP CODE: {otp_match.group(1)}")
 
                 links = re.findall(r'href="([^"]+)"', html_content)
                 if links:
-                    print("EXTRACTED LINKS:")
+                    logger.info("EXTRACTED LINKS:")
                     for link in links:
-                        print(f"  - {link}")
-                    print("-" * 50)
+                        logger.info(f"  - {link}")
+                    logger.info("-" * 50)
 
-                print("EMAIL CONTENT (Truncated preview):")
-                print(html_content[:300].encode('ascii', errors='replace').decode('ascii'))
-                print("="*50 + "\n")
+                logger.info("EMAIL CONTENT (Truncated preview):")
+                logger.info(html_content[:300].encode('ascii', errors='replace').decode('ascii'))
+                logger.info("="*50 + "\n")
             except Exception:
                 pass
 
@@ -379,7 +397,7 @@ class EmailUtils:
                 else:
                     error_msg = f"ZeptoMail API Error ({resp.status_code}): {resp.text}"
                     if current_app: current_app.logger.error(error_msg)
-                    else: print(error_msg)
+                    else: logger.info(error_msg)
                     if is_dev:
                         return {"id": "dev_mode_dummy_id", "status": "simulated"}
                     return None
@@ -413,7 +431,7 @@ class EmailUtils:
         except Exception as e:
             error_msg = f"Email Provider ({provider_type}) Error: {str(e)}"
             if current_app: current_app.logger.error(error_msg)
-            else: print(error_msg)
+            else: logger.info(error_msg)
             if is_dev: return {"id": "dev_mode_dummy_id"}
             return None
 
@@ -427,7 +445,7 @@ class EmailUtils:
         """Sends an email verification link to the user."""
         token = EmailUtils.generate_token()
         user.verification_token = token
-        user.token_expiry = datetime.utcnow() + timedelta(hours=24)
+        user.token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
         app_url = EmailUtils._get_app_url()
         verify_url = f"{app_url}/api/auth/verify-email/{token}"
         ctx = DocumentBrandingService.get_branding_context(user.org_id)
@@ -488,7 +506,7 @@ class EmailUtils:
 
             if rule:
                 if not rule.is_active:
-                    print(f"[EmailUtils] User welcome notification rule '{rule.name}' is PAUSED/DISABLED in Set Email Notifications dashboard. Cancelling email generation and dispatch completely.")
+                    logger.info(f"[EmailUtils] User welcome notification rule '{rule.name}' is PAUSED/DISABLED in Set Email Notifications dashboard. Cancelling email generation and dispatch completely.")
                     return False
 
                 rule_dict = rule.to_dict()
@@ -502,7 +520,7 @@ class EmailUtils:
                     return EmailUtils.send_email_async(user.email, subject, html, sender_email=sender_email, sender_name=sender_name, reply_to=reply_to, email_type='onboarding', org_id=user.org_id)
                 return EmailUtils.send_email(user.email, subject, html, sender_email=sender_email, sender_name=sender_name, reply_to=reply_to, email_type='onboarding', org_id=user.org_id)
         except Exception as e:
-            print(f"[EmailUtils] Error loading custom welcome email rule: {e}")
+            logger.info(f"[EmailUtils] Error loading custom welcome email rule: {e}")
 
         # Fallback to default template if no rule is found
         subject = f"Your {branding_ctx.get('software_short_name', 'QCMS')} Account Credentials"
@@ -545,10 +563,10 @@ class EmailUtils:
         """Sends a password reset link."""
         token = EmailUtils.generate_token()
         user.reset_token = token
-        user.token_expiry = datetime.utcnow() + timedelta(hours=1)
+        user.token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
         
         app_url = EmailUtils._get_app_url()
-        reset_url = f"{app_url}/reset-password.html?token={token}"
+        reset_url = f"{app_url}/auth/reset-password.html?token={token}"
         ctx = DocumentBrandingService.get_branding_context(user.org_id)
         
         subject = f"Reset Your {ctx['software_short_name']} Password"

@@ -2,16 +2,14 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master Control | QCMS SaaS Platform</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -394,8 +392,6 @@
         /* Action Dropdown Menu Scrollbar & Popover layer */
         #bulkActionsBar, #bulkActionsBar .ds-card-body {
             position: relative !important;
-            z-index: 15 !important;
-            overflow: visible !important;
         }
         .sub-filter-bar,
         .filter-panel,
@@ -404,7 +400,25 @@
         .search-filters,
         .bulk-bar {
             position: relative !important;
-            z-index: 15 !important;
+            z-index: 120 !important;
+            overflow: visible !important;
+        }
+        .filter-bar:hover,
+        .filter-bar:focus-within,
+        .filter-panel:hover,
+        .filter-panel:focus-within,
+        .sub-filter-bar:hover,
+        .sub-filter-bar:focus-within {
+            z-index: 2000 !important;
+        }
+        .filter-bar .ds-card-body,
+        .filter-panel .ds-card-body,
+        .sub-filter-bar .ds-card-body {
+            overflow: visible !important;
+        }
+        select.ds-input, select.form-select, select.ds-select {
+            position: relative !important;
+            z-index: 105 !important;
         }
         tr:has(.dropdown.show), td:has(.dropdown.show), tr:has(.dropdown-menu.show), td:has(.dropdown-menu.show), .ds-table tr:has(.dropdown-menu.show) {
             position: relative !important;
@@ -1489,28 +1503,23 @@
                     </div>
 
                     <!-- Filter Bar -->
-                    <div class="ds-card fade-in section-spacing">
-                        <div class="ds-card-body py-3 px-4">
+                    <div class="ds-card fade-in section-spacing filter-bar" style="position: relative; z-index: 100 !important; overflow: visible !important;">
+                        <div class="ds-card-body py-3 px-4" style="overflow: visible !important;">
                             <!-- Basic Search and Primary Filters -->
-                            <div class="row g-3 align-items-center">
+                            <div class="row g-3 align-items-center" style="overflow: visible !important;">
                                 <div class="col-lg-5 col-md-6">
                                     <div class="ds-search-inline glass-panel" style="background: var(--ds-surface); border-radius: 12px; height: 42px; border: 1.5px solid var(--ds-primary) !important; box-shadow: 0 0 0 3px rgba(var(--ds-primary-rgb), 0.08); display: flex; align-items: center; padding: 0 14px;">
                                         <i data-lucide="search" style="width:16px; height:16px; opacity: 0.7; margin-right: 10px; color: var(--ds-primary);"></i>
                                         <input type="search" class="ds-input border-0 bg-transparent p-0" placeholder="Search name, code, GST, admin, email..." id="companySearch" autocomplete="new-password" style="height: 100%; font-size: 13px; font-weight: 500; flex: 1; outline: none; border: none !important; border-color: transparent !important; background: transparent !important; box-shadow: none !important; color: var(--ds-text-main);">
                                     </div>
                                 </div>
-                                <div class="col-lg-3 col-md-3 col-6">
-                                    <select class="ds-input" id="filterPlan" onchange="SuperAdmin.currentPage=1;SuperAdmin.loadOrganizations();" style="font-size: 13px; height: 42px;">
+                                <div class="col-lg-3 col-md-3 col-6" style="position: relative; z-index: 105 !important;">
+                                    <select class="ds-input" id="filterPlan" onchange="SuperAdmin.currentPage=1;SuperAdmin.loadOrganizations();" style="font-size: 13px; height: 42px; position: relative; z-index: 105 !important; cursor: pointer;">
                                         <option value="">All Plans</option>
-                                        <option value="Starter">Starter</option>
-                                        <option value="Professional">Professional</option>
-                                        <option value="Enterprise">Enterprise</option>
-                                        <option value="Custom">Custom</option>
-                                        <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                                     </select>
                                 </div>
-                                <div class="col-lg-2 col-md-3 col-6">
-                                    <select class="ds-input" id="filterStatus" onchange="SuperAdmin.currentPage=1;SuperAdmin.loadOrganizations();" style="font-size: 13px; height: 42px;">
+                                <div class="col-lg-2 col-md-3 col-6" style="position: relative; z-index: 105 !important;">
+                                    <select class="ds-input" id="filterStatus" onchange="SuperAdmin.currentPage=1;SuperAdmin.loadOrganizations();" style="font-size: 13px; height: 42px; position: relative; z-index: 105 !important; cursor: pointer;">
                                         <option value="">All Status</option>
                                         <option value="Active">Active</option>
                                         <option value="Trialing">On Trial</option>
@@ -1542,7 +1551,7 @@
                     </div>
 
                     <!-- Organizations Table -->
-                    <div class="ds-card fade-in section-spacing" style="position: relative; z-index: 10;">
+                    <div class="ds-card fade-in section-spacing" style="position: relative; z-index: 1;">
                         <div class="ds-card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0" id="registeredOrgsCardTitle">Registered Organizations</h5>
                             <div class="d-flex align-items-center gap-3">
@@ -1586,23 +1595,8 @@
                             </div>
                         </div>
                         <!-- Pagination -->
-                        <div class="ds-card-body py-3 px-4 border-top" style="border-color: var(--ds-border-color) !important;">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <span class="text-xs text-muted" id="paginationInfo">—</span>
-                                <div class="d-flex gap-1 align-items-center">
-                                    <select class="ds-input" id="orgPerPageSelect" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SuperAdmin.orgSetPerPage(this.value)">
-                                        <option value="5" selected>5</option>
-                                        <option value="10">10</option>
-                                        <option value="20">20</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-                                    <span class="text-xs text-muted ms-1">per page</span>
-                                    <div class="d-flex gap-1 ms-2" id="paginationControls">
-                                        <!-- Dynamic -->
-                                    </div>
-                                </div>
-                            </div>
+                        <div id="tenantsPaginationContainer" class="border-top" style="border-color: var(--ds-border-color) !important;">
+                            <!-- Dynamic via createStandardPagination -->
                         </div>
                     </div>
                 </div>
@@ -1841,11 +1835,6 @@
                             <div class="col-lg-2">
                                 <select class="ds-input" id="billPlanFilter" onchange="SuperAdmin.setBillFilter('plan', this.value)">
                                     <option value="">All Plans</option>
-                                    <option value="Starter">Starter</option>
-                                    <option value="Professional">Professional</option>
-                                    <option value="Enterprise">Enterprise</option>
-                                    <option value="Custom">Custom</option>
-                                    <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                                 </select>
                             </div>
                         </div>
@@ -1937,20 +1926,7 @@
                             </div>
                         </div>
                         <!-- Pagination -->
-                        <div class="ds-card-body py-3 px-4 border-top d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color:var(--ds-border-color)!important;">
-                            <div class="text-xs text-muted" id="billPagInfo">Showing 0-0 of 0</div>
-                            <div class="d-flex gap-1 align-items-center">
-                                <select class="ds-input" id="billPerPage" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SuperAdmin.setBillPerPage(this.value)">
-                                    <option value="5">5</option>
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
-                                <span class="text-xs text-muted ms-1 me-2">per page</span>
-                                <div id="billPagBtns" class="d-flex gap-1 align-items-center"></div>
-                            </div>
-                        </div>
+                        <div id="billInvoicesPagination"></div>
                     </div>
                 </div>
 
@@ -2059,14 +2035,14 @@
                                                 <i data-lucide="percent" style="width:18px;height:18px;color:#2563eb;"></i>
                                             </div>
                                             <div>
-                                                <h5 class="fw-bold mb-0">8-Stage Progress Weightage Distribution</h5>
+                                                <h5 class="fw-bold mb-0">Stage Progress Weightage Distribution</h5>
                                                 <p class="text-xs text-muted mb-0">Assign completion percentage weight to each QC stage. Total allocation must equal 100.0%.</p>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" onclick="StageWeightageManager.applyPreset('equal')">
-                                            <i data-lucide="sliders" style="width:13px;height:13px;" class="me-1"></i> Equal Split (12.5% × 8)
+                                        <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" id="stageWeightageEqualBtn" onclick="StageWeightageManager.applyPreset('equal')">
+                                            <i data-lucide="sliders" style="width:13px;height:13px;" class="me-1"></i> Equal Split
                                         </button>
                                         <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" onclick="StageWeightageManager.applyPreset('rca_heavy')">
                                             <i data-lucide="zap" style="width:13px;height:13px;" class="me-1"></i> RCA Heavy (S1–S4)
@@ -2075,7 +2051,7 @@
                                             <i data-lucide="activity" style="width:13px;height:13px;" class="me-1"></i> Execution Heavy (S5–S8)
                                         </button>
                                         <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" onclick="StageWeightageManager.resetDefaults()">
-                                            <i data-lucide="rotate-ccw" style="width:13px;height:13px;" class="me-1"></i> Reset
+                                            <i data-lucide="rotate-ccw" style="width:13px;height:13px;" class="me-1"></i> Reset to Default
                                         </button>
                                     </div>
                                 </div>
@@ -2290,8 +2266,21 @@
                                         </div>
                                     </div>
 
-                                    <!-- Theme Palette Section -->
-                                    <div class="col-12 mt-3"><span class="text-xs fw-bold text-uppercase text-secondary" style="letter-spacing: 0.05em;">Theme Palette Colors</span></div>
+                                    <!-- Theme Palette Section with Mode-Specific Customization -->
+                                    <div class="col-12 mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2 pb-1 border-bottom" style="border-color:var(--ds-border-color)!important;">
+                                        <div>
+                                            <span class="text-xs fw-bold text-uppercase text-secondary" style="letter-spacing: 0.05em;">Theme Palette Colors</span>
+                                            <p class="text-xs text-muted mb-0">Custom colors apply specifically to the active mode and switch dynamically with Light/Dark mode.</p>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2.5 py-1 text-xs fw-semibold d-flex align-items-center gap-1" id="ps-palette-mode-badge">
+                                                <i data-lucide="sun" style="width:12px;height:12px;"></i> Active: Light Mode Palette
+                                            </span>
+                                            <button type="button" class="ds-btn ds-btn-secondary ds-btn-xs d-flex align-items-center gap-1" onclick="PlatformSettings.resetCurrentModePalette()" title="Reset current mode colors to system default">
+                                                <i data-lucide="rotate-ccw" style="width:11px;height:11px;"></i> Reset Mode Defaults
+                                            </button>
+                                        </div>
+                                    </div>
                                     <div class="col-md-4">
                                         <div class="ds-field">
                                             <label class="ds-label">Primary Color Accent</label>
@@ -2453,19 +2442,34 @@
                                                     <div id="ownAdminNewEmailError" class="text-xxs text-danger mt-1" style="display:none;">Please enter a valid email address in format username@domain.extension (e.g. admin@qcms.com)</div>
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="text-xs fw-semibold text-secondary mb-1">Current Password <span class="text-danger">*</span></label>
-                                                    <input type="password" id="ownAdminCurrentPassword" class="ds-input py-2 px-3 text-xs w-100" placeholder="Enter current password to verify" required>
-                                                </div>
-                                                <div class="row g-2 mb-3">
-                                                    <div class="col-sm-6 col-12">
-                                                        <label class="text-xs fw-semibold text-secondary mb-1">New Password (optional)</label>
-                                                        <input type="password" id="ownAdminNewPassword" class="ds-input py-2 px-3 text-xs w-100" placeholder="Min 6 characters">
-                                                    </div>
-                                                    <div class="col-sm-6 col-12">
-                                                        <label class="text-xs fw-semibold text-secondary mb-1">Confirm New Password</label>
-                                                        <input type="password" id="ownAdminConfirmPassword" class="ds-input py-2 px-3 text-xs w-100" placeholder="Repeat new password">
-                                                    </div>
-                                                </div>
+                                                     <label class="text-xs fw-semibold text-secondary mb-1">Current Password <span class="text-danger">*</span></label>
+                                                     <div class="position-relative">
+                                                         <input type="password" id="ownAdminCurrentPassword" class="ds-input py-2 px-3 text-xs w-100" style="padding-right: 38px !important;" placeholder="Enter current password to verify" required>
+                                                         <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent text-secondary p-0 pe-2.5 d-flex align-items-center" onclick="PlatformSettings.togglePasswordVisibility('ownAdminCurrentPassword', this)" title="Toggle password visibility" style="box-shadow: none; z-index: 5;">
+                                                             <i data-lucide="eye" style="width:16px;height:16px;"></i>
+                                                         </button>
+                                                     </div>
+                                                 </div>
+                                                 <div class="row g-2 mb-3">
+                                                     <div class="col-sm-6 col-12">
+                                                         <label class="text-xs fw-semibold text-secondary mb-1">New Password (optional)</label>
+                                                         <div class="position-relative">
+                                                             <input type="password" id="ownAdminNewPassword" class="ds-input py-2 px-3 text-xs w-100" style="padding-right: 38px !important;" placeholder="Min 6 characters">
+                                                             <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent text-secondary p-0 pe-2.5 d-flex align-items-center" onclick="PlatformSettings.togglePasswordVisibility('ownAdminNewPassword', this)" title="Toggle password visibility" style="box-shadow: none; z-index: 5;">
+                                                                 <i data-lucide="eye" style="width:16px;height:16px;"></i>
+                                                             </button>
+                                                         </div>
+                                                     </div>
+                                                     <div class="col-sm-6 col-12">
+                                                         <label class="text-xs fw-semibold text-secondary mb-1">Confirm New Password</label>
+                                                         <div class="position-relative">
+                                                             <input type="password" id="ownAdminConfirmPassword" class="ds-input py-2 px-3 text-xs w-100" style="padding-right: 38px !important;" placeholder="Repeat new password">
+                                                             <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent text-secondary p-0 pe-2.5 d-flex align-items-center" onclick="PlatformSettings.togglePasswordVisibility('ownAdminConfirmPassword', this)" title="Toggle password visibility" style="box-shadow: none; z-index: 5;">
+                                                                 <i data-lucide="eye" style="width:16px;height:16px;"></i>
+                                                             </button>
+                                                         </div>
+                                                     </div>
+                                                 </div>
 
                                                 <div class="d-flex justify-content-end mt-4">
                                                     <button type="submit" class="ds-btn ds-btn-primary ds-btn-sm px-4">
@@ -2645,6 +2649,21 @@
                                                             <input type="text" class="form-control" id="ps-cms-hero-stat3-lbl" placeholder="+12 this hour">
                                                         </div>
                                                     </div>
+                                                    <div class="col-12 mt-2">
+                                                        <label class="form-label text-xs fw-bold text-secondary text-uppercase mb-1" style="letter-spacing:.05em;">Hero Highlights (Pill Badges)</label>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Highlight 1 (e.g. Enterprise Secure)</label>
+                                                        <input type="text" class="form-control" id="ps-cms-hero-feature1" placeholder="Enterprise Secure">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Highlight 2 (e.g. Global Scale)</label>
+                                                        <input type="text" class="form-control" id="ps-cms-hero-feature2" placeholder="Global Scale">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Highlight 3 (e.g. High Precision)</label>
+                                                        <input type="text" class="form-control" id="ps-cms-hero-feature3" placeholder="High Precision">
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -2746,6 +2765,7 @@
                                         </div>
 
                                         <!-- Section 3: How It Works / Steps -->
+                                        <!-- Section 3: How It Works / Steps -->
                                         <div class="card glass-card border mb-3" style="background: var(--ds-bg-card); border-color: var(--ds-border-color) !important;">
                                             <div class="card-header fw-bold text-sm d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#sec-steps" style="background: var(--ds-bg-elevated, rgba(255,255,255,0.05)); color: var(--ds-text-main); border-bottom: 1px solid var(--ds-border-color) !important;">
                                                 <span>🪜 3. Onboarding Flow (How It Works Steps)</span>
@@ -2753,11 +2773,15 @@
                                             </div>
                                             <div class="collapse p-3" id="sec-steps">
                                                 <div class="row g-3 mb-3">
-                                                    <div class="col-md-6">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Steps Badge Text</label>
+                                                        <input type="text" class="form-control" id="ps-cms-steps-badge" placeholder="Onboarding Flow">
+                                                    </div>
+                                                    <div class="col-md-4">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Steps Section Title</label>
                                                         <input type="text" class="form-control" id="ps-cms-steps-title" placeholder="How It Works">
                                                     </div>
-                                                    <div class="col-md-6">
+                                                    <div class="col-md-4">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Steps Subtitle</label>
                                                         <input type="text" class="form-control" id="ps-cms-steps-subtitle" placeholder="Deploy your enterprise QMS in 4 steps.">
                                                     </div>
@@ -2775,11 +2799,15 @@
                                             </div>
                                             <div class="collapse p-3" id="sec-pricing">
                                                 <div class="row g-3 mb-3">
-                                                    <div class="col-md-6">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Pricing Badge Text</label>
+                                                        <input type="text" class="form-control" id="ps-cms-pricing-badge" placeholder="Simple Pricing">
+                                                    </div>
+                                                    <div class="col-md-4">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Pricing Title</label>
                                                         <input type="text" class="form-control" id="ps-cms-pricing-title" placeholder="Flexible Plans for Every Stage">
                                                     </div>
-                                                    <div class="col-md-6">
+                                                    <div class="col-md-4">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Pricing Subtitle</label>
                                                         <input type="text" class="form-control" id="ps-cms-pricing-subtitle" placeholder="Scale your quality operations without complexity.">
                                                     </div>
@@ -2819,6 +2847,10 @@
                                             </div>
                                             <div class="collapse p-3" id="sec-cta">
                                                 <div class="row g-3">
+                                                    <div class="col-md-12">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Banner Badge Text</label>
+                                                        <input type="text" class="form-control" id="ps-cms-cta-banner-badge" placeholder="Limited Time Offer">
+                                                    </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Banner Title</label>
                                                         <input type="text" class="form-control" id="ps-cms-cta-banner-title" placeholder="Start Your 14-Day Free Trial">
@@ -2827,13 +2859,29 @@
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Banner Subtitle</label>
                                                         <input type="text" class="form-control" id="ps-cms-cta-banner-subtitle" placeholder="No Credit Card Required...">
                                                     </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Primary Button Text</label>
-                                                        <input type="text" class="form-control" id="ps-cms-cta-banner-btn1" placeholder="Launch Your Instance">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Banner Feature 1</label>
+                                                        <input type="text" class="form-control" id="ps-cms-cta-feature-1" placeholder="Instant Setup">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Banner Feature 2</label>
+                                                        <input type="text" class="form-control" id="ps-cms-cta-feature-2" placeholder="Full Workflow">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Banner Feature 3</label>
+                                                        <input type="text" class="form-control" id="ps-cms-cta-feature-3" placeholder="AI Assistant">
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Secondary Button Text</label>
-                                                        <input type="text" class="form-control" id="ps-cms-cta-banner-btn2" placeholder="Talk to Sales">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Primary Button Label &amp; Destination URL</label>
+                                                        <input type="text" class="form-control mb-1" id="ps-cms-cta-banner-btn1" placeholder="Launch Your Instance">
+                                                        <input type="text" class="form-control" id="ps-cms-cta-banner-btn1-url" placeholder="URL (e.g. /auth/register-org.html)">
+                                                        <div class="text-xxs text-muted mt-1">Button label &amp; destination link for the primary offer button.</div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Secondary Button Label &amp; Destination Link/Action</label>
+                                                        <input type="text" class="form-control mb-1" id="ps-cms-cta-banner-btn2" placeholder="Talk to Sales">
+                                                        <input type="text" class="form-control" id="ps-cms-cta-banner-btn2-url" placeholder="Action / URL (e.g. openTalkToSalesModal() or https://...)">
+                                                        <div class="text-xxs text-muted mt-1">Button label &amp; action modal or link for the secondary button.</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2851,11 +2899,15 @@
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Footer Description</label>
                                                         <textarea class="form-control" id="ps-cms-footer-desc" rows="2" placeholder="The world's most advanced quality management system..."></textarea>
                                                     </div>
-                                                    <div class="col-md-6">
+                                                    <div class="col-md-4">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">Footer Copyright</label>
                                                         <input type="text" class="form-control" id="ps-cms-footer-copy" placeholder="© 2026 QCMS Precision Core.">
                                                     </div>
-                                                    <div class="col-md-6">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label text-xs fw-semibold text-secondary uppercase">Footer Language Label</label>
+                                                        <input type="text" class="form-control" id="ps-cms-footer-lang" placeholder="English (US)">
+                                                    </div>
+                                                    <div class="col-md-4">
                                                         <label class="form-label text-xs fw-semibold text-secondary uppercase">System Status Text</label>
                                                         <input type="text" class="form-control" id="ps-cms-footer-status" placeholder="Operational">
                                                     </div>
@@ -3664,13 +3716,7 @@
                                     <option value="Inactive">Inactive</option>
                                 </select>
                                 <select class="ds-input" id="filterPlanType" style="height:36px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 110px; width:auto;" onchange="SuperAdmin.setPlanFilter('plan_type',this.value)">
-                                    <option value="">All Types</option>
-                                    <option value="Starter">Starter</option>
-                                    <option value="Professional">Professional</option>
-                                    <option value="Enterprise">Enterprise</option>
-                                    <option value="Pay-As-You-Go">Pay-As-You-Go</option>
-                                    <option value="Custom">Custom</option>
-                                    <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
+                                    <option value="">All Plans</option>
                                 </select>
                                 <select class="ds-input" id="filterPlanCycle" style="height:36px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 130px; width:auto;" onchange="SuperAdmin.setPlanFilter('billing_cycle',this.value)">
                                     <option value="" selected>All Cycles</option>
@@ -3714,20 +3760,7 @@
                             </div>
                         </div>
                         <!-- Pagination -->
-                        <div class="plans-pagination-bar d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3" style="border-top:1px solid var(--ds-border-color);">
-                            <div class="text-xs text-muted" id="plansPagInfo">—</div>
-                            <div class="d-flex gap-1 align-items-center">
-                                <select class="ds-input" id="plansPerPage" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SuperAdmin.plansSetPerPage(this.value)">
-                                    <option value="5" selected>5</option>
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
-                                <span class="text-xs text-muted ms-1">per page</span>
-                                <div id="plansPagBtns" class="ms-2 d-flex gap-1"></div>
-                            </div>
-                        </div>
+                        <div id="plansPaginationContainer"></div>
                     </div>
 
                 </div><!-- /plansView -->
@@ -3934,13 +3967,12 @@
                                                 <th style="min-width: 110px;">Projects</th>
                                                 <th style="min-width: 140px;">Depts &amp; Sites</th>
                                                 <th style="min-width: 90px;">Base Fee</th>
-                                                <th style="min-width: 80px;">GST</th>
                                                 <th style="min-width: 110px;">Estimated Bill</th>
                                                 <th style="min-width: 100px;" class="text-end">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="paygOperationsBody">
-                                            <tr><td colspan="9" class="text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span>Loading metered usage telemetry...</div></td></tr>
+                                            <tr><td colspan="8" class="text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span>Loading metered usage telemetry...</div></td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -4422,11 +4454,6 @@
                         </select>
                         <select class="ds-input" id="modPlanFilter" style="height:34px; font-size:12px; padding: 6px 30px 6px 12px; min-width: 110px; width:auto;" onchange="SuperAdmin.setModFilter('plan',this.value)">
                             <option value="">All Plans</option>
-                            <option value="Starter">Starter</option>
-                            <option value="Professional">Professional</option>
-                            <option value="Enterprise">Enterprise</option>
-                            <option value="Custom">Custom</option>
-                            <option value="Trial Plan (Free Onboarding Trial)">Trial Plan (Free Onboarding Trial)</option>
                         </select>
                         <button class="ds-btn ds-btn-secondary btn-sm ms-auto" onclick="SuperAdmin.resetModFilters()" style="height:34px;">
                             <i data-lucide="x" style="width:11px;height:11px;"></i> Reset
@@ -4488,20 +4515,7 @@
                                 </table>
                             </div>
                             <!-- Pagination -->
-                            <div class="mod-pagination-bar d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3">
-                                <div class="text-xs text-muted" id="modPagInfo">—</div>
-                                <div class="d-flex gap-1 align-items-center">
-                                    <select class="ds-input" id="modPerPage" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SuperAdmin.modSetPerPage(this.value)">
-                                        <option value="5">5</option>
-                                        <option value="10">10</option>
-                                        <option value="20" selected>20</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-                                    <span class="text-xs text-muted ms-1">per page</span>
-                                    <div id="modPagBtns" class="ms-2 d-flex gap-1"></div>
-                                </div>
-                            </div>
+                            <div id="modulesPaginationContainer"></div>
                         </div>
                     </div>
 
@@ -5409,35 +5423,35 @@
                     <h5 class="modal-title fw-bold" id="orgDetailTitle">Organization Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-0 d-flex flex-column flex-md-row" style="max-height: 70vh;">
+                <div class="modal-body p-0 d-flex flex-column flex-md-row" style="max-height: 75vh;">
                     <!-- Sidebar Tabs -->
-                    <div class="border-end p-3 flex-shrink-0" style="width: 200px; background: rgba(0, 0, 0, 0.02); border-color: var(--ds-border-color) !important;">
-                        <ul class="nav nav-pills flex-column gap-1 text-sm" id="orgDetailTabs" role="tablist">
+                    <div class="p-2 p-md-3 flex-shrink-0 org-detail-sidebar" style="background: rgba(0, 0, 0, 0.02);">
+                        <ul class="nav nav-pills gap-1 text-sm" id="orgDetailTabs" role="tablist">
                             <li class="nav-item">
-                                <button class="nav-link w-100 text-start active" id="tab-overview-btn" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button">Overview</button>
+                                <button class="nav-link active" id="tab-overview-btn" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button">Overview</button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link w-100 text-start" id="tab-profile-btn" data-bs-toggle="pill" data-bs-target="#tab-profile" type="button">Profile</button>
+                                <button class="nav-link" id="tab-profile-btn" data-bs-toggle="pill" data-bs-target="#tab-profile" type="button">Profile</button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link w-100 text-start" id="tab-subscription-btn" data-bs-toggle="pill" data-bs-target="#tab-subscription" type="button">Subscription</button>
+                                <button class="nav-link" id="tab-subscription-btn" data-bs-toggle="pill" data-bs-target="#tab-subscription" type="button">Subscription</button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link w-100 text-start" id="tab-users-btn" data-bs-toggle="pill" data-bs-target="#tab-users" type="button">Admin & Users</button>
+                                <button class="nav-link" id="tab-users-btn" data-bs-toggle="pill" data-bs-target="#tab-users" type="button">Admin & Users</button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link w-100 text-start" id="tab-billing-btn" data-bs-toggle="pill" data-bs-target="#tab-billing" type="button">Billing & Invoices</button>
+                                <button class="nav-link" id="tab-billing-btn" data-bs-toggle="pill" data-bs-target="#tab-billing" type="button">Billing & Invoices</button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link w-100 text-start" id="tab-support-btn" data-bs-toggle="pill" data-bs-target="#tab-support" type="button">Support Tickets</button>
+                                <button class="nav-link" id="tab-support-btn" data-bs-toggle="pill" data-bs-target="#tab-support" type="button">Support Tickets</button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link w-100 text-start" id="tab-activity-btn" data-bs-toggle="pill" data-bs-target="#tab-activity" type="button">Activity Timeline</button>
+                                <button class="nav-link" id="tab-activity-btn" data-bs-toggle="pill" data-bs-target="#tab-activity" type="button">Activity Timeline</button>
                             </li>
                         </ul>
                     </div>
                     <!-- Content Pane -->
-                    <div class="tab-content flex-grow-1 p-4" id="orgDetailTabContent" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="tab-content flex-grow-1" id="orgDetailTabContent" style="max-height: 75vh; overflow-y: auto;">
                         <!-- Content will be injected dynamically by JS -->
                     </div>
                 </div>
@@ -5602,7 +5616,12 @@
                                 <div class="col-md-6">
                                     <div class="ds-field">
                                         <label class="ds-label">Password <span class="text-danger">*</span></label>
-                                        <input type="password" class="ds-input" id="wizAdminPassword" required placeholder="Minimum 8 characters">
+                                        <div class="position-relative">
+                                            <input type="password" class="ds-input" id="wizAdminPassword" style="padding-right: 38px !important;" required placeholder="Minimum 8 characters">
+                                            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent text-secondary p-0 pe-2.5 d-flex align-items-center" onclick="PlatformSettings.togglePasswordVisibility('wizAdminPassword', this)" title="Toggle password visibility" style="box-shadow: none; z-index: 5;">
+                                                <i data-lucide="eye" style="width:16px;height:16px;"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -6222,11 +6241,21 @@
                         <div class="row g-2 mb-2">
                             <div class="col-md-6">
                                 <label class="text-xs fw-semibold text-secondary mb-1">Initial Password <span class="text-danger">*</span></label>
-                                <input type="password" id="newAdminPassword" class="ds-input py-2 px-3 text-xs w-100" placeholder="Min 6 characters" required>
+                                <div class="position-relative">
+                                    <input type="password" id="newAdminPassword" class="ds-input py-2 px-3 text-xs w-100" style="padding-right: 38px !important;" placeholder="Min 6 characters" required>
+                                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent text-secondary p-0 pe-2.5 d-flex align-items-center" onclick="PlatformSettings.togglePasswordVisibility('newAdminPassword', this)" title="Toggle password visibility" style="box-shadow: none; z-index: 5;">
+                                        <i data-lucide="eye" style="width:16px;height:16px;"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="text-xs fw-semibold text-secondary mb-1">Confirm Password <span class="text-danger">*</span></label>
-                                <input type="password" id="newAdminConfirmPassword" class="ds-input py-2 px-3 text-xs w-100" placeholder="Repeat password" required>
+                                <div class="position-relative">
+                                    <input type="password" id="newAdminConfirmPassword" class="ds-input py-2 px-3 text-xs w-100" style="padding-right: 38px !important;" placeholder="Repeat password" required>
+                                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent text-secondary p-0 pe-2.5 d-flex align-items-center" onclick="PlatformSettings.togglePasswordVisibility('newAdminConfirmPassword', this)" title="Toggle password visibility" style="box-shadow: none; z-index: 5;">
+                                        <i data-lucide="eye" style="width:16px;height:16px;"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6282,7 +6311,12 @@
 
                         <div class="mb-2">
                             <label class="text-xs fw-semibold text-secondary mb-1">Reset Password <span class="text-muted font-normal">(Leave blank to keep unchanged)</span></label>
-                            <input type="password" id="editAdminPassword" class="ds-input py-2 px-3 text-xs w-100" placeholder="New password (optional)">
+                            <div class="position-relative">
+                                <input type="password" id="editAdminPassword" class="ds-input py-2 px-3 text-xs w-100" style="padding-right: 38px !important;" placeholder="New password (optional)">
+                                <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent text-secondary p-0 pe-2.5 d-flex align-items-center" onclick="PlatformSettings.togglePasswordVisibility('editAdminPassword', this)" title="Toggle password visibility" style="box-shadow: none; z-index: 5;">
+                                    <i data-lucide="eye" style="width:16px;height:16px;"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer border-top-0 pt-0">
@@ -6376,29 +6410,202 @@
                         </div>
 
                         <!-- Pagination Footer -->
-                        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top flex-wrap gap-2 text-xs">
-                            <div class="d-flex align-items-center gap-3 flex-wrap">
-                                <div class="text-muted" id="orgRevenuePaginationInfo">Showing 0 to 0 of 0 organizations</div>
-                                <div class="d-flex align-items-center gap-2 text-muted">
-                                    <span style="font-size:11px;">Show:</span>
-                                    <select class="form-select form-select-sm" id="orgRevenuePageSize" onchange="SuperAdmin.changeOrgRevenuePageSize(this.value)" style="width:auto !important; min-width:115px !important; height:32px !important; padding:2px 28px 2px 10px !important; font-size:12px !important; line-height:26px !important; color:#1e293b !important; background-color:#ffffff !important; border:1.5px solid #94a3b8 !important; border-radius:6px !important; font-weight:600 !important; cursor:pointer !important;">
-                                        <option value="10" selected>10 / page</option>
-                                        <option value="20">20 / page</option>
-                                        <option value="50">50 / page</option>
-                                        <option value="100">100 / page</option>
-                                    </select>
+                        <div id="orgRevenuePaginationContainer"></div>
+                    </div>
+
+                    <!-- Organization Drilldown View (Closed Projects of a single org) -->
+                    <div id="orgClosedProjectsDetailView" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <button class="ds-btn ds-btn-secondary ds-btn-sm d-flex align-items-center gap-1" onclick="SuperAdmin.backToOrgRevenueList()">
+                                <i data-lucide="arrow-left" style="width:13px;height:13px;"></i> Back to All Organizations
+                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary-subtle text-primary font-monospace" id="detailOrgBadge">Organization Details</span>
+                            </div>
+                        </div>
+
+                        <div class="p-3 mb-3 border rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-3" style="background: var(--ds-surface-raised, #f8fafc);">
+                            <div>
+                                <h6 class="fw-bold mb-1 text-main" id="detailOrgName">—</h6>
+                                <div class="text-xs text-muted" id="detailOrgSubText">Plan: — | Onboarded: —</div>
+                            </div>
+                            <div class="d-flex gap-4">
+                                <div class="text-end">
+                                    <div class="text-xxs text-muted text-uppercase">Total Closed Projects</div>
+                                    <div class="fw-bold text-primary fs-6" id="detailOrgClosedCount">0</div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-xxs text-muted text-uppercase">Total Verified Value / Savings</div>
+                                    <div class="fw-bold text-success fs-6" id="detailOrgTotalSavings">₹0.00</div>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2 d-flex align-items-center gap-1" id="orgRevenuePrevBtn" onclick="SuperAdmin.prevOrgRevenuePage()" disabled>
-                                    <i data-lucide="chevron-left" style="width:13px;height:13px;"></i> Previous
-                                </button>
-                                <span class="px-2 py-1 border rounded bg-light font-monospace fw-bold" id="orgRevenuePageIndicator">Page 1 of 1</span>
-                                <button class="ds-btn ds-btn-secondary ds-btn-sm py-1 px-2 d-flex align-items-center gap-1" id="orgRevenueNextBtn" onclick="SuperAdmin.nextOrgRevenuePage()" disabled>
-                                    Next <i data-lucide="chevron-right" style="width:13px;height:13px;"></i>
+                        </div>
+
+                        <div class="table-responsive border rounded-3" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0 text-xs">
+                                <thead class="table-light sticky-top" style="background: var(--ds-surface-raised, #f8fafc);">
+                                    <tr>
+                                        <th style="width: 28%;">Project Title &amp; Ref</th>
+                                        <th style="width: 14%;">Department</th>
+                                        <th style="width: 14%;">Category</th>
+                                        <th style="width: 12%;">Closed Date</th>
+                                        <th style="width: 16%; text-align: right;">Verified Savings</th>
+                                        <th style="width: 16%; text-align: center;">Quality Improvement</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detailOrgProjectsTableBody">
+                                    <!-- Dynamic project rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top pt-2">
+                    <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+
+    <!-- Edit Super Admin Account Modal -->
+    <div class="modal fade" id="editSuperAdminModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border-0" style="border-radius: 16px; background: var(--ds-bg-card);">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-main d-flex align-items-center gap-2">
+                        <i data-lucide="shield-check" class="text-primary" style="width:20px;height:20px;"></i>
+                        Edit Super Admin Account
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editAdminForm" onsubmit="event.preventDefault(); PlatformSettings.saveAdminAccount();">
+                    <input type="hidden" id="editAdminId">
+                    <div class="modal-body text-xs">
+                        <p class="text-secondary mb-3">Update administrator privileges, sub-role, or login credentials.</p>
+                        
+                        <div class="mb-3">
+                            <label class="text-xs fw-semibold text-secondary mb-1">Username / Name</label>
+                            <input type="text" id="editAdminUsername" class="ds-input py-2 px-3 text-xs w-100" readonly style="opacity: 0.7;">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="text-xs fw-semibold text-secondary mb-1">Email Address (Login ID)</label>
+                            <input type="email" id="editAdminEmail" class="ds-input py-2 px-3 text-xs w-100" placeholder="admin@qcms.com" required oninput="PlatformSettings.validateEmailInput(this)">
+                            <div id="editAdminEmailError" class="text-xxs text-danger mt-1" style="display:none;">Please enter a valid email in format username@domain.extension (e.g. admin@qcms.com)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="text-xs fw-semibold text-secondary mb-1">Super Admin Sub-Role <span class="text-danger">*</span></label>
+                            <select id="editAdminSubRole" class="ds-input ds-select py-2 px-3 text-xs w-100">
+                                <option value="Owner">Owner (Full Platform Privileges)</option>
+                                <option value="Platform Operations">Platform Operations</option>
+                                <option value="Billing">Billing & Subscriptions</option>
+                                <option value="Support">Support Desk Engineer</option>
+                                <option value="Product">Product & Content Manager</option>
+                                <option value="Read Only">Read Only Auditor</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="text-xs fw-semibold text-secondary mb-1">Reset Password <span class="text-muted font-normal">(Leave blank to keep unchanged)</span></label>
+                            <div class="position-relative">
+                                <input type="password" id="editAdminPassword" class="ds-input py-2 px-3 text-xs w-100" style="padding-right: 38px !important;" placeholder="New password (optional)">
+                                <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent text-secondary p-0 pe-2.5 d-flex align-items-center" onclick="PlatformSettings.togglePasswordVisibility('editAdminPassword', this)" title="Toggle password visibility" style="box-shadow: none; z-index: 5;">
+                                    <i data-lucide="eye" style="width:16px;height:16px;"></i>
                                 </button>
                             </div>
                         </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pt-0">
+                        <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="ds-btn ds-btn-primary ds-btn-sm px-3">
+                            <i data-lucide="check" class="me-1" style="width:13px;"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Organization Realized Project Revenue & Value Modal -->
+    <div class="modal fade" id="orgProjectRevenueModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content glass-card border-0" style="border-radius: 16px; background: var(--ds-bg-card);">
+                <div class="modal-header border-bottom pb-3">
+                    <div>
+                        <h5 class="modal-title fw-bold text-main d-flex align-items-center gap-2">
+                            <i data-lucide="award" class="text-success" style="width:20px;height:20px;"></i>
+                            Organization Business Value & Project Revenue
+                        </h5>
+                        <div class="text-xs text-muted mt-1">Verified tangible savings & economic revenue realized by customer organizations strictly from closed QC projects.</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-xs">
+                    <!-- Top Summary Stats -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded-3 text-center" style="background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.2) !important;">
+                                <div class="text-muted text-xxs text-uppercase fw-bold">Platform Total Realized</div>
+                                <div class="text-lg fw-bold text-success mt-1" id="modalTotalRealizedVal">—</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded-3 text-center" style="background: rgba(59,130,246,0.06); border-color: rgba(59,130,246,0.2) !important;">
+                                <div class="text-muted text-xxs text-uppercase fw-bold">Total Closed Projects</div>
+                                <div class="text-lg fw-bold text-primary mt-1" id="modalTotalClosedProjects">—</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded-3 text-center" style="background: rgba(139,92,246,0.06); border-color: rgba(139,92,246,0.2) !important;">
+                                <div class="text-muted text-xxs text-uppercase fw-bold">Avg Value / Project</div>
+                                <div class="text-lg fw-bold mt-1" style="color:#8b5cf6;" id="modalAvgSavingsPerProj">—</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded-3 text-center" style="background: rgba(6,182,212,0.06); border-color: rgba(6,182,212,0.2) !important;">
+                                <div class="text-muted text-xxs text-uppercase fw-bold">Avg Quality Improvement</div>
+                                <div class="text-lg fw-bold text-info mt-1" id="modalAvgKpiImp">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Organizations List View -->
+                    <div id="orgRevenueListView">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div class="position-relative" style="flex:1; max-width:380px;">
+                                <i data-lucide="search" class="text-muted position-absolute" style="top:50%; left:12px; transform:translateY(-50%); width:14px; height:14px; pointer-events:none; z-index:2;"></i>
+                                <input type="text" class="ds-input text-xs w-100" id="orgRevenueSearchInput" placeholder="Search organization..." oninput="SuperAdmin.filterOrgRevenueTable()" style="padding-left:36px; padding-top:6px; padding-bottom:6px; border-radius:8px;">
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm text-xs" id="orgRevenueStatusFilter" onchange="SuperAdmin.filterOrgRevenueTable()" style="width:170px;">
+                                    <option value="all">All Organizations</option>
+                                    <option value="with_savings">With Closed Projects</option>
+                                    <option value="zero_savings">No Closed Projects Yet</option>
+                                </select>
+                                <button class="ds-btn ds-btn-secondary ds-btn-sm" onclick="SuperAdmin.exportRealizedValueData('csv')">
+                                    <i data-lucide="download" style="width:12px;height:12px;" class="me-1"></i> Export CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive border rounded-3" style="max-height: 420px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0 text-xs" id="orgRevenueTable">
+                                <thead class="table-light sticky-top" style="background: var(--ds-surface-raised, #f8fafc);">
+                                    <tr>
+                                        <th style="width: 28%;">Organization</th>
+                                        <th style="width: 16%;">Plan &amp; Status</th>
+                                        <th style="width: 14%; text-align: center;">Closed Projects</th>
+                                        <th style="width: 18%; text-align: right;">Total Tangible Savings</th>
+                                        <th style="width: 14%; text-align: right;">Avg / Project</th>
+                                        <th style="width: 10%; text-align: center;">Avg Quality Imp.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orgRevenueTableBody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination Footer -->
+                        <div id="orgRevenuePaginationContainer"></div>
                     </div>
 
                     <!-- Organization Drilldown View (Closed Projects of a single org) -->
@@ -6457,22 +6664,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/i18n.js"></script>
-    <script src="/assets/js/components.js?v=3.1"></script>
-    <script src="/assets/js/enterprise-analytics.js?v=3.1"></script>
-    <script src="/assets/js/support-desk.js?v=3.4"></script>
-    <script src="/assets/js/announcements.js?v=3.1"></script>
-    <script src="/assets/js/integrations.js?v=3.1"></script>
-    <script src="/assets/js/platform-settings.js?v=3.1"></script>
-    <script src="/assets/js/super-admin.js?v=3.3"></script>
+    <script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
+    <script src="/assets/dist/enterprise-analytics.3c5210f0.min.js"></script>
+    <script src="/assets/dist/support-desk.631001bf.min.js"></script>
+    <script src="/assets/dist/integrations.bf5ef720.min.js"></script>
+    <script src="/assets/dist/platform-settings.db365a31.min.js"></script>
+    <script src="/assets/dist/super-admin.cd4a05d3.min.js"></script>
     <script>
+    if (typeof SupportDesk !== 'undefined') window.SupportDesk = SupportDesk;
+    if (typeof StageWeightageManager !== 'undefined') window.StageWeightageManager = StageWeightageManager;
+    if (typeof PlatformSettings !== 'undefined') window.PlatformSettings = PlatformSettings;
+
     // Helper: get JWT token from sessionStorage (primary) or localStorage (fallback) — matches api.js
     function _diGetToken() {
-        let t = sessionStorage.getItem('token') || 
-                sessionStorage.getItem('access_token') || 
-                localStorage.getItem('token') || 
-                localStorage.getItem('access_token') || '';
+        let t = (window.api && window.api.token) || '';
         if (t && t.startsWith('Bearer ')) t = t.substring(7).trim();
         return t;
     }
@@ -7230,101 +7435,125 @@
     </script>
 
 <!-- ══ Storage Breakdown Detail Modal ══════════════════════════════════════ -->
-<div id="storageBreakdownModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); align-items:center; justify-content:center;" onclick="if(event.target===this)SuperAdmin.closeStorageBreakdownModal()">
-    <div style="background:var(--ds-surface,#fff); border-radius:20px; box-shadow:0 32px 80px rgba(0,0,0,0.28); max-width:580px; width:calc(100% - 40px); overflow:hidden; animation:sbm-slide-in .25s cubic-bezier(.34,1.56,.64,1);">
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#1e40af,#4f46e5); padding:22px 28px 18px; position:relative;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:10px; display:flex;">
-                    <i data-lucide="database" style="width:20px;height:20px;color:#fff;"></i>
+<div class="modal fade" id="storageBreakdownModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background:var(--ds-bg-card,#ffffff); border: 1px solid var(--ds-border-color,#e2e8f0); border-radius: 20px; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.35);">
+            <!-- Modal Header -->
+            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #1e40af, #4f46e5); position: relative;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.18);">
+                        <i data-lucide="database" style="width:24px;height:24px;color:#fff;"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h5 class="modal-title fw-bold text-white mb-0" id="sbmOrgName" style="font-size: 18px;">Organization Name</h5>
+                            <span id="sbmOrgCode" class="badge" style="background: rgba(255,255,255,0.25); color: #fff; font-family: monospace; font-size: 11px; padding: 3px 8px; border-radius: 6px;">ORG-CODE</span>
+                        </div>
+                        <div class="text-xs text-white-50 mt-1">Real-Time Data Storage & Resource Consumption Breakdown</div>
+                    </div>
                 </div>
-                <div>
-                    <div id="sbmOrgName" style="font-size:16px;font-weight:700;color:#fff; line-height:1.2;"></div>
-                    <div style="font-size:12px;color:rgba(255,255,255,0.75); margin-top:2px;">Real-Time Storage Consumption Breakdown</div>
-                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <button onclick="SuperAdmin.closeStorageBreakdownModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;color:#fff;display:flex;align-items:center;transition:background .2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
-                <i data-lucide="x" style="width:16px;height:16px;"></i>
-            </button>
-        </div>
-        <!-- Body -->
-        <div style="padding:24px 28px;">
-            <!-- Total Bar -->
-            <div id="sbmTotalBar" style="background:linear-gradient(135deg,rgba(79,70,229,0.06),rgba(37,99,235,0.06)); border:1px solid rgba(79,70,229,0.15); border-radius:14px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
-                <div>
-                    <div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--ds-text-muted,#64748b);text-transform:uppercase;">Total Storage Used</div>
-                    <div id="sbmTotalUsed" style="font-size:28px;font-weight:800;color:#4f46e5; line-height:1.1; margin-top:4px;"></div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-4" style="max-height: calc(85vh - 160px); overflow-y: auto;">
+                <!-- Tenant Meta Pills -->
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+                    <span class="badge" id="sbmPlanBadge" style="background:#e0e7ff; color:#4338ca; font-size:11px; padding:5px 12px; border-radius:8px; font-weight:600;">Plan: Starter</span>
+                    <span class="badge" id="sbmStatusBadge" style="background:#dcfce7; color:#15803d; font-size:11px; padding:5px 12px; border-radius:8px; font-weight:600;">Active</span>
+                    <span class="badge" id="sbmUsersBadge" style="background:var(--ds-bg-elevated,#f1f5f9); color:var(--ds-text-main,#475569); font-size:11px; padding:5px 12px; border-radius:8px;"><i data-lucide="users" style="width:12px;height:12px;" class="me-1"></i>0 Users</span>
+                    <span class="badge" id="sbmProjectsBadge" style="background:var(--ds-bg-elevated,#f1f5f9); color:var(--ds-text-main,#475569); font-size:11px; padding:5px 12px; border-radius:8px;"><i data-lucide="folder-kanban" style="width:12px;height:12px;" class="me-1"></i>0 Projects</span>
+                    <span class="badge" id="sbmAuditsBadge" style="background:var(--ds-bg-elevated,#f1f5f9); color:var(--ds-text-main,#475569); font-size:11px; padding:5px 12px; border-radius:8px;"><i data-lucide="shield-check" style="width:12px;height:12px;" class="me-1"></i>0 Audit Logs</span>
                 </div>
-                <div style="text-align:right;">
-                    <div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--ds-text-muted,#64748b);text-transform:uppercase;">Allocated Limit</div>
-                    <div id="sbmTotalLimit" style="font-size:22px;font-weight:700;color:var(--ds-text-main,#0f172a); margin-top:4px;"></div>
-                    <div id="sbmTotalPct" style="font-size:12px;color:var(--ds-text-muted,#64748b); margin-top:2px;"></div>
+
+                <!-- Total Bar -->
+                <div class="p-3 mb-3 rounded-3 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(37,99,235,0.08)); border: 1px solid rgba(79,70,229,0.2);">
+                    <div>
+                        <div class="text-xxs fw-bold text-uppercase text-secondary" style="letter-spacing: 0.8px;">Total Storage Used</div>
+                        <div id="sbmTotalUsed" class="fs-3 fw-bold text-primary mt-1" style="color: #4f46e5 !important;">0.00 MB</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-xxs fw-bold text-uppercase text-secondary" style="letter-spacing: 0.8px;">Allocated Limit</div>
+                        <div id="sbmTotalLimit" class="fs-5 fw-bold text-main mt-1">10 GB</div>
+                        <div id="sbmTotalPct" class="text-xs text-muted mt-0.5">0% capacity used</div>
+                    </div>
                 </div>
+
+                <!-- Usage Progress Bar -->
+                <div class="mb-4">
+                    <div class="progress" style="height: 10px; border-radius: 8px; background: rgba(100,116,139,0.15);">
+                        <div id="sbmProgressBar" class="progress-bar" role="progressbar" style="width: 0%; border-radius: 8px; transition: width .5s ease;"></div>
+                    </div>
+                </div>
+
+                <!-- Breakdown Items -->
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="text-xs fw-bold text-uppercase text-secondary" style="letter-spacing: 0.7px;">Resource Consumption by Module</div>
+                    <span class="text-xxs text-muted">Calculated Real-Time</span>
+                </div>
+                <div id="sbmBreakdownList" class="d-flex flex-column gap-2"></div>
             </div>
-            <!-- Usage Progress Bar -->
-            <div style="margin-bottom:20px;">
-                <div style="background:rgba(0,0,0,0.06); border-radius:8px; height:10px; overflow:hidden;">
-                    <div id="sbmProgressBar" style="height:100%; border-radius:8px; transition:width .5s ease;"></div>
-                </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer border-top p-3 d-flex justify-content-between align-items-center" style="background: var(--ds-bg-elevated, #f8fafc);">
+                <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" id="sbmBtnAdjustLimit" onclick="SuperAdmin._openLimitModalFromBreakdown()">
+                    <i data-lucide="sliders" style="width:13px;height:13px;" class="me-1"></i> Adjust Storage Limit
+                </button>
+                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm px-4" data-bs-dismiss="modal">Close</button>
             </div>
-            <!-- Breakdown Items -->
-            <div style="font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ds-text-muted,#64748b); margin-bottom:12px;">Breakdown by Category</div>
-            <div id="sbmBreakdownList" style="display:flex; flex-direction:column; gap:8px;"></div>
-        </div>
-        <!-- Footer -->
-        <div style="padding:16px 28px 22px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--ds-border-color,#e2e8f0);">
-            <button class="ds-btn ds-btn-primary ds-btn-sm px-5" onclick="SuperAdmin.closeStorageBreakdownModal()">Close</button>
         </div>
     </div>
 </div>
 
 <!-- ══ Storage Limit Edit Modal ════════════════════════════════════════════ -->
-<div id="storageLimitModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); align-items:center; justify-content:center;" onclick="if(event.target===this)SuperAdmin.closeStorageLimitModal()">
-    <div style="background:var(--ds-surface,#fff); border-radius:20px; box-shadow:0 32px 80px rgba(0,0,0,0.28); max-width:460px; width:calc(100% - 40px); overflow:hidden; animation:sbm-slide-in .25s cubic-bezier(.34,1.56,.64,1);">
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#0f766e,#0891b2); padding:22px 28px 18px; position:relative;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:10px; display:flex;">
-                    <i data-lucide="sliders" style="width:20px;height:20px;color:#fff;"></i>
+<div class="modal fade" id="storageLimitModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--ds-bg-card,#ffffff); border: 1px solid var(--ds-border-color,#e2e8f0); border-radius: 20px; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.35);">
+            <!-- Header -->
+            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #0f766e, #0891b2); position: relative;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.18);">
+                        <i data-lucide="sliders" style="width:22px;height:22px;color:#fff;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-white mb-0" style="font-size: 17px;">Adjust Storage Limit</h5>
+                        <div id="slmOrgName" class="text-xs text-white-50 mt-1"></div>
+                    </div>
                 </div>
-                <div>
-                    <div style="font-size:15px;font-weight:700;color:#fff; line-height:1.2;">Adjust Storage Limit</div>
-                    <div id="slmOrgName" style="font-size:12px;color:rgba(255,255,255,0.75); margin-top:2px;"></div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-4">
+                <div class="p-3 mb-3 rounded-3 d-flex align-items-center justify-content-between" style="background: rgba(8,145,178,0.08); border: 1px solid rgba(8,145,178,0.2);">
+                    <div>
+                        <div class="text-xxs fw-bold text-uppercase text-secondary">Current Limit</div>
+                        <div id="slmCurrentLimit" class="fs-4 fw-bold" style="color: #0891b2;">-- GB</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-xxs fw-bold text-uppercase text-secondary">Storage Used</div>
+                        <div id="slmCurrentUsed" class="fs-5 fw-bold text-main">-- MB</div>
+                    </div>
+                </div>
+
+                <label class="form-label text-xs fw-semibold text-main mb-2">New Storage Limit (in GB)</label>
+                <div class="input-group mb-2">
+                    <input id="slmNewLimit" type="number" min="1" step="1" placeholder="e.g. 20" class="ds-input form-control fw-bold"
+                        style="font-size: 15px;" onkeydown="if(event.key==='Enter')SuperAdmin._confirmStorageLimitUpdate()">
+                    <span class="input-group-text bg-light text-secondary fw-bold text-xs">GB</span>
+                </div>
+                <div class="text-xxs text-muted mt-2">
+                    <i data-lucide="info" style="width:12px;height:12px;" class="me-1"></i> Limit must be &ge; current usage. Organizations exceeding their limit will receive capacity alerts.
                 </div>
             </div>
-            <button onclick="SuperAdmin.closeStorageLimitModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;color:#fff;display:flex;align-items:center;transition:background .2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
-                <i data-lucide="x" style="width:16px;height:16px;"></i>
-            </button>
-        </div>
-        <!-- Body -->
-        <div style="padding:24px 28px;">
-            <div id="slmCurrentInfo" style="background:rgba(8,145,178,0.06); border:1px solid rgba(8,145,178,0.18); border-radius:12px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
-                <div>
-                    <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ds-text-muted,#64748b);">Current Limit</div>
-                    <div id="slmCurrentLimit" style="font-size:22px;font-weight:800;color:#0891b2; margin-top:2px;"></div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ds-text-muted,#64748b);">Storage Used</div>
-                    <div id="slmCurrentUsed" style="font-size:18px;font-weight:700;color:var(--ds-text-main,#0f172a); margin-top:2px;"></div>
-                </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-top p-3 d-flex justify-content-end gap-2">
+                <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="ds-btn ds-btn-primary ds-btn-sm px-4" onclick="SuperAdmin._confirmStorageLimitUpdate()">
+                    <i data-lucide="check" style="width:13px;height:13px;" class="me-1"></i> Apply Limit
+                </button>
             </div>
-            <label style="display:block;font-size:13px;font-weight:600;color:var(--ds-text-main,#0f172a);margin-bottom:8px;">New Storage Limit <span style="color:var(--ds-text-muted,#64748b);font-weight:400;">(in GB)</span></label>
-            <div style="display:flex; align-items:center; gap:0; background:var(--ds-input-bg,#f8fafc); border:1.5px solid var(--ds-border-color,#e2e8f0); border-radius:12px; overflow:hidden; transition:border-color .2s;">
-                <input id="slmNewLimit" type="number" min="1" step="1" placeholder="e.g. 20"
-                    style="flex:1; border:none; background:transparent; padding:13px 16px; font-size:16px; font-weight:700; color:var(--ds-text-main,#0f172a); outline:none;"
-                    onkeydown="if(event.key==='Enter')SuperAdmin._confirmStorageLimitUpdate()"
-                    onfocus="this.closest('div').style.borderColor='#0891b2'"
-                    onblur="this.closest('div').style.borderColor='var(--ds-border-color,#e2e8f0)'">
-                <span style="padding:0 16px; font-size:13px; font-weight:700; color:var(--ds-text-muted,#64748b); white-space:nowrap;">GB</span>
-            </div>
-            <div style="font-size:12px;color:var(--ds-text-muted,#64748b); margin-top:8px;">⚠️ Limit must be ≥ current usage. Organizations exceeding their limit will receive capacity alerts.</div>
-        </div>
-        <!-- Footer -->
-        <div style="padding:16px 28px 22px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--ds-border-color,#e2e8f0);">
-            <button class="ds-btn ds-btn-secondary ds-btn-sm px-5" onclick="SuperAdmin.closeStorageLimitModal()">Cancel</button>
-            <button class="ds-btn ds-btn-primary ds-btn-sm px-5" onclick="SuperAdmin._confirmStorageLimitUpdate()">
-                <i data-lucide="check" style="width:14px;height:14px;" class="me-1"></i> Apply Limit
-            </button>
         </div>
     </div>
 </div>

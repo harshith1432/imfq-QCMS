@@ -63,6 +63,11 @@ const PlatformSettings = {
         this.bindBrandingListeners();
         this.restoreSavedBranding();
 
+        // Listen for mode switches to synchronize color pickers with active mode palette
+        window.addEventListener('qcms-theme-change', () => {
+            this.syncBrandingInputs();
+        });
+
         // Initialize FormManager for transactional editing (Explicit Save/Cancel, NO Auto-Save)
         if (window.FormManager) {
             this._formManager = new window.FormManager({
@@ -342,19 +347,9 @@ const PlatformSettings = {
             this._chk('ps-require-phone-otp', !!d.require_phone_otp);
             this._val('ps-global-notification', d.global_notification);
 
-            // Branding
-            const brand = d.branding_settings || {};
-            if (brand.primary_color) this._val('ps-primary-color', brand.primary_color);
-            if (brand.secondary_color) this._val('ps-secondary-color', brand.secondary_color);
-            if (brand.accent_color) this._val('ps-accent-color', brand.accent_color);
-            if (brand.success_color) this._val('ps-success-color', brand.success_color);
-            if (brand.warning_color) this._val('ps-warning-color', brand.warning_color);
-            if (brand.danger_color) this._val('ps-danger-color', brand.danger_color);
-            if (brand.font_family) this._val('ps-font-family', brand.font_family);
-            if (brand.font_size) this._val('ps-font-size', brand.font_size);
-            if (brand.border_radius) this._val('ps-border-radius', brand.border_radius);
-            if (brand.card_style) this._val('ps-card-style', brand.card_style);
-            if (brand.button_style) this._val('ps-button-style', brand.button_style);
+            // Branding (Dual-Mode Theme Management)
+            this._initBrandingData(d.branding_settings || {});
+            this.syncBrandingInputs();
 
             // Email
             const email = d.email_settings || {};
@@ -556,6 +551,9 @@ const PlatformSettings = {
         this._val('ps-cms-hero-stat2-lbl', lCms.hero_stat_2_lbl || 'Active Nodes');
         this._val('ps-cms-hero-stat3-val', lCms.hero_stat_3_val || '1,204');
         this._val('ps-cms-hero-stat3-lbl', lCms.hero_stat_3_lbl || '+12 this hour');
+        this._val('ps-cms-hero-feature1', lCms.hero_feature_1 || 'Enterprise Secure');
+        this._val('ps-cms-hero-feature2', lCms.hero_feature_2 || 'Global Scale');
+        this._val('ps-cms-hero-feature3', lCms.hero_feature_3 || 'High Precision');
 
         // Trust Ticker
         this._val('ps-cms-ticker-1', lCms.ticker_1 || '99.9% Uptime');
@@ -588,6 +586,7 @@ const PlatformSettings = {
         this.renderFeatures((lCms.features_list && lCms.features_list.length) ? lCms.features_list : defaultFeatures);
 
         // Steps
+        this._val('ps-cms-steps-badge', lCms.steps_badge || 'Onboarding Flow');
         this._val('ps-cms-steps-title', lCms.steps_title || 'How It Works');
         this._val('ps-cms-steps-subtitle', lCms.steps_subtitle || 'Deploy your enterprise-grade QMS in four simple steps.');
         const defaultSteps = [
@@ -599,12 +598,13 @@ const PlatformSettings = {
         this.renderSteps((lCms.steps_list && lCms.steps_list.length) ? lCms.steps_list : defaultSteps);
 
         // Pricing Plans
+        this._val('ps-cms-pricing-badge', lCms.pricing_badge || 'Simple Pricing');
         this._val('ps-cms-pricing-title', lCms.pricing_title || 'Flexible Plans for Every Stage');
         this._val('ps-cms-pricing-subtitle', lCms.pricing_subtitle || 'Scale your quality operations without complexity.');
         const defaultPricing = [
-            { name: 'Starter', badge: '', price: '₹0', period: '/month (14d Trial)', desc: 'For small focused teams', features: ['50 Users Max', 'Basic QC Workflow', 'Limited Reports', '14 Days Free Trial'], cta: 'Start Free Trial' },
-            { name: 'Professional', badge: 'MOST POPULAR', price: '₹199', period: '/month', desc: 'Complete enterprise engine', features: ['500 Users', 'Full Workflow Engine', 'Analytics Dashboard', 'Repository + AI Assistant', 'Reports + Audit Logs'], cta: 'Start Free Trial' },
-            { name: 'Enterprise', badge: '', price: 'Custom', period: '', desc: 'For global scale manufacturing', features: ['Unlimited Users', 'Multi Plant Support', 'White Label Branding', 'API Integration', 'Dedicated Support'], cta: 'Contact Sales' }
+            { name: 'Starter', badge: '', price: '₹0', period: '/month (14d Trial)', desc: 'For small focused teams', features: ['50 Users Max', 'Basic QC Workflow', 'Limited Reports', '14 Days Free Trial'], cta: 'Start Free Trial', cta_url: '/auth/register-org.html?plan=Starter' },
+            { name: 'Professional', badge: 'MOST POPULAR', price: '₹199', period: '/month', desc: 'Complete enterprise engine', features: ['500 Users', 'Full Workflow Engine', 'Analytics Dashboard', 'Repository + AI Assistant', 'Reports + Audit Logs'], cta: 'Start Free Trial', cta_url: '/auth/register-org.html?plan=Professional' },
+            { name: 'Enterprise', badge: '', price: 'Custom', period: '', desc: 'For global scale manufacturing', features: ['Unlimited Users', 'Multi Plant Support', 'White Label Branding', 'API Integration', 'Dedicated Support'], cta: 'Contact Sales', cta_url: 'openTalkToSalesModal()' }
         ];
         this.renderPricingPlans((lCms.pricing_plans && lCms.pricing_plans.length) ? lCms.pricing_plans : defaultPricing);
 
@@ -621,14 +621,21 @@ const PlatformSettings = {
         this.renderFAQs((lCms.faqs && lCms.faqs.length) ? lCms.faqs : defaultFaqs);
 
         // CTA Offer Banner
+        this._val('ps-cms-cta-banner-badge', lCms.cta_banner_badge || 'Limited Time Offer');
         this._val('ps-cms-cta-banner-title', lCms.cta_banner_title || 'Start Your 14-Day Free Trial');
         this._val('ps-cms-cta-banner-subtitle', lCms.cta_banner_subtitle || 'No Credit Card Required. Get instant access to admin dashboard, workflow engine, and analytics.');
+        this._val('ps-cms-cta-feature-1', lCms.cta_feature_1 || 'Instant Setup');
+        this._val('ps-cms-cta-feature-2', lCms.cta_feature_2 || 'Full Workflow');
+        this._val('ps-cms-cta-feature-3', lCms.cta_feature_3 || 'AI Assistant');
         this._val('ps-cms-cta-banner-btn1', lCms.cta_banner_btn1 || 'Launch Your Instance');
+        this._val('ps-cms-cta-banner-btn1-url', lCms.cta_banner_btn1_url || '/auth/register-org.html');
         this._val('ps-cms-cta-banner-btn2', lCms.cta_banner_btn2 || 'Talk to Sales');
+        this._val('ps-cms-cta-banner-btn2-url', lCms.cta_banner_btn2_url || 'openTalkToSalesModal()');
 
         // Footer
         this._val('ps-cms-footer-desc', lCms.footer_description || "The world's most advanced quality management system for modern manufacturing and enterprise excellence. Built for scale, security, and precision.");
         this._val('ps-cms-footer-copy', lCms.footer_copyright || '© 2026 QCMS Precision Core. Engineered for Excellence.');
+        this._val('ps-cms-footer-lang', lCms.footer_lang || 'English (US)');
         this._val('ps-cms-footer-status', lCms.footer_status || 'Operational');
 
         this.loadFooterPages(lCms.footer_pages);
@@ -789,9 +796,13 @@ const PlatformSettings = {
                         <label class="form-label text-xxs uppercase">Plan Description</label>
                         <input type="text" class="form-control form-control-sm plan-desc" value="${(p.desc||'').replace(/"/g, '&quot;')}">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <label class="form-label text-xxs uppercase">CTA Button Text</label>
                         <input type="text" class="form-control form-control-sm plan-cta" value="${(p.cta||'').replace(/"/g, '&quot;')}" placeholder="Start Free Trial">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-xxs uppercase">CTA Link / Action</label>
+                        <input type="text" class="form-control form-control-sm plan-cta-url" value="${(p.cta_url||'').replace(/"/g, '&quot;')}" placeholder="e.g. register-org.html?plan=Starter or openTalkToSalesModal()">
                     </div>
                     <div class="col-md-12">
                         <label class="form-label text-xxs uppercase">Features (Comma separated)</label>
@@ -812,9 +823,10 @@ const PlatformSettings = {
             period: el.querySelector('.plan-period').value,
             desc: el.querySelector('.plan-desc').value,
             cta: el.querySelector('.plan-cta').value,
+            cta_url: el.querySelector('.plan-cta-url') ? el.querySelector('.plan-cta-url').value : '',
             features: el.querySelector('.plan-features').value.split(',').map(s => s.trim()).filter(Boolean)
         }));
-        plans.push({ name: 'Custom Tier', badge: '', price: '₹999', period: '/month', desc: 'Custom enterprise features', features: ['Feature 1', 'Feature 2'], cta: 'Choose Plan' });
+        plans.push({ name: 'Custom Tier', badge: '', price: '₹999', period: '/month', desc: 'Custom enterprise features', features: ['Feature 1', 'Feature 2'], cta: 'Choose Plan', cta_url: 'register-org.html?plan=Custom' });
         this.renderPricingPlans(plans);
     },
 
@@ -858,6 +870,7 @@ const PlatformSettings = {
                 period: el.querySelector('.plan-period') ? el.querySelector('.plan-period').value.trim() : '',
                 desc: el.querySelector('.plan-desc') ? el.querySelector('.plan-desc').value.trim() : '',
                 cta: el.querySelector('.plan-cta') ? el.querySelector('.plan-cta').value.trim() : '',
+                cta_url: el.querySelector('.plan-cta-url') ? el.querySelector('.plan-cta-url').value.trim() : '',
                 features: el.querySelector('.plan-features') ? el.querySelector('.plan-features').value.split(',').map(s => s.trim()).filter(Boolean) : []
             })).filter(p => p.name);
 
@@ -878,6 +891,9 @@ const PlatformSettings = {
                     hero_stat_2_lbl: this._getVal('ps-cms-hero-stat2-lbl'),
                     hero_stat_3_val: this._getVal('ps-cms-hero-stat3-val'),
                     hero_stat_3_lbl: this._getVal('ps-cms-hero-stat3-lbl'),
+                    hero_feature_1: this._getVal('ps-cms-hero-feature1') || 'Enterprise Secure',
+                    hero_feature_2: this._getVal('ps-cms-hero-feature2') || 'Global Scale',
+                    hero_feature_3: this._getVal('ps-cms-hero-feature3') || 'High Precision',
 
                     ticker_1: this._getVal('ps-cms-ticker-1'),
                     ticker_2: this._getVal('ps-cms-ticker-2'),
@@ -898,10 +914,12 @@ const PlatformSettings = {
                     features_subtitle: this._getVal('ps-cms-features-subtitle'),
                     features_list: features_list,
 
+                    steps_badge: this._getVal('ps-cms-steps-badge') || 'Onboarding Flow',
                     steps_title: this._getVal('ps-cms-steps-title'),
                     steps_subtitle: this._getVal('ps-cms-steps-subtitle'),
                     steps_list: steps_list,
 
+                    pricing_badge: this._getVal('ps-cms-pricing-badge') || 'Simple Pricing',
                     pricing_title: this._getVal('ps-cms-pricing-title'),
                     pricing_subtitle: this._getVal('ps-cms-pricing-subtitle'),
                     pricing_plans: pricing_plans,
@@ -910,13 +928,20 @@ const PlatformSettings = {
                     faq_subtitle: this._getVal('ps-cms-faq-subtitle'),
                     faqs: faqs,
 
+                    cta_banner_badge: this._getVal('ps-cms-cta-banner-badge') || 'Limited Time Offer',
                     cta_banner_title: this._getVal('ps-cms-cta-banner-title'),
                     cta_banner_subtitle: this._getVal('ps-cms-cta-banner-subtitle'),
-                    cta_banner_btn1: this._getVal('ps-cms-cta-banner-btn1'),
-                    cta_banner_btn2: this._getVal('ps-cms-cta-banner-btn2'),
+                    cta_feature_1: this._getVal('ps-cms-cta-feature-1') || 'Instant Setup',
+                    cta_feature_2: this._getVal('ps-cms-cta-feature-2') || 'Full Workflow',
+                    cta_feature_3: this._getVal('ps-cms-cta-feature-3') || 'AI Assistant',
+                    cta_banner_btn1: this._getVal('ps-cms-cta-banner-btn1') || 'Launch Your Instance',
+                    cta_banner_btn1_url: this._getVal('ps-cms-cta-banner-btn1-url') || '/auth/register-org.html',
+                    cta_banner_btn2: this._getVal('ps-cms-cta-banner-btn2') || 'Talk to Sales',
+                    cta_banner_btn2_url: this._getVal('ps-cms-cta-banner-btn2-url') || 'openTalkToSalesModal()',
 
                     footer_description: this._getVal('ps-cms-footer-desc'),
                     footer_copyright: this._getVal('ps-cms-footer-copy'),
+                    footer_lang: this._getVal('ps-cms-footer-lang') || 'English (US)',
                     footer_status: this._getVal('ps-cms-footer-status'),
                     footer_pages: this.footerPagesData || {}
                 }
@@ -1171,7 +1196,7 @@ const PlatformSettings = {
     async loadSecurityKPIs() {
         try {
             const API_BASE = window.QCMS_API_BASE || '/api/super-admin';
-            const token = localStorage.getItem('access_token');
+            // Cookie authentication handled via credentials: 'include'
             const r = await fetch(`${API_BASE}/settings/security-kpis`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -1209,7 +1234,7 @@ const PlatformSettings = {
     async loadAuthKPIs() {
         try {
             const API_BASE = window.QCMS_API_BASE || '/api/super-admin';
-            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || sessionStorage.getItem('token');
+            // Cookie authentication handled via credentials: 'include'
             const r = await fetch(`${API_BASE}/settings/auth-kpis`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -1901,6 +1926,94 @@ const PlatformSettings = {
         return isNaN(num) ? '37, 99, 235' : `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
     },
 
+    _brandingData: null,
+
+    _initBrandingData(backendBrand = {}) {
+        let brand = backendBrand || {};
+        const lightDefaults = window.DEFAULT_PALETTES?.light || {
+            primary_color: '#2563eb', secondary_color: '#64748b', accent_color: '#10b981',
+            success_color: '#16a34a', warning_color: '#f59e0b', danger_color: '#ef4444'
+        };
+        const darkDefaults = window.DEFAULT_PALETTES?.dark || {
+            primary_color: '#3b82f6', secondary_color: '#94a3b8', accent_color: '#34d399',
+            success_color: '#22c55e', warning_color: '#fbbf24', danger_color: '#f87171'
+        };
+
+        if (!brand.light || !brand.dark) {
+            const existingLight = brand.light || {
+                primary_color: brand.primary_color || lightDefaults.primary_color,
+                secondary_color: brand.secondary_color || lightDefaults.secondary_color,
+                accent_color: brand.accent_color || lightDefaults.accent_color,
+                success_color: brand.success_color || lightDefaults.success_color,
+                warning_color: brand.warning_color || lightDefaults.warning_color,
+                danger_color: brand.danger_color || lightDefaults.danger_color,
+            };
+            const existingDark = brand.dark || {
+                primary_color: brand.dark_primary_color || darkDefaults.primary_color,
+                secondary_color: brand.dark_secondary_color || darkDefaults.secondary_color,
+                accent_color: brand.dark_accent_color || darkDefaults.accent_color,
+                success_color: brand.dark_success_color || darkDefaults.success_color,
+                warning_color: brand.dark_warning_color || darkDefaults.warning_color,
+                danger_color: brand.dark_danger_color || darkDefaults.danger_color,
+            };
+
+            brand = {
+                ...brand,
+                light: existingLight,
+                dark: existingDark,
+                font_family: brand.font_family || 'Inter',
+                font_size: brand.font_size || '14px',
+                border_radius: brand.border_radius || '10px',
+                card_style: brand.card_style || 'glass',
+                button_style: brand.button_style || 'rounded',
+                assets: brand.assets || JSON.parse(localStorage.getItem('qcms_brand_assets') || '{}')
+            };
+        }
+        this._brandingData = brand;
+        localStorage.setItem('qcms_branding_config', JSON.stringify(brand));
+        return brand;
+    },
+
+    syncBrandingInputs() {
+        const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const badge = document.getElementById('ps-palette-mode-badge');
+        if (badge) {
+            if (currentMode === 'dark') {
+                badge.innerHTML = `<i data-lucide="moon" style="width:12px;height:12px;" class="me-1"></i> Active: Dark Mode Palette`;
+                badge.className = 'badge bg-purple bg-opacity-10 text-purple border border-purple border-opacity-25 rounded-pill px-2.5 py-1 text-xs fw-semibold d-flex align-items-center gap-1';
+            } else {
+                badge.innerHTML = `<i data-lucide="sun" style="width:12px;height:12px;" class="me-1"></i> Active: Light Mode Palette`;
+                badge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2.5 py-1 text-xs fw-semibold d-flex align-items-center gap-1';
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+        const modePalette = (brand && brand[currentMode]) ? brand[currentMode] : (window.DEFAULT_PALETTES?.[currentMode] || {});
+
+        const colorMap = [
+            { id: 'ps-primary-color', txt: 'ps-primary-color-text', val: modePalette.primary_color || (currentMode === 'dark' ? '#3b82f6' : '#2563eb') },
+            { id: 'ps-secondary-color', txt: 'ps-secondary-color-text', val: modePalette.secondary_color || (currentMode === 'dark' ? '#94a3b8' : '#6b7280') },
+            { id: 'ps-accent-color', txt: 'ps-accent-color-text', val: modePalette.accent_color || (currentMode === 'dark' ? '#34d399' : '#10b981') },
+            { id: 'ps-success-color', txt: 'ps-success-color-text', val: modePalette.success_color || (currentMode === 'dark' ? '#22c55e' : '#16a34a') },
+            { id: 'ps-warning-color', txt: 'ps-warning-color-text', val: modePalette.warning_color || (currentMode === 'dark' ? '#fbbf24' : '#f59e0b') },
+            { id: 'ps-danger-color', txt: 'ps-danger-color-text', val: modePalette.danger_color || (currentMode === 'dark' ? '#f87171' : '#ef4444') }
+        ];
+
+        colorMap.forEach(item => {
+            const picker = document.getElementById(item.id);
+            const txt = document.getElementById(item.txt);
+            if (picker) picker.value = item.val;
+            if (txt) txt.value = item.val;
+        });
+
+        if (brand.font_family) this._val('ps-font-family', brand.font_family);
+        if (brand.font_size) this._val('ps-font-size', brand.font_size);
+        if (brand.border_radius) this._val('ps-border-radius', brand.border_radius);
+        if (brand.card_style) this._val('ps-card-style', brand.card_style);
+        if (brand.button_style) this._val('ps-button-style', brand.button_style);
+    },
+
     bindBrandingListeners() {
         const colorInputs = [
             { id: 'ps-primary-color', txtId: 'ps-primary-color-text' },
@@ -1935,56 +2048,55 @@ const PlatformSettings = {
 
     applyLiveBranding(key, val) {
         if (!key || !val) return;
-        const root = document.documentElement;
+        const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+        if (!brand[currentMode]) brand[currentMode] = { ...(window.DEFAULT_PALETTES?.[currentMode] || {}) };
 
-        if (key === 'ps-primary-color') {
-            const rgb = this._hexToRgb(val);
-            root.style.setProperty('--ds-primary', val);
-            root.style.setProperty('--ds-accent', val);
-            root.style.setProperty('--primary', val);
-            root.style.setProperty('--bs-primary', val);
-            root.style.setProperty('--ds-primary-rgb', rgb);
-            root.style.setProperty('--ds-accent-rgb', rgb);
-            root.style.setProperty('--primary-rgb', rgb);
+        const colorKeyMap = {
+            'ps-primary-color': 'primary_color',
+            'ps-secondary-color': 'secondary_color',
+            'ps-accent-color': 'accent_color',
+            'ps-success-color': 'success_color',
+            'ps-warning-color': 'warning_color',
+            'ps-danger-color': 'danger_color'
+        };
 
-            const kpiVal = document.getElementById('ps-kpi-color-palette');
-            if (kpiVal) kpiVal.innerText = `Custom Theme (${val})`;
-        } else if (key === 'ps-secondary-color') {
-            root.style.setProperty('--ds-text-secondary', val);
-            root.style.setProperty('--ds-gray-rgb', this._hexToRgb(val));
-        } else if (key === 'ps-accent-color') {
-            root.style.setProperty('--ds-accent-highlight', val);
-            root.style.setProperty('--accent', val);
-        } else if (key === 'ps-success-color') {
-            root.style.setProperty('--ds-green-rgb', this._hexToRgb(val));
-        } else if (key === 'ps-warning-color') {
-            root.style.setProperty('--ds-orange-rgb', this._hexToRgb(val));
-        } else if (key === 'ps-danger-color') {
-            root.style.setProperty('--ds-red-rgb', this._hexToRgb(val));
-        } else if (key === 'ps-font-family') {
-            const fontStack = val === 'Roboto'
-                ? `'Roboto', system-ui, sans-serif`
-                : val === 'Outfit'
-                ? `'Outfit', 'Inter', system-ui, sans-serif`
-                : `'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-            root.style.setProperty('--ds-font-body', fontStack);
-            root.style.setProperty('--ds-font-heading', fontStack);
-            root.style.setProperty('--ds-font-title', fontStack);
-        } else if (key === 'ps-font-size') {
-            root.style.setProperty('font-size', val);
-        } else if (key === 'ps-border-radius') {
-            root.style.setProperty('--ds-radius-lg', val);
-            const num = parseInt(val);
-            if (!isNaN(num)) {
-                root.style.setProperty('--ds-radius-md', `${Math.max(6, num - 4)}px`);
-                root.style.setProperty('--ds-radius-sm', `${Math.max(4, num - 8)}px`);
+        if (colorKeyMap[key]) {
+            brand[currentMode][colorKeyMap[key]] = val;
+        } else {
+            const globalKeyMap = {
+                'ps-font-family': 'font_family',
+                'ps-font-size': 'font_size',
+                'ps-border-radius': 'border_radius',
+                'ps-card-style': 'card_style',
+                'ps-button-style': 'button_style'
+            };
+            if (globalKeyMap[key]) {
+                brand[globalKeyMap[key]] = val;
             }
         }
 
-        // Save live configuration in local storage
-        const currentBranding = JSON.parse(localStorage.getItem('qcms_branding_config') || '{}');
-        currentBranding[key] = val;
-        localStorage.setItem('qcms_branding_config', JSON.stringify(currentBranding));
+        this._brandingData = brand;
+        localStorage.setItem('qcms_branding_config', JSON.stringify(brand));
+
+        if (window.themeManager) {
+            window.themeManager.applyModePalette(currentMode);
+        }
+    },
+
+    resetCurrentModePalette() {
+        const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const defaults = window.DEFAULT_PALETTES?.[currentMode] || {};
+        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+        brand[currentMode] = { ...defaults };
+        this._brandingData = brand;
+        localStorage.setItem('qcms_branding_config', JSON.stringify(brand));
+
+        if (window.themeManager) {
+            window.themeManager.applyModePalette(currentMode);
+        }
+        this.syncBrandingInputs();
+        QCMS.toast(`Reset ${currentMode === 'dark' ? 'Dark' : 'Light'} Mode palette to system defaults!`, 'info');
     },
 
     uploadAsset(type) {
@@ -2029,10 +2141,13 @@ const PlatformSettings = {
     },
 
     restoreSavedBranding() {
-        const saved = JSON.parse(localStorage.getItem('qcms_branding_config') || '{}');
-        Object.keys(saved).forEach(k => {
-            this.applyLiveBranding(k, saved[k]);
-        });
+        const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+        if (window.themeManager) {
+            window.themeManager.applyModePalette(currentMode);
+        }
+        this.syncBrandingInputs();
+
         const assets = JSON.parse(localStorage.getItem('qcms_brand_assets') || '{}');
         Object.keys(assets).forEach(type => {
             const containerId = `ps-preview-${type}`;
@@ -2045,41 +2160,39 @@ const PlatformSettings = {
 
     async saveBranding() {
         try {
-            const brandingObj = {
-                primary_color: this._getVal('ps-primary-color'),
-                secondary_color: this._getVal('ps-secondary-color'),
-                accent_color: this._getVal('ps-accent-color'),
-                success_color: this._getVal('ps-success-color'),
-                warning_color: this._getVal('ps-warning-color'),
-                danger_color: this._getVal('ps-danger-color'),
-                font_family: this._getVal('ps-font-family'),
-                font_size: this._getVal('ps-font-size'),
-                border_radius: this._getVal('ps-border-radius'),
-                card_style: this._getVal('ps-card-style'),
-                button_style: this._getVal('ps-button-style'),
-                assets: JSON.parse(localStorage.getItem('qcms_brand_assets') || '{}')
-            };
+            const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+            const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+            if (!brand[currentMode]) brand[currentMode] = {};
 
-            // Apply live to document
-            this.applyLiveBranding('ps-primary-color', brandingObj.primary_color);
-            this.applyLiveBranding('ps-secondary-color', brandingObj.secondary_color);
-            this.applyLiveBranding('ps-accent-color', brandingObj.accent_color);
-            this.applyLiveBranding('ps-success-color', brandingObj.success_color);
-            this.applyLiveBranding('ps-warning-color', brandingObj.warning_color);
-            this.applyLiveBranding('ps-danger-color', brandingObj.danger_color);
-            this.applyLiveBranding('ps-font-family', brandingObj.font_family);
-            this.applyLiveBranding('ps-font-size', brandingObj.font_size);
-            this.applyLiveBranding('ps-border-radius', brandingObj.border_radius);
+            brand[currentMode].primary_color = this._getVal('ps-primary-color') || brand[currentMode].primary_color;
+            brand[currentMode].secondary_color = this._getVal('ps-secondary-color') || brand[currentMode].secondary_color;
+            brand[currentMode].accent_color = this._getVal('ps-accent-color') || brand[currentMode].accent_color;
+            brand[currentMode].success_color = this._getVal('ps-success-color') || brand[currentMode].success_color;
+            brand[currentMode].warning_color = this._getVal('ps-warning-color') || brand[currentMode].warning_color;
+            brand[currentMode].danger_color = this._getVal('ps-danger-color') || brand[currentMode].danger_color;
+
+            brand.font_family = this._getVal('ps-font-family') || brand.font_family;
+            brand.font_size = this._getVal('ps-font-size') || brand.font_size;
+            brand.border_radius = this._getVal('ps-border-radius') || brand.border_radius;
+            brand.card_style = this._getVal('ps-card-style') || brand.card_style;
+            brand.button_style = this._getVal('ps-button-style') || brand.button_style;
+            brand.assets = JSON.parse(localStorage.getItem('qcms_brand_assets') || '{}');
+
+            this._brandingData = brand;
+            localStorage.setItem('qcms_branding_config', JSON.stringify(brand));
+
+            if (window.themeManager) {
+                window.themeManager.applyModePalette(currentMode);
+            }
 
             // Save to backend
             const payload = {
                 _category: 'Branding Settings',
-                branding_settings: brandingObj
+                branding_settings: brand
             };
             await this._put('/settings', payload);
 
-            localStorage.setItem('qcms_branding_config', JSON.stringify(brandingObj));
-            QCMS.toast('Branding customizations saved and applied live across platform!', 'success');
+            QCMS.toast(`Branding customizations saved for ${currentMode === 'dark' ? 'Dark' : 'Light'} Mode & applied live!`, 'success');
         } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
     },
 
@@ -2729,6 +2842,19 @@ Object.assign(PlatformSettings, {
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         }
+    },
+
+    togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.innerHTML = '<i data-lucide="eye-off" style="width:15px;height:15px;"></i>';
+        } else {
+            input.type = 'password';
+            btn.innerHTML = '<i data-lucide="eye" style="width:15px;height:15px;"></i>';
+        }
+        if (window.lucide) lucide.createIcons({ container: btn });
     },
 
     validateEmail(email) {

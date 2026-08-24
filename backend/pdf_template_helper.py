@@ -31,15 +31,32 @@ def resolve_image_to_data_uri(url_or_path):
         return url_or_path
         
     clean_path = url_or_path.replace('\\', '/')
-    filename = urllib.parse.unquote(os.path.basename(clean_path.split('?')[0]))
-    
+    clean_url = clean_path.split('?')[0].strip()
+    filename = urllib.parse.unquote(os.path.basename(clean_url))
+    if not filename:
+        return url_or_path
+
+    rel_path = clean_url
+    if rel_path.startswith('/'):
+        rel_path = rel_path.lstrip('/')
+    if rel_path.startswith('uploads/'):
+        rel_path = rel_path[len('uploads/'):]
+
     candidate_paths = [
-        clean_path,
+        clean_url,
+        os.path.join(os.getcwd(), clean_url.lstrip('/')),
+        os.path.join(os.getcwd(), 'uploads', rel_path),
+        os.path.join(os.getcwd(), 'backend', 'uploads', rel_path),
         os.path.join(os.getcwd(), 'uploads', filename),
         os.path.join(os.getcwd(), 'backend', 'uploads', filename),
-        os.path.join(os.getcwd(), 'frontend', 'uploads', filename),
+        os.path.join(os.getcwd(), 'backend', 'uploads', 'project_evidence', filename),
+        os.path.join(os.path.dirname(__file__), 'uploads', rel_path),
+        os.path.join(os.path.dirname(__file__), 'uploads', 'project_evidence', filename),
         os.path.join(os.path.dirname(__file__), 'uploads', filename),
         os.path.join(os.path.dirname(__file__), '..', 'frontend', 'uploads', filename),
+        os.path.join(r'd:\ifqm134\imfq\backend\uploads', rel_path.replace('/', os.sep)),
+        os.path.join(r'd:\ifqm134\imfq\backend\uploads', filename),
+        os.path.join(r'd:\ifqm134\imfq\backend\uploads\project_evidence', filename),
     ]
     
     try:
@@ -47,7 +64,9 @@ def resolve_image_to_data_uri(url_or_path):
         if current_app:
             up_folder = current_app.config.get('UPLOAD_FOLDER')
             if up_folder:
-                candidate_paths.insert(0, os.path.join(up_folder, filename))
+                candidate_paths.insert(0, os.path.join(up_folder, rel_path.replace('/', os.sep)))
+                candidate_paths.insert(1, os.path.join(up_folder, filename))
+                candidate_paths.insert(2, os.path.join(up_folder, 'project_evidence', filename))
     except Exception:
         pass
         
@@ -57,6 +76,22 @@ def resolve_image_to_data_uri(url_or_path):
             resolved_file = cp
             break
             
+    if not resolved_file:
+        search_dirs = [
+            os.path.join(os.getcwd(), 'uploads'),
+            os.path.join(os.getcwd(), 'backend', 'uploads'),
+            os.path.join(os.path.dirname(__file__), 'uploads'),
+            r'd:\ifqm134\imfq\backend\uploads'
+        ]
+        for sdir in search_dirs:
+            if sdir and os.path.isdir(sdir):
+                for root, _, files in os.walk(sdir):
+                    if filename in files:
+                        resolved_file = os.path.join(root, filename)
+                        break
+            if resolved_file:
+                break
+
     if resolved_file:
         try:
             mime_type, _ = mimetypes.guess_type(resolved_file)
@@ -85,6 +120,14 @@ def resolve_image_to_data_uri(url_or_path):
 def extract_evidence_photos(d2, d6):
     photos = []
     
+    def clean_txt(val):
+        if val is None:
+            return ""
+        s = str(val).strip()
+        if s.lower() in ('undefined', 'null', 'none', ''):
+            return ""
+        return s
+
     cs = d2.get('current_state') if isinstance(d2, dict) else {}
     if not isinstance(cs, dict):
         cs = {}
@@ -101,6 +144,14 @@ def extract_evidence_photos(d2, d6):
                 url = item
                 name = os.path.basename(item)
             
+            clean_name = clean_txt(name)
+            if not clean_name and url:
+                clean_name = os.path.basename(url.split('?')[0])
+                if clean_name.startswith('ev_') and '_' in clean_name[3:]:
+                    parts = clean_name.split('_', 3)
+                    if len(parts) >= 4:
+                        clean_name = parts[3]
+            
             if url and is_image_file(url):
                 photos.append({
                     'stage': 'Stage 2.7',
@@ -109,7 +160,7 @@ def extract_evidence_photos(d2, d6):
                     'badge_color': '#1e40af',
                     'badge_border': '#bfdbfe',
                     'url': url,
-                    'name': name or 'Current State Photo',
+                    'name': clean_name or 'Current State Photo',
                     'tag': 'Before'
                 })
                 
@@ -127,10 +178,20 @@ def extract_evidence_photos(d2, d6):
                 url = item
                 name = os.path.basename(item)
                 
+            clean_name = clean_txt(name)
+            if not clean_name and url:
+                clean_name = os.path.basename(url.split('?')[0])
+                if clean_name.startswith('ev_') and '_' in clean_name[3:]:
+                    parts = clean_name.split('_', 3)
+                    if len(parts) >= 4:
+                        clean_name = parts[3]
+
+            clean_upb = clean_txt(uploaded_by)
+
             if url and is_image_file(url):
-                caption = name or 'Implementation Proof'
-                if uploaded_by and str(uploaded_by).strip():
-                    caption += f" (by {str(uploaded_by).strip()})"
+                caption = clean_name or 'Implementation Proof'
+                if clean_upb:
+                    caption += f" (by {clean_upb})"
                 photos.append({
                     'stage': 'Stage 6.6',
                     'stage_label': 'Stage 6.6: Implementation Proof',

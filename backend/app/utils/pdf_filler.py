@@ -6,6 +6,7 @@ import html
 import base64
 import mimetypes
 import urllib.parse
+from datetime import datetime, date
 from app import db
 from app.infrastructure.database.models.models import (
     Project, ProjectWorkflow, Department, ProjectMeeting, Stage1ProblemDefinitionProjectInitiation, Stage2ObservationDataCollection, 
@@ -13,6 +14,7 @@ from app.infrastructure.database.models.models import (
     Stage6ImplementationChangeManagement, Stage7PerformanceVerificationBenefitsRealization, 
     Stage8StandardizationKnowledgeSharingProjectClosure
 )
+from app.infrastructure.database.models.audit import AuditLog
 
 def get_v(obj, data, path, fallback="--"):
     val = None
@@ -486,15 +488,33 @@ def resolve_image_to_data_uri(url_or_path):
         return url_or_path
         
     clean_path = url_or_path.replace('\\', '/')
-    filename = urllib.parse.unquote(os.path.basename(clean_path.split('?')[0]))
-    
+    clean_url = clean_path.split('?')[0].strip()
+    filename = urllib.parse.unquote(os.path.basename(clean_url))
+    if not filename:
+        return url_or_path
+
+    rel_path = clean_url
+    if rel_path.startswith('/'):
+        rel_path = rel_path.lstrip('/')
+    if rel_path.startswith('uploads/'):
+        rel_path = rel_path[len('uploads/'):]
+
     candidate_paths = [
-        clean_path,
+        clean_url,
+        os.path.join(os.getcwd(), clean_url.lstrip('/')),
+        os.path.join(os.getcwd(), 'uploads', rel_path),
+        os.path.join(os.getcwd(), 'backend', 'uploads', rel_path),
         os.path.join(os.getcwd(), 'uploads', filename),
         os.path.join(os.getcwd(), 'backend', 'uploads', filename),
-        os.path.join(os.getcwd(), 'frontend', 'uploads', filename),
+        os.path.join(os.getcwd(), 'backend', 'uploads', 'project_evidence', filename),
+        os.path.join(os.path.dirname(__file__), '..', '..', 'uploads', rel_path),
+        os.path.join(os.path.dirname(__file__), '..', '..', 'uploads', 'project_evidence', filename),
         os.path.join(os.path.dirname(__file__), '..', '..', 'uploads', filename),
-        os.path.join(os.path.dirname(__file__), '..', '..', '..', 'frontend', 'uploads', filename),
+        os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend', 'uploads', rel_path),
+        os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend', 'uploads', filename),
+        os.path.join(r'd:\ifqm134\imfq\backend\uploads', rel_path.replace('/', os.sep)),
+        os.path.join(r'd:\ifqm134\imfq\backend\uploads', filename),
+        os.path.join(r'd:\ifqm134\imfq\backend\uploads\project_evidence', filename),
     ]
     
     try:
@@ -502,7 +522,9 @@ def resolve_image_to_data_uri(url_or_path):
         if current_app:
             up_folder = current_app.config.get('UPLOAD_FOLDER')
             if up_folder:
-                candidate_paths.insert(0, os.path.join(up_folder, filename))
+                candidate_paths.insert(0, os.path.join(up_folder, rel_path.replace('/', os.sep)))
+                candidate_paths.insert(1, os.path.join(up_folder, filename))
+                candidate_paths.insert(2, os.path.join(up_folder, 'project_evidence', filename))
     except Exception:
         pass
         
@@ -512,6 +534,22 @@ def resolve_image_to_data_uri(url_or_path):
             resolved_file = cp
             break
             
+    if not resolved_file:
+        search_dirs = [
+            os.path.join(os.getcwd(), 'uploads'),
+            os.path.join(os.getcwd(), 'backend', 'uploads'),
+            os.path.join(os.path.dirname(__file__), '..', '..', 'uploads'),
+            r'd:\ifqm134\imfq\backend\uploads'
+        ]
+        for sdir in search_dirs:
+            if sdir and os.path.isdir(sdir):
+                for root, _, files in os.walk(sdir):
+                    if filename in files:
+                        resolved_file = os.path.join(root, filename)
+                        break
+            if resolved_file:
+                break
+
     if resolved_file:
         try:
             mime_type, _ = mimetypes.guess_type(resolved_file)
@@ -540,6 +578,14 @@ def resolve_image_to_data_uri(url_or_path):
 def extract_evidence_photos(d2, d6):
     photos = []
     
+    def clean_txt(val):
+        if val is None:
+            return ""
+        s = str(val).strip()
+        if s.lower() in ('undefined', 'null', 'none', ''):
+            return ""
+        return s
+
     # 1. Stage 2 (Section 2.7 Current State Evidence)
     cs = d2.get('current_state') if isinstance(d2, dict) else {}
     if not isinstance(cs, dict):
@@ -557,6 +603,14 @@ def extract_evidence_photos(d2, d6):
                 url = item
                 name = os.path.basename(item)
             
+            clean_name = clean_txt(name)
+            if not clean_name and url:
+                clean_name = os.path.basename(url.split('?')[0])
+                if clean_name.startswith('ev_') and '_' in clean_name[3:]:
+                    parts = clean_name.split('_', 3)
+                    if len(parts) >= 4:
+                        clean_name = parts[3]
+            
             if url and is_image_file(url):
                 photos.append({
                     'stage': 'Stage 2.7',
@@ -565,7 +619,7 @@ def extract_evidence_photos(d2, d6):
                     'badge_color': '#1e40af',
                     'badge_border': '#bfdbfe',
                     'url': url,
-                    'name': name or 'Current State Photo',
+                    'name': clean_name or 'Current State Photo',
                     'tag': 'Before'
                 })
                 
@@ -584,10 +638,20 @@ def extract_evidence_photos(d2, d6):
                 url = item
                 name = os.path.basename(item)
                 
+            clean_name = clean_txt(name)
+            if not clean_name and url:
+                clean_name = os.path.basename(url.split('?')[0])
+                if clean_name.startswith('ev_') and '_' in clean_name[3:]:
+                    parts = clean_name.split('_', 3)
+                    if len(parts) >= 4:
+                        clean_name = parts[3]
+
+            clean_upb = clean_txt(uploaded_by)
+
             if url and is_image_file(url):
-                caption = name or 'Implementation Proof'
-                if uploaded_by and str(uploaded_by).strip():
-                    caption += f" (by {str(uploaded_by).strip()})"
+                caption = clean_name or 'Implementation Proof'
+                if clean_upb:
+                    caption += f" (by {clean_upb})"
                 photos.append({
                     'stage': 'Stage 6.6',
                     'stage_label': 'Stage 6.6: Implementation Proof',
@@ -809,9 +873,21 @@ def build_qc_story_html(project_id):
     m_list = [m.full_name or m.username for m in (project.members or [])]
     members_str = ", ".join(m_list) if m_list else "Ramesh P., Vikram S., Anita M., Suresh K."
 
+    def parse_clean_date(val, fallback=""):
+        if not val:
+            return fallback
+        if isinstance(val, (datetime, date)):
+            return val.strftime('%d-%b-%Y')
+        try:
+            s = str(val).split('T')[0].strip()
+            dt = datetime.strptime(s, '%Y-%m-%d')
+            return dt.strftime('%d-%b-%Y')
+        except Exception:
+            return str(val)
+
     # Build Comprehensive Membership Movement & Contributor Timeline (Past & Current Members)
-    start_dt_clean = project.start_date.strftime('%d-%b-%Y') if project.start_date else (project.created_at.strftime('%d-%b-%Y') if project.created_at else 'Project Initiation')
-    end_dt_clean = project.end_date.strftime('%d-%b-%Y') if project.end_date else 'Present'
+    start_dt_clean = parse_clean_date(project.start_date or project.created_at, 'Project Initiation')
+    end_dt_clean = parse_clean_date(getattr(project, 'closed_at', None) or (d8.get('review') or {}).get('reviewed_at') or project.end_date or project.deadline, 'Present')
     is_proj_closed = project.status in ('Closed', 'Completed', 'Archived')
 
     movement_rows = []
@@ -864,8 +940,8 @@ def build_qc_story_html(project_id):
             t_nm = (tm.get('name') or tm.get('username') or '').strip()
             if t_nm and t_nm.lower() not in seen_movement_keys:
                 seen_movement_keys.add(t_nm.lower())
-                from_d = tm.get('from_date') or tm.get('joined_date') or start_dt_clean
-                to_d = tm.get('to_date') or tm.get('left_date') or 'Stage 3 Transition'
+                from_d = parse_clean_date(tm.get('from_date') or tm.get('joined_date'), start_dt_clean)
+                to_d = parse_clean_date(tm.get('to_date') or tm.get('left_date'), 'Stage 3 Transition')
                 t_r = tm.get('role') or 'Process SME'
                 t_d = tm.get('department') or 'Manufacturing'
                 movement_rows.append({
@@ -883,7 +959,7 @@ def build_qc_story_html(project_id):
             ta_nm = (ta.get('owner') or ta.get('assigned_to') or ta.get('name') or '').strip()
             if ta_nm and ta_nm.lower() not in seen_movement_keys and len(ta_nm) > 2:
                 seen_movement_keys.add(ta_nm.lower())
-                join_dt = ta.get('start_date') or ta.get('date') or 'Stage 5 Countermeasures'
+                join_dt = parse_clean_date(ta.get('start_date') or ta.get('date'), 'Stage 5 Countermeasures')
                 movement_rows.append({
                     'name': f"{html.escape(ta_nm)} <span style='font-size:6.5pt; color:#64748b;'>(Implementation SME)</span>",
                     'role': 'Implementation Specialist',
@@ -892,26 +968,54 @@ def build_qc_story_html(project_id):
                     'note': html.escape(ta.get('task') or 'Countermeasure Execution & Trial Testing')
                 })
 
-    # Detect Any Role Changes / Transitions (Team Leader, Facilitator, Reviewer, Past Members Who Left, Mid-Project Joiners)
+    # Detect and List Complete Role & Membership Data / Transitions (Team Leader, Facilitator, Reviewer, Active Members, Joiners, and Departed Members)
     role_changes_list = []
 
-    # 1. Facilitator change
-    init_fac = (d1.get('init') or {}).get('facilitator') or ''
-    curr_fac = (project.facilitator.full_name or project.facilitator.username) if project.facilitator else ''
-    if init_fac and curr_fac and init_fac.strip().lower() != curr_fac.strip().lower():
-        role_changes_list.append(f"<b>Facilitator Replaced:</b> {html.escape(init_fac.strip())} (Initiation) &rarr; {html.escape(curr_fac.strip())} (Current)")
-
-    # 2. Team Leader change
+    # 1. Team Leader
     init_tl = (d1.get('init') or {}).get('team_leader') or ''
     curr_tl = (project.team_leader.full_name or project.team_leader.username) if project.team_leader else ''
     if init_tl and curr_tl and init_tl.strip().lower() != curr_tl.strip().lower():
-        role_changes_list.append(f"<b>Team Leader Handover:</b> {html.escape(init_tl.strip())} (Initiation) &rarr; {html.escape(curr_tl.strip())} (Current)")
+        tl_change_dt = start_dt_clean
+        tl_log = AuditLog.query.filter(AuditLog.project_id == project.id, db.or_(AuditLog.action.ilike('%team leader%'), AuditLog.action.ilike('%stakeholder%'), AuditLog.action.ilike('%updated project%'))).order_by(AuditLog.created_at.asc()).first()
+        if tl_log and tl_log.created_at:
+            tl_change_dt = parse_clean_date(tl_log.created_at, start_dt_clean)
+        role_changes_list.append(
+            f"<b>Team Leader Handover:</b> {html.escape(init_tl.strip())} <span style='color:#64748b; font-size:6.2pt;'>(Active: {start_dt_clean} &rarr; {tl_change_dt})</span> &rarr; <span style='color:#047857; font-weight:600;'>{html.escape(curr_tl.strip())}</span> <span style='color:#047857; font-size:6.2pt;'>(Active: {tl_change_dt} &rarr; {end_dt_clean})</span>"
+        )
+    elif curr_tl:
+        role_changes_list.append(
+            f"<b>Team Leader:</b> <span style='font-weight:600;'>{html.escape(curr_tl.strip())}</span> <span style='color:#047857; font-size:6.2pt;'>(Active: {start_dt_clean} &rarr; {end_dt_clean})</span>"
+        )
 
-    # 3. Reviewer change
-    init_rev = (d1.get('review') or {}).get('reviewer') or ''
-    curr_rev = (project.reviewer.full_name or project.reviewer.username) if project.reviewer else ''
+    # 2. Quality Facilitator
+    init_fac = (d1.get('init') or {}).get('facilitator') or ''
+    curr_fac = (project.facilitator.full_name or project.facilitator.username) if project.facilitator else ''
+    if init_fac and curr_fac and init_fac.strip().lower() != curr_fac.strip().lower():
+        fac_change_dt = start_dt_clean
+        fac_log = AuditLog.query.filter(AuditLog.project_id == project.id, db.or_(AuditLog.action.ilike('%facilitator%'), AuditLog.action.ilike('%stakeholder%'), AuditLog.action.ilike('%updated project%'))).order_by(AuditLog.created_at.asc()).first()
+        if fac_log and fac_log.created_at:
+            fac_change_dt = parse_clean_date(fac_log.created_at, start_dt_clean)
+        role_changes_list.append(
+            f"<b>Facilitator Replaced:</b> {html.escape(init_fac.strip())} <span style='color:#64748b; font-size:6.2pt;'>(Active: {start_dt_clean} &rarr; {fac_change_dt})</span> &rarr; <span style='color:#047857; font-weight:600;'>{html.escape(curr_fac.strip())}</span> <span style='color:#047857; font-size:6.2pt;'>(Active: {fac_change_dt} &rarr; {end_dt_clean})</span>"
+        )
+    elif curr_fac:
+        role_changes_list.append(
+            f"<b>Facilitator / QA:</b> <span style='font-weight:600;'>{html.escape(curr_fac.strip())}</span> <span style='color:#047857; font-size:6.2pt;'>(Active: {start_dt_clean} &rarr; {end_dt_clean})</span>"
+        )
+
+    # 3. Project Reviewer
+    init_rev = (d1.get('review') or {}).get('reviewer') or (d1.get('init') or {}).get('reviewer') or ''
+    init_rev_dt = parse_clean_date((d1.get('review') or {}).get('reviewed_at') or (d1.get('init') or {}).get('date'), start_dt_clean)
+    curr_rev = (d8.get('review') or {}).get('reviewer') or ((project.reviewer.full_name or project.reviewer.username) if project.reviewer else '')
+    curr_rev_dt = parse_clean_date((d8.get('review') or {}).get('reviewed_at') or getattr(project, 'closed_at', None), end_dt_clean)
     if init_rev and curr_rev and init_rev.strip().lower() != curr_rev.strip().lower():
-        role_changes_list.append(f"<b>Reviewer Transition:</b> {html.escape(init_rev.strip())} (Stage 1 Gate) &rarr; {html.escape(curr_rev.strip())} (Closure Gate)")
+        role_changes_list.append(
+            f"<b>Reviewer Transition:</b> {html.escape(init_rev.strip())} <span style='color:#64748b; font-size:6.2pt;'>(Stage 1 Gate &bull; {init_rev_dt})</span> &rarr; <span style='color:#047857; font-weight:600;'>{html.escape(curr_rev.strip())}</span> <span style='color:#047857; font-size:6.2pt;'>(Closure Gate &bull; {curr_rev_dt})</span>"
+        )
+    elif curr_rev:
+        role_changes_list.append(
+            f"<b>Reviewer:</b> <span style='font-weight:600;'>{html.escape(curr_rev.strip())}</span> <span style='color:#047857; font-size:6.2pt;'>(Active: {start_dt_clean} &rarr; {end_dt_clean})</span>"
+        )
 
     # 4. Past Members Who Left in Middle
     curr_member_names = [((m.full_name or m.username) or '').strip().lower() for m in (project.members or [])]
@@ -922,27 +1026,39 @@ def build_qc_story_html(project_id):
         if isinstance(tm, dict):
             tm_name = (tm.get('name') or tm.get('username') or '').strip()
             if tm_name and tm_name.lower() not in curr_member_names:
-                from_d = tm.get('from_date') or tm.get('joined_date') or start_dt_clean
-                to_d = tm.get('to_date') or tm.get('left_date') or 'Mid-Project Handover'
+                from_d = parse_clean_date(tm.get('from_date') or tm.get('joined_date'), start_dt_clean)
+                to_d = parse_clean_date(tm.get('to_date') or tm.get('left_date'), 'Mid-Project Handover')
                 reason = tm.get('reason') or tm.get('note') or 'Department Transfer'
-                role_changes_list.append(f"<b>Past Member (Departed):</b> <span style='color:#b91c1c; font-weight:600;'>{html.escape(tm_name)}</span> (Active from {html.escape(from_d)} to {html.escape(to_d)} &bull; {html.escape(reason)})")
+                role_changes_list.append(
+                    f"<b>Departed Member:</b> <span style='color:#b91c1c; font-weight:600;'>{html.escape(tm_name)}</span> <span style='color:#64748b; font-size:6.2pt;'>(Active: {html.escape(from_d)} &rarr; {html.escape(to_d)} &bull; {html.escape(reason)})</span>"
+                )
 
-    # 5. Mid-Project Joiners
+    # 5. Mid-Project Joiners & Active Core Members
     init_member_names = [((tm.get('name') or tm.get('username') or '')).strip().lower() for tm in init_tms if isinstance(tm, dict)]
     if init_tl: init_member_names.append(init_tl.strip().lower())
 
+    active_mem_entries = []
     for m in (project.members or []):
         m_name = (m.full_name or m.username or '').strip()
-        if m_name and m_name.lower() not in init_member_names and len(init_member_names) > 0:
-            role_changes_list.append(f"<b>Joined Mid-Project:</b> <span style='color:#1d4ed8; font-weight:600;'>{html.escape(m_name)}</span> (Inducted during execution &bull; Active till {html.escape(end_dt_clean)})")
+        if not m_name: continue
+        if m_name.lower() not in init_member_names and len(init_member_names) > 0:
+            join_dt = parse_clean_date(getattr(m, 'joined_at', None) or getattr(project, 'updated_at', None) or project.created_at, start_dt_clean)
+            role_changes_list.append(
+                f"<b>Joined Mid-Project:</b> <span style='color:#1d4ed8; font-weight:600;'>{html.escape(m_name)}</span> <span style='color:#047857; font-size:6.2pt;'>(Added: {html.escape(join_dt)} &bull; Active: {html.escape(join_dt)} &rarr; {html.escape(end_dt_clean)})</span>"
+            )
+        else:
+            active_mem_entries.append(f"{html.escape(m_name)} <span style='color:#047857; font-size:6.2pt;'>(Active: {start_dt_clean} &rarr; {end_dt_clean})</span>")
 
-    # If changes exist, format row; otherwise keep empty
+    if active_mem_entries:
+        role_changes_list.append(f"<b>Team Members:</b> {', '.join(active_mem_entries)}")
+
+    # If changes / roster exist, format row; otherwise keep empty
     if role_changes_list:
         changes_html_content = " &nbsp;|&nbsp; ".join(role_changes_list)
         role_and_membership_changes_row_html = f"""
         <tr>
           <th style="background-color: #fff1f2; color: #9f1239; font-size: 6.5pt; vertical-align: middle;">Role & Member Changes</th>
-          <td colspan="5" style="background-color: #fffbeb; font-size: 6.8pt; line-height: 1.35; color: #854d0e; padding: 2.5px 5px;">
+          <td colspan="5" style="background-color: #fffbeb; font-size: 6.8pt; line-height: 1.45; color: #854d0e; padding: 2.5px 5px;">
             {changes_html_content}
           </td>
         </tr>"""
@@ -1005,7 +1121,6 @@ def build_qc_story_html(project_id):
         target_date = project.end_date.strftime('%Y-%m-%d') if project.end_date else "2026-12-31"
 
     try:
-        from datetime import datetime
         if '-' in target_date:
             parts = target_date.split('-')
             if len(parts) == 3 and len(parts[0]) == 4:
@@ -1274,7 +1389,7 @@ def build_qc_story_html(project_id):
         if hasattr(user_obj, 'department') and user_obj.department:
             return user_obj.department.name
         if getattr(user_obj, 'department_id', None):
-            dept_obj = Department.query.get(user_obj.department_id)
+            dept_obj = db.session.get(Department, user_obj.department_id)
             if dept_obj and dept_obj.name:
                 return dept_obj.name
         return fallback_dept

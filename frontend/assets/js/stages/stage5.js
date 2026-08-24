@@ -36,11 +36,13 @@ const Stage5 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Mapping
                             </button>
                         </div>
-                        <div id="s5_mappingContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-5">Root Cause</div>
-                                <div class="col-6">Proposed Solution(s)</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s5_mappingContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-5">Root Cause</div>
+                                    <div class="col-6">Proposed Solution(s)</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -64,12 +66,14 @@ const Stage5 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Idea
                             </button>
                         </div>
-                        <div id="s5_bsContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-5">Idea</div>
-                                <div class="col-3">Contributor</div>
-                                <div class="col-3">Feasibility</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s5_bsContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-5">Idea</div>
+                                    <div class="col-3">Contributor</div>
+                                    <div class="col-3">Feasibility</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -93,8 +97,8 @@ const Stage5 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Solution
                             </button>
                         </div>
-                        <div class="table-responsive">
-                            <div id="s5_evalContainer" class="mb-0" style="min-width: 650px;">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s5_evalContainer" class="mb-0" style="min-width: 680px;">
                                 <div class="row text-muted small fw-bold mb-2 px-2 align-items-center">
                                     <div class="col-3">Solution</div>
                                     <div class="col text-center">Effectiveness (1-10)</div>
@@ -127,8 +131,8 @@ const Stage5 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Analysis
                             </button>
                         </div>
-                        <div class="table-responsive">
-                            <div id="s5_cbaContainer" class="mb-0" style="min-width: 650px;">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s5_cbaContainer" class="mb-0" style="min-width: 680px;">
                                 <div class="row text-muted small fw-bold mb-2 px-2">
                                     <div class="col-4 ds-tooltip-trigger" title="Solution: Proposed solution candidate under economic evaluation">Solution</div>
                                     <div class="col-2 ds-tooltip-trigger" title="Estimated Cost: One-time and recurring capital expenditure needed for implementation">Estimated Cost</div>
@@ -159,8 +163,8 @@ const Stage5 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Risk
                             </button>
                         </div>
-                        <div class="table-responsive">
-                            <div id="s5_seContainer" class="mb-0" style="min-width: 650px;">
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s5_seContainer" class="mb-0" style="min-width: 680px;">
                                 <div class="row text-muted small fw-bold mb-2 px-2">
                                     <div class="col-3 ds-tooltip-trigger" title="Solution: Countermeasure solution candidate being evaluated for risks">Solution</div>
                                     <div class="col-4 ds-tooltip-trigger" title="Potential Risk: Negative secondary effect that could occur during implementation">Potential Risk</div>
@@ -190,14 +194,16 @@ const Stage5 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Pilot Run
                             </button>
                         </div>
-                        <div id="s5_pilotContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-3 ds-tooltip-trigger" title="Solution: Countermeasure solution candidate undergoing pilot trial">Solution</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Location: Workstation or shop floor line where pilot was conducted">Location</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Duration: Time duration or batch size of pilot trial">Duration</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Result: Measured trial result or defect reduction">Result</div>
-                                <div class="col-2 ds-tooltip-trigger" title="Decision: Go / No-Go decision for full rollout">Decision</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s5_pilotContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-3 ds-tooltip-trigger" title="Solution: Countermeasure solution candidate undergoing pilot trial">Solution</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Location: Workstation or shop floor line where pilot was conducted">Location</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Duration: Time duration or batch size of pilot trial">Duration</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Result: Measured trial result or defect reduction">Result</div>
+                                    <div class="col-2 ds-tooltip-trigger" title="Decision: Go / No-Go decision for full rollout">Decision</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -221,13 +227,15 @@ const Stage5 = {
                                 <i data-lucide="plus" style="width:12px;height:12px;"></i> Add Action Item
                             </button>
                         </div>
-                        <div id="s5_actionContainer" class="mb-0">
-                            <div class="row text-muted small fw-bold mb-2 px-2">
-                                <div class="col-4">What (Action)</div>
-                                <div class="col-2">Who (Owner)</div>
-                                <div class="col-2">When (Due Date)</div>
-                                <div class="col-3">How (Implementation Steps)</div>
-                                <div class="col-1"></div>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="s5_actionContainer" class="mb-0" style="min-width: 680px;">
+                                <div class="row text-muted small fw-bold mb-2 px-2">
+                                    <div class="col-4">What (Action)</div>
+                                    <div class="col-2">Who (Owner)</div>
+                                    <div class="col-2">When (Due Date)</div>
+                                    <div class="col-3">How (Implementation Steps)</div>
+                                    <div class="col-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>

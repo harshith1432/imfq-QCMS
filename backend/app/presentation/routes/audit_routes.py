@@ -1,6 +1,6 @@
 import hashlib
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 import sqlalchemy as sa
 from flask import Blueprint, jsonify, request
@@ -53,6 +53,7 @@ def audit_required(f):
     return decorated
 
 import urllib.request
+from app.presentation.routes.error_helpers import internal_server_error
 
 _geo_cache = {}
 
@@ -254,15 +255,22 @@ def log_audit_event(org_id, user_id, action, target_table=None, target_id=None, 
     ip_addr = get_real_client_ip(request) if request else "127.0.0.1"
     os, browser, device = parse_user_agent(ua_str)
     
-    # Session identification
-    session_id = request.cookies.get('session_id') if request else None
+    # Session identification from JWT or active session record
+    session_id = None
+    if request:
+        try:
+            from flask_jwt_extended import get_jwt
+            jwt_claims = get_jwt()
+            session_id = jwt_claims.get('session_id') if jwt_claims else None
+        except Exception:
+            session_id = None
     if not session_id and user and user_id:
         # Fallback to last active session
         last_sess = SaaSUserSession.query.filter_by(user_id=user_id).order_by(SaaSUserSession.login_time.desc()).first()
         if last_sess:
             session_id = last_sess.session_id
             
-    req_id = request.headers.get('X-Request-ID', f"REQ-{int(datetime.utcnow().timestamp())}") if request else None
+    req_id = request.headers.get('X-Request-ID', f"REQ-{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}") if request else None
     location = get_geo_location(ip_addr, user=user, req=request)
     role_name = user.role.name if user and user.role else "User"
     risk = get_risk_level_for_action(action, role_name)
@@ -322,7 +330,7 @@ def get_audit_dashboard():
     org_filter = get_user_org_filter(user, AuditLog)
     sess_filter = get_user_org_filter(user, SaaSUserSession)
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     p_curr_start = now - timedelta(days=7)
     p_prev_start = now - timedelta(days=14)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -415,18 +423,18 @@ def get_audit_dashboard():
     failed_logins_growth = calc_growth(flog_curr, flog_prev)
 
     kpis = {
-        "total_events": {"icon": "activity", "value": total_events, "growth": total_growth, "tooltip": "Total logged actions in registry", "last_updated": datetime.utcnow().isoformat()},
-        "today_events": {"icon": "clock", "value": today_events, "growth": today_growth, "tooltip": "Audit logs recorded in past 24 hours", "last_updated": datetime.utcnow().isoformat()},
-        "failed_actions": {"icon": "x-circle", "value": failed_actions, "growth": failed_growth, "tooltip": "Failed request operations", "last_updated": datetime.utcnow().isoformat()},
-        "success_actions": {"icon": "check-circle", "value": success_actions, "growth": success_growth, "tooltip": "Successful actions authorized", "last_updated": datetime.utcnow().isoformat()},
-        "security_events": {"icon": "shield-alert", "value": security_events, "growth": security_growth, "tooltip": "Critical authentication and access events", "last_updated": datetime.utcnow().isoformat()},
-        "login_events": {"icon": "log-in", "value": login_events, "growth": login_growth, "tooltip": "Access sessions logging activity", "last_updated": datetime.utcnow().isoformat()},
-        "data_changes": {"icon": "database", "value": data_changes, "growth": data_growth, "tooltip": "Database edits, inserts, and structural updates", "last_updated": datetime.utcnow().isoformat()},
-        "critical_events": {"icon": "zap", "value": critical_events, "growth": critical_growth, "tooltip": "Operations posing higher compliance risks", "last_updated": datetime.utcnow().isoformat()},
-        "deleted_records": {"icon": "trash-2", "value": deleted_records, "growth": deleted_growth, "tooltip": "Hard and soft deletions performed in organization", "last_updated": datetime.utcnow().isoformat()},
-        "export_activities": {"icon": "download-cloud", "value": export_activities, "growth": export_growth, "tooltip": "Large data extracts, report building, and CSV exports", "last_updated": datetime.utcnow().isoformat()},
-        "active_sessions": {"icon": "users", "value": active_sessions, "growth": session_growth, "tooltip": "Current active dashboard sessions", "last_updated": datetime.utcnow().isoformat()},
-        "failed_logins": {"icon": "unlock", "value": failed_login_attempts, "growth": failed_logins_growth, "tooltip": "Unsuccessful credential challenge attempts", "last_updated": datetime.utcnow().isoformat()}
+        "total_events": {"icon": "activity", "value": total_events, "growth": total_growth, "tooltip": "Total logged actions in registry", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "today_events": {"icon": "clock", "value": today_events, "growth": today_growth, "tooltip": "Audit logs recorded in past 24 hours", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "failed_actions": {"icon": "x-circle", "value": failed_actions, "growth": failed_growth, "tooltip": "Failed request operations", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "success_actions": {"icon": "check-circle", "value": success_actions, "growth": success_growth, "tooltip": "Successful actions authorized", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "security_events": {"icon": "shield-alert", "value": security_events, "growth": security_growth, "tooltip": "Critical authentication and access events", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "login_events": {"icon": "log-in", "value": login_events, "growth": login_growth, "tooltip": "Access sessions logging activity", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "data_changes": {"icon": "database", "value": data_changes, "growth": data_growth, "tooltip": "Database edits, inserts, and structural updates", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "critical_events": {"icon": "zap", "value": critical_events, "growth": critical_growth, "tooltip": "Operations posing higher compliance risks", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "deleted_records": {"icon": "trash-2", "value": deleted_records, "growth": deleted_growth, "tooltip": "Hard and soft deletions performed in organization", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "export_activities": {"icon": "download-cloud", "value": export_activities, "growth": export_growth, "tooltip": "Large data extracts, report building, and CSV exports", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "active_sessions": {"icon": "users", "value": active_sessions, "growth": session_growth, "tooltip": "Current active dashboard sessions", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()},
+        "failed_logins": {"icon": "unlock", "value": failed_login_attempts, "growth": failed_logins_growth, "tooltip": "Unsuccessful credential challenge attempts", "last_updated": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}
     }
     
     return jsonify({"status": "success", "data": kpis}), 200
@@ -687,7 +695,7 @@ def get_audit_logs():
         query = query.filter(AuditLog.target_table == module)
         
     # Date filters
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if date_preset:
         if date_preset == 'today':
             query = query.filter(AuditLog.created_at >= now.replace(hour=0, minute=0, second=0))
@@ -720,7 +728,7 @@ def get_audit_logs():
         diffs, has_diff, summary = extract_audit_diff_and_summary(log)
         data_items.append({
             "id": log.id,
-            "timestamp": log.created_at.isoformat() + "Z" if log.created_at else datetime.utcnow().isoformat() + "Z",
+            "timestamp": log.created_at.isoformat() + "Z" if log.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "action": log.action,
             "module": log.target_table or "Global",
             "record_id": log.target_id,
@@ -781,7 +789,7 @@ def get_audit_log_detail(log_id):
         sess_logs = AuditLog.query.filter(org_cond, AuditLog.session_id == log.session_id).order_by(AuditLog.created_at.asc()).all()
         timeline = [{
             "id": sl.id,
-            "timestamp": sl.created_at.isoformat() + "Z" if sl.created_at else datetime.utcnow().isoformat() + "Z",
+            "timestamp": sl.created_at.isoformat() + "Z" if sl.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "action": sl.action,
             "status": "Failed" if (sl.response_code and sl.response_code >= 400) else "Success"
         } for sl in sess_logs]
@@ -793,7 +801,7 @@ def get_audit_log_detail(log_id):
         "status": "success",
         "data": {
             "id": log.id,
-            "timestamp": log.created_at.isoformat() + "Z" if log.created_at else datetime.utcnow().isoformat() + "Z",
+            "timestamp": log.created_at.isoformat() + "Z" if log.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "action": log.action,
             "module": log.target_table or "Global",
             "record_id": log.target_id,
@@ -820,7 +828,7 @@ def get_audit_log_detail(log_id):
             "is_tampered": log.is_tampered,
             "related_logs": [{
                 "id": rl.id,
-                "timestamp": rl.created_at.isoformat() + "Z" if rl.created_at else datetime.utcnow().isoformat() + "Z",
+                "timestamp": rl.created_at.isoformat() + "Z" if rl.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
                 "action": rl.action,
                 "user": rl.user.username if rl.user else "System",
                 "risk_level": rl.risk_level
@@ -835,7 +843,7 @@ def cleanup_inactive_sessions(org_id=None, inactivity_hours=2):
     Sets status='Expired', logout_time = last_activity + 2h (or login_time + 2h), and calculates accurate session_duration.
     """
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         cutoff = now - timedelta(hours=inactivity_hours)
         query = SaaSUserSession.query.filter(
             SaaSUserSession.status == 'Active',
@@ -879,7 +887,7 @@ def session_heartbeat():
         claims = get_jwt()
         session_id = claims.get('session_id') if isinstance(claims, dict) else None
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         cutoff = now - timedelta(hours=2)
         
         sess = None
@@ -911,7 +919,7 @@ def session_heartbeat():
             
         return jsonify({"status": "ok"}), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 @audit_bp.route('/sessions', methods=['GET'])
@@ -959,7 +967,7 @@ def get_audit_sessions():
         raw_device = s.device or 'Desktop'
 
         # Accurate session duration calculation
-        now_dt = datetime.utcnow()
+        now_dt = datetime.now(timezone.utc).replace(tzinfo=None)
         if s.status == 'Active':
             login_t = s.login_time or now_dt
             dur_secs = max(0, int((now_dt - login_t).total_seconds()))
@@ -1008,7 +1016,7 @@ def terminate_session(session_id):
     sess = SaaSUserSession.query.filter(get_user_org_filter(user, SaaSUserSession), SaaSUserSession.session_id == session_id).first_or_404()
     if sess.status == 'Active':
         sess.status = 'Terminated'
-        sess.logout_time = datetime.utcnow()
+        sess.logout_time = datetime.now(timezone.utc).replace(tzinfo=None)
         sess.session_duration = int((sess.logout_time - (sess.login_time or sess.logout_time)).total_seconds())
         
         # Log this administrative termination
@@ -1053,7 +1061,7 @@ def get_audit_insights():
             if u_obj:
                 recs.append(f"Unusual Pattern: User '{u_obj.username}' has {dev_count} active sessions on different devices. Verify if session hijacking or credential sharing is occurring.")
 
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
     req_org_id = request.args.get('org_id', type=int)
     role_name = user.role.name if (user and user.role) else ''
     is_super = (role_name in ('SuperAdmin', 'Super Admin')) or getattr(user, 'is_super_admin', False)
@@ -1080,7 +1088,7 @@ def get_audit_insights():
 
     exports_24h = AuditLog.query.filter(
         org_filter,
-        AuditLog.created_at >= datetime.utcnow() - timedelta(hours=24),
+        AuditLog.created_at >= datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24),
         db.or_(AuditLog.action.like("%EXPORT%"), AuditLog.action.like("%DOWNLOAD%"))
     ).count()
     if exports_24h >= 5:
@@ -1136,7 +1144,7 @@ def verify_audit_integrity():
             tampered_logs.append({
                 "id":                 log.id,
                 "action":             log.action,
-                "timestamp":          log.created_at.isoformat() + "Z" if log.created_at else datetime.utcnow().isoformat() + "Z",
+                "timestamp":          log.created_at.isoformat() + "Z" if log.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
                 "operator":           log.user.username if log.user else "System",
                 "signature_in_db":    log.hash_signature,
                 "signature_computed": expected
@@ -1254,7 +1262,7 @@ def get_audit_storage_info():
     # Estimate size (approx 0.8 KB per audit log entry)
     estimated_mb = round((total_count * 0.8) / 1024.0, 2)
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     d30 = now - timedelta(days=30)
     d60 = now - timedelta(days=60)
     d90 = now - timedelta(days=90)
@@ -1414,7 +1422,7 @@ def preview_audit_log_purge():
     role_name = user.role.name if (user and user.role) else ''
     is_super = (role_name in ('SuperAdmin', 'Super Admin')) or getattr(user, 'is_super_admin', False)
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     cutoff_date = None
 
     if custom_before_date:
@@ -1472,7 +1480,7 @@ def purge_audit_logs():
     role_name = user.role.name if (user and user.role) else ''
     is_super = (role_name in ('SuperAdmin', 'Super Admin')) or getattr(user, 'is_super_admin', False)
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     cutoff_date = None
 
     if custom_before_date:
@@ -1538,4 +1546,3 @@ def purge_audit_logs():
         "deleted_count": deleted_count,
         "cutoff_date": cutoff_date.strftime('%Y-%m-%d')
     }), 200
-

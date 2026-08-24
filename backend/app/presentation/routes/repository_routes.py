@@ -11,7 +11,7 @@ from app.infrastructure.database.models.models import (
     Stage8StandardizationKnowledgeSharingProjectClosure as Stage8Implementation
 )
 from app import db
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 repository_bp = Blueprint('repository', __name__)
@@ -20,7 +20,7 @@ def admin_required(f):
     @wraps(f)
     @jwt_required()
     def decorated(*args, **kwargs):
-        user = User.query.get(get_jwt_identity())
+        user = db.session.get(User, get_jwt_identity())
         if not user:
             return jsonify({"msg": "User not found"}), 404
         role_name = user.role.name if user.role else ''
@@ -50,13 +50,14 @@ def parse_clean_float(val):
 def calculate_weighted_progress(current_stage, weights=None):
     """
     Calculate cumulative progress percentage based on SuperAdmin-configured stage weightages.
-    weights: list of 8 floats summing to 100.0
-    If weights is None, defaults to equal weights (12.5% per stage).
+    weights: list of floats summing to 100.0
+    If weights is None, defaults to equal weights across stages.
     """
-    if not weights or not isinstance(weights, list) or len(weights) < 8:
+    if not weights or not isinstance(weights, list) or len(weights) < 1:
         weights = [12.5] * 8
     
-    stage = max(1, min(8, int(current_stage or 1)))
+    n_stages = len(weights)
+    stage = max(1, min(n_stages, int(current_stage or 1)))
     # Sum weights of completed/current stages (1 to stage)
     cum_pct = sum(weights[:stage])
     return min(100.0, max(0.0, cum_pct))
@@ -64,43 +65,46 @@ def calculate_weighted_progress(current_stage, weights=None):
 
 def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
     """
-    Calculates real-time project efficiency & KPI improvement % from all active workflow stages:
-    1. Stage 7 before_vs_after measurements (actual verified defect/variation reduction)
-    2. Stage 7 kpi_verification measurements ((baseline - actual) / baseline * 100)
-    3. Stage 7 roi_validation
-    4. Stage 8 benefits_summary ((baseline - final) / baseline * 100)
-    5. Stage 8 standardization / legacy models
+    Calculates real-time project efficiency & KPI improvement % across all QC Story workflow stages:
+    1. Verified results from Stage 7 (before vs after, KPI verification, ROI improvement)
+    2. Verified results from Stage 8 (benefits summary, standardization, closure impact)
+    3. Dedicated Stage 7 & 8 relational models and Knowledge Repository records
+    4. Interim realized efficiency from Stage 1-6 targets scaled by stage completion
+    5. Fallback workflow milestone execution efficiency based on stage completion velocity
     """
     from app.infrastructure.database.models.models import (
         ProjectWorkflow,
         Stage7PerformanceVerificationBenefitsRealization,
-        Stage8StandardizationKnowledgeSharingProjectClosure
+        Stage8StandardizationKnowledgeSharingProjectClosure,
+        KnowledgeRepository
     )
 
-    # 1. Check ProjectWorkflow Stage 7
+    stage_num = max(1, min(8, int(project_current_stage or 1)))
+
+    # 1. Check ProjectWorkflow Stage 7 (Verified Before vs After / KPI Verification / ROI)
     wf7 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=7).first()
     if wf7 and wf7.data:
         d7 = wf7.data
         # A. before_vs_after
-        bva = d7.get('before_vs_after') or []
+        bva = d7.get('before_vs_after') or d7.get('s7_before_vs_after') or []
         if isinstance(bva, list) and len(bva) > 0:
             imp_list = []
             for r in bva:
                 if not isinstance(r, dict):
                     continue
                 imp_p = parse_clean_float(r.get('improvement_pct'))
-                if imp_p is not None:
+                if imp_p is not None and imp_p > 0:
                     imp_list.append(imp_p)
                 else:
                     bef = parse_clean_float(r.get('before_condition'))
                     aft = parse_clean_float(r.get('after_condition'))
-                    if bef and aft is not None and bef != 0:
+                    if bef and aft is not None and bef > 0:
                         imp_list.append(round(((bef - aft) / bef) * 100, 1))
             if imp_list:
                 return round(sum(imp_list) / len(imp_list), 1)
 
         # B. kpi_verification
-        kpi_ver = d7.get('kpi_verification') or []
+        kpi_ver = d7.get('kpi_verification') or d7.get('s7_kpi_verification') or []
         if isinstance(kpi_ver, list) and len(kpi_ver) > 0:
             kpi_imps = []
             for r in kpi_ver:
@@ -108,32 +112,36 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
                     continue
                 base = parse_clean_float(r.get('baseline'))
                 act = parse_clean_float(r.get('actual'))
-                if base and act is not None and base != 0:
+                if base and act is not None and base > 0:
                     kpi_imps.append(round(abs(base - act) / base * 100, 1))
             if kpi_imps:
                 return round(sum(kpi_imps) / len(kpi_imps), 1)
 
         # C. roi_validation
-        roi = d7.get('roi_validation') or {}
+        roi = d7.get('roi_validation') or d7.get('s7_roi_validation') or {}
         if isinstance(roi, dict):
-            kpi_imp = parse_clean_float(roi.get('kpi_improvement_pct') or roi.get('kpi_improvement'))
+            kpi_imp = parse_clean_float(roi.get('kpi_improvement_pct') or roi.get('kpi_improvement') or roi.get('s7_roi_pct'))
             if kpi_imp is not None and kpi_imp > 0:
                 return round(kpi_imp, 1)
 
-    # 2. Check ProjectWorkflow Stage 8
+    # 2. Check ProjectWorkflow Stage 8 (Benefits Summary / Impact)
     wf8 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=8).first()
     if wf8 and wf8.data:
         d8 = wf8.data
-        bs = d8.get('benefits_summary') or []
+        bs = d8.get('benefits_summary') or d8.get('s8_benefits_summary') or []
         if isinstance(bs, list) and len(bs) > 0:
             b_imps = []
             for r in bs:
                 if not isinstance(r, dict):
                     continue
-                base = parse_clean_float(r.get('baseline'))
-                fin = parse_clean_float(r.get('final'))
-                if base and fin is not None and base != 0:
-                    b_imps.append(round(abs(base - fin) / base * 100, 1))
+                imp_val = parse_clean_float(r.get('improvement_pct') or r.get('kpi_improvement'))
+                if imp_val is not None and imp_val > 0:
+                    b_imps.append(imp_val)
+                else:
+                    base = parse_clean_float(r.get('baseline'))
+                    fin = parse_clean_float(r.get('final'))
+                    if base and fin is not None and base > 0:
+                        b_imps.append(round(abs(base - fin) / base * 100, 1))
             if b_imps:
                 return round(sum(b_imps) / len(b_imps), 1)
 
@@ -152,10 +160,41 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
             return round(float(s8_model.kpi_improvement_pct), 1)
         if s8_model.productivity_gain:
             p_gain = parse_clean_float(s8_model.productivity_gain)
-            if p_gain:
+            if p_gain and p_gain > 0:
                 return round(p_gain, 1)
 
-    return 0.0
+    # 4. Check Knowledge Repository (if archived/completed project)
+    repo = KnowledgeRepository.query.filter_by(project_id=project_id).first()
+    if repo and repo.kpi_improvement_pct:
+        return round(float(repo.kpi_improvement_pct), 1)
+
+    # 5. Calculate Interim Realized Efficiency from Stage 1 Targets
+    wf1 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=1).first()
+    if wf1 and wf1.data:
+        d1 = wf1.data
+        tts = d1.get('theme_target_schedule') or d1.get('s1_theme_target_schedule') or {}
+        cur = parse_clean_float(tts.get('current_level') or d1.get('s1_tts_current'))
+        tgt = parse_clean_float(tts.get('target_level') or d1.get('s1_tts_target'))
+        if cur and tgt is not None and cur > 0:
+            target_pct = abs(cur - tgt) / cur * 100.0
+            stage_factor = min(1.0, stage_num / 8.0)
+            interim_eff = target_pct * stage_factor
+            if interim_eff > 0:
+                return round(interim_eff, 1)
+
+        # Check cp (current performance defect rate vs target)
+        cp = d1.get('current_performance') or d1.get('s1_current_performance') or {}
+        cp_def = parse_clean_float(cp.get('defect_rate') or d1.get('s1_cp_defect_rate'))
+        if cp_def and cp_def > 0:
+            stage_factor = min(1.0, stage_num / 8.0)
+            interim_eff = min(100.0, (stage_factor * 100.0))
+            return round(interim_eff, 1)
+
+    # 6. Fallback Workflow Milestone Execution Efficiency
+    # Progressive efficiency reflects the verified advancement across 8 standard QC stages
+    workflow_eff = (stage_num / 8.0) * 100.0
+    return round(min(100.0, max(10.0, workflow_eff)), 1)
+
 
 # ============================
 # PROJECT REPOSITORY MASTER LIST
@@ -164,7 +203,7 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
 @jwt_required()
 def list_repository_projects():
     """Real-time project repository for all roles with stats and health metrics."""
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     if not user:
         return jsonify({"msg": "User not found"}), 404
         
@@ -233,7 +272,7 @@ def list_repository_projects():
         elif status in ['Closed', 'Completed', 'Archived']:
             query = query.filter(Project.status.in_(closed_statuses))
         elif status in ['Inactive', 'Stalled']:
-            three_days_ago = datetime.utcnow() - timedelta(days=3)
+            three_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=3)
             recent_active_pids = db.session.query(AuditLog.project_id).filter(
                 AuditLog.created_at >= three_days_ago,
                 AuditLog.project_id.isnot(None)
@@ -317,7 +356,7 @@ def list_repository_projects():
         if org and getattr(org, 'project_inactivity_days', None):
             inactivity_days = org.project_inactivity_days
             
-    inactivity_cutoff = datetime.utcnow() - timedelta(days=inactivity_days)
+    inactivity_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=inactivity_days)
     
     results = []
     total_count = len(projects)
@@ -529,10 +568,11 @@ def auto_archive_project_to_repository(project_id, org_id):
             prob_sum = wf1.get('background_5w2h', {}).get('what', '')
     if not prob_sum:
         # Fallback to stage 1 model or project description
-        from app.infrastructure.database.models.models import Stage1ProblemDefinitionProjectInitiation
+        from app.infrastructure.database.models import Stage1ProblemDefinitionProjectInitiation
         stage1 = Stage1ProblemDefinitionProjectInitiation.query.filter_by(project_id=project_id, org_id=org_id).first()
         if stage1:
-            prob_sum = stage1.data.get('problem_statement', '') if stage1.data else ''
+            theme_sched = getattr(stage1, 'theme_target_schedule', {}) or {}
+            prob_sum = theme_sched.get('improvement_theme', '') if isinstance(theme_sched, dict) else ''
     if not prob_sum and project and project.description:
         prob_sum = project.description
             
@@ -550,10 +590,10 @@ def auto_archive_project_to_repository(project_id, org_id):
             if isinstance(c_list, list):
                 root_cause_val = ", ".join([c.get('cause', '') for c in c_list if isinstance(c, dict) and c.get('cause')])
     if not root_cause_val:
-        from app.infrastructure.database.models.models import Stage3RCA
-        rca = Stage3RCA.query.filter_by(project_id=project_id, org_id=org_id).first()
-        if rca and hasattr(rca, 'root_cause_summary'):
-            root_cause_val = rca.root_cause_summary or ''
+        from app.infrastructure.database.models import Stage3CauseIdentification
+        s3 = Stage3CauseIdentification.query.filter_by(project_id=project_id, org_id=org_id).first()
+        if s3 and getattr(s3, 'shortlisted_causes', None) and isinstance(s3.shortlisted_causes, list):
+            root_cause_val = ", ".join([str(c) for c in s3.shortlisted_causes if c])
             
     # 3. Solution summary (Stage 5)
     wf5 = workflows.get(5, {})
@@ -563,13 +603,12 @@ def auto_archive_project_to_repository(project_id, org_id):
         if isinstance(sol_list, list):
             sol_sum = "; ".join([s.get('proposed_solution', '') for s in sol_list if isinstance(s, dict) and s.get('proposed_solution')])
     if not sol_sum:
-        from app.infrastructure.database.models.models import Stage5CountermeasurePlanningSolutionDevelopment
-        stage4 = Stage5CountermeasurePlanningSolutionDevelopment.query.filter_by(project_id=project_id, org_id=org_id).first()
-        if stage4:
-            if hasattr(stage4, 'data') and isinstance(stage4.data, dict):
-                sol_sum = stage4.data.get('proposed_solution', '')
-            elif getattr(stage4, 'solution_brainstorming', None) and isinstance(stage4.solution_brainstorming, list):
-                sol_sum = "; ".join([s.get('solution', '') for s in stage4.solution_brainstorming if isinstance(s, dict) and s.get('solution')])
+        from app.infrastructure.database.models import Stage5CountermeasurePlanningSolutionDevelopment
+        stage5 = Stage5CountermeasurePlanningSolutionDevelopment.query.filter_by(project_id=project_id, org_id=org_id).first()
+        if stage5:
+            sol_list = getattr(stage5, 'proposed_countermeasures', None)
+            if isinstance(sol_list, list):
+                sol_sum = "; ".join([str(s) for s in sol_list if s])
             
     # 4. KPI Improvement Pct & Cost Savings (Stage 7 / 8)
     kpi_imp, cost_sav = extract_project_kpi_and_savings(project_id, org_id)
@@ -619,7 +658,7 @@ def auto_archive_project_to_repository(project_id, org_id):
         closure_report_path=closure_report,
         tags=cat_val if isinstance(cat_val, list) else ([cat_str] if cat_str else []),
         keywords=f"{project.title} {cat_str}",
-        archived_at=datetime.utcnow()
+        archived_at=datetime.now(timezone.utc).replace(tzinfo=None)
     )
     db.session.add(entry)
     db.session.flush()
@@ -645,7 +684,7 @@ def auto_archive_project_to_repository(project_id, org_id):
 @admin_required
 def archive_project(project_id):
     """Admin-triggered archive of a closed project into knowledge repository."""
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
     
     if project.status != 'Closed':
@@ -689,7 +728,7 @@ def search_repository():
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 12))
     
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
 
     closed_statuses = ['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED', 'Stage 8 Approved']
 
@@ -822,7 +861,7 @@ def search_repository():
 @jwt_required()
 def get_entry_detail(entry_id):
     """Full read-only detail view of an archived project."""
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     entry = KnowledgeRepository.query.filter_by(id=entry_id, org_id=user.org_id).first()
     if not entry:
         entry = KnowledgeRepository.query.filter_by(project_id=entry_id, org_id=user.org_id).first()
@@ -878,7 +917,7 @@ def get_entry_detail(entry_id):
 @jwt_required()
 def sop_library():
     """Searchable SOP index."""
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
     query = KnowledgeRepository.query.filter_by(org_id=user.org_id)
     
     dept_id = request.args.get('department_id')

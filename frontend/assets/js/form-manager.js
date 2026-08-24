@@ -309,122 +309,23 @@ class FormManager {
 
 /**
  * Navigation Protection Guard (NavigationGuard)
- * Intercepts tab closing, browser reload, and in-app route changes when unsaved changes exist.
+ * Disabled: Unsaved changes navigation modal removed across all pages.
  */
 const NavigationGuard = {
     _activeFormManagers: new Set(),
     _initialized: false,
 
-    register(formManager) {
-        this._activeFormManagers.add(formManager);
-        if (!this._initialized) {
-            this.initGlobalListeners();
-            this._initialized = true;
-        }
-    },
-
-    unregister(formManager) {
-        this._activeFormManagers.delete(formManager);
-    },
-
+    register(formManager) {},
+    unregister(formManager) {},
     hasUnsavedChanges() {
-        for (const fm of this._activeFormManagers) {
-            if (fm.isDirty) return true;
-        }
         return false;
     },
-
     getDirtyManager() {
-        for (const fm of this._activeFormManagers) {
-            if (fm.isDirty) return fm;
-        }
         return null;
     },
-
-    initGlobalListeners() {
-        // Browser tab reload / close alert
-        window.addEventListener('beforeunload', (e) => {
-            if (this.hasUnsavedChanges()) {
-                e.preventDefault();
-                e.returnValue = 'You have unsaved changes. Save before leaving?';
-                return e.returnValue;
-            }
-        });
-
-        // Intercept internal navigation clicks
-        document.addEventListener('click', async (e) => {
-            const link = e.target.closest('a, button[data-nav-target], .sidebar-link, .ps-nav-item');
-            if (!link) return;
-
-            // Ignore save/cancel button clicks
-            if (link.closest('#saveChangesBtn, #cancelBtn, .fm-save-btn, .fm-cancel-btn')) return;
-
-            if (this.hasUnsavedChanges()) {
-                const targetHref = link.getAttribute('href') || link.getAttribute('data-href');
-                if (targetHref && targetHref !== '#' && !targetHref.startsWith('javascript:')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const fm = this.getDirtyManager();
-                    const choice = await this.showConfirmationModal();
-
-                    if (choice === 'save') {
-                        const saved = await fm.save();
-                        if (saved) {
-                            window.location.href = targetHref;
-                        }
-                    } else if (choice === 'discard') {
-                        fm.cancel();
-                        window.location.href = targetHref;
-                    }
-                    // Choice === 'cancel' does nothing, stays on page
-                }
-            }
-        }, true);
-    },
-
+    initGlobalListeners() {},
     showConfirmationModal() {
-        return new Promise((resolve) => {
-            // Remove existing modal if any
-            const oldModal = document.getElementById('unsavedChangesModal');
-            if (oldModal) oldModal.remove();
-
-            const modalHtml = `
-                <div class="modal fade show" id="unsavedChangesModal" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5); z-index: 10000;" aria-modal="true" role="dialog">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content shadow-lg border-0 rounded-3">
-                            <div class="modal-header bg-warning text-dark py-3">
-                                <h5 class="modal-title font-semibold fs-6">
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Unsaved Changes
-                                </h5>
-                                <button type="button" class="btn-close" id="ucmCloseBtn"></button>
-                            </div>
-                            <div class="modal-content p-4 text-center">
-                                <p class="mb-3 text-secondary">You have unsaved changes. Save before leaving?</p>
-                                <div class="d-flex justify-content-center gap-2 mt-2">
-                                    <button class="btn btn-success px-4" id="ucmSaveBtn">Save</button>
-                                    <button class="btn btn-outline-danger px-4" id="ucmDiscardBtn">Discard</button>
-                                    <button class="btn btn-secondary px-4" id="ucmCancelBtn">Cancel</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-            const modalEl = document.getElementById('unsavedChangesModal');
-            const cleanUp = (result) => {
-                modalEl.remove();
-                resolve(result);
-            };
-
-            document.getElementById('ucmSaveBtn').onclick = () => cleanUp('save');
-            document.getElementById('ucmDiscardBtn').onclick = () => cleanUp('discard');
-            document.getElementById('ucmCancelBtn').onclick = () => cleanUp('cancel');
-            document.getElementById('ucmCloseBtn').onclick = () => cleanUp('cancel');
-        });
+        return Promise.resolve('discard');
     }
 };
 

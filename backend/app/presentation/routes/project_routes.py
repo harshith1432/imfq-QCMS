@@ -5,10 +5,11 @@ from app.presentation.middleware.middleware import role_required
 from app.domain.services.subscription_service import SubscriptionManager
 from app.domain.services.feature_engine import feature_module_required
 from app.presentation.middleware.idempotency_middleware import idempotent
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import copy
 from sqlalchemy.orm.attributes import flag_modified
+from app.presentation.routes.error_helpers import internal_server_error
 
 project_bp = Blueprint('projects', __name__)
 
@@ -219,10 +220,17 @@ def get_projects():
     org_id = user.org_id
     
     page = request.args.get('page', type=int)
-    per_page = request.args.get('per_page', default=25, type=int)
+    per_page = min(max(1, request.args.get('per_page', default=25, type=int)), 100)
     search = request.args.get('search', type=str)
     
-    query = Project.query.filter_by(org_id=org_id)
+    from sqlalchemy.orm import joinedload
+    query = Project.query.options(
+        joinedload(Project.department),
+        joinedload(Project.creator),
+        joinedload(Project.team_leader),
+        joinedload(Project.facilitator),
+        joinedload(Project.reviewer)
+    ).filter_by(org_id=org_id)
     
     as_member = (request.args.get('as_member') == 'true') or (request.args.get('scope') == 'member') or (request.args.get('role_filter') == 'member')
 
@@ -239,12 +247,14 @@ def get_projects():
         query = query.filter(False)
 
     if search:
-        search_term = f"%{search.strip()}%"
-        query = query.filter(db.or_(
-            Project.title.ilike(search_term),
-            Project.project_uid.ilike(search_term),
-            Project.category.ilike(search_term)
-        ))
+        clean_search = search.strip()[:100]
+        if clean_search:
+            search_term = f"%{clean_search}%"
+            query = query.filter(db.or_(
+                Project.title.ilike(search_term),
+                Project.project_uid.ilike(search_term),
+                Project.category.ilike(search_term)
+            ))
 
     query = query.order_by(Project.created_at.desc())
 
@@ -280,7 +290,8 @@ def get_projects():
         from app.shared.pagination import paginate_query
         return jsonify(paginate_query(query, page=page, per_page=per_page, serializer_fn=serialize_proj)), 200
 
-    projects = query.all()
+    # Unbounded guard: cap unpaginated requests at 200 items
+    projects = query.limit(200).all()
     return jsonify([serialize_proj(p) for p in projects]), 200
 
 @project_bp.route('/potential-members', methods=['GET'])
@@ -602,7 +613,7 @@ def create_project():
                 org_id=user.org_id,
                 stage_number=i,
                 status='Incomplete' if i == 1 else 'Not Started',
-                started_at=datetime.utcnow() if i == 1 else None
+                started_at=datetime.now(timezone.utc).replace(tzinfo=None) if i == 1 else None
             )
             db.session.add(tracker)
         
@@ -749,7 +760,7 @@ def create_project():
         print(f"[QCMS PROJECT] Initialization failed error: {e}", flush=True)
         traceback.print_exc()
         err_msg = str(e) or "Initialization failed"
-        return jsonify({"msg": f"Initialization failed: {err_msg}", "error": err_msg}), 500
+        return internal_server_error(e, "Project initialization failed.")
 
 # ─────────────────────────────────────────────────────────────────────────
 # STAGE 1 – QC STORY ROUTES (Save / Submit / Review)
@@ -763,7 +774,8 @@ def save_stage1(id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
 
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
 
     # Check if project is permanently rejected
@@ -789,7 +801,7 @@ def save_stage1(id):
     workflow.data = existing
     flag_modified(workflow, 'data')
     workflow.updated_by = user_id
-    workflow.updated_at = datetime.utcnow()
+    workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Sync Team Members, Facilitator, and Reviewer to the database so access control works
     team_data = payload.get('team')
@@ -798,18 +810,51 @@ def save_stage1(id):
         
         # 1. Sync Team Members
         if 'team_members' in team_data and isinstance(team_data['team_members'], list):
-            # Clear existing members except Team Leader (creator)
-            ProjectMember.query.filter_by(project_id=id).delete()
-            # Ensure team leader is always in members
+            old_member_ids = set([m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()])
+            new_member_ids = set()
             if project.team_leader_id:
-                db.session.add(ProjectMember(project_id=id, user_id=project.team_leader_id))
-            
+                new_member_ids.add(project.team_leader_id)
             for mem in team_data['team_members']:
                 uid = mem.get('user_id') if isinstance(mem, dict) else mem
-                if uid and int(uid) != project.team_leader_id:
-                    # Prevent duplicates
-                    if not ProjectMember.query.filter_by(project_id=id, user_id=int(uid)).first():
-                        db.session.add(ProjectMember(project_id=id, user_id=int(uid)))
+                if uid:
+                    try:
+                        uid_int = int(uid)
+                        if uid_int > 0:
+                            new_member_ids.add(uid_int)
+                    except (ValueError, TypeError):
+                        pass
+
+            now_dt = datetime.now(timezone.utc).replace(tzinfo=None)
+            added_ids = new_member_ids - old_member_ids
+            removed_ids = old_member_ids - new_member_ids
+
+            for added_id in added_ids:
+                u_obj = db.session.get(User, added_id)
+                u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{added_id}"
+                db.session.add(AuditLog(
+                    org_id=user.org_id, project_id=id, user_id=user_id,
+                    action="Team Member Joined Project",
+                    details=f"{u_name} was added and joined the active project team.",
+                    ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
+                    target_table="project_members", target_id=added_id,
+                    created_at=now_dt
+                ))
+
+            for rem_id in removed_ids:
+                u_obj = db.session.get(User, rem_id)
+                u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{rem_id}"
+                db.session.add(AuditLog(
+                    org_id=user.org_id, project_id=id, user_id=user_id,
+                    action="Team Member Left Project (Transitioned in Middle)",
+                    details=f"{u_name} left the project team / membership was removed from active roster.",
+                    ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
+                    target_table="project_members", target_id=rem_id,
+                    created_at=now_dt
+                ))
+
+            ProjectMember.query.filter_by(project_id=id).delete()
+            for uid in new_member_ids:
+                db.session.add(ProjectMember(project_id=id, user_id=uid))
 
     init_data = payload.get('init')
     if init_data and isinstance(init_data, dict):
@@ -841,7 +886,8 @@ def submit_stage1(id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
 
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
 
     # Check if project is permanently rejected
@@ -886,7 +932,7 @@ def submit_stage1(id):
 
     workflow.data = d
     flag_modified(workflow, 'data')
-    workflow.updated_at = datetime.utcnow()
+    workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Update stage tracker status
     tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=1).first()
@@ -894,7 +940,7 @@ def submit_stage1(id):
         tracker = ProjectStageTracker(project_id=id, org_id=user.org_id, stage_number=1)
         db.session.add(tracker)
     tracker.status = 'Submitted For Review'
-    tracker.started_at = tracker.started_at or datetime.utcnow()
+    tracker.started_at = tracker.started_at or datetime.now(timezone.utc).replace(tzinfo=None)
 
     project.status = 'Stage 1 Submitted'
 
@@ -956,7 +1002,8 @@ def review_stage1(id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
 
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
 
     if user.role.name != 'Reviewer':
@@ -974,7 +1021,7 @@ def review_stage1(id):
     if decision == 'approve':
         if tracker:
             tracker.status = 'Completed'
-            tracker.completed_at = datetime.utcnow()
+            tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         project.status = 'Stage 1 Approved'
         project.current_stage = 2
 
@@ -984,14 +1031,14 @@ def review_stage1(id):
         if s1:
             s1.facilitator_approved = True
             s1.facilitator_approver_id = user_id
-            s1.facilitator_approved_at = datetime.utcnow()
+            s1.facilitator_approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
             s1.facilitator_comments = comments
 
         # Unlock Stage 2
         stage2_tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=2).first()
         if stage2_tracker:
             stage2_tracker.status = 'Incomplete'
-            stage2_tracker.started_at = datetime.utcnow()
+            stage2_tracker.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         action_label = "Stage 1 Approved"
         msg = "Stage 1 approved. Stage 2 is now unlocked."
@@ -1015,7 +1062,7 @@ def review_stage1(id):
     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
     if workflow:
         d = dict(workflow.data or {})
-        d['review'] = {'decision': decision, 'comments': comments, 'reviewer': user.username, 'reviewed_at': datetime.utcnow().isoformat()}
+        d['review'] = {'decision': decision, 'comments': comments, 'reviewer': user.username, 'reviewed_at': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}
         workflow.data = d
         flag_modified(workflow, 'data')
 
@@ -1058,7 +1105,7 @@ def sync_sop_from_stage8(project_id, sop_data, user_id):
         import random
         import string
         random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-        sop_uid = f"SOP-{datetime.utcnow().year}-{random_suffix}"
+        sop_uid = f"SOP-{datetime.now(timezone.utc).replace(tzinfo=None).year}-{random_suffix}"
         
         sop = SOP(
             sop_uid=sop_uid,
@@ -1092,7 +1139,7 @@ def sync_sop_from_stage8(project_id, sop_data, user_id):
             role=role_name,
             action='Draft Created',
             comments='SOP automatically initialized via Stage 8 Standardization',
-            signature=f"Signed by {author_user.full_name or author_user.username if author_user else 'System'} at {datetime.utcnow().isoformat()}"
+            signature=f"Signed by {author_user.full_name or author_user.username if author_user else 'System'} at {datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}"
         )
         db.session.add(approval)
     else:
@@ -1108,7 +1155,7 @@ def sync_sop_from_stage8(project_id, sop_data, user_id):
         sop.reviewer_id = project.reviewer_id
         sop.approver_id = project.facilitator_id
         sop.owner_id = project.team_leader_id or project.creator_id or user_id
-        sop.updated_at = datetime.utcnow()
+        sop.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         
     # Delete old steps and recreate
     SOPStep.query.filter_by(sop_id=sop.id).delete()
@@ -1127,33 +1174,33 @@ def sync_sop_from_stage8(project_id, sop_data, user_id):
         )
         db.session.add(sop_step)
 
-# ── GENERIC ROUTES FOR STAGES 2-8 ──
+# ── GENERIC ROUTES FOR STAGES 2-N (DYNAMIC) ──
 
 @project_bp.route('/<int:id>/stage/<int:stage_id>/save', methods=['POST'])
 @jwt_required()
 def save_stage_generic(id, stage_id):
-    """Save Stage 2-8 progress without submitting for review."""
-    if stage_id < 2 or stage_id > 8:
+    """Save Stage progress without submitting for review."""
+    if stage_id < 2:
         return jsonify({"msg": "Invalid stage ID for generic route."}), 400
         
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
 
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
 
     # Check if project is permanently rejected
     if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
         return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
 
-    # STRICT RULE: Only assigned Team Leader or Team Member can edit Stage 2-8 details (Admin is read-only)
+    # STRICT RULE: Only assigned Team Leader or Team Member can edit stage details (Admin is read-only)
     is_authorized = user.role.name in ('Team Leader', 'Team Member')
     if not is_authorized:
         return jsonify({"msg": f"Access denied. Only assigned Team Leaders and Team Members can edit Stage {stage_id} details."}), 403
 
-
-    payload = request.get_json()
+    payload = request.get_json() or {}
     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=stage_id).first()
 
     if not workflow:
@@ -1167,10 +1214,10 @@ def save_stage_generic(id, stage_id):
     workflow.data = existing
     flag_modified(workflow, 'data')
     workflow.updated_by = user_id
-    workflow.updated_at = datetime.utcnow()
+    workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # Sync SOP if Stage 8
-    if stage_id == 8 and 'sop' in payload:
+    # Sync SOP if payload includes SOP data
+    if 'sop' in payload:
         sync_sop_from_stage8(id, payload['sop'], user_id)
 
     from app.infrastructure.database.models.models import AuditLog
@@ -1187,84 +1234,100 @@ def save_stage_generic(id, stage_id):
 @project_bp.route('/<int:id>/stage/<int:stage_id>/submit', methods=['POST'])
 @jwt_required()
 def submit_stage_generic(id, stage_id):
-    """Submit Stage 2-8 for Reviewer approval.
-    Workflow rules:
-      - All stages (2-8) → set tracker to 'Submitted For Review' and notify the assigned Reviewer.
-      - Stage 2 additionally checks that SOP, Specification, Control Plan, and PFMEA are followed.
-      - Stage 8 additionally syncs the SOP status to 'Under Review'.
-      - After Reviewer approves stages 2-7, the project advances to the next stage.
-      - After Reviewer approves Stage 8, project status becomes 'Stage 8 Reviewer Approved'
-        and the Facilitator handles impact review, SOP creation, and final closure.
-    """
-    if stage_id < 2 or stage_id > 8:
+    """Submit Stage for advancement or Reviewer approval (Dynamically supports custom stages)."""
+    if stage_id < 2:
         return jsonify({"msg": "Invalid stage ID."}), 400
 
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
 
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
 
     # Check if project is permanently rejected
     if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
         return jsonify({"msg": "This project has been permanently rejected and cannot be submitted for review."}), 400
 
-    # STRICT RULE: Only assigned Team Leader or Team Member can submit Stage 2-8 (Admin is read-only)
+    # STRICT RULE: Only assigned Team Leader or Team Member can submit stages (Admin is read-only)
     is_authorized = user.role.name in ('Team Leader', 'Team Member')
     if not is_authorized:
         return jsonify({"msg": f"Access denied. Only assigned Team Leaders and Team Members can submit Stage {stage_id} for review."}), 403
 
+    org_stages = project.stages_config or (project.organization.get_stages_config() if project.organization else [])
+    total_stages = len(org_stages) if org_stages else 8
+
+    current_stage_cfg = None
+    if org_stages and stage_id <= len(org_stages):
+        current_stage_cfg = org_stages[stage_id - 1]
+    
+    original_id = current_stage_cfg.get('original_id', stage_id) if current_stage_cfg else stage_id
+    is_closure_stage = (stage_id == total_stages) or (original_id == 8) or ('closure' in (current_stage_cfg.get('title', '') if current_stage_cfg else '').lower())
 
     tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=stage_id).first()
     from app.presentation.routes.notification_routes import create_notification
     from app.infrastructure.database.models.models import AuditLog
 
-    if stage_id == 2:
-        from app.infrastructure.database.models.models import Stage2ObservationDataCollection
-        s2 = Stage2ObservationDataCollection.query.filter_by(project_id=id).first()
-        sv = s2.standard_verification or {} if s2 else {}
-        deviation_found = sv.get('sop_dev') or sv.get('spec_dev') or sv.get('cp_dev')
-        if not deviation_found:
-            not_followed = []
-            if not sv.get('sop_follow'):
-                not_followed.append('SOP')
-            if not sv.get('spec_follow'):
-                not_followed.append('Specification')
-            if not sv.get('cp_follow'):
-                not_followed.append('Control Plan')
-            if not sv.get('pfmea_review'):
-                not_followed.append('PFMEA')
-            if not_followed:
-                return jsonify({
-                    "msg": f"Submission blocked. No deviation was found, but the following standard plans are NOT followed: {', '.join(not_followed)}. Please follow/enforce the respective plans or mark the deviations before proceeding."
-                }), 400
+    # SOP / Standard Verification gate: only check if this specific stage contains the standard verification section
+    has_std_verif = False
+    if current_stage_cfg and current_stage_cfg.get('sections'):
+        has_std_verif = any(s.get('id') == 's2_std_verification' or 'standard verification' in s.get('label', '').lower() for s in current_stage_cfg.get('sections', []))
+    elif original_id == 2:
+        has_std_verif = True
+
+    if has_std_verif:
+        sv = {}
+        wf_stage = ProjectWorkflow.query.filter_by(project_id=id, stage_id=stage_id).first()
+        if wf_stage and isinstance(wf_stage.data, dict):
+            sv = wf_stage.data.get('standard_verification') or wf_stage.data.get('interim_verification') or {}
+        if not sv:
+            from app.infrastructure.database.models.models import Stage2ObservationDataCollection
+            s2 = Stage2ObservationDataCollection.query.filter_by(project_id=id).first()
+            if s2:
+                sv = s2.interim_verification or {}
+        if sv:
+            deviation_found = sv.get('sop_dev') or sv.get('spec_dev') or sv.get('cp_dev')
+            if not deviation_found:
+                not_followed = []
+                if not sv.get('sop_follow'):
+                    not_followed.append('SOP')
+                if not sv.get('spec_follow'):
+                    not_followed.append('Specification')
+                if not sv.get('cp_follow'):
+                    not_followed.append('Control Plan')
+                if not sv.get('pfmea_review'):
+                    not_followed.append('PFMEA')
+                if not_followed:
+                    return jsonify({
+                        "msg": f"Submission blocked. No deviation was found, but the following standard plans are NOT followed: {', '.join(not_followed)}. Please follow/enforce the respective plans or mark the deviations before proceeding."
+                    }), 400
 
     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=stage_id).first()
     if workflow:
-        workflow.updated_at = datetime.utcnow()
+        workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # Stages 2-7: Auto-complete and auto-advance since no approval gate is needed
-    if stage_id in (2, 3, 4, 5, 6, 7):
+    # Intermediate Stages: Auto-complete and auto-advance to next stage
+    if not is_closure_stage and stage_id < total_stages:
         if tracker:
             tracker.status = 'Completed'
-            tracker.completed_at = datetime.utcnow()
+            tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         project.current_stage = stage_id + 1
-        project.status = 'In Progress'
+        project.status = f"Stage {stage_id + 1} In Progress" if stage_id + 1 == total_stages else "In Progress"
 
         # Unlock next stage tracker
         next_tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=stage_id + 1).first()
         if next_tracker:
             next_tracker.status = 'In Progress'
-            next_tracker.started_at = datetime.utcnow()
+            next_tracker.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             next_tracker = ProjectStageTracker(
                 project_id=id,
                 org_id=project.org_id,
                 stage_number=stage_id + 1,
                 status='In Progress',
-                started_at=datetime.utcnow()
+                started_at=datetime.now(timezone.utc).replace(tzinfo=None)
             )
             db.session.add(next_tracker)
 
@@ -1282,11 +1345,11 @@ def submit_stage_generic(id, stage_id):
             "next_stage": stage_id + 1
         }), 200
 
-    # Stage 8: submit for Reviewer review
+    # Final Closure Stage: submit for Reviewer review
     if tracker:
         tracker.status = 'Submitted For Review'
 
-    project.status = 'Stage 8 Submitted'
+    project.status = f"Stage {stage_id} Submitted"
 
     from app.infrastructure.database.models.models import SOP, SOPApproval
     sop = SOP.query.filter_by(project_id=id, org_id=user.org_id).first()
@@ -1297,8 +1360,8 @@ def submit_stage_generic(id, stage_id):
             user_id=user_id,
             role=user.role.name,
             action='Submit',
-            comments='SOP submitted for review as part of Stage 8 project closure',
-            signature=f"Signed by {user.full_name or user.username} at {datetime.utcnow().isoformat()}"
+            comments=f"SOP submitted for review as part of Stage {stage_id} project closure",
+            signature=f"Signed by {user.full_name or user.username} at {datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}"
         )
         db.session.add(approval)
 
@@ -1307,28 +1370,28 @@ def submit_stage_generic(id, stage_id):
         create_notification(
             user.org_id, project.reviewer_id,
             "Approval Request",
-            f"Project '{project.title}' requires your approval for Stage 8 closure.",
+            f"Project '{project.title}' requires your approval for Stage {stage_id} closure.",
             f"/projects/project-details.html?id={project.id}",
             commit=False
         )
 
     db.session.add(AuditLog(
         org_id=user.org_id, project_id=id, user_id=user_id,
-        action="Stage 8 Submitted For Review",
-        details=f"Stage 8 submitted by {user.username}. Awaiting Reviewer approval.",
+        action=f"Stage {stage_id} Submitted For Review",
+        details=f"Stage {stage_id} submitted by {user.username}. Awaiting Reviewer approval.",
         ip_address=request.remote_addr, user_agent=request.user_agent.string,
         target_table="project_stage_tracker", target_id=tracker.id if tracker else None
     ))
     db.session.commit()
 
-    # Trigger Reviewer Email Notification for Stage 8
+    # Trigger Reviewer Email Notification for Stage closure
     try:
         from app.domain.services.email_notification_engine import EmailNotificationEngine
-        EmailNotificationEngine.trigger_project_review_requested_notification(project.id, 8, user_id)
+        EmailNotificationEngine.trigger_project_review_requested_notification(project.id, stage_id, user_id)
     except Exception as e:
-        print(f"[EmailEngine] Stage 8 review notification error: {e}")
+        print(f"[EmailEngine] Stage review notification error: {e}")
 
-    return jsonify({"msg": "Stage 8 submitted for Reviewer review."}), 200
+    return jsonify({"msg": f"Stage {stage_id} submitted for Reviewer review."}), 200
 
 @project_bp.route('/<int:id>/request-facilitator-assistance', methods=['POST'])
 @jwt_required()
@@ -1338,14 +1401,15 @@ def request_facilitator_assistance(id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
 
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
 
     from app.infrastructure.database.models.models import Role, FacilitatorAssistanceRequest
     fac_user = project.facilitator
     if not fac_user or (fac_user.role and fac_user.role.name != 'Facilitator'):
         real_fac = User.query.join(Role).filter(
-            User.org_id == user.org_id,
+            User.org_id == project.org_id,
             User.is_active == True,
             Role.name == 'Facilitator'
         ).first()
@@ -1415,12 +1479,12 @@ def get_my_assistance_requests(id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
 
-    if not project or project.org_id != user.org_id:
+    if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
 
     stage_filter = request.args.get('stage')
     query = FacilitatorAssistanceRequest.query.filter_by(
-        org_id=user.org_id,
+        org_id=project.org_id,
         project_id=id,
         user_id=user_id
     )
@@ -1450,7 +1514,7 @@ def review_stage_generic(id, stage_id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
 
-    if not project or project.org_id != user.org_id:
+    if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
 
     # Check if project is permanently rejected
@@ -1477,18 +1541,26 @@ def review_stage_generic(id, stage_id):
     from app.presentation.routes.reviewer_routes import _process_decision_logic
     return _process_decision_logic(user, id, mapped_decision, comments, stage_id)
 
-@project_bp.route('/<int:id>', methods=['GET'])
+@project_bp.route('/<id_or_uid>', methods=['GET'])
 @jwt_required()
-def get_project_details(id):
+def get_project_details(id_or_uid):
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
-    project = db.session.get(Project, id)
+        
+    project = None
+    if str(id_or_uid).isdigit():
+        project = db.session.get(Project, int(id_or_uid))
+    if not project:
+        project = Project.query.filter(
+            db.func.lower(Project.project_uid) == str(id_or_uid).lower()
+        ).first()
+        
     if not project:
         return jsonify({"msg": "Project not found"}), 404
     
-    if project.org_id != user.org_id:
+    if user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
         return jsonify({"msg": "Project not found"}), 404
 
     # Ensure project facilitator is a valid user with role 'Facilitator'
@@ -1496,7 +1568,7 @@ def get_project_details(id):
     fac_user = project.facilitator
     if not fac_user or (fac_user.role and fac_user.role.name != 'Facilitator'):
         real_fac = User.query.join(Role).filter(
-            User.org_id == user.org_id,
+            User.org_id == project.org_id,
             User.is_active == True,
             Role.name == 'Facilitator'
         ).first()
@@ -1511,7 +1583,7 @@ def get_project_details(id):
     # Allow read-only visibility to closed/completed/archived projects for all users within the same organization
     is_archived_or_closed = project.status in ('Closed', 'Completed', 'Archived') or (project.current_stage == 8 and 'Approved' in (project.status or ''))
     
-    if not is_archived_or_closed:
+    if user.role.name != 'SuperAdmin' and not is_archived_or_closed:
         if role == 'Team Member':
             is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
             if not is_member and project.creator_id != user.id:
@@ -1530,11 +1602,11 @@ def get_project_details(id):
 
 
     # Fetch all stages for tracker
-    stages = ProjectStageTracker.query.filter_by(project_id=id).order_by(ProjectStageTracker.stage_number).all()
-    stage1_workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
+    stages = ProjectStageTracker.query.filter_by(project_id=project.id).order_by(ProjectStageTracker.stage_number).all()
+    stage1_workflow = ProjectWorkflow.query.filter_by(project_id=project.id, stage_id=1).first()
 
     from app.infrastructure.database.models.models import ProjectReview, ImportedIdea
-    reviews = ProjectReview.query.filter_by(project_id=id).order_by(ProjectReview.created_at.desc()).all()
+    reviews = ProjectReview.query.filter_by(project_id=project.id).order_by(ProjectReview.created_at.desc()).all()
 
     linked_idea = None
     if project.reference_number:
@@ -1543,7 +1615,7 @@ def get_project_details(id):
             linked_idea = imp_idea.to_dict()
 
     completed_stage_numbers = {s.stage_number for s in stages if s.status in ('Completed', 'Approved')}
-    wf_snapshots = {w.stage_id: w.template_snapshot for w in ProjectWorkflow.query.filter_by(project_id=id).all() if w.template_snapshot}
+    wf_snapshots = {w.stage_id: w.template_snapshot for w in ProjectWorkflow.query.filter_by(project_id=project.id).all() if w.template_snapshot}
 
     return jsonify({
         "id": project.id,
@@ -1592,17 +1664,17 @@ def get_project_details(id):
             or (project.department.plant.name if project.department and project.department.plant else None)
             or (project.creator.plant.name if project.creator and project.creator.plant else None)
         ),
-        "member_ids": [m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()],
+        "member_ids": [m.user_id for m in ProjectMember.query.filter_by(project_id=project.id).all()],
         "members": [{
             "id": m.user_id,
             "username": db.session.get(User, m.user_id).username if db.session.get(User, m.user_id) else "Member",
             "full_name": db.session.get(User, m.user_id).full_name if db.session.get(User, m.user_id) else "Member"
-        } for m in ProjectMember.query.filter_by(project_id=id).all()],
+        } for m in ProjectMember.query.filter_by(project_id=project.id).all()],
         "stage1_data": stage1_workflow.data if stage1_workflow else {},
         "workflows": [{
             "stage_id": w.stage_id,
             "data": w.data
-        } for w in ProjectWorkflow.query.filter_by(project_id=id).all()],
+        } for w in ProjectWorkflow.query.filter_by(project_id=project.id).all()],
         "stages": [{
             "stage_number": s.stage_number,
             "status": s.status,
@@ -1630,7 +1702,7 @@ def get_stage_meetings(project_id, stage_id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, project_id)
     
-    if not project or project.org_id != user.org_id:
+    if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
     from app.infrastructure.database.models.models import ProjectMeeting
@@ -1652,7 +1724,7 @@ def create_stage_meeting(project_id, stage_id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, project_id)
     
-    if not project or project.org_id != user.org_id:
+    if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
     data = request.get_json() or {}
@@ -1737,7 +1809,8 @@ def get_project_stage_details(id, stage_num):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
     
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
     from app.infrastructure.database.models.models import (
@@ -1762,6 +1835,8 @@ def get_project_stage_details(id, stage_num):
     data = {}
     if stage_data:
         data = {c.name: getattr(stage_data, c.name) for c in stage_data.__table__.columns}
+        if hasattr(stage_data, 'standard_verification') and 'standard_verification' not in data:
+            data['standard_verification'] = stage_data.standard_verification
         # Clean up
         data.pop('id', None)
         data.pop('project_id', None)
@@ -1780,7 +1855,8 @@ def update_project_stage(id, stage_num):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
     
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
     if stage_num == 1:
@@ -1835,7 +1911,7 @@ def update_project_stage(id, stage_num):
         tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=stage_num).first()
         if tracker:
             tracker.status = 'Completed'
-            tracker.completed_at = datetime.utcnow()
+            tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             
             # Note: Stage advancement is now handled via the /api/workflow/projects/<id>/transitions endpoint
             # to ensure all security gates (approvals/validations) are checked.
@@ -1865,13 +1941,14 @@ def get_project_activity(id):
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
     # Check authorization
     role = user.role.name
     authorized = False
-    if role == 'Admin' or role == 'CEO':
+    if role in ('Admin', 'CEO', 'SuperAdmin'):
         authorized = True
     elif role == 'Facilitator':
         authorized = (project.facilitator_id == user.id)
@@ -1903,7 +1980,8 @@ def update_project(id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
     
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
     # RBAC: Only Admin, SuperAdmin, Project Creator or TL of same dept
@@ -1922,27 +2000,60 @@ def update_project(id):
     old_tl = project.team_leader_id
     old_fac = project.facilitator_id
     old_rev = project.reviewer_id
+    from app.infrastructure.database.models.models import AuditLog, User
+    from flask import request as flask_request
+    ua_str = getattr(flask_request.user_agent, 'string', str(flask_request.user_agent or ''))
+    
     if 'facilitator_id' in data:
         fid = data['facilitator_id']
         new_fac = int(fid) if fid is not None and str(fid).strip() != "" else None
         if new_fac != old_fac:
             project.facilitator_id = new_fac
+            old_f = db.session.get(User, old_fac) if old_fac else None
+            new_f = db.session.get(User, new_fac) if new_fac else None
+            db.session.add(AuditLog(
+                org_id=user.org_id, project_id=id, user_id=user_id,
+                action="Facilitator Assigned / Transitioned",
+                details=f"Facilitator changed from {old_f.full_name or old_f.username if old_f else 'None'} to {new_f.full_name or new_f.username if new_f else 'Unassigned'}.",
+                ip_address=flask_request.remote_addr, user_agent=ua_str,
+                target_table="projects", target_id=id
+            ))
             if new_fac and new_fac != user_id:
                 from app.presentation.routes.notification_routes import create_notification
                 create_notification(user.org_id, new_fac, "Project Assigned", f"You have been assigned as the Facilitator for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
+                
     if 'team_leader_id' in data:
         tl_val = data['team_leader_id']
         new_tl = int(tl_val) if tl_val is not None and str(tl_val).strip() != "" else None
         if new_tl != old_tl:
             project.team_leader_id = new_tl
+            old_t = db.session.get(User, old_tl) if old_tl else None
+            new_t = db.session.get(User, new_tl) if new_tl else None
+            db.session.add(AuditLog(
+                org_id=user.org_id, project_id=id, user_id=user_id,
+                action="Team Leader Assigned / Transitioned",
+                details=f"Team Leader changed from {old_t.full_name or old_t.username if old_t else 'None'} to {new_t.full_name or new_t.username if new_t else 'Unassigned'}.",
+                ip_address=flask_request.remote_addr, user_agent=ua_str,
+                target_table="projects", target_id=id
+            ))
             if new_tl and new_tl != user_id:
                 from app.presentation.routes.notification_routes import create_notification
                 create_notification(user.org_id, new_tl, "Project Assigned", f"You have been assigned as the Team Leader for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
+                
     if 'reviewer_id' in data:
         rid = data['reviewer_id']
         new_rev = int(rid) if rid is not None and str(rid).strip() != "" else None
         if new_rev != old_rev:
             project.reviewer_id = new_rev
+            old_r = db.session.get(User, old_rev) if old_rev else None
+            new_r = db.session.get(User, new_rev) if new_rev else None
+            db.session.add(AuditLog(
+                org_id=user.org_id, project_id=id, user_id=user_id,
+                action="Reviewer Assigned / Transitioned",
+                details=f"Reviewer changed from {old_r.full_name or old_r.username if old_r else 'None'} to {new_r.full_name or new_r.username if new_r else 'Unassigned'}.",
+                ip_address=flask_request.remote_addr, user_agent=ua_str,
+                target_table="projects", target_id=id
+            ))
             if new_rev and new_rev != user_id:
                 from app.presentation.routes.notification_routes import create_notification
                 create_notification(user.org_id, new_rev, "Project Assigned", f"You have been assigned as the Reviewer for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
@@ -1959,6 +2070,7 @@ def update_project(id):
     if 'member_ids' in data:
         raw_member_ids = data['member_ids']
         if isinstance(raw_member_ids, list):
+            old_member_ids = set([m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()])
             cleaned_member_ids = set()
             for mid in raw_member_ids:
                 if mid is not None:
@@ -1978,6 +2090,32 @@ def update_project(id):
                 except (ValueError, TypeError):
                     pass
 
+            # Detect added members
+            added_ids = cleaned_member_ids - old_member_ids
+            for added_id in added_ids:
+                u_obj = db.session.get(User, added_id)
+                u_name = u_obj.full_name or u_obj.username if u_obj else f"User #{added_id}"
+                db.session.add(AuditLog(
+                    org_id=user.org_id, project_id=id, user_id=user_id,
+                    action="Team Member Joined Project",
+                    details=f"{u_name} was added and joined the active project team.",
+                    ip_address=flask_request.remote_addr, user_agent=ua_str,
+                    target_table="project_members", target_id=added_id
+                ))
+
+            # Detect removed members (left project in middle)
+            removed_ids = old_member_ids - cleaned_member_ids
+            for rem_id in removed_ids:
+                u_obj = db.session.get(User, rem_id)
+                u_name = u_obj.full_name or u_obj.username if u_obj else f"User #{rem_id}"
+                db.session.add(AuditLog(
+                    org_id=user.org_id, project_id=id, user_id=user_id,
+                    action="Team Member Left Project (Transitioned in Middle)",
+                    details=f"{u_name} left the project team / membership was removed from active roster.",
+                    ip_address=flask_request.remote_addr, user_agent=ua_str,
+                    target_table="project_members", target_id=rem_id
+                ))
+
             # Clear existing members and re-insert sanitized list
             ProjectMember.query.filter_by(project_id=id).delete()
             for uid in cleaned_member_ids:
@@ -1994,11 +2132,13 @@ def delete_project(id):
     user = db.session.get(User, user_id)
     project = db.session.get(Project, id)
     
-    if not project or project.org_id != user.org_id:
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
     # RBAC: Both Admin and Team Leader/Member (of the same department) should be able to delete
-    can_delete = (user.role.name == 'Admin' or 
+    can_delete = (user_is_sa or
+                  user.role.name == 'Admin' or 
                   (user.role.name in ('Team Leader', 'Team Member') and project.department_id == user.department_id) or
                   project.creator_id == user.id)
     
@@ -2078,12 +2218,11 @@ def delete_project(id):
         
     except Exception as e:
         db.session.rollback()
-        import traceback, logging
-        logging.error(f"[delete_project] FATAL error deleting project {id}: {e}\n{traceback.format_exc()}")
+        import logging
+        logging.getLogger('qcms.projects').exception("[delete_project] FATAL error deleting project %s: %s", id, e)
         return jsonify({
-            "msg": "Failed to delete project due to system error",
-            "error": str(e),
-            "trace": traceback.format_exc()
+            "status": "error",
+            "msg": "Failed to delete project due to system error. Please try again later."
         }), 500
 
 
@@ -2118,16 +2257,42 @@ def upload_project_evidence():
         size_mb = round(file_size / (1024 * 1024), 2)
         return jsonify({"msg": f"File size exceeds 2MB limit ({size_mb} MB). Please upload a document up to 2MB."}), 400
     
+    from app.infrastructure.storage import storage
     filename = secure_filename(file.filename)
-    filename = f"ev_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
-    upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
-    os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    target_name = f"ev_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}_{filename}"
+    result = storage.save_file(file, filename=target_name, subfolder="project_evidence")
     
-    file_url = f"/uploads/{filename}"
     return jsonify({
-        "url": file_url,
-        "name": file.filename
+        "url": result['url'],
+        "name": file.filename,
+        "storage_backend": result.get('backend', 'local')
     }), 200
+
+
+@project_bp.route('/<int:project_id>/close', methods=['POST'])
+@jwt_required()
+def close_project(project_id):
+    """
+    Slim Route Handler delegating full closure lifecycle to ProjectClosureService.
+    """
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+    comments = data.get('comments', 'Project officially closed.')
+
+    from app.domain.services.project_closure_service import ProjectClosureService
+    try:
+        result = ProjectClosureService.execute_closure(
+            project_id=project_id,
+            user_id=current_user_id,
+            comments=comments,
+            sign_off_by_role="Admin"
+        )
+        return jsonify(result), 200
+    except ValueError as val_err:
+        return jsonify({"status": "error", "message": str(val_err)}), 404
+    except PermissionError as perm_err:
+        return jsonify({"status": "error", "message": str(perm_err)}), 403
+    except Exception as err:
+        db.session.rollback()
+        return internal_server_error(err, "Project closure failed.")
 

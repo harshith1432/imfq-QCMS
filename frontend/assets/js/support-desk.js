@@ -279,23 +279,37 @@ const SupportDesk = {
                 </div>
             </div>
 
-            <!-- Create KB Article Modal -->
+            <!-- Create/Edit KB Article Modal -->
             <div class="modal fade" id="sdCreateKbModal" tabindex="-1">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content glass-card" style="background: var(--ds-bg-surface, #ffffff); border: 1px solid var(--ds-border-color, #cbd5e1); color: var(--ds-text-main, #0f172a); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
                         <div class="modal-header border-0 pb-0">
-                            <h5 class="modal-title fw-bold text-main" style="color:var(--ds-text-main);"><i data-lucide="book-open" class="me-1 text-primary"></i> Add Knowledge Base Article</h5>
+                            <h5 class="modal-title fw-bold text-main" id="sdKbModalTitle" style="color:var(--ds-text-main);">
+                                <i data-lucide="book-open" class="me-1 text-primary"></i> <span id="sdKbModalTitleText">Add Knowledge Base Article</span>
+                            </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
                             <form id="sdCreateKbForm" onsubmit="event.preventDefault(); SupportDesk.submitKbArticle();">
+                                <input type="hidden" id="sdKbArticleId">
+                                <div id="sdKbAuthorInfoBox" class="mb-3 p-2.5 rounded-3 d-flex align-items-center justify-content-between" style="display:none; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2);">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width:24px;height:24px;font-size:11px;font-weight:700;">
+                                            <i data-lucide="user" style="width:13px;height:13px;"></i>
+                                        </div>
+                                        <div class="text-xs">
+                                            <span class="text-secondary">Author:</span> <strong class="text-main" id="sdKbAuthorName">—</strong>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-xxs">Super Admin Author</span>
+                                </div>
                                 <div class="mb-3">
-                                    <label class="form-label text-xs fw-semibold text-secondary">Article Title</label>
+                                    <label class="form-label text-xs fw-semibold text-secondary">Article Title <span class="text-danger">*</span></label>
                                     <input type="text" class="ds-input" id="sdKbTitle" required placeholder="e.g. How to configure SSO Authentication">
                                 </div>
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
-                                        <label class="form-label text-xs fw-semibold text-secondary">Category</label>
+                                        <label class="form-label text-xs fw-semibold text-secondary">Category <span class="text-danger">*</span></label>
                                         <select class="ds-input" id="sdKbCategory" required>
                                             <option value="Technical">Technical</option>
                                             <option value="Billing">Billing</option>
@@ -307,12 +321,14 @@ const SupportDesk = {
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label text-xs fw-semibold text-secondary">Article Content</label>
+                                    <label class="form-label text-xs fw-semibold text-secondary">Article Content <span class="text-danger">*</span></label>
                                     <textarea class="ds-input" id="sdKbContent" rows="6" required placeholder="Detailed guide or solution content..."></textarea>
                                 </div>
                                 <div class="d-flex justify-content-end gap-2 mt-4">
                                     <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="ds-btn ds-btn-primary ds-btn-sm"><i data-lucide="check" class="me-1"></i> Save Article</button>
+                                    <button type="submit" class="ds-btn ds-btn-primary ds-btn-sm" id="sdKbSubmitBtn">
+                                        <i data-lucide="check" class="me-1"></i> <span id="sdKbSubmitBtnText">Save Article</span>
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -529,7 +545,11 @@ const SupportDesk = {
                     <!-- KPI Cards -->
                     <div class="row g-2 g-md-3">
                         <div class="col-6 col-md-3">
-                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100 position-relative clickable hover-shadow"
+                                style="cursor: pointer; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;"
+                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top"
+                                title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>📄 TOTAL EXTENSION REQUESTS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Cumulative count of all organization trial extension requests submitted across the platform.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organization_trial_extensions</code> records.</div><div style='color:#93c5fd;'>👉 Click to show all extension requests</div></div>"
+                                onclick="SupportDesk.filterTrialExtensionsKpi('')">
                                 <div class="p-2 p-md-2.5 rounded-circle bg-primary-subtle text-primary flex-shrink-0"><i data-lucide="file-text" style="width:18px;height:18px;"></i></div>
                                 <div class="min-w-0">
                                     <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold text-truncate">Total Requests</div>
@@ -538,7 +558,11 @@ const SupportDesk = {
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100 position-relative clickable hover-shadow"
+                                style="cursor: pointer; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;"
+                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top"
+                                title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>⏳ PENDING REVIEW</div><div class='text-white-50 mb-1'><strong>Data:</strong> Extension requests currently awaiting decision and approval by Super Administrators.</div><div class='text-white-50 mb-1'><strong>Source:</strong> Requests with status <code>Pending</code> or active auto-approval window.</div><div style='color:#93c5fd;'>👉 Click to filter pending requests</div></div>"
+                                onclick="SupportDesk.filterTrialExtensionsKpi('pending')">
                                 <div class="p-2 p-md-2.5 rounded-circle bg-warning-subtle text-warning flex-shrink-0"><i data-lucide="alert-circle" style="width:18px;height:18px;"></i></div>
                                 <div class="min-w-0">
                                     <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold text-truncate">Pending Review</div>
@@ -547,7 +571,11 @@ const SupportDesk = {
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100 position-relative clickable hover-shadow"
+                                style="cursor: pointer; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;"
+                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top"
+                                title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>⚡ AUTO-APPROVED</div><div class='text-white-50 mb-1'><strong>Data:</strong> Extension requests automatically approved by the system automated policy pipeline.</div><div class='text-white-50 mb-1'><strong>Source:</strong> System automated extension policy logs.</div><div style='color:#93c5fd;'>👉 Click to filter auto-approved requests</div></div>"
+                                onclick="SupportDesk.filterTrialExtensionsKpi('auto')">
                                 <div class="p-2 p-md-2.5 rounded-circle bg-success-subtle text-success flex-shrink-0"><i data-lucide="zap" style="width:18px;height:18px;"></i></div>
                                 <div class="min-w-0">
                                     <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold text-truncate">Auto-Approved</div>
@@ -556,7 +584,11 @@ const SupportDesk = {
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
+                            <div class="glass-card p-2.5 p-md-3 d-flex align-items-center gap-2.5 gap-md-3 h-100 position-relative clickable hover-shadow"
+                                style="cursor: pointer; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;"
+                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top"
+                                title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>✅ MANUALLY GRANTED</div><div class='text-white-50 mb-1'><strong>Data:</strong> Extension requests evaluated and granted manually by Super Administrators.</div><div class='text-white-50 mb-1'><strong>Source:</strong> Administrator-approved extension records.</div><div style='color:#93c5fd;'>👉 Click to filter manually granted requests</div></div>"
+                                onclick="SupportDesk.filterTrialExtensionsKpi('manual')">
                                 <div class="p-2 p-md-2.5 rounded-circle bg-info-subtle text-info flex-shrink-0"><i data-lucide="check-circle" style="width:18px;height:18px;"></i></div>
                                 <div class="min-w-0">
                                     <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold text-truncate">Manually Granted</div>
@@ -604,10 +636,21 @@ const SupportDesk = {
 
             this.renderTrialExtensionsTable();
             if (window.lucide) lucide.createIcons();
+
+            // Initialize Bootstrap Tooltips for KPI cards and elements
+            if (window.QCMS && QCMS.initTooltips) {
+                QCMS.initTooltips(view);
+            }
         } catch (e) {
             console.error('Failed to load trial extensions', e);
             view.innerHTML = `<div class="alert alert-danger p-3 text-xs">Failed to load trial extensions tab.</div>`;
         }
+    },
+
+    filterTrialExtensionsKpi(type) {
+        this.trialExtensionsKpiFilter = type || '';
+        this.trialExtensionsPage = 1;
+        this.renderTrialExtensionsTable();
     },
 
     filterTrialExtensions(query) {
@@ -633,6 +676,18 @@ const SupportDesk = {
         if (!tbody) return;
 
         let allData = this._trialExtensionsData || [];
+        if (this.trialExtensionsKpiFilter) {
+            const kf = this.trialExtensionsKpiFilter;
+            allData = allData.filter(o => {
+                const pending = o.pending_request || {};
+                const isPending = pending.status === 'Pending';
+                const isAutoApproving = Boolean(o.is_auto_approving && o.seconds_remaining > 0);
+                if (kf === 'pending') return isPending || isAutoApproving;
+                if (kf === 'auto') return o.auto_approved_trial_extensions > 0;
+                if (kf === 'manual') return o.manual_approved_trial_extensions > 0;
+                return true;
+            });
+        }
         if (this.trialExtensionsSearch) {
             const q = this.trialExtensionsSearch;
             allData = allData.filter(o => {
@@ -718,56 +773,17 @@ const SupportDesk = {
 
         tbody.innerHTML = rows;
 
-        if (footer) {
-            const startItem = total > 0 ? startIdx + 1 : 0;
-            const endItem = endIdx;
-
-            let pageBtns = '';
-            if (totalPages <= 7) {
-                for (let p = 1; p <= totalPages; p++) {
-                    pageBtns += `<button class="ds-btn ${p === page ? 'ds-btn-primary' : 'ds-btn-outline'} ds-btn-sm py-1 px-3 fw-bold" onclick="SupportDesk.setTrialExtensionsPage(${p})">${p}</button>`;
-                }
-            } else {
-                const pagesToShow = [];
-                pagesToShow.push(1);
-                if (page > 3) pagesToShow.push('...');
-                for (let p = Math.max(2, page - 1); p <= Math.min(totalPages - 1, page + 1); p++) {
-                    pagesToShow.push(p);
-                }
-                if (page < totalPages - 2) pagesToShow.push('...');
-                pagesToShow.push(totalPages);
-
-                pageBtns = pagesToShow.map(p => {
-                    if (p === '...') return `<span class="text-muted px-1 text-xs">...</span>`;
-                    return `<button class="ds-btn ${p === page ? 'ds-btn-primary' : 'ds-btn-outline'} ds-btn-sm py-1 px-3 fw-bold" onclick="SupportDesk.setTrialExtensionsPage(${p})">${p}</button>`;
-                }).join('');
-            }
-
-            footer.innerHTML = `
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 pt-3 border-top">
-                    <div class="text-xs text-secondary">
-                        ${total > 0 ? `Showing <strong>${startItem}–${endItem}</strong> of <strong>${total}</strong> requests` : 'Showing 0 of 0 requests'}
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="text-xs text-muted me-1 mb-0 d-none d-sm-inline">Show per page:</label>
-                        <select class="ds-input text-xs py-1 px-2" style="width: auto; height: 32px; border-radius: 6px;" onchange="SupportDesk.setTrialExtensionsPerPage(this.value)">
-                            <option value="5" ${perPage == 5 ? 'selected' : ''}>5 per page</option>
-                            <option value="10" ${perPage == 10 ? 'selected' : ''}>10 per page</option>
-                            <option value="20" ${perPage == 20 ? 'selected' : ''}>20 per page</option>
-                            <option value="30" ${perPage == 30 ? 'selected' : ''}>30 per page</option>
-                            <option value="50" ${perPage == 50 ? 'selected' : ''}>50 per page</option>
-                            <option value="100" ${perPage == 100 ? 'selected' : ''}>100 per page</option>
-                        </select>
-                        <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5 d-inline-flex align-items-center justify-content-center" ${page <= 1 ? 'disabled' : ''} onclick="SupportDesk.setTrialExtensionsPage(${page - 1})" title="Previous Page">
-                            <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
-                        </button>
-                        ${pageBtns}
-                        <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5 d-inline-flex align-items-center justify-content-center" ${page >= totalPages ? 'disabled' : ''} onclick="SupportDesk.setTrialExtensionsPage(${page + 1})" title="Next Page">
-                            <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
+        if (footer && typeof window.createStandardPagination === 'function') {
+            window.createStandardPagination({
+                containerId: 'sdTrialExtensionsPaginationFooter',
+                entityName: 'requests',
+                totalItems: total,
+                currentPage: page,
+                pageSize: perPage,
+                pageSizeOptions: [5, 10, 20, 30, 50, 100],
+                onPageChange: (p) => { SupportDesk.setTrialExtensionsPage(p); },
+                onPageSizeChange: (sz) => { SupportDesk.setTrialExtensionsPerPage(sz); }
+            });
         }
 
         if (window.lucide) lucide.createIcons();
@@ -922,14 +938,19 @@ const SupportDesk = {
                     <div class="row g-3 fade-in">
                         <!-- KPI Card Row -->
                         ${Object.entries(d).map(([k, c]) => {
+                            const formattedLabel = k.replace(/_/g, ' ').toUpperCase();
+                            const escTooltip = (c.tooltip || `${formattedLabel} metric`).replace(/"/g, '&quot;');
                             return `
                                 <div class="col-md-3">
-                                    <div class="glass-card p-3 d-flex align-items-center gap-3" style="min-height:92px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--ds-radius-md);">
+                                    <div class="glass-card p-3 d-flex align-items-center gap-3 position-relative clickable hover-shadow"
+                                        style="min-height:92px; cursor:pointer; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--ds-radius-md);"
+                                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top"
+                                        title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>📊 ${formattedLabel}</div><div class='text-white-50 mb-1'><strong>Data:</strong> ${escTooltip}</div></div>">
                                         <div class="icon-circle bg-primary-10 p-2.5 rounded-circle text-primary" style="display:flex; align-items:center; justify-content:center;">
                                             <i data-lucide="${c.icon}" style="width:20px; height:20px;"></i>
                                         </div>
                                         <div style="flex:1;">
-                                            <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold" style="font-size:10px; cursor:help;" title="${c.tooltip}">${k.replace(/_/g, ' ')}</div>
+                                            <div class="text-xxs uppercase tracking-wider text-secondary fw-semibold" style="font-size:10px;">${k.replace(/_/g, ' ')}</div>
                                             <h4 class="fw-bold mb-0 mt-0.5 text-main" style="color:var(--ds-text-main); font-size:1.35rem;">${c.value}${c.suffix || ''}</h4>
                                         </div>
                                     </div>
@@ -939,6 +960,9 @@ const SupportDesk = {
                     </div>
                 `;
                 if (window.lucide) lucide.createIcons();
+                if (window.QCMS && QCMS.initTooltips) {
+                    QCMS.initTooltips(view);
+                }
             }
         } catch (e) {
             view.innerHTML = `<div class="alert alert-danger">Failed to load support dashboard metrics.</div>`;
@@ -1058,33 +1082,17 @@ const SupportDesk = {
 
                 // Render pagination footer
                 const footer = document.getElementById('sdPaginationFooter');
-                if (footer) {
-                    const startItem = meta.total_items > 0 ? (meta.page - 1) * meta.per_page + 1 : 0;
-                    const endItem = Math.min(meta.page * meta.per_page, meta.total_items);
-                    let pageBtns = '';
-                    for (let p = 1; p <= meta.total_pages; p++) {
-                        pageBtns += `<button class="ds-btn ${p === meta.page ? 'ds-btn-primary' : 'ds-btn-outline'} ds-btn-sm py-1 px-3 fw-bold" onclick="SupportDesk.setPage(${p})">${p}</button>`;
-                    }
-                    footer.innerHTML = `
-                        <div class="text-xs text-secondary">
-                            ${meta.total_items > 0 ? `Showing <strong>${startItem}–${endItem}</strong> of <strong>${meta.total_items}</strong> items` : 'Showing 0 of 0'}
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <select class="ds-input text-xs py-1 px-2" style="width: auto; height: 32px;" onchange="SupportDesk.setPerPage(this.value)">
-                                <option value="10" ${meta.per_page == 10 ? 'selected' : ''}>10 per page</option>
-                                <option value="20" ${meta.per_page == 20 ? 'selected' : ''}>20 per page</option>
-                                <option value="50" ${meta.per_page == 50 ? 'selected' : ''}>50 per page</option>
-                            </select>
-                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5 d-inline-flex align-items-center justify-content-center" ${meta.page <= 1 ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page - 1})" title="Previous Page">
-                                <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
-                            </button>
-                            ${pageBtns}
-                            <button class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2.5 d-inline-flex align-items-center justify-content-center" ${meta.page >= meta.total_pages ? 'disabled' : ''} onclick="SupportDesk.setPage(${meta.page + 1})" title="Next Page">
-                                <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
-                            </button>
-                        </div>
-                    `;
-                    if (window.lucide) lucide.createIcons();
+                if (footer && typeof window.createStandardPagination === 'function') {
+                    window.createStandardPagination({
+                        containerId: 'sdPaginationFooter',
+                        entityName: 'tickets',
+                        totalItems: meta.total_items || 0,
+                        currentPage: meta.page || 1,
+                        pageSize: meta.per_page || 10,
+                        pageSizeOptions: [10, 20, 50, 100],
+                        onPageChange: (p) => { SupportDesk.setPage(p); },
+                        onPageSizeChange: (sz) => { SupportDesk.setPerPage(sz); }
+                    });
                 }
             }
         } catch (e) {
@@ -1589,23 +1597,69 @@ const SupportDesk = {
         container.innerHTML = `<div class="col-12 text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>`;
 
         try {
-            const res = await api.get(`/support/knowledge?q=${query}`);
+            const res = await api.get(`/support/knowledge?q=${encodeURIComponent(query)}`);
             if (res.status === 'success') {
                 const list = res.articles || [];
-                container.innerHTML = list.map(a => `
-                    <div class="col-md-6">
-                        <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between" style="border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.75); border-radius: 12px; backdrop-filter: blur(8px);">
+                this._cachedKbArticles = list;
+                
+                if (list.length === 0) {
+                    container.innerHTML = `<div class="col-12 text-center text-muted py-5">
+                        <i data-lucide="book-open" style="width:36px;height:36px;opacity:0.3;" class="mb-2"></i>
+                        <p class="mb-0 text-sm">No knowledge base articles found.</p>
+                    </div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                container.innerHTML = list.map(a => {
+                    const authorDisplay = a.author_name || 'Super Admin';
+                    const authorInitials = authorDisplay.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'SA';
+                    const dateStr = a.created_at ? (typeof QCMS !== 'undefined' && QCMS.formatDate ? QCMS.formatDate(a.created_at) : new Date(a.created_at).toLocaleDateString()) : '';
+                    
+                    const canEdit = a.can_edit !== false;
+                    const canDelete = a.can_delete !== false;
+                    const escapedTitle = (a.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+                    return `
+                    <div class="col-md-6 col-12">
+                        <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between" style="border: 1px solid rgba(0,0,0,0.08); background: var(--ds-bg-surface, rgba(255,255,255,0.9)); border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                             <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2.5">
+                                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 text-uppercase fw-semibold" style="font-size: 10px; letter-spacing: 0.5px;">${a.category}</span>
-                                    ${a.is_internal ? '<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 10px;">Internal</span>' : ''}
+                                    
+                                    <!-- Author Tag -->
+                                    <div class="d-flex align-items-center gap-1.5 px-2 py-0.5 rounded-pill" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.15);" title="Author: ${authorDisplay} (${a.author_email || ''})">
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 18px; height: 18px; font-size: 9px;">
+                                            ${authorInitials}
+                                        </div>
+                                        <span class="text-xs fw-semibold text-primary" style="font-size: 11px;">${authorDisplay}</span>
+                                    </div>
                                 </div>
-                                <h6 class="fw-bold mb-2" style="color:var(--ds-text-main, #1e293b); word-break: break-word; overflow-wrap: anywhere; line-height: 1.4;">${a.title}</h6>
-                                <p class="text-secondary mb-0" style="font-size: 13px; line-height: 1.55; color:var(--ds-text-secondary, #64748b); word-break: break-word; overflow-wrap: anywhere;">${a.content.length > 140 ? a.content.slice(0, 140) + '...' : a.content}</p>
+                                <h6 class="fw-bold mb-2 text-main" style="color:var(--ds-text-main, #1e293b); word-break: break-word; line-height: 1.4; font-size: 0.95rem;">${a.title}</h6>
+                                <p class="text-secondary mb-3" style="font-size: 13px; line-height: 1.6; color:var(--ds-text-secondary, #64748b); word-break: break-word;">${a.content.length > 180 ? a.content.slice(0, 180) + '...' : a.content}</p>
+                            </div>
+
+                            <!-- Footer with Date & Action Buttons -->
+                            <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-2 flex-wrap gap-2" style="border-color: var(--ds-border-color, rgba(0,0,0,0.06)) !important;">
+                                <span class="text-xs text-muted d-flex align-items-center gap-1">
+                                    <i data-lucide="calendar" style="width:13px;height:13px;"></i> ${dateStr}
+                                </span>
+                                <div class="d-flex align-items-center gap-1.5">
+                                    ${canEdit ? `
+                                        <button type="button" class="ds-btn ds-btn-outline ds-btn-xs py-1 px-2.5" onclick="SupportDesk.openEditKbModal(${a.id})" title="Edit Article">
+                                            <i data-lucide="edit-3" style="width:12px;height:12px;" class="me-1"></i> Edit
+                                        </button>
+                                    ` : ''}
+                                    ${canDelete ? `
+                                        <button type="button" class="ds-btn ds-btn-outline-danger ds-btn-xs py-1 px-2.5 text-danger" style="border-color: rgba(239, 68, 68, 0.3);" onclick="SupportDesk.deleteKbArticle(${a.id}, '${escapedTitle}')" title="Delete Article">
+                                            <i data-lucide="trash-2" style="width:12px;height:12px;" class="me-1"></i> Delete
+                                        </button>
+                                    ` : ''}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `).join('') || '<div class="col-12 text-center text-muted py-4">No knowledge articles found.</div>';
+                    </div>`;
+                }).join('');
                 if (window.lucide) lucide.createIcons();
 
             }
@@ -1619,12 +1673,56 @@ const SupportDesk = {
     },
 
     openCreateKbModal() {
+        const idEl = document.getElementById('sdKbArticleId');
         const titleEl = document.getElementById('sdKbTitle');
         const catEl = document.getElementById('sdKbCategory');
         const contentEl = document.getElementById('sdKbContent');
+        const modalTitleText = document.getElementById('sdKbModalTitleText');
+        const submitBtnText = document.getElementById('sdKbSubmitBtnText');
+        const authorBox = document.getElementById('sdKbAuthorInfoBox');
+
+        if (idEl) idEl.value = '';
         if (titleEl) titleEl.value = '';
         if (catEl) catEl.value = 'Technical';
         if (contentEl) contentEl.value = '';
+        if (modalTitleText) modalTitleText.textContent = 'Add Knowledge Base Article';
+        if (submitBtnText) submitBtnText.textContent = 'Save Article';
+        if (authorBox) authorBox.style.display = 'none';
+
+        const modalEl = this.ensureModalInBody('sdCreateKbModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+    },
+
+    openEditKbModal(articleId) {
+        const article = (this._cachedKbArticles || []).find(a => a.id === articleId);
+        if (!article) {
+            QCMS.toast('Article details not found', 'error');
+            return;
+        }
+
+        const idEl = document.getElementById('sdKbArticleId');
+        const titleEl = document.getElementById('sdKbTitle');
+        const catEl = document.getElementById('sdKbCategory');
+        const contentEl = document.getElementById('sdKbContent');
+        const modalTitleText = document.getElementById('sdKbModalTitleText');
+        const submitBtnText = document.getElementById('sdKbSubmitBtnText');
+        const authorBox = document.getElementById('sdKbAuthorInfoBox');
+        const authorNameEl = document.getElementById('sdKbAuthorName');
+
+        if (idEl) idEl.value = article.id;
+        if (titleEl) titleEl.value = article.title || '';
+        if (catEl) catEl.value = article.category || 'Technical';
+        if (contentEl) contentEl.value = article.content || '';
+        if (modalTitleText) modalTitleText.textContent = 'Edit Knowledge Base Article';
+        if (submitBtnText) submitBtnText.textContent = 'Update Article';
+        
+        if (authorBox) {
+            authorBox.style.display = 'flex';
+            if (authorNameEl) authorNameEl.textContent = article.author_name || 'Super Admin';
+        }
 
         const modalEl = this.ensureModalInBody('sdCreateKbModal');
         if (modalEl) {
@@ -1634,6 +1732,7 @@ const SupportDesk = {
     },
 
     async submitKbArticle() {
+        const articleId = document.getElementById('sdKbArticleId')?.value;
         const title = document.getElementById('sdKbTitle')?.value?.trim();
         const category = document.getElementById('sdKbCategory')?.value;
         const content = document.getElementById('sdKbContent')?.value?.trim();
@@ -1644,16 +1743,35 @@ const SupportDesk = {
             return;
         }
 
+        const btn = document.getElementById('sdKbSubmitBtn');
+        const origBtnText = btn ? btn.innerHTML : '';
         try {
-            const res = await api.post('/support/knowledge', {
-                title,
-                category,
-                content,
-                is_internal
-            });
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+            }
+
+            let res;
+            if (articleId) {
+                // Update existing article
+                res = await api.put(`/support/knowledge/${articleId}`, {
+                    title,
+                    category,
+                    content,
+                    is_internal
+                });
+            } else {
+                // Create new article
+                res = await api.post('/support/knowledge', {
+                    title,
+                    category,
+                    content,
+                    is_internal
+                });
+            }
 
             if (res && (res.status === 'success' || res.article_id)) {
-                QCMS.toast('Knowledge article published successfully!', 'success');
+                QCMS.toast(res.message || (articleId ? 'Knowledge article updated successfully!' : 'Knowledge article published successfully!'), 'success');
                 const modalEl = document.getElementById('sdCreateKbModal');
                 if (modalEl) {
                     const modal = bootstrap.Modal.getInstance(modalEl);
@@ -1661,11 +1779,37 @@ const SupportDesk = {
                 }
                 await this.loadKB();
             } else {
-                QCMS.toast(res.message || 'Failed to publish article', 'error');
+                QCMS.toast(res.message || 'Failed to save article', 'error');
             }
         } catch (e) {
-            console.error('Error creating KB article:', e);
-            QCMS.toast(e.message || 'Failed to publish article', 'error');
+            console.error('Error saving KB article:', e);
+            QCMS.toast(e.message || 'Failed to save article', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origBtnText;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    },
+
+    async deleteKbArticle(articleId, articleTitle) {
+        const titleDisp = articleTitle ? `"${articleTitle}"` : 'this knowledge article';
+        if (!confirm(`Are you sure you want to delete ${titleDisp}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const res = await api.delete(`/support/knowledge/${articleId}`);
+            if (res && res.status === 'success') {
+                QCMS.toast('Knowledge article deleted successfully.', 'success');
+                await this.loadKB();
+            } else {
+                QCMS.toast(res.message || 'Failed to delete article', 'error');
+            }
+        } catch (e) {
+            console.error('Error deleting KB article:', e);
+            QCMS.toast(e.message || 'Failed to delete article', 'error');
         }
     },
 
@@ -1820,12 +1964,7 @@ const SupportDesk = {
         if (window.lucide) lucide.createIcons();
 
         try {
-            const token = (window.api && window.api.token) 
-                || localStorage.getItem('access_token') 
-                || sessionStorage.getItem('access_token') 
-                || localStorage.getItem('token') 
-                || sessionStorage.getItem('token') 
-                || localStorage.getItem('qcms_token');
+            const token = window.api ? window.api.token : null;
             const formData = new FormData();
             formData.append('file', file);
             const resp = await fetch(`/api/support/tickets/${this.currentTicketId}/upload-attachment`, {
@@ -2662,3 +2801,5 @@ const SupportDesk = {
         }
     }
 };
+
+window.SupportDesk = SupportDesk;

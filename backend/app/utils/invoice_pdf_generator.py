@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from fpdf import FPDF
 
 
@@ -17,7 +17,7 @@ def generate_invoice_pdf_bytes(org_name, admin_name, admin_email, plan_name, bil
     subtotal_val = total_val / 1.18 if total_val > 0 else 0.0
     gst_val = total_val - subtotal_val
     
-    dt_str = payment_date.strftime('%Y-%m-%d') if isinstance(payment_date, datetime) else (str(payment_date) if payment_date else datetime.utcnow().strftime('%Y-%m-%d'))
+    dt_str = payment_date.strftime('%Y-%m-%d') if isinstance(payment_date, datetime) else (str(payment_date) if payment_date else datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d'))
     tx_str = str(transaction_id or 'TXN-001')
     inv_no = f"INV-2026-{tx_str[-8:] if len(tx_str) > 8 else tx_str}"
 

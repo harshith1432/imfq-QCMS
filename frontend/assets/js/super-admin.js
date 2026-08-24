@@ -238,6 +238,18 @@ const SuperAdmin = {
         const targetView = document.getElementById(`${viewId}View`);
         if (targetView) {
             targetView.classList.add('active');
+            if (viewId === 'stage-templates') {
+                const iframe = targetView.querySelector('iframe');
+                if (iframe) {
+                    const curTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                    try {
+                        if (iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'THEME_CHANGED', theme: curTheme }, '*');
+                        if (iframe.contentDocument && iframe.contentDocument.documentElement) {
+                            iframe.contentDocument.documentElement.setAttribute('data-theme', curTheme);
+                        }
+                    } catch(e) {}
+                }
+            }
         }
 
         // Update active state in sidebar
@@ -268,8 +280,8 @@ const SuperAdmin = {
             'integrations':   { title: 'Integration Hub',          subtitle: 'Central configuration, security vault, and real-time monitoring for platform APIs and third-party services.' },
             'doc-identity':   { title: 'Document Identity & Branding', subtitle: 'Centralized branding engine — configure platform identity, company info, document templates, and trace all setting dependencies.' },
             'storage':        { title: 'Organization Storage Analytics', subtitle: 'Real-time data storage consumption across all organizations, tier allocations, and usage alerts.' },
-            'stage-templates': { title: 'Global Stage Templates',      subtitle: 'Design global default 8-stage workflow templates, custom section cards, and mandatory rules applied to all organizations.' },
-            'stage-weightage': { title: 'Stage Weightage Configuration', subtitle: 'Configure percentage weight distribution across the 8 QC stages to calculate project completion accurately.' },
+            'stage-templates': { title: 'Global Stage Templates',      subtitle: 'Design global default workflow templates, custom section cards, and mandatory rules applied to all organizations.' },
+            'stage-weightage': { title: 'Stage Weightage Configuration', subtitle: 'Configure percentage weight distribution across the workflow stages to calculate project completion accurately.' },
             'settings':       { title: 'System Configuration',     subtitle: 'Manage global platform parameters and maintenance states.' }
         };
 
@@ -383,9 +395,9 @@ const SuperAdmin = {
             });
         }
 
-        // SPA link interception for Super Admin sidebar navigation (prevents page reloads & flashes)
+        // SPA link interception for Super Admin sidebar & mobile bottom navigation (prevents page reloads & flashes)
         document.addEventListener('click', (e) => {
-            const link = e.target.closest('.sidebar-link[href*="super-admin.html"]');
+            const link = e.target.closest('.sidebar-link[href*="super-admin.html"], .app-bottom-nav-item[href*="super-admin.html"]');
             if (link) {
                 const href = link.getAttribute('href') || '';
                 const match = href.match(/[?&]view=([^&]+)/);
@@ -399,6 +411,9 @@ const SuperAdmin = {
                     history.pushState(null, '', href);
                 }
                 this.switchView(viewId);
+                if (window.QCMS && typeof window.QCMS.renderMobileBottomNav === 'function') {
+                    window.QCMS.renderMobileBottomNav();
+                }
             }
         });
 
@@ -1117,26 +1132,17 @@ const SuperAdmin = {
         const pageItems = filtered.slice(startIndex, endIndex);
 
         // Update Pagination Footer UI
-        const infoEl = document.getElementById('orgRevenuePaginationInfo');
-        if (infoEl) {
-            infoEl.textContent = totalItems > 0 
-                ? `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} organizations`
-                : `Showing 0 to 0 of 0 organizations`;
-        }
-
-        const pageIndicatorEl = document.getElementById('orgRevenuePageIndicator');
-        if (pageIndicatorEl) {
-            pageIndicatorEl.textContent = `Page ${this.orgRevenueCurrentPage} of ${totalPages}`;
-        }
-
-        const prevBtn = document.getElementById('orgRevenuePrevBtn');
-        if (prevBtn) {
-            prevBtn.disabled = this.orgRevenueCurrentPage <= 1;
-        }
-
-        const nextBtn = document.getElementById('orgRevenueNextBtn');
-        if (nextBtn) {
-            nextBtn.disabled = this.orgRevenueCurrentPage >= totalPages || totalItems === 0;
+        if (typeof window.createStandardPagination === 'function') {
+            window.createStandardPagination({
+                containerId: 'orgRevenuePaginationContainer',
+                entityName: 'organizations',
+                totalItems: totalItems,
+                currentPage: this.orgRevenueCurrentPage,
+                pageSize: this.orgRevenuePageSize,
+                pageSizeOptions: [10, 20, 50, 100],
+                onPageChange: (p) => { this.orgRevenueCurrentPage = p; this._renderOrgRevenueTable(); },
+                onPageSizeChange: (sz) => { this.orgRevenuePageSize = sz; this.orgRevenueCurrentPage = 1; this._renderOrgRevenueTable(); }
+            });
         }
 
         if (pageItems.length === 0) {
@@ -1637,94 +1643,94 @@ const SuperAdmin = {
             const kpiGrid = document.getElementById('superKpiGrid');
             if (kpiGrid) {
                 
-                // Construct KPI cards with interactive click handlers
+                // Construct KPI cards with interactive click handlers and rich hover tooltips on the entire card
                 kpiGrid.innerHTML = `
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🏢 TOTAL ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Total registered customer tenant organizations on QCMS.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organizations</code> table (active tenant accounts).</div><div style='color:#93c5fd;'>👉 Click to manage organizations</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Total registered tenant organizations on the platform."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(var(--ds-primary-rgb),0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="building" style="width:18px;height:18px;color:var(--ds-accent);"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.total_organizations || 0}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Total Organizations</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">TOTAL ORGANIZATIONS</div>
                     </div>
                     
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>✅ PAID ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Client organizations with an active paid SaaS subscription plan.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>subscriptions</code> & <code>organizations</code> (status = Active).</div><div style='color:#93c5fd;'>👉 Click to view paid accounts</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Organizations on a paid subscription (not trial)."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="check-circle" style="width:18px;height:18px;color:#22c55e;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.paid_orgs !== undefined ? data.paid_orgs : (data.active_organizations || 0)}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Paid Organizations</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PAID ORGANIZATIONS</div>
                     </div>
 
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>⏳ ON TRIAL ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Tenants currently evaluating the platform within their trial window.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organizations</code> (subscription_status = Trialing).</div><div style='color:#93c5fd;'>👉 Click to inspect trial tenants</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Organizations currently within their initial trial window."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="clock" style="width:18px;height:18px;color:#f59e0b;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.trial_organizations || 0}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">On Trial Organizations</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">ON TRIAL ORGANIZATIONS</div>
                     </div>
 
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations'); setTimeout(() => SuperAdmin.filterByKpi('license_status', 'Inactive 20d'), 100);">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations'); setTimeout(() => SuperAdmin.filterByKpi('license_status', 'Inactive 20d'), 100);" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>👤 INACTIVE (20D)</div><div class='text-white-50 mb-1'><strong>Data:</strong> Organizations created >20 days ago with zero login activity in last 20 days.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>users.last_login</code> & <code>organizations.created_at</code>.</div><div style='color:#93c5fd;'>👉 Click to view inactive accounts</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Organizations created over 20 days ago with zero login activity in the last 20 days."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="user-x" style="width:18px;height:18px;color:#ef4444;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.inactive_20d_orgs || 0}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Inactive (20d)</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">INACTIVE (20D)</div>
                     </div>
 
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations'); setTimeout(() => SuperAdmin.filterByKpi('status', 'Expired'), 100);">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations'); setTimeout(() => SuperAdmin.filterByKpi('status', 'Expired'), 100);" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>❌ EXPIRED SUBSCRIPTIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Client accounts whose trial period or SaaS subscription has elapsed.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>license_expiry_date &lt; NOW()</code> or status Expired.</div><div style='color:#93c5fd;'>👉 Click to view expired tenants</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Organizations whose trial period or SaaS subscription has expired."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="x-circle" style="width:18px;height:18px;color:#ef4444;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.expired_licenses || 0}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Expired Subscriptions</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">EXPIRED SUBSCRIPTIONS</div>
                     </div>
 
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('storage')">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('storage')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>💾 PLATFORM STORAGE USAGE</div><div class='text-white-50 mb-1'><strong>Data:</strong> Aggregate disk and database storage consumed by all tenants.</div><div class='text-white-50 mb-1'><strong>Source:</strong> Real-time storage engine & database metrics.</div><div style='color:#93c5fd;'>👉 Click to open storage dashboard</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Aggregate real-time data storage consumed across all tenants. Click to open Organization Storage Usage Dashboard."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(139,92,246,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="hard-drive" style="width:18px;height:18px;color:#8b5cf6;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);" id="saStorageKpiVal">${data.storage_used_fmt || (data.storage_used ? data.storage_used + ' MB' : '0 MB')}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Platform Storage Usage</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PLATFORM STORAGE USAGE</div>
                     </div>
 
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('billing')">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('billing')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>💳 REVENUE (${(data.range_label || 'Selected Period').toUpperCase()})</div><div class='text-white-50 mb-1'><strong>Data:</strong> Total invoice collection amount received in selected period.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>subscription_payments</code> (status = Completed/Paid).</div><div style='color:#93c5fd;'>👉 Click to open billing & financial transactions</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Total invoice collection amount in selected period."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="credit-card" style="width:18px;height:18px;color:#22c55e;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">₹${SuperAdmin.formatINR(data.revenue_in_period || data.revenue_this_month || 0)}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Revenue (${data.range_label || 'Selected Period'})</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">REVENUE (${(data.range_label || 'Selected Period').toUpperCase()})</div>
                     </div>
 
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('support')">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('support')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🛟 PENDING TICKETS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Customer support tickets currently in Open or In-Progress status.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>support_tickets</code> table.</div><div style='color:#93c5fd;'>👉 Click to open support desk</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;" data-bs-toggle="tooltip" title="Support tickets currently in open or in-progress states."></i>
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
                             <i data-lucide="life-buoy" style="width:18px;height:18px;color:#ef4444;"></i>
                         </div>
                         <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.pending_support_tickets || 0}</div>
-                        <div class="text-muted" style="font-size:11px;margin-top:2px;">Pending Tickets</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PENDING TICKETS</div>
                     </div>
                 `;
 
@@ -1743,10 +1749,9 @@ const SuperAdmin = {
                 document.getElementById('dashPaidOrgs').textContent = paidOrgs;
                 document.getElementById('dashGrowth').textContent = `${growthVal >= 0 ? '+' : ''}${growthVal}%`;
 
-                // Initialize tooltips
-                if (typeof bootstrap !== 'undefined' && bootstrap && bootstrap.Tooltip) {
-                    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-                    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+                // Initialize tooltips on cards
+                if (window.QCMS && QCMS.initTooltips) {
+                    QCMS.initTooltips(kpiGrid);
                 }
 
                 // Redraw Donut and MRR Charts
@@ -1910,34 +1915,48 @@ const SuperAdmin = {
         try {
             const res = await api.get('/super-admin/companies/filter-options');
             if (res && res.status === 'success' && res.data) {
-                const { industries, countries, states, cities } = res.data;
+                const { industries, countries, states, cities, plans } = res.data;
                 
+                if (plans && Array.isArray(plans) && plans.length > 0) {
+                    this._allFetchedPlans = plans;
+                }
+
                 const indSelect = document.getElementById('filterIndustry');
                 if (indSelect) {
                     const current = indSelect.value;
                     indSelect.innerHTML = '<option value="">All Industries</option>' + 
-                        (industries || []).map(i => `<option value="${i}" ${i === current ? 'selected' : ''}>${i}</option>`).join('');
+                        (industries || []).map(i => `<option value="${this._escapeHTML(i)}" ${i === current ? 'selected' : ''}>${this._escapeHTML(i)}</option>`).join('');
                 }
                 
                 const cntSelect = document.getElementById('filterCountry');
                 if (cntSelect) {
                     const current = cntSelect.value;
                     cntSelect.innerHTML = '<option value="">All Countries</option>' + 
-                        (countries || []).map(c => `<option value="${c}" ${c === current ? 'selected' : ''}>${c}</option>`).join('');
+                        (countries || []).map(c => `<option value="${this._escapeHTML(c)}" ${c === current ? 'selected' : ''}>${this._escapeHTML(c)}</option>`).join('');
                 }
 
                 const stSelect = document.getElementById('filterState');
                 if (stSelect) {
                     const current = stSelect.value;
                     stSelect.innerHTML = '<option value="">All States</option>' + 
-                        (states || []).map(s => `<option value="${s}" ${s === current ? 'selected' : ''}>${s}</option>`).join('');
+                        (states || []).map(s => `<option value="${this._escapeHTML(s)}" ${s === current ? 'selected' : ''}>${this._escapeHTML(s)}</option>`).join('');
                 }
 
                 const ctSelect = document.getElementById('filterCity');
                 if (ctSelect) {
                     const current = ctSelect.value;
                     ctSelect.innerHTML = '<option value="">All Cities</option>' + 
-                        (cities || []).map(c => `<option value="${c}" ${c === current ? 'selected' : ''}>${c}</option>`).join('');
+                        (cities || []).map(c => `<option value="${this._escapeHTML(c)}" ${c === current ? 'selected' : ''}>${this._escapeHTML(c)}</option>`).join('');
+                }
+
+                const planSelect = document.getElementById('filterPlan');
+                if (planSelect && plans && plans.length > 0) {
+                    const current = planSelect.value;
+                    planSelect.innerHTML = '<option value="">All Plans</option>' + 
+                        plans.map(p => {
+                            const name = typeof p === 'string' ? p : (p.name || p.title || p.plan_name || '');
+                            return `<option value="${this._escapeHTML(name)}" ${name === current ? 'selected' : ''}>${this._escapeHTML(name)}</option>`;
+                        }).join('');
                 }
                 this._filterOptionsLoaded = true;
             }
@@ -2080,14 +2099,14 @@ const SuperAdmin = {
 
         if (grid) {
             grid.innerHTML = `
-                ${QCMS.kpiCardWithTooltip('Total Organisation', kpi.total, 'building-2', 'blue', 'Total count of non-deleted client tenants.', '', 'onclick="SuperAdmin.filterByKpi(\'all\')"')}
-                ${QCMS.kpiCardWithTooltip('Paid Organisation', kpi.active, 'check-circle', 'green', 'Tenants currently on a paid subscription plan.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Active\')"')}
-                ${QCMS.kpiCardWithTooltip('On Trial Organizations', kpi.trialing, 'clock', 'orange', 'Tenants currently under active trial period.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Trialing\')"')}
-                ${QCMS.kpiCardWithTooltip('Expiring Soon', kpi.expiring_soon || 0, 'alert-triangle', 'amber', 'Tenants with trials or licenses expiring within 7 days.', '', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Expiring Soon\')"')}
-                ${QCMS.kpiCardWithTooltip('Inactive (20d)', kpi.inactive_20d || 0, 'user-x', 'slate', 'Tenants registered over 20 days ago with no login activity in the last 20 days.', '', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Inactive 20d\')"')}
-                ${QCMS.kpiCardWithTooltip('On Hold', kpi.suspended, 'pause-circle', 'red', 'Tenants suspended from platform access.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Suspended\')"')}
-                ${QCMS.kpiCardWithTooltip('Enterprise', kpi.enterprise, 'crown', 'purple', 'Tenants using the Enterprise SaaS plan.', '', 'onclick="SuperAdmin.filterByKpi(\'plan\', \'Enterprise\')"')}
-                ${QCMS.kpiCardWithTooltip('Expired Subscription', kpi.expired, 'x-circle', 'gray', 'Tenants whose trial or subscription has expired.', '', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Expired\')"')}
+                ${QCMS.kpiCardWithTooltip('Total Organizations', kpi.total, 'building-2', 'blue', 'COUNT(organizations WHERE is_platform_org=FALSE AND is_deleted=FALSE)', 'Total registered customer tenant organizations on QCMS. Sourced from the organizations table.', 'onclick="SuperAdmin.filterByKpi(\'all\')"')}
+                ${QCMS.kpiCardWithTooltip('Paid Organizations', kpi.active, 'check-circle', 'green', 'COUNT(organizations WHERE subscription_status=\'Active\')', 'Tenants currently on an active paid SaaS subscription plan. Sourced from organizations & subscriptions.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Active\')"')}
+                ${QCMS.kpiCardWithTooltip('On Trial Organizations', kpi.trialing, 'clock', 'orange', 'COUNT(organizations WHERE subscription_status=\'Trialing\')', 'Tenants currently active within their 14-day evaluation trial. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Trialing\')"')}
+                ${QCMS.kpiCardWithTooltip('Expiring Soon', kpi.expiring_soon || 0, 'alert-triangle', 'amber', 'COUNT(organizations WHERE license_expiry_date BETWEEN NOW() AND NOW() + 7 DAYS)', 'Tenants with trials or licenses expiring within 7 days. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Expiring Soon\')"')}
+                ${QCMS.kpiCardWithTooltip('Inactive (20d)', kpi.inactive_20d || 0, 'user-x', 'slate', 'COUNT(organizations WHERE created_at < NOW() - 20d AND MAX(last_login) < NOW() - 20d)', 'Tenants registered >20 days ago with zero login activity across all users in last 20 days.', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Inactive 20d\')"')}
+                ${QCMS.kpiCardWithTooltip('On Hold', kpi.suspended, 'pause-circle', 'red', 'COUNT(organizations WHERE subscription_status=\'Suspended\')', 'Tenants temporarily suspended from platform access. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Suspended\')"')}
+                ${QCMS.kpiCardWithTooltip('Enterprise', kpi.enterprise, 'crown', 'purple', 'COUNT(organizations WHERE subscription_plan=\'Enterprise\')', 'Client organizations enrolled in the Enterprise SaaS tier. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'plan\', \'Enterprise\')"')}
+                ${QCMS.kpiCardWithTooltip('Expired Subscriptions', kpi.expired, 'x-circle', 'gray', 'COUNT(organizations WHERE subscription_status=\'Expired\' OR license_expiry_date < NOW())', 'Tenants whose trial or subscription has expired. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Expired\')"')}
             `;
             // Force all cards onto a responsive grid with clean spacing
             grid.style.display = 'grid';
@@ -2098,12 +2117,16 @@ const SuperAdmin = {
         }
         if (window.lucide) lucide.createIcons();
         
-        // Initialize tooltips
-        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        // Initialize tooltips on org cards
+        if (window.QCMS && QCMS.initTooltips) {
+            QCMS.initTooltips(grid);
+        }
     },
 
     filterByKpi(type, value = '') {
+        if (window.QCMS && QCMS.cleanTooltips) {
+            QCMS.cleanTooltips();
+        }
         const elPlan = document.getElementById('filterPlan');
         const elStatus = document.getElementById('filterStatus');
         const elFeature = document.getElementById('filterFeature');
@@ -2197,10 +2220,7 @@ const SuperAdmin = {
             return `<tr>
                 <td><input type="checkbox" class="form-check-input org-row-chk" data-id="${org.id}" ${isChecked}></td>
                 <td class="col-company">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="fw-bold" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;color:var(--ds-text-main);" title="${org.name}">${this.highlightText(org.name, search)}</div>
-                        <span class="badge border" style="font-size:11px;padding:2px 6px;background:rgba(100,116,139,0.12);color:#334155;border-color:rgba(100,116,139,0.2) !important;font-family:monospace;font-weight:600;" title="Database Organization ID: ${org.id}">ID: ${org.id}</span>
-                    </div>
+                    <div class="fw-bold" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;color:var(--ds-text-main);" title="${org.name}">${this.highlightText(org.name, search)}</div>
                     ${subInfo ? `<div style="font-size:12px;color:#475569;font-weight:500;margin-top:2px;">${this.highlightText(subInfo, search)}</div>` : ''}
                 </td>
                 <td class="col-admin">
@@ -2327,14 +2347,14 @@ const SuperAdmin = {
         if (!grid) return;
         
         const kpis = [
-            { label: 'Total Revenue', value: `₹${SuperAdmin.formatINR(data.total_revenue || 0)}`, icon: 'dollar-sign', color: '#10b981', accent: '#10b981' },
-            { label: 'Monthly Rate (MRR)', value: `₹${SuperAdmin.formatINR(data.monthly_revenue || 0)}`, icon: 'trending-up', color: '#3b82f6', accent: '#3b82f6' },
-            { label: 'Unpaid Invoices', value: data.overdue_invoices || 0, icon: 'alert-triangle', color: '#ef4444', accent: '#ef4444' },
-            { label: 'Payment Due', value: `₹${SuperAdmin.formatINR(data.outstanding_amount || 0)}`, icon: 'clock', color: '#f59e0b', accent: '#f59e0b' }
+            { label: 'Total Revenue', value: `₹${SuperAdmin.formatINR(data.total_revenue || 0)}`, icon: 'dollar-sign', color: '#10b981', accent: '#10b981', desc: 'Total realized revenue collected across all completed payments. Sourced from subscription_payments.' },
+            { label: 'Monthly Rate (MRR)', value: `₹${SuperAdmin.formatINR(data.mrr !== undefined ? data.mrr : (data.monthly_revenue || 0))}`, icon: 'trending-up', color: '#3b82f6', accent: '#3b82f6', desc: 'Normalized monthly recurring revenue run-rate across active customer subscriptions.' },
+            { label: 'Unpaid Invoices', value: data.overdue_invoices || 0, icon: 'alert-triangle', color: '#ef4444', accent: '#ef4444', desc: 'Count of generated invoices past their due date without payment receipt.' },
+            { label: 'Payment Due', value: `₹${SuperAdmin.formatINR(data.outstanding_amount || 0)}`, icon: 'clock', color: '#f59e0b', accent: '#f59e0b', desc: 'Total unpaid outstanding balance from pending and overdue invoices.' }
         ];
 
         grid.innerHTML = kpis.map(k => `
-            <div class="bill-kpi-card">
+            <div class="bill-kpi-card position-relative" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>💳 ${k.label.toUpperCase()}</div><div class='text-white-50 mb-1'><strong>Data:</strong> ${k.desc}</div><div style='color:#93c5fd;'>👉 Click to inspect billing data</div></div>">
                 <div class="kpi-icon" style="background: ${k.color}15; color: ${k.color};">
                     <i data-lucide="${k.icon}" style="width:16px;height:16px;"></i>
                 </div>
@@ -2345,6 +2365,9 @@ const SuperAdmin = {
         `).join('');
 
         if (window.lucide) lucide.createIcons();
+        if (window.QCMS && QCMS.initTooltips) {
+            QCMS.initTooltips(grid);
+        }
     },
 
     renderBillInvoices(data, pagination) {
@@ -2397,37 +2420,18 @@ const SuperAdmin = {
         }).join('');
 
         // Update pagination numbers & controls
-        const start = (pagination.page - 1) * pagination.per_page + 1;
-        const end = Math.min(start + pagination.per_page - 1, pagination.total);
-        const infoEl = document.getElementById('billPagInfo');
-        if (infoEl) infoEl.textContent = `Showing ${start}-${end} of ${pagination.total}`;
-
-        const perPageSelect = document.getElementById('billPerPage');
-        if (perPageSelect) {
-            perPageSelect.value = String(pagination.per_page || 10);
+        if (typeof window.createStandardPagination === 'function') {
+            window.createStandardPagination({
+                containerId: 'billInvoicesPagination',
+                entityName: 'invoices',
+                totalItems: pagination.total || data.length || 0,
+                currentPage: pagination.page || 1,
+                pageSize: pagination.per_page || 10,
+                pageSizeOptions: [5, 10, 20, 50, 100],
+                onPageChange: (p) => { SuperAdmin.goToBillPage(p); },
+                onPageSizeChange: (sz) => { SuperAdmin.setBillPerPage(sz); }
+            });
         }
-
-        const curPage = pagination.page;
-        const totalPages = pagination.pages || 1;
-
-        let pagHtml = `
-            <button class="ds-btn ds-btn-sm ds-btn-outline px-2" ${curPage <= 1 ? 'disabled' : ''} onclick="SuperAdmin.goToBillPage(${curPage - 1})">
-                <i data-lucide="chevron-left" style="width:13px;height:13px;"></i>
-            </button>
-        `;
-
-        for (let i = 1; i <= totalPages; i++) {
-            pagHtml += `<button class="ds-btn ds-btn-sm ${curPage === i ? 'ds-btn-primary' : 'ds-btn-outline'}" onclick="SuperAdmin.goToBillPage(${i})">${i}</button>`;
-        }
-
-        pagHtml += `
-            <button class="ds-btn ds-btn-sm ds-btn-outline px-2" ${curPage >= totalPages ? 'disabled' : ''} onclick="SuperAdmin.goToBillPage(${curPage + 1})">
-                <i data-lucide="chevron-right" style="width:13px;height:13px;"></i>
-            </button>
-        `;
-
-        const btnsEl = document.getElementById('billPagBtns');
-        if (btnsEl) btnsEl.innerHTML = pagHtml;
 
         this.updateBillColumnVisibility();
 
@@ -2993,7 +2997,7 @@ const SuperAdmin = {
         }
         if (!d.branding) {
             try {
-                const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+                const token = (window.api && window.api.token) || '';
                 const bRes = await fetch('/api/document-identity/all', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -3699,7 +3703,7 @@ const SuperAdmin = {
             if (el) el.innerHTML = html;
         };
         try {
-            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || sessionStorage.getItem('token');
+            const token = (window.api && window.api.token) || '';
             const res = await fetch('/api/v1/billing/kpis', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -4057,7 +4061,13 @@ const SuperAdmin = {
                                 <div class="col-md-6 text-center">
                                     <div class="p-3 rounded-3 border h-100 d-flex flex-column justify-content-center align-items-center" style="background:var(--ds-bg-card)" id="receiptImagePane_${p.id}">
                                         ${p.screenshot_url ? (() => {
-                                            const _tok = encodeURIComponent(localStorage.getItem('token') || sessionStorage.getItem('token') || '');
+                                            const _rawTok = (window.api && window.api.token) ||
+                                                sessionStorage.getItem('access_token') ||
+                                                localStorage.getItem('access_token') ||
+                                                sessionStorage.getItem('token') ||
+                                                localStorage.getItem('token') ||
+                                                '';
+                                            const _tok = encodeURIComponent(_rawTok);
                                             return `
                                             <a href="/api/billing/offline-payments/${p.id}/screenshot?token=${_tok}" target="_blank" title="Click to open full size" id="receiptImgLink_${p.id}">
                                                 <img src="/api/billing/offline-payments/${p.id}/screenshot?token=${_tok}"
@@ -4175,7 +4185,13 @@ const SuperAdmin = {
         </div>`;
 
         try {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+            const token = (window.api && window.api.token) ||
+                sessionStorage.getItem('access_token') ||
+                localStorage.getItem('access_token') ||
+                sessionStorage.getItem('token') ||
+                localStorage.getItem('token') ||
+                '';
+            const _tok = encodeURIComponent(token);
             const fd = new FormData();
             fd.append('file', file);
             const res = await fetch(`/api/billing/offline-payments/${proofId}/upload-screenshot`, {
@@ -4187,8 +4203,8 @@ const SuperAdmin = {
             if (res.ok && json.status === 'success') {
                 // Show the newly uploaded image
                 if (pane) pane.innerHTML = `
-                    <a href="/api/billing/offline-payments/${proofId}/screenshot" target="_blank" title="Click to open full size">
-                        <img src="/api/billing/offline-payments/${proofId}/screenshot?t=${Date.now()}"
+                    <a href="/api/billing/offline-payments/${proofId}/screenshot?token=${_tok}" target="_blank" title="Click to open full size">
+                        <img src="/api/billing/offline-payments/${proofId}/screenshot?token=${_tok}&t=${Date.now()}"
                              class="img-fluid rounded border shadow-sm"
                              style="max-height: 420px; object-fit: contain;"
                              alt="Payment Receipt Screenshot">
@@ -4834,52 +4850,24 @@ const SuperAdmin = {
 
     buildFourPagePagination(currentPage, totalPages, onClickFnName) {
         if (!totalPages || totalPages < 1) totalPages = 1;
-        let btnHtml = '';
+        const isPrevDisabled = currentPage <= 1;
+        const isNextDisabled = currentPage >= totalPages;
 
-        const activeStyle = 'background:#3b82f6; color:#ffffff; border:none; border-radius:10px; font-weight:600; padding:4px 14px; min-width:34px; height:34px; box-shadow:0 2px 8px rgba(59,130,246,0.35); font-size:13px; cursor:pointer;';
-        const inactiveStyle = 'background:var(--ds-bg-card, #f8fafc); color:var(--ds-text-main, #1e293b); border:1px solid var(--ds-border-color, #e2e8f0); border-radius:10px; font-weight:600; padding:4px 14px; min-width:34px; height:34px; font-size:13px; transition:all 0.15s ease; cursor:pointer;';
-        const disabledStyle = 'background:var(--ds-bg-card, #f8fafc); color:var(--ds-text-muted, #94a3b8); border:1px solid var(--ds-border-color, #e2e8f0); border-radius:10px; font-weight:600; padding:4px 14px; min-width:34px; height:34px; font-size:13px; opacity:0.45; cursor:not-allowed;';
-
-        // Prev button
-        if (currentPage > 1) {
-            btnHtml += `<button type="button" style="${inactiveStyle}" onclick="${onClickFnName}(${currentPage - 1})">&laquo; Prev</button>`;
-        } else {
-            btnHtml += `<button type="button" style="${disabledStyle}" disabled>&laquo; Prev</button>`;
-        }
-
-        if (totalPages <= 4) {
-            for (let i = 1; i <= totalPages; i++) {
-                const st = i === currentPage ? activeStyle : inactiveStyle;
-                btnHtml += `<button type="button" style="${st}" onclick="${onClickFnName}(${i})">${i}</button>`;
-            }
-        } else {
-            let pageNums = [];
-            if (currentPage <= 3) {
-                pageNums = [1, 2, 3, 4, '...', totalPages];
-            } else if (currentPage >= totalPages - 2) {
-                pageNums = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-            } else {
-                pageNums = [1, '...', currentPage - 1, currentPage, currentPage + 1, currentPage + 2, '...', totalPages];
-            }
-
-            pageNums.forEach(p => {
-                if (p === '...') {
-                    btnHtml += `<span class="px-2 text-muted text-xs align-self-center fw-bold">&hellip;</span>`;
-                } else {
-                    const st = p === currentPage ? activeStyle : inactiveStyle;
-                    btnHtml += `<button type="button" style="${st}" onclick="${onClickFnName}(${p})">${p}</button>`;
-                }
-            });
-        }
-
-        // Next button
-        if (currentPage < totalPages) {
-            btnHtml += `<button type="button" style="${inactiveStyle}" onclick="${onClickFnName}(${currentPage + 1})">Next &raquo;</button>`;
-        } else {
-            btnHtml += `<button type="button" style="${disabledStyle}" disabled>Next &raquo;</button>`;
-        }
-
-        return btnHtml;
+        return `
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                        ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : `onclick="${onClickFnName}(${currentPage - 1})"`}>
+                    <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev
+                </button>
+                <span class="fw-semibold text-dark text-xs px-1" style="white-space: nowrap;">
+                    Page ${currentPage} of ${totalPages}
+                </span>
+                <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                        ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : `onclick="${onClickFnName}(${currentPage + 1})"`}>
+                    Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                </button>
+            </div>
+        `;
     },
 
     renderAuditPagination(pag) {
@@ -5283,6 +5271,7 @@ const SuperAdmin = {
                 btn.onclick = async (e) => {
                     document.querySelectorAll('#orgDetailTabs button').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+                    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                     const targetTab = btn.getAttribute('id').replace('tab-', '').replace('-btn', '');
                     await this.renderOrgDetailTab(targetTab);
                 };
@@ -5754,7 +5743,7 @@ const SuperAdmin = {
         const searchVal = document.getElementById('companySearch')?.value || '';
         const planVal = document.getElementById('filterPlan')?.value || '';
         const statusVal = document.getElementById('filterStatus')?.value || '';
-        const token = api.token || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+        const token = (window.api && window.api.token) || '';
 
         let downloadSuccess = false;
 
@@ -5948,7 +5937,7 @@ const SuperAdmin = {
                 }
             }
             if (!json || !json.data || json.status !== 'success') {
-                const token = (window.api && window.api.token) || sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+                const token = (window.api && window.api.token) || '';
                 const res = await fetch('/api/v1/storage/breakdown', {
                     headers: { 
                         'Authorization': `Bearer ${token}`,
@@ -6026,6 +6015,7 @@ const SuperAdmin = {
     _filteredStorageOrgs: [],
     _storagePage: 1,
     _storagePerPage: 10,
+    _orgStorageMap: {},
 
     renderStorageTable(orgs) {
         this._filteredStorageOrgs = orgs || [];
@@ -6036,7 +6026,7 @@ const SuperAdmin = {
     _renderStoragePage() {
         const tbody = document.getElementById('storageDashboardTableBody');
         const infoEl = document.getElementById('storagePaginationInfo');
-        const controlsEl = document.getElementById('storagePaginationControls');
+        const paginationEl = document.getElementById('storagePaginationControls');
 
         if (!tbody) return;
 
@@ -6045,7 +6035,7 @@ const SuperAdmin = {
         if (!orgs || orgs.length === 0) {
             tbody.innerHTML = `<tr><td colspan="9" class="text-center p-4 text-muted">No organizations match the selected storage filters.</td></tr>`;
             if (infoEl) infoEl.textContent = 'Showing 0 of 0 organizations';
-            if (controlsEl) controlsEl.innerHTML = '';
+            if (paginationEl) paginationEl.innerHTML = '';
             return;
         }
 
@@ -6057,7 +6047,11 @@ const SuperAdmin = {
         const start = (currentPage - 1) * perPage;
         const pageOrgs = orgs.slice(start, start + perPage);
 
+        this._orgStorageMap = this._orgStorageMap || {};
         tbody.innerHTML = pageOrgs.map(o => {
+            this._orgStorageMap[o.id] = o;
+            this._orgStorageMap[String(o.id)] = o;
+
             const usedMb = o.storage_used_mb || 0;
             const limitMb = o.storage_limit_mb || 10240;
             const limitGb = o.storage_limit_gb || (limitMb / 1024);
@@ -6110,7 +6104,7 @@ const SuperAdmin = {
                         <span class="badge ${badgeBg} font-semibold text-xs px-2.5 py-1">${healthStr}</span>
                     </td>
                     <td class="text-end">
-                        <button class="ds-btn ds-btn-outline ds-btn-sm" onclick="SuperAdmin.viewOrgStorageBreakdown(${o.id})" title="View detailed data breakdown">
+                        <button type="button" class="ds-btn ds-btn-outline ds-btn-sm" onclick="event.stopPropagation(); SuperAdmin.viewOrgStorageBreakdown(${o.id})" title="View detailed data breakdown">
                             <i data-lucide="info" style="width:12px;height:12px;"></i> Details
                         </button>
                     </td>
@@ -6124,33 +6118,158 @@ const SuperAdmin = {
         const startDisplay = orgs.length > 0 ? start + 1 : 0;
         if (infoEl) infoEl.textContent = `Showing ${startDisplay} to ${endDisplay} of ${orgs.length} organizations`;
 
-        if (controlsEl) {
-            controlsEl.innerHTML = this.buildFourPagePagination(currentPage, totalPages, 'SuperAdmin.changeStoragePage');
+        // Render pagination controls
+        if (paginationEl) {
+            let pagHtml = '';
+            pagHtml += `<button class="ds-btn ds-btn-outline ds-btn-sm ${currentPage === 1 ? 'disabled opacity-50' : ''}" onclick="SuperAdmin.goStoragePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Prev</button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    pagHtml += `<button class="ds-btn ${i === currentPage ? 'ds-btn-primary' : 'ds-btn-outline'} ds-btn-sm" onclick="SuperAdmin.goStoragePage(${i})">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    pagHtml += `<span class="px-2 text-muted">&hellip;</span>`;
+                }
+            }
+            pagHtml += `<button class="ds-btn ds-btn-outline ds-btn-sm ${currentPage === totalPages ? 'disabled opacity-50' : ''}" onclick="SuperAdmin.goStoragePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next &raquo;</button>`;
+            paginationEl.innerHTML = pagHtml;
         }
     },
 
-    changeStoragePage(p) {
-        this._storagePage = p;
+    goStoragePage(page) {
+        this._storagePage = page;
         this._renderStoragePage();
     },
 
-    setStoragePerPage(val) {
-        this._storagePerPage = parseInt(val) || 10;
-        this._storagePage = 1;
-        this._renderStoragePage();
+    _ensureStorageLimitModal() {
+        if (document.getElementById('storageLimitModal')) return;
+        const div = document.createElement('div');
+        div.id = 'storageLimitModal';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:1000150; background:rgba(15,23,42,0.65); backdrop-filter:blur(8px); align-items:center; justify-content:center;';
+        div.onclick = (e) => { if (e.target === div) SuperAdmin.closeStorageLimitModal(); };
+        div.innerHTML = `
+            <div style="background:var(--ds-surface,#fff); border-radius:20px; box-shadow:0 32px 80px rgba(0,0,0,0.35); max-width:460px; width:calc(100% - 32px); overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
+                <div style="background:linear-gradient(135deg,#0f766e,#0891b2); padding:22px 28px 18px; position:relative;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:10px; display:flex;">
+                            <i data-lucide="sliders" style="width:20px;height:20px;color:#fff;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:15px;font-weight:700;color:#fff; line-height:1.2;">Adjust Storage Limit</div>
+                            <div id="slmOrgName" style="font-size:12px;color:rgba(255,255,255,0.85); margin-top:2px;"></div>
+                        </div>
+                    </div>
+                    <button onclick="SuperAdmin.closeStorageLimitModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;color:#fff;display:flex;align-items:center;">
+                        <i data-lucide="x" style="width:16px;height:16px;"></i>
+                    </button>
+                </div>
+                <div style="padding:24px 28px;">
+                    <div id="slmCurrentInfo" style="background:rgba(8,145,178,0.06); border:1px solid rgba(8,145,178,0.18); border-radius:12px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
+                        <div>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ds-text-muted,#64748b);">Current Limit</div>
+                            <div id="slmCurrentLimit" style="font-size:22px;font-weight:800;color:#0891b2; margin-top:2px;"></div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ds-text-muted,#64748b);">Storage Used</div>
+                            <div id="slmCurrentUsed" style="font-size:18px;font-weight:700;color:var(--ds-text-main,#0f172a); margin-top:2px;"></div>
+                        </div>
+                    </div>
+                    <label style="display:block;font-size:13px;font-weight:600;color:var(--ds-text-main,#0f172a);margin-bottom:8px;">New Storage Limit <span style="color:var(--ds-text-muted,#64748b);font-weight:400;">(in GB)</span></label>
+                    <div style="display:flex; align-items:center; gap:0; background:var(--ds-input-bg,#f8fafc); border:1.5px solid var(--ds-border-color,#e2e8f0); border-radius:12px; overflow:hidden;">
+                        <input id="slmNewLimit" type="number" min="1" step="1" placeholder="e.g. 20"
+                            style="flex:1; border:none; background:transparent; padding:13px 16px; font-size:16px; font-weight:700; color:var(--ds-text-main,#0f172a); outline:none;"
+                            onkeydown="if(event.key==='Enter')SuperAdmin._confirmStorageLimitUpdate()">
+                        <span style="padding:0 16px; font-size:13px; font-weight:700; color:var(--ds-text-muted,#64748b); white-space:nowrap;">GB</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--ds-text-muted,#64748b); margin-top:8px;">⚠️ Limit must be &ge; current usage. Organizations exceeding their limit will receive capacity alerts.</div>
+                </div>
+                <div style="padding:16px 28px 22px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--ds-border-color,#e2e8f0);">
+                    <button class="ds-btn ds-btn-secondary ds-btn-sm px-5" onclick="SuperAdmin.closeStorageLimitModal()">Cancel</button>
+                    <button class="ds-btn ds-btn-primary ds-btn-sm px-5" onclick="SuperAdmin._confirmStorageLimitUpdate()">
+                        <i data-lucide="check" style="width:14px;height:14px;" class="me-1"></i> Apply Limit
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    },
+
+    _ensureStorageBreakdownModal() {
+        if (document.getElementById('storageBreakdownModal')) return;
+        const div = document.createElement('div');
+        div.id = 'storageBreakdownModal';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:1000100; background:rgba(15,23,42,0.65); backdrop-filter:blur(8px); align-items:center; justify-content:center;';
+        div.onclick = (e) => { if (e.target === div) SuperAdmin.closeStorageBreakdownModal(); };
+        div.innerHTML = `
+            <div style="background:var(--ds-surface,#fff); border-radius:20px; box-shadow:0 32px 80px rgba(0,0,0,0.35); max-width:620px; width:calc(100% - 32px); overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
+                <div style="background:linear-gradient(135deg,#1e40af,#4f46e5); padding:22px 28px 18px; position:relative;">
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="background:rgba(255,255,255,0.18); border-radius:12px; padding:10px; display:flex; align-items:center; justify-content:center;">
+                                <i data-lucide="database" style="width:22px;height:22px;color:#fff;"></i>
+                            </div>
+                            <div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span id="sbmOrgName" style="font-size:17px;font-weight:700;color:#fff; line-height:1.2;"></span>
+                                    <span id="sbmOrgCode" class="badge" style="background:rgba(255,255,255,0.2); color:#fff; font-family:monospace; font-size:11px; padding:2px 8px; border-radius:6px;"></span>
+                                </div>
+                                <div style="font-size:12px;color:rgba(255,255,255,0.85); margin-top:3px;">Real-Time Data Storage & Resource Consumption</div>
+                            </div>
+                        </div>
+                        <button onclick="SuperAdmin.closeStorageBreakdownModal()" style="background:rgba(255,255,255,0.15);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;color:#fff;display:flex;align-items:center;">
+                            <i data-lucide="x" style="width:16px;height:16px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="padding:24px 28px; max-height:calc(85vh - 140px); overflow-y:auto;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+                        <span class="badge" id="sbmPlanBadge" style="background:#e0e7ff; color:#4338ca; font-size:11px; padding:4px 10px; border-radius:8px; font-weight:600;">Plan: Starter</span>
+                        <span class="badge" id="sbmStatusBadge" style="background:#dcfce7; color:#15803d; font-size:11px; padding:4px 10px; border-radius:8px; font-weight:600;">Active</span>
+                        <span class="badge" id="sbmUsersBadge" style="background:#f1f5f9; color:#475569; font-size:11px; padding:4px 10px; border-radius:8px;"><i data-lucide="users" style="width:11px;height:11px;" class="me-1"></i>0 Users</span>
+                        <span class="badge" id="sbmProjectsBadge" style="background:#f1f5f9; color:#475569; font-size:11px; padding:4px 10px; border-radius:8px;"><i data-lucide="folder-kanban" style="width:11px;height:11px;" class="me-1"></i>0 Projects</span>
+                        <span class="badge" id="sbmAuditsBadge" style="background:#f1f5f9; color:#475569; font-size:11px; padding:4px 10px; border-radius:8px;"><i data-lucide="shield-check" style="width:11px;height:11px;" class="me-1"></i>0 Audit Logs</span>
+                    </div>
+                    <div id="sbmTotalBar" style="background:linear-gradient(135deg,rgba(79,70,229,0.06),rgba(37,99,235,0.06)); border:1px solid rgba(79,70,229,0.18); border-radius:14px; padding:16px 20px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between;">
+                        <div>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--ds-text-muted,#64748b);text-transform:uppercase;">Total Storage Used</div>
+                            <div id="sbmTotalUsed" style="font-size:26px;font-weight:800;color:#4f46e5; line-height:1.1; margin-top:4px;"></div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--ds-text-muted,#64748b);text-transform:uppercase;">Allocated Limit</div>
+                            <div id="sbmTotalLimit" style="font-size:22px;font-weight:700;color:var(--ds-text-main,#0f172a); margin-top:4px;"></div>
+                            <div id="sbmTotalPct" style="font-size:12px;color:var(--ds-text-muted,#64748b); margin-top:2px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:22px;">
+                        <div style="background:rgba(0,0,0,0.07); border-radius:8px; height:10px; overflow:hidden;">
+                            <div id="sbmProgressBar" style="height:100%; border-radius:8px; transition:width .5s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                        <div style="font-size:12px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ds-text-muted,#64748b);">Resource Consumption by Module</div>
+                        <span class="text-xxs text-muted">Calculated Real-Time</span>
+                    </div>
+                    <div id="sbmBreakdownList" style="display:flex; flex-direction:column; gap:9px;"></div>
+                </div>
+                <div style="padding:16px 28px 20px; display:flex; justify-content:space-between; align-items:center; gap:10px; border-top:1px solid var(--ds-border-color,#e2e8f0); background:var(--ds-surface-2,#f8fafc);">
+                    <button class="ds-btn ds-btn-outline ds-btn-sm" id="sbmBtnAdjustLimit" onclick="SuperAdmin._openLimitModalFromBreakdown()">
+                        <i data-lucide="sliders" style="width:13px;height:13px;" class="me-1"></i> Adjust Storage Limit
+                    </button>
+                    <button class="ds-btn ds-btn-primary ds-btn-sm px-4" onclick="SuperAdmin.closeStorageBreakdownModal()">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
     },
 
     updateOrgStorageLimitPrompt(orgId, orgName, currentLimitGb) {
-        // Store context for confirm handler
         this._slmOrgId = orgId;
         this._slmOrgName = orgName;
 
-        // Find current used from cache
-        const org = (this._storageDataCache && this._storageDataCache.organizations || []).find(o => o.id === orgId);
+        const orgIdStr = String(orgId);
+        const org = (this._orgStorageMap && this._orgStorageMap[orgIdStr]) ||
+                    (this._storageDataCache && this._storageDataCache.organizations || []).find(o => String(o.id) === orgIdStr);
         const usedMb = org ? (org.storage_used_mb || 0) : 0;
         const usedFmt = usedMb < 1024 ? `${usedMb} MB` : `${(usedMb/1024).toFixed(2)} GB`;
 
-        // Populate modal
         const slmOrgName = document.getElementById('slmOrgName');
         const slmCurrentLimit = document.getElementById('slmCurrentLimit');
         const slmCurrentUsed = document.getElementById('slmCurrentUsed');
@@ -6160,14 +6279,29 @@ const SuperAdmin = {
         if (slmCurrentUsed) slmCurrentUsed.textContent = usedFmt;
         if (slmNewLimit) { slmNewLimit.value = currentLimitGb; }
 
-        // Show modal
-        const modal = document.getElementById('storageLimitModal');
-        if (modal) { modal.style.display = 'flex'; if (window.lucide) lucide.createIcons(); setTimeout(() => slmNewLimit && slmNewLimit.focus(), 100); }
+        const modalEl = document.getElementById('storageLimitModal');
+        if (modalEl) {
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            } else {
+                modalEl.style.setProperty('display', 'block', 'important');
+                modalEl.classList.add('show');
+            }
+            if (window.lucide) lucide.createIcons();
+            setTimeout(() => slmNewLimit && slmNewLimit.focus(), 150);
+        }
     },
 
     closeStorageLimitModal() {
-        const modal = document.getElementById('storageLimitModal');
-        if (modal) modal.style.display = 'none';
+        const modalEl = document.getElementById('storageLimitModal');
+        if (modalEl) {
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+            } else {
+                modalEl.style.setProperty('display', 'none', 'important');
+                modalEl.classList.remove('show');
+            }
+        }
         this._slmOrgId = null;
         this._slmOrgName = null;
     },
@@ -6186,7 +6320,7 @@ const SuperAdmin = {
         this.closeStorageLimitModal();
 
         try {
-            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const token = (window.api && window.api.token) || sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
             let res = await fetch('/api/v1/storage/update-limit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -6205,21 +6339,73 @@ const SuperAdmin = {
         }
     },
 
-    viewOrgStorageBreakdown(orgId) {
-        if (!this._storageDataCache || !this._storageDataCache.organizations) return;
-        const org = this._storageDataCache.organizations.find(o => o.id === orgId);
-        if (!org) return;
+    async viewOrgStorageBreakdown(orgId) {
+        const orgIdStr = String(orgId);
+        let org = null;
+
+        if (this._orgStorageMap && this._orgStorageMap[orgIdStr]) {
+            org = this._orgStorageMap[orgIdStr];
+        }
+        if (!org && this._storageDataCache && this._storageDataCache.organizations) {
+            org = this._storageDataCache.organizations.find(o => String(o.id) === orgIdStr || String(o.org_code) === orgIdStr);
+        }
+        if (!org && this._filteredStorageOrgs) {
+            org = this._filteredStorageOrgs.find(o => String(o.id) === orgIdStr || String(o.org_code) === orgIdStr);
+        }
+
+        // If not in local cache, fetch realtime breakdown directly from API
+        if (!org) {
+            try {
+                const token = (window.api && window.api.token) || sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+                const res = await fetch(`/api/v1/storage/breakdown?org_id=${orgId}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+                const json = await res.json();
+                if (json.status === 'success' && json.data) {
+                    if (json.data.organizations && json.data.organizations.length > 0) {
+                        org = json.data.organizations[0];
+                    } else if (json.data.id) {
+                        org = json.data;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch org storage details:', e);
+            }
+        }
+
+        if (!org) {
+            if (this.toast) this.toast('Organization storage details could not be loaded.', 'warning');
+            return;
+        }
+
+        this._currentBreakdownOrg = org;
 
         const bd = org.breakdown || {};
-        const usedMb = org.storage_used_mb || 0;
-        const limitGb = org.storage_limit_gb || 10;
-        const pct = org.usage_percent || 0;
-        const usedFmt = usedMb < 1024 ? `${usedMb} MB` : `${org.storage_used_gb || (usedMb/1024).toFixed(2)} GB`;
+        const usedMb = parseFloat(org.storage_used_mb || 0);
+        const limitMb = parseFloat(org.storage_limit_mb || 10240);
+        const limitGb = parseFloat(org.storage_limit_gb || (limitMb / 1024));
+        const pct = parseFloat(org.usage_percent || ((usedMb / limitMb) * 100).toFixed(2));
+        const usedFmt = usedMb < 1024 ? `${usedMb.toFixed(2)} MB` : `${(usedMb / 1024).toFixed(2)} GB`;
         const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#4f46e5';
 
-        // Populate header
+        // Populate header & code
         const sbmOrgName = document.getElementById('sbmOrgName');
-        if (sbmOrgName) sbmOrgName.textContent = org.name;
+        const sbmOrgCode = document.getElementById('sbmOrgCode');
+        if (sbmOrgName) sbmOrgName.textContent = org.name || 'Organization';
+        if (sbmOrgCode) sbmOrgCode.textContent = org.org_code || `ORG-${org.id}`;
+
+        // Populate metadata pills
+        const sbmPlanBadge = document.getElementById('sbmPlanBadge');
+        const sbmStatusBadge = document.getElementById('sbmStatusBadge');
+        const sbmUsersBadge = document.getElementById('sbmUsersBadge');
+        const sbmProjectsBadge = document.getElementById('sbmProjectsBadge');
+        const sbmAuditsBadge = document.getElementById('sbmAuditsBadge');
+
+        if (sbmPlanBadge) sbmPlanBadge.textContent = `Plan: ${org.plan || 'Standard'}`;
+        if (sbmStatusBadge) sbmStatusBadge.textContent = org.subscription_status || 'Active';
+        if (sbmUsersBadge) sbmUsersBadge.innerHTML = `<i data-lucide="users" style="width:12px;height:12px;" class="me-1"></i>${org.users_count || 0} Users`;
+        if (sbmProjectsBadge) sbmProjectsBadge.innerHTML = `<i data-lucide="folder-kanban" style="width:12px;height:12px;" class="me-1"></i>${org.projects_count || 0} Projects`;
+        if (sbmAuditsBadge) sbmAuditsBadge.innerHTML = `<i data-lucide="shield-check" style="width:12px;height:12px;" class="me-1"></i>${org.audits_count || 0} Audit Logs`;
 
         // Populate totals
         const sbmTotalUsed = document.getElementById('sbmTotalUsed');
@@ -6227,51 +6413,75 @@ const SuperAdmin = {
         const sbmTotalPct = document.getElementById('sbmTotalPct');
         const sbmProgressBar = document.getElementById('sbmProgressBar');
         if (sbmTotalUsed) sbmTotalUsed.textContent = usedFmt;
-        if (sbmTotalLimit) sbmTotalLimit.textContent = `${limitGb} GB`;
+        if (sbmTotalLimit) sbmTotalLimit.textContent = `${limitGb} GB (${Math.round(limitMb).toLocaleString('en-IN')} MB)`;
         if (sbmTotalPct) sbmTotalPct.textContent = `${pct}% capacity used`;
         if (sbmProgressBar) {
-            sbmProgressBar.style.width = `${Math.min(100, pct)}%`;
-            sbmProgressBar.style.background = barColor;
+            sbmProgressBar.style.width = `${Math.min(100, Math.max(1, pct))}%`;
+            sbmProgressBar.style.backgroundColor = barColor;
         }
 
         // Build breakdown items
         const categories = [
-            { icon: 'file-text', label: 'Documents & SOP Uploads', value: bd.documents_sops_mb || 0, color: '#3b82f6' },
-            { icon: 'git-branch', label: 'Project Stage Workflows', value: bd.project_workflows_mb || 0, color: '#8b5cf6' },
-            { icon: 'brain', label: 'RAG Knowledge Base Vectors', value: Math.round((org.knowledge_entries_count || 0) * 1.2), color: '#06b6d4' },
-            { icon: 'shield-check', label: 'System Audit Logs & Trails', value: bd.audit_logs_mb || 0, color: '#f59e0b' },
-            { icon: 'database', label: 'User Metadata & DB Tables', value: bd.system_db_mb || 0, color: '#10b981' },
+            { icon: 'file-text', label: 'Documents, SOPs & Attachments', value: parseFloat(bd.documents_sops_mb || 0), color: '#3b82f6' },
+            { icon: 'git-branch', label: 'QC Project Stage Workflows & Form Data', value: parseFloat(bd.project_workflows_mb || 0), color: '#8b5cf6' },
+            { icon: 'shield-check', label: 'Audit Logs & Governance Trails', value: parseFloat(bd.audit_logs_mb || 0), color: '#f59e0b' },
+            { icon: 'database', label: 'User Profiles & System DB Tables', value: parseFloat(bd.system_db_mb || 0), color: '#10b981' },
+            { icon: 'brain', label: 'Knowledge Base Repository & Vectors', value: parseFloat(((org.knowledge_entries_count || 0) * 0.05).toFixed(3)), color: '#06b6d4' }
         ];
-        const maxVal = Math.max(...categories.map(c => c.value), 0.1);
+        const maxVal = Math.max(...categories.map(c => c.value || 0), 0.01);
 
         const sbmBreakdownList = document.getElementById('sbmBreakdownList');
         if (sbmBreakdownList) {
             sbmBreakdownList.innerHTML = categories.map(cat => {
                 const w = Math.max(2, Math.round((cat.value / maxVal) * 100));
+                const valFmt = cat.value < 1 && cat.value > 0 ? `${cat.value.toFixed(3)} MB` : `${cat.value.toFixed(2)} MB`;
                 return `
-                    <div style="display:flex; align-items:center; gap:12px; background:var(--ds-surface-2,#f8fafc); border:1px solid var(--ds-border-color,#e2e8f0); border-radius:12px; padding:12px 16px;">
-                        <div style="width:34px;height:34px;border-radius:10px;background:${cat.color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="${cat.icon}" style="width:16px;height:16px;color:${cat.color};"></i>
+                    <div class="d-flex align-items-center gap-3 p-2.5 rounded-3 border" style="background:var(--ds-bg-elevated,#f8fafc); border-color:var(--ds-border-color,#e2e8f0)!important;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:${cat.color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="${cat.icon}" style="width:17px;height:17px;color:${cat.color};"></i>
                         </div>
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-size:13px;font-weight:600;color:var(--ds-text-main,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cat.label}</div>
-                            <div style="background:rgba(0,0,0,0.06); border-radius:6px; height:5px; margin-top:6px; overflow:hidden;">
-                                <div style="height:100%; border-radius:6px; width:${w}%; background:${cat.color}; transition:width .4s ease;"></div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-semibold text-xs text-main text-truncate">${cat.label}</div>
+                            <div class="progress mt-1.5" style="height: 5px; background: rgba(100,116,139,0.15); border-radius: 4px;">
+                                <div class="progress-bar" style="width:${w}%; background-color:${cat.color}; border-radius: 4px; transition: width .4s ease;"></div>
                             </div>
                         </div>
-                        <div style="font-size:14px;font-weight:700;color:${cat.color};white-space:nowrap;">${cat.value} MB</div>
+                        <div class="fw-bold text-xs font-mono text-nowrap" style="color:${cat.color};">${valFmt}</div>
                     </div>`;
             }).join('');
         }
 
-        // Show modal
-        const modal = document.getElementById('storageBreakdownModal');
-        if (modal) { modal.style.display = 'flex'; if (window.lucide) lucide.createIcons(); }
+        const modalEl = document.getElementById('storageBreakdownModal');
+        if (modalEl) {
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            } else {
+                modalEl.style.setProperty('display', 'block', 'important');
+                modalEl.classList.add('show');
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    _openLimitModalFromBreakdown() {
+        if (!this._currentBreakdownOrg) return;
+        const o = this._currentBreakdownOrg;
+        this.closeStorageBreakdownModal();
+        const limitGb = o.storage_limit_gb || (o.storage_limit_mb ? o.storage_limit_mb / 1024 : 10);
+        this.updateOrgStorageLimitPrompt(o.id, o.name, limitGb);
     },
 
     closeStorageBreakdownModal() {
-        const modal = document.getElementById('storageBreakdownModal');
-        if (modal) modal.style.display = 'none';
+        const modalEl = document.getElementById('storageBreakdownModal');
+        if (modalEl) {
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+            } else {
+                modalEl.style.setProperty('display', 'none', 'important');
+                modalEl.classList.remove('show');
+            }
+        }
+        this._currentBreakdownOrg = null;
     },
 
     // ── Main loader (called by switchView) ────────────────────────────────────
@@ -6290,23 +6500,26 @@ const SuperAdmin = {
             if (!res || !res.data) { grid.innerHTML = `<div class="text-xs text-muted text-center py-2" style="grid-column:1/-1;">Dashboard unavailable.</div>`; return; }
             const d = res.data;
             const kpis = [
-                { icon:'activity',      bg:'rgba(16,185,129,.12)', color:'#10b981', label:'Active Organizations',    val: d.active_subscriptions,    accent:'#10b981', filter:'Active' },
-                { icon:'flask-conical', bg:'rgba(245,158,11,.12)', color:'#f59e0b', label:'Trial Organizations',     val: d.trial_subscriptions,     accent:'#f59e0b', filter:'Trial' },
-                { icon:'alert-circle',  bg:'rgba(239,68,68,.12)',  color:'#ef4444', label:'Expired Plans',           val: d.expired_subscriptions,   accent:'#ef4444', filter:'Expired' },
-                { icon:'x-circle',      bg:'rgba(107,114,128,.12)',color:'#6b7280', label:'Cancelled Organizations', val: d.cancelled_subscriptions, accent:'#6b7280', filter:'Cancelled' },
-                { icon:'calendar-clock',bg:'rgba(59,130,246,.12)', color:'#3b82f6', label:'Renewal Due This Month',  val: d.renewal_due_this_month,  accent:'#3b82f6', filter:'30d' },
-                { icon:'trending-up',   bg:'rgba(16,185,129,.12)', color:'#10b981', label:'Monthly Revenue (MRR)',   val: this._subFmt(d.mrr),       accent:'#10b981' },
-                { icon:'bar-chart-2',   bg:'rgba(99,102,241,.12)', color:'#6366f1', label:'Annual Revenue (ARR)',    val: this._subFmt(d.arr),       accent:'#6366f1' },
-                { icon:'users',         bg:'rgba(245,158,11,.12)', color:'#f59e0b', label:'Avg Revenue Per Org',     val: this._subFmt(d.arpo),      accent:'#f59e0b' },
+                { icon:'activity',      bg:'rgba(16,185,129,.12)', color:'#10b981', label:'Active Organizations',    val: d.active_subscriptions,    accent:'#10b981', filter:'Active', desc:'Client tenants with an active paid SaaS subscription.' },
+                { icon:'flask-conical', bg:'rgba(245,158,11,.12)', color:'#f59e0b', label:'Trial Organizations',     val: d.trial_subscriptions,     accent:'#f59e0b', filter:'Trial', desc:'Tenants currently exploring the platform within trial.' },
+                { icon:'alert-circle',  bg:'rgba(239,68,68,.12)',  color:'#ef4444', label:'Expired Plans',           val: d.expired_subscriptions,   accent:'#ef4444', filter:'Expired', desc:'Tenants whose subscription has elapsed.' },
+                { icon:'x-circle',      bg:'rgba(107,114,128,.12)',color:'#6b7280', label:'Cancelled Organizations', val: d.cancelled_subscriptions, accent:'#6b7280', filter:'Cancelled', desc:'Tenants whose subscriptions have been cancelled.' },
+                { icon:'calendar-clock',bg:'rgba(59,130,246,.12)', color:'#3b82f6', label:'Renewal Due This Month',  val: d.renewal_due_this_month,  accent:'#3b82f6', filter:'30d', desc:'Subscriptions expiring and up for renewal in current month.' },
+                { icon:'trending-up',   bg:'rgba(16,185,129,.12)', color:'#10b981', label:'Monthly Revenue (MRR)',   val: this._subFmt(d.mrr),       accent:'#10b981', desc:'Monthly recurring run-rate across active accounts.' },
+                { icon:'bar-chart-2',   bg:'rgba(99,102,241,.12)', color:'#6366f1', label:'Annual Revenue (ARR)',    val: this._subFmt(d.arr),       accent:'#6366f1', desc:'Annualized recurring run-rate (MRR × 12).' },
+                { icon:'users',         bg:'rgba(245,158,11,.12)', color:'#f59e0b', label:'Avg Revenue Per Org',     val: this._subFmt(d.arpo),      accent:'#f59e0b', desc:'Average revenue generated per tenant organization.' },
             ];
             grid.innerHTML = kpis.map(k=>`
-                <div class="sub-kpi-card" onclick="${k.filter?`SuperAdmin.setSubFilter('status','${k.filter}',null)`:''}" title="${k.label}">
+                <div class="sub-kpi-card position-relative" onclick="${k.filter?`SuperAdmin.setSubFilter('status','${k.filter}',null)`:''}" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>📊 ${k.label.toUpperCase()}</div><div class='text-white-50 mb-1'><strong>Data:</strong> ${k.desc}</div><div style='color:#93c5fd;'>👉 Click to filter subscriptions</div></div>">
                     <div class="kpi-icon" style="background:${k.bg};"><i data-lucide="${k.icon}" style="width:16px;height:16px;color:${k.color};"></i></div>
                     <div class="kpi-label">${k.label}</div>
                     <div class="kpi-value">${k.val}</div>
                     <div class="kpi-accent" style="background:${k.accent};"></div>
                 </div>`).join('');
             if(window.lucide) lucide.createIcons();
+            if (window.QCMS && QCMS.initTooltips) {
+                QCMS.initTooltips(grid);
+            }
         } catch(e) {
             grid.innerHTML = `<div class="text-xs text-muted text-center py-2" style="grid-column:1/-1;">Dashboard unavailable — subscriptions not yet created.</div>`;
         }
@@ -6721,7 +6934,7 @@ const SuperAdmin = {
         
         let ctx = {}, tmpl = {};
         try {
-            const token = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+            const token = (window.api && window.api.token) || '';
             const res = await fetch('/api/document-identity/all', { headers: { 'Authorization': `Bearer ${token}` } });
             const result = await res.json();
             if (result.status === 'success') {
@@ -6885,7 +7098,7 @@ const SuperAdmin = {
     async subWizSearchOrg(q) {
         if(!q||q.length<2){document.getElementById('swOrgList').innerHTML='';return;}
         try {
-            const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const token = (window.api && window.api.token) || '';
             const r=await fetch(`/api/super-admin/companies?search=${encodeURIComponent(q)}&per_page=8`,{headers:{Authorization:`Bearer ${token}`}});
             const res=await r.json();
             document.getElementById('swOrgList').innerHTML=(res.data||[]).map(o=>`
@@ -7176,13 +7389,13 @@ const SuperAdmin = {
             const card = (label, val, icon, color, formula, desc, filterVal, filterKey = 'status') => {
                 const colors = { blue: '#2563eb', green: '#10b981', red: '#ef4444', orange: '#f59e0b', purple: '#8b5cf6', gray: '#6b7280' };
                 const cHex = colors[color] || '#6b7280';
-                return `<div class="lic-kpi-card" onclick="SuperAdmin.setLicFilter('${filterKey}', '${filterVal}', null)">
+                return `<div class="lic-kpi-card position-relative" onclick="SuperAdmin.setLicFilter('${filterKey}', '${filterVal}', null)" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🔑 ${label.toUpperCase()}</div><div class='text-white-50 mb-1'><strong>Data:</strong> ${desc}</div><div class='text-white-50 mb-1'><strong>Formula:</strong> <code>${formula}</code></div><div style='color:#93c5fd;'>👉 Click to filter licenses</div></div>">
                     <div class="kpi-icon" style="background: rgba(var(--ds-primary-rgb), 0.08);"><i data-lucide="${icon}" style="width:16px;height:16px;color:${cHex};"></i></div>
                     <div class="kpi-label">${label}</div>
                     <div class="kpi-value">${val}</div>
                     <div class="kpi-accent" style="background:${cHex};"></div>
-                    <div class="position-absolute" style="top:8px; right:8px; opacity:0.4;" onclick="event.stopPropagation()">
-                        <i data-lucide="info" style="width:12px; height:12px; cursor:help;" data-bs-toggle="tooltip" data-bs-html="true" title="<strong>Formula:</strong> ${formula}<br/><small class='text-muted'>${desc}<br/>As of: ${timestamp}</small>"></i>
+                    <div class="position-absolute" style="top:8px; right:8px; opacity:0.4;">
+                        <i data-lucide="info" style="width:12px; height:12px;"></i>
                     </div>
                 </div>`;
             };
@@ -7199,8 +7412,9 @@ const SuperAdmin = {
             `;
             if (window.lucide) lucide.createIcons();
             
-            const tooltipTriggerList = document.querySelectorAll('#licKpiGrid [data-bs-toggle="tooltip"]');
-            [...tooltipTriggerList].map(el => new bootstrap.Tooltip(el));
+            if (window.QCMS && QCMS.initTooltips) {
+                QCMS.initTooltips(grid);
+            }
         } catch (e) {
             grid.innerHTML = `<div class="text-xs text-muted text-center py-2 col-12">Statistics unavailable — Backend offline.</div>`;
         }
@@ -7879,6 +8093,7 @@ const SuperAdmin = {
 
     // ── Main loader ──
     async loadPlans() {
+        await this.populateAllPlanDropdowns(true);
         await Promise.all([this._planLoadKPIs(), this._planLoadInsights(), this._planLoadTable()]);
         if(window.lucide) lucide.createIcons();
     },
@@ -7972,6 +8187,19 @@ const SuperAdmin = {
             this._plan._cachedPlans = data;
             if (countEl) countEl.textContent = `${data.length} plans`;
 
+            const filterSelect = document.getElementById('filterPlanType');
+            if (filterSelect && (!filterSelect.options || filterSelect.options.length <= 1 || !filterSelect.value)) {
+                const currentVal = (s.filters && s.filters.plan_type) || filterSelect.value || '';
+                const uniqueNames = Array.from(new Set(data.map(p => (p.name || p.title || '').trim()).filter(Boolean)));
+                filterSelect.innerHTML = '<option value="">All Plans</option>' + uniqueNames.map(n => {
+                    const esc = this._escapeHTML(n);
+                    return `<option value="${esc}">${esc}</option>`;
+                }).join('');
+                if (currentVal && uniqueNames.includes(currentVal)) {
+                    filterSelect.value = currentVal;
+                }
+            }
+
             s.page = s.page || 1;
             s.perPage = s.perPage || 5;
             const total = data.length;
@@ -7981,27 +8209,18 @@ const SuperAdmin = {
 
             this._planRenderTable(pageData, tbody);
 
-            const info = document.getElementById('plansPagInfo');
-            const btns = document.getElementById('plansPagBtns');
-            const perPageSelect = document.getElementById('plansPerPage');
-
-            if (perPageSelect) perPageSelect.value = s.perPage;
-
-            if (info) {
-                const startItem = total > 0 ? start + 1 : 0;
-                const endItem = Math.min(s.page * s.perPage, total);
-                info.textContent = total > 0 ? `Showing ${startItem}–${endItem} of ${total}` : 'No results';
+            if (typeof window.createStandardPagination === 'function') {
+                window.createStandardPagination({
+                    containerId: 'plansPaginationContainer',
+                    entityName: 'plans',
+                    totalItems: total,
+                    currentPage: s.page,
+                    pageSize: s.perPage,
+                    pageSizeOptions: [5, 10, 20, 50, 100],
+                    onPageChange: (p) => { SuperAdmin.plansGoToPage(p); },
+                    onPageSizeChange: (sz) => { SuperAdmin.plansSetPerPage(sz); }
+                });
             }
-
-            if (btns) {
-                let btnHtml = `<button class="ds-btn ds-btn-sm ds-btn-ghost" ${s.page <= 1 ? 'disabled' : ''} onclick="SuperAdmin.plansGoToPage(${s.page - 1})"><i data-lucide="chevron-left" style="width:14px;height:14px;"></i></button>`;
-                for (let i = 1; i <= totalPages; i++) {
-                    btnHtml += `<button class="ds-btn ds-btn-sm ${i === s.page ? 'ds-btn-primary' : 'ds-btn-ghost'}" onclick="SuperAdmin.plansGoToPage(${i})">${i}</button>`;
-                }
-                btnHtml += `<button class="ds-btn ds-btn-sm ds-btn-ghost" ${s.page >= totalPages ? 'disabled' : ''} onclick="SuperAdmin.plansGoToPage(${s.page + 1})"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></button>`;
-                btns.innerHTML = btnHtml;
-            }
-            if (window.lucide) lucide.createIcons();
         } catch(e) {
             tbody.innerHTML = `<tr><td colspan="10" class="py-5 text-danger text-xs"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">${e.message} — Verify backend is running.</div></td></tr>`;
         }
@@ -9177,7 +9396,7 @@ const SuperAdmin = {
         const badgeEl = document.getElementById('paygOrgCountBadge');
         if (!tbody) return;
 
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span>Loading metered usage telemetry...</div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;"><span class="spinner-border spinner-border-sm me-2"></span>Loading metered usage telemetry...</div></td></tr>';
         
         try {
             const res = await api.post('/billing/payg/preview-all');
@@ -9186,7 +9405,7 @@ const SuperAdmin = {
             if (badgeEl) badgeEl.textContent = `${data.length} Organizations`;
 
             if (!data.length) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">No organizations found on metered billing.</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">No organizations found on metered billing.</div></td></tr>';
                 return;
             }
 
@@ -9210,7 +9429,6 @@ const SuperAdmin = {
                         <div class="text-xxs text-muted"><span class="fw-bold text-dark">${d.metrics.plants_count || 0}</span> sites (${d.rules.location_free_tier || 0} free)</div>
                     </td>
                     <td>${this._planFmt(d.rules.base_fee || 999)}</td>
-                    <td>${this._planFmt(d.gst_amount || 0)}</td>
                     <td><strong class="text-primary font-bold">${this._planFmt(d.total_amount || 0)}</strong></td>
                     <td class="text-end">
                         <button class="ds-btn ds-btn-sm ds-btn-secondary text-nowrap" onclick="SuperAdmin.executeSinglePaygBill(${d.org_id}, '${d.org_name.replace(/'/g, "\\'")}')">
@@ -9222,7 +9440,7 @@ const SuperAdmin = {
 
             if (window.lucide) lucide.createIcons();
         } catch(e) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-danger text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">${e.message}</div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center py-4"><div style="position:sticky;left:0;max-width:calc(100vw - 48px);margin:0 auto;text-align:center;">${e.message}</div></td></tr>`;
         }
     },
 
@@ -9292,7 +9510,7 @@ const SuperAdmin = {
         if (window.lucide) lucide.createIcons();
 
         try {
-            const token = api.token || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+            const token = (window.api && window.api.token) || '';
             const previewUrls = [
                 '/api/billing/payg/preview-single',
                 '/api/v1/billing/payg/preview-single'
@@ -9447,7 +9665,7 @@ const SuperAdmin = {
         }
 
         try {
-            const token = api.token || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+            const token = (window.api && window.api.token) || '';
             const dispatchUrls = [
                 '/api/billing/payg/generate-bills',
                 '/api/v1/billing/payg/generate-bills'
@@ -9920,21 +10138,22 @@ const SuperAdmin = {
 
     _modRenderPagination(pg) {
         if (!pg) return;
-        const info = document.getElementById('modPagInfo');
-        const btns = document.getElementById('modPagBtns');
         const total = pg.total || 0;
         const page = pg.page || 1;
         const perPage = pg.per_page || 20;
-        const pages = pg.pages || 1;
-        
-        if (info) info.textContent = `Showing ${Math.min((page-1)*perPage+1, total)}–${Math.min(page*perPage, total)} of ${total.toLocaleString()}`;
-        if (!btns) return;
-        const b = [];
-        b.push(`<button class="ds-btn ds-btn-secondary btn-sm" onclick="SuperAdmin._modGoPage(${page-1})" ${page<=1?'disabled':''}>‹</button>`);
-        const start = Math.max(1, page-2), end = Math.min(pages, page+2);
-        for(let i=start;i<=end;i++) b.push(`<button class="ds-btn ${i===page?'ds-btn-primary':'ds-btn-secondary'} btn-sm" onclick="SuperAdmin._modGoPage(${i})">${i}</button>`);
-        b.push(`<button class="ds-btn ds-btn-secondary btn-sm" onclick="SuperAdmin._modGoPage(${page+1})" ${page>=pages?'disabled':''}>›</button>`);
-        btns.innerHTML = b.join('');
+
+        if (typeof window.createStandardPagination === 'function') {
+            window.createStandardPagination({
+                containerId: 'modulesPaginationContainer',
+                entityName: 'modules',
+                totalItems: total,
+                currentPage: page,
+                pageSize: perPage,
+                pageSizeOptions: [5, 10, 20, 50, 100],
+                onPageChange: (p) => { SuperAdmin._modGoPage(p); },
+                onPageSizeChange: (sz) => { SuperAdmin.modSetPerPage(sz); }
+            });
+        }
     },
 
     _modGoPage(p) { if(p<1||p>this._mod.totalPages) return; this._mod.page=p; this._modLoadTable(); },
@@ -10906,53 +11125,60 @@ const SuperAdmin = {
             if (!forceRefresh && this._allFetchedPlans && this._allFetchedPlans.length) {
                 plans = this._allFetchedPlans;
             } else {
-                const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
-                const res = await fetch('/api/subscriptions/plans', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const body = await res.json();
-                    plans = body.data || body.plans || [];
-                    this._allFetchedPlans = plans;
+                try {
+                    const client = (typeof api !== 'undefined' && api && typeof api.get === 'function') ? api : (window.api || null);
+                    if (client) {
+                        const res = await client.get('/super-admin/companies/filter-options');
+                        if (res && res.status === 'success' && res.data && res.data.plans && res.data.plans.length) {
+                            plans = res.data.plans;
+                        } else {
+                            const subRes = await client.get('/subscriptions/plans').catch(() => null);
+                            if (subRes && (subRes.data || subRes.plans || Array.isArray(subRes))) {
+                                plans = subRes.data || subRes.plans || subRes;
+                            }
+                        }
+                    }
+                    if (!plans || plans.length === 0) {
+                        const token = (typeof api !== 'undefined' && api && api.token) || (window.api && window.api.token) || '';
+                        const fetchRes = await fetch('/api/super-admin/companies/filter-options', {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        }).catch(() => null);
+                        if (fetchRes && fetchRes.ok) {
+                            const resJson = await fetchRes.json();
+                            plans = (resJson && resJson.data && resJson.data.plans) || [];
+                        }
+                    }
+                    if (plans && plans.length > 0) {
+                        this._allFetchedPlans = plans;
+                    }
+                } catch(err) {
+                    console.error('Error fetching plans for dropdowns:', err);
                 }
             }
 
-            // Standard Plan Types / Tiers for Type Tier dropdowns only
-            const standardTiers = ['Starter', 'Professional', 'Enterprise', 'Custom', 'Trial Plan (Free Onboarding Trial)'];
-
-            // Extract ONLY the names of created plans from the database
+            // Extract strictly ONLY the names of created plans from the database
             let createdPlanNames = [];
             if (Array.isArray(plans) && plans.length > 0) {
                 createdPlanNames = Array.from(new Set(
-                    plans.map(p => (p.name || p.title || p.plan_name || '').trim()).filter(Boolean)
-                ));
+                    plans.map(p => (typeof p === 'string' ? p : (p.name || p.title || p.plan_name || '')).trim()).filter(Boolean)
+                )).sort((a, b) => a.localeCompare(b));
             }
 
-            // Fallback only if no custom plans exist in database
-            if (!createdPlanNames.length) {
-                createdPlanNames = [...standardTiers];
+            // Standard Tier options for wizard tier selector
+            const standardTiers = ['Starter', 'Professional', 'Enterprise', 'Custom', 'Trial Plan (Free Onboarding Trial)'];
+
+            // 1. Populate Plan Type Tier fields in Plan Wizard (pwTier)
+            const pwTierSelect = document.getElementById('pwTier');
+            if (pwTierSelect) {
+                const currentVal = pwTierSelect.value;
+                pwTierSelect.innerHTML = standardTiers.map(name => {
+                    const escaped = this._escapeHTML(name);
+                    return `<option value="${escaped}" ${name === currentVal ? 'selected' : ''}>${escaped}</option>`;
+                }).join('');
+                if (currentVal) pwTierSelect.value = currentVal;
             }
 
-            // 1. Populate Plan Type Tier fields (pwTier & filterPlanType) with ONLY standard Plan Types
-            const tierSelects = ['pwTier', 'filterPlanType'];
-            tierSelects.forEach(id => {
-                const select = document.getElementById(id);
-                if (select) {
-                    const currentVal = select.value;
-                    const isFilter = (id === 'filterPlanType');
-                    const options = (isFilter ? '<option value="">All Types</option>' : '') + standardTiers.map(name => {
-                        const escaped = this._escapeHTML(name);
-                        return `<option value="${escaped}">${escaped}</option>`;
-                    }).join('');
-                    select.innerHTML = options;
-                    if (currentVal) {
-                        const match = standardTiers.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
-                        if (match) select.value = match;
-                    }
-                }
-            });
-
-            // 2. Single plan select fields (changePlanSelect, editPlan, assignPlanSelect, etc.) with ONLY Created Plan Names
+            // 2. Single plan select fields with ONLY Created Plan Names
             const formSelectIds = ['editPlan', 'assignPlanSelect', 'changePlanSelect', 'wizPlan', 'ps-default-plan'];
             formSelectIds.forEach(id => {
                 const select = document.getElementById(id);
@@ -10960,19 +11186,19 @@ const SuperAdmin = {
                     const currentVal = select.value;
                     const options = createdPlanNames.map(name => {
                         const escaped = this._escapeHTML(name);
-                        return `<option value="${escaped}">${escaped}</option>`;
+                        return `<option value="${escaped}" ${name === currentVal ? 'selected' : ''}>${escaped}</option>`;
                     }).join('');
                     select.innerHTML = options;
-                    if (currentVal) {
-                        const match = createdPlanNames.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
-                        if (match) select.value = match;
+                    if (currentVal && createdPlanNames.includes(currentVal)) {
+                        select.value = currentVal;
                     }
                 }
             });
 
-            // 3. Filter select fields with ONLY Created Plan Names
+            // 3. Filter select fields with ONLY Created Plan Names from database
             const filterSelects = [
                 { id: 'filterPlan', label: 'All Plans' },
+                { id: 'filterPlanType', label: 'All Plans' },
                 { id: 'billPlanFilter', label: 'All Plans' },
                 { id: 'subPlanFilter', label: 'All Plans' },
                 { id: 'licPlanFilter', label: 'All Plans' },
@@ -10984,12 +11210,11 @@ const SuperAdmin = {
                     const currentVal = select.value;
                     const options = `<option value="">${label}</option>` + createdPlanNames.map(name => {
                         const escaped = this._escapeHTML(name);
-                        return `<option value="${escaped}">${escaped}</option>`;
+                        return `<option value="${escaped}" ${name === currentVal ? 'selected' : ''}>${escaped}</option>`;
                     }).join('');
                     select.innerHTML = options;
-                    if (currentVal) {
-                        const match = createdPlanNames.find(name => name.toLowerCase() === currentVal.toLowerCase() || (name.toLowerCase().includes('trial') && currentVal.toLowerCase().includes('trial')));
-                        if (match) select.value = match;
+                    if (currentVal && createdPlanNames.includes(currentVal)) {
+                        select.value = currentVal;
                     }
                 }
             });
@@ -11096,20 +11321,18 @@ const SuperAdmin = {
             api.showNotification('Requesting administrative impersonation...', 'info');
             const res = await api.post(`/super-admin/companies/${id}/impersonate`);
             if (res.status === 'success' || res.token) {
-                const impersonateToken = res.token || res.data?.token;
-                if (!impersonateToken) {
-                    throw new Error('No authentication token returned for impersonation');
-                }
-                const superToken = sessionStorage.getItem('token');
-                if (superToken) {
-                    sessionStorage.setItem('super_admin_backup_token', superToken);
-                }
-                
-                sessionStorage.setItem('token', impersonateToken);
+                sessionStorage.setItem('qcms_authenticated', 'true');
+                localStorage.setItem('qcms_authenticated', 'true');
+                sessionStorage.removeItem('token');
+                localStorage.removeItem('token');
+                sessionStorage.removeItem('access_token');
+                localStorage.removeItem('access_token');
+                sessionStorage.removeItem('user');
+                localStorage.removeItem('user');
                 
                 api.showNotification('Login impersonation successful. Redirecting to tenant space...', 'success');
                 setTimeout(() => {
-                    window.location.href = '/admin/dashboard.html';
+                    window.location.href = '/dashboard/dashboard-admin.html';
                 }, 1000);
             }
         } catch (err) {
@@ -11270,34 +11493,20 @@ const SuperAdmin = {
     _renderBinPagination(total, currentPage, pageSize) {
         const el = document.getElementById('recycleBinPagination');
         if (!el) return;
-
-        const totalPages = Math.ceil(total / pageSize);
         if (total === 0) { el.innerHTML = ''; return; }
 
-        const start = (currentPage - 1) * pageSize + 1;
-        const end   = Math.min(currentPage * pageSize, total);
-
-        const controlsHtml = this.buildFourPagePagination(currentPage, totalPages, 'SuperAdmin.goToBinPage');
-
-        el.innerHTML = `
-            <div class="ds-card-body py-3 px-4 border-top" style="border-color: var(--ds-border-color) !important;">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span class="text-xs text-muted">Showing <strong>${start}&ndash;${end}</strong> of <strong>${total}</strong> deleted organization${total !== 1 ? 's' : ''}</span>
-                    <div class="d-flex gap-1 align-items-center">
-                        <select class="ds-input" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="SuperAdmin.setBinPerPage(this.value)">
-                            <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
-                            <option value="20" ${pageSize === 20 ? 'selected' : ''}>20</option>
-                            <option value="50" ${pageSize === 50 ? 'selected' : ''}>50</option>
-                            <option value="100" ${pageSize === 100 ? 'selected' : ''}>100</option>
-                        </select>
-                        <span class="text-xs text-muted ms-1 me-2">per page</span>
-                        <div class="d-flex gap-1">
-                            ${controlsHtml}
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        if (window.lucide) lucide.createIcons();
+        if (typeof window.createStandardPagination === 'function') {
+            window.createStandardPagination({
+                containerId: 'recycleBinPagination',
+                entityName: 'deleted organizations',
+                totalItems: total,
+                currentPage: currentPage,
+                pageSize: pageSize,
+                pageSizeOptions: [10, 20, 50, 100],
+                onPageChange: (p) => { SuperAdmin.goToBinPage(p); },
+                onPageSizeChange: (sz) => { SuperAdmin.setBinPerPage(sz); }
+            });
+        }
     },
 
     setBinPerPage(val) {
@@ -11448,6 +11657,7 @@ const StageWeightageManager = {
         { id: 7, name: "S7 Take Preventive Measures", icon: "shield-check", color: "#06b6d4", desc: "Before vs after analysis, statistical & ROI verification" },
         { id: 8, name: "S8 Congratulate Team & Closure", icon: "award", color: "#84cc16", desc: "Standardization, SOP adoption & Final project closure" }
     ],
+    paletteColors: ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#84cc16', '#f97316', '#14b8a6', '#a855f7', '#64748b'],
 
     async load() {
         const container = document.getElementById('stageWeightageList');
@@ -11455,14 +11665,40 @@ const StageWeightageManager = {
 
         try {
             const res = await api.get('/super-admin/stage-weightage');
-            if (res && Array.isArray(res.weights) && res.weights.length === 8) {
+            if (res && Array.isArray(res.stages) && res.stages.length > 0) {
+                this.stageLabels = res.stages.map((stg, idx) => ({
+                    id: stg.stage || (idx + 1),
+                    name: stg.label || stg.name || `Stage ${idx + 1}`,
+                    icon: stg.icon || 'layers',
+                    color: stg.color || this.paletteColors[idx % this.paletteColors.length],
+                    desc: stg.desc || `Stage ${idx + 1} workflow & verification`
+                }));
+                if (Array.isArray(res.weights) && res.weights.length === this.stageLabels.length) {
+                    this.weights = res.weights.map(w => Number(w));
+                } else {
+                    const n = this.stageLabels.length;
+                    const base = Math.round((100 / n) * 10) / 10;
+                    this.weights = Array(n).fill(base);
+                    const diff = Math.round((100 - (base * n)) * 10) / 10;
+                    if (diff !== 0) this.weights[n - 1] = Math.round((this.weights[n - 1] + diff) * 10) / 10;
+                }
+            } else if (res && Array.isArray(res.weights) && res.weights.length > 0) {
                 this.weights = res.weights.map(w => Number(w));
-            } else {
-                this.weights = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5];
             }
         } catch (e) {
             console.warn('[StageWeightage] Failed to fetch weightage, using defaults:', e);
-            this.weights = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5];
+        }
+
+        // Update UI dynamic count if elements exist
+        const titleEl = document.querySelector('#stage-weightageView h5');
+        if (titleEl) {
+            titleEl.textContent = `${this.stageLabels.length}-Stage Progress Weightage Distribution`;
+        }
+        const eqBtn = document.getElementById('stageWeightageEqualBtn');
+        if (eqBtn) {
+            const splitVal = (100 / this.stageLabels.length).toFixed(1);
+            eqBtn.innerHTML = `<i data-lucide="sliders" style="width:13px;height:13px;" class="me-1"></i> Equal Split (${splitVal}% × ${this.stageLabels.length})`;
+            if (window.lucide) lucide.createIcons({ container: eqBtn });
         }
 
         this.render();
@@ -11474,7 +11710,7 @@ const StageWeightageManager = {
 
         let cumulative = 0;
         container.innerHTML = this.stageLabels.map((stg, idx) => {
-            const val = this.weights[idx] ?? 12.5;
+            const val = this.weights[idx] ?? Math.round((100 / this.stageLabels.length) * 10) / 10;
             cumulative += val;
             const cumStr = (cumulative % 1 === 0) ? cumulative.toFixed(0) : cumulative.toFixed(1);
 
@@ -11609,24 +11845,62 @@ const StageWeightageManager = {
     },
 
     applyPreset(preset) {
+        const n = this.stageLabels.length || 8;
         if (preset === 'equal') {
-            this.weights = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5];
+            const base = Math.floor((100 / n) * 10) / 10;
+            this.weights = Array(n).fill(base);
+            const remainder = Math.round((100 - (base * n)) * 10) / 10;
+            if (remainder !== 0) {
+                this.weights[n - 1] = Math.round((this.weights[n - 1] + remainder) * 10) / 10;
+            }
         } else if (preset === 'rca_heavy') {
-            this.weights = [15.0, 20.0, 20.0, 15.0, 10.0, 10.0, 5.0, 5.0];
+            if (n === 8) {
+                this.weights = [15.0, 20.0, 20.0, 15.0, 10.0, 10.0, 5.0, 5.0];
+            } else {
+                const half = Math.ceil(n / 2);
+                const firstHalfWeight = 70.0 / half;
+                const secondHalfWeight = 30.0 / (n - half);
+                this.weights = [];
+                for (let i = 0; i < n; i++) {
+                    this.weights.push(i < half ? Math.round(firstHalfWeight * 10) / 10 : Math.round(secondHalfWeight * 10) / 10);
+                }
+                const sum = this.weights.reduce((a, b) => a + b, 0);
+                this.weights[n - 1] = Math.round((this.weights[n - 1] + (100 - sum)) * 10) / 10;
+            }
         } else if (preset === 'execution_heavy') {
-            this.weights = [10.0, 10.0, 10.0, 15.0, 20.0, 20.0, 10.0, 5.0];
+            if (n === 8) {
+                this.weights = [10.0, 10.0, 10.0, 15.0, 20.0, 20.0, 10.0, 5.0];
+            } else {
+                const half = Math.floor(n / 2);
+                const firstHalfWeight = 30.0 / half;
+                const secondHalfWeight = 70.0 / (n - half);
+                this.weights = [];
+                for (let i = 0; i < n; i++) {
+                    this.weights.push(i < half ? Math.round(firstHalfWeight * 10) / 10 : Math.round(secondHalfWeight * 10) / 10);
+                }
+                const sum = this.weights.reduce((a, b) => a + b, 0);
+                this.weights[n - 1] = Math.round((this.weights[n - 1] + (100 - sum)) * 10) / 10;
+            }
         }
         this.render();
     },
 
     async resetDefaults() {
-        if (!confirm('Reset stage weights to equal system defaults (12.5% for each stage)?')) return;
+        const n = this.stageLabels.length || 8;
+        if (!confirm(`Reset stage weights to equal system defaults for all ${n} stages?`)) return;
         try {
             const res = await api.post('/super-admin/stage-weightage', { reset: true });
             if (res && res.status === 'success') {
-                this.weights = [12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5];
+                if (Array.isArray(res.weights)) {
+                    this.weights = res.weights.map(w => Number(w));
+                } else {
+                    const base = Math.floor((100 / n) * 10) / 10;
+                    this.weights = Array(n).fill(base);
+                    const remainder = Math.round((100 - (base * n)) * 10) / 10;
+                    if (remainder !== 0) this.weights[n - 1] = Math.round((this.weights[n - 1] + remainder) * 10) / 10;
+                }
                 this.render();
-                api.showNotification('Stage weightage reset to equal defaults (12.5% per stage).', 'success');
+                api.showNotification(`Stage weightage reset to equal defaults for all ${n} stages.`, 'success');
             }
         } catch (e) {
             api.showNotification(e.message || 'Failed to reset stage weightage', 'error');

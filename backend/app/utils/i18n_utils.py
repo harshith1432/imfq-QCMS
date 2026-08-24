@@ -1,6 +1,7 @@
 import json
 import os
 from flask import request, current_app
+from app import db
 from app.infrastructure.database.models.models import User
 
 class BackendI18n:
@@ -31,7 +32,7 @@ class BackendI18n:
     def get_user_locale(cls, user_id=None):
         # 1. User preference from DB
         if user_id:
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if user and user.language:
                 return user.language
         

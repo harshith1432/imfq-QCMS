@@ -1,7 +1,9 @@
 import os
+import click
 from flask import Flask, jsonify, send_from_directory, request, redirect
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, jwt_required
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -25,6 +27,8 @@ def create_app():
     frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'frontend'))
 
     app = Flask(__name__, static_folder=None)
+    # x_for=1 means trust exactly 1 upstream proxy (e.g. Nginx or Cloudflare)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
     # Load configuration from centralized settings
     app.config.from_object(Config)
@@ -46,32 +50,64 @@ def create_app():
     from app.presentation.middleware.idempotency_middleware import init_idempotency_middleware
     init_idempotency_middleware(app)
 
-    # Configure JWT revocation / session termination verification
+    # Initialize Structured Logging & Request Correlation ID Middleware (X-Request-ID)
+    from app.presentation.middleware.logging_middleware import init_logging_middleware
+    init_logging_middleware(app)
+
+    # Configure JWT revocation / session termination verification with sub-millisecond in-memory / Redis caching
+    from app.infrastructure.cache.redis_client import cache as session_cache
+
     @jwt.token_in_blocklist_loader
     def check_if_token_is_revoked(jwt_header, jwt_payload):
         try:
             session_id = jwt_payload.get("session_id")
             user_id = jwt_payload.get("sub")
-            
+
+            # 1. Fast Cache Check for Session ID (0.01ms vs 20ms DB query)
+            if session_id:
+                cached_status = session_cache.get(f"sess_status:{session_id}")
+                if cached_status:
+                    if cached_status in ('Terminated', 'Revoked'):
+                        return True
+                    elif cached_status == 'Active':
+                        return False
+
+            # 2. Fast Cache Check for User Active State
+            if user_id:
+                cached_u_status = session_cache.get(f"user_active:{user_id}")
+                if cached_u_status == 'inactive':
+                    return True
+
             from app.infrastructure.database.models.models import SaaSUserSession, User
 
-            # Check if user account itself has been deactivated or deleted
-            if user_id:
+            # 3. Check if user account itself has been deactivated or deleted (Cached for 120s)
+            if user_id and session_cache.get(f"user_active:{user_id}") is None:
                 try:
                     uid = int(user_id)
-                    user = User.query.get(uid)
-                    if not user or getattr(user, 'is_deleted', False) or not user.is_active or user.status == 'Inactive':
-                        return True # Account deactivated/deleted by admin
+                    user = db.session.get(User, uid)
+                    # User is inactive only if BOTH is_active=False AND status != 'Active'
+                    # This prevents false session terminations when is_active has inconsistent state
+                    is_truly_inactive = (
+                        not user or
+                        getattr(user, 'is_deleted', False) or
+                        (not user.is_active and user.status not in ('Active', 'active'))
+                    )
+                    if is_truly_inactive:
+                        session_cache.set(f"user_active:{user_id}", "inactive", ex=120)
+                        return True
+                    else:
+                        session_cache.set(f"user_active:{user_id}", "active", ex=120)
                 except Exception:
                     pass
 
+            # 4. Fallback Session Lookup from DB (Cached for 300s)
             if session_id:
                 sess = SaaSUserSession.query.filter_by(session_id=session_id).first()
                 if sess:
-                    if sess.status in ('Terminated', 'Revoked'):
-                        return True # Token was explicitly terminated/revoked by admin!
-                    return False # Explicit active session is valid
-                # If token has a session_id claim but record isn't in DB yet, do NOT falsely revoke it
+                    session_cache.set(f"sess_status:{session_id}", sess.status, ex=300)
+                    return sess.status in ('Terminated', 'Revoked')
+                # If session_id claim exists but not yet in DB, cache as Active for 60s
+                session_cache.set(f"sess_status:{session_id}", "Active", ex=60)
                 return False
 
             elif user_id:
@@ -153,8 +189,10 @@ def create_app():
         from .presentation.routes.email_notification_routes import email_notification_bp
         from .presentation.routes.points_routes import points_bp
         from .presentation.routes.plant_routes import plant_bp
+        from .presentation.routes.storage_routes import storage_bp
         
         app.register_blueprint(auth_bp, url_prefix='/api/auth')
+        app.register_blueprint(storage_bp, url_prefix='/api/storage')
         app.register_blueprint(project_bp, url_prefix='/api/projects')
         app.register_blueprint(workflow_bp, url_prefix='/api/workflow')
         app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
@@ -199,226 +237,12 @@ def create_app():
         global _DB_AUTO_MIGRATED
         if not _DB_AUTO_MIGRATED:
             try:
-                is_serverless = bool(os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
-                if not is_serverless:
-                    try:
-                        db.create_all()
-                    except Exception:
-                        pass
+                # Schema management is handled via `flask init-db` CLI or Alembic migrations.
+                # db.create_all() has been removed from startup to prevent race conditions
+                # across multiple Gunicorn workers. Run `flask init-db` before first deploy.
+                app.logger.debug('[QCMS] Startup: schema management skipped (use flask init-db).')
 
-                # ── DB-based migration version guard ──────────────────────────────────
-                # Increment CURRENT_MIGRATIONS_VERSION whenever new ALTER statements are added.
-                # On first run: migrations execute and version is saved to DB.
-                # On ALL subsequent deploys: single query detects current version → skips
-                # all 100+ ALTER statements → boot time drops from 30-60s to <2s.
-                CURRENT_MIGRATIONS_VERSION = 2
-                from sqlalchemy import text
-                migrations_needed = True
-                try:
-                    db.session.execute(text(
-                        "CREATE TABLE IF NOT EXISTS _qcms_schema_version "
-                        "(id INTEGER PRIMARY KEY DEFAULT 1, version INTEGER NOT NULL DEFAULT 0, "
-                        "applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
-                    ))
-                    db.session.commit()
-                    result = db.session.execute(text(
-                        "SELECT version FROM _qcms_schema_version WHERE id = 1"
-                    ))
-                    row = result.fetchone()
-                    if row and row[0] >= CURRENT_MIGRATIONS_VERSION:
-                        migrations_needed = False
-                        print(f"[QCMS] Schema already at version {row[0]}, skipping migrations.")
-                except Exception as ve:
-                    print(f"[QCMS] Version check failed (will run migrations): {ve}")
-                    try:
-                        db.session.rollback()
-                    except Exception:
-                        pass
-
-                if migrations_needed:
-                    alter_statements = [
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS global_template_version INTEGER DEFAULT 1;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS global_template_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS applied_template_version INTEGER DEFAULT 1;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS has_pending_template_update BOOLEAN DEFAULT FALSE;",
-                "ALTER TABLE project_workflow ADD COLUMN IF NOT EXISTS template_snapshot JSON;",
-                "ALTER TABLE company_information DROP COLUMN IF EXISTS iso_certifications;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS org_scale VARCHAR(50) DEFAULT 'Small';",
-                "CREATE TABLE IF NOT EXISTS plants (id SERIAL PRIMARY KEY, org_id INTEGER NOT NULL REFERENCES organizations(id), name VARCHAR(100) NOT NULL, code VARCHAR(50), location VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
-                "ALTER TABLE departments ADD COLUMN IF NOT EXISTS plant_id INTEGER REFERENCES plants(id);",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS plant_id INTEGER REFERENCES plants(id);",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_fields JSONB;",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMP;",
-                "ALTER TABLE user_custom_fields ADD COLUMN IF NOT EXISTS data_type VARCHAR(50) DEFAULT 'both';",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50);",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS website VARCHAR(255);",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS org_code VARCHAR(100);",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS license_number VARCHAR(100);",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS storage_limit_mb FLOAT DEFAULT 10240.0;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS enabled_modules JSONB;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS state VARCHAR(100);",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS is_platform_org BOOLEAN DEFAULT FALSE;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS gst_number VARCHAR(50);",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS udyam_number VARCHAR(50);",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS license_start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS license_expiry_date TIMESTAMP;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS storage_used_mb FLOAT DEFAULT 0.0;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stages_config JSONB;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS login_options JSONB;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS security_settings JSONB;",
-                "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS trial_extension_count INTEGER DEFAULT 0;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS max_auto_trial_extensions INTEGER DEFAULT 2;",
-                "ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS is_default_trial BOOLEAN DEFAULT FALSE;",
-                "ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS trial_duration_days INTEGER DEFAULT 14;",
-                "ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS auto_approve_extensions_limit INTEGER DEFAULT 2;",
-                # ── Enterprise Subscription Management additions ──────────────────────
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_start_date TIMESTAMP;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_end_date TIMESTAMP;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS base_price FLOAT DEFAULT 0.0;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS discount_percent FLOAT DEFAULT 0.0;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS discount_amount FLOAT DEFAULT 0.0;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS gst_percent FLOAT DEFAULT 18.0;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS gst_amount FLOAT DEFAULT 0.0;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS final_amount FLOAT DEFAULT 0.0;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'INR';",
-                "ALTER TABLE saas_plan_pricing ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE;",
-                "ALTER TABLE subscription_invoices ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS max_users INTEGER DEFAULT 500;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS storage_limit_gb FLOAT DEFAULT 10.0;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS api_limit INTEGER DEFAULT 10000;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS enabled_modules JSONB;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS support_level VARCHAR(50) DEFAULT 'Standard';",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS auto_renewal BOOLEAN DEFAULT TRUE;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS grace_period_days INTEGER DEFAULT 7;",
-                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_notes TEXT;",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS subscription_id INTEGER REFERENCES subscriptions(id);",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS invoice_id INTEGER REFERENCES subscription_invoices(id);",
-                "ALTER TABLE subscription_payments DROP CONSTRAINT IF EXISTS subscription_payments_invoice_id_fkey;",
-                "ALTER TABLE subscription_payments ADD CONSTRAINT subscription_payments_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES subscription_invoices(id) ON DELETE SET NULL;",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(20);",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50);",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS gateway_reference VARCHAR(255);",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS discount_amount FLOAT DEFAULT 0.0;",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS gst_percent FLOAT DEFAULT 18.0;",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS gst_amount FLOAT DEFAULT 0.0;",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS final_amount FLOAT;",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS refund_status VARCHAR(20);",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS refund_amount FLOAT DEFAULT 0.0;",
-                "ALTER TABLE subscription_payments ADD COLUMN IF NOT EXISTS refund_date TIMESTAMP;",
-                # ── Support Tickets additions ──────────────────────
-                "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS ticket_number VARCHAR(100) UNIQUE;",
-                "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS assigned_engineer_id INTEGER REFERENCES users(id);",
-                "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS assigned_team VARCHAR(100);",
-                "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS sla_status VARCHAR(50) DEFAULT 'Within SLA';",
-                "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS escalation_level INTEGER DEFAULT 0;",
-                "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS tags JSONB;",
-                # ── Company Contacts additions ──────────────────────
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS otp_email VARCHAR(255) DEFAULT 'otp-auth@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255) DEFAULT 'contact@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS alerts_email VARCHAR(255) DEFAULT 'alerts@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS feedback_email VARCHAR(255) DEFAULT 'feedback@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS onboarding_email VARCHAR(255) DEFAULT 'onboarding@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS sales_email VARCHAR(255) DEFAULT 'sales@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS legal_email VARCHAR(255) DEFAULT 'legal@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS compliance_email VARCHAR(255) DEFAULT 'compliance@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS privacy_email VARCHAR(255) DEFAULT 'privacy@qcms.com';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS general_sender_name VARCHAR(255) DEFAULT 'QCMS General Info';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS support_sender_name VARCHAR(255) DEFAULT 'QCMS Customer Support';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS billing_sender_name VARCHAR(255) DEFAULT 'QCMS Accounts & Billing';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS otp_sender_name VARCHAR(255) DEFAULT 'QCMS OTP Verification';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS contact_sender_name VARCHAR(255) DEFAULT 'QCMS Business Inquiries';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS alerts_sender_name VARCHAR(255) DEFAULT 'QCMS System Alerts';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS feedback_sender_name VARCHAR(255) DEFAULT 'QCMS Product Feedback';",
-                "ALTER TABLE company_contacts ADD COLUMN IF NOT EXISTS onboarding_sender_name VARCHAR(255) DEFAULT 'QCMS User Onboarding';",
-                # ── Audit Logs enterprise extensions ──────────────────────
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS session_id VARCHAR(100);",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS request_id VARCHAR(100);",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS response_code INTEGER;",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS execution_time FLOAT;",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS risk_level VARCHAR(20) DEFAULT 'Low';",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS browser VARCHAR(50);",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS os VARCHAR(50);",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS device VARCHAR(50);",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS location VARCHAR(100);",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS before_data JSONB;",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS after_data JSONB;",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS hash_signature VARCHAR(128);",
-                "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_tampered BOOLEAN DEFAULT FALSE;",
-                # ── Platform Settings additions ──────────────────────
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS support_phone VARCHAR(50);",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS support_website VARCHAR(255);",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS company_address TEXT;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS timezone VARCHAR(100);",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS default_language VARCHAR(10);",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS date_format VARCHAR(50);",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS time_format VARCHAR(20);",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS currency VARCHAR(10);",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS branding_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS localization_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS authentication_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS security_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS notification_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS email_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS sms_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS push_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS storage_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS backup_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS compliance_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS api_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS webhook_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS integrations_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS ai_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS feature_flags JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS maintenance_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS system_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS organizations_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS billing_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS modules_settings JSONB;",
-                "CREATE TABLE IF NOT EXISTS sales_enquiries (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(120) NOT NULL, phone VARCHAR(30) NOT NULL, company_name VARCHAR(100) NOT NULL, message TEXT, source VARCHAR(50) DEFAULT 'Talk to Sales', status VARCHAR(30) DEFAULT 'New', notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS developer_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS audit_logs_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS system_health_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS about_settings JSONB;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS require_email_otp BOOLEAN DEFAULT TRUE;",
-                "ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS require_phone_otp BOOLEAN DEFAULT FALSE;",
-                "CREATE TABLE IF NOT EXISTS phone_verifications (id SERIAL PRIMARY KEY, phone VARCHAR(50) UNIQUE NOT NULL, otp VARCHAR(6) NOT NULL, is_verified BOOLEAN DEFAULT FALSE, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
-                ]
-                    for statement in alter_statements:
-                        try:
-                            db.session.execute(text(statement))
-                            db.session.commit()
-                        except Exception:
-                            db.session.rollback()
-                            if "IF NOT EXISTS" in statement:
-                                fallback = statement.replace("IF NOT EXISTS ", "")
-                                if "JSONB" in fallback:
-                                    fallback = fallback.replace("JSONB", "JSON")
-                                try:
-                                    db.session.execute(text(fallback))
-                                    db.session.commit()
-                                except Exception:
-                                    db.session.rollback()
-
-                    # Save version to DB so future deploys skip all migrations
-                    try:
-                        db.session.execute(text(
-                            "INSERT INTO _qcms_schema_version (id, version) VALUES (1, :v) "
-                            "ON CONFLICT (id) DO UPDATE SET version = :v, applied_at = CURRENT_TIMESTAMP"
-                        ), {"v": CURRENT_MIGRATIONS_VERSION})
-                        db.session.commit()
-                        print(f"[QCMS] Schema version saved: {CURRENT_MIGRATIONS_VERSION}.")
-                    except Exception as sve:
-                        print(f"[QCMS] Could not save schema version: {sve}")
-                        try:
-                            db.session.rollback()
-                        except Exception:
-                            pass
-
+                # Startup performs only lightweight entity seeding and initial configuration checks.
                 from .infrastructure.database.models.models import (
                     Role, PlatformSettings, User, Organization, UserCustomField,
                     SaaSPlan, SaaSPlanPricing, SaaSPlanLimits, SaaSPlanModules, SaaSPlanAnalytics,
@@ -613,7 +437,6 @@ def create_app():
                             {"name": "Assign Training", "code": "training.assign"},
                             {"name": "Online Assessment", "code": "training.assessment"},
                             {"name": "Reading Progress Tracker", "code": "training.reading_progress"},
-                            {"name": "Training Certificates", "code": "training.certificates"},
                             {"name": "Training Audit Reports", "code": "training.reports"}
                         ]
                     },
@@ -825,50 +648,36 @@ def create_app():
                         db.session.add(parent_mod)
                         db.session.flush()
 
-                    # Seed children
-                    for idx, child in enumerate(item.get('children', [])):
-                        c_mod = Module.query.filter_by(code=child['code']).first()
-                        if not c_mod:
-                            c_mod = Module(
-                                parent_id=parent_mod.id,
-                                name=child['name'],
-                                code=child['code'],
-                                category=item['category'],
-                                icon=item['icon'],
-                                color=item.get('color', '#3b82f6'),
-                                display_order=idx + 1,
-                                navigation_route=child.get('navigation_route', item.get('navigation_route')),
-                                status='Active',
-                                development_stage='Released',
-                                version='1.0.0',
-                                enable_by_default=True,
-                                visible_in_sidebar=True,
-                                visible_in_dashboard=True,
-                                requires_subscription=True,
-                                system_module=parent_mod.system_module,
-                                description=f"Sub-feature: {child['name']}"
+                    if 'children' in item:
+                        for child in item['children']:
+                            child_mod = Module.query.filter_by(code=child['code']).first()
+                            if not child_mod:
+                                child_mod = Module(
+                                    name=child['name'],
+                                    code=child['code'],
+                                    parent_id=parent_mod.id,
+                                    category=parent_mod.category,
+                                    icon=parent_mod.icon,
+                                    status='Active',
+                                    enable_by_default=True,
+                                    system_module=parent_mod.system_module
+                                )
+                                db.session.add(child_mod)
+                # Seed Default Super Admin (Only create if no SuperAdmin user exists)
+                sa_role = Role.query.filter_by(name='SuperAdmin').first()
+                if sa_role:
+                    any_sa = User.query.filter_by(role_id=sa_role.id).first()
+                    if not any_sa:
+                        sa_username = (os.getenv('SUPER_ADMIN_USERNAME') or getattr(Config, 'SUPER_ADMIN_USERNAME', '') or '').strip().lower()
+                        sa_password = os.getenv('SUPER_ADMIN_PASSWORD', '').strip()
+                        if not sa_username or not sa_password:
+                            app.logger.warning(
+                                '[QCMS SECURITY] SUPER_ADMIN_USERNAME and/or SUPER_ADMIN_PASSWORD environment variables are not set in .env. '
+                                'Skipping initial SuperAdmin creation to prevent insecure or hardcoded credentials. '
+                                'Set SUPER_ADMIN_USERNAME and SUPER_ADMIN_PASSWORD in your .env file.'
                             )
-                            db.session.add(c_mod)
-
-                db.session.commit()
-                print("[QCMS] Seeded Enterprise Feature Hierarchy (Parents & Children) successfully.")
-            
-                # Seed Default Super Admin
-                sa_username = (os.getenv('SUPER_ADMIN_USERNAME') or getattr(Config, 'SUPER_ADMIN_USERNAME', '') or 'harshithkd6@gmail.com').strip().lower()
-                sa_password = os.getenv('SUPER_ADMIN_PASSWORD') or getattr(Config, 'SUPER_ADMIN_PASSWORD', '') or '123456'
-                if sa_username and sa_password:
-                    sa_role = Role.query.filter_by(name='SuperAdmin').first()
-                    if sa_role:
-                        hashed_pw = bcrypt.generate_password_hash(sa_password).decode('utf-8')
-                        existing_sa = User.query.filter_by(email=sa_username).first()
-                        if existing_sa:
-                            existing_sa.role_id = sa_role.id
-                            existing_sa.org_id = None
-                            existing_sa.is_verified = True
-                            existing_sa.status = 'Active'
-                            existing_sa.is_active = True
-                            existing_sa.hashed_password = hashed_pw
                         else:
+                            hashed_pw = bcrypt.generate_password_hash(sa_password).decode('utf-8')
                             new_sa = User(
                                 username=sa_username,
                                 email=sa_username,
@@ -880,17 +689,19 @@ def create_app():
                                 is_active=True
                             )
                             db.session.add(new_sa)
-                        db.session.commit()
-                        print(f"[QCMS] SuperAdmin '{sa_username}' synced with password from environment variables.")
-
-                        # Ensure all existing SuperAdmins have org_id = None
+                            db.session.commit()
+                            print(f"[QCMS] Initialized default SuperAdmin from environment configuration.")
+                    else:
+                        # Existing SuperAdmin: ensure system-level attributes remain valid without modifying passwords
                         sa_users = User.query.filter_by(role_id=sa_role.id).all()
                         for sa_user in sa_users:
-                            sa_user.org_id = None
-                            sa_user.is_active = True
-                            sa_user.status = 'Active'
-
-                db.session.commit()
+                            if sa_user.org_id is not None:
+                                sa_user.org_id = None
+                            if not sa_user.is_active:
+                                sa_user.is_active = True
+                            if sa_user.status != 'Active':
+                                sa_user.status = 'Active'
+                        db.session.commit()
             
                 # Seed Default Tax Rules & Billing Settings
                 from .infrastructure.database.models.models import TaxRule, BillingSettings, Organization
@@ -920,8 +731,6 @@ def create_app():
                 except Exception:
                     pass
                 print(f"[QCMS] Warning: Could not auto-initialize database: {e}")
-            finally:
-                _DB_AUTO_MIGRATED = True
 
     # Helper to check if public landing page is enabled
     def is_landing_page_enabled():
@@ -933,7 +742,7 @@ def create_app():
                 val = s.landing_cms_settings.get('enable_landing_page')
                 if val is False or str(val).lower() in ('false', '0', 'off', 'disabled'):
                     return False
-        except Exception as e:
+        except Exception:
             pass
         return True
 
@@ -951,8 +760,14 @@ def create_app():
         return send_from_directory(frontend_dir, 'index.html')
 
     # Serve any frontend HTML page (e.g., /login.html, /dashboard-admin.html)
-    @app.route('/<path:filename>')
+    @app.route('/<path:filename>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
     def serve_frontend(filename):
+        if filename.startswith('api/'):
+            return jsonify({"code": 404, "message": "API endpoint not found", "status": "error"}), 404
+
+        if request.method != 'GET':
+            return jsonify({"code": 405, "message": "Method not allowed", "status": "error"}), 405
+
         if not has_local_frontend:
             if filename.endswith('.html') or '.' not in filename:
                 return redirect(f"{vercel_url}/{filename}")
@@ -974,32 +789,82 @@ def create_app():
                 sub_path = os.path.join(frontend_dir, s, html_name)
                 if os.path.isfile(sub_path):
                     return send_from_directory(os.path.join(frontend_dir, s), html_name)
-                    
+
         # Fallback to index.html for SPA-like behavior
         if not is_landing_page_enabled():
             return redirect('/auth/login.html')
         return send_from_directory(frontend_dir, 'index.html')
 
-    # Serve uploaded files
+    # Serve uploaded files (Protected by JWT authentication & Tenant Isolation)
     @app.route('/uploads/<path:filename>')
     def serve_uploads(filename):
-        primary_dir = app.config.get('UPLOAD_FOLDER')
-        if primary_dir and os.path.exists(os.path.join(primary_dir, filename)):
-            return send_from_directory(primary_dir, filename)
-        
-        frontend_dir = os.path.abspath(os.path.join(app.root_path, '..', '..', 'frontend', 'uploads'))
-        if os.path.exists(os.path.join(frontend_dir, filename)):
-            return send_from_directory(frontend_dir, filename)
+        import re
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 
-        if primary_dir:
-            return send_from_directory(primary_dir, filename)
-        return jsonify({"message": "File not found"}), 404
+        clean_filename = os.path.normpath(filename).replace('\\', '/')
+        if '..' in clean_filename or clean_filename.startswith('/'):
+            return jsonify({"status": "error", "message": "Invalid file path."}), 400
+
+        is_public_asset = (
+            clean_filename.startswith('branding/') or
+            clean_filename.startswith('template_previews/') or
+            clean_filename.startswith('system/') or
+            clean_filename.startswith('avatars/') or
+            clean_filename.startswith('avatar_') or
+            clean_filename.startswith('banner_') or
+            'logo' in clean_filename.lower() or
+            'favicon' in clean_filename.lower() or
+            clean_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp'))
+        )
+
+        if not is_public_asset:
+            try:
+                verify_jwt_in_request()
+                user_id = get_jwt_identity()
+                if isinstance(user_id, dict):
+                    user_id = user_id.get('id') or user_id.get('user_id')
+                user_id = int(user_id) if user_id else None
+            except Exception:
+                return jsonify({"status": "error", "message": "Authentication required to access this file.", "code": "UNAUTHORIZED"}), 401
+
+            from app.infrastructure.database.models.models import User
+            user = db.session.get(User, user_id) if user_id else None
+            if not user:
+                return jsonify({"status": "error", "message": "User not found."}), 403
+
+            is_super_admin = (user.role and user.role.name in ('SuperAdmin', 'Admin') and (user.org_id is None or getattr(user, 'is_super_admin', False)))
+            if not is_super_admin:
+                org_match = re.search(r'org_(\d+)', clean_filename)
+                if org_match:
+                    owning_org_id = int(org_match.group(1))
+                    if owning_org_id != user.org_id:
+                        return jsonify({"status": "error", "message": "Access denied. You do not have permission to view this tenant file.", "code": "FORBIDDEN"}), 403
+
+        primary_dir = app.config.get('UPLOAD_FOLDER')
+        if primary_dir and os.path.exists(os.path.join(primary_dir, clean_filename)):
+            return send_from_directory(primary_dir, clean_filename)
+        
+        frontend_dir_local = os.path.abspath(os.path.join(app.root_path, '..', '..', 'frontend', 'uploads'))
+        if os.path.exists(os.path.join(frontend_dir_local, clean_filename)):
+            return send_from_directory(frontend_dir_local, clean_filename)
+
+        # Fallback to Unified Storage Service
+        try:
+            from app.infrastructure.storage import storage
+            content_bytes, content_type = storage.get_file_bytes(clean_filename)
+            if content_bytes is not None:
+                from flask import Response
+                return Response(content_bytes, mimetype=content_type)
+        except Exception:
+            pass
+
+        return jsonify({"status": "error", "message": "File not found."}), 404
 
     @app.before_request
     def check_maintenance_mode():
         if not request.path.startswith('/api/'):
             return
-            
+
         excluded_endpoints = [
             '/api/auth/maintenance-status',
             '/api/auth/login',
@@ -1016,7 +881,7 @@ def create_app():
                 
         if is_excluded:
             return
-            
+
         from app.infrastructure.database.models.models import User
         from sqlalchemy import text as _sql_text
         # Use raw SQL to bypass SQLAlchemy identity map cache and always get fresh DB state
@@ -1058,7 +923,7 @@ def create_app():
         # Intercept only API requests, excluding login/registration and super admin
         if not request.path.startswith('/api/'):
             return
-        if request.path.startswith('/api/auth/login') or request.path.startswith('/api/super-admin') or request.path.startswith('/api/auth/register-org'):
+        if request.path.startswith('/api/auth/login') or request.path.startswith('/api/super-admin') or request.path.startswith('/api/v1/super-admin') or request.path.startswith('/api/auth/register-org'):
             return
             
         from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
@@ -1068,24 +933,29 @@ def create_app():
             if identity:
                 from app.infrastructure.database.models.models import User
                 user = db.session.get(User, int(identity))
-                if user and user.organization and user.organization.subscription_status == 'Suspended':
-                    if user.role.name != 'SuperAdmin':
-                        allowed_paths = (
-                            '/api/auth/me',
-                            '/api/auth/profile',
-                            '/api/auth/request-reactivation',
-                            '/api/auth/user-reactivation-request',
-                            '/api/auth/logout',
-                            '/api/auth/login',
-                            '/api/billing/offline-payment/status',
-                            '/api/billing/offline-payment/submit'
-                        )
-                        if not any(request.path.startswith(p) for p in allowed_paths):
-                            return jsonify({
-                                "status": "suspended",
-                                "msg": "Your organization's access to the QCMS platform has been suspended. Please contact the QCMS support team to reactivate your account.",
-                                "error_code": "ORGANIZATION_SUSPENDED"
-                            }), 403
+                if not user or not user.org_id or not user.organization:
+                    return
+                role_name = (user.role.name if user.role else '').strip().lower()
+                if role_name in ('superadmin', 'super admin', 'super_admin') or getattr(user, 'is_super_admin', False) or getattr(user, 'is_platform_super_admin', False) or user.id == 1:
+                    return
+
+                if user.organization.subscription_status == 'Suspended':
+                    allowed_paths = (
+                        '/api/auth/me',
+                        '/api/auth/profile',
+                        '/api/auth/request-reactivation',
+                        '/api/auth/user-reactivation-request',
+                        '/api/auth/logout',
+                        '/api/auth/login',
+                        '/api/billing/offline-payment/status',
+                        '/api/billing/offline-payment/submit'
+                    )
+                    if not any(request.path.startswith(p) for p in allowed_paths):
+                        return jsonify({
+                            "status": "suspended",
+                            "msg": "Your organization's access to the QCMS platform has been suspended. Please contact the QCMS support team to reactivate your account.",
+                            "error_code": "ORGANIZATION_SUSPENDED"
+                        }), 403
         except Exception:
             pass
 
@@ -1108,50 +978,48 @@ def create_app():
             if identity:
                 from app.infrastructure.database.models.models import User
                 user = db.session.get(User, int(identity))
-                if user and user.organization and getattr(user.organization, 'is_deleted', False):
-                    role_name = user.role.name if user.role else ''
-                    if role_name != 'SuperAdmin':
-                        return jsonify({
-                            "status": "error",
-                            "msg": "Access denied. This organization has been deleted and your session is no longer valid.",
-                            "error_code": "ORG_DELETED"
-                        }), 403
+                if not user or not user.org_id or not user.organization:
+                    return
+                role_name = (user.role.name if user.role else '').strip().lower()
+                if role_name in ('superadmin', 'super admin', 'super_admin') or getattr(user, 'is_super_admin', False) or getattr(user, 'is_platform_super_admin', False) or user.id == 1:
+                    return
+
+                if getattr(user.organization, 'is_deleted', False):
+                    return jsonify({
+                        "status": "error",
+                        "msg": "Access denied. This organization has been deleted and your session is no longer valid.",
+                        "error_code": "ORG_DELETED"
+                    }), 403
         except Exception:
             pass
 
-    # ─── Global Error Handlers ───
-    from sqlalchemy.exc import OperationalError
-    from werkzeug.exceptions import HTTPException
-    
-    @app.errorhandler(OperationalError)
-    def handle_db_error(e):
-        print(f"[QCMS] Critical Database Connection Error: {e}")
-        return jsonify({
-            "status": "error",
-            "message": "The system could not connect to the database. Please ensure your PostgreSQL service is running.",
-            "code": "DB_CONNECTION_ERROR"
-        }), 503
+    # Register error handlers
+    @app.errorhandler(404)
+    def handle_404(e):
+        return jsonify({"status": "error", "message": "Resource not found", "code": 404}), 404
 
-    @app.errorhandler(HTTPException)
-    def handle_http_exception(e):
-        return jsonify({
-            "status": "error",
-            "message": e.description,
-            "code": e.code
-        }), e.code
+    @app.errorhandler(405)
+    def handle_405(e):
+        return jsonify({"status": "error", "message": "Method not allowed", "code": 405}), 405
 
     @app.errorhandler(Exception)
-    def handle_exception(e):
-        print(f"[QCMS] Unhandled exception: {e}")
+    def handle_global_exception(e):
+        import logging
+        logging.getLogger('qcms.app').exception("[QCMS Global Exception] %s", e)
         try:
             db.session.rollback()
         except Exception:
             pass
-        return jsonify({
+        response = {
             "status": "error",
-            "message": f"Server error: {str(e)}",
-            "code": "SERVER_ERROR"
-        }), 500
+            "message": "An internal server error occurred. Please contact support if the problem persists.",
+            "code": "INTERNAL_SERVER_ERROR"
+        }
+        if app.config.get('DEBUG', False) and os.getenv('FLASK_ENV') == 'development':
+            import traceback
+            response["debug_error"] = str(e)
+            response["traceback"] = traceback.format_exc()
+        return jsonify(response), 500
 
     @app.after_request
     def add_header(response):
@@ -1171,18 +1039,52 @@ def create_app():
         except Exception:
             pass
 
-    @app.errorhandler(Exception)
-    def handle_global_exception(e):
-        import traceback
-        tb = traceback.format_exc()
+    # ── flask init-db CLI command ─────────────────────────────────────────────
+    import click
+
+    @app.cli.command('init-db')
+    def init_db_command():
+        """Create all database tables (run once per environment, idempotent)."""
+        with app.app_context():
+            try:
+                db.create_all()
+                click.echo('[QCMS] Database tables created successfully (flask init-db).')
+            except Exception as exc:
+                click.echo(f'[QCMS] init-db failed: {exc}', err=True)
+                raise SystemExit(1)
+
+    # ── Health probes ─────────────────────────────────────────────────────────
+    import time as _time
+    _app_start_time = _time.time()
+
+    @app.route('/health/live', methods=['GET'])
+    def health_live():
+        """Liveness probe — returns 200 if the process is alive."""
+        return jsonify({'status': 'ok', 'uptime_seconds': round(_time.time() - _app_start_time, 1)}), 200
+
+    @app.route('/health/ready', methods=['GET'])
+    def health_ready():
+        """Readiness probe: returns 200 only when DB and Redis are both healthy."""
+        from app.infrastructure.cache.redis_adapter import cache as _cache
+        checks = {'status': 'ready', 'db': 'ok', 'redis': 'ok'}
+        http_status = 200
+        # Database check
         try:
-            db.session.rollback()
-        except Exception:
-            pass
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-            "traceback": tb
-        }), 500
+            db.session.execute(db.text('SELECT 1'))
+        except Exception as exc:
+            checks['db'] = 'error'
+            checks['status'] = 'not_ready'
+            http_status = 503
+            app.logger.error('[QCMS Health] DB readiness check failed: %s', exc)
+        # Redis check
+        redis_url = os.environ.get('REDIS_URL', '')
+        if not redis_url:
+            checks['redis'] = 'not_configured'  # dev mode — acceptable
+        elif not _cache.ping():
+            checks['redis'] = 'degraded'
+            checks['status'] = 'not_ready'
+            http_status = 503
+            app.logger.warning('[QCMS Health] Redis unreachable (REDIS_URL is set but ping failed)')
+        return jsonify(checks), http_status
 
     return app

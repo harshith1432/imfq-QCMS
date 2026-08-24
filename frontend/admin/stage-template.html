@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/assets/js/auth-guard.js"></script>
+    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>8-Stage Workflow Template | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/design-system.css">
-    <link rel="stylesheet" href="/assets/css/glass.css">
-    <link rel="stylesheet" href="/assets/css/glass_overrides.css">
-    <script src="/assets/js/ux/breadcrumbs.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -19,17 +17,7 @@
         window.api = { get: () => Promise.resolve([]), post: () => Promise.resolve({}) };
         window.QCMS = { toast: () => {} };
     </script>
-    <script src="/assets/js/stages/stage1.js"></script>
-    <script src="/assets/js/stages/stage2.js"></script>
-    <script src="/assets/js/stages/stage3.js"></script>
-    <script src="/assets/js/stages/stage4.js"></script>
-    <script src="/assets/js/stages/stage5.js"></script>
-    <script src="/assets/js/stages/stage6.js"></script>
-    <script src="/assets/js/stages/stage7.js"></script>
-    <script src="/assets/js/stages/stage8.js"></script>
-    <script src="/assets/js/stages/dynamic_renderer.js"></script>
-
-
+    <script src="/assets/dist/stages-bundle.2fec1a68.min.js"></script>
     <style>
         /* ── Stage list ──────────────────────────────────────────────── */
         #stageList {
@@ -537,6 +525,66 @@
         }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; display: inline-block; }
+
+        @media (max-width: 768px) {
+            .stage-row-header {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                gap: 8px !important;
+                padding: 10px 12px !important;
+            }
+            .drag-handle {
+                order: 1;
+            }
+            .stage-icon-bubble {
+                order: 2;
+                width: 34px !important;
+                height: 34px !important;
+            }
+            .stage-title-wrap {
+                order: 3;
+                flex: 1 1 120px !important;
+                min-width: 100px !important;
+            }
+            .orig-badge {
+                order: 4;
+                font-size: 0.65rem !important;
+                padding: 2px 7px !important;
+            }
+            .collapse-toggle {
+                order: 5;
+                margin-left: auto;
+            }
+            .row-actions {
+                order: 6;
+                width: 100% !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                margin-top: 6px !important;
+                padding-top: 8px !important;
+                border-top: 1px dashed var(--ds-border-color) !important;
+                margin-right: 0 !important;
+            }
+            .row-actions .ds-btn {
+                flex: 1 1 auto !important;
+                font-size: 11px !important;
+                height: 30px !important;
+            }
+            .section-item {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                padding: 10px !important;
+            }
+            .section-item .section-title-wrap {
+                flex: 1 1 140px !important;
+            }
+            .tool-meta-badge {
+                max-width: 100% !important;
+            }
+        }
     </style>
 
 </head>
@@ -663,21 +711,20 @@
             <div class="modal-body px-4 pb-0">
                 <div class="mb-3">
                     <label class="ds-label text-xs fw-semibold mb-1 d-block">Stage Title <span class="text-danger">*</span></label>
-                    <input type="text" class="ds-input" id="newStageTitle" placeholder="e.g. D9 Additional Audit Checklist" required>
+                    <input type="text" class="ds-input" id="newStageTitle" placeholder="e.g. Process Capability &amp; Audit Verification" required>
                 </div>
                 <div class="mb-3">
                     <label class="ds-label text-xs fw-semibold mb-1 d-block">Base Module (Binding)</label>
                     <select class="ds-input ds-select" id="newStageBaseModule">
-                        <option value="0">Blank / Custom Stage (Empty Canvas)</option>
-                        <option value="1">S0/S1 Plan &amp; Establish Team</option>
-                        <option value="2">S2 Define Problem</option>
-                        <option value="3">S3 Interim Containment</option>
-                        <option value="4">S4 Determine Root Causes</option>
-                        <option value="5">S5 Choose Permanent Corrections</option>
-                        <option value="6">S6 Implement Corrective Actions</option>
-                        <option value="7">S7 Take Preventive Measures</option>
-                        <option value="8" selected>S8 Congratulate Team &amp; Closure</option>
+                        <option value="0" selected>Blank / Custom Stage (Empty Canvas)</option>
+                        <option value="2">S2 Define Problem &amp; Data Collection</option>
+                        <option value="3">S3 Interim Containment &amp; Risk Mitigation</option>
+                        <option value="4">S4 Root Cause Analysis &amp; 5-Why</option>
+                        <option value="5">S5 Corrective Actions &amp; Evaluation</option>
+                        <option value="6">S6 Implementation &amp; Trial Validation</option>
+                        <option value="7">S7 Preventive Measures &amp; Standardization</option>
                     </select>
+                    <p class="text-xs text-muted mt-1.5 mb-0"><i data-lucide="info" style="width:12px;height:12px;" class="me-1 text-primary"></i>New stages are inserted in the middle of the workflow right before the fixed Project Closure stage.</p>
                 </div>
                 <div class="mb-3">
                     <label class="ds-label text-xs fw-semibold mb-1 d-block">Stage Icon</label>
@@ -702,10 +749,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/assets/js/api.js"></script>
-<script src="/assets/js/i18n.js"></script>
-<script src="/assets/js/components.js"></script>
-<script>
+<script src="/assets/dist/core-bundle.03a2eb4e.min.js"></script>
+    <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon library
 // ─────────────────────────────────────────────────────────────────────────────
@@ -919,31 +964,90 @@ function esc(s) {
 const escapeHtml = esc;
 window.escapeHtml = esc;
 
+function normalizeStagesSequence(rawStages) {
+    if (!rawStages || rawStages.length === 0) return [];
+    let list = [...rawStages];
+    // Find if any stage is original_id === 8 or title has "Closure" / "Congratulate"
+    const closureIdx = list.findIndex(s => s.original_id === 8 || (s.title && s.title.toLowerCase().includes('closure')) || (s.title && s.title.toLowerCase().includes('congratulat')));
+    if (closureIdx !== -1 && closureIdx !== list.length - 1) {
+        const closureStage = list.splice(closureIdx, 1)[0];
+        list.push(closureStage);
+    }
+    // Find if any stage is original_id === 1 or title has "Initiation" / "Identify"
+    const initIdx = list.findIndex(s => s.original_id === 1 || (s.title && s.title.toLowerCase().includes('initiat')));
+    if (initIdx !== -1 && initIdx !== 0) {
+        const initStage = list.splice(initIdx, 1)[0];
+        list.unshift(initStage);
+    }
+    list.forEach((s, idx) => { s.stage_id = idx + 1; });
+    return list;
+}
+
 function renumber() {
-    stages.forEach((s, i) => { s.stage_id = i + 1; });
+    stages = normalizeStagesSequence(stages);
 }
 
 // ── Render the stage and sections list ────────────────────────────────────────
 function renderList() {
+    stages = normalizeStagesSequence(stages);
     const list = document.getElementById('stageList');
     list.innerHTML = '';
 
     stages.forEach((s, i) => {
+        const isFirstStage = (i === 0);
+        const isLastStage = (i === stages.length - 1);
+        const isMiddleStage = (!isFirstStage && !isLastStage);
+
         const clr = STAGE_COLORS[i] || STAGE_COLORS[0];
         const container = document.createElement('div');
         container.className = 'stage-row-container';
         container.dataset.idx = i;
-        container.setAttribute('draggable', 'true');
+        container.setAttribute('draggable', isMiddleStage ? 'true' : 'false');
         container.style.animationDelay = (i * 0.04) + 's';
+
+        // Badges & Action Buttons based on Anchor vs Middle
+        let origBadgeHtml = '';
+        let dragHandleHtml = '';
+        let reorderButtonsHtml = '';
+
+        if (isFirstStage) {
+            origBadgeHtml = `<span class="orig-badge bg-primary-subtle text-primary border border-primary border-opacity-25 fw-bold"><i data-lucide="lock" style="width:10px;height:10px;" class="me-1"></i>Project Initiation (Fixed)</span>`;
+            dragHandleHtml = `<div class="drag-handle text-muted" style="cursor:not-allowed; opacity:0.45;" title="Stage 1 (Project Initiation) is fixed at the beginning"><i data-lucide="lock" style="width:14px;height:14px;"></i></div>`;
+            reorderButtonsHtml = `
+                <button class="row-btn" disabled title="Initial stage position is fixed"><i data-lucide="chevron-up" style="width:13px;height:13px;"></i></button>
+                <button class="row-btn" disabled title="Initial stage position is fixed"><i data-lucide="chevron-down" style="width:13px;height:13px;"></i></button>
+                <button class="row-btn text-muted" disabled title="Stage 1 (Project Initiation) is mandatory and cannot be deleted"><i data-lucide="lock" style="width:13px;height:13px;"></i></button>
+            `;
+        } else if (isLastStage) {
+            origBadgeHtml = `<span class="orig-badge bg-success-subtle text-success border border-success border-opacity-25 fw-bold"><i data-lucide="lock" style="width:10px;height:10px;" class="me-1"></i>Project Closure (Fixed)</span>`;
+            dragHandleHtml = `<div class="drag-handle text-muted" style="cursor:not-allowed; opacity:0.45;" title="Final Stage (Project Closure) is fixed at the end"><i data-lucide="lock" style="width:14px;height:14px;"></i></div>`;
+            reorderButtonsHtml = `
+                <button class="row-btn" disabled title="Final closure stage position is fixed"><i data-lucide="chevron-up" style="width:13px;height:13px;"></i></button>
+                <button class="row-btn" disabled title="Final closure stage position is fixed"><i data-lucide="chevron-down" style="width:13px;height:13px;"></i></button>
+                <button class="row-btn text-muted" disabled title="Final Project Closure stage is mandatory and cannot be deleted"><i data-lucide="lock" style="width:13px;height:13px;"></i></button>
+            `;
+        } else {
+            origBadgeHtml = `<span class="orig-badge">Module D${s.original_id}</span>`;
+            dragHandleHtml = `<div class="drag-handle" title="Drag to reorder intermediate stage"><i data-lucide="grip-vertical" style="width:16px;height:16px;"></i></div>`;
+            reorderButtonsHtml = `
+                <button class="row-btn" title="Move up" onclick="moveStage(${i},-1); event.stopPropagation();" ${i === 1 ? 'disabled' : ''}>
+                    <i data-lucide="chevron-up" style="width:13px;height:13px;"></i>
+                </button>
+                <button class="row-btn" title="Move down" onclick="moveStage(${i},+1); event.stopPropagation();" ${i === stages.length - 2 ? 'disabled' : ''}>
+                    <i data-lucide="chevron-down" style="width:13px;height:13px;"></i>
+                </button>
+                <button class="row-btn text-danger ms-1" title="Delete stage" onclick="deleteStage(${i}); event.stopPropagation();">
+                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                </button>
+            `;
+        }
 
         // Stage Header
         const header = document.createElement('div');
         header.className = 'stage-row-header';
         header.innerHTML = `
             <!-- drag handle -->
-            <div class="drag-handle" title="Drag to reorder stages">
-                <i data-lucide="grip-vertical" style="width:16px;height:16px;"></i>
-            </div>
+            ${dragHandleHtml}
 
             <!-- icon bubble -->
             <div class="stage-icon-bubble" data-idx="${i}" title="Click to change icon"
@@ -961,22 +1065,14 @@ function renderList() {
             </div>
 
             <!-- module badge -->
-            <span class="orig-badge">Module D${s.original_id}</span>
+            ${origBadgeHtml}
 
             <!-- stage reorder & delete buttons -->
             <div class="row-actions me-2">
                 <button class="ds-btn ds-btn-primary ds-btn-sm py-1 px-2.5 me-2 text-nowrap d-inline-flex align-items-center gap-1" style="font-size:11px; height:28px;" title="Add New Section to this stage" onclick="addNewSectionDirectly(${i}); event.stopPropagation();">
                     <i data-lucide="plus-circle" style="width:13px;height:13px;"></i> Add Section
                 </button>
-                <button class="row-btn" title="Move up" onclick="moveStage(${i},-1); event.stopPropagation();" ${i === 0 ? 'disabled' : ''}>
-                    <i data-lucide="chevron-up" style="width:13px;height:13px;"></i>
-                </button>
-                <button class="row-btn" title="Move down" onclick="moveStage(${i},+1); event.stopPropagation();" ${i === stages.length - 1 ? 'disabled' : ''}>
-                    <i data-lucide="chevron-down" style="width:13px;height:13px;"></i>
-                </button>
-                <button class="row-btn text-danger ms-1" title="Delete stage" onclick="deleteStage(${i}); event.stopPropagation();">
-                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
-                </button>
+                ${reorderButtonsHtml}
             </div>
 
             <!-- Expand icon -->
@@ -1002,34 +1098,39 @@ function renderList() {
             lucide.createIcons();
         });
 
-        // Stage Drag & Drop
-        container.addEventListener('dragstart', e => {
-            if (e.target.closest('.section-item')) return; // prevent nested drag
-            dragSrcIdx = i;
-            container.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-        });
-        container.addEventListener('dragend', () => {
-            container.classList.remove('dragging');
-            document.querySelectorAll('.stage-row-container').forEach(r => r.classList.remove('drag-over'));
-        });
-        container.addEventListener('dragover', e => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            document.querySelectorAll('.stage-row-container').forEach(r => r.classList.remove('drag-over'));
-            container.classList.add('drag-over');
-        });
-        container.addEventListener('dragleave', () => container.classList.remove('drag-over'));
-        container.addEventListener('drop', e => {
-            e.preventDefault();
-            container.classList.remove('drag-over');
-            if (dragSrcIdx === null || dragSrcIdx === i) return;
-            const moved = stages.splice(dragSrcIdx, 1)[0];
-            stages.splice(i, 0, moved);
-            renumber();
-            renderList();
-            renderPreview();
-        });
+        // Stage Drag & Drop (Only allowed for intermediate stages)
+        if (isMiddleStage) {
+            container.addEventListener('dragstart', e => {
+                if (e.target.closest('.section-item')) return; // prevent nested drag
+                dragSrcIdx = i;
+                container.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            container.addEventListener('dragend', () => {
+                container.classList.remove('dragging');
+                document.querySelectorAll('.stage-row-container').forEach(r => r.classList.remove('drag-over'));
+            });
+            container.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                document.querySelectorAll('.stage-row-container').forEach(r => r.classList.remove('drag-over'));
+                container.classList.add('drag-over');
+            });
+            container.addEventListener('dragleave', () => container.classList.remove('drag-over'));
+            container.addEventListener('drop', e => {
+                e.preventDefault();
+                container.classList.remove('drag-over');
+                if (dragSrcIdx === null || dragSrcIdx === 0 || dragSrcIdx === stages.length - 1) return;
+                // Clamp target strictly to the middle range [1, stages.length - 2]
+                const targetIdx = Math.max(1, Math.min(stages.length - 2, i));
+                if (targetIdx === dragSrcIdx) return;
+                const moved = stages.splice(dragSrcIdx, 1)[0];
+                stages.splice(targetIdx, 0, moved);
+                renumber();
+                renderList();
+                renderPreview();
+            });
+        }
 
         // Inline Title Input
         header.querySelector('.stage-title-input').addEventListener('input', e => {
@@ -1697,8 +1798,9 @@ function renderList() {
 }
 
 function moveStage(idx, dir) {
+    if (idx <= 0 || idx >= stages.length - 1) return;
     const t = idx + dir;
-    if (t < 0 || t >= stages.length) return;
+    if (t <= 0 || t >= stages.length - 1) return;
     [stages[idx], stages[t]] = [stages[t], stages[idx]];
     renumber();
     renderList();
@@ -1841,6 +1943,9 @@ function openToolPicker(stageIdx, secIdx = null) {
     buildToolGrid();
     bsToolModal.show();
 }
+window.openToolPicker = openToolPicker;
+window.addNewSectionDirectly = addNewSectionDirectly;
+window.openIconPicker = openIconPicker;
 
 function buildToolGrid() {
     const grid = document.getElementById('toolGrid');
@@ -1952,7 +2057,7 @@ function mockupHtmlForFieldType(type, placeholder = '', inputType = 'text') {
             return `<textarea class="ds-input ds-textarea" style="pointer-events:none;" rows="2" placeholder="${esc(ph)}"></textarea>`;
         case 'select':
             return `
-                <select class="ds-input ds-select" style="height:32px;pointer-events:none;appearance:auto;">
+                <select class="ds-input ds-select" style="height:32px;pointer-events:none;">
                     <option value="">-- Select option --</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
@@ -2174,19 +2279,22 @@ document.getElementById('addStageConfirmBtn').addEventListener('click', () => {
 
     const newStg = {
         stage_id: stages.length + 1,
-        original_id: baseModule || 8,
+        original_id: baseModule || 2,
         title: title,
         icon: icon,
         sections: baseSections
     };
-    stages.push(newStg);
+
+    // Always insert in the middle before the Project Closure stage
+    const insertIdx = Math.max(1, stages.length - 1);
+    stages.splice(insertIdx, 0, newStg);
     renumber();
     renderList();
     renderPreview();
     bsAddStageModal.hide();
 
     setTimeout(() => {
-        const newStageIdx = stages.length - 1;
+        const newStageIdx = insertIdx;
         const list = document.getElementById('stageList');
         const cont = list ? list.children[newStageIdx] : null;
         if (cont) {
@@ -2195,15 +2303,24 @@ document.getElementById('addStageConfirmBtn').addEventListener('click', () => {
             if (detail) detail.style.display = 'block';
             if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
             if (window.lucide) lucide.createIcons();
+            cont.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }, 50);
 
-    showToast('New stage added! Drag & drop elements from catalog or click to customize.');
+    showToast('New stage added to workflow (placed before Project Closure)! Customize sections and tools below.');
 });
 
 // ── Delete stage ───────────────────────────────────────────────────────────────
 function deleteStage(idx) {
-    if (!confirm('Are you sure you want to delete this stage? All customized sections/fields under this stage will be removed.')) return;
+    if (idx === 0) {
+        showToast('Stage 1 (Project Initiation) is fixed and cannot be deleted.', 'error');
+        return;
+    }
+    if (idx === stages.length - 1) {
+        showToast('Final Stage (Project Closure) is fixed and cannot be deleted.', 'error');
+        return;
+    }
+    if (!confirm(`Are you sure you want to delete Stage ${idx + 1} ("${stages[idx].title}")? All customized sections/fields under this stage will be removed.`)) return;
     stages.splice(idx, 1);
     renumber();
     renderList();

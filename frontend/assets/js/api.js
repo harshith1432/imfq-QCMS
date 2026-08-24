@@ -50,25 +50,46 @@ const API_BASE = '/api';
 const api = {
     baseUrl: API_BASE,
     inFlightRequests: new Map(), // Deduplication map for active HTTP requests
+    _inMemoryToken: null,
 
     get token() {
-        const t = sessionStorage.getItem('token')
-            || localStorage.getItem('token')
-            || localStorage.getItem('access_token')
-            || sessionStorage.getItem('access_token')
-            || '';
-        if (t) return t;
-        // Fallback: if running inside an iframe, try to read token from parent window (same origin)
+        if (this._inMemoryToken) return this._inMemoryToken;
         try {
-            if (window.parent && window.parent !== window) {
-                return window.parent.sessionStorage.getItem('token')
-                    || window.parent.localStorage.getItem('token')
-                    || window.parent.localStorage.getItem('access_token')
-                    || window.parent.sessionStorage.getItem('access_token')
-                    || '';
+            if (typeof sessionStorage !== 'undefined') {
+                const sToken = sessionStorage.getItem('token') || sessionStorage.getItem('access_token');
+                if (sToken) return sToken;
+            }
+            if (typeof localStorage !== 'undefined') {
+                const lToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+                if (lToken) return lToken;
             }
         } catch (_) {}
         return '';
+    },
+
+    set token(val) {
+        this._inMemoryToken = val || null;
+        try {
+            if (val) {
+                if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.setItem('token', val);
+                    sessionStorage.setItem('access_token', val);
+                }
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('token', val);
+                    localStorage.setItem('access_token', val);
+                }
+            } else {
+                if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.removeItem('token');
+                    sessionStorage.removeItem('access_token');
+                }
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('access_token');
+                }
+            }
+        } catch (_) {}
     },
 
     generateIdempotencyKey() {
@@ -155,6 +176,7 @@ const api = {
                 const response = await fetch(`${API_BASE}${endpoint}`, {
                     ...options,
                     headers,
+                    credentials: options.credentials || 'same-origin',
                     signal: controller.signal
                 });
                 clearTimeout(timeoutId);
@@ -191,13 +213,21 @@ const api = {
                             console.warn('[API] 401 on super-admin portal for:', endpoint);
                             return null;
                         }
-                        console.warn('[API] 401 Unauthorized for:', endpoint, '— redirecting to login.');
-                        sessionStorage.removeItem('token');
-                        localStorage.removeItem('token');
-                        if (!window.location.pathname.includes('login.html')) {
-                            window.location.href = '/auth/login.html';
+                        const errData = await response.clone().json().catch(() => ({}));
+                        if (endpoint.includes('/auth/me') || endpoint.includes('/auth/profile') || errData.session_terminated || errData.message?.includes('Signature has expired') || errData.message?.includes('Invalid token')) {
+                            console.warn('[API] 401 Unauthorized session for:', endpoint, '— redirecting to login.');
+                            sessionStorage.removeItem('qcms_authenticated');
+                            localStorage.removeItem('qcms_authenticated');
+                            sessionStorage.removeItem('user');
+                            localStorage.removeItem('user');
+                            sessionStorage.removeItem('token');
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('access_token');
+                            if (!window.location.pathname.includes('login.html')) {
+                                window.location.href = '/auth/login.html' + (errData.session_terminated ? '?reason=session_terminated' : '');
+                            }
+                            return null;
                         }
-                        return null;
                     }
                 }
 
@@ -283,6 +313,20 @@ const api = {
     },
     delete(endpoint, options = {}) { return this.request(endpoint, { ...options, method: 'DELETE' }); },
     
+    fetch: function(endpoint, options = {}) {
+        const token = this.token;
+        const headers = { ...(options.headers || {}) };
+        if (token && !headers['Authorization']) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const url = (endpoint.startsWith('http') || endpoint.startsWith('/api')) ? endpoint : `${API_BASE}${endpoint}`;
+        return window.fetch(url, {
+            ...options,
+            headers: headers,
+            credentials: options.credentials || 'same-origin'
+        });
+    },
+
     // Custom helpers
     getPotentialMembers: function(deptId, role = '') {
         let url = `/projects/potential-members?dept_id=${deptId}`;
@@ -328,7 +372,8 @@ const api = {
         }
         const response = await fetch(`${API_BASE}${endpoint}`, {
             method: 'GET',
-            headers: headers
+            headers: headers,
+            credentials: 'same-origin'
         });
         if (response.status === 401) {
             if (typeof window.logout === 'function') {
@@ -496,64 +541,81 @@ if (typeof window !== 'undefined') {
         const isPrevDisabled = currentPage <= 1;
         const isNextDisabled = currentPage >= totalPages;
 
-        const elementId = typeof containerId === 'string' ? containerId : (container.id || 'qcms_pag');
-
+        const elementId = (typeof containerId === 'string' && containerId)
+            ? containerId
+            : (container.id || `qcms_pag_${Math.random().toString(36).slice(2, 9)}`);
         container.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 pb-2 px-3 border-top mt-2" style="font-size: 13px; color: var(--ds-text-secondary, #64748b);">
-                <!-- Left: Showing Info -->
-                <div class="text-muted fw-medium text-xs">
-                    Showing <strong class="text-dark fw-bold">${startItem.toLocaleString()}-${endItem.toLocaleString()}</strong> of <strong class="text-dark fw-bold">${totalItems.toLocaleString()}</strong> ${entityName}
-                </div>
-
-                <!-- Right: Controls Group -->
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 pb-2 px-3 border-top mt-2 w-100" style="font-size: 13px; color: var(--ds-text-secondary, #64748b); width: 100%;">
+                <!-- Left: Showing Info & Page Size -->
                 <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <!-- Page Size Dropdown -->
+                    <div class="text-muted fw-medium text-xs">
+                        Showing <strong class="text-dark fw-bold">${startItem.toLocaleString()}-${endItem.toLocaleString()}</strong> of <strong class="text-dark fw-bold">${totalItems.toLocaleString()}</strong> ${entityName}
+                    </div>
                     <div class="d-flex align-items-center gap-1">
                         <select class="form-select form-select-sm shadow-none border rounded-2 px-2 py-1" style="width: auto; font-size: 12.5px; height: 32px; font-weight: 500; cursor: pointer; background-color: var(--ds-input-bg, #fff);" id="${elementId}_pageSize">
                             ${pageSizeOptions.map(size => `<option value="${size}" ${size === pageSize ? 'selected' : ''}>${size}</option>`).join('')}
                         </select>
                         <span class="text-muted text-xs ms-1">per page</span>
                     </div>
+                </div>
 
-                    <!-- Prev / Page / Next Buttons -->
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
-                                id="${elementId}_prevBtn" ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
-                            <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev
-                        </button>
-                        
-                        <span class="fw-semibold text-dark text-xs px-1" style="white-space: nowrap;">
-                            Page ${currentPage} of ${totalPages}
-                        </span>
+                <!-- Right: Prev / Page / Next Buttons -->
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                            id="${elementId}_prevBtn" ${isPrevDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+                        <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev
+                    </button>
+                    
+                    <span class="fw-semibold text-dark text-xs px-1" style="white-space: nowrap;">
+                        Page ${currentPage} of ${totalPages}
+                    </span>
 
-                        <button class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
-                                id="${elementId}_nextBtn" ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
-                            Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-light border px-2 py-1 rounded-2 text-xs d-flex align-items-center gap-1 shadow-none" 
+                            id="${elementId}_nextBtn" ${isNextDisabled ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+                        Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                    </button>
                 </div>
             </div>
         `;
 
         if (window.lucide) window.lucide.createIcons();
 
-        // Event Bindings
-        document.getElementById(`${elementId}_pageSize`)?.addEventListener('change', (e) => {
-            if (typeof onPageSizeChange === 'function') {
-                onPageSizeChange(parseInt(e.target.value, 10));
-            }
-        });
+        // Scoped Event Bindings
+        const pageSizeSelect = container.querySelector(`#${elementId}_pageSize`);
+        const prevBtn = container.querySelector(`#${elementId}_prevBtn`);
+        const nextBtn = container.querySelector(`#${elementId}_nextBtn`);
 
-        document.getElementById(`${elementId}_prevBtn`)?.addEventListener('click', () => {
-            if (currentPage > 1 && typeof onPageChange === 'function') {
-                onPageChange(currentPage - 1);
-            }
-        });
+        if (pageSizeSelect) {
+            pageSizeSelect.onchange = (e) => {
+                if (typeof onPageSizeChange === 'function') {
+                    onPageSizeChange(parseInt(e.target.value, 10));
+                }
+            };
+        }
 
-        document.getElementById(`${elementId}_nextBtn`)?.addEventListener('click', () => {
-            if (currentPage < totalPages && typeof onPageChange === 'function') {
-                onPageChange(currentPage + 1);
-            }
-        });
+        if (prevBtn) {
+            prevBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (currentPage > 1 && typeof onPageChange === 'function') {
+                    onPageChange(currentPage - 1);
+                }
+            };
+        }
+
+        if (nextBtn) {
+            nextBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (currentPage < totalPages && typeof onPageChange === 'function') {
+                    onPageChange(currentPage + 1);
+                }
+            };
+        }
     };
 }
+
+if (typeof window !== 'undefined') {
+    window.api = api;
+}
+

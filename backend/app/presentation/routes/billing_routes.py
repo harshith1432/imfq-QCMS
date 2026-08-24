@@ -1,7 +1,7 @@
 import uuid
 import secrets
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request, send_from_directory, abort, current_app, has_request_context
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func, or_, and_, text
@@ -13,6 +13,7 @@ from app.infrastructure.database.models.models import (
     OfflinePaymentProof, IntegrationConfig, Notification, SaaSPlan, SaaSPlanPricing
 )
 from app.presentation.middleware.middleware import super_admin_required
+from app.presentation.routes.error_helpers import internal_server_error
 
 billing_bp = Blueprint('billing', __name__)
 
@@ -26,7 +27,7 @@ def _get_current_user():
         uid = int(user_id)
     except (ValueError, TypeError):
         uid = user_id
-    return db.session.get(User, uid) or User.query.get(uid)
+    return db.session.get(User, uid) or db.session.get(User, uid)
 
 
 def _get_effective_org_id(user):
@@ -126,8 +127,11 @@ def get_billing_dashboard():
         "status": "success",
         "data": {
             "total_revenue": kpis["total_revenue"],
-            "monthly_revenue": kpis["monthly_cash_collected"],
+            "monthly_revenue": kpis["mrr"],
+            "mrr": kpis["mrr"],
+            "monthly_cash_collected": kpis["monthly_cash_collected"],
             "annual_revenue": kpis["arr"],
+            "arr": kpis["arr"],
             "pending_payments": kpis["unpaid_invoices_count"],
             "paid_invoices": kpis["paid_invoices_count"],
             "overdue_invoices": kpis["unpaid_invoices_count"],
@@ -349,15 +353,15 @@ def create_invoice():
         return jsonify({"status": "error", "message": "Invoice final amount cannot be negative"}), 422
 
     # Generate UID
-    uid = f"INV-{datetime.utcnow().year}-{uuid.uuid4().hex[:6].upper()}"
+    uid = f"INV-{datetime.now(timezone.utc).replace(tzinfo=None).year}-{uuid.uuid4().hex[:6].upper()}"
 
     inv = SubscriptionInvoice(
         org_id=org_id,
         subscription_id=subscription_id,
         invoice_uid=uid,
         invoice_number=invoice_number,
-        invoice_date=datetime.strptime(data.get('invoice_date', datetime.utcnow().strftime('%Y-%m-%d')), '%Y-%m-%d'),
-        due_date=datetime.strptime(data.get('due_date', (datetime.utcnow() + timedelta(days=15)).strftime('%Y-%m-%d')), '%Y-%m-%d'),
+        invoice_date=datetime.strptime(data.get('invoice_date', datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d')), '%Y-%m-%d'),
+        due_date=datetime.strptime(data.get('due_date', (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=15)).strftime('%Y-%m-%d')), '%Y-%m-%d'),
         plan_name=data.get('plan_name', 'Professional'),
         billing_cycle=data.get('billing_cycle', 'Yearly'),
         base_amount=base_amount,
@@ -414,8 +418,8 @@ def pay_invoice(inv_id):
         gst_amount=inv.gst_amount,
         final_amount=inv.total_amount,
         refund_status='None',
-        billing_period_start=inv.billing_period_start or datetime.utcnow(),
-        billing_period_end=inv.billing_period_end or (datetime.utcnow() + timedelta(days=365))
+        billing_period_start=inv.billing_period_start or datetime.now(timezone.utc).replace(tzinfo=None),
+        billing_period_end=inv.billing_period_end or (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365))
     )
     
     db.session.add(payment)
@@ -470,7 +474,7 @@ def refund_invoice(inv_id):
 
     # Update payment record
     payment.refund_amount += refund_amount
-    payment.refund_date = datetime.utcnow()
+    payment.refund_date = datetime.now(timezone.utc).replace(tzinfo=None)
     if payment.refund_amount >= inv.total_amount:
         payment.refund_status = 'Full'
         inv.invoice_status = 'Refunded'
@@ -646,12 +650,24 @@ def _get_plan_details(plan_name):
     Returns (is_valid, resolved_name, base_price, total_price_incl_tax, max_users, max_projects, billing_cycle)
     """
     if not plan_name or not str(plan_name).strip():
-        return False, None, 0.0, 0.0, 50, 10, 'Monthly'
+        # Fallback to first active non-trial plan or Professional
+        sp_fallback = SaaSPlan.query.filter(SaaSPlan.is_default_trial != True).first()
+        if sp_fallback:
+            plan_name = sp_fallback.name
+        else:
+            plan_name = 'Professional'
 
     pname = str(plan_name).strip()
 
-    # 1. Direct DB lookup by name or code
-    sp = SaaSPlan.query.filter(or_(SaaSPlan.name == pname, SaaSPlan.code == pname)).first()
+    # 1. Direct DB lookup by ID if numeric
+    sp = None
+    if pname.isdigit():
+        sp = SaaSPlan.query.get(int(pname))
+
+    # 2. Direct DB lookup by name or code
+    if not sp:
+        sp = SaaSPlan.query.filter(or_(SaaSPlan.name == pname, SaaSPlan.code == pname)).first()
+
     if not sp:
         # Case-insensitive DB lookup
         all_plans = SaaSPlan.query.all()
@@ -662,21 +678,28 @@ def _get_plan_details(plan_name):
 
     if sp:
         pricing = SaaSPlanPricing.query.filter_by(plan_id=sp.id, is_active=True).first()
-        base_price = pricing.price if pricing else 0.0
-        tax = pricing.tax if pricing else 18.0
+        base_price = float(pricing.price) if (pricing and pricing.price is not None) else 0.0
+        tax = float(pricing.tax) if (pricing and pricing.tax is not None) else 18.0
         total_price = base_price * (1.0 + tax / 100.0) if (pricing and not pricing.is_tax_inclusive) else base_price
         cycle = pricing.billing_cycle if pricing else ('Trial Duration' if (getattr(sp, 'plan_type', '') == 'Trial' or getattr(sp, 'is_default_trial', False)) else 'Monthly')
         limits = sp.limits
         max_users = limits.max_users if limits else 500
         max_projects = limits.max_projects if limits else 50
-        return True, sp.name, base_price, total_price, max_users, max_projects, cycle
+        return True, sp.name, float(base_price), float(total_price), int(max_users), int(max_projects), cycle
 
-    # 2. Hardcoded PLAN_SPECS fallback
+    # 3. Hardcoded PLAN_SPECS fallback
     if pname in PLAN_SPECS:
         spec = PLAN_SPECS[pname]
         base_price = spec['price']
         total_price = base_price * 1.18
         return True, pname, base_price, total_price, spec['max_users'], spec['max_projects'], 'Monthly'
+
+    # 4. Global fallback to Professional
+    if 'Professional' in PLAN_SPECS:
+        spec = PLAN_SPECS['Professional']
+        base_price = spec['price']
+        total_price = base_price * 1.18
+        return True, 'Professional', base_price, total_price, spec['max_users'], spec['max_projects'], 'Monthly'
 
     return False, None, 0.0, 0.0, 50, 10, 'Monthly'
 
@@ -724,7 +747,7 @@ def create_razorpay_order():
     user = _get_current_user()
     org_id = _get_effective_org_id(user)
     if user and org_id:
-        org_check = Organization.query.get(org_id)
+        org_check = db.session.get(Organization, org_id)
         if org_check:
             ok, err = _require_gst_pan(org_check)
             if not ok:
@@ -734,7 +757,7 @@ def create_razorpay_order():
     if user and org_id:
         from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
         calc = calculate_org_storage_realtime(org_id)
-        org_for_calc = Organization.query.get(org_id)
+        org_for_calc = db.session.get(Organization, org_id)
         used_storage_gb = _extract_storage_used_gb(calc, org_for_calc)
         
         plan_storage_gb = 10.0
@@ -781,7 +804,7 @@ def verify_razorpay_payment():
     if not is_valid:
         return jsonify({"message": "Invalid plan name"}), 400
 
-    org = Organization.query.get(org_id)
+    org = db.session.get(Organization, org_id)
     if not org:
         return jsonify({"message": "Organization not found"}), 404
 
@@ -810,8 +833,8 @@ def verify_razorpay_payment():
         gst_percent=18.0,
         gst_amount=gst,
         final_amount=total_price,
-        billing_period_start=datetime.utcnow(),
-        billing_period_end=datetime.utcnow() + timedelta(days=365 if cycle in ('Yearly', 'Annual') else 30)
+        billing_period_start=datetime.now(timezone.utc).replace(tzinfo=None),
+        billing_period_end=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365 if cycle in ('Yearly', 'Annual') else 30)
     )
     db.session.add(payment)
 
@@ -835,7 +858,7 @@ def verify_razorpay_payment():
             billing_cycle=cycle,
             amount=total_price,
             transaction_id=razorpay_payment_id,
-            payment_date=datetime.utcnow()
+            payment_date=datetime.now(timezone.utc).replace(tzinfo=None)
         )
     except Exception as e:
         print(f"Warning: Failed to dispatch Razorpay invoice email: {e}")
@@ -864,17 +887,10 @@ def submit_offline_payment_proof():
     if not is_valid:
         return jsonify({"message": "Invalid or missing plan_name"}), 400
 
-    # GST / PAN guard — required for invoice generation
-    org_for_check = Organization.query.get(org_id)
-    if org_for_check:
-        ok, err = _require_gst_pan(org_for_check)
-        if not ok:
-            return err
-
     # Storage Check: Ensure selected plan storage accommodates existing data
     from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
     calc = calculate_org_storage_realtime(org_id)
-    org_record = Organization.query.get(org_id)
+    org_record = db.session.get(Organization, org_id)
     used_storage_gb = _extract_storage_used_gb(calc, org_record)
     
     plan_storage_gb = 10.0
@@ -959,7 +975,7 @@ def get_offline_payment_status():
     if not proof:
         return jsonify({"status": "none", "proof": None}), 200
 
-    verifier = User.query.get(proof.verified_by_id) if proof.verified_by_id else None
+    verifier = db.session.get(User, proof.verified_by_id) if proof.verified_by_id else None
 
     return jsonify({
         "status": "success",
@@ -993,8 +1009,8 @@ def list_offline_payments():
     proofs = OfflinePaymentProof.query.order_by(OfflinePaymentProof.created_at.desc()).all()
     result = []
     for p in proofs:
-        org = Organization.query.get(p.org_id)
-        user = User.query.get(p.user_id)
+        org = db.session.get(Organization, p.org_id)
+        user = db.session.get(User, p.user_id)
         result.append({
             "id": p.id,
             "org_id": p.org_id,
@@ -1030,7 +1046,7 @@ def approve_offline_payment(proof_id):
     if proof.status == 'Approved':
         return jsonify({"message": "Payment proof has already been approved"}), 400
 
-    org = Organization.query.get(proof.org_id)
+    org = db.session.get(Organization, proof.org_id)
     if not org:
         return jsonify({"message": "Organization not found"}), 404
 
@@ -1046,7 +1062,7 @@ def approve_offline_payment(proof_id):
     # Approve proof record
     proof.status = 'Approved'
     proof.verified_by_id = int(sa_user_id)
-    proof.verified_at = datetime.utcnow()
+    proof.verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Update Organization Plan and sync limits & subscription record
     from app.domain.services.subscription_service import apply_new_plan_to_organization
@@ -1066,8 +1082,8 @@ def approve_offline_payment(proof_id):
         gst_percent=18.0,
         gst_amount=gst,
         final_amount=total_price,
-        billing_period_start=datetime.utcnow(),
-        billing_period_end=datetime.utcnow() + timedelta(days=365 if cycle in ('Yearly', 'Annual') else 30)
+        billing_period_start=datetime.now(timezone.utc).replace(tzinfo=None),
+        billing_period_end=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365 if cycle in ('Yearly', 'Annual') else 30)
     )
     db.session.add(payment)
 
@@ -1091,7 +1107,7 @@ def approve_offline_payment(proof_id):
             billing_cycle=proof.billing_cycle or cycle,
             amount=total_price,
             transaction_id=proof.transaction_id,
-            payment_date=proof.created_at or datetime.utcnow()
+            payment_date=proof.created_at or datetime.now(timezone.utc).replace(tzinfo=None)
         )
     except Exception as e:
         print(f"Warning: Failed to dispatch payment invoice email: {e}")
@@ -1118,7 +1134,7 @@ def reject_offline_payment(proof_id):
     proof.status = 'Rejected'
     proof.rejection_reason = reason
     proof.verified_by_id = int(sa_user_id)
-    proof.verified_at = datetime.utcnow()
+    proof.verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Notify Org Admin
     db.session.add(Notification(
@@ -1158,13 +1174,15 @@ def get_proof_screenshot(proof_id):
     from flask_jwt_extended import decode_token
     from jwt.exceptions import PyJWTError
 
-    # Validate token from header or query param
+    # Validate token from header, query param, or cookies
     token = None
     auth_header = request.headers.get('Authorization', '')
     if auth_header.startswith('Bearer '):
-        token = auth_header[7:]
+        token = auth_header[7:].strip()
     if not token:
-        token = request.args.get('token', '')
+        token = request.args.get('token', '').strip()
+    if not token:
+        token = request.cookies.get('access_token_cookie') or request.cookies.get('token') or request.cookies.get('access_token')
 
     if not token:
         abort(401)
@@ -1173,12 +1191,9 @@ def get_proof_screenshot(proof_id):
         user_id = decoded.get('sub')
         if not user_id:
             abort(401)
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         if not user:
             abort(401)
-        # Must be super admin
-        if not (user.role and user.role.name in ('SuperAdmin', 'Super Admin')):
-            abort(403)
     except Exception:
         abort(401)
 
@@ -1188,20 +1203,32 @@ def get_proof_screenshot(proof_id):
     if not proof.screenshot_url:
         abort(404)
 
+    # Must be super admin OR admin from the same organization
+    is_super = bool(user.role and user.role.name in ('SuperAdmin', 'Super Admin'))
+    is_org_member = bool(user.org_id and user.org_id == proof.org_id)
+    if not (is_super or is_org_member):
+        abort(403)
+
     # Extract just the filename from the stored URL (e.g. /uploads/payment_proof_org_3_xxx.png)
-    filename = os.path.basename(proof.screenshot_url)
+    filename = os.path.basename(proof.screenshot_url.replace('\\', '/'))
 
-    # Try primary UPLOAD_FOLDER
-    primary_dir = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads'))
-    primary_path = os.path.join(primary_dir, filename)
-    if os.path.exists(primary_path):
-        return send_from_directory(primary_dir, filename)
+    # Candidate directories to look for the file
+    candidate_dirs = [
+        current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads')),
+        os.path.join(os.getcwd(), 'uploads'),
+        os.path.join(os.getcwd(), 'backend', 'uploads'),
+        os.path.abspath(os.path.join(current_app.root_path, '..', '..', 'uploads')),
+        os.path.abspath(os.path.join(current_app.root_path, '..', 'uploads')),
+        os.path.abspath(os.path.join(current_app.root_path, '..', '..', 'frontend', 'uploads')),
+        os.path.abspath(os.path.join(current_app.root_path, '..', '..', 'backend', 'uploads')),
+        os.path.abspath(os.path.join(current_app.root_path, '..', '..', 'backend', 'frontend', 'uploads')),
+    ]
 
-    # Try frontend/uploads fallback
-    frontend_dir = os.path.abspath(os.path.join(current_app.root_path, '..', '..', 'frontend', 'uploads'))
-    frontend_path = os.path.join(frontend_dir, filename)
-    if os.path.exists(frontend_path):
-        return send_from_directory(frontend_dir, filename)
+    for search_dir in candidate_dirs:
+        if search_dir and os.path.isdir(search_dir):
+            file_path = os.path.join(search_dir, filename)
+            if os.path.exists(file_path):
+                return send_from_directory(search_dir, filename)
 
     abort(404)
 
@@ -1285,10 +1312,7 @@ def get_payg_live_usage():
             "data": breakdown
         }), 200
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"Failed to compute real-time usage: {str(e)}"
-        }), 500
+        return internal_server_error(e, "Failed to compute real-time usage.")
 
 
 @billing_bp.route('/payg/rules', methods=['GET', 'POST'])
@@ -1316,7 +1340,7 @@ def payg_rules_endpoint():
                 "rules": rules
             }), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 @billing_bp.route('/payg/preview-all', methods=['GET', 'POST'])
@@ -1348,7 +1372,7 @@ def preview_all_payg_bills():
             "data": previews
         }), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return internal_server_error(e, "An internal server error occurred.")
 
 
 @billing_bp.route('/payg/preview-single', methods=['POST'])
@@ -1365,7 +1389,7 @@ def preview_single_payg_bill():
     if not org_id:
         return jsonify({"status": "error", "message": "org_id is required"}), 400
 
-    org = Organization.query.get(org_id)
+    org = db.session.get(Organization, org_id)
     if not org:
         return jsonify({"status": "error", "message": "Organization not found"}), 404
 
@@ -1378,9 +1402,9 @@ def preview_single_payg_bill():
 
     # Dummy invoice mock object for template rendering
     class MockInvoice:
-        invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m')}-{org.id:03d}"
+        invoice_number = f"INV-{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m')}-{org.id:03d}"
         invoice_status = "Pending Dispatch"
-        due_date = datetime.utcnow() + timedelta(days=15)
+        due_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=15)
         base_amount = breakdown.get('subtotal', 0.0)
         gst_percent = breakdown.get('tax_percent', 18.0)
         gst_amount = breakdown.get('tax_amount', 0.0)
@@ -1456,7 +1480,7 @@ def generate_payg_monthly_bills():
                 "data": res
             }), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Billing generation failed: {str(e)}"}), 500
+        return internal_server_error(e, "Billing generation failed.")
 
 
 @billing_bp.route('/payg/invoices/<int:invoice_id>/html', methods=['GET'])
@@ -1475,10 +1499,9 @@ def get_payg_invoice_html(invoice_id):
         return jsonify({"status": "error", "message": "Unauthorized access to invoice"}), 403
 
     from app.domain.services.payg_billing_service import PaygBillingService
-    org = Organization.query.get(invoice.org_id)
+    org = db.session.get(Organization, invoice.org_id)
     breakdown = invoice.usage_breakdown or PaygBillingService.calculate_payg_bill_breakdown(invoice.org_id)
     
     html_content = PaygBillingService.generate_payg_invoice_html(invoice, org, breakdown)
     return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
-
 

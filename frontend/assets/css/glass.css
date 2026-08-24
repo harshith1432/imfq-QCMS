@@ -111,9 +111,10 @@
 
 .glass-sidebar {
     width: var(--ds-sidebar-width, 260px);
-    background: var(--ds-bg-surface) !important;
+    background: #002347 !important;
+    background-color: #002347 !important;
     backdrop-filter: blur(var(--ds-glass-blur)) !important;
-    border-right: 1px solid var(--ds-border-color) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
     height: 100vh;
     position: fixed;
     left: 0;
@@ -123,7 +124,7 @@
     flex-direction: column;
     z-index: 1001;
     transition: all 0.3s ease;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
+    box-shadow: 4px 0 24px rgba(0, 15, 35, 0.35);
 }
 
 .sidebar-brand {
@@ -131,7 +132,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid var(--ds-border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .brand-icon {
@@ -431,7 +432,7 @@ select.ds-select:focus {
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: none;
     }
 }
 
@@ -851,56 +852,72 @@ select.ds-select:focus {
     backdrop-filter: blur(12px);
     border: 1px solid var(--ds-border-color);
     border-radius: var(--ds-radius-xl);
-    padding: var(--ds-space-6) var(--ds-space-8);
+    padding: var(--ds-space-4) var(--ds-space-6);
     position: relative;
-    overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    max-width: 100%;
+}
+
+.ds-stepper::-webkit-scrollbar {
+    display: none;
 }
 
 .ds-stepper .step {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--ds-space-2);
+    gap: 4px;
     position: relative;
     z-index: 2;
     flex: 0 0 auto;
-    width: 60px;
+    min-width: 42px;
 }
 
 .ds-stepper .step-circle {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: var(--ds-bg-surface);
     border: 2px solid var(--ds-border-color);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: var(--ds-text-secondary);
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+.ds-stepper .step-circle i,
+.ds-stepper .step-circle svg {
+    width: 14px;
+    height: 14px;
+}
+
 .ds-stepper .step-label {
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     font-weight: 600;
     color: var(--ds-text-tertiary);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     transition: all 0.3s ease;
     white-space: nowrap;
+    text-align: center;
 }
 
 .ds-stepper .step-line {
     flex: 1 1 auto;
+    min-width: 8px;
     height: 2px;
     background: var(--ds-border-color);
     position: relative;
-    top: -12px;
+    top: -10px;
     z-index: 1;
-    margin: 0 -15px;
+    margin: 0 -4px;
 }
 
 .ds-stepper .step.active .step-circle {
@@ -928,6 +945,39 @@ select.ds-select:focus {
 
 .ds-stepper .step.completed+.step-line {
     background: #10b981;
+}
+
+@media (max-width: 768px) {
+    .ds-stepper {
+        padding: 10px 8px !important;
+        border-radius: 14px !important;
+        gap: 0 !important;
+        justify-content: space-between !important;
+    }
+    .ds-stepper .step {
+        min-width: 28px !important;
+        gap: 2px !important;
+    }
+    .ds-stepper .step-circle {
+        width: 26px !important;
+        height: 26px !important;
+        font-size: 0.7rem !important;
+        border-width: 1.5px !important;
+    }
+    .ds-stepper .step-circle i,
+    .ds-stepper .step-circle svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+    .ds-stepper .step-label {
+        font-size: 0.58rem !important;
+        letter-spacing: 0 !important;
+    }
+    .ds-stepper .step-line {
+        min-width: 4px !important;
+        margin: 0 -3px !important;
+        top: -8px !important;
+    }
 }
 
 /* --- Premium KPI & Activity Styling --- */
@@ -1051,38 +1101,34 @@ select.ds-select:focus {
 /* Dropdown stacking fix for tables — elevate open row, isolate others */
 .table-responsive {
     min-height: 220px !important;
-    -ms-overflow-style: none !important;  /* IE & Edge */
-    scrollbar-width: none !important;     /* Firefox */
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(99, 102, 241, 0.35) transparent !important;
 }
 
 .table-responsive::-webkit-scrollbar {
-    display: none !important;             /* Chrome, Safari, Opera */
-    width: 0 !important;
-    height: 0 !important;
+    display: block !important;
+    height: 6px !important;
+    width: 6px !important;
 }
 
-.glass-card:has(.table-responsive),
-.glass-card:has(.dropdown-menu.show),
-.card:has(.dropdown-menu.show),
-div:has(> .table-responsive) {
-    overflow: visible !important;
+.table-responsive::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 4px;
 }
 
-/* Elevate the entire row & table cell that contains an open dropdown above subsequent rows */
-.ds-table tr:has(.dropdown.show),
-.ds-table tr:has(.dropdown-menu.show),
-.ds-table td:has(.dropdown-menu.show),
-tr:has(.dropdown-menu.show),
-td:has(.dropdown-menu.show) {
-    position: relative !important;
-    z-index: 99999 !important;
+.table-responsive::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.35);
+    border-radius: 4px;
 }
 
-.table-responsive:has(.dropdown.show),
-.table-responsive:has(.dropdown-menu.show),
-.table-responsive:has(.show),
-.table-responsive:has(.dropdown) {
-    overflow: visible !important;
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.65);
 }
 
 /* Force dropdown to always render on top layer of the web page */
@@ -1149,6 +1195,34 @@ td:has(.dropdown-menu.show) {
 .ds-badge.gray {
     background: rgba(100, 116, 139, 0.1);
     color: #64748b;
+}
+
+.ds-badge.gold,
+.ds-badge.amber {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+}
+
+.ds-badge.indigo,
+.ds-badge.violet {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+}
+
+.ds-badge.teal,
+.ds-badge.emerald {
+    background: rgba(20, 184, 166, 0.12);
+    color: #0d9488;
+}
+
+.ds-badge.rose {
+    background: rgba(244, 63, 94, 0.12);
+    color: #e11d48;
+}
+
+.ds-badge.slate {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
 }
 
 .ds-badge-dot {
@@ -2288,4 +2362,69 @@ body.sidebar-collapsed .sidebar-toggle-btn {
 #orgKpiGrid .position-absolute,
 #licKpiGrid .position-absolute {
     display: none !important;
+}
+
+/* --- Mobile Responsive Floating Helpdesk & Chat Widgets (< 768px) --- */
+@media (max-width: 768px) {
+    /* Prevent cards, buttons, and workstation views from being blocked by floating widgets */
+    body,
+    .app-main,
+    .ds-main-content,
+    .main-content,
+    .app-container,
+    .dashboard-body,
+    main {
+        padding-bottom: 95px !important;
+    }
+
+    #helpdesk-widget {
+        bottom: calc(var(--mobile-nav-height, 64px) + 12px) !important;
+        right: 4.25rem !important;
+        z-index: 1045 !important;
+    }
+    #ai-chat-widget {
+        bottom: calc(var(--mobile-nav-height, 64px) + 12px) !important;
+        right: 1rem !important;
+        z-index: 1045 !important;
+    }
+    .helpdesk-toggle-btn,
+    .chat-toggle-btn {
+        width: 44px !important;
+        height: 44px !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+    }
+    .helpdesk-toggle-btn i,
+    .chat-toggle-btn i {
+        width: 20px !important;
+        height: 20px !important;
+    }
+    .helpdesk-window,
+    .chat-window {
+        position: fixed !important;
+        top: 10px !important;
+        bottom: 74px !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-width: calc(100vw - 20px) !important;
+        height: auto !important;
+        max-height: calc(100vh - 84px) !important;
+        border-radius: 16px !important;
+        z-index: 100050 !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+    }
+    .helpdesk-header,
+    .chat-header {
+        padding: 0.85rem 1rem !important;
+    }
+    .helpdesk-tabs {
+        padding: 0 4px !important;
+    }
+    .helpdesk-tab-btn {
+        padding: 0.5rem !important;
+        font-size: 0.82rem !important;
+    }
+    .helpdesk-content {
+        padding: 0.85rem 1rem !important;
+    }
 }

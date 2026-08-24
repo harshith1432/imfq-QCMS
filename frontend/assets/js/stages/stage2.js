@@ -107,26 +107,28 @@ const Stage2 = {
                             <p class="text-xs text-muted mb-0 mt-1 ms-1">Confirm whether the current SOP/work standard is actually being followed.</p>
                         </div>
                     </div>
-                    <div class="ds-card-body p-4">
-                        <div class="w-100" style="overflow: visible;">
-                            <table class="table table-bordered align-middle text-sm mb-0 w-100">
+                    <div class="ds-card-body p-3 p-sm-4">
+                        <div class="std-verification-wrap mb-0" style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--ds-border-color); overflow: visible;">
+                            <table class="table table-bordered align-middle text-sm mb-0 w-100 std-verification-table" style="width: 100%; min-width: 0 !important; table-layout: auto;">
                                 <thead style="background:var(--ds-surface-raised)">
                                     <tr>
-                                        <th class="ds-tooltip-trigger" title="Standard Type: SOP, Quality Specification, Control Plan, or PFMEA">Standard Type</th>
-                                        <th class="ds-tooltip-trigger" title="Available?: Confirm whether documented standard exists at workstation">Available?</th>
-                                        <th class="ds-tooltip-trigger" title="Followed?: Confirm whether operators follow standard in daily work">Followed?</th>
-                                        <th class="ds-tooltip-trigger" title="Deviation Found?: Flag whether deviation from standard was observed">Deviation Found?</th>
-                                        <th class="ds-tooltip-trigger" title="Details / Findings: Audit findings and deviation gap details">Details / Findings</th>
+                                        <th style="width: 15%; min-width: 75px;" class="ds-tooltip-trigger" title="Standard Type: SOP, Quality Specification, Control Plan, or PFMEA">Standard Type</th>
+                                        <th style="width: 10%; min-width: 60px; text-align:center;" class="ds-tooltip-trigger" title="Available?: Confirm whether documented standard exists at workstation">Available?</th>
+                                        <th style="width: 10%; min-width: 60px; text-align:center;" class="ds-tooltip-trigger" title="Followed?: Confirm whether operators follow standard in daily work">Followed?</th>
+                                        <th style="width: 15%; min-width: 80px; text-align:center;" class="ds-tooltip-trigger" title="Deviation Found?: Flag whether deviation from standard was observed">Deviation Found?</th>
+                                        <th style="width: 50%; min-width: 140px;" class="ds-tooltip-trigger" title="Details / Findings: Audit findings and deviation gap details">Details / Findings</th>
                                     </tr>
+                                </thead>
+                                <tbody>
                                     <tr>
                                         <td class="fw-bold"><span title="Standard Operating Procedure (SOP)" style="cursor: help; border-bottom: 1px dotted var(--ds-primary);" data-bs-toggle="tooltip">SOP</span></td>
-                                        <td><input type="checkbox" id="sv_sop_avail"></td>
-                                        <td><input type="checkbox" id="sv_sop_follow" onchange="StageModules[2].onStandardChange('sop')"></td>
-                                        <td><input type="checkbox" id="sv_sop_dev" onchange="StageModules[2].onStandardChange('sop'); StageModules[2].onDeviationChange();"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_sop_avail" class="form-check-input"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_sop_follow" class="form-check-input" onchange="StageModules[2].onStandardChange('sop')"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_sop_dev" class="form-check-input" onchange="StageModules[2].onStandardChange('sop'); StageModules[2].onDeviationChange();"></td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <input type="text" class="ds-input" id="sv_sop_details" placeholder="Describe deviation..." required>
-                                                <button type="button" id="btn_analyze_sop_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap;" onclick="StageModules[2].openDeviationPage('sop')">
+                                                <input type="text" class="ds-input flex-grow-1" id="sv_sop_details" placeholder="Describe deviation..." required style="min-width:0; width:100%; font-size:0.8rem; padding:4px 8px;">
+                                                <button type="button" id="btn_analyze_sop_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px;" onclick="StageModules[2].openDeviationPage('sop')">
                                                     Analyze Deviation
                                                 </button>
                                             </div>
@@ -134,13 +136,13 @@ const Stage2 = {
                                     </tr>
                                     <tr>
                                         <td class="fw-bold"><span title="Technical Work & Quality Specifications" style="cursor: help; border-bottom: 1px dotted var(--ds-primary);" data-bs-toggle="tooltip">Specification</span></td>
-                                        <td><input type="checkbox" id="sv_spec_avail"></td>
-                                        <td><input type="checkbox" id="sv_spec_follow" onchange="StageModules[2].onStandardChange('spec')"></td>
-                                        <td><input type="checkbox" id="sv_spec_dev" onchange="StageModules[2].onStandardChange('spec'); StageModules[2].onDeviationChange();"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_spec_avail" class="form-check-input"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_spec_follow" class="form-check-input" onchange="StageModules[2].onStandardChange('spec')"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_spec_dev" class="form-check-input" onchange="StageModules[2].onStandardChange('spec'); StageModules[2].onDeviationChange();"></td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <input type="text" class="ds-input" id="sv_spec_details" placeholder="Describe deviation..." required>
-                                                <button type="button" id="btn_analyze_spec_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap;" onclick="StageModules[2].openDeviationPage('spec')">
+                                                <input type="text" class="ds-input flex-grow-1" id="sv_spec_details" placeholder="Describe deviation..." required style="min-width:0; width:100%; font-size:0.8rem; padding:4px 8px;">
+                                                <button type="button" id="btn_analyze_spec_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px;" onclick="StageModules[2].openDeviationPage('spec')">
                                                     Analyze Deviation
                                                 </button>
                                             </div>
@@ -148,13 +150,13 @@ const Stage2 = {
                                     </tr>
                                     <tr>
                                         <td class="fw-bold"><span title="Quality Control & Process Monitoring Plan (CP)" style="cursor: help; border-bottom: 1px dotted var(--ds-primary);" data-bs-toggle="tooltip">Control Plan</span></td>
-                                        <td><input type="checkbox" id="sv_cp_avail"></td>
-                                        <td><input type="checkbox" id="sv_cp_follow" onchange="StageModules[2].onStandardChange('cp')"></td>
-                                        <td><input type="checkbox" id="sv_cp_dev" onchange="StageModules[2].onStandardChange('cp'); StageModules[2].onDeviationChange();"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_cp_avail" class="form-check-input"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_cp_follow" class="form-check-input" onchange="StageModules[2].onStandardChange('cp')"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_cp_dev" class="form-check-input" onchange="StageModules[2].onStandardChange('cp'); StageModules[2].onDeviationChange();"></td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <input type="text" class="ds-input" id="sv_cp_details" placeholder="Describe deviation..." required>
-                                                <button type="button" id="btn_analyze_cp_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap;" onclick="StageModules[2].openDeviationPage('cp')">
+                                                <input type="text" class="ds-input flex-grow-1" id="sv_cp_details" placeholder="Describe deviation..." required style="min-width:0; width:100%; font-size:0.8rem; padding:4px 8px;">
+                                                <button type="button" id="btn_analyze_cp_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px;" onclick="StageModules[2].openDeviationPage('cp')">
                                                     Analyze Deviation
                                                 </button>
                                             </div>
@@ -162,18 +164,19 @@ const Stage2 = {
                                     </tr>
                                     <tr>
                                         <td class="fw-bold"><span title="Process Failure Mode and Effects Analysis (PFMEA)" style="cursor: help; border-bottom: 1px dotted var(--ds-primary);" data-bs-toggle="tooltip">PFMEA</span></td>
-                                        <td><input type="checkbox" id="sv_pfmea_avail"></td>
-                                        <td><input type="checkbox" id="sv_pfmea_review" onchange="StageModules[2].onStandardChange('pfmea')"></td>
-                                        <td>-</td>
+                                        <td class="text-center"><input type="checkbox" id="sv_pfmea_avail" class="form-check-input"></td>
+                                        <td class="text-center"><input type="checkbox" id="sv_pfmea_review" class="form-check-input" onchange="StageModules[2].onStandardChange('pfmea')"></td>
+                                        <td class="text-center">-</td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <input type="text" class="ds-input" id="sv_pfmea_details" placeholder="Findings..." required>
-                                                <button type="button" id="btn_analyze_pfmea_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap;" onclick="StageModules[2].openDeviationPage('pfmea')">
+                                                <input type="text" class="ds-input flex-grow-1" id="sv_pfmea_details" placeholder="Findings..." required style="min-width:0; width:100%; font-size:0.8rem; padding:4px 8px;">
+                                                <button type="button" id="btn_analyze_pfmea_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px;" onclick="StageModules[2].openDeviationPage('pfmea')">
                                                     Analyze Deviation
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -194,10 +197,10 @@ const Stage2 = {
                         <div class="row g-3 mb-4">
                             <div class="col-12">
                                 <label class="ds-label">Upload Raw Data (Excel/CSV/PDF) <span class="text-xs text-muted fw-normal">(Optional - Or enter observations manually in table below)</span></label>
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <input type="file" class="ds-input py-1" id="dc_upload" accept=".csv" style="flex-grow:1;" onchange="StageModules[2].handleCSVUpload(this)">
-                                    <button type="button" class="ds-btn ds-btn-ghost text-primary py-1 px-2" style="font-size:0.75rem; white-space:nowrap; border:1px solid var(--ds-primary);" onclick="StageModules[2].downloadTemplate()">
-                                        <i data-lucide="download" style="width:13px;height:13px;margin-right:4px;vertical-align:text-bottom;"></i> Download CSV Template
+                                <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 mb-2">
+                                    <input type="file" class="ds-input py-1" id="dc_upload" accept=".csv" style="flex-grow:1; min-width:0;" onchange="StageModules[2].handleCSVUpload(this)">
+                                    <button type="button" class="ds-btn ds-btn-ghost text-primary py-2 py-sm-1 px-3 d-flex align-items-center justify-content-center" style="font-size:0.75rem; white-space:nowrap; border:1px solid var(--ds-primary);" onclick="StageModules[2].downloadTemplate()">
+                                        <i data-lucide="download" style="width:13px;height:13px;margin-right:4px;flex-shrink:0;"></i> Download CSV Template
                                     </button>
                                 </div>
                                 <div class="alert p-2 mb-0 mt-2 text-xs" style="background:rgba(var(--ds-primary-rgb),.05); border:1px solid rgba(var(--ds-primary-rgb),.15); border-radius:6px; line-height:1.4;">
@@ -382,12 +385,14 @@ const Stage2 = {
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <label class="ds-label mb-0 ds-tooltip-trigger" title="Stratification Categories: Break down problem by operational factors (Shift, Location, Machine, Operator)">Break down problem by categories (Auto-generated from logs or manually input)</label>
                         </div>
-                        <div id="stratContainer" class="mb-3">
-                            <div class="strat-row mb-1" style="display:grid;grid-template-columns:1fr 2fr 1fr 32px;gap:.5rem;align-items:end;">
-                                <small class="ds-label fw-bold ds-tooltip-trigger" title="Type: Dimension type (e.g. By Shift, By Location, By Machine)">Type</small>
-                                <small class="ds-label fw-bold ds-tooltip-trigger" title="Category Segment: Specific segment factor under observation">Category Segment</small>
-                                <small class="ds-label fw-bold ds-tooltip-trigger" title="Value / Quantity: Defect count or metric value logged for this category segment">Value / Quantity</small>
-                                <span></span>
+                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <div id="stratContainer" class="mb-3" style="min-width: 520px;">
+                                <div class="strat-row mb-1" style="display:grid;grid-template-columns:1fr 2fr 1fr 32px;gap:.5rem;align-items:end;">
+                                    <small class="ds-label fw-bold ds-tooltip-trigger" title="Type: Dimension type (e.g. By Shift, By Location, By Machine)">Type</small>
+                                    <small class="ds-label fw-bold ds-tooltip-trigger" title="Category Segment: Specific segment factor under observation">Category Segment</small>
+                                    <small class="ds-label fw-bold ds-tooltip-trigger" title="Value / Quantity: Defect count or metric value logged for this category segment">Value / Quantity</small>
+                                    <span></span>
+                                </div>
                             </div>
                         </div>
 
@@ -413,12 +418,14 @@ const Stage2 = {
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <label class="ds-label mb-0 fw-bold ds-tooltip-trigger" title="Defect/Failure Categories: Categorized defect frequency tally derived from raw data log">Defect/Failure Categories (Auto-derived from logs)</label>
                                 </div>
-                                <div id="paretoContainer" class="mb-3" style="max-height: 250px; overflow-y: auto;">
-                                    <div class="pareto-row mb-1" style="display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:.5rem;align-items:end;">
-                                        <small class="ds-label fw-bold ds-tooltip-trigger" title="Category Name: Name of defect or problem category">Category Name</small>
-                                        <small class="ds-label fw-bold ds-tooltip-trigger" title="Count / Value: Number of defect occurrences logged">Count / Value</small>
-                                        <small class="ds-label fw-bold ds-tooltip-trigger" title="Cum. %: Cumulative percentage contribution to total defects">Cum. %</small>
-                                        <span></span>
+                                <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                                    <div id="paretoContainer" class="mb-3" style="max-height: 250px; overflow-y: auto; min-width: 480px;">
+                                        <div class="pareto-row mb-1" style="display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:.5rem;align-items:end;">
+                                            <small class="ds-label fw-bold ds-tooltip-trigger" title="Category Name: Name of defect or problem category">Category Name</small>
+                                            <small class="ds-label fw-bold ds-tooltip-trigger" title="Count / Value: Number of defect occurrences logged">Count / Value</small>
+                                            <small class="ds-label fw-bold ds-tooltip-trigger" title="Cum. %: Cumulative percentage contribution to total defects">Cum. %</small>
+                                            <span></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

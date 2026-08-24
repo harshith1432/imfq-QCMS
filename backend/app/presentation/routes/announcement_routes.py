@@ -1,6 +1,6 @@
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
@@ -16,21 +16,41 @@ announcement_bp = Blueprint('announcements', __name__, url_prefix='/api/announce
 
 # ─── Permission helpers ────────────────────────────────────────────────────────
 
-ALLOWED_ROLES = ('SuperAdmin', 'Owner', 'Platform Admin', 'Communications Manager', 'Support Manager')
+ALLOWED_ROLES = ('SuperAdmin', 'Owner', 'Platform Admin', 'Communications Manager', 'Support Manager', 'Admin')
 READ_ROLES = ALLOWED_ROLES + ('Read Only',)
 
 def get_current_user():
     uid = get_jwt_identity()
+    try:
+        uid = int(uid)
+    except (ValueError, TypeError):
+        pass
     return db.session.get(User, uid)
 
+def _is_admin_user(user):
+    if not user:
+        return False
+    role_name = user.role.name if user.role else ''
+    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
+    is_sa_flag = getattr(user, 'is_super_admin', False) or user.org_id is None
+    return role_name in ALLOWED_ROLES or is_sa_custom or is_sa_flag
+
+def _can_read(user):
+    if not user:
+        return False
+    role_name = user.role.name if user.role else ''
+    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
+    is_sa_flag = getattr(user, 'is_super_admin', False) or user.org_id is None
+    return role_name in READ_ROLES or is_sa_custom or is_sa_flag
+
 def require_admin(user):
-    if not user or not user.role or user.role.name not in ALLOWED_ROLES:
+    if not _is_admin_user(user):
         return jsonify({"message": "Insufficient permissions"}), 403
     return None
 
 def ann_number():
     suffix = ''.join(random.choices(string.digits, k=4))
-    return f"ANN-{datetime.utcnow().strftime('%Y%m%d')}-{suffix}"
+    return f"ANN-{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}-{suffix}"
 
 def log_ann_event(announcement_id, user_id, action, details=None):
     audit = AnnouncementAudit(
@@ -118,7 +138,7 @@ def deliver_in_app(announcement, user_ids):
             user_id=uid,
             title=f"📢 {announcement.title}",
             message=announcement.summary or announcement.body or "",
-            link=f"/admin/super-admin.html?view=announcements&ann={announcement.id}"
+            link=f"/admin / super-admin.html?view=announcements&ann={announcement.id}"
         )
         db.session.add(notif)
         delivery = AnnouncementDelivery(
@@ -127,7 +147,7 @@ def deliver_in_app(announcement, user_ids):
             user_id=uid,
             channel='in_app',
             status='Sent',
-            sent_at=datetime.utcnow()
+            sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(delivery)
 
@@ -155,7 +175,7 @@ def deliver_email(announcement, user_ids):
             user_id=uid,
             channel='email',
             status='Queued',
-            sent_at=datetime.utcnow()
+            sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         db.session.add(delivery)
         delivery_records.append(uid)
@@ -199,7 +219,7 @@ def deliver_email(announcement, user_ids):
                             {ann.body}
                         </div>
                         <div style="margin: 25px 0;">
-                            <a href="{EmailUtils._get_app_url()}/admin/super-admin.html?view=announcements&ann={ann.id}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display:inline-block;">View Announcement</a>
+                            <a href="{EmailUtils._get_app_url()}/admin / super-admin.html?view=announcements&ann={ann.id}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display:inline-block;">View Announcement</a>
                         </div>
                     """
                     html = DocumentBrandingService.wrap_email_html(body_html, title=ann.title, org_id=user.org_id)
@@ -354,10 +374,10 @@ def user_matches_announcement(user, ann):
 @jwt_required()
 def get_dashboard():
     user = get_current_user()
-    if not user or not user.role or user.role.name not in READ_ROLES:
+    if not _can_read(user):
         return jsonify({"message": "Unauthorized"}), 403
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     thirty_ago = now - timedelta(days=30)
 
     total = Announcement.query.count()
@@ -374,8 +394,8 @@ def get_dashboard():
     total_clicked = db.session.query(db.func.sum(Announcement.total_clicked)).scalar() or 0
 
     if total_delivered > 0:
-        read_pct = round(total_read / total_delivered * 100, 1)
-        unread_pct = round((total_delivered - total_read) / total_delivered * 100, 1)
+        read_pct = round((total_read / total_delivered * 100.0), 1) if total_delivered > 0 else 0.0
+        unread_pct = round(((total_delivered - total_read) / total_delivered * 100.0), 1) if total_delivered > 0 else 0.0
     else:
         read_pct = 0.0
         unread_pct = 0.0
@@ -439,7 +459,7 @@ def get_dashboard():
 @jwt_required()
 def get_active_broadcasts():
     user = get_current_user()
-    if not user or not user.role or user.role.name not in READ_ROLES:
+    if not _can_read(user):
         return jsonify({"message": "Unauthorized"}), 403
 
     page = request.args.get('page', 1, type=int)
@@ -467,11 +487,12 @@ def get_active_broadcasts():
 
 # ─── List / Search ────────────────────────────────────────────────────────────
 
+@announcement_bp.route('', methods=['GET'])
 @announcement_bp.route('/', methods=['GET'])
 @jwt_required()
 def list_announcements():
     user = get_current_user()
-    if not user or not user.role or user.role.name not in READ_ROLES:
+    if not _can_read(user):
         return jsonify({"message": "Unauthorized"}), 403
 
     page = request.args.get('page', 1, type=int)
@@ -524,7 +545,7 @@ def list_announcements():
 @jwt_required()
 def get_announcement(ann_id):
     user = get_current_user()
-    if not user or not user.role or user.role.name not in READ_ROLES:
+    if not _can_read(user):
         return jsonify({"message": "Unauthorized"}), 403
     ann = db.session.get(Announcement, ann_id)
     if not ann:
@@ -534,6 +555,7 @@ def get_announcement(ann_id):
 
 # ─── Create ───────────────────────────────────────────────────────────────────
 
+@announcement_bp.route('', methods=['POST'])
 @announcement_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_announcement():
@@ -583,7 +605,7 @@ def create_announcement():
         publish_at=publish_at,
         expires_at=expires_at,
         timezone=data.get('timezone', 'UTC'),
-        published_at=datetime.utcnow() if status == 'Published' else None
+        published_at=datetime.now(timezone.utc).replace(tzinfo=None) if status == 'Published' else None
     )
     db.session.add(ann)
     db.session.flush()
@@ -648,7 +670,7 @@ def update_announcement(ann_id):
                 target_value=str(rule.get('value'))
             ))
 
-    ann.updated_at = datetime.utcnow()
+    ann.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     log_ann_event(ann.id, user.id, 'UPDATED', {"changed_fields": list(data.keys())})
     db.session.commit()
     return jsonify({"status": "success", "data": ann_to_dict(ann), "message": "Announcement updated."}), 200
@@ -671,7 +693,7 @@ def publish_announcement(ann_id):
         return jsonify({"message": "Already published"}), 400
 
     ann.status = 'Published'
-    ann.published_at = datetime.utcnow()
+    ann.published_at = datetime.now(timezone.utc).replace(tzinfo=None)
     log_ann_event(ann.id, user.id, 'PUBLISHED')
 
     user_ids = resolve_audience(ann)
@@ -774,7 +796,7 @@ def unarchive_announcement(ann_id):
     if not ann:
         return jsonify({"message": "Not found"}), 404
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     pub_at = ann.publish_at.replace(tzinfo=None) if ann.publish_at and ann.publish_at.tzinfo else ann.publish_at
     exp_at = ann.expires_at.replace(tzinfo=None) if ann.expires_at and ann.expires_at.tzinfo else ann.expires_at
 
@@ -859,7 +881,7 @@ def delete_announcement(ann_id):
 @jwt_required()
 def get_delivery_status(ann_id):
     user = get_current_user()
-    if not user or not user.role or user.role.name not in READ_ROLES:
+    if not _can_read(user):
         return jsonify({"message": "Unauthorized"}), 403
 
     ann = db.session.get(Announcement, ann_id)
@@ -897,7 +919,7 @@ def get_delivery_status(ann_id):
 @jwt_required()
 def get_read_stats(ann_id):
     user = get_current_user()
-    if not user or not user.role or user.role.name not in READ_ROLES:
+    if not _can_read(user):
         return jsonify({"message": "Unauthorized"}), 403
 
     ann = db.session.get(Announcement, ann_id)
@@ -942,7 +964,7 @@ def mark_read(ann_id):
         return jsonify({"message": "Not found"}), 404
 
     existing = AnnouncementRead.query.filter_by(announcement_id=ann_id, user_id=user.id).first()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if existing:
         if not existing.read_at:
             existing.read_at = now
@@ -971,7 +993,7 @@ def mark_read(ann_id):
 @jwt_required()
 def get_ann_audit(ann_id):
     user = get_current_user()
-    if not user or not user.role or user.role.name not in READ_ROLES:
+    if not _can_read(user):
         return jsonify({"message": "Unauthorized"}), 403
 
     logs = AnnouncementAudit.query.filter_by(announcement_id=ann_id).order_by(AnnouncementAudit.created_at.desc()).all()
@@ -1038,7 +1060,7 @@ def export_announcements():
 @jwt_required()
 def get_ai_insights():
     user = get_current_user()
-    if not user or not user.role or user.role.name not in READ_ROLES:
+    if not _can_read(user):
         return jsonify({"message": "Unauthorized"}), 403
 
     total = Announcement.query.count()
@@ -1071,7 +1093,7 @@ def get_ai_insights():
             "engagement_score": min(100, int(avg_read_rate * 1.2)),
             "recommendations": recommendations,
             "performance_score": round(min(100, (avg_read_rate * 0.6) + (min(total, 20) * 2)), 1),
-            "suggested_category": "Maintenance" if datetime.utcnow().weekday() == 5 else "General",
+            "suggested_category": "Maintenance" if datetime.now(timezone.utc).replace(tzinfo=None).weekday() == 5 else "General",
         }
     }), 200
 
@@ -1234,7 +1256,7 @@ def preview_recipients():
 
     for u in users:
         role_name = u.role.name if u.role else (getattr(u, 'role_name', None) or 'User')
-        org_name = u.organization.name if u.organization else 'System / Internal'
+        org_name = u.organization.name if u.organization else 'System  / Internal'
         if u.org_id:
             org_ids.add(u.org_id)
         
@@ -1309,7 +1331,7 @@ def get_user_active_announcements():
     if not user:
         return jsonify({"message": "User not found"}), 404
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     # Published announcements that are active
     query = Announcement.query.filter(
         Announcement.status == 'Published',
@@ -1350,7 +1372,7 @@ def dismiss_announcement(ann_id):
         return jsonify({"message": "Announcement not found"}), 404
 
     read_rec = AnnouncementRead.query.filter_by(announcement_id=ann_id, user_id=user.id).first()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if not read_rec:
         read_rec = AnnouncementRead(
             announcement_id=ann_id,
@@ -1377,7 +1399,7 @@ def get_my_announcements():
     if not user:
         return jsonify({"message": "User not found"}), 404
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     q_str = request.args.get('q', '').strip().lower()
     cat_filter = request.args.get('category', '').strip()
     unread_only = request.args.get('unread_only', 'false').lower() == 'true'

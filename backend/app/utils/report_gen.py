@@ -431,7 +431,7 @@ def generate_8d_summary_report(project_id):
     
     temp_files = []
     
-    project = Project.query.get(project_id)
+    project = db.session.get(Project, project_id)
     if not project:
         return None
         
@@ -468,7 +468,7 @@ def generate_8d_summary_report(project_id):
     pdf.cell(0, 10, f"{pdf.tmpl['header_title']}: {project.title}", 0, 1, 'C')
     pdf.set_font('Helvetica', '', 10)
     pdf.cell(0, 6, f"Project UID: {project.project_uid}  |  Category: {project.category or 'N/A'}", 0, 1, 'C')
-    pdf.cell(0, 6, f"Generated At: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC", 0, 1, 'C')
+    pdf.cell(0, 6, f"Generated At: {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')} UTC", 0, 1, 'C')
     pdf.ln(10)
     
     def section_header(title):
@@ -1351,7 +1351,7 @@ def generate_qc_tool_report(project_id, tool_name):
         QCProcessMap, QCProcessStep
     )
     
-    project = Project.query.get(project_id)
+    project = db.session.get(Project, project_id)
     if not project:
         return None
         
@@ -1507,7 +1507,7 @@ def generate_sop_pdf_report(sop):
     pdf.cell(0, 10, f"{pdf.tmpl['header_title']}: STANDARD OPERATING PROCEDURE (SOP)", 0, 1, 'C')
     pdf.set_font('Helvetica', '', 10)
     pdf.cell(0, 6, f"Document ID: {sop.sop_uid}  |  Version: {sop.version}  |  Status: {sop.status}", 0, 1, 'C')
-    pdf.cell(0, 6, f"Generated At: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC", 0, 1, 'C')
+    pdf.cell(0, 6, f"Generated At: {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')} UTC", 0, 1, 'C')
     pdf.ln(10)
 
     def section_header(title):
@@ -1573,82 +1573,6 @@ def generate_sop_pdf_report(sop):
         
     return pdf.output()
 
-def generate_sop_training_certificate(training):
-    org_id = getattr(training.user, 'org_id', None)
-    ctx = DocumentBrandingService.get_branding_context(org_id)
-    tmpl = DocumentBrandingService.get_template_config('certificate', org_id)
-
-    pdf = FPDF(orientation='L', unit='mm', format='A4') # Landscape
-    pdf.add_page()
-    # Border
-    pdf.set_line_width(2)
-    pdf.rect(10, 10, 277, 190)
-    pdf.set_line_width(0.5)
-    pdf.rect(12, 12, 273, 186)
-    
-    # Organization Branding Header
-    pdf.ln(12)
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.set_text_color(100, 116, 139)
-    pdf.cell(0, 8, ctx['legal_company_name'].upper(), 0, 1, 'C')
-
-    # Title
-    pdf.ln(4)
-    pdf.set_font('Helvetica', 'B', 22)
-    pdf.set_text_color(30, 41, 59)
-    pdf.cell(0, 14, tmpl['header_title'].upper(), 0, 1, 'C')
-    pdf.set_font('Helvetica', 'I', 11)
-    pdf.set_text_color(71, 85, 105)
-    pdf.cell(0, 6, tmpl['subtitle'], 0, 1, 'C')
-    pdf.ln(5)
-    
-    # Body
-    pdf.set_font('Helvetica', '', 14)
-    pdf.set_text_color(51, 65, 85)
-    pdf.cell(0, 10, "This is to certify that", 0, 1, 'C')
-    pdf.ln(4)
-    
-    # User name
-    pdf.set_font('Helvetica', 'B', 20)
-    user_name = training.user.full_name or training.user.username
-    pdf.cell(0, 12, user_name.upper(), 0, 1, 'C')
-    if training.user.employee_id:
-        pdf.set_font('Helvetica', 'I', 11)
-        pdf.cell(0, 6, f"Employee ID: {training.user.employee_id}", 0, 1, 'C')
-    pdf.ln(4)
-    
-    pdf.set_font('Helvetica', '', 14)
-    pdf.cell(0, 10, "has successfully completed training on the Standard Operating Procedure:", 0, 1, 'C')
-    pdf.ln(4)
-    
-    # SOP
-    pdf.set_font('Helvetica', 'B', 16)
-    pdf.cell(0, 10, f"\"{training.sop.title}\" ({training.sop.sop_uid})", 0, 1, 'C')
-    pdf.ln(4)
-    
-    # Info
-    pdf.set_font('Helvetica', '', 12)
-    completed_date = training.completed_at.strftime('%Y-%m-%d') if training.completed_at else datetime.utcnow().strftime('%Y-%m-%d')
-    score_str = f"Assessment Score: {training.assessment_score}%" if training.assessment_score is not None else "Assessment: Exempt"
-    pdf.cell(0, 8, f"Date of Issue: {completed_date}  |  {score_str}", 0, 1, 'C')
-    
-    cert_no = f"CERT-{training.sop.sop_uid}-{training.id:05d}"
-    pdf.cell(0, 8, f"Certificate ID: {cert_no}", 0, 1, 'C')
-    pdf.ln(6)
-    
-    # Footer & Signature
-    pdf.set_font('Helvetica', 'I', 9)
-    pdf.set_text_color(100, 116, 139)
-    pdf.cell(0, 5, f"{tmpl['footer_text']}", 0, 1, 'C')
-    
-    sig_text = "N/A"
-    if training.acknowledgement_record:
-        sig_text = training.acknowledgement_record.digital_signature
-    pdf.set_font('Helvetica', 'I', 10)
-    pdf.cell(0, 6, f"Digitally Signed By: {sig_text}", 0, 1, 'C')
-    
-    return pdf.output()
-
 def generate_sop_audit_report(sop, trainings, report_type='Training Audit'):
     org_id = getattr(sop, 'org_id', None)
     pdf = DynamicBrandedPDF(org_id=org_id, template_key='audit')
@@ -1657,7 +1581,7 @@ def generate_sop_audit_report(sop, trainings, report_type='Training Audit'):
     pdf.cell(0, 10, f"{pdf.tmpl['header_title']}: SOP {report_type.upper()}", 0, 1, 'C')
     pdf.set_font('Helvetica', '', 10)
     pdf.cell(0, 6, f"SOP Title: {sop.title} ({sop.sop_uid})", 0, 1, 'C')
-    pdf.cell(0, 6, f"Generated At: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC", 0, 1, 'C')
+    pdf.cell(0, 6, f"Generated At: {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')} UTC", 0, 1, 'C')
     pdf.ln(10)
     
     total = len(trainings)

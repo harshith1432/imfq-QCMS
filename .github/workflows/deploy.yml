@@ -1,0 +1,61 @@
+name: QCMS Production CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test & Lint Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest flake8
+
+      - name: Run Linting (Syntax & Critical Errors)
+        run: |
+          flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Pytest Suite
+        run: |
+          cd backend
+          pytest tests
+
+  deploy:
+    name: Deploy to Hostinger VPS
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Hostinger VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_VPS_IP }}
+          username: ${{ secrets.HOSTINGER_SSH_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          script: |
+            echo "[QCMS CI/CD] Starting automated deployment..."
+            cd /var/www/qcms || cd /home/${{ secrets.HOSTINGER_SSH_USER }}/qcms || exit 1
+            git fetch --all
+            git reset --hard origin/main
+            docker compose down --remove-orphans || docker-compose down
+            docker compose up -d --build || docker-compose up -d --build
+            docker image prune -f
+            echo "[QCMS CI/CD] Deployment completed successfully!"

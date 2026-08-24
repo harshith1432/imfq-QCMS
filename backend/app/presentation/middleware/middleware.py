@@ -1,6 +1,7 @@
 from functools import wraps
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from flask import jsonify, request
+from app import db
 from app.infrastructure.database.models.models import User, Organization
 from app.domain.services.subscription_service import SubscriptionManager
 
@@ -105,7 +106,7 @@ def role_required(allowed_roles):
             except (ValueError, TypeError):
                 return jsonify({"msg": "Invalid identity"}), 401
 
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not user:
                 return jsonify({"msg": "User not found"}), 403
 
@@ -132,7 +133,7 @@ def plan_required(required_plans):
             except (ValueError, TypeError):
                 return jsonify({"msg": "Invalid identity"}), 401
 
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not user:
                 return jsonify({"msg": "User not found"}), 403
 
@@ -142,7 +143,7 @@ def plan_required(required_plans):
             if not user.org_id:
                 return jsonify({"msg": "Organization context required"}), 403
 
-            org = Organization.query.get(user.org_id)
+            org = db.session.get(Organization, user.org_id)
             if not org or org.subscription_plan not in required_plans:
                 return jsonify({
                     "msg": "Premium feature",
@@ -167,7 +168,7 @@ def feature_required(feature_name):
             except (ValueError, TypeError):
                 return jsonify({"msg": "Invalid identity"}), 401
 
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not user:
                 return jsonify({"msg": "User not found"}), 403
 
@@ -201,7 +202,7 @@ def super_admin_required():
             except (ValueError, TypeError):
                 return jsonify({"msg": "Invalid identity"}), 401
 
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not _is_super_admin(user):
                 return jsonify({"msg": "Super Admin access required"}), 403
 
@@ -225,7 +226,7 @@ def sub_role_required(section):
             except (ValueError, TypeError):
                 return jsonify({"msg": "Invalid identity"}), 401
 
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not _is_super_admin(user):
                 return jsonify({"msg": "Super Admin access required"}), 403
 
@@ -264,7 +265,7 @@ def sub_role_write_required(section):
             except (ValueError, TypeError):
                 return jsonify({"msg": "Invalid identity"}), 401
 
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not _is_super_admin(user):
                 return jsonify({"msg": "Super Admin access required"}), 403
 
@@ -334,7 +335,7 @@ def feature_required(feature_code):
             user_id = get_jwt_identity()
             try:
                 user_id = int(user_id)
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
             except Exception:
                 user = None
 

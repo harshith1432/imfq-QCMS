@@ -1,85 +1,65 @@
+"""
+QCMS Idempotency Domain Service
+Wraps RedisIdempotency to support both programmatic and middleware-level idempotency operations.
+"""
+
 import hashlib
-import time
-import threading
-from typing import Dict, Any, Tuple, Optional
+import json
+from typing import Tuple, Optional, Any, Dict
+from app.infrastructure.cache.redis_adapter import cache
+
+IDEMPOTENCY_DEFAULT_TTL = 3600  # 1 hour
+
 
 class IdempotencyService:
-    """
-    Thread-safe Idempotency Store for Backend Write Operations.
-    Prevents duplicate database mutations, notifications, and transactions
-    if duplicate HTTP requests arrive concurrently or rapidly.
-    """
+    """Domain service for checking and storing idempotent execution results."""
 
-    _lock = threading.Lock()
-    # Cache format: key -> { status: 'PROCESSING'|'COMPLETED', status_code: int, data: dict, created_at: float }
-    _cache: Dict[str, Dict[str, Any]] = {}
-    TTL_SECONDS = 60 # 60 second window for idempotency deduplication
-
-    @classmethod
-    def generate_key(cls, user_id: Any, org_id: Any, method: str, path: str, raw_body: bytes) -> str:
-        """Computes a SHA-256 fingerprint for the request."""
-        hasher = hashlib.sha256()
-        hasher.update(str(user_id or '').encode('utf-8'))
-        hasher.update(str(org_id or '').encode('utf-8'))
-        hasher.update(method.upper().encode('utf-8'))
-        hasher.update(path.encode('utf-8'))
-        if raw_body:
-            hasher.update(raw_body)
-        return hasher.hexdigest()
+    @staticmethod
+    def compute_hash(payload: Any) -> str:
+        if isinstance(payload, dict):
+            raw = json.dumps(payload, sort_keys=True)
+        elif isinstance(payload, bytes):
+            raw = payload.decode('utf-8', errors='ignore')
+        else:
+            raw = str(payload)
+        return hashlib.sha256(raw.encode('utf-8')).hexdigest()
 
     @classmethod
-    def check_and_lock(cls, key: str) -> Tuple[str, Optional[Tuple[Dict[str, Any], int]]]:
-        """
-        Atomically checks request status.
+    def get(cls, key: str, payload: Any = None) -> Tuple[Optional[Dict[str, Any]], Optional[int]]:
+        """Retrieve cached idempotent result if payload hash matches.
+        
         Returns:
-            ('NEW', None) -> First execution, proceed.
-            ('PROCESSING', None) -> Identical request currently processing, block duplicate.
-            ('COMPLETED', (data, status_code)) -> Completed request, return cached response.
+            (cached_data, status_code) or (None, 422) on payload mismatch.
         """
-        now = time.time()
+        record = cache.get(key)
+        if not record:
+            return None, None
 
-        with cls._lock:
-            # Clean expired keys
-            cls._cleanup(now)
+        if isinstance(record, str):
+            try:
+                record = json.loads(record)
+            except Exception:
+                return None, None
 
-            record = cls._cache.get(key)
-            if not record:
-                # Register new processing lock
-                cls._cache[key] = {
-                    'status': 'PROCESSING',
-                    'status_code': None,
-                    'data': None,
-                    'created_at': now
-                }
-                return 'NEW', None
+        if payload is not None:
+            expected_hash = cls.compute_hash(payload)
+            actual_hash = record.get('payload_hash')
+            if actual_hash and actual_hash != expected_hash:
+                return None, 422
 
-            if record['status'] == 'PROCESSING':
-                return 'PROCESSING', None
+        if record.get('status') == 'COMPLETED':
+            return record.get('data'), record.get('status_code', 200)
 
-            if record['status'] == 'COMPLETED':
-                return 'COMPLETED', (record['data'], record['status_code'])
-
-            return 'NEW', None
+        return None, None
 
     @classmethod
-    def complete(cls, key: str, data: Any, status_code: int = 200):
-        """Stores the response of a completed idempotent request."""
-        with cls._lock:
-            if key in cls._cache:
-                cls._cache[key]['status'] = 'COMPLETED'
-                cls._cache[key]['data'] = data
-                cls._cache[key]['status_code'] = status_code
-
-    @classmethod
-    def release(cls, key: str):
-        """Releases lock upon error/rollback so user can retry."""
-        with cls._lock:
-            if key in cls._cache:
-                del cls._cache[key]
-
-    @classmethod
-    def _cleanup(cls, now: float):
-        """Removes entries older than TTL."""
-        expired = [k for k, v in cls._cache.items() if now - v['created_at'] > cls.TTL_SECONDS]
-        for k in expired:
-            del cls._cache[k]
+    def set(cls, key: str, data: Any, status_code: int = 200, payload: Any = None, ttl: int = IDEMPOTENCY_DEFAULT_TTL) -> bool:
+        """Store completed idempotent execution result."""
+        payload_hash = cls.compute_hash(payload) if payload is not None else None
+        record = {
+            'status': 'COMPLETED',
+            'payload_hash': payload_hash,
+            'status_code': status_code,
+            'data': data
+        }
+        return cache.set(key, record, timeout=ttl)

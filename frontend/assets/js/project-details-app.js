@@ -65,6 +65,7 @@ const ProjectApp = {
         try {
             const data = await api.get(`/projects/${this.projectId}`);
             this.projectData = data;
+            this.projectId = data.id; // Normalize to integer ID for all subsequent calls
 
             // Default to stage parameter in URL, or Stage 1 if completed/closed project, or current_stage
             const stageParam = new URLSearchParams(window.location.search).get('stage');
@@ -418,17 +419,48 @@ const ProjectApp = {
 
         
         if (!module) {
-            container.innerHTML = `
-                <div class="glass-card ds-card p-5 text-center mb-4">
-                    <i data-lucide="wrench" style="width:40px;height:40px;color:var(--ds-text-secondary);"></i>
-                    <h5 class="mt-3 fw-bold">Stage ${stageId} Under Construction</h5>
-                    <p class="ds-text-secondary">This stage is currently being implemented.</p>
-                </div>
-            `;
+            // Render custom / dynamic stages dynamically using DynamicRenderer
+            const dynamicSections = (stageCfg && stageCfg.sections && stageCfg.sections.length > 0) ? stageCfg.sections : [
+                {
+                    id: `stage_${stageId}_workspace`,
+                    label: stageCfg ? stageCfg.title : `Stage ${stageId} Workspace`,
+                    type: 'section_header',
+                    fields: [
+                        { id: `stage_${stageId}_notes`, label: 'Stage Notes & Observations', type: 'textarea', placeholder: 'Enter details, analysis and findings for this stage...' }
+                    ]
+                }
+            ];
+            container.innerHTML = DynamicRenderer.renderHTML(dynamicSections);
+
+            const dynModule = {
+                init: (projData) => {
+                    DynamicRenderer.init(projData, stageId);
+                },
+                renderHTML: () => {
+                    return DynamicRenderer.renderHTML(dynamicSections);
+                },
+                getVal: (id) => {
+                    const el = document.getElementById(id);
+                    return el ? el.value : '';
+                }
+            };
+            StageModules[moduleId] = dynModule;
+            StageModules[stageId] = dynModule;
+
+            try {
+                DynamicRenderer.init(this.projectData, stageId);
+            } catch (e) {
+                console.error("[QCMS] Error initializing DynamicRenderer for custom stage:", e);
+            }
+
+            document.getElementById('reviewPanel')?.classList.add('d-none');
+
+            this.applyPermissions(stageId);
+            this.updateFacReplyCard(stageId);
+            if (window.LivePresence) {
+                window.LivePresence.startStagePresence(this.projectId, stageId);
+            }
             if (window.lucide) lucide.createIcons();
-            document.getElementById('saveDraftBtn').classList.add('d-none');
-            document.getElementById('submitBtn').classList.add('d-none');
-            document.getElementById('reviewPanel').classList.add('d-none');
             return;
         }
 
@@ -776,6 +808,11 @@ const ProjectApp = {
 
         window.hasUnsavedChanges = false;
         this.attachDirtyListeners(container);
+
+        // Start real-time collaborative stage presence
+        if (window.LivePresence) {
+            window.LivePresence.startStagePresence(this.projectId, stageId);
+        }
     },
 
     setupSectionNAToggles(container, stageCfg) {
@@ -1327,147 +1364,12 @@ const ProjectApp = {
 
     setupUnsavedChangesNavigationGuard() {
         window.hasUnsavedChanges = false;
-
-        // Native browser beforeunload warning
-        window.addEventListener('beforeunload', (e) => {
-            if (window.hasUnsavedChanges) {
-                e.preventDefault();
-                e.returnValue = 'You have unsaved changes in this stage. Would you like to save before leaving?';
-                return e.returnValue;
-            }
-        });
-
-        // Intercept internal link clicks
-        document.addEventListener('click', (e) => {
-            const link = e.target.closest('a[href], button[data-navigate]');
-            if (!link) return;
-            const href = link.getAttribute('href') || link.getAttribute('data-navigate');
-            if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('blob:')) return;
-            if (link.getAttribute('target') === '_blank') return;
-            
-            // Allow stage tab switching buttons to handle their own check via switchStage
-            if (link.closest('#stepperContainer')) return;
-
-            if (window.hasUnsavedChanges) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.showUnsavedChangesWarningModal(() => {
-                    window.location.href = href;
-                });
-            }
-        }, true);
     },
 
     showUnsavedChangesWarningModal(onProceed) {
-        return new Promise((resolve) => {
-            let modalEl = document.getElementById('unsavedChangesModal');
-            if (!modalEl) {
-                modalEl = document.createElement('div');
-                modalEl.id = 'unsavedChangesModal';
-                modalEl.className = 'modal fade';
-                modalEl.setAttribute('tabindex', '-1');
-                modalEl.setAttribute('aria-hidden', 'true');
-                modalEl.setAttribute('data-bs-backdrop', 'static');
-                document.body.appendChild(modalEl);
-            }
-
-            modalEl.innerHTML = `
-                <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
-                    <div class="modal-content border-0 shadow" style="border-radius: 16px; overflow: hidden;">
-                        <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-2.5">
-                                <span class="rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: rgba(99, 102, 241, 0.1); color: #6366f1; flex-shrink:0;">
-                                    <i data-lucide="file-edit" style="width: 18px; height: 18px;"></i>
-                                </span>
-                                <div>
-                                    <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.05rem;">
-                                        Unsaved Changes
-                                    </h5>
-                                    <p class="text-xs text-muted mb-0">Stage ${this.activeStageId || 1} Form Edits</p>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body px-4 py-3">
-                            <p class="text-secondary text-sm mb-0">
-                                You have unsaved changes in this stage. Would you like to save them as a draft before leaving, or discard them?
-                            </p>
-                        </div>
-                        <div class="modal-footer border-0 pt-2 pb-4 px-4 d-flex align-items-center justify-content-end gap-2 flex-wrap">
-                            <button type="button" class="ds-btn ds-btn-ghost text-xs" data-bs-dismiss="modal" id="cancelUnsavedBtn">
-                                Stay on Page
-                            </button>
-                            <button type="button" class="ds-btn ds-btn-outline text-xs text-secondary" id="discardUnsavedBtn">
-                                Discard &amp; Leave
-                            </button>
-                            <button type="button" class="ds-btn ds-btn-primary text-xs" id="saveAndLeaveBtn">
-                                <i data-lucide="save" style="width: 14px; height: 14px; margin-right: 4px;"></i> Save Draft &amp; Leave
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            if (window.lucide) lucide.createIcons();
-
-            let bsModal;
-            try {
-                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                    bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-                }
-            } catch (err) {
-                console.error("[QCMS] Bootstrap Modal error:", err);
-            }
-
-            const cleanup = () => {
-                if (bsModal) {
-                    try { bsModal.hide(); } catch (_) {}
-                } else {
-                    modalEl.classList.remove('show');
-                    modalEl.style.display = 'none';
-                    document.body.classList.remove('modal-open');
-                    const backdrop = document.querySelector('.modal-backdrop');
-                    if (backdrop) backdrop.remove();
-                }
-            };
-
-            const cancelBtn = modalEl.querySelector('#cancelUnsavedBtn');
-            const discardBtn = modalEl.querySelector('#discardUnsavedBtn');
-            const saveBtn = modalEl.querySelector('#saveAndLeaveBtn');
-
-            if (cancelBtn) {
-                cancelBtn.onclick = () => {
-                    cleanup();
-                    resolve(false);
-                };
-            }
-
-            if (discardBtn) {
-                discardBtn.onclick = () => {
-                    window.hasUnsavedChanges = false;
-                    cleanup();
-                    if (onProceed) onProceed();
-                    resolve(true);
-                };
-            }
-
-            if (saveBtn) {
-                saveBtn.onclick = async () => {
-                    await this.saveDraft();
-                    window.hasUnsavedChanges = false;
-                    cleanup();
-                    if (onProceed) onProceed();
-                    resolve(true);
-                };
-            }
-
-            if (bsModal) {
-                bsModal.show();
-            } else {
-                modalEl.classList.add('show');
-                modalEl.style.display = 'block';
-            }
-        });
+        window.hasUnsavedChanges = false;
+        if (typeof onProceed === 'function') onProceed();
+        return Promise.resolve(true);
     },
 
     showSubmissionWarningModal(stageId) {
