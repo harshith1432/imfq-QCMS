@@ -1,7 +1,11 @@
 import math
 import json
 import logging
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
 from sqlalchemy import text
 from app import db
 from app.infrastructure.database.models.models import KnowledgeRepository, Project
@@ -10,6 +14,30 @@ logger = logging.getLogger("QCMS.RAG")
 
 MODEL_NAME = 'all-MiniLM-L6-v2'
 _model = None
+
+def _cosine_similarity(vec1, vec2):
+    """Pure-python fallback for cosine similarity calculation"""
+    if not vec1 or not vec2 or len(vec1) != len(vec2):
+        return 0.0
+    if np is not None:
+        try:
+            q_vec = np.array(vec1, dtype=np.float32)
+            doc_vec = np.array(vec2, dtype=np.float32)
+            q_norm = np.linalg.norm(q_vec)
+            doc_norm = np.linalg.norm(doc_vec)
+            if q_norm > 0 and doc_norm > 0:
+                return float(np.dot(q_vec, doc_vec) / (q_norm * doc_norm))
+        except Exception:
+            pass
+    try:
+        dot = sum(a * b for a, b in zip(vec1, vec2))
+        norm1 = math.sqrt(sum(a * a for a in vec1))
+        norm2 = math.sqrt(sum(b * b for b in vec2))
+        if norm1 > 0 and norm2 > 0:
+            return float(dot / (norm1 * norm2))
+    except Exception:
+        pass
+    return 0.0
 
 def get_embedding_model():
     global _model
@@ -40,21 +68,14 @@ class VectorSearchService:
 
         results = []
         try:
-            q_vec = np.array(query_embedding, dtype=np.float32)
-            q_norm = np.linalg.norm(q_vec)
-            if q_norm == 0:
-                return []
-
             for rec in records:
                 if rec.embedding is not None:
                     try:
                         emb = rec.embedding
                         if isinstance(emb, str):
                             emb = json.loads(emb)
-                        doc_vec = np.array(emb, dtype=np.float32)
-                        doc_norm = np.linalg.norm(doc_vec)
-                        if doc_norm > 0 and len(doc_vec) == len(q_vec):
-                            similarity = float(np.dot(q_vec, doc_vec) / (q_norm * doc_norm))
+                        similarity = _cosine_similarity(query_embedding, emb)
+                        if similarity > 0:
                             results.append({
                                 "id": rec.id,
                                 "project_id": rec.project_id,
@@ -64,7 +85,6 @@ class VectorSearchService:
                                 "root_cause": rec.root_cause or "",
                                 "solution_summary": rec.solution_summary or "",
                                 "kpi_improvement_pct": rec.kpi_improvement_pct or 0,
-                                "cost_savings": rec.cost_savings or 0,
                                 "similarity_score": round(similarity, 4),
                                 "content": f"{rec.title or ''} - {rec.solution_summary or rec.problem_summary or ''}"
                             })
