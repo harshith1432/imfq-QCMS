@@ -112,12 +112,13 @@ def test_support_ticket_ownership_authorization(app):
 
 def test_signed_url_endpoint(client, app):
     with app.app_context():
+        import uuid
         from flask_jwt_extended import create_access_token
         admin_user = User.query.filter_by(email='gelala@fxzig.com').first()
         team_user = User.query.filter_by(email='nitin.murthy9@example.com').first()
         
-        admin_token = create_access_token(identity=str(admin_user.id))
-        team_token = create_access_token(identity=str(team_user.id))
+        admin_token = create_access_token(identity=str(admin_user.id), additional_claims={'session_id': str(uuid.uuid4())})
+        team_token = create_access_token(identity=str(team_user.id), additional_claims={'session_id': str(uuid.uuid4())})
 
         # Admin requests invoice signed url
         res = client.post('/api/storage/signed-url', json={'file_path': 'invoices/org_55/inv_01.pdf'}, headers={'Authorization': f'Bearer {admin_token}'})

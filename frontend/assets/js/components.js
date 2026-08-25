@@ -1517,65 +1517,7 @@ const QCMS = {
         </div>`;
     },
 
-    /**
-     * Premium Date Formatting
-     */
-    formatDate(dateStr) {
-        if (!dateStr || dateStr === 'â€”') return 'â€”';
-        let normalized = dateStr;
-        if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+')) normalized += 'Z';
-        const date = new Date(normalized);
-        if (isNaN(date.getTime())) return 'â€”';
-        return date.toLocaleDateString('en-IN', { 
-            day: '2-digit',
-            month: 'short', 
-            year: 'numeric' 
-        });
-    },
 
-    /**
-     * Premium Time Formatting
-     */
-    formatTime(dateStr) {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return '';
-        return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-    },
-
-    /**
-     * Relative Time (e.g. 2 hours ago)
-     */
-    formatRelative(dateStr) {
-        if (!dateStr || dateStr === 'â€”') return 'â€”';
-        let normalized = dateStr;
-        if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+')) normalized += 'Z';
-        const date = new Date(normalized);
-        if (isNaN(date.getTime())) return 'â€”';
-        const diff = (new Date() - date) / 1000;
-        if (diff < 60) return 'Just now';
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    },
-
-    /**
-     * KPI Card Component â€” for dashboard grids
-     */
-    kpiCard(label, value, icon, color) {
-        const hexMap = {
-            blue: '#2563eb', green: '#10b981', red: '#ef4444',
-            orange: '#f59e0b', purple: '#8b5cf6', cyan: '#06b6d4', gray: '#64748b'
-        };
-        const c = hexMap[color] || hexMap.blue;
-        return `<div class="glass-card kpi-card-item p-3" style="padding: 14px 16px !important; text-align: center; border-radius: 12px; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="width:34px;height:34px;border-radius:10px;background:${c}1f;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">
-                <i data-lucide="${icon || 'hash'}" style="width:16px;height:16px;color:${c};"></i>
-            </div>
-            <div class="text-xl fw-bold" style="color:var(--ds-text-main); font-size: 1.35rem; line-height: 1.1;">${value ?? '—'}</div>
-            <div class="text-xs text-muted mt-1" style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">${label}</div>
-        </div>`;
-    },
 
     /**
      * KPI Card Component with interactive calculation tooltip
@@ -1653,26 +1595,6 @@ const QCMS = {
         }
     },
 
-    /**
-     * Status Badge Component
-     */
-    statusBadge(status) {
-        const map = { 'Active': 'green', 'Trialing': 'orange', 'Suspended': 'red', 'Expired': 'gray', 'Pending': 'orange' };
-        return `<span class="ds-badge ${map[status] || 'gray'}">${status}</span>`;
-    },
-
-    /**
-     * Empty State Component
-     */
-    emptyState(title, message, icon) {
-        return `<div style="text-align:center; padding: var(--ds-space-8) var(--ds-space-4);">
-            <div style="width:56px;height:56px;border-radius:16px;background:rgba(var(--ds-primary-rgb),0.08);display:flex;align-items:center;justify-content:center;margin:0 auto var(--ds-space-4);">
-                <i data-lucide="${icon || 'inbox'}" style="width:24px;height:24px;opacity:0.4;"></i>
-            </div>
-            <h6 class="fw-bold mb-1">${title}</h6>
-            <p class="text-sm text-muted mb-0">${message}</p>
-        </div>`;
-    },
 
     getPermissions() {
         if (!this.user) return this.perms['Team Member'];

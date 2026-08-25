@@ -325,6 +325,91 @@ node build.js
 
 ---
 
+## 🔄 Automated CI/CD & Deployment Pipeline
+
+Every push or pull-request to `main` triggers the automated GitHub Actions pipeline with database migrations, security scans, health checks, and smoke tests:
+
+```text
+Git push/merge to main
+        ↓
+Install dependencies (pip install -r requirements.txt, pytest, flake8, bandit)
+        ↓
+Run tests (pytest tests -v, flake8 syntax checks)
+        ↓
+Security scan (Bandit SAST vulnerability inspection)
+        ↓
+Build Docker image (Container build verification)
+        ↓
+Deploy (Hostinger VPS / Target Server via SSH)
+        ↓
+Run database migration (docker compose exec backend flask db upgrade)
+        ↓
+Health check (Liveness /health/live & Readiness /health/ready retry loop)
+        ↓
+Smoke test (Automated scripts/smoke_test.py validating critical endpoints)
+        ↓
+Deployment successful 🎉
+```
+
+---
+
+## 🗄️ Storage Architecture & Provider Abstraction
+
+QCMS features a **provider-independent storage abstraction layer** enabling seamless switching between **Supabase Storage** (development & testing) and **Azure Blob Storage** (production) without altering application code or compromising tenant security:
+
+```text
+QCMS Frontend Client
+       │
+       ▼
+QCMS Flask Backend API
+       │
+[JWT Authentication & Session Verification]
+       │
+[5-Factor File Access Authorization Engine]
+(Tenant Isolation / Role RBAC / Resource Ownership)
+       │
+       ▼
+StorageService (Provider-Independent Facade)
+       │
+ ┌─────┴─────────────────────┬───────────────────────────┐
+ ▼                           ▼                           ▼
+SupabaseStorageProvider    AzureBlobStorageProvider    LocalStorageProvider
+(Dev: private bucket 'ifqmqc') (Prod: Azure Blob Container) (Local Disk / Fallback)
+```
+
+### Switching Storage Providers
+
+Switching the active storage backend requires only changing the `STORAGE_BACKEND` environment variable:
+
+#### 1. Development & Testing (Supabase Storage)
+```env
+STORAGE_BACKEND=supabase
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-secret
+SUPABASE_STORAGE_BUCKET=ifqmqc
+```
+- Operates on the private bucket `ifqmqc`.
+- Credentials remain strictly on the backend.
+- Generates 15-minute time-limited signed download URLs via `/storage/v1/object/sign/ifqmqc/<path>`.
+
+#### 2. Production (Azure Blob Storage)
+```env
+STORAGE_BACKEND=azure
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;
+AZURE_STORAGE_CONTAINER_NAME=qcms-uploads
+AZURE_STORAGE_BLOB_URL=https://youraccount.blob.core.windows.net/qcms-uploads
+```
+- Connects to private container `qcms-uploads`.
+- Generates 15-minute time-limited SAS signed URLs.
+
+#### 3. Local Filesystem / Testing Fallback
+```env
+STORAGE_BACKEND=local
+UPLOAD_FOLDER=uploads
+```
+
+---
+
 ## 🔌 API Endpoints Overview
 
 | Blueprint | Route Prefix | Key Functionalities |

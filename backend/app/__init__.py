@@ -8,6 +8,7 @@ from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_migrate import Migrate
+from datetime import datetime, timezone
 from .boot_utils import bootstrap_database
 
 from app.config import Config
@@ -1058,15 +1059,19 @@ def create_app():
     _app_start_time = _time.time()
 
     @app.route('/health/live', methods=['GET'])
+    @app.route('/api/health/live', methods=['GET'])
     def health_live():
         """Liveness probe — returns 200 if the process is alive."""
         return jsonify({'status': 'ok', 'uptime_seconds': round(_time.time() - _app_start_time, 1)}), 200
 
     @app.route('/health/ready', methods=['GET'])
+    @app.route('/api/health', methods=['GET'])
+    @app.route('/health', methods=['GET'])
     def health_ready():
         """Readiness probe: returns 200 only when DB and Redis are both healthy."""
+        from datetime import datetime, timezone
         from app.infrastructure.cache.redis_adapter import cache as _cache
-        checks = {'status': 'ready', 'db': 'ok', 'redis': 'ok'}
+        checks = {'status': 'ready', 'db': 'ok', 'redis': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()}
         http_status = 200
         # Database check
         try:

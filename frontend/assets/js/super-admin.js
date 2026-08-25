@@ -3061,11 +3061,6 @@ const SuperAdmin = {
     },
 
 
-    closeBillDrawer() {
-        document.getElementById('billDetailOverlay').classList.remove('open');
-        document.getElementById('billDetailDrawer').classList.remove('open');
-    },
-
     // ─── WIZARD CREATOR ──────────────────────────────────────────────────────
 
     biOrgSelectorState: {
@@ -4244,11 +4239,6 @@ const SuperAdmin = {
         }
     },
 
-    // --- Audit Registry & Activity Trail Module ---
-    auditCurrentTab: 'logs',
-    auditLogs: [],
-    auditSessions: [],
-    auditInsights: {},
     // --- Audit Registry & Activity Trail Module ---
     auditCurrentTab: 'logs',
     auditLogs: [],
@@ -7987,7 +7977,7 @@ const SuperAdmin = {
         });
     },
 
-    applyColumnVisibility() {
+    _licApplyColumnVisibility() {
         document.querySelectorAll('#licColToggles input').forEach(chk => {
             const cls = chk.value;
             document.querySelectorAll(`#licensesTable .${cls}`).forEach(c => {

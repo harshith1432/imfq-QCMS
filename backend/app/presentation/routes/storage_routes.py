@@ -1,6 +1,7 @@
 # QCMS Enterprise Storage & Signed URL Download Routes
 import os
 import mimetypes
+import logging
 from flask import Blueprint, request, jsonify, Response, redirect, send_from_directory, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
@@ -9,14 +10,15 @@ from app.infrastructure.database.models.models import User
 from app.infrastructure.storage import storage
 from app.domain.services.file_access_service import verify_file_access_authorization, sanitize_file_path
 
+logger = logging.getLogger("QCMS.Storage.Routes")
 storage_bp = Blueprint('storage_bp', __name__)
 
 @storage_bp.route('/signed-url', methods=['POST', 'GET'])
 @jwt_required()
 def get_signed_download_url():
     """
-    Generates a secure, 15-minute time-limited Azure SAS signed URL only after verifying:
-    user + organization + resource + permission + file ownership.
+    Generates a secure, 15-minute time-limited signed URL (Azure SAS or Supabase signed URL)
+    only after verifying: user + organization + resource + permission + file ownership.
     """
     try:
         user_id = get_jwt_identity()
@@ -68,13 +70,13 @@ def get_signed_download_url():
     if not storage.exists(clean_path):
         return jsonify({"status": "error", "message": "File not found in storage.", "code": "NOT_FOUND"}), 404
 
-    # If backend is Azure Blob Storage, generate 15-minute SAS signed URL
-    if storage.backend == 'azure':
+    # If backend is Azure Blob or Supabase Storage, generate 15-minute signed URL
+    if storage.backend in ('azure', 'supabase'):
         signed_url = storage.generate_signed_url(clean_path, expiry_minutes=15)
         if signed_url:
             return jsonify({
                 "status": "success",
-                "backend": "azure",
+                "backend": storage.backend,
                 "signed_url": signed_url,
                 "expires_in_seconds": 900,
                 "file_path": clean_path,
@@ -84,7 +86,7 @@ def get_signed_download_url():
     # Local Disk Fallback / Development URL
     return jsonify({
         "status": "success",
-        "backend": "local",
+        "backend": storage.backend,
         "download_url": f"/api/storage/download/{clean_path}",
         "file_path": clean_path,
         "auth_status": reason
@@ -95,7 +97,7 @@ def get_signed_download_url():
 @jwt_required()
 def secure_download_file(file_path):
     """
-    Enforces 5-factor authorization and either redirects to signed SAS URL or streams file bytes.
+    Enforces 5-factor authorization and either redirects to signed access URL or streams file bytes.
     """
     try:
         user_id = get_jwt_identity()
@@ -113,7 +115,7 @@ def secure_download_file(file_path):
     if not is_authorized:
         return jsonify({"status": "error", "message": reason, "code": "FORBIDDEN"}), status_code
 
-    if storage.backend == 'azure':
+    if storage.backend in ('azure', 'supabase'):
         signed_url = storage.generate_signed_url(clean_path, expiry_minutes=15)
         if signed_url:
             return redirect(signed_url, code=302)
@@ -128,3 +130,54 @@ def secure_download_file(file_path):
     filename = os.path.basename(clean_path)
     resp.headers['Content-Disposition'] = f'inline; filename="{filename}"'
     return resp
+
+
+@storage_bp.route('/<path:file_path>', methods=['DELETE'])
+@jwt_required()
+def secure_delete_file(file_path):
+    """
+    Enforces 5-factor authorization and deletes file from the active storage backend.
+    """
+    try:
+        user_id = get_jwt_identity()
+        if isinstance(user_id, dict):
+            user_id = user_id.get('id') or user_id.get('user_id')
+        user = db.session.get(User, int(user_id)) if user_id else None
+    except Exception:
+        return jsonify({"status": "error", "message": "Authentication required.", "code": "UNAUTHORIZED"}), 401
+
+    clean_path = sanitize_file_path(file_path)
+    if not clean_path:
+        return jsonify({"status": "error", "message": "Invalid file path.", "code": "BAD_REQUEST"}), 400
+
+    # User must have write/delete permissions for the resource
+    is_authorized, reason, status_code = verify_file_access_authorization(user, clean_path)
+    if not is_authorized:
+        return jsonify({"status": "error", "message": reason, "code": "FORBIDDEN"}), status_code
+
+    # If file does not exist, return 404 gracefully
+    if not storage.exists(clean_path):
+        return jsonify({"status": "error", "message": "File not found in storage.", "code": "NOT_FOUND"}), 404
+
+    try:
+        deleted = storage.delete_file(clean_path)
+        if deleted:
+            logger.info(f"[StorageRoutes] User #{user.id} deleted file: {clean_path}")
+            return jsonify({
+                "status": "success",
+                "message": "File deleted successfully from storage.",
+                "file_path": clean_path,
+                "backend": storage.backend
+            }), 200
+        else:
+            return jsonify({"status": "error", "message": "Could not delete file from storage backend.", "code": "DELETE_FAILED"}), 500
+    except Exception as e:
+        logger.error(f"[StorageRoutes] Error deleting file {clean_path}: {e}")
+        return jsonify({"status": "error", "message": "Internal storage deletion error.", "code": "INTERNAL_ERROR"}), 500
+
+
+@storage_bp.route('/info', methods=['GET'])
+@jwt_required()
+def get_storage_info():
+    """Returns active storage backend metadata (sanitized, no secrets)."""
+    return jsonify(storage.get_info()), 200

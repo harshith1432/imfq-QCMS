@@ -2699,17 +2699,17 @@ const AnnouncementsModule = {
     },
 
     insertSmsVariableChip(tag) {
-        const textarea = document.getElementById('enSmsBody');
-        if (!textarea) return;
-        const start = textarea.selectionStart || 0;
-        const end = textarea.selectionEnd || 0;
-        const text = textarea.value;
-        textarea.value = text.substring(0, start) + tag + text.substring(end);
-        textarea.focus();
-        textarea.selectionStart = textarea.selectionEnd = start + tag.length;
-        // Update char count
+        const bodyEl = document.getElementById('smsModal_Body') || document.getElementById('enSmsBody');
+        if (!bodyEl) return;
+        const start = bodyEl.selectionStart || 0;
+        const end = bodyEl.selectionEnd || 0;
+        const text = bodyEl.value;
+        bodyEl.value = text.substring(0, start) + tag + text.substring(end);
+        bodyEl.focus();
+        bodyEl.selectionStart = bodyEl.selectionEnd = start + tag.length;
+        if (typeof this.onSmsModalBodyInput === 'function') this.onSmsModalBodyInput(bodyEl);
         const countEl = document.getElementById('enSmsBodyCount');
-        if (countEl) countEl.textContent = textarea.value.length;
+        if (countEl) countEl.textContent = bodyEl.value.length;
     },
 
     onSmsPanelToggle(checked) {
@@ -3365,17 +3365,6 @@ const AnnouncementsModule = {
         }
     },
 
-    insertSmsVariableChip(tag) {
-        const bodyEl = document.getElementById('smsModal_Body');
-        if (!bodyEl) return;
-        const start = bodyEl.selectionStart || 0;
-        const end = bodyEl.selectionEnd || 0;
-        const text = bodyEl.value;
-        bodyEl.value = text.substring(0, start) + tag + text.substring(end);
-        bodyEl.focus();
-        bodyEl.selectionStart = bodyEl.selectionEnd = start + tag.length;
-        this.onSmsModalBodyInput(bodyEl);
-    },
 
     onSmsTriggerTypeChange(val) {
         const eventBox = document.getElementById('smsModal_EventConfig');

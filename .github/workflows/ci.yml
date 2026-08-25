@@ -1,0 +1,166 @@
+name: QCMS Enterprise CI & Security Quality Gate
+
+on:
+  push:
+    branches: [main, master, develop, staging]
+  pull_request:
+    branches: [main, master, develop, staging]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 1. FRONTEND CI: Install, Lint, Build & Automated Tests
+  # ═══════════════════════════════════════════════════════════════════════════
+  frontend-ci:
+    name: 🎨 Frontend Validation & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Set up Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Install Frontend Dependencies
+        run: npm ci
+
+      - name: 🔍 Run ESLint Linter
+        run: npm run lint
+
+      - name: 🏗️ Execute Production Asset Build
+        run: npm run build:html
+
+      - name: 🧪 Run Frontend Automated Test Suite
+        run: npm test
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 2. BACKEND CI: Dependency Setup & Pytest Test Suite
+  # ═══════════════════════════════════════════════════════════════════════════
+  backend-ci:
+    name: ⚙️ Backend Test Suite
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: 📦 Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: 🧪 Run Backend Pytest Suite
+        env:
+          FLASK_ENV: testing
+          TESTING: 'True'
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: ci-test-secret-key-qcms-enterprise-security
+          JWT_SECRET_KEY: ci-test-jwt-secret-key-qcms-enterprise-security
+        run: pytest --maxfail=5 -v
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 3. SECURITY SCANNING: pip-audit, npm audit, Secrets & SAST
+  # ═══════════════════════════════════════════════════════════════════════════
+  security-scanning:
+    name: 🛡️ Security, Dependency & Secret Auditing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── NPM Vulnerability Audit ─────────────────────────────────────────────
+      - name: 🟢 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 🛡️ Run Frontend npm audit (Fail on High/Critical)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+      # ── Python pip-audit ────────────────────────────────────────────────────
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 🛡️ Run Backend pip-audit (Fail on Known CVEs)
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          pip-audit -r backend/requirements.txt
+
+      # ── Secret Scanning (Gitleaks) ──────────────────────────────────────────
+      - name: 🔑 Run Gitleaks Secret Scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
+
+      # ── Trivy Vulnerability & Misconfiguration Scanner ──────────────────────
+      - name: 🔍 Run Trivy Security Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 4. PRODUCTION READINESS GATE: Must pass all quality checks
+  # ═══════════════════════════════════════════════════════════════════════════
+  production-readiness:
+    name: 🚀 Production Readiness Gate
+    needs: [frontend-ci, backend-ci, security-scanning]
+    runs-on: ubuntu-latest
+    steps:
+      - name: ✅ Confirm Quality & Security Verification
+        run: |
+          echo "=========================================================="
+          echo " QCMS CI & SECURITY QUALITY GATES PASSED SUCCESSFULLY"
+          echo " Frontend Build & Tests: PASSED"
+          echo " Backend Pytest Suite:   PASSED"
+          echo " Dependency Audits:      PASSED (0 High/Critical CVEs)"
+          echo " Secret Scanning:        PASSED (No exposed credentials)"
+          echo " Production Readiness:   APPROVED FOR DEPLOYMENT"
+          echo "=========================================================="

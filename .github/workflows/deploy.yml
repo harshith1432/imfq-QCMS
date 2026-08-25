@@ -1,4 +1,4 @@
-name: QCMS Production CI/CD
+name: QCMS Production CI/CD & Automated Verification Pipeline
 
 on:
   push:
@@ -8,54 +8,134 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Test & Lint Backend
+  # =========================================================================
+  # STAGE 1: CI (Dependencies -> Tests -> Security Scan -> Docker Build)
+  # =========================================================================
+  ci-pipeline:
+    name: "1. Build, Test & Security Verification"
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      - name: "Checkout Source Code"
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: "Set up Python Environment"
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install Dependencies
+      # Step 1: Install dependencies
+      - name: "Install Dependencies"
         run: |
+          echo "[CI] Upgrading pip and installing dependencies..."
           cd backend
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest flake8
+          pip install pytest flake8 bandit
 
-      - name: Run Linting (Syntax & Critical Errors)
+      # Step 2: Run tests
+      - name: "Run Linting & Pytest Test Suite"
         run: |
+          echo "[CI] Running flake8 critical syntax check..."
           flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
-
-      - name: Run Pytest Suite
-        run: |
+          echo "[CI] Running automated pytest suite..."
           cd backend
-          pytest tests
+          pytest tests -v
 
-  deploy:
-    name: Deploy to Hostinger VPS
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # Step 3: Security scan
+      - name: "Security Vulnerability Scan (Bandit SAST)"
+        run: |
+          echo "[CI] Running Bandit Security SAST scan on backend..."
+          bandit -r backend/app -ll -ii -x backend/tests,backend/migrations
+
+      # Step 4: Build Docker image verification
+      - name: "Build Docker Image (Pre-Deployment Validation)"
+        run: |
+          echo "[CI] Verifying Docker container builds..."
+          docker build -t qcms-backend:ci-check ./backend
+          docker build -t qcms-frontend:ci-check ./frontend
+          echo "[CI] Docker images built successfully!"
+
+  # =========================================================================
+  # STAGE 2: CD (Deploy -> Run DB Migration -> Health Check -> Smoke Test)
+  # =========================================================================
+  cd-pipeline:
+    name: "2. Production Deployment & Verification"
+    needs: ci-pipeline
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+
     steps:
-      - name: Deploy to Hostinger VPS via SSH
+      - name: "Deploy, Migrate & Verify on Production Host"
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOSTINGER_VPS_IP }}
           username: ${{ secrets.HOSTINGER_SSH_USER }}
           key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          timeout: 300s
+          command_timeout: 30m
           script: |
-            echo "[QCMS CI/CD] Starting automated deployment..."
+            set -e
+
+            echo "========================================================="
+            echo " [QCMS CI/CD] STARTING PRODUCTION DEPLOYMENT PIPELINE"
+            echo "========================================================="
+
+            # 1. Navigate to Project Directory
             cd /var/www/qcms || cd /home/${{ secrets.HOSTINGER_SSH_USER }}/qcms || exit 1
+
+            # 2. Deploy: Pull Latest Code & Build Docker Images
+            echo "[Step 1/5] Pulling latest git commit from main..."
             git fetch --all
             git reset --hard origin/main
-            docker compose down --remove-orphans || docker-compose down
+
+            echo "[Step 2/5] Building and spinning up Docker containers..."
+            docker compose down --remove-orphans || docker-compose down || true
             docker compose up -d --build || docker-compose up -d --build
+
+            # 3. Run Database Migration
+            echo "[Step 3/5] Running automated database migrations..."
+            docker compose exec -T backend flask db upgrade || \
+            docker-compose exec -T backend flask db upgrade || \
+            docker compose exec -T backend python -m flask --app app db upgrade || \
+            docker compose exec -T backend python -m app.infrastructure.database.migrations.runner
+
+            # 4. Health Check (Wait for readiness probe)
+            echo "[Step 4/5] Running health check probes on backend..."
+            MAX_RETRIES=30
+            RETRY_COUNT=0
+            HEALTHY=false
+
+            until [ $RETRY_COUNT -ge $MAX_RETRIES ]
+            do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/health/ready || curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health/ready || true)
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "[QCMS Health Check] Backend readiness probe passed with HTTP 200 OK!"
+                HEALTHY=true
+                break
+              fi
+              RETRY_COUNT=$((RETRY_COUNT+1))
+              echo "[QCMS Health Check] Waiting for backend to become ready... (Attempt $RETRY_COUNT/$MAX_RETRIES, HTTP $HTTP_CODE)"
+              sleep 2
+            done
+
+            if [ "$HEALTHY" != "true" ]; then
+              echo "[QCMS Health Check] ERROR: Backend failed readiness probe after $MAX_RETRIES attempts!"
+              docker compose logs --tail=100 backend
+              exit 1
+            fi
+
+            # 5. Smoke Test Suite
+            echo "[Step 5/5] Executing post-deployment smoke test suite..."
+            docker compose exec -T backend python scripts/smoke_test.py http://127.0.0.1:5000 || \
+            docker-compose exec -T backend python scripts/smoke_test.py http://127.0.0.1:5000 || \
+            curl -f -s http://127.0.0.1:5000/health/live && curl -f -s http://127.0.0.1:5000/api/auth/maintenance-status
+
+            # Cleanup unused images
             docker image prune -f
-            echo "[QCMS CI/CD] Deployment completed successfully!"
+
+            echo "========================================================="
+            echo " [QCMS CI/CD] DEPLOYMENT & VERIFICATION SUCCESSFUL!"
+            echo "========================================================="

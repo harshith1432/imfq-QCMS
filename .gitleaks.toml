@@ -1,0 +1,18 @@
+# Gitleaks Configuration for QCMS Enterprise Security
+title = "QCMS Gitleaks Configuration"
+
+[allowlist]
+description = "Allowlisted test keys and documentation sample placeholders"
+regexes = [
+    '''ci-test-secret-key-[a-zA-Z0-9_-]+''',
+    '''ci-test-jwt-secret-key-[a-zA-Z0-9_-]+''',
+    '''sk_test_[a-zA-Z0-9]+''',
+    '''re_test_[a-zA-Z0-9]+''',
+    '''mock-[a-zA-Z0-9_-]+''',
+    '''TICK-TEST-[0-9]+'''
+]
+paths = [
+    '''backend/tests/.*''',
+    '''frontend/tests/.*''',
+    '''\.github/workflows/.*'''
+]
