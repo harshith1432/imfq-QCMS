@@ -167,6 +167,8 @@ class SupabaseStorageProvider(BaseStorageProvider):
         clean_sub = subfolder.strip("/\\")
         target_path = f"{clean_sub}/{filename_or_path}" if clean_sub and not filename_or_path.startswith(clean_sub) else filename_or_path
         clean_path = target_path.lstrip('/')
+        if clean_path.startswith("uploads/"):
+            clean_path = clean_path[len("uploads/"):]
 
         download_url = f"{self.supabase_url}/storage/v1/object/authenticated/{self.bucket_name}/{clean_path}"
         headers = self._get_headers()
@@ -176,17 +178,23 @@ class SupabaseStorageProvider(BaseStorageProvider):
             if resp.status_code == 200:
                 content_type = resp.headers.get("Content-Type") or mimetypes.guess_type(clean_path)[0] or "application/octet-stream"
                 return resp.content, content_type
-            elif resp.status_code == 404:
-                return None, None
-            else:
-                logger.warning(f"[SupabaseStorageProvider] Download response status {resp.status_code} for {clean_path}")
-                return None, None
+            
+            # Fallback to public endpoint
+            pub_url = f"{self.supabase_url}/storage/v1/object/public/{self.bucket_name}/{clean_path}"
+            resp_pub = requests.get(pub_url, timeout=self.timeout)
+            if resp_pub.status_code == 200:
+                content_type = resp_pub.headers.get("Content-Type") or mimetypes.guess_type(clean_path)[0] or "application/octet-stream"
+                return resp_pub.content, content_type
+
+            return None, None
         except Exception as e:
             logger.error(f"[SupabaseStorageProvider] Download exception for {clean_path}: {e}")
             raise StorageDownloadError(f"Supabase download failed: {str(e)}", original_error=e)
 
     def generate_signed_url(self, blob_path: str, expiry_minutes: int = 15) -> Optional[str]:
         clean_path = blob_path.lstrip('/')
+        if clean_path.startswith("uploads/"):
+            clean_path = clean_path[len("uploads/"):]
         sign_url = f"{self.supabase_url}/storage/v1/object/sign/{self.bucket_name}/{clean_path}"
         payload = {"expiresIn": expiry_minutes * 60}
         headers = self._get_headers("application/json")
@@ -212,6 +220,8 @@ class SupabaseStorageProvider(BaseStorageProvider):
         clean_sub = subfolder.strip("/\\")
         target_path = f"{clean_sub}/{filename_or_path}" if clean_sub and not filename_or_path.startswith(clean_sub) else filename_or_path
         clean_path = target_path.lstrip('/')
+        if clean_path.startswith("uploads/"):
+            clean_path = clean_path[len("uploads/"):]
 
         delete_url = f"{self.supabase_url}/storage/v1/object/{self.bucket_name}"
         payload = {"prefixes": [clean_path]}
@@ -231,13 +241,19 @@ class SupabaseStorageProvider(BaseStorageProvider):
         clean_sub = subfolder.strip("/\\")
         target_path = f"{clean_sub}/{filename_or_path}" if clean_sub and not filename_or_path.startswith(clean_sub) else filename_or_path
         clean_path = target_path.lstrip('/')
+        if clean_path.startswith("uploads/"):
+            clean_path = clean_path[len("uploads/"):]
 
         # Perform quick HEAD or list request
         url = f"{self.supabase_url}/storage/v1/object/authenticated/{self.bucket_name}/{clean_path}"
         headers = self._get_headers()
         try:
             resp = requests.head(url, headers=headers, timeout=self.timeout)
-            return resp.status_code == 200
+            if resp.status_code == 200:
+                return True
+            pub_url = f"{self.supabase_url}/storage/v1/object/public/{self.bucket_name}/{clean_path}"
+            resp_pub = requests.head(pub_url, timeout=self.timeout)
+            return resp_pub.status_code == 200
         except Exception:
             return False
 

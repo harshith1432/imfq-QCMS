@@ -5,6 +5,10 @@
       "destination": "https://imfq-qcms.onrender.com/api/$1"
     },
     {
+      "source": "/uploads/(.*)",
+      "destination": "https://imfq-qcms.onrender.com/uploads/$1"
+    },
+    {
       "source": "/login",
       "destination": "/frontend/auth/login.html"
     },
