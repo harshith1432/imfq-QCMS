@@ -1026,10 +1026,10 @@ const QCMS = {
             }
             if (canAudits) {
                 navItems.push({
-                    label: 'Audits',
-                    url: '/admin/audit-queue.html',
-                    icon: 'shield-alert',
-                    isActive: currentPath.includes('audit-queue.html') || currentPath.includes('audit_logs')
+                    label: 'Audit Logs',
+                    url: '/admin/audit-logs.html',
+                    icon: 'scroll-text',
+                    isActive: currentPath.includes('audit-logs.html') || currentPath.includes('audit_logs') || currentPath.includes('audit-logs')
                 });
             } else if (canReports) {
                 navItems.push({

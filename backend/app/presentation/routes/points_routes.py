@@ -3,7 +3,7 @@ QCMS Employee Reward & Leaderboard System - Presentation Routes
 REST APIs for points management, leaderboard rankings, employee history, and admin analytics.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import csv
 import io
 from flask import Blueprint, request, jsonify, Response
@@ -370,9 +370,10 @@ def export_leaderboard():
     if not current_user:
         return jsonify({"message": "User not found"}), 404
 
-    # Enforce access control: Only Organization Administrators & SuperAdmins can export
-    user_role_name = (current_user.role.name if current_user.role else '').strip()
-    if user_role_name not in ['Admin', 'SuperAdmin', 'admin', 'superadmin']:
+    # Enforce strict access control: Only Organization Administrators can export
+    user_role_name = (current_user.role.name if current_user.role else (getattr(current_user, 'role', None) or '')).strip()
+    is_admin = user_role_name in ['Admin', 'SuperAdmin', 'admin', 'superadmin', 'Owner', 'owner', 'Organization Admin', 'CEO', 'ceo'] or getattr(current_user, 'is_super_admin', False)
+    if not is_admin:
         return jsonify({"message": "Forbidden: Only Organization Administrators can export employee leaderboard rankings."}), 403
 
     search_q = (request.args.get('q') or '').strip()
@@ -381,9 +382,76 @@ def export_leaderboard():
     role_param = (request.args.get('role') or request.args.get('role_name') or '').strip()
     user_ids_param = (request.args.get('user_ids') or '').strip()
     limit = request.args.get('limit', 0, type=int)
+    time_range = (request.args.get('time_range') or 'all').lower().strip()
+    start_date_str = (request.args.get('start_date') or '').strip()
+    end_date_str = (request.args.get('end_date') or '').strip()
     export_format = (request.args.get('format') or 'csv').lower()
 
-    from app.infrastructure.database.models.models import Role
+    # Determine timeline date filters
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    filter_start = None
+    filter_end = None
+    timeline_label = "All Time (Lifetime)"
+
+    try:
+        if time_range == 'month' or time_range == 'this_month':
+            filter_start = datetime(now.year, now.month, 1, 0, 0, 0)
+            filter_end = now
+            timeline_label = f"This Month ({now.strftime('%B %Y')})"
+        elif time_range == 'last_month':
+            first_this_month = datetime(now.year, now.month, 1)
+            last_day_prev = first_this_month - timedelta(days=1)
+            filter_start = datetime(last_day_prev.year, last_day_prev.month, 1, 0, 0, 0)
+            filter_end = datetime(last_day_prev.year, last_day_prev.month, last_day_prev.day, 23, 59, 59)
+            timeline_label = f"Last Month ({last_day_prev.strftime('%B %Y')})"
+        elif time_range == 'quarter' or time_range == 'this_quarter':
+            q_month = ((now.month - 1) // 3) * 3 + 1
+            filter_start = datetime(now.year, q_month, 1, 0, 0, 0)
+            filter_end = now
+            q_num = (now.month - 1) // 3 + 1
+            timeline_label = f"Q{q_num} {now.year} (Quarter to Date)"
+        elif time_range == 'year' or time_range == 'this_year':
+            filter_start = datetime(now.year, 1, 1, 0, 0, 0)
+            filter_end = now
+            timeline_label = f"Year {now.year} (YTD)"
+        elif time_range == 'custom' or (start_date_str and end_date_str):
+            if start_date_str:
+                filter_start = datetime.strptime(start_date_str, "%Y-%m-%d")
+            if end_date_str:
+                filter_end = datetime.strptime(end_date_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            timeline_label = f"Custom Period ({start_date_str or 'Start'} to {end_date_str or 'Present'})"
+    except Exception as e:
+        filter_start = None
+        filter_end = None
+        timeline_label = "All Time"
+
+    from app.infrastructure.database.models.models import Role, Plant
+    from sqlalchemy import func
+
+    # Calculate period points from EmployeePoints table if timeline is constrained
+    period_points_map = {}
+    if filter_start:
+        pts_query = db.session.query(
+            EmployeePoints.employee_id,
+            func.sum(EmployeePoints.points).label('p_points'),
+            func.count(db.case((EmployeePoints.activity_type.ilike('%PROJECT_COMPLETED%'), 1))).label('p_completed'),
+            func.count(db.case((EmployeePoints.activity_type.ilike('%IDEA_APPROVED%'), 1))).label('p_ideas'),
+            func.count(db.case((EmployeePoints.activity_type.ilike('%KNOWLEDGE_ARTICLE%'), 1))).label('p_articles')
+        ).filter(
+            EmployeePoints.organization_id == current_user.org_id,
+            EmployeePoints.created_at >= filter_start
+        )
+        if filter_end:
+            pts_query = pts_query.filter(EmployeePoints.created_at <= filter_end)
+        
+        pts_res = pts_query.group_by(EmployeePoints.employee_id).all()
+        for r in pts_res:
+            period_points_map[r.employee_id] = {
+                'points': int(r.p_points or 0),
+                'completed': int(r.p_completed or 0),
+                'ideas': int(r.p_ideas or 0),
+                'articles': int(r.p_articles or 0)
+            }
 
     query = db.session.query(EmployeeLeaderboard)\
         .join(User, User.id == EmployeeLeaderboard.employee_id)\
@@ -405,7 +473,6 @@ def export_leaderboard():
             pass
 
     if plant_param:
-        from app.infrastructure.database.models.models import Plant
         if plant_param.isdigit():
             query = query.filter(db.or_(getattr(User, 'plant_id', None) == int(plant_param), Department.plant_id == int(plant_param)))
         else:
@@ -430,27 +497,20 @@ def export_leaderboard():
             )
         )
 
-    # Order using exact tie-breaking specification
-    query = query.order_by(
-        EmployeeLeaderboard.total_points.desc(),
-        EmployeeLeaderboard.projects_completed.desc(),
-        EmployeeLeaderboard.ideas_approved.desc(),
-        EmployeeLeaderboard.knowledge_articles.desc(),
-        User.created_at.asc()
-    )
+    all_candidates = query.all()
+    ranked_candidates = []
 
-    if limit and limit > 0:
-        results = query.limit(limit).all()
-    else:
-        results = query.all()
-
-    ranked_data = []
-    for rank, lb in enumerate(results, start=1):
+    for lb in all_candidates:
         u = lb.employee
         if not u:
             continue
-        ranked_data.append({
-            "rank": rank,
+        p_info = period_points_map.get(u.id, {})
+        period_pts = p_info.get('points', lb.total_points if not filter_start else 0)
+        period_completed = p_info.get('completed', lb.projects_completed if not filter_start else 0)
+        period_ideas = p_info.get('ideas', lb.ideas_approved if not filter_start else 0)
+        period_articles = p_info.get('articles', lb.knowledge_articles if not filter_start else 0)
+
+        ranked_candidates.append({
             "employee_id": u.id,
             "name": u.full_name or u.username,
             "username": u.username,
@@ -459,46 +519,73 @@ def export_leaderboard():
             "plant": u.plant.name if getattr(u, 'plant', None) else (u.dept.plant.name if u.dept and u.dept.plant else "Main Plant"),
             "department": u.dept.name if u.dept else "General",
             "badge": lb.badges or PointEngineService.get_badge_for_points(lb.total_points),
+            "period_points": period_pts,
             "total_points": lb.total_points,
-            "projects_completed": lb.projects_completed,
+            "projects_completed": period_completed if filter_start else lb.projects_completed,
+            "lifetime_projects_completed": lb.projects_completed,
             "projects_created": lb.projects_created,
             "ideas_submitted": lb.ideas_submitted,
-            "ideas_approved": lb.ideas_approved,
-            "knowledge_articles": lb.knowledge_articles,
-            "meetings_attended": lb.meetings_attended
+            "ideas_approved": period_ideas if filter_start else lb.ideas_approved,
+            "knowledge_articles": period_articles if filter_start else lb.knowledge_articles,
+            "meetings_attended": lb.meetings_attended,
+            "user_created_at": u.created_at
         })
+
+    # Sort based on timeframe score with tie-breaking
+    if filter_start:
+        ranked_candidates.sort(key=lambda x: (x['period_points'], x['total_points'], x['projects_completed'], x['ideas_approved']), reverse=True)
+    else:
+        ranked_candidates.sort(key=lambda x: (x['total_points'], x['projects_completed'], x['ideas_approved'], x['knowledge_articles']), reverse=True)
+
+    if limit and limit > 0:
+        ranked_candidates = ranked_candidates[:limit]
+
+    # Assign rank
+    for idx, item in enumerate(ranked_candidates, start=1):
+        item['rank'] = idx
 
     if export_format == 'json':
         return jsonify({
             "status": "success",
-            "count": len(ranked_data),
-            "items": ranked_data
+            "timeline": timeline_label,
+            "count": len(ranked_candidates),
+            "items": ranked_candidates
         }), 200
 
-    # Build CSV Response (with UTF-8 BOM for Microsoft Excel compatibility)
+    # Build CSV Response with Excel UTF-8 BOM
     output = io.StringIO()
     output.write('\ufeff')
     writer = csv.writer(output, lineterminator='\n')
 
+    # Header metadata
+    org_name = current_user.organization.name if current_user.organization else "QCMS Organization"
+    gen_time = now.strftime("%d-%b-%Y %H:%M UTC")
+
+    writer.writerow(["# QCMS EMPLOYEE RECOGNITION & REWARDS LEADERBOARD REPORT"])
+    writer.writerow([f"# Organization: {org_name}"])
+    writer.writerow([f"# Timeline Scope: {timeline_label}"])
+    writer.writerow([f"# Generated At: {gen_time}"])
+    writer.writerow([f"# Total Records Exported: {len(ranked_candidates)}"])
+    writer.writerow([]) # Empty separator line
+
     writer.writerow([
         "Rank",
         "Employee Name",
-        "Username",
+        "Username / Employee ID",
         "Email Address",
         "Role",
         "Plant Location",
         "Department",
-        "Current Badge",
-        "Total Points (PTS)",
+        "Period Points (PTS)",
+        "Lifetime Points (PTS)",
+        "Recognition Badge / Tier",
         "Projects Completed",
-        "Projects Created",
-        "Ideas Submitted",
         "Ideas Approved",
         "Knowledge Articles",
         "Meetings Attended"
     ])
 
-    for r in ranked_data:
+    for r in ranked_candidates:
         writer.writerow([
             r["rank"],
             r["name"],
@@ -507,163 +594,28 @@ def export_leaderboard():
             r["role"],
             r["plant"],
             r["department"],
-            r["badge"],
+            r["period_points"],
             r["total_points"],
+            r["badge"],
             r["projects_completed"],
-            r["projects_created"],
-            r["ideas_submitted"],
             r["ideas_approved"],
             r["knowledge_articles"],
             r["meetings_attended"]
         ])
 
     csv_data = output.getvalue()
-    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-    filename = f"QCMS_Leaderboard_Rankings_{limit or 'All'}_{timestamp}.csv"
+    filename_clean = f"QCMS_Rewards_Export_{time_range}_{now.strftime('%Y%m%d_%H%M%S')}.csv"
 
-    response = Response(csv_data, mimetype='text/csv')
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
-    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    return response
-
-
-# ─── 4. GET /api/employee/<id>/points ─────────────────────────────────────────
-@points_bp.route('/employee/<int:emp_id>/points', methods=['GET'])
-@jwt_required()
-def get_employee_points_summary(emp_id):
-    current_user_id = get_jwt_identity()
-    current_user = db.session.get(User, current_user_id)
-    if not current_user:
-        return jsonify({"message": "User not found"}), 404
-
-    emp = db.session.get(User, emp_id)
-    if not emp or emp.org_id != current_user.org_id:
-        return jsonify({"message": "Employee not found"}), 404
-
-    lb = EmployeeLeaderboard.query.filter_by(employee_id=emp_id).first()
-    if not lb:
-        PointEngineService.sync_employee_metrics(emp_id, current_user.org_id)
-        lb = EmployeeLeaderboard.query.filter_by(employee_id=emp_id).first()
-
-    pts = lb.total_points if lb else 0
-    badge = PointEngineService.get_badge_for_points(pts)
-
-    # Next Badge Threshold Calculation
-    next_badge = None
-    next_threshold = 100
-    for thresh, b_name in sorted(PointEngineService.get_badge_thresholds_list(), key=lambda x: x[0]):
-        if pts < thresh:
-            next_badge = b_name
-            next_threshold = thresh
-            break
-
-    points_to_next = max(0, next_threshold - pts) if next_badge else 0
-    progress_pct = min(100, round((pts / next_threshold) * 100, 1)) if next_threshold > 0 else 100
-
-    # Recent activities (last 10)
-    recent = EmployeePoints.query.filter_by(employee_id=emp_id)\
-        .order_by(EmployeePoints.created_at.desc()).limit(10).all()
-
-    return jsonify({
-        "employee": {
-            "id": emp.id,
-            "name": emp.full_name or emp.username,
-            "avatar": get_profile_picture_url(emp),
-            "department": emp.dept.name if emp.dept else "General",
-            "role": emp.role.name if emp.role else "Member"
-        },
-        "metrics": {
-            "total_points": pts,
-            "rank": lb.rank if lb else 0,
-            "badge": badge,
-            "next_badge": next_badge,
-            "next_threshold": next_threshold,
-            "points_to_next": points_to_next,
-            "progress_pct": progress_pct,
-            "projects_completed": lb.projects_completed if lb else 0,
-            "projects_created": lb.projects_created if lb else 0,
-            "ideas_submitted": lb.ideas_submitted if lb else 0,
-            "ideas_approved": lb.ideas_approved if lb else 0,
-            "knowledge_articles": lb.knowledge_articles if lb else 0
-        },
-        "recent_activities": [{
-            "id": r.id,
-            "activity_type": r.activity_type,
-            "points": r.points,
-            "description": r.description,
-            "created_at": r.created_at.isoformat() + "Z" if r.created_at else None
-        } for r in recent]
-    }), 200
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename_clean}",
+            "Content-Type": "text/csv; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+        }
+    )
 
 
-# ─── 5. GET /api/points/admin-analytics ──────────────────────────────────────
-@points_bp.route('/points/admin-analytics', methods=['GET'])
-@jwt_required()
-@role_required(['Admin', 'SuperAdmin', 'CEO', 'Team Leader'])
-def get_points_admin_analytics():
-    current_user_id = get_jwt_identity()
-    current_user = db.session.get(User, current_user_id)
-    if not current_user:
-        return jsonify({"message": "User not found"}), 404
-
-    org_id = current_user.org_id
-
-    # Department-wise total points ranking
-    dept_rankings = db.session.query(
-        Department.name.label('department'),
-        func.sum(EmployeeLeaderboard.total_points).label('dept_points'),
-        func.count(EmployeeLeaderboard.id).label('member_count')
-    ).join(User, User.id == EmployeeLeaderboard.employee_id)\
-     .join(Department, Department.id == User.department_id)\
-     .filter(EmployeeLeaderboard.organization_id == org_id)\
-     .group_by(Department.name)\
-     .order_by(func.sum(EmployeeLeaderboard.total_points).desc()).all()
-
-    # Most Active Facilitators
-    active_facilitators = db.session.query(
-        User.id, User.full_name, User.username,
-        func.count(Project.id).label('project_count')
-    ).join(Project, Project.facilitator_id == User.id)\
-     .filter(Project.org_id == org_id)\
-     .group_by(User.id, User.full_name, User.username)\
-     .order_by(func.count(Project.id).desc()).limit(5).all()
-
-    # Most Active Team Leaders
-    active_leaders = db.session.query(
-        User.id, User.full_name, User.username,
-        func.count(Project.id).label('project_count')
-    ).join(Project, Project.team_leader_id == User.id)\
-     .filter(Project.org_id == org_id)\
-     .group_by(User.id, User.full_name, User.username)\
-     .order_by(func.count(Project.id).desc()).limit(5).all()
-
-    return jsonify({
-        "department_rankings": [{
-            "department": d.department,
-            "points": int(d.dept_points or 0),
-            "members": int(d.member_count or 0)
-        } for d in dept_rankings],
-        "active_facilitators": [{
-            "id": f.id,
-            "name": f.full_name or f.username,
-            "projects": f.project_count
-        } for f in active_facilitators],
-        "active_leaders": [{
-            "id": l.id,
-            "name": l.full_name or l.username,
-            "projects": l.project_count
-        } for l in active_leaders]
-    }), 200
 
 
-# Helper method on Service for Threshold List
-PointEngineService.get_badge_thresholds_list = staticmethod(lambda: [
-    (10000, "Quality Champion"),
-    (5000, "Diamond"),
-    (3000, "Platinum"),
-    (1500, "Gold"),
-    (700, "Silver"),
-    (300, "Bronze"),
-    (100, "Beginner"),
-    (0, "Newbie")
-])
