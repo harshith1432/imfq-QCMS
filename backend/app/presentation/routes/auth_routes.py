@@ -1127,6 +1127,14 @@ def login():
     
     # Update last login time
     user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Warm session cache immediately
+    try:
+        from app.infrastructure.cache.redis_client import cache as session_cache
+        session_cache.set(f"sess_status:{session_id}", "Active", ex=3600)
+        session_cache.set(f"user_active:{user.id}", "active", ex=3600)
+    except Exception:
+        pass
     
     # Track session in db safely
     try:

@@ -1,19 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/assets/dist/auth-guard.a3b7eac2.min.js"></script>
+    <script src="/assets/dist/auth-guard.1fa62aac.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facilitator Dashboard | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.2b398453.min.css">
+    <link rel="stylesheet" href="/assets/dist/core.3ebcd984.min.css">
     <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        /* Role-specific minor tweaks can stay here if absolutely necessary, 
-           but most are now in design-system.css */
-    </style>
 </head>
 <body>
     <div class="app-layout">
@@ -33,7 +29,7 @@
                 </header>
 
                 <!-- KPI Widget Cards -->
-                <div class="kpi-grid fade-in section-spacing" id="kpiGrid">
+                <div class="kpi-grid kpi-grid-4 fade-in section-spacing" id="kpiGrid">
                     <!-- Dynamic injection via components.js -->
                 </div>
 
@@ -206,30 +202,138 @@
         </div>
     </div>
 
-    <!-- ─── RCA Validate Modal ───────────────────────────────────── -->
+    <!-- ─── Validate RCA Modal ────────────────────────────────────── -->
     <div class="modal fade" id="validateRcaModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold"><i data-lucide="check-circle" class="me-2 text-success" style="width:20px;height:20px;vertical-align:text-bottom;"></i>RCA Validation Note</h5>
+                    <h5 class="modal-title fw-bold">Validate Root Cause Analysis (Stage 5)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="ds-alert info mb-3">
-                        <div class="d-flex gap-2">
-                            <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
-                            <div class="text-sm">By adding this validation note, you confirm the Root Cause Analysis is complete and the project is eligible to advance to Stage 6 (Data Analysis).</div>
-                        </div>
-                    </div>
                     <input type="hidden" id="validateProjectId">
+                    <p class="text-sm text-muted">Confirm that the team has completed 5-Why analysis, Fishbone diagram verification, and identified validated root causes.</p>
                     <div class="mb-3">
-                        <label class="form-label fw-medium">RCA Validation Statement <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="validateNote" rows="4" placeholder="e.g. Root cause analysis complete. Fishbone, Pareto, and 5-Why all validated. Proceed to solution design."></textarea>
+                        <label class="form-label fw-medium">Facilitator Validation Comments</label>
+                        <textarea class="form-control" id="validateComments" rows="3" placeholder="Enter validation comments or specific guidance..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitValidation()">Validate RCA & Unlock Stage 6</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Assistance Reply Modal ─────────────────────────────── -->
+    <div class="modal fade" id="assistanceReplyModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card ds-card border-0" style="border: 1px solid var(--ds-border-color) !important;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);">
+                        <i data-lucide="reply" class="me-2 text-primary" style="width:20px;height:20px;vertical-align:text-bottom;"></i> Reply to Assistance Request
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="replyReqId">
+
+                    <!-- Request context -->
+                    <div class="p-3 rounded mb-3" style="background:var(--ds-surface-1,#f8fafc);border:1px solid var(--ds-border-color);">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-semibold text-sm" id="replyProjectInfo" style="color:var(--ds-text-main);">Project — Stage</span>
+                            <small class="text-muted">From: <strong id="replyRequesterName">—</strong></small>
+                        </div>
+                        <div class="text-sm" style="color:var(--ds-text-secondary);white-space:pre-wrap;" id="replyOriginalMessage">—</div>
+                    </div>
+
+                    <!-- Facilitator reply -->
+                    <div class="mb-3">
+                        <label class="ds-label" for="replyText">Your Reply / Guidance <span class="text-danger">*</span></label>
+                        <textarea class="ds-input ds-textarea" id="replyText" rows="4" placeholder="Explain your feedback, guidance, or decision to the team member..."></textarea>
+                    </div>
+
+                    <!-- Action status -->
+                    <div class="mb-2">
+                        <label class="ds-label" for="replyStatus">Request Status</label>
+                        <select class="ds-input ds-select" id="replyStatus">
+                            <option value="Approved">Approve / Provide Solution (Approved)</option>
+                            <option value="Not Approved">Reject / Request Re-work (Not Approved)</option>
+                            <option value="Responded">Information Provided (In Progress)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-2">
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitReply()">
+                        <i data-lucide="send" style="width:14px;height:14px;margin-right:6px;"></i> Send Reply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Assisted Details Modal ─────────────────────────────── -->
+    <div class="modal fade" id="assistedDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card ds-card border-0" style="border: 1px solid var(--ds-border-color) !important;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);">
+                        <i data-lucide="history" class="me-2 text-primary" style="width:20px;height:20px;vertical-align:text-bottom;"></i> Assisted Project Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Project metadata card -->
+                    <div class="p-3 rounded mb-3" style="background:var(--ds-surface-1,#f8fafc);border:1px solid var(--ds-border-color);">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <span class="text-xs text-muted d-block">Project</span>
+                                <strong id="adProjectTitle" class="text-sm">—</strong>
+                                <span id="adProjectUid" class="font-mono text-xxs text-muted d-block">—</span>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-xs text-muted d-block">Department / Plant</span>
+                                <span id="adProjectDept" class="fw-medium text-sm">—</span>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-xs text-muted d-block">Assisted Stage</span>
+                                <span id="adProjectStage" class="ds-badge blue">Stage —</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-xs text-muted d-block">Requested By</span>
+                                <span id="adRequester" class="fw-medium text-sm">—</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-xs text-muted d-block">Assisted Date &amp; Decision</span>
+                                <span id="adAssistedDate" class="text-xs text-muted">—</span>
+                                <span id="adStatusBadge" class="ms-2 ds-badge green">Approved</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Original Team Question / Request -->
+                    <div class="mb-3">
+                        <label class="ds-label fw-bold text-xs text-uppercase mb-1">
+                            <i data-lucide="help-circle" style="width:14px;height:14px;margin-right:4px;" class="text-warning"></i> Team Request / Issue Description
+                        </label>
+                        <div id="adOriginalMessage" class="p-3 rounded text-sm" style="background:var(--ds-surface-raised,#f1f5f9);border:1px solid var(--ds-border-color);white-space:pre-wrap;color:var(--ds-text-main);">—</div>
+                    </div>
+
+                    <!-- Facilitator Guidance & Assistance Provided -->
+                    <div class="mb-2">
+                        <label class="ds-label fw-bold text-xs text-uppercase mb-1">
+                            <i data-lucide="check-circle" style="width:14px;height:14px;margin-right:4px;" class="text-success"></i> Facilitator Assistance &amp; Guidance Provided
+                        </label>
+                        <div id="adResponse" class="p-3 rounded text-sm" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.3);border-left:4px solid #22c55e;white-space:pre-wrap;color:var(--ds-text-main);">—</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-2 d-flex justify-content-between">
+                    <a id="adOpenStageLink" href="#" class="ds-btn ds-btn-outline">
+                        <i data-lucide="external-link" style="width:14px;height:14px;margin-right:6px;"></i> Open Stage in Workspace
+                    </a>
+                    <button type="button" class="ds-btn ds-btn-primary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -318,62 +422,47 @@
                 const plantSel = document.getElementById('facPlantFilter');
                 if (plantSel) {
                     const currentPlant = plantSel.value;
-                    let pOpts = '<option value="">All Plant Locations</option>';
-                    this.allPlants.forEach(p => {
-                        const label = p.name + (p.location && p.location !== p.name ? ` (${p.location})` : '');
-                        pOpts += `<option value="${QCMS.escapeHtml(p.name)}">${QCMS.escapeHtml(label)}</option>`;
-                    });
-                    plantSel.innerHTML = pOpts;
-                    if (currentPlant) plantSel.value = currentPlant;
+                    plantSel.innerHTML = '<option value="">All Plant Locations</option>' +
+                        this.allPlants.map(p => `<option value="${p.id}">${p.name || p.title || p.location}</option>`).join('');
+                    plantSel.value = currentPlant;
                 }
 
                 // 2. Fetch Departments
                 const depts = await api.get('/projects/departments').catch(() => []);
                 this.allDepartments = Array.isArray(depts) ? depts : [];
-                this.populateDepartmentOptions();
+                this.populateDepartmentOptions('');
             } catch (err) {
-                console.error("Failed to load filter options", err);
+                console.error('Failed to load filter options:', err);
             }
         },
 
-        populateDepartmentOptions(selectedPlant = '') {
+        populateDepartmentOptions(plantId) {
             const deptSel = document.getElementById('facDeptFilter');
             if (!deptSel) return;
             const currentDept = deptSel.value;
 
             let filteredDepts = this.allDepartments;
-            if (selectedPlant) {
-                const targetPlant = this.allPlants.find(p => 
-                    p.name.toLowerCase() === selectedPlant.toLowerCase() || 
-                    String(p.id) === String(selectedPlant) ||
-                    (p.location && p.location.toLowerCase() === selectedPlant.toLowerCase())
-                );
-                if (targetPlant) {
-                    filteredDepts = this.allDepartments.filter(d => !d.plant_id || d.plant_id === targetPlant.id);
-                }
+            if (plantId) {
+                filteredDepts = this.allDepartments.filter(d => String(d.plant_id) === String(plantId));
             }
 
-            let dOpts = '<option value="">All Departments</option>';
-            const seen = new Set();
-            filteredDepts.forEach(d => {
-                if (!seen.has(d.name)) {
-                    seen.add(d.name);
-                    dOpts += `<option value="${QCMS.escapeHtml(d.name)}">${QCMS.escapeHtml(d.name)}</option>`;
-                }
-            });
-            deptSel.innerHTML = dOpts;
-            if (currentDept && seen.has(currentDept)) {
+            deptSel.innerHTML = '<option value="">All Departments</option>' +
+                filteredDepts.map(d => `<option value="${d.id || d.name}">${d.name}</option>`).join('');
+            
+            if (filteredDepts.some(d => String(d.id) === String(currentDept) || d.name === currentDept)) {
                 deptSel.value = currentDept;
+            } else {
+                deptSel.value = '';
             }
         },
 
-        handlePlantFilterChange(plantVal) {
-            this.populateDepartmentOptions(plantVal);
+        handlePlantFilterChange(plantId) {
+            this.populateDepartmentOptions(plantId);
             this.applyFilters();
         },
 
         handleSearchInput(val) {
-            this.currentSearchQuery = (val || '').toLowerCase();
+            this.currentSearchQuery = val || '';
             this.applyFilters();
         },
 
@@ -444,10 +533,14 @@
         async loadStats() {
             try {
                 const s = await api.get('/facilitator/stats');
-                document.getElementById('kpiGrid').innerHTML =
-                    QCMS.kpiCard('Needs Guidance', s.pending_rca || s.pending_assistance || 0, 'search', 'orange', null, "#assistance") +
-                    QCMS.kpiCard('Inactive Projects', s.stalled_projects || 0, 'alert-triangle', 'red') +
-                    QCMS.kpiCard('Total Active Projects', s.total_projects || 0, 'grid', 'blue', null, "#pipeline");
+                const kpiEl = document.getElementById('kpiGrid');
+                if (kpiEl) {
+                    kpiEl.innerHTML =
+                        QCMS.kpiCard('Needs Guidance', s.pending_rca || s.pending_assistance || 0, 'help-circle', 'orange', null, "#assistance") +
+                        QCMS.kpiCard('Inactive Projects', s.stalled_projects || 0, 'alert-triangle', 'red') +
+                        QCMS.kpiCard('Total Active Projects', s.total_projects || 0, 'folder-open', 'blue', null, "#pipeline") +
+                        QCMS.kpiCard('Assisted Projects', s.assisted_count || 0, 'history', 'purple', null, "#assisted-history");
+                }
                 if (window.lucide) lucide.createIcons();
             } catch (e) { console.error('Stats failed', e); }
         },
@@ -498,40 +591,36 @@
                     </td>
                     <td><span class="ds-badge blue">Stage ${r.stage_id}</span></td>
                     <td>
-                        <div class="fw-medium">${r.user_name}</div>
-                        <div class="text-xxs text-muted">${r.user_email || ''}</div>
+                        <div class="text-sm fw-medium">${r.user_name || r.user_id}</div>
                     </td>
                     <td>
-                        <div style="max-width:220px;white-space:normal;font-size:13px;">${r.message}</div>
+                        <div class="text-sm" style="max-width:280px;white-space:pre-wrap;">${r.message}</div>
                         ${replySection}
                     </td>
-                    <td class="text-muted" style="font-size:12px;">${r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+                    <td class="text-xs text-muted">${QCMS.formatDate(r.created_at)}</td>
                     <td><span class="ds-badge ${statusBadge}">${r.status}</span></td>
-                    <td class="text-end" style="white-space:nowrap;">
-                        <a href="/projects/project-details.html?id=${r.project_id}&stage=${r.stage_id}" class="ds-btn ds-btn-sm ds-btn-ghost me-1">Open Stage ${r.stage_id}</a>
+                    <td class="text-end">
                         <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.respondToRequest(${r.id})">
-                            ${r.status === 'Pending' ? 'Reply' : 'Update Reply'}
+                            <i data-lucide="reply" style="width:13px;height:13px;margin-right:4px;"></i> Reply
                         </button>
                     </td>
-                </tr>`;
+                </tr>
+                `;
             }).join('');
             if (window.lucide) lucide.createIcons();
         },
 
         respondToRequest(reqId) {
-            const r = (this.assistanceData || []).find(x => x.id === reqId) || {};
+            const req = this.assistanceData.find(r => r.id === reqId);
+            if (!req) return;
+
             document.getElementById('replyReqId').value = reqId;
-            document.getElementById('replyProjectInfo').textContent = `${r.project_title || 'Project'} — Stage ${r.stage_id || '1'}`;
-            document.getElementById('replyRequesterName').textContent = r.user_name || 'Team Member';
-            document.getElementById('replyOriginalMessage').textContent = r.message || '';
-            document.getElementById('replyText').value = r.response || '';
-            // Pre-select current status
-            const statusSelect = document.getElementById('replyStatus');
-            if (r.status && r.status !== 'Pending') {
-                statusSelect.value = r.status;
-            } else {
-                statusSelect.value = 'Approved';
-            }
+            document.getElementById('replyProjectInfo').textContent = `${req.project_title} (${req.project_uid}) — Stage ${req.stage_id}`;
+            document.getElementById('replyRequesterName').textContent = req.user_name || `User #${req.user_id}`;
+            document.getElementById('replyOriginalMessage').textContent = req.message;
+            document.getElementById('replyText').value = req.response || '';
+            document.getElementById('replyStatus').value = req.status === 'Pending' ? 'Approved' : req.status;
+
             if (!this.replyModal) {
                 this.replyModal = new bootstrap.Modal(document.getElementById('assistanceReplyModal'));
             }
@@ -541,171 +630,170 @@
 
         async submitReply() {
             const reqId = document.getElementById('replyReqId').value;
-            const response = document.getElementById('replyText').value.trim();
+            const reply = document.getElementById('replyText').value.trim();
             const status = document.getElementById('replyStatus').value;
-            if (!response) return QCMS.toast('Please write a reply message.', 'warning');
+
+            if (!reply) {
+                QCMS.toast('Please provide a reply message or guidance.', 'warning');
+                return;
+            }
+
             try {
-                await api.post(`/facilitator/assistance-requests/${reqId}/respond`, { response, status });
-                this.replyModal.hide();
-                QCMS.toast('Reply sent successfully and recorded in Assisted Project History!', 'success');
+                await api.post(`/facilitator/assistance-requests/${reqId}/respond`, {
+                    response: reply,
+                    status: status
+                });
+                QCMS.toast('Reply sent successfully!', 'success');
+                if (this.replyModal) this.replyModal.hide();
                 this.loadAssistanceRequests();
                 this.loadAssistedHistory();
                 this.loadStats();
-            } catch (e) {
-                QCMS.toast('Failed to send reply: ' + (e.message || 'Unknown error'), 'error');
+            } catch (err) {
+                QCMS.toast(err.message || 'Failed to send reply', 'error');
             }
         },
 
-        // ─── Pipeline / Active Projects ───────────────────────────
+        // ─── Pipeline / Projects ──────────────────────────────────
         async loadPipeline() {
+            const body = document.getElementById('pipelineBody');
+            const countEl = document.getElementById('pipelineCount');
+            if (!body) return;
             try {
                 const projects = await api.get('/facilitator/projects');
                 this.pipelineData = projects || [];
                 this.renderPipeline(this.filterData(this.pipelineData));
-            } catch (e) {
-                document.getElementById('pipelineBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Error loading projects.</td></tr>`;
+            } catch (err) {
+                console.error('Pipeline failed', err);
+                if (body) body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-danger">Failed to load pipeline.</td></tr>`;
             }
         },
 
         renderPipeline(projects) {
-            document.getElementById('pipelineCount').textContent = `${projects.length} Active Project${projects.length === 1 ? '' : 's'}`;
             const body = document.getElementById('pipelineBody');
-            if (!projects.length) {
+            const countEl = document.getElementById('pipelineCount');
+            if (countEl) countEl.textContent = `${projects.length} Active`;
+            if (!projects || projects.length === 0) {
                 const msg = (this.currentSearchQuery || document.getElementById('facPlantFilter')?.value || document.getElementById('facDeptFilter')?.value)
-                    ? 'No active projects matching your selected plant, department, or search filters.'
-                    : 'No active projects found where you are assigned as facilitator.';
+                    ? 'No projects matching your selected plant, department, or search filters.'
+                    : 'No projects currently assigned.';
                 body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${QCMS.emptyState('folder-open', 'No Projects Found', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
-            const stageColors = {
-                1: 'blue', 2: 'cyan', 3: 'orange', 4: 'indigo', 
-                5: 'purple', 6: 'pink', 7: 'teal', 8: 'green'
-            };
-            body.innerHTML = projects.map(p => {
-                let statusBadge = p.status.includes('Approved') ? 'green' 
-                    : p.status.includes('Submitted') ? 'orange' 
-                    : p.status.includes('Rejected') ? 'red' : 'blue';
-                
-                return `<tr>
+            body.innerHTML = projects.map(p => `
+                <tr>
                     <td>
                         <div class="fw-semibold">${p.title}</div>
-                        <span class="text-xxs font-mono text-muted">${p.uid}</span>
+                        <span class="text-xxs font-mono text-muted">${p.uid || ''}</span>
                     </td>
                     <td>
-                        <div class="fw-medium text-sm">${p.dept}</div>
-                        <span class="text-xxs text-muted d-flex align-items-center gap-1 mt-0.5"><i data-lucide="map-pin" style="width:11px;height:11px;"></i> ${p.plant || 'Main Plant'} · TL: ${p.team_leader}</span>
+                        <div class="fw-medium text-sm">${p.dept || '—'}</div>
+                        <span class="text-xxs text-muted d-flex align-items-center gap-1 mt-0.5"><i data-lucide="map-pin" style="width:11px;height:11px;"></i> ${p.plant || 'Main Plant'}</span>
                     </td>
-                    <td><span class="ds-badge ${stageColors[p.stage] || 'blue'}">Stage ${p.stage}</span></td>
-                    <td><span class="ds-badge ${statusBadge}">${p.status}</span></td>
+                    <td><span class="ds-badge blue">Stage ${p.stage || 1}</span></td>
+                    <td><span class="ds-badge ${QCMS.statusColor(p.status)}">${p.status}</span></td>
                     <td class="text-end">
-                        <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-primary">
-                            <i data-lucide="external-link" style="width:13px;height:13px;margin-right:4px;"></i> Open Project
-                        </a>
+                        <div class="d-flex justify-content-end gap-1">
+                            <a href="/workflow/workspace.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-primary">
+                                <i data-lucide="external-link" style="width:13px;height:13px;margin-right:4px;"></i> Open
+                            </a>
+                            <button class="ds-btn ds-btn-sm ds-btn-ghost" onclick="facDash.openNoteModal(${p.id}, ${p.stage || 1})">
+                                <i data-lucide="file-plus" style="width:13px;height:13px;"></i>
+                            </button>
+                        </div>
                     </td>
-                </tr>`;
-            }).join('');
+                </tr>
+            `).join('');
             if (window.lucide) lucide.createIcons();
         },
 
-        // ─── Assisted Project History ────────────────────────────
+        // ─── Assisted Project History ─────────────────────────────
         async loadAssistedHistory() {
+            const body = document.getElementById('assistedHistoryBody');
+            const countEl = document.getElementById('assistedHistoryCount');
+            if (!body) return;
             try {
                 const history = await api.get('/facilitator/assisted-history');
                 this.assistedHistoryData = history || [];
                 this.renderAssistedHistory(this.filterData(this.assistedHistoryData));
-            } catch (e) {
-                document.getElementById('assistedHistoryBody').innerHTML = `<tr><td colspan="9" class="p-4 text-center text-danger">Error loading assisted history.</td></tr>`;
+            } catch (err) {
+                console.error('Assisted history failed', err);
+                if (body) body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-danger">Failed to load assisted project history.</td></tr>`;
             }
         },
 
-        renderAssistedHistory(items) {
-            document.getElementById('assistedHistoryCount').textContent = `${items.length} Assisted`;
+        renderAssistedHistory(history) {
             const body = document.getElementById('assistedHistoryBody');
-            if (!items || !items.length) {
+            const countEl = document.getElementById('assistedHistoryCount');
+            if (countEl) countEl.textContent = `${history.length} Assisted`;
+            if (!history || history.length === 0) {
                 const msg = (this.currentSearchQuery || document.getElementById('facPlantFilter')?.value || document.getElementById('facDeptFilter')?.value)
-                    ? 'No assisted history matching your selected plant, department, or search filters.'
-                    : 'No assisted project history found yet. As you provide guidance and respond to project assistance requests, your assistance history will be logged here.';
-                body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-muted">${QCMS.emptyState('history', 'No Assisted History Found', msg)}</td></tr>`;
+                    ? 'No assisted projects matching your selected plant, department, or search filters.'
+                    : 'No assisted project records found yet.';
+                body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-muted">${QCMS.emptyState('history', 'No Assisted History', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
-            body.innerHTML = items.map(item => {
-                const statusBadge = item.status === 'Approved' ? 'green' 
-                    : item.status === 'Not Approved' ? 'red' 
-                    : item.status === 'Needs Info' ? 'orange' : 'blue';
-
-                const responseExcerpt = item.response ? (
-                    item.response.length > 80 ? item.response.substring(0, 80) + '...' : item.response
-                ) : '<span class="text-muted fst-italic">No response details</span>';
-
-                const messageExcerpt = item.message ? (
-                    item.message.length > 70 ? item.message.substring(0, 70) + '...' : item.message
-                ) : '—';
-
-                const assistedDateStr = item.assisted_at ? new Date(item.assisted_at).toLocaleDateString('en-IN', {
-                    day: '2-digit', month: 'short', year: 'numeric'
-                }) : '—';
-
-                return `<tr>
+            body.innerHTML = history.map(item => {
+                const statusBadge = item.status === 'Approved' ? 'green'
+                    : item.status === 'Not Approved' ? 'red' : 'blue';
+                return `
+                <tr>
                     <td>
                         <div class="fw-semibold">${item.project_title}</div>
                         <span class="text-xxs font-mono text-muted">${item.project_uid}</span>
                     </td>
                     <td>
-                        <div class="fw-medium text-sm">${item.dept}</div>
+                        <div class="fw-medium text-sm">${item.dept || 'General'}</div>
                         <span class="text-xxs text-muted d-flex align-items-center gap-1 mt-0.5"><i data-lucide="map-pin" style="width:11px;height:11px;"></i> ${item.plant || 'Main Plant'}</span>
                     </td>
                     <td><span class="ds-badge blue">Stage ${item.stage_id}</span></td>
                     <td>
-                        <div class="fw-medium">${item.requested_by}</div>
-                        <div class="text-xxs text-muted">${item.user_email || ''}</div>
+                        <div class="text-sm fw-medium">${item.requested_by || 'Team Member'}</div>
                     </td>
                     <td>
-                        <div style="max-width:180px;white-space:normal;font-size:12px;" class="text-muted" title="${(item.message || '').replace(/"/g, '&quot;')}">${messageExcerpt}</div>
+                        <div class="text-sm text-truncate" style="max-width:200px;" title="${(item.message || '').replace(/"/g, '&quot;')}">${item.message || '—'}</div>
                     </td>
                     <td>
-                        <div class="p-1.5 rounded" style="background:rgba(34,197,94,0.06);border-left:3px solid #22c55e;font-size:12px;max-width:220px;white-space:normal;">
-                            <strong class="text-success">Assistance:</strong> ${responseExcerpt}
-                        </div>
+                        <div class="text-sm fw-medium text-truncate" style="max-width:220px;color:var(--ds-success,#16a34a);" title="${(item.response || '').replace(/"/g, '&quot;')}">${item.response || '—'}</div>
                     </td>
                     <td><span class="ds-badge ${statusBadge}">${item.status}</span></td>
-                    <td class="text-muted" style="font-size:12px;white-space:nowrap;">${assistedDateStr}</td>
-                    <td class="text-end" style="white-space:nowrap;">
+                    <td class="text-xs text-muted">${QCMS.formatDate(item.responded_at || item.created_at)}</td>
+                    <td class="text-end">
                         <button class="ds-btn ds-btn-sm ds-btn-ghost me-1" onclick="facDash.viewAssistedDetails(${item.id})">
-                            <i data-lucide="eye" style="width:13px;height:13px;margin-right:3px;"></i> View Details
+                            <i data-lucide="eye" style="width:13px;height:13px;margin-right:4px;"></i> View
                         </button>
-                        <a href="/projects/project-details.html?id=${item.project_id}&stage=${item.stage_id}" class="ds-btn ds-btn-sm ds-btn-outline">
-                            Open Stage ${item.stage_id}
-                        </a>
                     </td>
-                </tr>`;
+                </tr>
+                `;
             }).join('');
             if (window.lucide) lucide.createIcons();
         },
 
-        viewAssistedDetails(id) {
-            const item = this.assistedHistoryData.find(x => x.id === id);
+        viewAssistedDetails(itemId) {
+            const item = this.assistedHistoryData.find(h => h.id === itemId);
             if (!item) return;
 
-            document.getElementById('adProjectTitle').textContent = item.project_title;
-            document.getElementById('adProjectUid').textContent = item.project_uid;
+            document.getElementById('adProjectTitle').textContent = item.project_title || '—';
+            document.getElementById('adProjectUid').textContent = item.project_uid || '—';
             document.getElementById('adProjectDept').textContent = `${item.dept || 'General'} (${item.plant || 'Main Plant'})`;
-            document.getElementById('adProjectStage').textContent = `Stage ${item.stage_id}`;
-            document.getElementById('adRequester').textContent = `${item.requested_by} ${item.user_email ? '(' + item.user_email + ')' : ''}`;
+            document.getElementById('adProjectStage').textContent = `Stage ${item.stage_id || '—'}`;
+            document.getElementById('adRequester').textContent = item.requested_by || 'Team Member';
+            document.getElementById('adAssistedDate').textContent = QCMS.formatDate(item.responded_at || item.created_at);
             
-            const dateStr = item.assisted_at ? new Date(item.assisted_at).toLocaleString('en-IN', {
-                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-            }) : '—';
-            document.getElementById('adAssistedDate').textContent = dateStr;
+            const badgeEl = document.getElementById('adStatusBadge');
+            if (badgeEl) {
+                badgeEl.textContent = item.status || 'Approved';
+                badgeEl.className = `ms-2 ds-badge ${item.status === 'Approved' ? 'green' : item.status === 'Not Approved' ? 'red' : 'blue'}`;
+            }
 
-            const badge = document.getElementById('adStatusBadge');
-            badge.textContent = item.status;
-            badge.className = `ms-2 ds-badge ${item.status === 'Approved' ? 'green' : item.status === 'Not Approved' ? 'red' : item.status === 'Needs Info' ? 'orange' : 'blue'}`;
+            document.getElementById('adOriginalMessage').textContent = item.message || '—';
+            document.getElementById('adResponse').textContent = item.response || '—';
 
-            document.getElementById('adOriginalMessage').textContent = item.message || 'No description provided';
-            document.getElementById('adResponse').textContent = item.response || 'No assistance notes recorded.';
-            document.getElementById('adOpenStageLink').href = `/projects/project-details.html?id=${item.project_id}&stage=${item.stage_id}`;
+            const openLink = document.getElementById('adOpenStageLink');
+            if (openLink) {
+                openLink.href = `/workflow/workspace.html?id=${item.project_id}&stage=${item.stage_id}`;
+            }
 
             if (!this.assistedDetailsModal) {
                 this.assistedDetailsModal = new bootstrap.Modal(document.getElementById('assistedDetailsModal'));
@@ -714,39 +802,32 @@
             if (window.lucide) lucide.createIcons();
         },
 
-        // ─── Modals ───────────────────────────────────────────────
-        openNoteModal(projectId, stage) {
+        openNoteModal(projectId, stageNumber) {
             document.getElementById('noteProjectId').value = projectId;
-            document.getElementById('noteStageNumber').value = stage;
+            document.getElementById('noteStageNumber').value = stageNumber;
             document.getElementById('noteText').value = '';
             this.noteModal.show();
         },
 
         async submitNote() {
             const projectId = document.getElementById('noteProjectId').value;
-            const stage = document.getElementById('noteStageNumber').value;
-            const text = document.getElementById('noteText').value.trim();
-            if (!text) return QCMS.toast('Note text is required', 'warning');
+            const stageNumber = document.getElementById('noteStageNumber').value;
+            const note = document.getElementById('noteText').value.trim();
+            if (!note) return;
+
             try {
-                await api.post('/facilitator/notes', { project_id: parseInt(projectId), stage_number: parseInt(stage), note_text: text });
+                await api.post('/facilitator/notes', { project_id: parseInt(projectId), stage_number: parseInt(stageNumber), note });
                 this.noteModal.hide();
                 QCMS.toast('Note added successfully', 'success');
-            } catch (e) { QCMS.toast('Failed to add note', 'error'); }
-        },
-
-        openValidateModal(projectId) {
-            document.getElementById('validateProjectId').value = projectId;
-            document.getElementById('validateNote').value = '';
-            this.validateModal.show();
-            if (window.lucide) lucide.createIcons();
+            } catch (e) { QCMS.toast(e.message || 'Failed to add note', 'error'); }
         },
 
         async submitValidation() {
             const projectId = document.getElementById('validateProjectId').value;
-            const note = document.getElementById('validateNote').value.trim();
-            if (!note) return QCMS.toast('Validation note is required', 'warning');
+            const comments = document.getElementById('validateComments').value.trim();
+
             try {
-                await api.post(`/facilitator/rca/${projectId}/validate`, { validation_note: note });
+                await api.post(`/facilitator/rca/${projectId}/validate`, { comments });
                 this.validateModal.hide();
                 QCMS.toast('RCA Validated! Stage 6 is now unlocked.', 'success');
                 this.loadStats();
@@ -760,120 +841,5 @@
         facDash.init();
     }
     </script>
-
-    <!-- ─── Assistance Reply Modal ─────────────────────────────── -->
-    <div class="modal fade" id="assistanceReplyModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content glass-card ds-card border-0" style="border: 1px solid var(--ds-border-color) !important;">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);">
-                        <i data-lucide="reply" class="me-2 text-primary" style="width:20px;height:20px;vertical-align:text-bottom;"></i> Reply to Assistance Request
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="replyReqId">
-
-                    <!-- Request context -->
-                    <div class="p-3 rounded mb-3" style="background:var(--ds-surface-1,#f8fafc);border:1px solid var(--ds-border-color);">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-semibold text-sm" id="replyProjectInfo" style="color:var(--ds-text-main);">Project — Stage</span>
-                            <small class="text-muted">From: <strong id="replyRequesterName">—</strong></small>
-                        </div>
-                        <div class="text-sm" style="color:var(--ds-text-secondary);white-space:pre-wrap;" id="replyOriginalMessage">—</div>
-                    </div>
-
-                    <!-- Facilitator reply -->
-                    <div class="mb-3">
-                        <label class="ds-label" for="replyText">Your Reply / Guidance <span class="text-danger">*</span></label>
-                        <textarea class="ds-input ds-textarea" id="replyText" rows="4" placeholder="Explain your feedback, guidance, or decision to the team member..."></textarea>
-                    </div>
-
-                    <!-- Approval status -->
-                    <div class="mb-1">
-                        <label class="ds-label" for="replyStatus">Decision</label>
-                        <select class="ds-input" id="replyStatus">
-                            <option value="Approved">✅ Approved — They can proceed</option>
-                            <option value="Not Approved">❌ Not Approved — Changes required</option>
-                            <option value="Needs Info">🔄 Needs More Information</option>
-                            <option value="Responded">💬 Responded (for reference)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-2">
-                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="ds-btn ds-btn-primary" onclick="facDash.submitReply()">
-                        <i data-lucide="send" style="width:14px;height:14px;margin-right:6px;"></i> Send Reply
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ─── Assisted Details Modal ─────────────────────────────── -->
-    <div class="modal fade" id="assistedDetailsModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content glass-card ds-card border-0" style="border: 1px solid var(--ds-border-color) !important;">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" style="color:var(--ds-text-main);">
-                        <i data-lucide="history" class="me-2 text-primary" style="width:20px;height:20px;vertical-align:text-bottom;"></i> Assisted Project Details
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Project metadata card -->
-                    <div class="p-3 rounded mb-3" style="background:var(--ds-surface-1,#f8fafc);border:1px solid var(--ds-border-color);">
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <span class="text-xs text-muted d-block">Project</span>
-                                <strong id="adProjectTitle" class="text-sm">—</strong>
-                                <span id="adProjectUid" class="font-mono text-xxs text-muted d-block">—</span>
-                            </div>
-                            <div class="col-md-3">
-                                <span class="text-xs text-muted d-block">Department / Plant</span>
-                                <span id="adProjectDept" class="fw-medium text-sm">—</span>
-                            </div>
-                            <div class="col-md-3">
-                                <span class="text-xs text-muted d-block">Assisted Stage</span>
-                                <span id="adProjectStage" class="ds-badge blue">Stage —</span>
-                            </div>
-                            <div class="col-md-6">
-                                <span class="text-xs text-muted d-block">Requested By</span>
-                                <span id="adRequester" class="fw-medium text-sm">—</span>
-                            </div>
-                            <div class="col-md-6">
-                                <span class="text-xs text-muted d-block">Assisted Date &amp; Decision</span>
-                                <span id="adAssistedDate" class="text-xs text-muted">—</span>
-                                <span id="adStatusBadge" class="ms-2 ds-badge green">Approved</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Original Team Question / Request -->
-                    <div class="mb-3">
-                        <label class="ds-label fw-bold text-xs text-uppercase mb-1">
-                            <i data-lucide="help-circle" style="width:14px;height:14px;margin-right:4px;" class="text-warning"></i> Team Request / Issue Description
-                        </label>
-                        <div id="adOriginalMessage" class="p-3 rounded text-sm" style="background:var(--ds-surface-raised,#f1f5f9);border:1px solid var(--ds-border-color);white-space:pre-wrap;color:var(--ds-text-main);">—</div>
-                    </div>
-
-                    <!-- Facilitator Guidance & Assistance Provided -->
-                    <div class="mb-2">
-                        <label class="ds-label fw-bold text-xs text-uppercase mb-1">
-                            <i data-lucide="check-circle" style="width:14px;height:14px;margin-right:4px;" class="text-success"></i> Facilitator Assistance &amp; Guidance Provided
-                        </label>
-                        <div id="adResponse" class="p-3 rounded text-sm" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.3);border-left:4px solid #22c55e;white-space:pre-wrap;color:var(--ds-text-main);">—</div>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-2 d-flex justify-content-between">
-                    <a id="adOpenStageLink" href="#" class="ds-btn ds-btn-outline">
-                        <i data-lucide="external-link" style="width:14px;height:14px;margin-right:6px;"></i> Open Stage in Workspace
-                    </a>
-                    <button type="button" class="ds-btn ds-btn-primary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
 </body>
 </html>

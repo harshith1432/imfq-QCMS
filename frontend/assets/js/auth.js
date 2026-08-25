@@ -167,15 +167,37 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 return;
             }
 
-            // Role-based redirection
-            const role = data.role;
-            let targetDashboard = '/dashboard/dashboard-team-member.html';
-            if (role === 'SuperAdmin') targetDashboard = '/admin/super-admin.html';
-            else if (role === 'Admin') targetDashboard = '/dashboard/dashboard-admin.html';
-            else if (role === 'Reviewer') targetDashboard = '/dashboard/dashboard-reviewer.html';
-            else if (role === 'Facilitator') targetDashboard = '/dashboard/dashboard-facilitator.html';
-            else if (role === 'Team Leader') targetDashboard = '/dashboard/dashboard-team-member.html';
-            else if (role === 'CEO') targetDashboard = '/dashboard/dashboard-ceo.html';
+            // Role-based redirection with normalization
+            const rawRole = data.role || data.role_name;
+            const normRole = (function(r) {
+                if (!r) return 'Team Member';
+                let roleStr = r;
+                if (typeof r === 'object') {
+                    roleStr = r.name || r.role_name || r.role || '';
+                }
+                if (!roleStr || typeof roleStr !== 'string') return 'Team Member';
+                const clean = roleStr.trim().toLowerCase();
+                if (clean === 'superadmin' || clean === 'super admin' || clean === 'super_admin') return 'SuperAdmin';
+                if (clean === 'admin') return 'Admin';
+                if (clean === 'reviewer') return 'Reviewer';
+                if (clean === 'facilitator') return 'Facilitator';
+                if (clean === 'team leader' || clean === 'teamleader' || clean === 'team_leader') return 'Team Leader';
+                if (clean === 'team member' || clean === 'teammember' || clean === 'team_member') return 'Team Member';
+                if (clean === 'ceo') return 'CEO';
+                return roleStr;
+            })(rawRole);
+
+            const dashboardMap = {
+                'SuperAdmin': '/admin/super-admin.html',
+                'Admin': '/dashboard/dashboard-admin.html',
+                'Reviewer': '/dashboard/dashboard-reviewer.html',
+                'Facilitator': '/dashboard/dashboard-facilitator.html',
+                'Team Leader': '/dashboard/dashboard-team-member.html',
+                'Team Member': '/dashboard/dashboard-team-member.html',
+                'CEO': '/dashboard/dashboard-ceo.html'
+            };
+
+            const targetDashboard = dashboardMap[normRole] || '/dashboard/dashboard-team-member.html';
             
             // Brief micro-timeout to ensure storage is flushed in iOS WebKit before navigation
             setTimeout(() => {

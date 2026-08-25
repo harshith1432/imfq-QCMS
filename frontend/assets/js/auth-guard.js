@@ -448,16 +448,23 @@
     // Pages that DON'T need protection
     const publicPages = [
         'index.html',
+        'index',
         'login.html',
+        'login',
         'register.html',
+        'register',
         'register-org.html',
+        'register-org',
         'forgot-password.html',
+        'forgot-password',
         'reset-password.html',
-        'page.html'
+        'reset-password',
+        'page.html',
+        'page'
     ];
 
-    const isPublic = publicPages.includes(page) || path === '/' || path.endsWith('/');
-    const isAuthPage = page === 'login.html';
+    const isPublic = publicPages.includes(page) || path === '/' || path.endsWith('/') || path.startsWith('/auth/');
+    const isAuthPage = page === 'login.html' || page === 'login' || path.includes('/auth/login');
 
     if (!isAuthed && !isPublic) {
         console.log('Access denied. Redirecting to login...');

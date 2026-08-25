@@ -208,12 +208,14 @@ body.dark-mode .app-bottom-nav {
         top: 0 !important;
         bottom: 0 !important;
         left: 0 !important;
-        width: var(--mobile-drawer-width) !important;
+        width: var(--mobile-drawer-width, 280px) !important;
         max-width: 85vw !important;
         height: 100vh !important;
         height: 100dvh !important;
         z-index: 1060 !important;
-        background: var(--ds-bg-surface, #ffffff) !important;
+        background: #002347 !important;
+        background-color: #002347 !important;
+        color: #FFFFFF !important;
         transform: translateX(-100%) !important;
         transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.35s ease !important;
         box-shadow: none !important;
@@ -222,13 +224,14 @@ body.dark-mode .app-bottom-nav {
         flex-direction: column !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        border-right: 1px solid var(--ds-border-color) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 
     [data-theme="dark"] .app-sidebar,
     [data-theme="dark"] .glass-sidebar,
     body.dark-mode .app-sidebar {
-        background: var(--ds-bg-surface, #0f172a) !important;
+        background: #002347 !important;
+        background-color: #002347 !important;
         border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 

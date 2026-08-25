@@ -1,8 +1,8 @@
 const dashboard = {
     init: async function() {
-        const userJson = sessionStorage.getItem('user');
+        const userJson = sessionStorage.getItem('user') || localStorage.getItem('user');
         if (!userJson) {
-            window.location.href = 'login.html';
+            window.location.href = '/auth/login.html';
             return;
         }
         const user = JSON.parse(userJson);

@@ -90,11 +90,11 @@ def get_stats():
         and (p.current_stage or 1) < 8
     )
 
-    from app.infrastructure.database.models.models import Stage8Implementation, FacilitatorAssistanceRequest
-    impacts_query = Stage8Implementation.query.join(Project).filter(
+    from app.infrastructure.database.models.models import Stage8StandardizationKnowledgeSharingProjectClosure as Stage8Model, FacilitatorAssistanceRequest
+    impacts_query = Stage8Model.query.join(Project).filter(
         Project.org_id == org_id,
         Project.facilitator_id == user.id,
-        Stage8Implementation.results_data.isnot(None)
+        Stage8Model.kpi_improvement_pct.isnot(None)
     )
     impacts = impacts_query.all()
     avg_improvement = 0
@@ -107,6 +107,12 @@ def get_stats():
         FacilitatorAssistanceRequest.status == 'Pending'
     ).count()
 
+    assisted_count = FacilitatorAssistanceRequest.query.filter(
+        FacilitatorAssistanceRequest.org_id == org_id,
+        FacilitatorAssistanceRequest.facilitator_id == user.id,
+        FacilitatorAssistanceRequest.status.in_(['Responded', 'Resolved', 'Closed', 'Completed'])
+    ).count()
+
     return jsonify({
         "pending_rca": pending_rca,
         "pending_impact": pending_impact,
@@ -114,7 +120,8 @@ def get_stats():
         "stalled_projects": inactive_projects_count,
         "avg_improvement": f"{avg_improvement}%",
         "total_savings": 0,
-        "total_projects": active_projects_count
+        "total_projects": active_projects_count,
+        "assisted_count": assisted_count
     })
 
 
