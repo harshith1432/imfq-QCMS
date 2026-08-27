@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <script src="/assets/dist/auth-guard.1fa62aac.min.js"></script>
+    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,29 +114,10 @@
 
         .login-options {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             margin-bottom: var(--ds-space-8);
             font-size: 0.8125rem;
-        }
-
-        .remember-me {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--ds-text-secondary);
-            cursor: pointer;
-            user-select: none;
-            font-weight: 500;
-        }
-
-        .remember-me input {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-            border: 1.5px solid var(--ds-input-border);
-            background: var(--ds-input-bg);
-            cursor: pointer;
         }
 
         .forgot-password {
@@ -245,9 +226,6 @@
                 </div>
 
                 <div class="login-options">
-                    <label class="remember-me">
-                        <input type="checkbox" id="rememberMe"> Remember me
-                    </label>
                     <a href="forgot-password.html" class="forgot-password">Forgot password?</a>
                 </div>
 
@@ -266,30 +244,35 @@
                 </div>
             </div>
 
-            <div class="login-footer">
-                Create an Organization Account? <a href="register-org.html">Sign up</a>
-            </div>
         </div>
     </div>
 
-    <script src="/assets/dist/core-bundle.f5773e97.min.js"></script>
+    <script src="/assets/dist/core-bundle.3cd1a892.min.js"></script>
     <script src="/assets/dist/enterprise-validator.e89a83c2.min.js"></script>
-    <script src="/assets/dist/auth.78b1ccac.min.js"></script>
+    <script src="/assets/dist/auth.3e6477e1.min.js"></script>
     <script>
-        // Check for URL parameters to show messages
+        // Check for URL parameters to show messages and prepare login state
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams    = new URLSearchParams(window.location.search);
             const successMsgEl = document.getElementById('successMsg');
 
-            // Clear tokens only if explicitly logging out or session was terminated
+            // Always clear stale auth tokens on login load so previous expired sessions never interfere
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('access_token');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('role_permissions');
+            sessionStorage.removeItem('qcms_authenticated');
+            localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('role_permissions');
+            localStorage.removeItem('qcms_authenticated');
+
+            // Clear remembered credentials only if explicitly logging out or session was terminated
             if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
                 sessionStorage.clear();
-                localStorage.removeItem('token');
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('user');
-                localStorage.removeItem('role_permissions');
-                localStorage.removeItem('qcms_authenticated');
                 localStorage.removeItem('qcms_remember_me');
+                localStorage.removeItem('qcms_remembered_username');
             } else {
                 // Pre-fill remembered username/email and checkbox
                 const rememberedUser = localStorage.getItem('qcms_remembered_username');
@@ -312,7 +295,6 @@
                 successMsgEl.style.display = 'flex';
             } else if (urlParams.get('reason') === 'session_terminated') {
                 const errEl = document.getElementById('errorMsg');
-                if (errEl) {
                     errEl.querySelector('span').textContent = "Your session was terminated by an administrator. Please sign in again.";
                     errEl.style.display = 'flex';
                 }

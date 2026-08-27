@@ -1085,9 +1085,9 @@ const QCMS = {
             }
             navItems.push({
                 label: 'Profile',
-                url: '/auth/user-profile.html',
+                url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
             });
         } else if (roleName === 'Reviewer') {
             // ── Stage Reviewer / Approver ──
@@ -1120,9 +1120,9 @@ const QCMS = {
             }
             navItems.push({
                 label: 'Profile',
-                url: '/auth/user-profile.html',
+                url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
             });
         } else if (roleName === 'Facilitator') {
             // ── Gate Facilitator ──
@@ -1155,9 +1155,9 @@ const QCMS = {
             }
             navItems.push({
                 label: 'Profile',
-                url: '/auth/user-profile.html',
+                url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
             });
         } else if (roleName === 'Team Leader') {
             // ── Team Leader ──
@@ -1196,9 +1196,9 @@ const QCMS = {
             }
             navItems.push({
                 label: 'Profile',
-                url: '/auth/user-profile.html',
+                url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
             });
         } else {
             // ── Team Member (Default Contributor) ──
@@ -1225,9 +1225,9 @@ const QCMS = {
             if (canKB) {
                 navItems.push({
                     label: 'Knowledge',
-                    url: '/knowledge-base/repository.html',
+                    url: '/projects/repository.html',
                     icon: 'book-open',
-                    isActive: currentPath.includes('/knowledge-base/')
+                    isActive: currentPath.includes('repository.html') && !currentPath.includes('projects-repository')
                 });
             }
             if (canRewards) {
@@ -1240,9 +1240,9 @@ const QCMS = {
             }
             navItems.push({
                 label: 'Profile',
-                url: '/auth/user-profile.html',
+                url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile')
+                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
             });
         }
 

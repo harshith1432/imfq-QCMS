@@ -147,6 +147,10 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 sessionStorage.setItem('role_permissions', JSON.stringify(data.role_permissions));
                 localStorage.setItem('role_permissions', JSON.stringify(data.role_permissions));
             }
+
+            const now = Date.now().toString();
+            sessionStorage.setItem('qcms_last_activity', now);
+            localStorage.setItem('qcms_last_activity', now);
             
             // Sync global language
             if (data.language) {
@@ -161,9 +165,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             }
 
             if (data.is_temp_password) {
-                setTimeout(() => {
-                    window.location.href = '/auth/reset-password.html';
-                }, 50);
+                window.location.replace('/auth/reset-password.html');
                 return;
             }
 
@@ -199,10 +201,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
             const targetDashboard = dashboardMap[normRole] || '/dashboard/dashboard-team-member.html';
             
-            // Brief micro-timeout to ensure storage is flushed in iOS WebKit before navigation
-            setTimeout(() => {
-                window.location.href = targetDashboard;
-            }, 60);
+            // Cleanly replace location to prevent history bounce
+            window.location.replace(targetDashboard);
         } catch (err) {
             isLoggingIn = false;
             if (err.isTimeout) {

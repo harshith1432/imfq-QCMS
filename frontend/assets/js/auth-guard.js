@@ -504,19 +504,24 @@
 
     if (isAuthPage) {
         const urlParams = new URLSearchParams(window.location.search);
-        // Clear session on explicit logout or administrative session termination
-        if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
-            try {
+        try {
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('access_token');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('role_permissions');
+            sessionStorage.removeItem('qcms_authenticated');
+            localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('role_permissions');
+            localStorage.removeItem('qcms_authenticated');
+            // Clear remembered credentials only on explicit logout or administrative session termination
+            if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
                 sessionStorage.clear();
-                localStorage.removeItem('token');
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('user');
-                localStorage.removeItem('role_permissions');
-                localStorage.removeItem('qcms_authenticated');
                 localStorage.removeItem('qcms_remember_me');
-                sessionStorage.removeItem('role_permissions');
-            } catch (_) {}
-        }
+                localStorage.removeItem('qcms_remembered_username');
+            }
+        } catch (_) {}
         return;
     } else if (token && !isSuperAdminUser) {
         let isDenied = false;
