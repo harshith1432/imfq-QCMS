@@ -250,10 +250,33 @@ function getHtmlFiles(dir, fileList = []) {
 function updateHtmlFiles(manifest, coreCssFile, coreJsFile, stagesJsFile) {
     const htmlFiles = getHtmlFiles(FRONTEND_DIR);
     let updatedCount = 0;
+    const authGuardPath = manifest['auth-guard.js'] || '/assets/dist/auth-guard.min.js';
+
+    const preloads = [
+        '<!-- Performance & Network Acceleration: CDN Preconnect & Critical Preloads -->',
+        '<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>',
+        '<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">',
+        '<link rel="preconnect" href="https://unpkg.com" crossorigin>',
+        '<link rel="dns-prefetch" href="https://unpkg.com">',
+        `<link rel="preload" href="/assets/dist/${coreCssFile}" as="style">`,
+        `<link rel="preload" href="${authGuardPath}" as="script">`
+    ].join('\n    ');
 
     for (const htmlPath of htmlFiles) {
         let content = fs.readFileSync(htmlPath, 'utf8');
         const originalContent = content;
+
+        // 0. Clean up existing performance headers / preloads to prevent duplicates
+        content = content.replace(/<!-- Performance & Network Acceleration:[^>]*-->\s*/gi, '');
+        content = content.replace(/<link\s+rel=["\'](?:preconnect|dns-prefetch)["\']\s+href=["\']https:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com)["\'][^>]*>\s*/gi, '');
+        content = content.replace(/<link\s+rel=["\']preload["\']\s+href=["\']\/assets\/dist\/(?:core|auth-guard)[^"\']*["\'][^>]*>\s*/gi, '');
+
+        // Inject Preconnect & Preloads at top of <head>
+        if (content.includes('<head>')) {
+            content = content.replace('<head>', `<head>\n    ${preloads}`);
+        } else if (content.includes('<head ')) {
+            content = content.replace(/(<head[^>]*>)/i, `$1\n    ${preloads}`);
+        }
 
         // 1. Consolidate Stages Bundle (stages/stage1.js to stage8.js + dynamic_renderer.js + previous stages-bundle.*.min.js)
         const stageRegex = /<script\s+src=["\'](?:\/assets\/js\/stages\/(?:stage[1-8]|dynamic_renderer)\.js(?:\?[^"\']*)?|\/assets\/dist\/(?:stage[1-8]|dynamic_renderer|stages-bundle)(?:\.[a-f0-9]+)?\.min\.js)["\']\s*><\/script>\s*/gi;
@@ -322,7 +345,7 @@ function updateHtmlFiles(manifest, coreCssFile, coreJsFile, stagesJsFile) {
             updatedCount++;
         }
     }
-    console.log(`  -> Updated ${updatedCount} HTML files to use hashed bundles and minified scripts.`);
+    console.log(`  -> Updated ${updatedCount} HTML files to use hashed bundles, preloads, and minified scripts.`);
 }
 
 function restoreHtmlFiles() {
@@ -333,6 +356,10 @@ function restoreHtmlFiles() {
     for (const htmlPath of htmlFiles) {
         let content = fs.readFileSync(htmlPath, 'utf8');
         const originalContent = content;
+
+        content = content.replace(/<!-- Performance & Network Acceleration:[^>]*-->\s*/gi, '');
+        content = content.replace(/<link\s+rel=["\'](?:preconnect|dns-prefetch)["\']\s+href=["\']https:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com)["\'][^>]*>\s*/gi, '');
+        content = content.replace(/<link\s+rel=["\']preload["\']\s+href=["\']\/assets\/dist\/(?:core|auth-guard)[^"\']*["\'][^>]*>\s*/gi, '');
 
         content = content.replace(
             /<link\s+rel=["\']stylesheet["\']\s+href=["\']\/assets\/dist\/core\.[a-f0-9]+\.min\.css["\']\s+\/?>/gi,

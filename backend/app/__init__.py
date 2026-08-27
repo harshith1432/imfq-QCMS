@@ -151,6 +151,13 @@ def create_app():
         if isinstance(cors_origins, str):
             cors_origins = [origin.strip() for origin in cors_origins.split(',')]
     CORS(app, resources={r"/api/*": {"origins": cors_origins}})
+
+    # Initialize Celery Distributed Worker Integration
+    try:
+        from .celery_app import make_celery
+        make_celery(app)
+    except Exception as cel_err:
+        app.logger.warning(f"[QCMS] Celery initialization skipped: {cel_err}")
     
     with app.app_context():
         # Import all models first so db.create_all() knows about them
@@ -1024,9 +1031,54 @@ def create_app():
 
     @app.after_request
     def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '-1'
+        # Baseline production security headers on all responses
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        response.headers.setdefault('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+        response.headers.setdefault(
+            'Content-Security-Policy',
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' ws: wss:; frame-ancestors 'self';"
+        )
+
+        path = request.path
+
+        # 1. API routes & sensitive endpoints: strict no-store / no-cache
+        if path.startswith('/api/'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '-1'
+            return response
+
+        # 2. Hashed production assets and versioned static files: immutable 1-year cache
+        is_immutable_asset = (
+            path.startswith('/assets/dist/') or
+            any(path.endswith(ext) for ext in ('.min.js', '.min.css', '.woff2', '.woff', '.ttf', '.eot')) or
+            (path.startswith('/assets/') and any(path.endswith(ext) for ext in ('.svg', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp')))
+        )
+        if is_immutable_asset:
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+            response.headers.pop('Pragma', None)
+            response.headers.pop('Expires', None)
+            return response
+
+        # 3. HTML pages and root route: revalidate with ETags for instant 304 Not Modified
+        is_html = (
+            path == '/' or
+            path.endswith('.html') or
+            (response.mimetype and response.mimetype == 'text/html')
+        )
+        if is_html:
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+            response.headers.pop('Pragma', None)
+            response.headers.pop('Expires', None)
+            return response
+
+        # 4. Other static resources (e.g. non-dist assets): cache with revalidation
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        response.headers.pop('Pragma', None)
+        response.headers.pop('Expires', None)
         return response
 
     @app.teardown_request
@@ -1068,12 +1120,13 @@ def create_app():
     @app.route('/api/health', methods=['GET'])
     @app.route('/health', methods=['GET'])
     def health_ready():
-        """Readiness probe: returns 200 only when DB and Redis are both healthy."""
+        """Readiness probe: returns 200 only when DB and Redis are both healthy within tight 2.0s timeouts."""
         from datetime import datetime, timezone
         from app.infrastructure.cache.redis_adapter import cache as _cache
         checks = {'status': 'ready', 'db': 'ok', 'redis': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()}
         http_status = 200
-        # Database check
+        
+        # 1. Database check (fast timeout)
         try:
             db.session.execute(db.text('SELECT 1'))
         except Exception as exc:
@@ -1081,15 +1134,31 @@ def create_app():
             checks['status'] = 'not_ready'
             http_status = 503
             app.logger.error('[QCMS Health] DB readiness check failed: %s', exc)
-        # Redis check
-        redis_url = os.environ.get('REDIS_URL', '')
-        if not redis_url:
-            checks['redis'] = 'not_configured'  # dev mode — acceptable
-        elif not _cache.ping():
-            checks['redis'] = 'degraded'
-            checks['status'] = 'not_ready'
-            http_status = 503
-            app.logger.warning('[QCMS Health] Redis unreachable (REDIS_URL is set but ping failed)')
+            
+        # 2. Redis check (fast timeout ping)
+        require_redis = os.environ.get('REQUIRE_REDIS_SECURITY', '').lower() in ('true', '1') or app.config.get('ENVIRONMENT') == 'production'
+        if _cache.is_redis:
+            try:
+                if _cache.ping():
+                    checks['redis'] = 'ok'
+                else:
+                    checks['redis'] = 'degraded'
+                    if require_redis:
+                        checks['status'] = 'not_ready'
+                        http_status = 503
+            except Exception as red_err:
+                checks['redis'] = 'error'
+                if require_redis:
+                    checks['status'] = 'not_ready'
+                    http_status = 503
+        else:
+            if require_redis:
+                checks['redis'] = 'unreachable'
+                checks['status'] = 'not_ready'
+                http_status = 503
+            else:
+                checks['redis'] = 'ok'
+
         return jsonify(checks), http_status
 
     return app

@@ -428,11 +428,15 @@ def register_security_middleware(app):
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
         response.headers.setdefault(
             'Permissions-Policy',
-            'geolocation=(), microphone=(), camera=(), payment=()'
+            'camera=(), microphone=(), geolocation=()'
         )
         response.headers.setdefault(
             'Strict-Transport-Security',
-            'max-age=31536000; includeSubDomains; preload'
+            'max-age=63072000; includeSubDomains; preload'
+        )
+        response.headers.setdefault(
+            'Content-Security-Policy',
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' ws: wss:; frame-ancestors 'self';"
         )
 
         # WAF mode hint header (internal / for logging proxies)

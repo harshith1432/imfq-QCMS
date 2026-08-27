@@ -34,8 +34,8 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 1800,
-        'pool_size': 5,
-        'max_overflow': 5,
+        'pool_size': 10,
+        'max_overflow': 10,
         'pool_timeout': 30,
     }
     
@@ -46,6 +46,12 @@ class Config:
     SUPABASE_STORAGE_BUCKET = os.getenv('SUPABASE_STORAGE_BUCKET', 'ifqmqc')
     AZURE_STORAGE_CONNECTION_STRING = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
     AZURE_STORAGE_CONTAINER_NAME = os.getenv('AZURE_STORAGE_CONTAINER_NAME', 'qcms-uploads')
+
+    # Distributed Redis & Celery Configuration
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')
+    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0'))
+    CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'))
+    REQUIRE_REDIS_SECURITY = os.getenv('REQUIRE_REDIS_SECURITY', 'false').lower() in ('true', '1', 'yes')
 
     # File upload settings
     is_serverless = bool(os.getenv('VERCEL') or os.getenv('VERCEL_ENV') or os.getenv('VERCEL_REGION') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
@@ -127,8 +133,10 @@ class Config:
             ssl_ctx = ssl.create_default_context()
             SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'ssl_context': ssl_ctx}
     elif SQLALCHEMY_DATABASE_URI and 'sqlite' not in SQLALCHEMY_DATABASE_URI:
-        SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 5
-        SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 5
+        SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 10
+        SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 10
+        SQLALCHEMY_ENGINE_OPTIONS['pool_pre_ping'] = True
+        SQLALCHEMY_ENGINE_OPTIONS['pool_recycle'] = 1800
     else:
         # For SQLite (including :memory:) use StaticPool so every session and
         # every Flask request handler share the SAME single connection.

@@ -41,4 +41,23 @@ test('Frontend Production Build Integrity Suite', async (t) => {
             assert.ok(stat.size > 0, `Compiled asset for ${key} must not be 0 bytes`);
         }
     });
+
+    await t.test('HTML files contain critical preloads and CDN preconnect links', () => {
+        const indexPath = path.join(frontendDir, 'index.html');
+        const loginPath = path.join(frontendDir, 'auth', 'login.html');
+        const adminDashboardPath = path.join(frontendDir, 'dashboard', 'dashboard-admin.html');
+
+        for (const filePath of [indexPath, loginPath, adminDashboardPath]) {
+            assert.ok(fs.existsSync(filePath), `HTML file ${filePath} must exist`);
+            const html = fs.readFileSync(filePath, 'utf8');
+
+            assert.ok(html.includes('rel="preconnect" href="https://cdn.jsdelivr.net"'), `${filePath} must have CDN preconnect for jsdelivr`);
+            assert.ok(html.includes('rel="dns-prefetch" href="https://cdn.jsdelivr.net"'), `${filePath} must have CDN dns-prefetch for jsdelivr`);
+            assert.ok(html.includes('rel="preconnect" href="https://unpkg.com"'), `${filePath} must have CDN preconnect for unpkg`);
+            assert.ok(html.includes('rel="dns-prefetch" href="https://unpkg.com"'), `${filePath} must have CDN dns-prefetch for unpkg`);
+            assert.ok(/rel="preload"\s+href="\/assets\/dist\/core\.[a-f0-9]+\.min\.css"\s+as="style"/.test(html), `${filePath} must preload core CSS bundle`);
+            assert.ok(/rel="preload"\s+href="\/assets\/dist\/auth-guard\.[a-f0-9]+\.min\.js"\s+as="script"/.test(html), `${filePath} must preload auth-guard script`);
+        }
+    });
 });
+

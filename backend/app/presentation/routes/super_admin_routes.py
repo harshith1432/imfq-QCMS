@@ -2569,6 +2569,12 @@ def platform_settings():
         s.maintenance_mode = data['maintenance_settings'].get('enabled', s.maintenance_mode)
 
     db.session.commit()
+    try:
+        from app.domain.services.cache_service import CacheService
+        CacheService.invalidate_global_platform_settings()
+    except Exception:
+        pass
+
     category_name = data.get('_category', 'Platform Settings')
     log_admin_action(f"Updated {category_name}", target_type="SystemSetting", details=json.dumps(list(data.keys())))
 
@@ -2849,6 +2855,11 @@ def toggle_feature_flag(flag_key):
     flags[flag_key].update({k: v for k, v in body.items() if k in ('enabled', 'target_org_ids', 'target_plans')})
     s.feature_flags = flags
     db.session.commit()
+    try:
+        from app.domain.services.cache_service import CacheService
+        CacheService.invalidate_global_platform_settings()
+    except Exception:
+        pass
     state = "enabled" if flags[flag_key].get('enabled') else "disabled"
     log_admin_action(f"Feature flag '{flag_key}' {state}", target_type="FeatureFlag")
     return jsonify({"status": "success", "message": f"Feature flag '{flag_key}' {state}", "data": flags[flag_key]})

@@ -63,7 +63,15 @@ def export_csv():
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
-    projects = _get_user_projects(user).all()
+    projects = (
+        _get_user_projects(user)
+        .options(
+            db.joinedload(Project.department),
+            db.joinedload(Project.team_leader),
+            db.joinedload(Project.facilitator)
+        )
+        .all()
+    )
 
     db.session.add(AuditLog(
         org_id=user.org_id,
@@ -73,6 +81,36 @@ def export_csv():
         details={"count": len(projects), "ip": request.remote_addr}
     ))
     db.session.commit()
+
+    proj_ids = [p.id for p in projects]
+
+    # Batch fetch Stage 7 ROI workflow records (1 query instead of N queries)
+    s7_roi_by_proj = {}
+    if proj_ids:
+        try:
+            from app.infrastructure.database.models.models import ProjectWorkflow
+            wf7_list = ProjectWorkflow.query.filter(
+                ProjectWorkflow.project_id.in_(proj_ids),
+                ProjectWorkflow.stage_id == 7
+            ).all()
+            for wf7 in wf7_list:
+                if wf7 and wf7.data and isinstance(wf7.data, dict):
+                    s7_roi_by_proj[wf7.project_id] = wf7.data.get('roi_validation') or {}
+        except Exception:
+            pass
+
+    # Batch fetch ProjectStageTracker records (1 query instead of N queries)
+    trackers_by_proj = {}
+    if proj_ids:
+        try:
+            from app.infrastructure.database.models.models import ProjectStageTracker
+            all_trackers = ProjectStageTracker.query.filter(
+                ProjectStageTracker.project_id.in_(proj_ids)
+            ).all()
+            for t in all_trackers:
+                trackers_by_proj.setdefault(t.project_id, []).append(t)
+        except Exception:
+            pass
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -84,36 +122,24 @@ def export_csv():
     ])
 
     for p in projects:
-        s7_roi = {}
-        try:
-            from app.infrastructure.database.models.models import ProjectWorkflow
-            wf7 = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=7).first()
-            if wf7 and wf7.data:
-                s7_roi = wf7.data.get('roi_validation') or {}
-        except Exception:
-            pass
-
-        try:
-            from app.infrastructure.database.models.models import ProjectStageTracker
-            trackers = ProjectStageTracker.query.filter_by(project_id=p.id).all()
-            completed = sum(1 for t in trackers if t.status == 'completed')
-            total_stages = max(len(trackers), 1)
-            comp_pct = round((completed / total_stages) * 100)
-        except Exception:
-            comp_pct = 0
+        s7_roi = s7_roi_by_proj.get(p.id, {})
+        trackers = trackers_by_proj.get(p.id, [])
+        completed = sum(1 for t in trackers if str(t.status).lower() == 'completed')
+        total_stages = max(len(trackers), 1)
+        comp_pct = round((completed / total_stages) * 100) if trackers else 0
 
         dept_name = p.department.name if p.department else '--'
         tl = p.team_leader
-        tl_name = f"{tl.first_name} {tl.last_name}" if tl else '--'
+        tl_name = (tl.full_name or f"{getattr(tl, 'first_name', '')} {getattr(tl, 'last_name', '')}".strip() or tl.username) if tl else '--'
         fac = p.facilitator
-        fac_name = f"{fac.first_name} {fac.last_name}" if fac else '--'
+        fac_name = (fac.full_name or f"{getattr(fac, 'first_name', '')} {getattr(fac, 'last_name', '')}".strip() or fac.username) if fac else '--'
 
         writer.writerow([
             p.project_uid or f'PRJ-{p.id}',
             p.title or '--',
             dept_name,
             p.status or '--',
-            p.priority or '--',
+            getattr(p, 'priority', '--') or '--',
             p.start_date.strftime('%Y-%m-%d') if p.start_date else '--',
             p.end_date.strftime('%Y-%m-%d') if p.end_date else '--',
             tl_name,
@@ -197,6 +223,80 @@ def export_all_pdfs():
         as_attachment=True,
         download_name='QCMS_All_Project_Reports.zip'
     )
+
+
+@reports_bp.route('/export/pdf/all-async', methods=['POST', 'GET'])
+@reports_bp.route('/projects/export-pdf-all-async', methods=['POST', 'GET'])
+@jwt_required()
+@feature_module_required('reports.pdf')
+def export_all_pdfs_async():
+    """
+    Spawns bulk project PDF generation & ZIP packaging in Celery background queue.
+    Returns HTTP 202 Accepted with a polling job_id immediately.
+    """
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+    job_id = f"job_bulk_zip_{user.org_id or 'sa'}_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{uuid.uuid4().hex[:6]}"
+
+    job_data = {
+        "job_id": job_id,
+        "org_id": user.org_id,
+        "status": "processing",
+        "progress": 10,
+        "created_at": datetime.now(timezone.utc).replace(tzinfo=None).timestamp(),
+        "completed_at": None,
+        "download_url": None,
+        "filename": None,
+        "error": None
+    }
+    _set_pdf_job(job_id, job_data)
+
+    try:
+        from app.infrastructure.tasks.report_tasks import generate_async_bulk_pdf_zip
+        generate_async_bulk_pdf_zip.apply_async(
+            args=[user.id, user.org_id, is_super_admin],
+            task_id=job_id,
+            retry=False
+        )
+    except Exception as celery_err:
+        current_app.logger.warning(f"[Async Bulk PDF] Celery dispatch fallback: {celery_err}")
+        app_obj = current_app._get_current_object()
+        def _bg_bulk_worker(app_inst, u_id, o_id, is_sa, jid):
+            with app_inst.app_context():
+                try:
+                    from app.infrastructure.tasks.report_tasks import generate_async_bulk_pdf_zip
+                    res = generate_async_bulk_pdf_zip.run(user_id=u_id, org_id=o_id, is_super_admin=is_sa)
+                    j = _get_pdf_job(jid) or {}
+                    if res.get("status") == "completed":
+                        j["status"] = "completed"
+                        j["progress"] = 100
+                        j["download_url"] = res.get("download_url")
+                        j["filename"] = res.get("filename")
+                        j["completed_at"] = res.get("completed_at")
+                    else:
+                        j["status"] = "failed"
+                        j["error"] = res.get("error", "Failed to generate bulk PDF zip")
+                    _set_pdf_job(jid, j)
+                except Exception as err:
+                    j = _get_pdf_job(jid) or {}
+                    j["status"] = "failed"
+                    j["error"] = str(err)
+                    _set_pdf_job(jid, j)
+
+        t = threading.Thread(target=_bg_bulk_worker, args=(app_obj, user.id, user.org_id, is_super_admin, job_id))
+        t.daemon = True
+        t.start()
+
+    return jsonify({
+        "status": "processing",
+        "job_id": job_id,
+        "message": "Bulk project PDF generation & ZIP packaging started in background.",
+        "poll_url": f"/api/reports/jobs/{job_id}"
+    }), 202
 
 
 @reports_bp.route('/export/pdf/<int:project_id>', methods=['GET'])
@@ -451,7 +551,8 @@ def export_pdf_async(project_id):
         from app.infrastructure.tasks.report_tasks import generate_async_pdf_report
         generate_async_pdf_report.apply_async(
             args=[project_id, tool_name, user.id, user.org_id],
-            task_id=job_id
+            task_id=job_id,
+            retry=False
         )
     except Exception as celery_err:
         current_app.logger.warning(f"[Async Reports] Celery dispatch fallback to direct worker: {celery_err}")
@@ -470,6 +571,7 @@ def export_pdf_async(project_id):
     }), 202
 
 @reports_bp.route('/jobs/<string:job_id>', methods=['GET'])
+@reports_bp.route('/task-status/<string:job_id>', methods=['GET'])
 @jwt_required()
 def get_pdf_job_status(job_id):
     """Poll the status of a background report generation job from Celery / Redis."""

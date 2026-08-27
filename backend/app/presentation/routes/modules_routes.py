@@ -142,7 +142,7 @@ def bulk_toggle_modules():
 @jwt_required()
 @super_admin_required()
 def list_modules():
-    """Lists all modules with search, sort, filter and pagination support"""
+    """Lists all modules with search, sort, filter and pagination support (Tier 1 Redis cached)"""
     q = request.args.get('q', '').strip()
     category = request.args.get('category', '').strip()
     status = request.args.get('status', '').strip()
@@ -156,133 +156,136 @@ def list_modules():
     if request.args.get('all') == 'true':
         per_page = 1000
     
-    query = Module.query.filter_by(is_archived=False)
-    
-    if q:
-        query = query.filter(
-            (Module.name.ilike(f'%{q}%')) |
-            (Module.code.ilike(f'%{q}%')) |
-            (Module.description.ilike(f'%{q}%'))
-        )
-    if category:
-        query = query.filter(Module.category.ilike(f'%{category}%'))
-    if status:
-        if status == 'Active':
-            query = query.filter(Module.status == 'Active')
-        elif status == 'Inactive':
-            query = query.filter(Module.status.in_(['Inactive', 'Disabled']))
-        elif status == 'Deprecated':
-            query = query.filter(Module.status == 'Deprecated')
-        elif status == 'Beta':
-            query = query.filter((Module.beta_feature == True) | (Module.status == 'Beta'))
-        elif status == 'Premium':
-            query = query.filter(Module.premium_feature == True)
-        elif status == 'AI':
-            query = query.filter(Module.ai_enabled == True)
-        elif status == 'System':
-            query = query.filter(Module.system_module == True)
-        else:
-            query = query.filter(Module.status == status)
-    if plan:
-        query = query.join(ModuleAssignment).filter(
-            (ModuleAssignment.assigned_type == 'Plan') &
-            (ModuleAssignment.assigned_target == plan)
-        )
-        
-    # Sort
-    if sort_dir == 'desc':
-        query = query.order_by(db.desc(getattr(Module, sort_by, Module.display_order)))
-    else:
-        query = query.order_by(getattr(Module, sort_by, Module.display_order))
-        
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
-    data = []
-    for m in pagination.items:
-        plan_assignments = [a.assigned_target for a in m.assignments if a.assigned_type == 'Plan']
-        org_assignments = [int(a.assigned_target) for a in m.assignments if a.assigned_type == 'Organization' and str(a.assigned_target).isdigit()]
-        
-        # Include plans enabled via SaaSPlanModules
-        spm_records = SaaSPlanModules.query.filter(
-            (func.lower(func.trim(SaaSPlanModules.module_name)) == m.code.lower()) |
-            (func.lower(func.trim(SaaSPlanModules.module_name)) == m.name.lower())
-        ).filter(SaaSPlanModules.is_enabled == True).all()
-        if spm_records:
-            spm_plan_ids = [r.plan_id for r in spm_records]
-            spm_plan_names = [p.name for p in SaaSPlan.query.filter(SaaSPlan.id.in_(spm_plan_ids)).all()]
-            plan_assignments = list(set(plan_assignments + spm_plan_names))
+    from app.domain.services.cache_service import CacheService
 
-        if plan_assignments or org_assignments:
-            assigned_orgs_count = Organization.query.filter(
-                (Organization.is_deleted == False) &
-                (
-                    (func.lower(func.trim(Organization.subscription_plan)).in_([p.strip().lower() for p in plan_assignments])) |
-                    (Organization.id.in_(org_assignments))
-                )
-            ).count()
-        else:
-            if m.status == 'Active' and not m.premium_feature:
-                assigned_orgs_count = Organization.query.filter(Organization.is_deleted == False).count()
-                all_plan_names = [p.name for p in SaaSPlan.query.filter_by(status='Active').all()]
-                plan_assignments = all_plan_names
+    def _fetch_modules_payload():
+        query = Module.query.filter_by(is_archived=False)
+        
+        if q:
+            query = query.filter(
+                (Module.name.ilike(f'%{q}%')) |
+                (Module.code.ilike(f'%{q}%')) |
+                (Module.description.ilike(f'%{q}%'))
+            )
+        if category:
+            query = query.filter(Module.category.ilike(f'%{category}%'))
+        if status:
+            if status == 'Active':
+                query = query.filter(Module.status == 'Active')
+            elif status == 'Inactive':
+                query = query.filter(Module.status.in_(['Inactive', 'Disabled']))
+            elif status == 'Deprecated':
+                query = query.filter(Module.status == 'Deprecated')
+            elif status == 'Beta':
+                query = query.filter((Module.beta_feature == True) | (Module.status == 'Beta'))
+            elif status == 'Premium':
+                query = query.filter(Module.premium_feature == True)
+            elif status == 'AI':
+                query = query.filter(Module.ai_enabled == True)
+            elif status == 'System':
+                query = query.filter(Module.system_module == True)
             else:
-                assigned_orgs_count = 0
+                query = query.filter(Module.status == status)
+        if plan:
+            query = query.join(ModuleAssignment).filter(
+                ModuleAssignment.assigned_type == 'Plan',
+                ModuleAssignment.assigned_target == plan
+            )
+            
+        # Dynamic Sorting
+        sort_col = getattr(Module, sort_by, Module.display_order)
+        if sort_dir.lower() == 'desc':
+            query = query.order_by(sort_col.desc())
+        else:
+            query = query.order_by(sort_col.asc())
+            
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        modules = pagination.items
         
-        parent_name = m.parent.name if m.parent else None
-        
-        data.append({
-            "id": m.id,
-            "parent_id": m.parent_id,
-            "parent_name": parent_name,
-            "name": m.name,
-            "code": m.code,
-            "description": m.description,
-            "category": m.category,
-            "icon": m.icon,
-            "color": m.color,
-            "display_order": m.display_order,
-            "navigation_route": m.navigation_route,
-            "status": m.status,
-            "development_stage": m.development_stage,
-            "version": m.version,
-            "minimum_plan": m.minimum_plan,
-            "enable_by_default": m.enable_by_default,
-            "visible_in_sidebar": m.visible_in_sidebar,
-            "visible_in_dashboard": m.visible_in_dashboard,
-            "page_visibility": m.page_visibility,
-            "widget_visibility": m.widget_visibility,
-            "button_visibility": m.button_visibility,
-            "api_enabled": m.api_enabled,
-            "frontend_enabled": m.frontend_enabled,
-            "backend_enabled": m.backend_enabled,
-            "export_enabled": m.export_enabled,
-            "import_enabled": m.import_enabled,
-            "notification_enabled": m.notification_enabled,
-            "background_jobs_enabled": m.background_jobs_enabled,
-            "requires_license": m.requires_license,
-            "requires_subscription": m.requires_subscription,
-            "premium_feature": m.premium_feature,
-            "ai_enabled": m.ai_enabled,
-            "beta_feature": m.beta_feature,
-            "system_module": m.system_module,
-            "feature_flags": m.feature_flags,
-            "children_count": len(m.children),
-            "assigned_orgs_count": assigned_orgs_count,
-            "plans": plan_assignments,
-            "created_at": m.created_at.isoformat() if m.created_at else None,
-            "updated_at": m.updated_at.isoformat() if m.updated_at else None
-        })
-        
-    return jsonify({
-        "status": "success",
-        "data": data,
-        "pagination": {
-            "total": pagination.total,
-            "page": pagination.page,
-            "per_page": pagination.per_page,
-            "pages": pagination.pages
+        data = []
+        for m in modules:
+            plan_assignments = [a.assigned_target for a in m.assignments if a.assigned_type == 'Plan']
+            org_assignments = [int(a.assigned_target) for a in m.assignments if a.assigned_type == 'Organization' and str(a.assigned_target).isdigit()]
+            
+            if org_assignments:
+                assigned_orgs_count = Organization.query.filter(
+                    Organization.is_deleted == False,
+                    db.or_(
+                        (Organization.subscription_plan.in_(plan_assignments)) if plan_assignments else db.false(),
+                        (Organization.id.in_(org_assignments))
+                    )
+                ).count()
+            else:
+                if m.status == 'Active' and not m.premium_feature:
+                    assigned_orgs_count = Organization.query.filter(Organization.is_deleted == False).count()
+                    all_plan_names = [p.name for p in SaaSPlan.query.filter_by(status='Active').all()]
+                    plan_assignments = all_plan_names
+                else:
+                    assigned_orgs_count = 0
+            
+            parent_name = m.parent.name if m.parent else None
+            
+            data.append({
+                "id": m.id,
+                "parent_id": m.parent_id,
+                "parent_name": parent_name,
+                "name": m.name,
+                "code": m.code,
+                "description": m.description,
+                "category": m.category,
+                "icon": m.icon,
+                "color": m.color,
+                "display_order": m.display_order,
+                "navigation_route": m.navigation_route,
+                "status": m.status,
+                "development_stage": m.development_stage,
+                "version": m.version,
+                "minimum_plan": m.minimum_plan,
+                "enable_by_default": m.enable_by_default,
+                "visible_in_sidebar": m.visible_in_sidebar,
+                "visible_in_dashboard": m.visible_in_dashboard,
+                "page_visibility": m.page_visibility,
+                "widget_visibility": m.widget_visibility,
+                "button_visibility": m.button_visibility,
+                "api_enabled": m.api_enabled,
+                "frontend_enabled": m.frontend_enabled,
+                "backend_enabled": m.backend_enabled,
+                "export_enabled": m.export_enabled,
+                "import_enabled": m.import_enabled,
+                "notification_enabled": m.notification_enabled,
+                "background_jobs_enabled": m.background_jobs_enabled,
+                "requires_license": m.requires_license,
+                "requires_subscription": m.requires_subscription,
+                "premium_feature": m.premium_feature,
+                "ai_enabled": m.ai_enabled,
+                "beta_feature": m.beta_feature,
+                "system_module": m.system_module,
+                "feature_flags": m.feature_flags,
+                "children_count": len(m.children),
+                "assigned_orgs_count": assigned_orgs_count,
+                "plans": plan_assignments,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+                "updated_at": m.updated_at.isoformat() if m.updated_at else None
+            })
+            
+        return {
+            "status": "success",
+            "data": data,
+            "pagination": {
+                "total": pagination.total,
+                "page": pagination.page,
+                "per_page": pagination.per_page,
+                "pages": pagination.pages
+            }
         }
-    }), 200
+
+    is_default_query = (not q and not category and not status and not plan and page == 1 and per_page == 500)
+    if is_default_query:
+        payload = CacheService.get_global_modules(_fetch_modules_payload)
+    else:
+        payload = _fetch_modules_payload()
+
+    return jsonify(payload), 200
 
 
 @modules_bp.route('/dashboard', methods=['GET'])
@@ -558,6 +561,12 @@ def update_module(module_id):
     db.session.commit()
     _log_module_action(m.id, "UPDATE", f"Configuration updated: {list(data.keys())}")
 
+    try:
+        from app.domain.services.cache_service import CacheService
+        CacheService.invalidate_global_modules()
+    except Exception:
+        pass
+
     from app.domain.services.feature_engine import FeatureEngine
     FeatureEngine.invalidate()
     FeatureEngine.broadcast_change(m.code, m.status == 'Active')
@@ -587,6 +596,12 @@ def enable_module(module_id):
     db.session.commit()
     _log_module_action(m.id, "ENABLE", "Module status set to Active.")
     
+    try:
+        from app.domain.services.cache_service import CacheService
+        CacheService.invalidate_global_modules()
+    except Exception:
+        pass
+
     from app.domain.services.feature_engine import FeatureEngine
     FeatureEngine.invalidate()
     FeatureEngine.broadcast_change(m.code, True)
@@ -619,6 +634,12 @@ def disable_module(module_id):
     db.session.commit()
     _log_module_action(m.id, "DISABLE", "Module status set to Inactive.")
     
+    try:
+        from app.domain.services.cache_service import CacheService
+        CacheService.invalidate_global_modules()
+    except Exception:
+        pass
+
     from app.domain.services.feature_engine import FeatureEngine
     FeatureEngine.invalidate()
     FeatureEngine.broadcast_change(m.code, False)

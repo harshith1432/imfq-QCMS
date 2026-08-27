@@ -191,6 +191,11 @@ def update_stage_data(project_id, stage_id):
     
     try:
         db.session.commit()
+        try:
+            from app.domain.services.cache_service import CacheService
+            CacheService.invalidate_project_cache(project.org_id)
+        except Exception:
+            pass
     except StaleDataError:
         db.session.rollback()
         return jsonify({
@@ -468,6 +473,12 @@ def advance_stage(project_id):
 
         log_action(project.org_id, user_id, f"Advanced from Stage {old_stage} to Stage {new_stage}", project_id)
         db.session.commit()
+
+        try:
+            from app.domain.services.cache_service import CacheService
+            CacheService.invalidate_project_cache(project.org_id)
+        except Exception:
+            pass
 
     # Award points for stage completion
     try:

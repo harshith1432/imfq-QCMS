@@ -663,21 +663,39 @@ def auto_archive_project_to_repository(project_id, org_id):
     db.session.add(entry)
     db.session.flush()
     
-    # Try generating embedding
+    # Dispatch asynchronous vector indexing
     try:
-        from app.infrastructure.vector_db.vector_ingest import get_embedding_model
-        model = get_embedding_model()
-        content = f"Title: {entry.title or ''}\n"
-        content += f"Category: {entry.category or ''}\n"
-        content += f"Problem: {entry.problem_summary or ''}\n"
-        content += f"Root Cause: {entry.root_cause or ''}\n"
-        content += f"Solution: {entry.solution_summary or ''}\n"
-        raw_emb = model.encode(content)
-        entry.embedding = raw_emb.tolist() if hasattr(raw_emb, 'tolist') else list(raw_emb)
-    except Exception as e:
-        print(f"[RAG] Vector encoding skipped or failed during auto-archive: {e}")
-        entry.embedding = None
-        
+        from app.infrastructure.tasks.ai_rag_tasks import process_document_for_rag
+        process_document_for_rag.delay(entry.id, org_id)
+    except Exception:
+        # Background worker fallback
+        import threading
+        from flask import current_app
+        try:
+            app_obj = current_app._get_current_object()
+        except Exception:
+            app_obj = None
+
+        def _bg_vector(app_inst, doc_id, o_id):
+            if app_inst:
+                with app_inst.app_context():
+                    from app.infrastructure.database.models.models import KnowledgeRepository, db
+                    from app.infrastructure.vector_db.vector_ingest import get_embedding_model
+                    try:
+                        d = db.session.get(KnowledgeRepository, doc_id)
+                        if d:
+                            model = get_embedding_model()
+                            content = f"Title: {d.title or ''}\nCategory: {d.category or ''}\nProblem: {d.problem_summary or ''}\nRoot Cause: {d.root_cause or ''}\nSolution: {d.solution_summary or ''}\n"
+                            raw_emb = model.encode(content)
+                            d.embedding = raw_emb.tolist() if hasattr(raw_emb, 'tolist') else list(raw_emb)
+                            db.session.commit()
+                    except Exception as err:
+                        print(f"[RAG Background Indexing Error] {err}")
+
+        t = threading.Thread(target=_bg_vector, args=(app_obj, entry.id, org_id))
+        t.daemon = True
+        t.start()
+
     return entry
 
 @repository_bp.route('/archive/<int:project_id>', methods=['POST'])

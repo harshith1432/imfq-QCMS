@@ -122,3 +122,92 @@ def generate_async_excel_export(self, user_id: int, org_id: int):
         "download_url": saved.get("url"),
         "completed_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     }
+
+
+@shared_task(bind=True, name="app.infrastructure.tasks.report_tasks.generate_async_bulk_pdf_zip")
+def generate_async_bulk_pdf_zip(self, user_id: int, org_id: int, is_super_admin: bool = False):
+    """Generates a zip archive containing PDFs of all closed projects asynchronously."""
+    import io
+    import zipfile
+    from app.infrastructure.database.models.models import Project, KPIMetric, AuditLog, User, db
+    from app.infrastructure.storage import storage
+    from app.utils.pdf_filler import generate_qc_story_closure_summary_pdf
+    from app.utils.report_gen import generate_pdf_summary
+
+    self.update_state(state="PROGRESS", meta={"progress": 10, "status": "Locating closed projects"})
+    
+    closed_statuses = ('Closed', 'Completed', 'Archived', 'Stage 8 Approved', 'Stage 8 Submitted', 'Pending Closure', 'SOP Created')
+    if is_super_admin:
+        projects = Project.query.filter(Project.status.in_(closed_statuses)).all()
+    else:
+        from app.presentation.routes.reports_routes import _get_user_projects
+        user = db.session.get(User, user_id)
+        if not user:
+            return {"status": "failed", "error": "User not found"}
+        projects = _get_user_projects(user).filter(Project.status.in_(closed_statuses)).all()
+
+    if not projects:
+        return {"status": "failed", "error": "No closed projects found"}
+
+    total_projects = len(projects)
+    zip_buffer = io.BytesIO()
+    success_count = 0
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for idx, p in enumerate(projects):
+            progress = 10 + int((idx / total_projects) * 80)
+            self.update_state(state="PROGRESS", meta={
+                "progress": progress,
+                "status": f"Generating PDF {idx + 1} of {total_projects} ({p.project_uid})"
+            })
+            try:
+                pdf_data = generate_qc_story_closure_summary_pdf(p.id)
+                if not pdf_data:
+                    kpi = KPIMetric.query.filter_by(project_id=p.id).first()
+                    pdf_out = generate_pdf_summary(p, kpi, p.org_id)
+                    if pdf_out:
+                        pdf_data = pdf_out.encode('latin-1') if isinstance(pdf_out, str) else bytes(pdf_out)
+
+                if pdf_data:
+                    safe_uid = (p.project_uid or f'PRJ_{p.id}').replace('/', '_')
+                    zf.writestr(f"{safe_uid}_QC_Story_Report.pdf", pdf_data)
+                    success_count += 1
+            except Exception as e:
+                logger.warning(f"[Bulk PDF Task] Failed for project {p.id}: {e}")
+
+    if success_count == 0:
+        return {"status": "failed", "error": "No PDFs could be generated"}
+
+    self.update_state(state="PROGRESS", meta={"progress": 95, "status": "Saving ZIP archive to storage"})
+    
+    zip_buffer.seek(0)
+    filename = f"QCMS_All_Project_Reports_{org_id or 'all'}.zip"
+    saved = storage.save_file(
+        zip_buffer.getvalue(),
+        filename=filename,
+        subfolder="reports/bulk",
+        content_type="application/zip"
+    )
+    download_url = saved.get("url")
+
+    # Log audit event
+    try:
+        db.session.add(AuditLog(
+            org_id=org_id,
+            user_id=user_id,
+            action="ASYNC_EXPORT_PDF_ALL",
+            target_table="projects",
+            details={"count": success_count, "task_id": self.request.id, "url": download_url}
+        ))
+        db.session.commit()
+    except Exception:
+        pass
+
+    return {
+        "status": "completed",
+        "progress": 100,
+        "filename": filename,
+        "download_url": download_url,
+        "count": success_count,
+        "completed_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    }

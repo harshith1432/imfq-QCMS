@@ -10,6 +10,7 @@ class Project(db.Model):
     __tablename__ = 'projects'
     __table_args__ = (
         db.Index('idx_project_org_status_created', 'org_id', 'status', 'created_at'),
+        db.Index('idx_project_org_stage', 'org_id', 'current_stage'),
         db.Index('idx_project_org_status', 'org_id', 'status'),
         db.Index('idx_project_org_created', 'org_id', 'created_at'),
         db.Index('idx_project_plant', 'plant'),
@@ -74,6 +75,10 @@ class ProjectStageTracker(db.Model):
 
 class ProjectWorkflow(db.Model):
     __tablename__ = 'project_workflow'
+    __table_args__ = (
+        db.Index('idx_project_workflow_proj_stage', 'project_id', 'stage_id'),
+        db.Index('idx_project_workflow_org_stage', 'org_id', 'stage_id'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)

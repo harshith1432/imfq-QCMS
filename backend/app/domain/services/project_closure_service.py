@@ -124,6 +124,12 @@ class ProjectClosureService:
 
         db.session.commit()
 
+        try:
+            from app.domain.services.cache_service import CacheService
+            CacheService.invalidate_project_cache(project.org_id)
+        except Exception:
+            pass
+
         # 8. Dispatch Background Congratulatory Email (Non-blocking Thread)
         try:
             import threading

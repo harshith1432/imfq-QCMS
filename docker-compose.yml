@@ -1,6 +1,21 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: qcms_redis
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     image: qcms-backend:${QCMS_TAG:-latest}
     build:
@@ -11,6 +26,9 @@ services:
       - "5000:5000"
     env_file:
       - ./backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/health')\" || exit 1"]
@@ -23,6 +41,21 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qcms_celery_worker
+    command: celery -A celery_worker.celery worker --loglevel=info --concurrency=2
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    env_file:
+      - ./backend/.env
+    restart: unless-stopped
 
   frontend:
     image: qcms-frontend:${QCMS_TAG:-latest}
@@ -47,3 +80,6 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+
+volumes:
+  redis_data:

@@ -3,6 +3,8 @@ Celery Distributed Worker Factory for QCMS Enterprise
 ======================================================
 Binds Celery task execution with Flask application context and database session lifecycle.
 """
+import os
+import logging
 from celery import Celery, Task
 from flask import Flask
 
@@ -26,14 +28,25 @@ def make_celery(flask_app: Flask) -> Celery:
                     except Exception:
                         pass
 
+    is_testing = (
+        flask_app.config.get('TESTING', False)
+        or os.getenv('TESTING', '').lower() in ('true', '1')
+        or bool(os.getenv('PYTEST_CURRENT_TEST'))
+    )
+    broker_url = 'memory://' if is_testing else flask_app.config.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+    result_backend = 'cache+memory://' if is_testing else flask_app.config.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+
     celery_app = Celery(
         flask_app.import_name,
         task_cls=FlaskContextTask,
-        broker=flask_app.config.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0'),
-        backend=flask_app.config.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+        broker=broker_url,
+        backend=result_backend
     )
 
     celery_app.conf.update(
+        task_always_eager=is_testing,
+        task_eager_propagates=is_testing,
+        task_store_eager_result=is_testing,
         task_serializer=flask_app.config.get('CELERY_TASK_SERIALIZER', 'json'),
         result_serializer=flask_app.config.get('CELERY_RESULT_SERIALIZER', 'json'),
         accept_content=flask_app.config.get('CELERY_ACCEPT_CONTENT', ['json']),
@@ -43,6 +56,18 @@ def make_celery(flask_app: Flask) -> Celery:
         task_time_limit=flask_app.config.get('CELERY_TASK_TIME_LIMIT', 600),
         task_soft_time_limit=flask_app.config.get('CELERY_TASK_SOFT_TIME_LIMIT', 540),
         worker_prefetch_multiplier=flask_app.config.get('CELERY_WORKER_PREFETCH_MULTIPLIER', 1),
+        broker_connection_retry=False,
+        broker_connection_retry_on_startup=False,
+        broker_connection_max_retries=0,
+        broker_connection_timeout=0.5,
+        broker_transport_options={
+            'socket_timeout': 0.5,
+            'socket_connect_timeout': 0.5,
+            'retry_on_timeout': False,
+            'max_retries': 0,
+        },
+        redis_socket_connect_timeout=0.5,
+        redis_socket_timeout=0.5,
         task_routes=flask_app.config.get('CELERY_TASK_ROUTES', {}),
         beat_schedule={
             'cleanup-expired-sessions-every-hour': {

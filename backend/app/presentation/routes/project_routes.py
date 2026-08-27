@@ -457,9 +457,10 @@ def get_imported_idea_by_code(idea_code):
 
 
 @project_bp.route('', methods=['POST'])
+@project_bp.route('/', methods=['POST'])
 @jwt_required()
 @feature_module_required('projects.create')
-@role_required(['Team Leader', 'Team Member'])
+@role_required(['Team Leader', 'Team Member', 'Admin', 'SuperAdmin'])
 @idempotent()
 def create_project():
     data = request.get_json()
@@ -467,8 +468,8 @@ def create_project():
     user = db.session.get(User, user_id)
     role_name = user.role.name
 
-    if role_name not in ('Team Leader', 'Team Member'):
-        return jsonify({"msg": "Access denied. Only Team Members and Team Leaders can initialize projects."}), 403
+    if role_name not in ('Team Leader', 'Team Member', 'Admin', 'SuperAdmin'):
+        return jsonify({"msg": "Access denied. Only Team Members, Team Leaders, and Admins can initialize projects."}), 403
 
     # Subscription Limit Check
     can_create, limit_msg = SubscriptionManager.check_project_limit(user.org_id)
@@ -711,6 +712,12 @@ def create_project():
         
         db.session.commit()
         
+        try:
+            from app.domain.services.cache_service import CacheService
+            CacheService.invalidate_project_cache(user.org_id)
+        except Exception:
+            pass
+
         # Award Employee Points for Project Initialization & Role Assignments
         try:
             from app.domain.services.point_engine_service import PointEngineService
@@ -1549,11 +1556,21 @@ def get_project_details(id_or_uid):
     if not user:
         return jsonify({"msg": "User not found"}), 404
         
+    from sqlalchemy.orm import joinedload, selectinload
+    proj_query = Project.query.options(
+        joinedload(Project.department),
+        joinedload(Project.creator),
+        joinedload(Project.team_leader),
+        joinedload(Project.facilitator),
+        joinedload(Project.reviewer),
+        selectinload(Project.members)
+    )
+
     project = None
     if str(id_or_uid).isdigit():
-        project = db.session.get(Project, int(id_or_uid))
+        project = proj_query.filter_by(id=int(id_or_uid)).first()
     if not project:
-        project = Project.query.filter(
+        project = proj_query.filter(
             db.func.lower(Project.project_uid) == str(id_or_uid).lower()
         ).first()
         
@@ -2214,6 +2231,12 @@ def delete_project(id):
         db.session.execute(text("DELETE FROM projects WHERE id = :pid"), {"pid": id})
         db.session.commit()
         
+        try:
+            from app.domain.services.cache_service import CacheService
+            CacheService.invalidate_project_cache(project.org_id)
+        except Exception:
+            pass
+
         return jsonify({"msg": "Project and all associated data deleted successfully"}), 200
         
     except Exception as e:

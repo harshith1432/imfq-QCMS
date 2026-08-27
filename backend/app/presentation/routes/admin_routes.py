@@ -3026,6 +3026,13 @@ def upload_branding():
             org.favicon_url = file_url
             
         db.session.commit()
+        
+        try:
+            from app.domain.services.document_branding_service import DocumentBrandingService
+            DocumentBrandingService.invalidate_cache(org.id)
+        except Exception:
+            pass
+
         log_action(current_user.id, "UPDATE_BRANDING", org.id, "organizations", org.id, {"type": asset_type})
         
         return jsonify({"url": file_url, "storage_backend": result.get('backend', 'local')}), 200

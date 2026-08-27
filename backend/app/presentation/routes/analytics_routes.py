@@ -106,7 +106,19 @@ def get_project_roster():
             page = total_pages
 
         offset = max(0, (page - 1) * per_page)
-        paginated = proj_q.order_by(Project.created_at.desc()).offset(offset).limit(per_page).all()
+        from sqlalchemy.orm import joinedload
+        paginated = (
+            proj_q
+            .options(
+                joinedload(Project.team_leader),
+                joinedload(Project.creator),
+                joinedload(Project.department)
+            )
+            .order_by(Project.created_at.desc())
+            .offset(offset)
+            .limit(per_page)
+            .all()
+        )
 
         items = []
         for p in paginated:

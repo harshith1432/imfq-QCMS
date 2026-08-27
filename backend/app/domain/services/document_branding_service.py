@@ -23,9 +23,14 @@ class DocumentBrandingService:
 
 
     @classmethod
-    def invalidate_cache(cls):
-        """Invalidate in-memory branding cache so changes immediately take effect across all generators."""
+    def invalidate_cache(cls, org_id=None):
+        """Invalidate in-memory and Redis branding cache so changes immediately take effect across all generators."""
         cls._cache.clear()
+        try:
+            from app.domain.services.cache_service import CacheService
+            CacheService.invalidate_tenant_branding(org_id)
+        except Exception:
+            pass
 
     @classmethod
     def load(cls, org_id=None):
@@ -38,6 +43,16 @@ class DocumentBrandingService:
         cache_key = f"context:{org_id}"
         if cache_key in cls._cache:
             return cls._cache[cache_key]
+
+        try:
+            from app.domain.services.cache_service import CacheService
+            return CacheService.get_tenant_branding(org_id, lambda: cls._build_branding_context(org_id))
+        except Exception:
+            return cls._build_branding_context(org_id)
+
+    @classmethod
+    def _build_branding_context(cls, org_id=None):
+        cache_key = f"context:{org_id}"
 
         # Fetch Global Defaults
         platform = PlatformIdentityConfig.query.filter_by(org_id=None).first()

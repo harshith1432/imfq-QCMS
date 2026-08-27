@@ -59,7 +59,7 @@ class CacheAdapter:
 
         if HAS_REDIS and redis_url:
             try:
-                client = redis.from_url(redis_url, decode_responses=True, socket_timeout=2.0, socket_connect_timeout=2.0)
+                client = redis.from_url(redis_url, decode_responses=True, socket_timeout=0.5, socket_connect_timeout=0.5)
                 client.ping()
                 self._redis_client = client
                 logger.info(f"[QCMS Cache] Connected to Redis at {redis_url.split('@')[-1] if '@' in redis_url else 'configured endpoint'}")
@@ -72,6 +72,15 @@ class CacheAdapter:
     @property
     def is_redis(self) -> bool:
         return self._redis_client is not None
+
+    def ping(self) -> bool:
+        """Health-check ping for cache layer."""
+        if self._redis_client:
+            try:
+                return bool(self._redis_client.ping())
+            except Exception:
+                return False
+        return True
 
     def _ensure_security_available(self, operation_name: str):
         """Fail closed in production if Redis is explicitly configured/required but became unreachable."""
