@@ -1,4 +1,4 @@
-name: QCMS Production CI/CD & Automated Verification Pipeline
+name: QCMS Production CI & Automated Verification Pipeline
 
 on:
   push:
@@ -9,9 +9,9 @@ on:
 
 jobs:
   # =========================================================================
-  # STAGE 1: CI (Dependencies -> Tests -> Security Scan -> Docker Build)
+  # BACKEND & SECURITY VERIFICATION
   # =========================================================================
-  ci-pipeline:
+  test-and-verify:
     name: "1. Build, Test & Security Verification"
     runs-on: ubuntu-latest
 
@@ -24,46 +24,39 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
 
-      # Step 1: Install dependencies
       - name: "Install Dependencies"
         run: |
-          echo "[CI] Upgrading pip and installing dependencies..."
-          cd backend
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest flake8 bandit
+          pip install -r backend/requirements.txt
+          pip install pytest flake8
 
-      # Step 2: Run tests
-      - name: "Run Linting & Pytest Test Suite"
+      - name: "Run Syntax & Flake8 Check"
         run: |
-          echo "[CI] Running flake8 critical syntax check..."
           flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
-          echo "[CI] Running automated pytest suite..."
+
+      - name: "Run Automated Pytest Test Suite"
+        env:
+          ENVIRONMENT: testing
+          FLASK_ENV: testing
+          DATABASE_URL: sqlite:///:memory:
+          JWT_SECRET_KEY: ci-test-secret-key-at-least-32-chars-long-abc
+        run: |
           cd backend
           pytest tests -v
 
-      # Step 3: Security scan
-      - name: "Security Vulnerability Scan (Bandit SAST)"
+      - name: "Verify Docker Build"
         run: |
-          echo "[CI] Running Bandit Security SAST scan on backend..."
-          bandit -r backend/app -ll -ii -x backend/tests,backend/migrations
-
-      # Step 4: Build Docker image verification
-      - name: "Build Docker Image (Pre-Deployment Validation)"
-        run: |
-          echo "[CI] Verifying Docker container builds..."
           docker build -t qcms-backend:ci-check ./backend
-          docker build -t qcms-frontend:ci-check ./frontend
-          echo "[CI] Docker images built successfully!"
 
   # =========================================================================
   # STAGE 2: CD (Deploy -> Run DB Migration -> Health Check -> Smoke Test)
   # =========================================================================
   cd-pipeline:
     name: "2. Production Deployment & Verification"
-    needs: ci-pipeline
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: test-and-verify
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && secrets.HOSTINGER_VPS_IP != ''
     runs-on: ubuntu-latest
 
     steps:

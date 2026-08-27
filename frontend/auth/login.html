@@ -114,10 +114,29 @@
 
         .login-options {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: var(--ds-space-8);
             font-size: 0.8125rem;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--ds-text-secondary);
+            cursor: pointer;
+            user-select: none;
+            font-weight: 500;
+        }
+
+        .remember-me input {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1.5px solid var(--ds-input-border);
+            background: var(--ds-input-bg);
+            cursor: pointer;
         }
 
         .forgot-password {
@@ -218,14 +237,17 @@
                     <div style="position: relative;">
                         <input type="password" class="ds-input" id="password" placeholder="**********" required
                             autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" style="padding-right: 40px;">
-                        <button type="button" id="togglePasswordBtn" 
-                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; color: var(--ds-text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                            <i id="togglePasswordIcon" data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                        <button type="button" id="togglePasswordBtn" onclick="togglePassword('password', this)"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; color: var(--ds-text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5;" title="Show / Hide Password" aria-label="Toggle Password Visibility">
+                            <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
                         </button>
                     </div>
                 </div>
 
                 <div class="login-options">
+                    <label class="remember-me">
+                        <input type="checkbox" id="rememberMe"> Remember me
+                    </label>
                     <a href="forgot-password.html" class="forgot-password">Forgot password?</a>
                 </div>
 
@@ -244,13 +266,29 @@
                 </div>
             </div>
 
+            <div class="login-footer">
+                Create an Organization Account? <a href="register-org.html">Sign up</a>
+            </div>
         </div>
     </div>
 
-    <script src="/assets/dist/core-bundle.3cd1a892.min.js"></script>
-    <script src="/assets/dist/enterprise-validator.e89a83c2.min.js"></script>
-    <script src="/assets/dist/auth.3e6477e1.min.js"></script>
+    <script src="/assets/dist/core-bundle.e907ecc3.min.js"></script>
+    <script src="/assets/dist/enterprise-validator.min.js"></script>
+    <script src="/assets/dist/auth.min.js"></script>
     <script>
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            if (btn) {
+                btn.innerHTML = isPassword
+                    ? '<i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>'
+                    : '<i data-lucide="eye" style="width: 18px; height: 18px;"></i>';
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
         // Check for URL parameters to show messages and prepare login state
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams    = new URLSearchParams(window.location.search);
@@ -295,29 +333,13 @@
                 successMsgEl.style.display = 'flex';
             } else if (urlParams.get('reason') === 'session_terminated') {
                 const errEl = document.getElementById('errorMsg');
+                if (errEl) {
                     errEl.querySelector('span').textContent = "Your session was terminated by an administrator. Please sign in again.";
                     errEl.style.display = 'flex';
                 }
             }
 
             if (window.lucide) lucide.createIcons();
-
-            // Password toggle
-            const toggleBtn = document.getElementById('togglePasswordBtn');
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', () => {
-                    const passwordInput = document.getElementById('password');
-                    const icon = document.getElementById('togglePasswordIcon');
-                    if (passwordInput.type === 'password') {
-                        passwordInput.type = 'text';
-                        icon.setAttribute('data-lucide', 'eye-off');
-                    } else {
-                        passwordInput.type = 'password';
-                        icon.setAttribute('data-lucide', 'eye');
-                    }
-                    if (window.lucide) lucide.createIcons();
-                });
-            }
 
             // ── Dynamic Login Label ───────────────────────────────────────
             const FIELD_LABELS = {
@@ -328,7 +350,7 @@
             };
 
             window.handleSSOLogin = async function(provider) {
-                const email = prompt(`Please enter your ${provider.toUpperCase()} email address to simulate SSO login:`);
+                const email = prompt('Please enter your ' + provider.toUpperCase() + ' email address to simulate SSO login:');
                 if (!email) return;
                 
                 try {
@@ -345,9 +367,9 @@
                     }));
                     
                     // Redirect
-                    if (res.role === 'SuperAdmin') window.location.href = '/admin/super-admin.html';
-                    else if (res.role === 'Admin') window.location.href = '/dashboard/dashboard-admin.html';
-                    else window.location.href = '/dashboard/dashboard-team-member.html';
+                    if (res.role === 'SuperAdmin') window.location.replace('/admin/super-admin.html');
+                    else if (res.role === 'Admin') window.location.replace('/dashboard/dashboard-admin.html');
+                    else window.location.replace('/dashboard/dashboard-team-member.html');
                 } catch (err) {
                     const errEl = document.getElementById('errorMsg');
                     if (errEl) {
@@ -357,6 +379,7 @@
                 }
             };
 
+            let _lastCheckedIdentifier = null;
             async function fetchAndApplyLoginOptions(identifier = '') {
                 try {
                     const url = api.baseUrl + '/auth/login-config' + (identifier ? '?identifier=' + encodeURIComponent(identifier) : '');
@@ -446,16 +469,16 @@
                     const platTitleEl = document.getElementById('loginPlatformTitle');
                     if (platTitleEl) platTitleEl.textContent = platTitle;
 
-                    document.title = `Login | ${softName}`;
+                    document.title = 'Login | ' + softName;
 
                     // Dynamic Logo Image or Fallback Shield
                     const logoSlot = document.getElementById('loginBrandLogoSlot');
                     if (logoSlot) {
                         const logoSrc = b.platform_logo_url || b.logo_url;
                         if (logoSrc && !logoSrc.includes('/assets/img/logo.png')) {
-                            logoSlot.innerHTML = `<img src="${logoSrc}" alt="${shortName} Logo" style="height:22px; max-width:120px; object-fit:contain;" onerror="this.outerHTML='<i data-lucide=\'shield-check\' style=\'width:20px;height:20px;\'></i>'; if(window.lucide) lucide.createIcons();">`;
+                            logoSlot.innerHTML = '<img src="' + logoSrc + '" alt="' + shortName + ' Logo" style="height:22px; max-width:120px; object-fit:contain;" onerror="this.outerHTML=\'<i data-lucide=\\\'shield-check\\\' style=\\\width:20px;height:20px;\\\'></i>\'; if(window.lucide) lucide.createIcons();">';
                         } else {
-                            logoSlot.innerHTML = `<i data-lucide="shield-check" style="width:20px; height:20px;"></i>`;
+                            logoSlot.innerHTML = '<i data-lucide="shield-check" style="width:20px; height:20px;"></i>';
                         }
                     }
 
@@ -487,7 +510,8 @@
                 fetchAndApplyLoginOptions();
                 identifierInput.addEventListener('blur', () => {
                     const val = identifierInput.value.trim();
-                    if (val) {
+                    if (val && val !== _lastCheckedIdentifier) {
+                        _lastCheckedIdentifier = val;
                         fetchAndApplyLoginOptions(val);
                     }
                 });

@@ -378,15 +378,32 @@ function handleStaticRedirects() {
 // checkAuth();
 // handleStaticRedirects();
 
-function togglePassword(inputId, icon) {
+function togglePassword(inputId, btnOrIcon) {
     const input = document.getElementById(inputId);
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        input.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+
+    if (btnOrIcon) {
+        // If it's a button or container with Lucide icon
+        if (btnOrIcon.tagName === 'BUTTON' || btnOrIcon.classList.contains('password-toggle-btn') || btnOrIcon.classList.contains('password-toggle')) {
+            btnOrIcon.innerHTML = isPassword
+                ? '<i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>'
+                : '<i data-lucide="eye" style="width: 18px; height: 18px;"></i>';
+            if (window.lucide) lucide.createIcons();
+        } else if (btnOrIcon.tagName === 'I' || btnOrIcon.tagName === 'SPAN') {
+            if (btnOrIcon.dataset && btnOrIcon.dataset.lucide) {
+                btnOrIcon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+                if (window.lucide) lucide.createIcons();
+            } else {
+                if (isPassword) {
+                    btnOrIcon.classList.remove('fa-eye');
+                    btnOrIcon.classList.add('fa-eye-slash');
+                } else {
+                    btnOrIcon.classList.remove('fa-eye-slash');
+                    btnOrIcon.classList.add('fa-eye');
+                }
+            }
+        }
     }
 }

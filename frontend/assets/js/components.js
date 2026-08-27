@@ -418,20 +418,30 @@ const QCMS = {
         const path = (window.location.pathname || '').toLowerCase();
         const rawPage = path.split('/').pop() || 'index.html';
         const page = rawPage.split('?')[0].split('#')[0].toLowerCase();
+        const publicPages = [
+            'login.html',
+            'login',
+            'register.html',
+            'register',
+            'register-org.html',
+            'register-org',
+            'forgot-password.html',
+            'forgot-password',
+            'reset-password.html',
+            'reset-password',
+            'verify-email.html',
+            'verify-email',
+            'accept-invite.html',
+            'accept-invite',
+            'maintenance.html',
+            'maintenance'
+        ];
         return (
             path === '/' ||
             path === '' ||
             page === 'index.html' ||
             page === '' ||
-            path.includes('/auth/') ||
-            page === 'login.html' ||
-            page === 'register.html' ||
-            page === 'register-org.html' ||
-            page === 'forgot-password.html' ||
-            page === 'reset-password.html' ||
-            page === 'verify-email.html' ||
-            page === 'accept-invite.html' ||
-            page === 'maintenance.html'
+            publicPages.includes(page)
         );
     },
 
@@ -951,6 +961,24 @@ const QCMS = {
         const urlParams = new URLSearchParams(window.location.search);
         const currentView = (urlParams.get('view') || 'overview').toLowerCase();
 
+        // Unambiguous route matchers to prevent multiple tab highlights
+        const isKnowledgeActive = currentPath.includes('repository.html') && !currentPath.includes('projects-repository');
+        const isNewProjectActive = currentPath.includes('new-project.html');
+        const isProjectsActive = !isKnowledgeActive && !isNewProjectActive && (
+            currentPath.includes('projects-repository') ||
+            currentPath.includes('workspace') ||
+            currentPath.includes('sop-deviation') ||
+            currentPath.includes('additional-sources') ||
+            (currentPath.includes('/projects/') && !currentPath.includes('repository.html'))
+        );
+        const isLeaderboardActive = currentPath.includes('leaderboard.html') || currentPath.includes('/rewards/');
+        const isProfileActive = currentPath.includes('profile.html') || currentPath.includes('user-profile.html') || currentPath.includes('/auth/profile') || currentPath.includes('/auth/user-profile');
+        const isUsersActive = currentPath.includes('users.html') || currentPath.includes('user-management.html') || currentPath.includes('departments.html') || currentPath.includes('plants.html');
+        const isAuditLogsActive = currentPath.includes('audit-logs.html') || currentPath.includes('audit_logs');
+        const isAnalyticsActive = currentPath.includes('analytics.html') || currentPath.includes('/reports/');
+        const isTemplatesActive = currentPath.includes('stage-template.html');
+        const isSettingsActive = currentPath.includes('/admin/settings') || currentPath.includes('settings.html');
+
         let navItems = [];
 
         if (roleName === 'SuperAdmin') {
@@ -959,7 +987,7 @@ const QCMS = {
             const isOrgsActive = currentPath.includes('super-admin.html') && currentView === 'organizations';
             const isPlansActive = currentPath.includes('super-admin.html') && (currentView === 'plans' || currentView === 'billing');
             const isLogsActive = currentPath.includes('super-admin.html') && currentView === 'logs';
-            const isSettingsActive = currentPath.includes('super-admin.html') && ['settings', 'doc-identity', 'integrations', 'storage', 'stage-templates', 'stage-weightage', 'recycle-bin'].includes(currentView);
+            const isSASettingsActive = currentPath.includes('super-admin.html') && ['settings', 'doc-identity', 'integrations', 'storage', 'stage-templates', 'stage-weightage', 'recycle-bin'].includes(currentView);
 
             navItems = [
                 {
@@ -990,7 +1018,7 @@ const QCMS = {
                     label: 'Settings',
                     url: '/admin/super-admin.html?view=settings',
                     icon: 'settings-2',
-                    isActive: isSettingsActive
+                    isActive: isSASettingsActive
                 }
             ];
         } else if (roleName === 'Admin') {
@@ -1013,7 +1041,7 @@ const QCMS = {
                     label: 'Projects',
                     url: '/projects/projects-repository.html',
                     icon: 'folder-kanban',
-                    isActive: currentPath.includes('/projects/') || currentPath.includes('repository') || currentPath.includes('workspace')
+                    isActive: isProjectsActive
                 });
             }
             if (canUsers) {
@@ -1021,7 +1049,7 @@ const QCMS = {
                     label: 'Directory',
                     url: '/admin/users.html',
                     icon: 'users',
-                    isActive: currentPath.includes('users.html')
+                    isActive: isUsersActive
                 });
             }
             if (canAudits) {
@@ -1029,21 +1057,21 @@ const QCMS = {
                     label: 'Audit Logs',
                     url: '/admin/audit-logs.html',
                     icon: 'scroll-text',
-                    isActive: currentPath.includes('audit-logs.html') || currentPath.includes('audit_logs') || currentPath.includes('audit-logs')
+                    isActive: isAuditLogsActive
                 });
             } else if (canReports) {
                 navItems.push({
                     label: 'Analytics',
                     url: '/reports/analytics.html',
                     icon: 'bar-chart-3',
-                    isActive: currentPath.includes('analytics.html') || currentPath.includes('/reports/')
+                    isActive: isAnalyticsActive
                 });
             }
             navItems.push({
                 label: 'Settings',
                 url: '/admin/settings.html',
                 icon: 'settings',
-                isActive: currentPath.includes('/admin/settings') || currentPath.includes('settings.html')
+                isActive: isSettingsActive
             });
         } else if (roleName === 'CEO') {
             // ── CEO / Executive ──
@@ -1056,7 +1084,7 @@ const QCMS = {
                     label: 'Executive',
                     url: '/dashboard/dashboard-admin.html',
                     icon: 'layout-dashboard',
-                    isActive: currentPath.includes('dashboard-admin.html')
+                    isActive: currentPath.includes('dashboard-admin.html') || currentPath.includes('dashboard-ceo.html')
                 }
             ];
             if (canReports) {
@@ -1064,7 +1092,7 @@ const QCMS = {
                     label: 'Analytics',
                     url: '/reports/analytics.html',
                     icon: 'bar-chart-3',
-                    isActive: currentPath.includes('analytics.html') || currentPath.includes('/reports/')
+                    isActive: isAnalyticsActive
                 });
             }
             if (canRewards) {
@@ -1072,7 +1100,7 @@ const QCMS = {
                     label: 'Leaderboard',
                     url: '/rewards/leaderboard.html',
                     icon: 'trophy',
-                    isActive: currentPath.includes('leaderboard.html') || currentPath.includes('/rewards/')
+                    isActive: isLeaderboardActive
                 });
             }
             if (canUsers) {
@@ -1080,14 +1108,14 @@ const QCMS = {
                     label: 'Directory',
                     url: '/admin/users.html',
                     icon: 'users',
-                    isActive: currentPath.includes('users.html')
+                    isActive: isUsersActive
                 });
             }
             navItems.push({
                 label: 'Profile',
                 url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
+                isActive: isProfileActive
             });
         } else if (roleName === 'Reviewer') {
             // ── Stage Reviewer / Approver ──
@@ -1107,7 +1135,7 @@ const QCMS = {
                     label: 'Projects',
                     url: '/projects/projects-repository.html',
                     icon: 'folder-kanban',
-                    isActive: currentPath.includes('/projects/') || currentPath.includes('repository') || currentPath.includes('workspace')
+                    isActive: isProjectsActive
                 });
             }
             if (canReports) {
@@ -1115,14 +1143,14 @@ const QCMS = {
                     label: 'Analytics',
                     url: '/reports/analytics.html',
                     icon: 'bar-chart-3',
-                    isActive: currentPath.includes('analytics.html') || currentPath.includes('/reports/')
+                    isActive: isAnalyticsActive
                 });
             }
             navItems.push({
                 label: 'Profile',
                 url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
+                isActive: isProfileActive
             });
         } else if (roleName === 'Facilitator') {
             // ── Gate Facilitator ──
@@ -1142,7 +1170,7 @@ const QCMS = {
                     label: 'Projects',
                     url: '/projects/projects-repository.html',
                     icon: 'folder-kanban',
-                    isActive: currentPath.includes('/projects/') || currentPath.includes('repository') || currentPath.includes('workspace')
+                    isActive: isProjectsActive
                 });
             }
             if (canTpl) {
@@ -1150,14 +1178,14 @@ const QCMS = {
                     label: 'Templates',
                     url: '/admin/stage-template.html',
                     icon: 'layers',
-                    isActive: currentPath.includes('stage-template.html')
+                    isActive: isTemplatesActive
                 });
             }
             navItems.push({
                 label: 'Profile',
                 url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
+                isActive: isProfileActive
             });
         } else if (roleName === 'Team Leader') {
             // ── Team Leader ──
@@ -1177,13 +1205,13 @@ const QCMS = {
                     label: 'Projects',
                     url: '/projects/projects-repository.html',
                     icon: 'folder-kanban',
-                    isActive: currentPath.includes('/projects/') && !currentPath.includes('new-project.html')
+                    isActive: isProjectsActive
                 });
                 navItems.push({
                     label: 'Create',
                     url: '/projects/new-project.html',
                     icon: 'plus-circle',
-                    isActive: currentPath.includes('new-project.html')
+                    isActive: isNewProjectActive
                 });
             }
             if (canRewards) {
@@ -1191,14 +1219,14 @@ const QCMS = {
                     label: 'Rewards',
                     url: '/rewards/leaderboard.html',
                     icon: 'trophy',
-                    isActive: currentPath.includes('leaderboard.html') || currentPath.includes('/rewards/')
+                    isActive: isLeaderboardActive
                 });
             }
             navItems.push({
                 label: 'Profile',
                 url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
+                isActive: isProfileActive
             });
         } else {
             // ── Team Member (Default Contributor) ──
@@ -1219,7 +1247,7 @@ const QCMS = {
                     label: 'Projects',
                     url: '/projects/projects-repository.html',
                     icon: 'folder-kanban',
-                    isActive: currentPath.includes('/projects/')
+                    isActive: isProjectsActive
                 });
             }
             if (canKB) {
@@ -1227,7 +1255,7 @@ const QCMS = {
                     label: 'Knowledge',
                     url: '/projects/repository.html',
                     icon: 'book-open',
-                    isActive: currentPath.includes('repository.html') && !currentPath.includes('projects-repository')
+                    isActive: isKnowledgeActive
                 });
             }
             if (canRewards) {
@@ -1235,14 +1263,14 @@ const QCMS = {
                     label: 'Leaderboard',
                     url: '/rewards/leaderboard.html',
                     icon: 'trophy',
-                    isActive: currentPath.includes('leaderboard.html') || currentPath.includes('/rewards/')
+                    isActive: isLeaderboardActive
                 });
             }
             navItems.push({
                 label: 'Profile',
                 url: '/auth/profile.html',
                 icon: 'user',
-                isActive: currentPath.includes('profile.html') || currentPath.includes('/auth/profile')
+                isActive: isProfileActive
             });
         }
 
