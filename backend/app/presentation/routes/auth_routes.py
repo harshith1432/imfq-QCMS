@@ -763,8 +763,8 @@ def register():
     if not role:
         return jsonify({"msg": "Invalid role"}), 400
         
-    # Temporary password logic
-    temp_password = data.get('password', 'QCMS@123') # Default temp pass if not provided
+    # Temporary password logic (Mapped to .env DEFAULT_TEMP_PASSWORD / DEFAULT_USER_PASSWORD)
+    temp_password = data.get('password') or os.getenv('DEFAULT_TEMP_PASSWORD') or os.getenv('DEFAULT_USER_PASSWORD') or 'Welcome@123'
     hashed_pw = bcrypt.generate_password_hash(temp_password).decode('utf-8')
     
     dept_id = None
@@ -1883,10 +1883,24 @@ def forgot_password():
             ).first()
 
     if not user:
-        return jsonify({
-            "msg": "If an account exists with that email or phone number, a verification code has been dispatched.",
-            "found": False
-        }), 200
+        if '@' in identifier:
+            return jsonify({
+                "status": "error",
+                "msg": "Please enter a valid registered email address. No account found.",
+                "message": "Please enter a valid registered email address. No account found."
+            }), 404
+        elif clean_digits and len(clean_digits) >= 10:
+            return jsonify({
+                "status": "error",
+                "msg": "Please enter a valid registered phone number. No account found.",
+                "message": "Please enter a valid registered phone number. No account found."
+            }), 404
+        else:
+            return jsonify({
+                "status": "error",
+                "msg": "Please enter a valid registered email address or phone number.",
+                "message": "Please enter a valid registered email address or phone number."
+            }), 404
 
     if not user.is_active:
         return jsonify({"msg": "This account is currently deactivated. Please contact your organization administrator."}), 403

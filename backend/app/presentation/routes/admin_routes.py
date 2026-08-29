@@ -497,7 +497,7 @@ def create_user():
         }), 403
 
     import secrets
-    password = data.get('password') or os.getenv('DEFAULT_USER_PASSWORD') or secrets.token_urlsafe(12)
+    password = data.get('password') or os.getenv('DEFAULT_USER_PASSWORD') or os.getenv('DEFAULT_TEMP_PASSWORD') or 'Welcome@123'
     
     plant_input = data.get('plant_id') or data.get('plant_location') or data.get('plant')
     user_plant_id = None
@@ -837,7 +837,8 @@ def download_users_template():
     writer = csv.writer(output)
     writer.writerow(headers)
     
-    sample_row = ['john_doe', '9876543210', 'john.doe@example.com', 'Team Member', 'Unit 1 - Pune', 'Manufacturing', 'John Doe', 'Welcome@123']
+    default_sample_pw = os.getenv('DEFAULT_TEMP_PASSWORD') or os.getenv('DEFAULT_USER_PASSWORD') or 'Welcome@123'
+    sample_row = ['john_doe', '9876543210', 'john.doe@example.com', 'Team Member', 'Unit 1 - Pune', 'Manufacturing', 'John Doe', default_sample_pw]
     sample_row += [''] * len(custom_headers)
     writer.writerow(sample_row)
     
@@ -1048,7 +1049,7 @@ def bulk_upload_users():
         plant_raw     = (row.get('plant_location') or row.get('plant') or row.get('location') or row.get('Plant') or row.get('Location') or row.get('Plant  / Location') or '').strip()
         dept_raw      = (row.get('department') or row.get('dept') or row.get('Department') or row.get('Dept') or row.get('Department Name') or '').strip()
         full_name     = (row.get('full_name') or row.get('Full Name') or '').strip() or username
-        password      = (row.get('password') or row.get('Password') or '').strip() or os.getenv('DEFAULT_USER_PASSWORD') or secrets.token_urlsafe(12)
+        password      = (row.get('password') or row.get('Password') or '').strip() or os.getenv('DEFAULT_USER_PASSWORD') or os.getenv('DEFAULT_TEMP_PASSWORD') or 'Welcome@123'
 
         def reject(reason):
             nonlocal rejected_count

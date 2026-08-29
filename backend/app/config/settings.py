@@ -73,6 +73,11 @@ class Config:
     SUPER_ADMIN_USERNAME = os.getenv('SUPER_ADMIN_USERNAME')
     SUPER_ADMIN_PASSWORD = os.getenv('SUPER_ADMIN_PASSWORD')
     
+    # Default Temporary / Initial Passwords
+    DEFAULT_TEMP_PASSWORD = os.getenv('DEFAULT_TEMP_PASSWORD', 'Welcome@123')
+    DEFAULT_USER_PASSWORD = os.getenv('DEFAULT_USER_PASSWORD', os.getenv('DEFAULT_TEMP_PASSWORD', 'Welcome@123'))
+    DEFAULT_ADMIN_PASSWORD = os.getenv('DEFAULT_ADMIN_PASSWORD', os.getenv('DEFAULT_TEMP_PASSWORD', 'Welcome@123'))
+
     # DB URL parsing
     db_url = os.getenv('DATABASE_URL')
     if db_url:

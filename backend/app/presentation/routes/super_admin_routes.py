@@ -1297,7 +1297,7 @@ def reset_admin_password(org_id):
         target_users.add(new_admin)
 
     import secrets
-    temp_password = os.getenv('DEFAULT_ADMIN_PASSWORD') or secrets.token_urlsafe(12)
+    temp_password = os.getenv('DEFAULT_ADMIN_PASSWORD') or os.getenv('DEFAULT_TEMP_PASSWORD') or 'Welcome@123'
     hashed_pw = bcrypt.generate_password_hash(temp_password).decode('utf-8')
     
     for u in target_users:

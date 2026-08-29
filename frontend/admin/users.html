@@ -1685,8 +1685,6 @@
                         QCMS.toast('Stakeholder updated successfully', 'success');
                     } else {
                         QCMS.toast('Provisioning stakeholder...', 'info');
-                        // For new users, ensure we have a password
-                        payload.password = password || 'QCMS@123';
                         // Use standardized admin user creation endpoint instead of deprecated auth register
                         await api.post('/admin/users', payload);
                         QCMS.toast('Stakeholder provisioned successfully', 'success');
