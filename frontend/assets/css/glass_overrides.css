@@ -989,7 +989,7 @@ body.dark-mode .ds-select:focus {
 /* Universal Top-Layer Modal z-index Guarantee */
 .modal-backdrop,
 .modal-backdrop.show {
-    z-index: 1070 !important;
+    z-index: 105000 !important;
 }
 
 .modal,
@@ -997,7 +997,7 @@ body.dark-mode .ds-select:focus {
 #talkToSalesModal,
 #sdGlobalModalsContainer,
 #sdGlobalModalsContainer .modal {
-    z-index: 1080 !important;
+    z-index: 105010 !important;
 }
 
 /* Talk to Sales Modal High-Contrast Styling */
@@ -1718,18 +1718,36 @@ body.dark-mode select.r-stat {
 /* Responsive Organization Detail Modal Tab Sidebar */
 @media (min-width: 769px) {
     .org-detail-sidebar {
-        width: 200px !important;
+        width: 240px !important;
+        min-width: 240px !important;
+        max-width: 260px !important;
         border-right: 1px solid var(--ds-border-color) !important;
         border-bottom: none !important;
-        flex-shrink: 0;
+        flex-shrink: 0 !important;
+        padding: 20px 14px !important;
+        background: rgba(0, 0, 0, 0.02) !important;
     }
     .org-detail-sidebar .nav-pills {
         flex-direction: column !important;
         flex-wrap: nowrap !important;
+        gap: 6px !important;
     }
     .org-detail-sidebar .nav-pills .nav-link {
         width: 100% !important;
         text-align: left !important;
+        padding: 9px 14px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        border-radius: 10px !important;
+        white-space: nowrap !important;
+        transition: all 0.2s ease !important;
+    }
+    #orgDetailTabContent {
+        padding: 24px 28px !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        flex: 1 1 auto !important;
+        width: 100% !important;
     }
 }
 
@@ -1738,7 +1756,7 @@ body.dark-mode select.r-stat {
         width: 100% !important;
         border-right: none !important;
         border-bottom: 1px solid var(--ds-border-color) !important;
-        padding: 8px 10px !important;
+        padding: 10px 12px !important;
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
         flex-shrink: 0 !important;
@@ -1770,7 +1788,8 @@ body.dark-mode select.r-stat {
         width: 100% !important;
         flex: 1 1 auto !important;
         overflow-y: auto !important;
-        padding: 14px 12px !important;
+        overflow-x: hidden !important;
+        padding: 16px 14px !important;
     }
 }
 

@@ -1879,6 +1879,10 @@ const QCMS = {
                             <i class="link-icon" data-lucide="trash-2"></i>
                             <span>Recycle Bin</span>
                         </a>
+                        <a href="/resources/user-manual.html" class="sidebar-link sa-compact-link" title="User Manual">
+                            <i class="link-icon" data-lucide="book-open"></i>
+                            <span>User Manual</span>
+                        </a>
                         <a href="/admin/super-admin.html?view=settings" class="sidebar-link sa-compact-link" title="Settings">
                             <i class="link-icon" data-lucide="settings-2"></i>
                             <span>Settings</span>
@@ -1955,7 +1959,7 @@ const QCMS = {
                 adminNav += `<a href="/admin/sop-masters.html" class="sidebar-link"><i class="link-icon" data-lucide="file-text"></i><span>Categories & Types</span></a>`;
             }
 
-            // Resources section: Knowledge Base, Leaderboard & Rewards, Additional Sources
+            // Resources section: Knowledge Base, Leaderboard & Rewards, Additional Sources, User Manual
             let resNav = '';
             if (canKB) {
                 resNav += `<a href="/projects/repository.html" class="sidebar-link"><i class="link-icon" data-lucide="database"></i><span data-i18n="sidebar.links.knowledge_base">Knowledge Base</span></a>`;
@@ -1966,6 +1970,7 @@ const QCMS = {
             if (canSources) {
                 resNav += `<a href="/projects/additional-sources.html" class="sidebar-link"><i class="link-icon" data-lucide="sparkles"></i><span>Additional Sources</span></a>`;
             }
+            resNav += `<a href="/resources/user-manual.html" class="sidebar-link"><i class="link-icon" data-lucide="book-open"></i><span data-i18n="sidebar.links.user_manual">User Manual</span></a>`;
 
             sectionsHtml = `
                 ${mainNav ? `

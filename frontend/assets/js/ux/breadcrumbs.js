@@ -33,6 +33,7 @@ const Breadcrumbs = {
         'leaderboard.html': 'Rewards & Leaderboard',
         'sop-deviation-analysis.html': 'SOP Deviation Analysis',
         'additional-sources.html': 'Additional Sources',
+        'user-manual.html': 'User Manual',
         'login.html': 'Portal Access',
         'register.html': 'Account Creation',
         'super-admin.html': 'Super Admin Dashboard'

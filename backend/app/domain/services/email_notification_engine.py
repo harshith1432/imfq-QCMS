@@ -701,6 +701,45 @@ DEFAULT_NOTIFICATION_PRESETS = [
         "target_statuses": ["Active"],
         "is_active": True,
         "is_system_preset": True
+    },
+    {
+        "name": "Password Reset OTP Verification",
+        "category": "auth",
+        "description": "Sent when a user requests to reset their password via Email & SMS OTP verification.",
+        "subject": "Your Password Reset OTP Verification Code - {{software_name}}",
+        "preheader": "Your one-time password verification code for resetting your {{software_name}} password is {{otp}}.",
+        "heading": "Password Reset Verification Code",
+        "banner_color": "#2563eb",
+        "body_html": """<p>Hello <strong>{{user_name}}</strong>,</p>
+
+<p>We received a request to reset the password for your <strong>{{software_name}}</strong> account associated with username <strong>{{username}}</strong>.</p>
+
+<p>Please use the 6-digit verification code below to securely verify your identity and set a new password:</p>
+
+<div style="background: #f8fafc; border: 2px dashed #cbd5e1; padding: 22px; text-align: center; margin: 25px 0; border-radius: 12px;">
+    <span style="font-size: 34px; font-weight: bold; letter-spacing: 10px; color: #1e40af; font-family: monospace;">{{otp}}</span>
+</div>
+
+<p style="font-size: 13px; color: #64748b; text-align: center;">
+    This OTP code is valid for <strong>{{expires_in_minutes}} minutes</strong>. For security, never share this code with anyone.
+</p>
+
+<div style="background: rgba(239,68,68,0.06); border-left: 4px solid #ef4444; padding: 12px 16px; margin: 20px 0; border-radius: 4px; font-size: 12.5px; color: #991b1b;">
+    <strong>Security Notice:</strong> If you did not initiate this password reset request, please ignore this email or contact your administrator / support team immediately.
+</div>""",
+        "cta_text": "Open Password Recovery",
+        "cta_url": "{{app_url}}/auth/forgot-password.html",
+        "trigger_type": "event",
+        "event_trigger": "password_reset_otp",
+        "trigger_days_before": 0,
+        "target_audience_type": "all",
+        "target_roles": ["All"],
+        "target_statuses": ["Active"],
+        "is_active": True,
+        "is_system_preset": True,
+        "sms_enabled": True,
+        "sms_sender_id": "IFQMSK",
+        "sms_body": "Dear Customer, use OTP {{otp}} to reset your password on IFQM QCMS. Valid for 10 mins. Do not share with anyone. - IFQM"
     }
 ]
 
@@ -897,8 +936,28 @@ class EmailNotificationEngine:
         if not text:
             return ""
         
+        ctx = dict(context or {})
+        # Support password variable aliases ({{Password}}, {{password}}, {{temp_password}}, {{temporary_password}}, {{default_password}})
+        pwd = (
+            ctx.get('Password') or ctx.get('password') or 
+            ctx.get('temp_password') or ctx.get('temporary_password') or 
+            ctx.get('default_password')
+        )
+        if pwd is not None:
+            ctx.setdefault('Password', pwd)
+            ctx.setdefault('password', pwd)
+            ctx.setdefault('temp_password', pwd)
+            ctx.setdefault('temporary_password', pwd)
+            ctx.setdefault('default_password', pwd)
+
+        uname = ctx.get('username') or ctx.get('email') or ctx.get('user_email')
+        if uname is not None:
+            ctx.setdefault('username', uname)
+            ctx.setdefault('email', uname)
+            ctx.setdefault('user_email', uname)
+        
         output = str(text)
-        for key, val in context.items():
+        for key, val in ctx.items():
             pattern = re.compile(r'\{\{\s*' + re.escape(key) + r'\s*\}\}', re.IGNORECASE)
             output = pattern.sub(str(val if val is not None else ''), output)
         
@@ -924,6 +983,13 @@ class EmailNotificationEngine:
             'org_name': context.get('org_name', 'Acme Quality Manufacturing Ltd.'),
             'user_name': context.get('user_name', 'John Doe'),
             'user_email': context.get('user_email', 'admin@acme.com'),
+            'email': context.get('email', 'admin@acme.com'),
+            'username': context.get('username', 'admin@acme.com'),
+            'Password': context.get('Password', 'Pass@1234'),
+            'password': context.get('password', 'Pass@1234'),
+            'temp_password': context.get('temp_password', 'Pass@1234'),
+            'temporary_password': context.get('temporary_password', 'Pass@1234'),
+            'default_password': context.get('default_password', 'Pass@1234'),
             'role_name': context.get('role_name', 'Company Admin'),
             'assigned_role': context.get('assigned_role', 'Team Member'),
             'project_title': context.get('project_title', 'Assembly Line Productivity Improvement'),
@@ -2283,6 +2349,115 @@ class EmailNotificationEngine:
         except Exception as e:
             if current_app: current_app.logger.error(f"Error dispatching facilitator guidance email: {e}")
             return False
+
+    @staticmethod
+    def trigger_password_reset_otp_notification(user, otp):
+        """
+        Dispatches dynamic Password Reset OTP notification email.
+        Uses active EmailNotificationRule (event_trigger='password_reset_otp') if configured,
+        otherwise falls back to default system layout.
+        """
+        if not user or not user.email:
+            return False
+
+        try:
+            from app.domain.services.document_branding_service import DocumentBrandingService
+            branding = DocumentBrandingService.get_branding_context(user.org_id)
+            app_url = EmailUtils._get_app_url()
+            software_name = branding.get('software_name', 'QCMS Enterprise OS')
+
+            user_name = user.full_name or user.username or "User"
+            org_name = user.organization.name if user.organization else "QCMS Platform"
+
+            context = {
+                "otp": otp,
+                "user_name": user_name,
+                "username": user.username or user.email,
+                "email": user.email,
+                "phone": user.phone or "",
+                "org_name": org_name,
+                "app_url": app_url,
+                "expires_in_minutes": "10",
+                "software_name": software_name,
+                "software_short_name": branding.get('software_short_name', 'QCMS'),
+                "support_email": branding.get('support_email', 'support@ifqm.org.in')
+            }
+
+            rule = EmailNotificationRule.query.filter_by(
+                event_trigger='password_reset_otp',
+                is_active=True
+            ).first()
+
+            if rule and rule.body_html and rule.subject:
+                final_subject = EmailNotificationEngine.replace_variables(rule.subject, context)
+                rendered_body = EmailNotificationEngine.replace_variables(rule.body_html, context)
+                html_content = DocumentBrandingService.wrap_email_html(
+                    rendered_body,
+                    title=rule.heading or "Password Reset OTP",
+                    org_id=user.org_id
+                )
+                sender_addr = rule.sender_email or EmailUtils.construct_sender_email('noreply@ifqm.org.in', 'otp', user.org_id)
+                sender_name = rule.sender_name or f"{branding.get('software_short_name', 'QCMS')} Security"
+                reply_to_addr = rule.reply_to or branding.get('support_email', 'support@ifqm.org.in')
+            else:
+                final_subject = f"Your Password Reset OTP Verification Code - {software_name}"
+                raw_body = f"""<p>Hello <strong>{user_name}</strong>,</p>
+<p>We received a request to reset the password for your <strong>{software_name}</strong> account ({user.username or user.email}).</p>
+<p>Please use the 6-digit verification code below to securely verify your identity and set a new password:</p>
+<div style="background: #f8fafc; border: 2px dashed #cbd5e1; padding: 22px; text-align: center; margin: 25px 0; border-radius: 12px;">
+    <span style="font-size: 34px; font-weight: bold; letter-spacing: 10px; color: #1e40af; font-family: monospace;">{otp}</span>
+</div>
+<p style="font-size: 13px; color: #64748b; text-align: center;">
+    This code will expire in <strong>10 minutes</strong>. For your security, never share this code with anyone.
+</p>
+<div style="background: rgba(239,68,68,0.06); border-left: 4px solid #ef4444; padding: 12px 16px; margin: 20px 0; border-radius: 4px; font-size: 12.5px; color: #991b1b;">
+    <strong>Security Notice:</strong> If you did not initiate this password reset, please ignore this email or contact support immediately.
+</div>"""
+                html_content = DocumentBrandingService.wrap_email_html(
+                    raw_body,
+                    title="Password Reset Verification Code",
+                    org_id=user.org_id
+                )
+                sender_addr = EmailUtils.construct_sender_email('noreply@ifqm.org.in', 'otp', user.org_id)
+                sender_name = f"{branding.get('software_short_name', 'QCMS')} Security"
+                reply_to_addr = branding.get('support_email', 'support@ifqm.org.in')
+
+            sent = EmailUtils.send_email_async(
+                to_email=user.email,
+                subject=final_subject,
+                html_content=html_content,
+                email_type='otp',
+                org_id=user.org_id,
+                sender_email=sender_addr,
+                sender_name=sender_name,
+                reply_to=reply_to_addr
+            )
+
+            if sent and rule:
+                rule.total_sent = (rule.total_sent or 0) + 1
+                rule.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                log_entry = EmailNotificationLog(
+                    rule_id=rule.id,
+                    rule_name=rule.name,
+                    category=rule.category,
+                    subject=final_subject,
+                    sender_email=sender_addr,
+                    sender_name=sender_name,
+                    recipient_count=1,
+                    recipients_summary=[{"email": user.email, "name": user_name, "status": "Delivered"}],
+                    status="Delivered",
+                    error_message=None,
+                    sent_by_id=user.id,
+                    sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
+                )
+                db.session.add(log_entry)
+                db.session.commit()
+
+            return bool(sent)
+        except Exception as e:
+            if current_app: current_app.logger.error(f"Error dispatching password reset OTP email: {e}")
+            return False
+
 
 
 

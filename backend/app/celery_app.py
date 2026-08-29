@@ -66,8 +66,15 @@ def make_celery(flask_app: Flask) -> Celery:
             'retry_on_timeout': False,
             'max_retries': 0,
         },
+        result_backend_transport_options={
+            'socket_timeout': 0.5,
+            'socket_connect_timeout': 0.5,
+            'retry_on_timeout': False,
+            'max_retries': 0,
+        },
         redis_socket_connect_timeout=0.5,
         redis_socket_timeout=0.5,
+        redis_retry_on_timeout=False,
         task_routes=flask_app.config.get('CELERY_TASK_ROUTES', {}),
         beat_schedule={
             'cleanup-expired-sessions-every-hour': {

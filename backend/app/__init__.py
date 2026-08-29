@@ -792,7 +792,7 @@ def create_app():
         # 2. Check within feature folders
         if filename.endswith('.html') or '.' not in filename:
             html_name = filename if filename.endswith('.html') else f"{filename}.html"
-            subdirs = ['auth', 'dashboard', 'projects', 'admin', 'analytics']
+            subdirs = ['auth', 'dashboard', 'projects', 'admin', 'analytics', 'resources', 'rewards', 'help']
             for s in subdirs:
                 sub_path = os.path.join(frontend_dir, s, html_name)
                 if os.path.isfile(sub_path):

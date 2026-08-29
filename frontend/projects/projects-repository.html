@@ -6,7 +6,7 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.3ebcd984.min.css" as="style">
+    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
     <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
     <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
 
@@ -14,8 +14,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Repository | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.3ebcd984.min.css">
-    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
+    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .stalled-row { background: rgba(239, 68, 68, 0.05) !important; border-left: 3px solid #ef4444 !important; }
@@ -92,17 +92,22 @@
 
                 <!-- Summary Stats Section -->
                 <div class="row g-4 mb-4" id="repoStats">
-                    <div class="col-md-4">
+                    <div class="col-xl-3 col-md-6 col-sm-6">
                         <div class="ds-card p-3 h-100 skeleton">
                             <div style="height: 100px;"></div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-xl-3 col-md-6 col-sm-6">
                         <div class="ds-card p-3 h-100 skeleton">
                             <div style="height: 100px;"></div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-xl-3 col-md-6 col-sm-6">
+                        <div class="ds-card p-3 h-100 skeleton">
+                            <div style="height: 100px;"></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6 col-sm-6">
                         <div class="ds-card p-3 h-100 skeleton">
                             <div style="height: 100px;"></div>
                         </div>
@@ -147,6 +152,7 @@
                                     <option value="Active" selected>Active</option>
                                     <option value="Completed">Completed</option>
                                     <option value="Inactive">Inactive / Stalled</option>
+                                    <option value="Stopped">Stopped</option>
                                     <option value="Pending Approval">Pending Approval</option>
                                 </select>
                             </div>
@@ -579,7 +585,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e907ecc3.min.js"></script>
+    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
     <script>
     function esc(str) {
         if (!str) return '';
@@ -2166,14 +2172,17 @@
         renderStats(stats) {
             const container = document.getElementById('repoStats');
             container.innerHTML = `
-                <div class="col-md-4 col-sm-6">
-                    ${QCMS.kpiCard('Total Projects', stats.total, 'layers', 'blue', null, "javascript:repoUI.filterByStatus('')")}
+                <div class="col-xl-3 col-md-6 col-sm-6">
+                    ${QCMS.kpiCard('Total Projects', stats.total || 0, 'layers', 'blue', null, "javascript:repoUI.filterByStatus('')")}
                 </div>
-                <div class="col-md-4 col-sm-6">
-                    ${QCMS.kpiCard('Active Projects', stats.active, 'activity', 'green', null, "javascript:repoUI.filterByStatus('Active')")}
+                <div class="col-xl-3 col-md-6 col-sm-6">
+                    ${QCMS.kpiCard('Active Projects', stats.active || 0, 'activity', 'green', null, "javascript:repoUI.filterByStatus('Active')")}
                 </div>
-                <div class="col-md-4 col-sm-6">
-                    ${QCMS.kpiCard('Inactive Projects', stats.stalled, 'clock', 'red', null, "javascript:repoUI.filterByStatus('Inactive')")}
+                <div class="col-xl-3 col-md-6 col-sm-6">
+                    ${QCMS.kpiCard('Inactive Projects', stats.stalled || 0, 'clock', 'orange', null, "javascript:repoUI.filterByStatus('Inactive')")}
+                </div>
+                <div class="col-xl-3 col-md-6 col-sm-6">
+                    ${QCMS.kpiCard('Total Projects Stopped', stats.stopped || 0, 'x-circle', 'red', null, "javascript:repoUI.filterByStatus('Stopped')")}
                 </div>
             `;
             if (window.lucide) lucide.createIcons();

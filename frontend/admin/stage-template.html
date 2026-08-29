@@ -6,7 +6,7 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.3ebcd984.min.css" as="style">
+    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
     <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
     <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
 
@@ -14,8 +14,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>8-Stage Workflow Template | QCMS Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.3ebcd984.min.css">
-    <script src="/assets/dist/breadcrumbs.5e69549e.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
+    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -513,15 +513,36 @@
             border: 2px solid var(--ds-primary, #3b82f6) !important;
             border-radius: 8px !important;
         }
-        #globalSyncDiffModal {
-            z-index: 100005 !important;
-        }
-        #globalSyncDiffModal + .modal-backdrop,
+        /* Modal & Backdrop Stacking: Guarantee modals are always on top of backdrops and page elements */
+        .modal-backdrop,
         .modal-backdrop.show {
-            z-index: 100000 !important;
+            z-index: 105000 !important;
         }
-        #diffPreviewModal { z-index: 100010 !important; }
-        #saveScopeModal { z-index: 100020 !important; }
+        .modal,
+        .modal.show {
+            z-index: 105010 !important;
+        }
+        .modal-dialog {
+            z-index: 105015 !important;
+            position: relative !important;
+        }
+        .modal-content {
+            z-index: 105020 !important;
+            position: relative !important;
+        }
+        #iconPickerModal,
+        #toolPickerModal,
+        #addStageModal {
+            z-index: 105025 !important;
+        }
+        #globalSyncDiffModal { z-index: 105030 !important; }
+        #diffPreviewModal { z-index: 105040 !important; }
+        #saveScopeModal { z-index: 105050 !important; }
+
+        body:not(.modal-open) .modal-backdrop {
+            display: none !important;
+            pointer-events: none !important;
+        }
         .scope-option-card {
             transition: all 0.2s ease;
             cursor: pointer;
@@ -756,7 +777,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/assets/dist/core-bundle.e907ecc3.min.js"></script>
+<script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
     <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon library

@@ -1,0 +1,2584 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Performance & Network Acceleration: CDN Preconnect & Critical Preloads -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
+    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role-Based User Manual — Help &amp; Operating Guides | QCMS Enterprise</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <style>
+        .manual-hero-card {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(14, 165, 233, 0.04) 100%);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-xl, 16px);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .role-pill-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1.5px solid var(--ds-border-color);
+            background: var(--ds-bg-card, #ffffff);
+            color: var(--ds-text-secondary, #64748b);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            text-decoration: none;
+            user-select: none;
+        }
+
+        .role-pill-btn:hover {
+            border-color: var(--ds-primary, #3b82f6);
+            color: var(--ds-primary, #3b82f6);
+            transform: translateY(-2px);
+            box-shadow: var(--ds-shadow-sm);
+        }
+
+        .role-pill-btn.active {
+            background: var(--ds-primary, #3b82f6);
+            color: #ffffff !important;
+            border-color: var(--ds-primary, #3b82f6);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+        }
+
+        .role-pill-btn .role-badge-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 999px;
+            padding: 2px 7px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .role-pill-btn.active .role-badge-count {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+
+        .manual-case-card {
+            background: var(--ds-bg-card, #ffffff);
+            border: 1px solid var(--ds-border-color);
+            border-radius: var(--ds-radius-lg, 12px);
+            padding: 1.5rem;
+            transition: all 0.25s ease;
+            position: relative;
+            margin-bottom: 1.25rem;
+        }
+
+        .manual-case-card:hover {
+            border-color: var(--ds-primary, #3b82f6);
+            box-shadow: var(--ds-shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .case-header-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tag-blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .tag-green { background: rgba(16, 185, 129, 0.12); color: #059669; }
+        .tag-amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .tag-purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .tag-rose { background: rgba(244, 63, 94, 0.12); color: #e11d48; }
+        .tag-teal { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
+
+        .step-timeline {
+            position: relative;
+            padding-left: 28px;
+            margin-top: 1rem;
+        }
+
+        .step-timeline::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 12px;
+            bottom: 12px;
+            width: 2px;
+            background: var(--ds-border-color);
+        }
+
+        .step-item {
+            position: relative;
+            padding-bottom: 14px;
+        }
+
+        .step-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .step-badge {
+            position: absolute;
+            left: -28px;
+            top: 2px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--ds-primary, #3b82f6);
+            color: #ffffff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--ds-bg-card, #ffffff);
+            box-shadow: 0 0 0 2px var(--ds-border-color);
+        }
+
+        .step-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--ds-text-main, #1e293b);
+            line-height: 1.4;
+        }
+
+        .step-desc {
+            font-size: 0.8rem;
+            color: var(--ds-text-secondary, #64748b);
+            margin-top: 2px;
+        }
+
+        .quick-action-btn {
+            font-size: 0.78rem;
+            padding: 5px 12px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+
+        @media print {
+            .app-sidebar, .glass-navbar, .role-pills-bar, .no-print {
+                display: none !important;
+            }
+            .app-main {
+                margin-left: 0 !important;
+                padding: 0 !important;
+            }
+            .manual-case-card {
+                break-inside: avoid;
+                border: 1px solid #ccc !important;
+                box-shadow: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="app-main">
+            <!-- Navbar -->
+            <header class="glass-navbar" id="app-navbar"></header>
+
+            <div class="app-content-inner fade-in-up">
+                
+                <!-- Page Header / Hero Banner -->
+                <div class="manual-hero-card mb-4">
+                    <div class="row align-items-center g-3">
+                        <div class="col-lg-8">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge bg-primary-subtle text-primary fw-bold text-xs px-2.5 py-1">
+                                    <i data-lucide="book-marked" style="width:12px;height:12px;" class="me-1"></i>
+                                    OPERATING PROCEDURES &amp; WORKFLOWS
+                                </span>
+                            </div>
+                            <h1 class="ds-title mb-1">Role-Based User Manual</h1>
+                            <p class="ds-text-secondary mb-0">
+                                Official standard operating manuals.
+                            </p>
+                        </div>
+                        <div class="col-lg-4 text-lg-end no-print">
+                            <div class="d-flex gap-2 justify-content-lg-end">
+                                <button class="ds-btn ds-btn-outline ds-btn-sm gap-1.5" onclick="window.print()">
+                                    <i data-lucide="printer" style="width:14px;height:14px;"></i>
+                                    Print Manual
+                                </button>
+                                <a href="/admin/settings.html" class="ds-btn ds-btn-primary ds-btn-sm gap-1.5">
+                                    <i data-lucide="settings" style="width:14px;height:14px;"></i>
+                                    Settings &amp; 8S Manual
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search & Role Switcher Bar -->
+                <div class="glass-card ds-card p-3 mb-4 no-print">
+                    <div class="row align-items-center g-3">
+                        <!-- Role Selector Pills -->
+                        <div class="col-lg-8">
+                            <div class="d-flex flex-wrap gap-2 role-pills-bar" id="rolePillsContainer"></div>
+                        </div>
+
+                        <!-- Live Search Input -->
+                        <div class="col-lg-4">
+                            <div class="position-relative">
+                                <input type="text" class="ds-input ps-4" id="manualSearchInput" placeholder="Search case name or step (e.g. password, create project, governance)..." oninput="UserManualApp.filterCases()">
+                                <i data-lucide="search" class="position-absolute top-50 translate-middle-y text-muted" style="left:12px;width:14px;height:14px;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cases List Container -->
+                <div id="casesListContainer">
+                    <!-- Injected dynamically by JavaScript -->
+                </div>
+
+            </div><!-- /app-content-inner -->
+        </main>
+    </div><!-- /app-layout -->
+
+    <script>
+        /**
+         * QCMS Enterprise - Role-Based User Manual Application
+         */        const MANUAL_DATA = {
+    "super-admin": {
+    "roleTitle": "Super Administrator",
+    "roleBadgeClass": "tag-purple",
+    "description": "Multi-tenant cloud platform governance, tenant provisioning, subscription billing, system audit logs, global master templates, and platform branding.",
+    "cases": [
+        {
+            "id": "sa-case-1",
+            "caseNumber": 1,
+            "title": "To Fetch / Modify Organization Data",
+            "category": "Tenant Management",
+            "tagClass": "tag-blue",
+            "actionUrl": "/admin/super-admin-orgs.html",
+            "actionText": "Organizations",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Organization",
+                    "desc": "Access the Organizations management console from the Super Admin sidebar navigation."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Action Button",
+                    "desc": "Locate the target organization in the roster and click the 'Actions' (⋮) dropdown button."
+                },
+                {
+                    "num": 3,
+                    "title": "Perform Management Operation",
+                    "desc": "Click on 'View Details', 'Edit Profile', 'Extend Trial', 'Reset Password', 'Pause Organization', or 'Delete Organization' according to your operational need."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-2",
+            "caseNumber": 2,
+            "title": "To Download the Overall Organization Data",
+            "category": "Tenant Management",
+            "tagClass": "tag-blue",
+            "actionUrl": "/admin/super-admin-orgs.html",
+            "actionText": "Export Organizations",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Organization",
+                    "desc": "Navigate to the Organizations module from the left sidebar."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Export CSV Button",
+                    "desc": "Click the 'Export CSV' button in the top action bar to download the complete cross-tenant directory spreadsheet."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-3",
+            "caseNumber": 3,
+            "title": "To Create New Plan",
+            "category": "Plans & Pricing",
+            "tagClass": "tag-green",
+            "actionUrl": "/admin/super-admin-plans.html",
+            "actionText": "New Plan",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Plans",
+                    "desc": "Open the Subscription Plans & Pricing management page."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on New Plan Button",
+                    "desc": "Click the '+ New Plan' button to launch the multi-tier plan wizard."
+                },
+                {
+                    "num": 3,
+                    "title": "Enter the Plan Details",
+                    "desc": "Specify Plan Name, Code, Monthly/Annual Pricing, User Seat Quotas, Plant Limits, Storage Allocations, and Feature Toggles."
+                },
+                {
+                    "num": 4,
+                    "title": "Click Next and Save Button",
+                    "desc": "Review the configured feature matrix and click 'Save Plan' to publish the tier across the platform."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-4",
+            "caseNumber": 4,
+            "title": "To Dispatch All Pay-As-You-Go Metered Bills",
+            "category": "Plans & Pricing",
+            "tagClass": "tag-green",
+            "actionUrl": "/admin/super-admin-plans.html",
+            "actionText": "Pay As You Go",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Plans",
+                    "desc": "Navigate to the Plans section in the Super Admin dashboard."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Pay As You Go",
+                    "desc": "Select the 'Pay As You Go' metered billing tab."
+                },
+                {
+                    "num": 3,
+                    "title": "Set the Metered Rules Button",
+                    "desc": "Click 'Set Metered Rules' to define per-unit costs for surplus projects, active user seats, AI tokens, and extra GB storage."
+                },
+                {
+                    "num": 4,
+                    "title": "Click Dispatch Bills Button",
+                    "desc": "Click the 'Dispatch Bills' button to aggregate cross-tenant usage metrics."
+                },
+                {
+                    "num": 5,
+                    "title": "Click on Generate & Send Invoices",
+                    "desc": "Confirm and click 'Generate & Send Invoices' to automatically dispatch metered GST invoices via email to all tenant billing contacts."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-5",
+            "caseNumber": 5,
+            "title": "To View / Edit Existing Subscription Plan",
+            "category": "Plans & Pricing",
+            "tagClass": "tag-green",
+            "actionUrl": "/admin/super-admin-plans.html",
+            "actionText": "Manage Plans",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Plans",
+                    "desc": "Open the Plans console from the sidebar."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Action Button",
+                    "desc": "Locate the specific plan tier card or table row and click the 'Actions' menu."
+                },
+                {
+                    "num": 3,
+                    "title": "To View: Click on View",
+                    "desc": "Inspect plan subscriber counts, quota details, and pricing breakdown."
+                },
+                {
+                    "num": 4,
+                    "title": "To Edit: Click on Edit",
+                    "desc": "Modify plan parameters, limits, or pricing and save the changes."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-6",
+            "caseNumber": 6,
+            "title": "To Extend Organization Trial via Support",
+            "category": "Support Helpdesk",
+            "tagClass": "tag-amber",
+            "actionUrl": "/admin/super-admin-tickets.html",
+            "actionText": "Support Tickets",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Support Tickets",
+                    "desc": "Navigate to the Support Tickets center."
+                },
+                {
+                    "num": 2,
+                    "title": "Under Action, Click on Extend Trial Button",
+                    "desc": "Locate the organization's trial extension request and click the 'Extend Trial' action button to grant additional trial days."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-7",
+            "caseNumber": 7,
+            "title": "To Create Support Ticket",
+            "category": "Support Helpdesk",
+            "tagClass": "tag-amber",
+            "actionUrl": "/admin/super-admin-tickets.html",
+            "actionText": "Create Ticket",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Support Tickets",
+                    "desc": "Access the Support Tickets dashboard."
+                },
+                {
+                    "num": 2,
+                    "title": "Click Create Ticket",
+                    "desc": "Click the '+ Create Ticket' button in the top action bar."
+                },
+                {
+                    "num": 3,
+                    "title": "Enter the Details",
+                    "desc": "Select the Target Organization, Priority (Low/Medium/High/Critical), Category, and Subject."
+                },
+                {
+                    "num": 4,
+                    "title": "Review the Content",
+                    "desc": "Verify the ticket description, technical details, and attached references."
+                },
+                {
+                    "num": 5,
+                    "title": "Click on Create Ticket",
+                    "desc": "Submit the ticket into the enterprise helpdesk system."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-8",
+            "caseNumber": 8,
+            "title": "To Define New SMS / Email Notification Template",
+            "category": "Announcements & Notifications",
+            "tagClass": "tag-rose",
+            "actionUrl": "/admin/super-admin-announcements.html",
+            "actionText": "Notification Rules",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Announcement",
+                    "desc": "Navigate to Announcements in the Super Admin navigation bar."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Set SMS / Email Notification",
+                    "desc": "Select the 'Notification Automation & Templates' management tab."
+                },
+                {
+                    "num": 3,
+                    "title": "Click on Set SMS / Email Notification Button",
+                    "desc": "Click '+ Set SMS/Email Notification' or 'Configure Template'."
+                },
+                {
+                    "num": 4,
+                    "title": "Define New Rule",
+                    "desc": "Select Event Trigger (e.g. Password Reset OTP, Organization Welcome, Subscription Expiry), configure DLT Entity ID / Template ID / Sender ID for SMS, and write the email HTML / SMS body template with placeholders like {{otp}} or {{name}}."
+                },
+                {
+                    "num": 5,
+                    "title": "Click on Save Notification Rule Button",
+                    "desc": "Click 'Save Notification Rule' to activate the template across system events."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-9",
+            "caseNumber": 9,
+            "title": "To Create New Announcement Broadcast",
+            "category": "Announcements & Notifications",
+            "tagClass": "tag-rose",
+            "actionUrl": "/admin/super-admin-announcements.html",
+            "actionText": "Compose Broadcast",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Announcement",
+                    "desc": "Open the Announcements module."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Compose Broadcast",
+                    "desc": "Click the 'Compose Broadcast' button."
+                },
+                {
+                    "num": 3,
+                    "title": "Enter the Details",
+                    "desc": "Provide Title, Announcement Category (Maintenance, Release, Critical Alert), Priority, and Message Content."
+                },
+                {
+                    "num": 4,
+                    "title": "Select the Target Audience",
+                    "desc": "Choose broadcast recipients: All Organizations, Specific Tenants, Super Admins, or Organization Admins."
+                },
+                {
+                    "num": 5,
+                    "title": "Click on Send",
+                    "desc": "Click 'Send / Publish' to broadcast the banner and dispatch notification alerts."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-10",
+            "caseNumber": 10,
+            "title": "To View Billing Details & Payment Invoices",
+            "category": "Billing & Invoicing",
+            "tagClass": "tag-teal",
+            "actionUrl": "/admin/super-admin-billing.html",
+            "actionText": "Billing History",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Billings",
+                    "desc": "Open the Super Admin Billing & Invoicing dashboard."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Action Button",
+                    "desc": "Find the relevant organization transaction or invoice record and click 'Actions' (⋮)."
+                },
+                {
+                    "num": 3,
+                    "title": "Click on View Details",
+                    "desc": "Inspect full invoice line items, tax breakdown, GST details, payment transaction ID, and downloadable PDF receipt."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-11",
+            "caseNumber": 11,
+            "title": "To Delete / Purge Audit Logs",
+            "category": "Audit & Compliance",
+            "tagClass": "tag-blue",
+            "actionUrl": "/admin/super-admin-audit-logs.html",
+            "actionText": "Purge Logs",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Audit Logs",
+                    "desc": "Navigate to the Audit Logs section in the Super Admin portal."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Purge Audit Logs",
+                    "desc": "Click the 'Purge Audit Logs' button in the toolbar."
+                },
+                {
+                    "num": 3,
+                    "title": "Select the Option from Dropdown",
+                    "desc": "Choose retention threshold (e.g., Older than 30 days, Older than 90 days, or All Logs)."
+                },
+                {
+                    "num": 4,
+                    "title": "Click on Confirm & Purge Logs",
+                    "desc": "Confirm the action to permanently purge historical security audit records."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-12",
+            "caseNumber": 12,
+            "title": "To Update Platform & Company Identity Details",
+            "category": "Branding & Identity",
+            "tagClass": "tag-purple",
+            "actionUrl": "/admin/super-admin-doc-identity.html",
+            "actionText": "Doc Identity",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Doc Identity & Branding",
+                    "desc": "Access Doc Identity & Branding from the sidebar."
+                },
+                {
+                    "num": 2,
+                    "title": "Enter the Details",
+                    "desc": "Update Software Name, Display Name, Support Email, Contact Directory Addresses, Watermark Disclaimers, and Header/Footer formatting."
+                },
+                {
+                    "num": 3,
+                    "title": "Click on Save Platform Identity Button",
+                    "desc": "Click 'Save Platform Identity' to update document templates and notification headers globally."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-13",
+            "caseNumber": 13,
+            "title": "To View & Adjust Storage Used by Individual Organization",
+            "category": "Storage Infrastructure",
+            "tagClass": "tag-purple",
+            "actionUrl": "/admin/super-admin-storage-analytics.html",
+            "actionText": "Storage Limits",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Click on Storage Analytics",
+                    "desc": "Open Storage Analytics in the Super Admin console."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Details Button",
+                    "desc": "Click 'Details' on the target organization row to view storage breakdown (S3 files, database partitions, PDF reports)."
+                },
+                {
+                    "num": 3,
+                    "title": "Click on Adjust Storage Limit",
+                    "desc": "Click the 'Adjust Storage Limit' button."
+                },
+                {
+                    "num": 4,
+                    "title": "Set New Limit",
+                    "desc": "Enter the new maximum storage allocation in Gigabytes (GB)."
+                },
+                {
+                    "num": 5,
+                    "title": "Click on Save Button",
+                    "desc": "Click 'Save Storage Limit' to immediately apply the updated quota."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-14",
+            "caseNumber": 14,
+            "title": "To Update Global 8-Stage Master Template",
+            "category": "Global Templates",
+            "tagClass": "tag-teal",
+            "actionUrl": "/admin/super-admin-stage-template.html",
+            "actionText": "Stage Templates",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Global Stage Template",
+                    "desc": "Navigate to the Global Stage Template customizer."
+                },
+                {
+                    "num": 2,
+                    "title": "To Add New Stage: Click Add New Stage",
+                    "desc": "Click '+ Add New Stage' button to append a custom stage milestone."
+                },
+                {
+                    "num": 3,
+                    "title": "To Add New Columns: Click Add Columns",
+                    "desc": "Click '+ Add Columns' under any stage card to insert custom data fields or checklist requirements."
+                },
+                {
+                    "num": 4,
+                    "title": "Click on Save Templates Button",
+                    "desc": "Click 'Save Templates' to apply changes as the platform-wide default."
+                },
+                {
+                    "num": 5,
+                    "title": "Reset to Default",
+                    "desc": "To restore default QC methodology templates, click the 'Reset to Default' button."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-15",
+            "caseNumber": 15,
+            "title": "To Delete Organization Permanently from Recycle Bin",
+            "category": "Data Recovery",
+            "tagClass": "tag-rose",
+            "actionUrl": "/admin/super-admin-recycle-bin.html",
+            "actionText": "Empty Recycle Bin",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Recycle Bin",
+                    "desc": "Open the Recycle Bin page from the sidebar."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on the Empty Recycle Bin Button",
+                    "desc": "Click 'Empty Recycle Bin' (or select specific deleted organizations)."
+                },
+                {
+                    "num": 3,
+                    "title": "Click OK",
+                    "desc": "Confirm the dialog to permanently remove the organization and scrub its data."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-16",
+            "caseNumber": 16,
+            "title": "To Recover Organization from Recycle Bin",
+            "category": "Data Recovery",
+            "tagClass": "tag-green",
+            "actionUrl": "/admin/super-admin-recycle-bin.html",
+            "actionText": "Recover Org",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Recycle Bin",
+                    "desc": "Open the Recycle Bin management console."
+                },
+                {
+                    "num": 2,
+                    "title": "Click on Recover Button",
+                    "desc": "Locate the soft-deleted organization and click the green 'Recover' button."
+                },
+                {
+                    "num": 3,
+                    "title": "Click OK",
+                    "desc": "Confirm restoration to immediately restore the tenant and its user accounts to active status."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-17",
+            "caseNumber": 17,
+            "title": "To Configure General Platform Settings (Self-Service, Email OTP, Phone OTP, Maintenance)",
+            "category": "System Settings",
+            "tagClass": "tag-blue",
+            "actionUrl": "/admin/super-admin-settings.html",
+            "actionText": "General Settings",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Settings",
+                    "desc": "Open Platform Settings from the Super Admin navigation bar."
+                },
+                {
+                    "num": 2,
+                    "title": "Under General: View All Four Options",
+                    "desc": "Locate 'Self-Service Sign-up', 'Email OTP Verification', 'Phone OTP Verification', and 'Maintenance Mode'."
+                },
+                {
+                    "num": 3,
+                    "title": "Turn On / Off the Button",
+                    "desc": "Toggle the switch for each setting according to your platform security and access policies."
+                },
+                {
+                    "num": 4,
+                    "title": "Click on Save",
+                    "desc": "Click 'Save General Settings' to immediately enforce the configuration."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-18",
+            "caseNumber": 18,
+            "title": "To Upload Platform Logos & Branding Assets",
+            "category": "System Settings",
+            "tagClass": "tag-purple",
+            "actionUrl": "/admin/super-admin-settings.html",
+            "actionText": "Branding Assets",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Settings",
+                    "desc": "Navigate to Super Admin Settings."
+                },
+                {
+                    "num": 2,
+                    "title": "Under Branding: Upload Brand Graphics",
+                    "desc": "Upload Primary Logo, Dark Theme Logo, Favicon (.ico/.png), Background Graphic, and Mobile Splash Image."
+                },
+                {
+                    "num": 3,
+                    "title": "Click on Save Branding Button",
+                    "desc": "Click 'Save Branding' to refresh platform icons, headers, and login backgrounds."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-19",
+            "caseNumber": 19,
+            "title": "To Update Super Admin Password",
+            "category": "System Settings",
+            "tagClass": "tag-amber",
+            "actionUrl": "/admin/super-admin-settings.html",
+            "actionText": "Update Password",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Settings",
+                    "desc": "Open Platform Settings."
+                },
+                {
+                    "num": 2,
+                    "title": "Under Super Admin Logins: Enter New Password",
+                    "desc": "Scroll to 'Super Admin Logins' section and type your strong new password."
+                },
+                {
+                    "num": 3,
+                    "title": "Click on Update My Credentials Button",
+                    "desc": "Click 'Update My Credentials' to save the new hashed password."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-20",
+            "caseNumber": 20,
+            "title": "To Add New Super Admin Account",
+            "category": "System Settings",
+            "tagClass": "tag-green",
+            "actionUrl": "/admin/super-admin-settings.html",
+            "actionText": "Add Super Admin",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Settings",
+                    "desc": "Navigate to Super Admin Settings."
+                },
+                {
+                    "num": 2,
+                    "title": "Under Super Admin Logins: Click on Add Super Admin",
+                    "desc": "Click the '+ Add Super Admin' button."
+                },
+                {
+                    "num": 3,
+                    "title": "Enter the Details",
+                    "desc": "Provide Full Name, Official Email Address, Username, and Initial Password."
+                },
+                {
+                    "num": 4,
+                    "title": "Click on Create Super Admin Account Button",
+                    "desc": "Click 'Create Super Admin Account' to provision the administrative credentials."
+                }
+            ]
+        },
+        {
+            "id": "sa-case-21",
+            "caseNumber": 21,
+            "title": "To Modify Platform Landing Page",
+            "category": "System Settings",
+            "tagClass": "tag-teal",
+            "actionUrl": "/admin/super-admin-settings.html",
+            "actionText": "Landing CMS",
+            "steps": [
+                {
+                    "num": 1,
+                    "title": "Go to Settings",
+                    "desc": "Open Settings in the Super Admin console."
+                },
+                {
+                    "num": 2,
+                    "title": "Under Landing CMS: Enter the Details",
+                    "desc": "Configure Hero Headline, Subtitle, CTA Button Labels, Feature Highlights, Video Demo URLs, and Customer Testimonials."
+                },
+                {
+                    "num": 3,
+                    "title": "Click on Publish Landing Page / Use Default Template Button",
+                    "desc": "Click 'Publish Landing Page' to push live updates, or 'Use Default Template' to reset to the standard corporate landing page."
+                }
+            ]
+        }
+    ]
+},
+
+    "team-member": {
+        "roleTitle": "Team Member",
+        "roleBadgeClass": "tag-blue",
+        "description": "Operational step-by-step guidelines for QC project execution, problem solving, task updates, and document exports.",
+        "cases": [
+            {
+                "id": "tm-case-1",
+                "caseNumber": 1,
+                "title": "To create a new project",
+                "category": "Project Initiation",
+                "tagClass": "tag-blue",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "Go to Project Repository",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Project repository",
+                        "desc": "Navigate to the Project Repository via the left sidebar or quick navigation."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Create new project",
+                        "desc": "Click the primary '+ Create New Project' button located at the top-right corner."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter the Details",
+                        "desc": "Fill in Project Title, Plant Location, Department, Problem Statement, and Target Completion Date."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Select the Members, Facilitator, Reviewer and Team leader",
+                        "desc": "Assign key stakeholders from the dropdown lists to assemble the project team."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on Create & go to Stage 1 button",
+                        "desc": "Confirm project creation to initialize the 8-Stage workspace and enter Stage 1 (Identify Problem)."
+                    }
+                ]
+            },
+            {
+                "id": "tm-case-2",
+                "caseNumber": 2,
+                "title": "To continue with the Existing Project",
+                "category": "Workflow Execution",
+                "tagClass": "tag-green",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "Find Existing Projects",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Project repository",
+                        "desc": "Open the Project Repository page listing all active and historical projects."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Find the project in List of projects",
+                        "desc": "Use the search bar or stage filters to locate your assigned project."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on the particular project row Or Click on action button/three dots",
+                        "desc": "Select the project row or click the three-dots (\u2022\u2022\u2022) action menu on the right."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on View Workspace",
+                        "desc": "Enter the interactive 8-Stage Problem Solving workspace to view and edit stage deliverables."
+                    }
+                ]
+            },
+            {
+                "id": "tm-case-3",
+                "caseNumber": 3,
+                "title": "To View the team Governance",
+                "category": "Governance & Meetings",
+                "tagClass": "tag-purple",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "View Team Governance",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Project repository",
+                        "desc": "Navigate to the Project Repository table."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Find the project in List of projects",
+                        "desc": "Locate your target project in the repository directory."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on action button/three dots",
+                        "desc": "Click the actions menu icon on the far right of the project row."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Team Governance",
+                        "desc": "Open the Team Governance drawer to review meeting logs, attendance, and stage review minutes."
+                    }
+                ]
+            },
+            {
+                "id": "tm-case-4",
+                "caseNumber": 4,
+                "title": "To view Report of Completed project",
+                "category": "Reporting & Downloads",
+                "tagClass": "tag-amber",
+                "actionUrl": "/projects/repository.html",
+                "actionText": "Open Knowledge Base",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Knowledge Base",
+                        "desc": "Click 'Knowledge Base' under Resources in the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "View Report Or Click Download",
+                        "desc": "Browse closed/approved projects and click 'View Report' or 'Download' on the project card."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Export Document on right- top corner button",
+                        "desc": "Use the top-right export button to generate the complete PDF / 8D executive summary."
+                    }
+                ]
+            },
+            {
+                "id": "tm-case-5",
+                "caseNumber": 5,
+                "title": "To view 8 Stage user manual",
+                "category": "Documentation",
+                "tagClass": "tag-teal",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Open Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Click 'Settings' at the bottom of the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Open 8S user manual",
+                        "desc": "Under the Documentation section in Settings, click '8S User Manual' to view stage methodologies & QC tool guides."
+                    }
+                ]
+            },
+            {
+                "id": "tm-case-6",
+                "caseNumber": 6,
+                "title": "To Reset Password",
+                "category": "Account & Security",
+                "tagClass": "tag-rose",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Go to Password Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Navigate to Settings from the sidebar or user dropdown."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Enter Current password",
+                        "desc": "Navigate to the Security / Password tab and provide your current password."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter New password",
+                        "desc": "Input your new compliant password (minimum 8 characters with letters, numbers, and symbols)."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on update password",
+                        "desc": "Validate and submit the password update request."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on save changes button",
+                        "desc": "Save profile preferences to ensure all session tokens are refreshed securely."
+                    }
+                ]
+            }
+        ]
+    },
+    "team-leader": {
+        "roleTitle": "Team Leader",
+        "roleBadgeClass": "tag-green",
+        "description": "Leadership guidelines for project steering, milestone submissions, 8-Stage gate progression, and tangible ROI tracking.",
+        "cases": [
+            {
+                "id": "tl-case-1",
+                "caseNumber": 1,
+                "title": "To Create & Assemble QC Project Team",
+                "category": "Team Setup",
+                "tagClass": "tag-blue",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "Create Project",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Project repository",
+                        "desc": "Access the Project Repository from the main navigation."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on '+ Create New Project'",
+                        "desc": "Launch the Project Creation modal."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Assign Roles & Team Members",
+                        "desc": "Select dedicated Facilitator, Reviewer, and operational Team Members."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Define Project Target & Savings Goal",
+                        "desc": "Establish baseline metrics, target completion date, and expected tangible savings."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Initialize Workspace",
+                        "desc": "Click Create to notify all stakeholders and launch Stage 1."
+                    }
+                ]
+            },
+            {
+                "id": "tl-case-2",
+                "caseNumber": 2,
+                "title": "To Execute 8-Stage Problem Solving (S1 to S8)",
+                "category": "Stage Execution",
+                "tagClass": "tag-green",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "Open Workspace",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Open Project Workspace",
+                        "desc": "Click 'View Workspace' on your active project."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Fill Required Stage Deliverables",
+                        "desc": "Complete problem definition, containment, RCA (Fishbone / 5-Why), corrective actions, and trial validation."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Upload Supporting Evidence & Charts",
+                        "desc": "Attach Pareto diagrams, before/after photographs, run charts, and process capability data."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Verify Mandatory Fields",
+                        "desc": "Ensure all required custom fields and validation criteria are satisfied."
+                    }
+                ]
+            },
+            {
+                "id": "tl-case-3",
+                "caseNumber": 3,
+                "title": "To Submit Stage for Facilitator & Reviewer Sign-off",
+                "category": "Gate Approval",
+                "tagClass": "tag-amber",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "Submit Gate",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Navigate to current Stage summary",
+                        "desc": "Review all entered data in the workspace header."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click 'Submit Stage for Review'",
+                        "desc": "Submit the stage gate to lock editing and notify Facilitator and Reviewer."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Address Review Feedback if Rejected",
+                        "desc": "If revisions are requested, review comments, modify deliverables, and re-submit."
+                    }
+                ]
+            },
+            {
+                "id": "tl-case-4",
+                "caseNumber": 4,
+                "title": "To Log Team Governance & Review Meetings",
+                "category": "Governance",
+                "tagClass": "tag-purple",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "Log Meeting",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Open Project Action Menu (\u2022\u2022\u2022)",
+                        "desc": "Select 'Team Governance' for your project."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click '+ Add Meeting Log'",
+                        "desc": "Record meeting date, attendees, discussion points, and action items."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Save Governance Record",
+                        "desc": "Save the log to maintain an audit trail for quality assurance auditors."
+                    }
+                ]
+            },
+            {
+                "id": "tl-case-5",
+                "caseNumber": 5,
+                "title": "To Standardize & Validate ROI in Stage 7 & 8",
+                "category": "ROI & Closure",
+                "tagClass": "tag-teal",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "Validate ROI",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Document Standardization in Stage 7",
+                        "desc": "Record updated SOPs, control plans, and horizontal replication across plants."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Enter Tangible Cost Savings in Stage 7/8",
+                        "desc": "Input verified recurring monetary savings, scrap reduction, or labor hour recovery."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Submit Final Project Closure",
+                        "desc": "Request final CEO/Admin sign-off to publish project to Knowledge Base."
+                    }
+                ]
+            },
+            {
+                "id": "tl-case-6",
+                "caseNumber": 6,
+                "title": "To Export Complete 8D Presentation & Reports",
+                "category": "Reporting",
+                "tagClass": "tag-rose",
+                "actionUrl": "/projects/repository.html",
+                "actionText": "Export Report",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Open Project Workspace or Knowledge Base",
+                        "desc": "Access the completed project."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click 'Export Document' (PDF / ZIP)",
+                        "desc": "Generate the high-resolution executive report with full QC charts."
+                    }
+                ]
+            }
+        ]
+    },
+    "facilitator": {
+        "roleTitle": "Facilitator",
+        "roleBadgeClass": "tag-amber",
+        "description": "Methodological coaching, assistance dispatch, and 8-stage problem solving guidance.",
+        "cases": [
+            {
+                "id": "fc-case-1",
+                "caseNumber": 1,
+                "title": "To provide Assistance",
+                "category": "Assistance",
+                "tagClass": "tag-blue",
+                "actionUrl": "/dashboard/dashboard-facilitator.html",
+                "actionText": "Assistance Requests",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Overview",
+                        "desc": "Access the Facilitator Dashboard Overview from the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to Assistance Request",
+                        "desc": "Navigate to the 'Assistance Request' section / queue."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Reply",
+                        "desc": "Click the 'Reply' button on the incoming team assistance request."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Enter the Comments",
+                        "desc": "Type your methodological coaching notes, suggestions, and tool guidance."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on send",
+                        "desc": "Send your assistance response back to the team members."
+                    }
+                ]
+            },
+            {
+                "id": "fc-case-2",
+                "caseNumber": 2,
+                "title": "To view Report of Completed project",
+                "category": "Reporting & Downloads",
+                "tagClass": "tag-purple",
+                "actionUrl": "/projects/repository.html",
+                "actionText": "Open Knowledge Base",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Knowledge Base",
+                        "desc": "Click 'Knowledge Base' under Resources in the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "View Report Or Click Download",
+                        "desc": "Locate the completed project and choose 'View Report' or 'Download'."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Export Document on right- top corner button",
+                        "desc": "Use the top-right export button to generate the complete PDF / 8D presentation."
+                    }
+                ]
+            },
+            {
+                "id": "fc-case-3",
+                "caseNumber": 3,
+                "title": "To view 8 Stage user manual",
+                "category": "Documentation",
+                "tagClass": "tag-teal",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Open Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Navigate to Settings from the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Open 8S user manual",
+                        "desc": "Under Documentation, open '8S User Manual' to view 8-Stage QC methodologies & tool guides."
+                    }
+                ]
+            },
+            {
+                "id": "fc-case-4",
+                "caseNumber": 4,
+                "title": "To Reset Password",
+                "category": "Account & Security",
+                "tagClass": "tag-rose",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Go to Password Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Click 'Settings' in the sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Enter Current password",
+                        "desc": "Navigate to Security / Password settings and enter current password."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter New password",
+                        "desc": "Input new strong password meeting security complexity rules."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on update password",
+                        "desc": "Submit the password modification request."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on save changes button",
+                        "desc": "Save preferences to confirm the update."
+                    }
+                ]
+            }
+        ]
+    },
+    "reviewer": {
+        "roleTitle": "Reviewer",
+        "roleBadgeClass": "tag-purple",
+        "description": "Executive quality verification, gate reviews, impact validation, closure sign-offs, and CEO escalation.",
+        "cases": [
+            {
+                "id": "rv-case-1",
+                "caseNumber": 1,
+                "title": "To Review the Project",
+                "category": "Gate Review",
+                "tagClass": "tag-blue",
+                "actionUrl": "/dashboard/dashboard-reviewer.html",
+                "actionText": "Pending Approvals",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Overview",
+                        "desc": "Access the Reviewer Dashboard Overview from the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to pending Approvals",
+                        "desc": "Navigate to the 'Pending Approvals' tab / queue."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Review button",
+                        "desc": "Click the 'Review' action button on the project awaiting sign-off."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Give the Comment",
+                        "desc": "Input your evaluation feedback, observations, and quality scoring comments."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on Request Revision/Reject/Approve Project Button",
+                        "desc": "Finalize your decision by clicking Request Revision, Reject, or Approve Project."
+                    }
+                ]
+            },
+            {
+                "id": "rv-case-2",
+                "caseNumber": 2,
+                "title": "To do Impact review",
+                "category": "Impact Validation",
+                "tagClass": "tag-green",
+                "actionUrl": "/dashboard/dashboard-reviewer.html",
+                "actionText": "Impact Review",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Overview",
+                        "desc": "Navigate to the Reviewer Overview dashboard."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to Impact review",
+                        "desc": "Select the 'Impact Review' section to assess project results."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Approve Results",
+                        "desc": "Click 'Approve Results' on the target project."
+                    },
+                    {
+                        "num": 4,
+                        "title": "enter the Impact metrics details",
+                        "desc": "Validate and input verified cost savings, scrap reduction, and cycle time improvements."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on Approve Results Button",
+                        "desc": "Confirm the impact metrics validation to advance the project."
+                    }
+                ]
+            },
+            {
+                "id": "rv-case-4",
+                "caseNumber": 4,
+                "title": "To Close the project",
+                "category": "Project Closure",
+                "tagClass": "tag-teal",
+                "actionUrl": "/dashboard/dashboard-reviewer.html",
+                "actionText": "Standardization & Closure",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Overview",
+                        "desc": "Open the Reviewer Overview page."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to Standardization & closure",
+                        "desc": "Navigate to the 'Standardization & Closure' tab."
+                    },
+                    {
+                        "num": 3,
+                        "title": "To View SOP Click on View SOP Button",
+                        "desc": "Inspect the standardized operating procedure and control documentation."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on approve & close",
+                        "desc": "Initiate the formal project closure workflow."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Enter the details",
+                        "desc": "Complete closure remarks, final quality rating, and horizontal deployment tags."
+                    },
+                    {
+                        "num": 6,
+                        "title": "Click on sign off & close button",
+                        "desc": "Execute final sign-off to formally close the project and archive in Knowledge Base."
+                    }
+                ]
+            },
+            {
+                "id": "rv-case-5",
+                "caseNumber": 5,
+                "title": "To send the project to CEO",
+                "category": "Executive Escalation",
+                "tagClass": "tag-amber",
+                "actionUrl": "/dashboard/dashboard-reviewer.html",
+                "actionText": "Send to CEO",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Overview",
+                        "desc": "Open the Reviewer Overview page."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to Standardization & closure",
+                        "desc": "Navigate to the 'Standardization & Closure' section."
+                    },
+                    {
+                        "num": 3,
+                        "title": "To View SOP Click on View SOP Button",
+                        "desc": "Review the finalized SOP and project story deliverables."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on approve & close",
+                        "desc": "Open the approval and routing dialog."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Enter the details",
+                        "desc": "Add executive summary highlights, total tangible ROI, and recommendation notes."
+                    },
+                    {
+                        "num": 6,
+                        "title": "Click on Send to CEO button",
+                        "desc": "Forward the project directly to the CEO dashboard for executive authorization."
+                    }
+                ]
+            },
+            {
+                "id": "rv-case-6",
+                "caseNumber": 6,
+                "title": "To view Report of Completed project",
+                "category": "Reporting & Downloads",
+                "tagClass": "tag-purple",
+                "actionUrl": "/projects/repository.html",
+                "actionText": "Open Knowledge Base",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Knowledge Base",
+                        "desc": "Click 'Knowledge Base' under Resources in the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "View Report Or Click Download",
+                        "desc": "Locate the completed project and choose 'View Report' or 'Download'."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Export Document on right- top corner button",
+                        "desc": "Use the top-right export button to generate the complete PDF / 8D executive presentation."
+                    }
+                ]
+            },
+            {
+                "id": "rv-case-7",
+                "caseNumber": 7,
+                "title": "To view 8 Stage user manual",
+                "category": "Documentation",
+                "tagClass": "tag-teal",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Open Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Navigate to Settings from the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Open 8S user manual",
+                        "desc": "Under Documentation, open '8S User Manual' to view 8-Stage QC methodologies & tool guides."
+                    }
+                ]
+            },
+            {
+                "id": "rv-case-8",
+                "caseNumber": 8,
+                "title": "To Reset Password",
+                "category": "Account & Security",
+                "tagClass": "tag-rose",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Go to Password Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Click 'Settings' in the sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Enter Current password",
+                        "desc": "Navigate to Security / Password settings and enter current password."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter New password",
+                        "desc": "Input new strong password meeting security complexity rules."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on update password",
+                        "desc": "Submit the password modification request."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on save changes button",
+                        "desc": "Save preferences to confirm the update."
+                    }
+                ]
+            }
+        ]
+    },
+    "admin": {
+        "roleTitle": "Administrator",
+        "roleBadgeClass": "tag-teal",
+        "description": "System provisioning, role-based access control, plant/department hierarchy, 8-stage template customization, and platform security.",
+        "cases": [
+            {
+                "id": "ad-case-1",
+                "caseNumber": 1,
+                "title": "To View the team Governance & Project works",
+                "category": "Governance & Projects",
+                "tagClass": "tag-blue",
+                "actionUrl": "/projects/projects-repository.html",
+                "actionText": "Project Repository",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Project repository",
+                        "desc": "Navigate to Project Repository from the main navigation."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Find the project in List of projects",
+                        "desc": "Locate the target project using the search or filter bars."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on action button/three dots",
+                        "desc": "Click the actions menu (\u2022\u2022\u2022) on the right side of the project row."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Team Governance/View Workspace",
+                        "desc": "Select 'Team Governance' to inspect logs or 'View Workspace' to enter stage workflows."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-2",
+                "caseNumber": 2,
+                "title": "To Create a Plant",
+                "category": "Plant Locations",
+                "tagClass": "tag-green",
+                "actionUrl": "/admin/plants.html",
+                "actionText": "Plant Locations",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Plants",
+                        "desc": "Click 'Plant Locations' under Administration in the sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Add Plant Location button",
+                        "desc": "Launch the plant creation dialog."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter the Details",
+                        "desc": "Fill in Plant Name, Plant Code, Address, and Unit Head."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on save Plant Location Button",
+                        "desc": "Save the new plant location."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-3",
+                "caseNumber": 3,
+                "title": "To create A department",
+                "category": "Departments",
+                "tagClass": "tag-purple",
+                "actionUrl": "/admin/departments.html",
+                "actionText": "Departments",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Department",
+                        "desc": "Click 'Departments' under Administration."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Select Plant",
+                        "desc": "Select the parent Plant location from the dropdown filter."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Add department button",
+                        "desc": "Open the new department creation modal."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Enter the details",
+                        "desc": "Provide Department Name, Department Code, and HOD."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on save button",
+                        "desc": "Save the department under the selected plant."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-4",
+                "caseNumber": 4,
+                "title": "To Add new Employee",
+                "category": "User Management",
+                "tagClass": "tag-amber",
+                "actionUrl": "/admin/users.html",
+                "actionText": "User Management",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "go to User Management",
+                        "desc": "Navigate to 'User Management' in the left menu."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Add member Button",
+                        "desc": "Click the '+ Add Member' button."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter the Details",
+                        "desc": "Enter Full Name, Email Address, Role, Plant, and Department."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Confirm button",
+                        "desc": "Confirm user onboarding to issue account credentials."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-5",
+                "caseNumber": 5,
+                "title": "To update the Employee Data",
+                "category": "Field Configuration",
+                "tagClass": "tag-teal",
+                "actionUrl": "/admin/users.html",
+                "actionText": "Configure Fields",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to user Management",
+                        "desc": "Open User Management directory."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Configure Fields button",
+                        "desc": "Open the user profile field configuration drawer."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter the data to be updated",
+                        "desc": "Specify field label, data type, and mandatory flag."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Add custom Field button",
+                        "desc": "Save the custom field to apply across all user profiles."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-6",
+                "caseNumber": 6,
+                "title": "To change the Login Options",
+                "category": "Authentication",
+                "tagClass": "tag-blue",
+                "actionUrl": "/admin/users.html",
+                "actionText": "Login Options",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to user Management",
+                        "desc": "Navigate to User Management."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Configure Fields button",
+                        "desc": "Open the login options and field configuration modal."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Select the check box to be used for login",
+                        "desc": "Choose allowed identifiers (Email, Employee ID, Phone Number)."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save Login Options Button",
+                        "desc": "Confirm and save active authentication mechanisms."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-7",
+                "caseNumber": 7,
+                "title": "To Bulk Import Employee Data",
+                "category": "Bulk Operations",
+                "tagClass": "tag-green",
+                "actionUrl": "/admin/users.html",
+                "actionText": "Bulk Import",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to user Management",
+                        "desc": "Open User Management."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Bulk Import button",
+                        "desc": "Open the CSV Bulk Import dialog."
+                    },
+                    {
+                        "num": 3,
+                        "title": "upload the CSV file",
+                        "desc": "Select and upload your prepared employee CSV spreadsheet."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Update Data button",
+                        "desc": "Process the file to provision multiple employees automatically."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-8",
+                "caseNumber": 8,
+                "title": "To Bulk export Employee Data",
+                "category": "Bulk Operations",
+                "tagClass": "tag-purple",
+                "actionUrl": "/admin/users.html",
+                "actionText": "Bulk Export",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to user Management",
+                        "desc": "Navigate to User Management."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Bulk Export button",
+                        "desc": "Download the complete organization user roster in CSV format."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-9",
+                "caseNumber": 9,
+                "title": "To add An Individual Employee",
+                "category": "User Provisioning",
+                "tagClass": "tag-amber",
+                "actionUrl": "/admin/users.html",
+                "actionText": "Add Member",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to user Management",
+                        "desc": "Open User Management."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Add Member button",
+                        "desc": "Click '+ Add Member'."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter the Details",
+                        "desc": "Provide specific individual user details, plant, department, and role permissions."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Confirm Provisioning button",
+                        "desc": "Finalize and provision the new user."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-10",
+                "caseNumber": 10,
+                "title": "To change the 8 Stage Template",
+                "category": "Template Customizer",
+                "tagClass": "tag-teal",
+                "actionUrl": "/admin/stage-template.html",
+                "actionText": "8 Stage Template",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to 8 Stage template",
+                        "desc": "Click '8 Stage Template' in the Administration sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Add New Stage button to add new Stage",
+                        "desc": "Insert a new custom problem solving stage into the workflow."
+                    },
+                    {
+                        "num": 3,
+                        "title": "To add New Columns in existing Stages Click on Add columns Under the Any stages",
+                        "desc": "Click '+ Add Field / QC Tool' to insert columns and tools."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save Templates button",
+                        "desc": "Save and publish template modifications across the organization."
+                    },
+                    {
+                        "num": 5,
+                        "title": "To keep the default settings of the Templates, Click on Reset to default button",
+                        "desc": "Revert back to standard 8-Stage factory settings if required."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-11",
+                "caseNumber": 11,
+                "title": "To create new category",
+                "category": "SOP Masters",
+                "tagClass": "tag-blue",
+                "actionUrl": "/admin/sop-masters.html",
+                "actionText": "Categories & Types",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "go to Categories & types",
+                        "desc": "Navigate to 'Categories & Types' in Administration."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Add Category",
+                        "desc": "Open the new category creation dialog."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter the Details",
+                        "desc": "Enter Category Name, Category Code, and Description."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save button",
+                        "desc": "Save the new category to organize projects and SOPs."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-12",
+                "caseNumber": 12,
+                "title": "To create new SOP",
+                "category": "SOP Masters",
+                "tagClass": "tag-green",
+                "actionUrl": "/admin/sop-masters.html",
+                "actionText": "Add SOP",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "go to Categories & types",
+                        "desc": "Open Categories & Types."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Add SOP",
+                        "desc": "Click '+ Add SOP Document'."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter the Details",
+                        "desc": "Input SOP Title, Document Number, Category, and upload SOP files."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save button",
+                        "desc": "Save and publish the standard operating procedure."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-13",
+                "caseNumber": 13,
+                "title": "To view Report of Completed project",
+                "category": "Reporting & Downloads",
+                "tagClass": "tag-purple",
+                "actionUrl": "/projects/repository.html",
+                "actionText": "Open Knowledge Base",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Knowledge Base",
+                        "desc": "Click 'Knowledge Base' under Resources in the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "View Report Or Click Download",
+                        "desc": "Browse completed projects and select 'View Report' or 'Download'."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Export Document on right- top corner button",
+                        "desc": "Export the full 8D document report."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-14",
+                "caseNumber": 14,
+                "title": "To view 8 Stage user manual",
+                "category": "Documentation",
+                "tagClass": "tag-teal",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Open Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Click 'Settings' in the left navigation menu."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Open 8S user manual",
+                        "desc": "Open '8S User Manual' under Documentation."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-15",
+                "caseNumber": 15,
+                "title": "To Reset Password",
+                "category": "Account & Security",
+                "tagClass": "tag-rose",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Password Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Open Settings."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Enter Current password",
+                        "desc": "Enter current account password."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter New password",
+                        "desc": "Enter new strong password."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on update password",
+                        "desc": "Click 'Update Password'."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on save changes button",
+                        "desc": "Click 'Save Changes' to confirm."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-16",
+                "caseNumber": 16,
+                "title": "To Change the Organization Profile",
+                "category": "Organization Settings",
+                "tagClass": "tag-blue",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Organization Profile",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Settings",
+                        "desc": "Navigate to Platform Settings."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Click on Organization Profile",
+                        "desc": "Open the Organization Profile tab."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter the Details",
+                        "desc": "Update Company Legal Name, Registration Number, Industry, and Contact Info."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save button",
+                        "desc": "Save profile updates."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-17",
+                "caseNumber": 17,
+                "title": "To upload the Organization LOGO",
+                "category": "Branding",
+                "tagClass": "tag-green",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Branding & Styling",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Settings",
+                        "desc": "Open Settings."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to Branding & Styling",
+                        "desc": "Navigate to the 'Branding & Styling' tab."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Upload the logo/Favicon",
+                        "desc": "Upload your high-resolution Company Logo and Browser Favicon."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save button",
+                        "desc": "Save branding to apply across all dashboards and PDF reports."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-18",
+                "caseNumber": 18,
+                "title": "To Modify the control of the dashboard to different Users",
+                "category": "Role Access Control",
+                "tagClass": "tag-purple",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Role Access Control",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Settings",
+                        "desc": "Open Settings."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to Role Access Control",
+                        "desc": "Navigate to the 'Role Access Control' tab."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Turn on/off different modules for different user",
+                        "desc": "Toggle module permissions (Overview, Projects, Analytics, Users, Plants) per role."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save button",
+                        "desc": "Save access control policies."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-19",
+                "caseNumber": 19,
+                "title": "To update sign-Off Hierarchy",
+                "category": "Sign-Off Hierarchy",
+                "tagClass": "tag-amber",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Sign-Off Hierarchy",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Settings",
+                        "desc": "Open Settings."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to sign-Off Hierarchy",
+                        "desc": "Select the 'Sign-Off Hierarchy' tab."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Add sign-Off Rule/ Reset",
+                        "desc": "Configure multi-level approval gates (Facilitator -> Reviewer -> CEO)."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save button",
+                        "desc": "Save the sign-off sequence."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-20",
+                "caseNumber": 20,
+                "title": "To extend Trail/ Change Plan",
+                "category": "Subscription & Billing",
+                "tagClass": "tag-teal",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Subscription & Billing",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Settings",
+                        "desc": "Open Settings."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to Subscription & Billings",
+                        "desc": "Navigate to the 'Subscription & Billings' tab."
+                    },
+                    {
+                        "num": 3,
+                        "title": "click on Extend Trail Button to Extend the trail",
+                        "desc": "Request automated trial extension."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Change Plan button to Take Subscription",
+                        "desc": "Select your desired enterprise tier (Starter, Pro, Enterprise)."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Either pay through Razor Pay or Enter the payment Details Manually",
+                        "desc": "Complete online payment or upload wire transfer receipt."
+                    },
+                    {
+                        "num": 6,
+                        "title": "It will be Approved with in 24 hours",
+                        "desc": "Platform admins will verify and activate your enterprise subscription within 24 hours."
+                    }
+                ]
+            },
+            {
+                "id": "ad-case-21",
+                "caseNumber": 21,
+                "title": "To Turn on Maintenance Mode",
+                "category": "Security & Privacy",
+                "tagClass": "tag-rose",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Security & Privacy",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Go to Settings",
+                        "desc": "Open Settings."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Go to Security & Privacy",
+                        "desc": "Navigate to the 'Security & Privacy' tab."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Turn on/off the Maintenance Mode button",
+                        "desc": "Toggle system-wide maintenance lock."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on Save changes button",
+                        "desc": "Save changes to activate maintenance mode banner for non-admin users."
+                    }
+                ]
+            }
+        ]
+    },
+    "ceo": {
+        "roleTitle": "CEO / Executive",
+        "roleBadgeClass": "tag-rose",
+        "description": "Executive strategic oversight, cumulative enterprise ROI, and completed project governance.",
+        "cases": [
+            {
+                "id": "ceo-case-1",
+                "caseNumber": 1,
+                "title": "To view Report of Completed project",
+                "category": "Reporting & Downloads",
+                "tagClass": "tag-blue",
+                "actionUrl": "/projects/repository.html",
+                "actionText": "Open Knowledge Base",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Knowledge Base",
+                        "desc": "Click 'Knowledge Base' under Resources in the left sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "View Report Or Click Download",
+                        "desc": "Browse completed projects and click 'View Report' or 'Download'."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Click on Export Document on right- top corner button",
+                        "desc": "Click 'Export Document' on the top-right corner to export full executive summaries."
+                    }
+                ]
+            },
+            {
+                "id": "ceo-case-2",
+                "caseNumber": 2,
+                "title": "To view 8 Stage user manual",
+                "category": "Documentation",
+                "tagClass": "tag-teal",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Open Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Navigate to Settings from the sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Open 8S user manual",
+                        "desc": "Under Documentation, open '8S User Manual' to review standard QC methodologies."
+                    }
+                ]
+            },
+            {
+                "id": "ceo-case-3",
+                "caseNumber": 3,
+                "title": "To Reset Password",
+                "category": "Account & Security",
+                "tagClass": "tag-rose",
+                "actionUrl": "/admin/settings.html",
+                "actionText": "Go to Password Settings",
+                "steps": [
+                    {
+                        "num": 1,
+                        "title": "Click on Settings",
+                        "desc": "Click 'Settings' in the sidebar."
+                    },
+                    {
+                        "num": 2,
+                        "title": "Enter Current password",
+                        "desc": "Enter your current account password."
+                    },
+                    {
+                        "num": 3,
+                        "title": "Enter New password",
+                        "desc": "Enter your new compliant password."
+                    },
+                    {
+                        "num": 4,
+                        "title": "Click on update password",
+                        "desc": "Click 'Update Password' to validate."
+                    },
+                    {
+                        "num": 5,
+                        "title": "Click on save changes button",
+                        "desc": "Click 'Save Changes' to confirm."
+                    }
+                ]
+            }
+        ]
+    }
+};
+
+        const ROLE_PERMISSIONS = {
+            "team-member": {
+                allowedRoles: ["team-member", "team-leader"],
+                defaultRole: "team-member"
+            },
+            "team-leader": {
+                allowedRoles: ["team-leader", "team-member"],
+                defaultRole: "team-leader"
+            },
+            "facilitator": {
+                allowedRoles: ["facilitator"],
+                defaultRole: "facilitator"
+            },
+            "reviewer": {
+                allowedRoles: ["reviewer"],
+                defaultRole: "reviewer"
+            },
+            "ceo": {
+                allowedRoles: ["ceo"],
+                defaultRole: "ceo"
+            },
+            "admin": {
+                allowedRoles: ["admin", "ceo", "reviewer", "facilitator", "team-leader", "team-member"],
+                defaultRole: "admin"
+            },
+            "super-admin": {
+                allowedRoles: ["super-admin", "admin", "ceo", "reviewer", "facilitator", "team-leader", "team-member"],
+                defaultRole: "super-admin"
+            }
+        };
+
+        const ROLE_METADATA = {
+            "super-admin": { label: "Super Admin", icon: "shield-alert" },
+            "team-member": { label: "Team Member", icon: "user" },
+            "team-leader": { label: "Team Leader", icon: "user-check" },
+            "facilitator": { label: "Facilitator", icon: "shield" },
+            "reviewer": { label: "Reviewer", icon: "clipboard-check" },
+            "admin": { label: "Admin", icon: "sliders" },
+            "ceo": { label: "CEO / Exec", icon: "line-chart" }
+        };
+
+        const UserManualApp = {
+            currentRoleKey: "team-member",
+            userRoleKey: "team-member",
+            allowedRoles: ["team-member", "team-leader"],
+
+            init() {
+                this.detectUserRole();
+                this.renderRolePills();
+                this.renderCases();
+            },
+
+            detectUserRole() {
+                try {
+                    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+                    if (userStr) {
+                        const u = JSON.parse(userStr);
+                        const r = (u.role || u.role_name || '').toLowerCase();
+                        
+                        let detectedRole = "team-member";
+                        if (r.includes("leader")) detectedRole = "team-leader";
+                        else if (r.includes("facilitator")) detectedRole = "facilitator";
+                        else if (r.includes("reviewer")) detectedRole = "reviewer";
+                        else if (r.includes("super")) detectedRole = "super-admin";
+                        else if (r.includes("admin")) detectedRole = "admin";
+                        else if (r.includes("ceo") || r.includes("exec")) detectedRole = "ceo";
+                        else if (r.includes("member")) detectedRole = "team-member";
+
+                        this.userRoleKey = detectedRole;
+                        const perm = ROLE_PERMISSIONS[detectedRole] || ROLE_PERMISSIONS["team-member"];
+                        this.allowedRoles = perm.allowedRoles;
+                        this.currentRoleKey = perm.defaultRole;
+
+                        const badge = document.getElementById('activeUserRoleBadge');
+                        if (badge && MANUAL_DATA[this.currentRoleKey]) {
+                            badge.textContent = `Your Role: ${MANUAL_DATA[this.currentRoleKey].roleTitle}`;
+                        }
+                    }
+                } catch(e) {
+                    console.warn('Could not parse user session:', e);
+                }
+            },
+
+            renderRolePills() {
+                const container = document.getElementById('rolePillsContainer');
+                if (!container) return;
+                let pillsHtml = '';
+                this.allowedRoles.forEach(rKey => {
+                    const meta = ROLE_METADATA[rKey];
+                    const data = MANUAL_DATA[rKey];
+                    if (!meta || !data) return;
+                    const isActive = rKey === this.currentRoleKey;
+                    pillsHtml += `
+                        <button class="role-pill-btn ${isActive ? 'active' : ''}" data-role="${rKey}" onclick="UserManualApp.selectRole('${rKey}')">
+                            <i data-lucide="${meta.icon}" style="width:15px;height:15px;"></i>
+                            <span>${meta.label}</span>
+                            <span class="role-badge-count">${data.cases.length} Cases</span>
+                        </button>
+                    `;
+                });
+                container.innerHTML = pillsHtml;
+                if (window.lucide) lucide.createIcons();
+            },
+
+            selectRole(roleKey) {
+                if (!this.allowedRoles.includes(roleKey) || !MANUAL_DATA[roleKey]) return;
+                this.currentRoleKey = roleKey;
+                
+                this.renderRolePills();
+
+                const searchInput = document.getElementById('manualSearchInput');
+                if (searchInput) searchInput.value = '';
+
+                this.renderCases();
+            },
+
+            filterCases() {
+                const query = (document.getElementById('manualSearchInput').value || '').trim().toLowerCase();
+                const caseCards = document.querySelectorAll('.manual-case-card');
+                let matchCount = 0;
+
+                caseCards.forEach(card => {
+                    const text = card.textContent.toLowerCase();
+                    const matches = text.includes(query);
+                    card.style.display = matches ? 'block' : 'none';
+                    if (matches) matchCount++;
+                });
+
+                const noResultsEl = document.getElementById('noResultsMessage');
+                if (noResultsEl) {
+                    noResultsEl.style.display = matchCount === 0 ? 'block' : 'none';
+                }
+            },
+
+            renderCases() {
+                const role = MANUAL_DATA[this.currentRoleKey];
+                const container = document.getElementById('casesListContainer');
+                if (!role || !container) return;
+
+                let html = `
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <h4 class="mb-0 fw-bold text-main">${role.roleTitle} Manual</h4>
+                            <span class="badge ${role.roleBadgeClass} text-xs px-2.5 py-1">${role.cases.length} Standard Operating Cases</span>
+                        </div>
+                        <p class="text-xs ds-text-secondary mb-0 d-none d-md-block">${role.description}</p>
+                    </div>
+                `;
+
+                role.cases.forEach(c => {
+                    let stepsHtml = '';
+                    c.steps.forEach(s => {
+                        stepsHtml += `
+                            <div class="step-item">
+                                <div class="step-badge">${s.num}</div>
+                                <div class="step-title">Step ${s.num}: ${s.title}</div>
+                                <div class="step-desc">${s.desc}</div>
+                            </div>
+                        `;
+                    });
+
+                    html += `
+                        <div class="manual-case-card" id="${c.id}">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="case-header-tag ${c.tagClass}">Case ${c.caseNumber}</span>
+                                    <h5 class="mb-0 fw-bold text-main">${c.title}</h5>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 no-print">
+                                    ${c.actionUrl ? `
+                                        <a href="${c.actionUrl}" class="ds-btn ds-btn-primary ds-btn-sm quick-action-btn">
+                                            <i data-lucide="external-link" style="width:12px;height:12px;"></i>
+                                            ${c.actionText || 'Open Action'}
+                                        </a>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div class="step-timeline">
+                                ${stepsHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <div id="noResultsMessage" class="glass-card ds-card p-5 text-center" style="display: none;">
+                        <i data-lucide="search-x" style="width:48px;height:48px;" class="text-muted mb-2"></i>
+                        <h6 class="fw-bold">No matching cases found</h6>
+                        <p class="text-xs ds-text-secondary mb-0">Try searching for different keywords like 'password', 'repository', 'stage', or 'governance'.</p>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+                if (window.lucide) lucide.createIcons();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            UserManualApp.init();
+        });
+    </script>
+</body>
+
+</html>

@@ -1870,6 +1870,7 @@ const AnnouncementsModule = {
             this._emailRules = rules;
 
             const categoryMap = {
+                'auth': { label: 'Auth & Verification', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'shield-check' },
                 'subscription_reminder': { label: 'Subscription Expiry', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'clock' },
                 'trial_reminder': { label: 'Trial Ending Alert', color: '#d97706', bg: 'rgba(217,119,6,0.1)', icon: 'hourglass' },
                 'project_assignment': { label: 'Project Assignment', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'user-plus' },
@@ -1887,7 +1888,7 @@ const AnnouncementsModule = {
 
             const cardsHtml = rules.length ? rules.map(rule => {
                 const catInfo = categoryMap[rule.category] || categoryMap['custom'];
-                const isInstant = (!rule.trigger_days_before || rule.trigger_days_before === 0 || ['payment_approved', 'payment_rejected', 'project_assigned', 'project_completed', 'new_org_welcome', 'new_user_welcome'].includes(rule.event_trigger));
+                const isInstant = (!rule.trigger_days_before || rule.trigger_days_before === 0 || ['payment_approved', 'payment_rejected', 'project_assigned', 'project_completed', 'new_org_welcome', 'new_user_welcome', 'password_reset_otp'].includes(rule.event_trigger));
                 const triggerBadge = rule.trigger_type === 'event' 
                     ? (isInstant 
                         ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i data-lucide="zap" style="width:11px;height:11px;" class="me-1"></i>Immediate Dispatch</span>`
@@ -2123,7 +2124,45 @@ const AnnouncementsModule = {
 
     async openEmailRuleModal(ruleId = null, defaultCategory = null) {
         let meta = await this.fetchEmailMeta();
-        if (!meta) meta = { organizations: [], plans: [], roles: ["All", "Admin", "CEO", "Reviewer", "Facilitator", "Team Member"], subscription_statuses: ["Active", "Trial", "Expiring", "Suspended"], available_variables: [], sender_suggestions: [] };
+        const defaultVars = [
+            { tag: "{{org_name}}", label: "Organization Name", example: "Acme Quality Corp" },
+            { tag: "{{user_name}}", label: "User Name", example: "John Doe" },
+            { tag: "{{username}}", label: "Username", example: "john@acme.com" },
+            { tag: "{{email}}", label: "User Email", example: "john@acme.com" },
+            { tag: "{{Password}}", label: "Default / Temporary Password", example: "Pass@1234" },
+            { tag: "{{password}}", label: "Default Password", example: "Pass@1234" },
+            { tag: "{{temp_password}}", label: "Temporary Password", example: "Pass@1234" },
+            { tag: "{{role_name}}", label: "User Role", example: "Company Admin" },
+            { tag: "{{plan_name}}", label: "Subscription Plan", example: "Small MSME's Plan" },
+            { tag: "{{trial_days}}", label: "Trial Days Duration", example: "14" },
+            { tag: "{{trial_end_date}}", label: "Trial Expiration Date", example: "28 Aug 2026" },
+            { tag: "{{max_users}}", label: "Max Users", example: "50" },
+            { tag: "{{storage_limit_mb}}", label: "Storage Limit", example: "5120" },
+            { tag: "{{industry}}", label: "Industry Sector", example: "Automotive Quality" },
+            { tag: "{{expiry_date}}", label: "Expiry Date", example: "21 Aug 2026" },
+            { tag: "{{days_left}}", label: "Days Left", example: "7" },
+            { tag: "{{project_title}}", label: "Project Title", example: "Defect Reduction" },
+            { tag: "{{project_code}}", label: "Project Code", example: "PRJ-J2FJ" },
+            { tag: "{{stage_number}}", label: "Stage Number", example: "8" },
+            { tag: "{{submitter_name}}", label: "Submitted By", example: "Priya Singh" },
+            { tag: "{{reviewer_name}}", label: "Reviewer Name", example: "Meera Kapoor" },
+            { tag: "{{reviewer_comments}}", label: "Reviewer Comments", example: "Approved." },
+            { tag: "{{requester_name}}", label: "Requester Name", example: "Neha Sharma" },
+            { tag: "{{assistance_message}}", label: "Assistance Message", example: "Need guidance." },
+            { tag: "{{annual_savings}}", label: "Annual Savings", example: "₹ 4,46,000 INR" },
+            { tag: "{{roi_multiplier}}", label: "ROI Multiplier", example: "8.3x" },
+            { tag: "{{plant_name}}", label: "Plant", example: "Chennai Plant" },
+            { tag: "{{department_name}}", label: "Department", example: "Quality Control" },
+            { tag: "{{support_email}}", label: "Support Email", example: "support@ifqm.org.in" },
+            { tag: "{{app_url}}", label: "Application URL", example: "http://127.0.0.1:5000" },
+            { tag: "{{cta_url}}", label: "Action Link", example: "/admin/settings.html" },
+            { tag: "{{cta_text}}", label: "Action Text", example: "Log In Now" }
+        ];
+        if (!meta) {
+            meta = { organizations: [], plans: [], roles: ["All", "Admin", "CEO", "Reviewer", "Facilitator", "Team Member"], subscription_statuses: ["Active", "Trial", "Expiring", "Suspended"], available_variables: defaultVars, sender_suggestions: [] };
+        } else if (!meta.available_variables || meta.available_variables.length === 0) {
+            meta.available_variables = defaultVars;
+        }
 
         const targetCat = defaultCategory || 'subscription_reminder';
         let defaultName = '';
@@ -2472,6 +2511,7 @@ const AnnouncementsModule = {
                                                 <div class="col-7">
                                                     <label class="ds-label text-xxs">Automated Event Trigger</label>
                                                     <select class="ds-input text-xs" id="enEventTrigger">
+                                                        <option value="password_reset_otp" ${ruleData.event_trigger === 'password_reset_otp' ? 'selected' : ''}>Password Reset OTP Verification</option>
                                                         <option value="payment_approved" ${ruleData.event_trigger === 'payment_approved' ? 'selected' : ''}>Subscription Purchased / Activated</option>
                                                         <option value="payment_rejected" ${ruleData.event_trigger === 'payment_rejected' ? 'selected' : ''}>Offline Payment Declined</option>
                                                         <option value="subscription_expiring_soon" ${ruleData.event_trigger === 'subscription_expiring_soon' ? 'selected' : ''}>Subscription Expiring Soon</option>
@@ -2591,7 +2631,7 @@ const AnnouncementsModule = {
                                             </div>
                                             <div class="d-flex flex-wrap gap-1 mb-2 p-2 rounded border" style="background:rgba(99,102,241,0.03);">
                                                 <span class="text-xxs text-muted fw-semibold me-1 align-self-center">Insert:</span>
-                                                ${['{{org_name}}','{{user_name}}','{{plan_name}}','{{expiry_date}}','{{days_left}}','{{app_url}}'].map(v =>
+                                                ${['{{org_name}}','{{user_name}}','{{username}}','{{Password}}','{{password}}','{{plan_name}}','{{expiry_date}}','{{days_left}}','{{app_url}}'].map(v =>
                                                     `<button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-1.5 text-xxs font-monospace rounded" onclick="AnnouncementsModule.insertSmsVariableChip('${v}')">${v}</button>`
                                                 ).join('')}
                                             </div>
@@ -2753,6 +2793,7 @@ const AnnouncementsModule = {
             const activeCount = templates.filter(t => t.is_active).length;
 
             const categoryMap = {
+                'password_reset_otp': { label: 'Password Reset OTP', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'key-round' },
                 'phone_otp_verification': { label: 'Auth & Verification', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'shield-check' },
                 'subscription_reminder_7d': { label: 'Subscription Expiry', color: '#2563eb', bg: 'rgba(37,99,235,0.1)', icon: 'clock' },
                 'subscription_urgent_1d': { label: 'Urgent Expiry Notice', color: '#dc2626', bg: 'rgba(220,38,38,0.1)', icon: 'alert-octagon' },
@@ -3045,7 +3086,45 @@ const AnnouncementsModule = {
 
     async openSmsRuleModal(templateKey = null) {
         let meta = await this.fetchEmailMeta();
-        if (!meta) meta = { organizations: [], plans: [], roles: ["All", "Admin", "CEO", "Reviewer", "Facilitator", "Team Member"], subscription_statuses: ["Active", "Trial", "Expiring", "Suspended"], available_variables: [] };
+        const defaultVars = [
+            { tag: "{{org_name}}", label: "Organization Name", example: "Acme Quality Corp" },
+            { tag: "{{user_name}}", label: "User Name", example: "John Doe" },
+            { tag: "{{username}}", label: "Username", example: "john@acme.com" },
+            { tag: "{{email}}", label: "User Email", example: "john@acme.com" },
+            { tag: "{{Password}}", label: "Default / Temporary Password", example: "Pass@1234" },
+            { tag: "{{password}}", label: "Default Password", example: "Pass@1234" },
+            { tag: "{{temp_password}}", label: "Temporary Password", example: "Pass@1234" },
+            { tag: "{{role_name}}", label: "User Role", example: "Company Admin" },
+            { tag: "{{plan_name}}", label: "Subscription Plan", example: "Small MSME's Plan" },
+            { tag: "{{trial_days}}", label: "Trial Days Duration", example: "14" },
+            { tag: "{{trial_end_date}}", label: "Trial Expiration Date", example: "28 Aug 2026" },
+            { tag: "{{max_users}}", label: "Max Users", example: "50" },
+            { tag: "{{storage_limit_mb}}", label: "Storage Limit", example: "5120" },
+            { tag: "{{industry}}", label: "Industry Sector", example: "Automotive Quality" },
+            { tag: "{{expiry_date}}", label: "Expiry Date", example: "21 Aug 2026" },
+            { tag: "{{days_left}}", label: "Days Left", example: "7" },
+            { tag: "{{project_title}}", label: "Project Title", example: "Defect Reduction" },
+            { tag: "{{project_code}}", label: "Project Code", example: "PRJ-J2FJ" },
+            { tag: "{{stage_number}}", label: "Stage Number", example: "8" },
+            { tag: "{{submitter_name}}", label: "Submitted By", example: "Priya Singh" },
+            { tag: "{{reviewer_name}}", label: "Reviewer Name", example: "Meera Kapoor" },
+            { tag: "{{reviewer_comments}}", label: "Reviewer Comments", example: "Approved." },
+            { tag: "{{requester_name}}", label: "Requester Name", example: "Neha Sharma" },
+            { tag: "{{assistance_message}}", label: "Assistance Message", example: "Need guidance." },
+            { tag: "{{annual_savings}}", label: "Annual Savings", example: "₹ 4,46,000 INR" },
+            { tag: "{{roi_multiplier}}", label: "ROI Multiplier", example: "8.3x" },
+            { tag: "{{plant_name}}", label: "Plant", example: "Chennai Plant" },
+            { tag: "{{department_name}}", label: "Department", example: "Quality Control" },
+            { tag: "{{support_email}}", label: "Support Email", example: "support@ifqm.org.in" },
+            { tag: "{{app_url}}", label: "Application URL", example: "http://127.0.0.1:5000" },
+            { tag: "{{cta_url}}", label: "Action Link", example: "/admin/settings.html" },
+            { tag: "{{cta_text}}", label: "Action Text", example: "Log In Now" }
+        ];
+        if (!meta) {
+            meta = { organizations: [], plans: [], roles: ["All", "Admin", "CEO", "Reviewer", "Facilitator", "Team Member"], subscription_statuses: ["Active", "Trial", "Expiring", "Suspended"], available_variables: defaultVars };
+        } else if (!meta.available_variables || meta.available_variables.length === 0) {
+            meta.available_variables = defaultVars;
+        }
 
         let tmplData = {
             template_key: templateKey || 'custom_sms_broadcast',
@@ -3272,6 +3351,7 @@ const AnnouncementsModule = {
                                             <div class="col-8">
                                                 <label class="ds-label text-xxs fw-semibold mb-1">Automated Event Trigger</label>
                                                 <select class="ds-input text-xs py-1" id="smsModal_EventTrigger">
+                                                    <option value="password_reset_otp" ${tmplData.event_trigger === 'password_reset_otp' ? 'selected' : ''}>Password Reset OTP Verification</option>
                                                     <option value="phone_otp_verification" ${tmplData.event_trigger === 'phone_otp_verification' ? 'selected' : ''}>Phone OTP Verification</option>
                                                     <option value="subscription_expiring_soon" ${tmplData.event_trigger === 'subscription_expiring_soon' ? 'selected' : ''}>Subscription Expiring Soon</option>
                                                     <option value="trial_expiring_soon" ${tmplData.event_trigger === 'trial_expiring_soon' ? 'selected' : ''}>Trial Plan Ending Soon</option>

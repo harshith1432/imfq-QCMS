@@ -24,8 +24,13 @@ class EmailUtils:
     @staticmethod
     def send_email_async(to_email, subject, html_content, provider_override=None, email_type='general', org_id=None, sender_email=None, sender_name=None, reply_to=None, attachments=None, app=None):
         """Dispatches an email asynchronously via Celery distributed task queue (with in-process fallback)."""
-        # 1. Try Celery distributed worker dispatch
-        if not attachments and not provider_override:
+        if not to_email or not str(to_email).strip() or str(to_email).strip().lower() in ('none', 'null', ''):
+            logger.info("[QCMS Email] Skipping email dispatch: recipient address is None or empty.")
+            return False
+
+        # 1. Try Celery distributed worker dispatch ONLY if Redis is connected
+        from app.infrastructure.cache.redis_adapter import cache
+        if not attachments and not provider_override and cache.is_redis:
             try:
                 from app.infrastructure.tasks.email_tasks import send_async_email
                 send_async_email.delay(
@@ -220,6 +225,10 @@ class EmailUtils:
     @staticmethod
     def send_email(to_email, subject, html_content, provider_override=None, email_type='general', org_id=None, sender_email=None, sender_name=None, reply_to=None, attachments=None):
         """Sends an email using the active connected integration provider (ZeptoMail or Resend) from the database."""
+        if not to_email or not str(to_email).strip() or str(to_email).strip().lower() in ('none', 'null', ''):
+            logger.info("[QCMS Email] Skipping send_email: recipient address is None or empty.")
+            return None
+
         import requests
         import base64
         from app.infrastructure.database.models.models import IntegrationConfig
@@ -485,6 +494,9 @@ class EmailUtils:
             'email': user.email,
             'temp_password': temp_password,
             'password': temp_password,
+            'Password': temp_password,
+            'default_password': temp_password,
+            'temporary_password': temp_password,
             'org_name': org_name,
             'role_name': role_name,
             'assigned_role': role_name,
@@ -508,6 +520,21 @@ class EmailUtils:
                 if not rule.is_active:
                     logger.info(f"[EmailUtils] User welcome notification rule '{rule.name}' is PAUSED/DISABLED in Set Email Notifications dashboard. Cancelling email generation and dispatch completely.")
                     return False
+
+                # Dispatch SMS alongside email if enabled on the rule
+                user_phone = getattr(user, 'phone', None) or getattr(user, 'mobile', None) or getattr(user, 'phone_number', None)
+                if rule.sms_enabled and rule.sms_body and user_phone:
+                    try:
+                        p_sms_body = EmailNotificationEngine.replace_variables(rule.sms_body, user_ctx)
+                        EmailNotificationEngine.dispatch_dlt_sms(
+                            user_phone,
+                            p_sms_body,
+                            template_id=rule.sms_template_id,
+                            entity_id=rule.sms_entity_id,
+                            sender_id=rule.sms_sender_id
+                        )
+                    except Exception as se:
+                        logger.info(f"[EmailUtils] Error dispatching user welcome SMS: {se}")
 
                 rule_dict = rule.to_dict()
                 subject = EmailNotificationEngine.replace_variables(rule.subject, user_ctx)
@@ -583,6 +610,32 @@ class EmailUtils:
         if is_async:
             return EmailUtils.send_email_async(user.email, subject, html, email_type='otp', org_id=user.org_id)
         return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=user.org_id)
+
+    @staticmethod
+    def send_password_reset_otp_email(user, otp, is_async=True):
+        """Sends a Password Reset OTP verification email using active template configuration."""
+        try:
+            from app.domain.services.email_notification_engine import EmailNotificationEngine
+            return EmailNotificationEngine.trigger_password_reset_otp_notification(user, otp)
+        except Exception as e:
+            logger.error(f"[EmailUtils] Error in send_password_reset_otp_email: {e}")
+            org_id = getattr(user, 'org_id', None)
+            ctx = DocumentBrandingService.get_branding_context(org_id)
+            subject = f"Your Password Reset OTP Code - {ctx['software_name']}"
+            body = f"""
+                <h2 style="color: #2563eb; margin-top:0; text-align:center;">Password Reset Verification</h2>
+                <p>Hello {user.username or user.email},</p>
+                <p>We received a request to reset your password. Use the verification code below to proceed:</p>
+                <div style="background: #f8fafc; border: 2px dashed #cbd5e1; padding: 20px; text-align: center; margin: 25px 0; border-radius: 12px;">
+                    <span style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #1e40af; font-family: monospace;">{otp}</span>
+                </div>
+                <p style="color: #64748b; font-size: 13px; text-align: center;">This code will expire in <strong>10 minutes</strong>.</p>
+            """
+            html = DocumentBrandingService.wrap_email_html(body, title="Password Reset OTP", org_id=org_id)
+            if is_async:
+                return EmailUtils.send_email_async(user.email, subject, html, email_type='otp', org_id=org_id)
+            return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=org_id)
+
 
     @staticmethod
     def send_registration_otp(email, otp, is_async=True):

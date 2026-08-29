@@ -456,15 +456,39 @@ def verify_registration_otp():
     return jsonify({"msg": "Email verified successfully. You can now proceed.", "is_verified": True}), 200
 
 
-def dispatch_phone_otp_sms(phone, otp):
+def _dispatch_phone_otp_sms_sync(phone, otp, template_key='phone_otp_verification', user=None):
     """
-    Dispatch SMS OTP to mobile phone via active Jio DLT / Kaleyra SMS integration gateway.
+    Synchronous implementation of Jio DLT / Kaleyra SMS dispatch.
     """
     try:
         from app.infrastructure.database.models.models import IntegrationConfig
         cfg = IntegrationConfig.query.filter_by(provider_id='jio_dlt').first()
         if not cfg or cfg.status != 'Connected':
-            print(f"[QCMS Phone OTP] Jio DLT integration status is '{cfg.status if cfg else 'not found'}'. Simulating OTP {otp} for {phone}")
+            print(f"[QCMS Phone OTP] Jio DLT integration status is '{cfg.status if cfg else 'not found'}'. Simulating OTP {otp} for {phone} (Template: {template_key})")
+            try:
+                from app.infrastructure.database.models.models import SmsTemplateConfig, SmsNotificationLog
+                tmpl = SmsTemplateConfig.query.filter_by(template_key=template_key).first()
+                tmpl_name = tmpl.display_name if tmpl else ("Password Reset OTP" if template_key == 'password_reset_otp' else "Phone OTP")
+                log = SmsNotificationLog(
+                    template_key=template_key,
+                    template_name=tmpl_name,
+                    category="auth",
+                    sender_id=(tmpl.sender_id if tmpl else None) or "IFQMSK",
+                    dlt_template_id=tmpl.template_id if tmpl else None,
+                    dlt_entity_id=tmpl.entity_id if tmpl else None,
+                    message_body=f"Dear Customer, use OTP {otp} to verify on IFQM QCMS. Valid for 10 mins. Do not share with anyone. - IFQM",
+                    phone_number=phone,
+                    recipient_name=(user.full_name or user.username) if user else "User",
+                    org_name=(user.organization.name if user and user.organization else "Platform"),
+                    gateway="Jio DLT / Simulated",
+                    status="Delivered",
+                    sent_by_id=user.id if user else None,
+                    sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
+                )
+                db.session.add(log)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
             return False, "SMS gateway not connected"
 
         settings = cfg.settings or {}
@@ -487,10 +511,14 @@ def dispatch_phone_otp_sms(phone, otp):
             formatted_phone = clean_phone
 
         # Load SMS body from DB (SmsTemplateConfig) — falls back to default if not configured
-        sms_body_template = f"Dear Customer, use OTP {otp} to complete your activation on IFQM Skills. Do not share this OTP with anyone."
+        if template_key == 'password_reset_otp':
+            sms_body_template = f"Dear Customer, use OTP {otp} to reset your password on IFQM QCMS. Valid for 10 mins. Do not share this OTP with anyone. - IFQM"
+        else:
+            sms_body_template = f"Dear Customer, use OTP {otp} to complete your activation on IFQM Skills. Do not share this OTP with anyone."
+
         try:
             from app.infrastructure.database.models.models import SmsTemplateConfig
-            otp_tmpl = SmsTemplateConfig.query.filter_by(template_key='phone_otp_verification', is_active=True).first()
+            otp_tmpl = SmsTemplateConfig.query.filter_by(template_key=template_key, is_active=True).first()
             if otp_tmpl and otp_tmpl.body:
                 sms_body_template = otp_tmpl.body.replace('{{otp}}', otp).replace('{otp}', otp)
                 # If template_id is configured in SmsTemplateConfig and not overridden in integration settings, use it
@@ -586,6 +614,44 @@ def dispatch_phone_otp_sms(phone, otp):
         except Exception:
             pass
         return False, str(e)
+
+
+def dispatch_phone_otp_sms(phone, otp, template_key='phone_otp_verification', user=None, is_async=True):
+    """
+    Non-blocking asynchronous wrapper for SMS dispatch.
+    Dispatches SMS via thread pool so HTTP requests finish immediately (<50ms).
+    """
+    if not phone or not str(phone).strip():
+        return False, "No phone number"
+
+    if is_async:
+        from app.infrastructure.mailer.email_service import email_executor
+        try:
+            app_obj = current_app._get_current_object()
+        except Exception:
+            app_obj = None
+
+        uid = user.id if user else None
+
+        def _async_sms_runner(target_app, ph, o_val, t_val, u_id):
+            if target_app:
+                with target_app.app_context():
+                    try:
+                        from app.infrastructure.database.models.models import User
+                        u_obj = db.session.get(User, u_id) if u_id else None
+                        _dispatch_phone_otp_sms_sync(ph, o_val, t_val, u_obj)
+                    except Exception as ex:
+                        print(f"[QCMS Phone OTP Async] Error: {ex}")
+            else:
+                try:
+                    _dispatch_phone_otp_sms_sync(ph, o_val, t_val, None)
+                except Exception as ex:
+                    print(f"[QCMS Phone OTP Async] Error: {ex}")
+
+        email_executor.submit(_async_sms_runner, app_obj, phone, otp, template_key, uid)
+        return True, "SMS queued"
+
+    return _dispatch_phone_otp_sms_sync(phone, otp, template_key, user)
 
 
 @auth_bp.route('/request-phone-otp', methods=['POST'])
@@ -1683,16 +1749,25 @@ def reset_password():
     user = None
     jwt_uid = get_jwt_identity()
 
-    # Strategy 1: Active JWT session identity
-    if jwt_uid:
+    # Strategy 1: One-time single-use cryptographically secure reset token (from OTP or email link)
+    if token:
+        user = User.query.filter_by(reset_token=token).first()
+        if not user:
+            return jsonify({"msg": "Invalid or expired reset token."}), 400
+
+        if not user.token_expiry or _to_naive_utc(user.token_expiry) < datetime.now(timezone.utc).replace(tzinfo=None):
+            return jsonify({"msg": "Password reset token has expired. Please request a new verification code."}), 400
+
+    # Strategy 2: Active JWT session identity
+    elif jwt_uid:
         try:
             user = db.session.get(User, int(jwt_uid))
         except (ValueError, TypeError):
             pass
 
-    # Strategy 2: auth_token / access_token provided in request body
-    raw_jwt = data.get('auth_token') or data.get('access_token') or data.get('jwt')
-    if not user and raw_jwt:
+    # Strategy 3: auth_token / access_token provided in request body
+    elif data.get('auth_token') or data.get('access_token') or data.get('jwt'):
+        raw_jwt = data.get('auth_token') or data.get('access_token') or data.get('jwt')
         try:
             from flask_jwt_extended import decode_token
             decoded = decode_token(raw_jwt)
@@ -1701,32 +1776,6 @@ def reset_password():
                 user = db.session.get(User, int(jwt_sub))
         except Exception:
             pass
-
-    # Strategy 3: user_id provided in body
-    uid_val = data.get('user_id') or data.get('id')
-    if not user and uid_val:
-        try:
-            user = db.session.get(User, int(uid_val))
-        except (ValueError, TypeError):
-            pass
-
-    # Strategy 4: username or email lookup
-    uname_val = (data.get('username') or '').strip()
-    if not user and uname_val:
-        user = User.query.filter((User.username.ilike(uname_val)) | (User.email.ilike(uname_val))).first()
-
-    email_val = (data.get('email') or '').strip()
-    if not user and email_val:
-        user = User.query.filter((User.email.ilike(email_val)) | (User.username.ilike(email_val))).first()
-
-    # Strategy 5: One-time password reset token (from email link)
-    if not user and token:
-        user = User.query.filter_by(reset_token=token).first()
-        if not user:
-            return jsonify({"msg": "Invalid or expired reset token."}), 400
-
-        if not user.token_expiry or _to_naive_utc(user.token_expiry) < datetime.now(timezone.utc).replace(tzinfo=None):
-            return jsonify({"msg": "Password reset link has expired. Please request a new link."}), 400
 
     if not user:
         return jsonify({"msg": "Cryptographically valid reset token or authenticated user session is required."}), 400
@@ -1773,18 +1822,217 @@ def reset_password():
 
     return jsonify({"msg": "Password updated successfully. Please log in with your new password."}), 200
 
+def _mask_email(email):
+    if not email or '@' not in email:
+        return email or ""
+    parts = email.split('@', 1)
+    name = parts[0]
+    domain = parts[1]
+    if len(name) <= 2:
+        masked_name = name[0] + "***"
+    else:
+        masked_name = name[:2] + "***" + name[-1]
+    return f"{masked_name}@{domain}"
+
+def _mask_phone(phone):
+    if not phone:
+        return ""
+    clean = re.sub(r'\D', '', phone)
+    if len(clean) >= 10:
+        return f"+91 {clean[:2]}******{clean[-2:]}"
+    elif len(clean) >= 4:
+        return f"{clean[:2]}****{clean[-2:]}"
+    return "***"
+
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
+    """
+    Initiate Password Recovery via Dual-Channel OTP (Email & SMS).
+    Accepts identifier as email or phone number.
+    If user exists, generates 6-digit OTP and dispatches to BOTH email and phone (if configured).
+    """
     data = request.get_json() or {}
-    email = data.get('email')
-    user = User.query.filter_by(email=email).first()
+    identifier = (data.get('identifier') or data.get('email') or data.get('phone') or '').strip()
     
-    if user:
-        EmailUtils.send_reset_password_email(user)
-        db.session.commit()
-        return jsonify({"msg": "Password reset link sent to your email"}), 200
+    if not identifier:
+        return jsonify({"msg": "Please enter your Email Address or Phone Number."}), 400
+
+    from sqlalchemy import func, or_
+    clean_digits = re.sub(r'\D', '', identifier)
+    user = None
     
-    return jsonify({"msg": "If that email exists in our system, a reset link has been sent."}), 200
+    if '@' in identifier:
+        user = User.query.filter(func.lower(User.email) == identifier.lower()).first()
+    else:
+        if clean_digits and len(clean_digits) >= 10:
+            last_10 = clean_digits[-10:]
+            user = User.query.filter(
+                or_(
+                    User.phone == identifier,
+                    User.phone == f"+91{last_10}",
+                    User.phone == last_10,
+                    User.phone.like(f"%{last_10}")
+                )
+            ).first()
+        if not user:
+            user = User.query.filter(
+                or_(
+                    func.lower(User.username) == identifier.lower(),
+                    func.lower(User.email) == identifier.lower()
+                )
+            ).first()
+
+    if not user:
+        return jsonify({
+            "msg": "If an account exists with that email or phone number, a verification code has been dispatched.",
+            "found": False
+        }), 200
+
+    if not user.is_active:
+        return jsonify({"msg": "This account is currently deactivated. Please contact your organization administrator."}), 403
+
+    from app.infrastructure.cache.redis_adapter import cache
+    cooldown_key = f"otp_cooldown:forgot_pwd:{user.id}"
+    if cache.get(cooldown_key):
+        return jsonify({
+            "status": "error",
+            "msg": "Please wait 60 seconds before requesting a new password reset verification code.",
+            "code": "OTP_COOLDOWN_ACTIVE"
+        }), 429
+
+    # Generate 6-digit cryptographically secure OTP
+    otp = f"{secrets.randbelow(1_000_000):06d}"
+    user.otp_token = otp
+    user.otp_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
+    db.session.add(user)
+
+    cache.setex(cooldown_key, 60, "1")
+    cache.delete(f"otp_fails:forgot_pwd:{user.id}")
+    db.session.commit()
+
+    channels_sent = []
+    # Send to Email if user has email
+    if user.email:
+        try:
+            EmailUtils.send_password_reset_otp_email(user, otp, is_async=True)
+            channels_sent.append("email")
+        except Exception as e:
+            print(f"[AUTH Forgot Password] Email dispatch error: {e}")
+
+    # Send to Phone if user has phone
+    if user.phone:
+        try:
+            dispatch_phone_otp_sms(user.phone, otp, template_key='password_reset_otp', user=user)
+            channels_sent.append("sms")
+        except Exception as e:
+            print(f"[AUTH Forgot Password] SMS dispatch error: {e}")
+
+    masked_email = _mask_email(user.email) if user.email else None
+    masked_phone = _mask_phone(user.phone) if user.phone else None
+
+    if masked_email and masked_phone:
+        dest_msg = f"OTP verification code sent to your email ({masked_email}) and phone ({masked_phone})."
+    elif masked_email:
+        dest_msg = f"OTP verification code sent to your email ({masked_email})."
+    elif masked_phone:
+        dest_msg = f"OTP verification code sent to your phone ({masked_phone})."
+    else:
+        dest_msg = "OTP verification code has been dispatched."
+
+    return jsonify({
+        "status": "success",
+        "msg": dest_msg,
+        "user_id": user.id,
+        "masked_email": masked_email,
+        "masked_phone": masked_phone,
+        "has_email": bool(user.email),
+        "has_phone": bool(user.phone)
+    }), 200
+
+@auth_bp.route('/verify-reset-otp', methods=['POST'])
+def verify_reset_otp():
+    """
+    Verify the 6-digit OTP code for password reset.
+    On success, invalidates OTP and generates a temporary reset_token (valid 15 mins).
+    """
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    identifier = (data.get('identifier') or data.get('email') or data.get('phone') or '').strip()
+    otp = str(data.get('otp') or '').strip()
+
+    if not otp:
+        return jsonify({"msg": "Please enter the 6-digit OTP verification code."}), 400
+
+    user = None
+    if user_id:
+        try:
+            user = db.session.get(User, int(user_id))
+        except (ValueError, TypeError):
+            pass
+
+    if not user and identifier:
+        from sqlalchemy import func, or_
+        clean_digits = re.sub(r'\D', '', identifier)
+        if '@' in identifier:
+            user = User.query.filter(func.lower(User.email) == identifier.lower()).first()
+        elif clean_digits and len(clean_digits) >= 10:
+            last_10 = clean_digits[-10:]
+            user = User.query.filter(
+                or_(
+                    User.phone == identifier,
+                    User.phone == f"+91{last_10}",
+                    User.phone == last_10,
+                    User.phone.like(f"%{last_10}")
+                )
+            ).first()
+        if not user:
+            user = User.query.filter(
+                or_(
+                    func.lower(User.username) == identifier.lower(),
+                    func.lower(User.email) == identifier.lower()
+                )
+            ).first()
+
+    if not user:
+        return jsonify({"msg": "Invalid user session or user not found."}), 404
+
+    from app.infrastructure.cache.redis_adapter import cache
+    fails_key = f"otp_fails:forgot_pwd:{user.id}"
+    current_fails = cache.incr(fails_key, amount=1, ttl_seconds=600)
+    if current_fails > 5:
+        return jsonify({
+            "status": "error",
+            "msg": "Too many invalid OTP attempts. This reset session has been locked for 10 minutes.",
+            "code": "OTP_ATTEMPTS_EXCEEDED"
+        }), 429
+
+    if not user.otp_token or user.otp_token != otp:
+        return jsonify({"msg": "Invalid verification code. Please check and try again."}), 400
+
+    if user.otp_expiry and _to_naive_utc(user.otp_expiry) < datetime.now(timezone.utc).replace(tzinfo=None):
+        return jsonify({"msg": "Verification code has expired. Please request a new code."}), 400
+
+    # OTP is valid! Issue temporary cryptographically secure reset token
+    reset_token = secrets.token_urlsafe(32)
+    user.reset_token = reset_token
+    user.token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=15)
+    user.otp_token = None
+    user.otp_expiry = None
+
+    cache.delete(fails_key)
+    cache.delete(f"otp_cooldown:forgot_pwd:{user.id}")
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "msg": "Identity verified successfully. You can now set your new password.",
+        "reset_token": reset_token
+    }), 200
+
+@auth_bp.route('/resend-reset-otp', methods=['POST'])
+def resend_reset_otp():
+    """Resend Password Reset OTP."""
+    return forgot_password()
 
 @auth_bp.route('/verify-email/<token>', methods=['GET'])
 def verify_email(token):

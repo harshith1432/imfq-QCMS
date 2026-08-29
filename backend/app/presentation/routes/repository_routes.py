@@ -284,6 +284,12 @@ def list_repository_projects():
                     ~Project.id.in_(recent_active_pids)
                 )
             )
+        elif status in ['Stopped', 'Rejected', 'Cancelled']:
+            query = query.filter(db.or_(
+                Project.status.in_(['Rejected', 'Cancelled', 'Stopped', 'On Hold']),
+                Project.status.ilike('Rejected%'),
+                Project.status.ilike('Stopped%')
+            ))
         elif status == 'Pending Approval':
             from app.infrastructure.database.models.models import (
                 ProjectStageTracker, ProjectReview,
@@ -433,6 +439,8 @@ def list_repository_projects():
             "last_updated": last_activity.isoformat() + "Z"
         })
         
+    stopped_count = sum(1 for p in projects if p.status in ('Rejected', 'Cancelled', 'Stopped', 'On Hold') or (p.status and (p.status.startswith('Rejected') or p.status.startswith('Stopped'))))
+
     total_items = len(results)
     if page is not None:
         start = (page - 1) * per_page
@@ -443,7 +451,8 @@ def list_repository_projects():
             "stats": {
                 "total": total_count,
                 "active": active_count,
-                "stalled": stalled_count
+                "stalled": stalled_count,
+                "stopped": stopped_count
             },
             "page": page,
             "per_page": per_page,
@@ -456,7 +465,8 @@ def list_repository_projects():
         "stats": {
             "total": total_count,
             "active": active_count,
-            "stalled": stalled_count
+            "stalled": stalled_count,
+            "stopped": stopped_count
         },
         "page": 1,
         "per_page": total_items,

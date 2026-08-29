@@ -439,6 +439,9 @@ def get_notification_meta():
             {"tag": "{{user_email}}", "label": "Recipient Email Address", "example": "john@acme.com"},
             {"tag": "{{email}}", "label": "User Login Email", "example": "john@acme.com"},
             {"tag": "{{username}}", "label": "Username", "example": "john@acme.com"},
+            {"tag": "{{Password}}", "label": "Default / Temporary Password", "example": "Pass@1234"},
+            {"tag": "{{password}}", "label": "Default Password", "example": "Pass@1234"},
+            {"tag": "{{default_password}}", "label": "Default Password", "example": "Pass@1234"},
             {"tag": "{{temp_password}}", "label": "Temporary Password", "example": "Pass@1234"},
             {"tag": "{{role_name}}", "label": "User Role", "example": "Company Admin"},
             {"tag": "{{plan_name}}", "label": "Subscription Plan", "example": "Small MSME's Plan"},
@@ -578,7 +581,14 @@ def send_test_sms_template(template_key):
         'stage_number': '8',
         'submitter_name': 'Priya Singh',
         'assigned_role': 'Team Leader',
-        'username': 'john.doe@company.com',
+        'username': user.email or user.username or 'john.doe@company.com',
+        'email': user.email or 'john.doe@company.com',
+        'user_email': user.email or 'john.doe@company.com',
+        'Password': 'Pass@1234',
+        'password': 'Pass@1234',
+        'temp_password': 'Pass@1234',
+        'temporary_password': 'Pass@1234',
+        'default_password': 'Pass@1234',
         'invoice_number': 'INV-2026-089',
         'total_amount': '₹ 12,500',
         'amount': '₹ 12,500',
@@ -588,9 +598,8 @@ def send_test_sms_template(template_key):
         'app_url': 'http://127.0.0.1:5000'
     }
 
-    body = tmpl.body or 'Test SMS Notification from IFQM QCMS'
-    for k, v in context.items():
-        body = body.replace(f'{{{{{k}}}}}', str(v)).replace(f'{{{k}}}', str(v))
+    from app.domain.services.email_notification_engine import EmailNotificationEngine
+    body = EmailNotificationEngine.replace_variables(tmpl.body or 'Test SMS Notification from IFQM QCMS', context)
 
     print(f"\n[TEST SMS] Template: {tmpl.display_name} ({tmpl.template_key}) | To: {phone} | Body: {body}\n")
 
@@ -786,6 +795,12 @@ def _seed_sms_template_defaults():
     """Seed default system SMS templates matching all platform communication events if not yet present."""
     defaults = [
         {
+            'template_key': 'password_reset_otp',
+            'display_name': 'Password Reset OTP Verification',
+            'description': 'Sent when a user requests to reset their password and needs to verify their identity via SMS OTP.',
+            'body': 'Dear Customer, use OTP {{otp}} to reset your password on IFQM QCMS. Valid for 10 mins. Do not share with anyone. - IFQM',
+        },
+        {
             'template_key': 'phone_otp_verification',
             'display_name': 'Phone Number OTP Verification',
             'description': 'Sent when a user registers or logs in and needs to verify their mobile number via SMS OTP.',
@@ -866,8 +881,8 @@ def _seed_sms_template_defaults():
         {
             'template_key': 'user_welcome_credentials',
             'display_name': 'User Account Welcome & Login Credentials',
-            'description': 'Sends new invited/created users their login username and quickstart portal access link.',
-            'body': 'Welcome to {{org_name}} on QCMS! Your account username ({{username}}) is active. Log in at {{app_url}} to access your projects. - IFQM QCMS',
+            'description': 'Sends new invited/created users their login username, default temporary password, and quickstart portal access link.',
+            'body': 'Welcome to {{org_name}}! Your Quality Circle account is created. Your account username ({{username}}). Temporary Password: [{{Password}}] Log in at {{app_url}} Please change your password after first login. - IFQM QCMS',
         },
         {
             'template_key': 'payg_metered_invoice',
@@ -909,6 +924,8 @@ def _seed_sms_template_defaults():
             if not existing.description:
                 existing.description = d.get('description', '')
             if not existing.body:
+                existing.body = d.get('body', '')
+            elif d['template_key'] == 'user_welcome_credentials' and ('Password' not in existing.body and 'password' not in existing.body and 'temp_password' not in existing.body):
                 existing.body = d.get('body', '')
             if not existing.display_name:
                 existing.display_name = d.get('display_name', '')

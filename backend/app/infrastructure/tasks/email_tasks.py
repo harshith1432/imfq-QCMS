@@ -14,17 +14,19 @@ logger = logging.getLogger("QCMS.EmailTasks")
 )
 def send_async_email(self, recipient: str, subject: str, html_body: str, sender_name: str = None, org_id: int = None):
     """Sends a transactional email with automated Celery retries on provider hiccups."""
+    if not recipient or str(recipient).strip().lower() in ('none', 'null', ''):
+        return {"status": "skipped", "reason": "invalid_recipient"}
     try:
-        success, message = EmailUtils.send_email(
+        res = EmailUtils.send_email(
             to_email=recipient,
             subject=subject,
             html_content=html_body,
             sender_name=sender_name,
             org_id=org_id
         )
-        if not success:
-            logger.warning(f"[Celery Email] Failed to send email to {recipient}: {message}")
-            raise RuntimeError(message)
+        if not res:
+            logger.warning(f"[Celery Email] Failed or empty response sending email to {recipient}")
+            raise RuntimeError("Email sending failed or returned empty response")
         logger.info(f"[Celery Email] Successfully sent email to {recipient}")
         return {"status": "sent", "recipient": recipient}
     except Exception as exc:
@@ -40,7 +42,7 @@ def send_batch_announcements(self, org_id: int, subject: str, html_content: str,
     
     for email in user_emails:
         try:
-            ok, _ = EmailUtils.send_email(to_email=email, subject=subject, html_content=html_content, org_id=org_id)
+            ok = EmailUtils.send_email(to_email=email, subject=subject, html_content=html_content, org_id=org_id)
             if ok:
                 sent_count += 1
         except Exception as e:

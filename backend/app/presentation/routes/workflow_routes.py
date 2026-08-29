@@ -583,25 +583,67 @@ def _clean_and_get_stage_presence(project_id, stage_id):
         STAGE_PRESENCE[key] = active_dict
         return active_list
 
-def _update_stage_presence(project_id, stage_id, user, is_editing=False):
+def _extract_user_presence_data(user):
+    from app.utils.avatar_utils import get_profile_picture_url
+    if isinstance(user, dict):
+        return user
+
+    avatar_url = ""
+    try:
+        profile_picture = getattr(user, 'profile_picture', None)
+        if profile_picture:
+            avatar_url = get_profile_picture_url(profile_picture)
+    except Exception:
+        avatar_url = ""
+
+    user_name = "Team Member"
+    try:
+        user_name = getattr(user, 'full_name', None) or getattr(user, 'username', None) or "Team Member"
+    except Exception:
+        pass
+
+    role_name = "Team Member"
+    try:
+        role = getattr(user, 'role', None)
+        if role and hasattr(role, 'name'):
+            role_name = role.name
+    except Exception:
+        pass
+
+    email = ""
+    try:
+        email = getattr(user, 'email', '') or ""
+    except Exception:
+        pass
+
+    user_id = getattr(user, 'id', None)
+
+    return {
+        "user_id": user_id,
+        "name": user_name,
+        "role": role_name,
+        "avatar": avatar_url,
+        "email": email,
+    }
+
+def _update_stage_presence(project_id, stage_id, user_or_data, is_editing=False):
     now = time.time()
     key = (int(project_id), int(stage_id))
+    user_info = _extract_user_presence_data(user_or_data) if not isinstance(user_or_data, dict) else user_or_data
+    uid = user_info.get("user_id")
+    if not uid:
+        return
+
     with _PRESENCE_LOCK:
         if key not in STAGE_PRESENCE:
             STAGE_PRESENCE[key] = {}
         
-        from app.utils.avatar_utils import get_profile_picture_url
-        avatar_url = get_profile_picture_url(user.profile_picture) if getattr(user, 'profile_picture', None) else ""
-        
-        user_name = getattr(user, 'full_name', None) or getattr(user, 'username', None) or "Team Member"
-        role_name = user.role.name if getattr(user, 'role', None) else "Team Member"
-
-        STAGE_PRESENCE[key][user.id] = {
-            "user_id": user.id,
-            "name": user_name,
-            "role": role_name,
-            "avatar": avatar_url,
-            "email": getattr(user, 'email', '') or "",
+        STAGE_PRESENCE[key][uid] = {
+            "user_id": uid,
+            "name": user_info.get("name") or "Team Member",
+            "role": user_info.get("role") or "Team Member",
+            "avatar": user_info.get("avatar") or "",
+            "email": user_info.get("email") or "",
             "is_editing": bool(is_editing),
             "last_seen": now
         }
@@ -667,8 +709,11 @@ def stage_presence_stream(project_id, stage_id):
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
+    # Extract user profile data while DB session is open and active
+    user_data = _extract_user_presence_data(user)
+
     # Initial register
-    _update_stage_presence(project_id, stage_id, user, is_editing=False)
+    _update_stage_presence(project_id, stage_id, user_data, is_editing=False)
 
     from flask import Response, stream_with_context
 
@@ -676,7 +721,7 @@ def stage_presence_stream(project_id, stage_id):
         start_time = time.time()
         # Stream for 60 seconds per connection cycle (browser EventSource will auto-reconnect)
         while time.time() - start_time < 60:
-            _update_stage_presence(project_id, stage_id, user, is_editing=False)
+            _update_stage_presence(project_id, stage_id, user_data, is_editing=False)
             active_users = _clean_and_get_stage_presence(project_id, stage_id)
             payload = json.dumps(active_users)
             yield f"data: {payload}\n\n"

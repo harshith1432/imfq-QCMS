@@ -11,9 +11,10 @@ class QualityAIAssistant:
     """
     Enterprise Quality AI Assistant Engine:
     - Zero-latency dynamic organization queries (employees, QC counts, plants, departments, project growth)
-    - Comprehensive 200+ question how-to & configuration navigation manual
-    - 8-Stage QC Methodology & Quality Tools specialist
-    - Strict Role-Based Access Control (RBAC) & Data Privacy enforcement
+    - Comprehensive 21-Case Super Admin Standard Operating Procedures (SOP) Library
+    - Organization Admin Operational & Infrastructure Configuration Manual
+    - 8-Stage QC Methodology & Quality Tools specialist (Fishbone 6M, Pareto 80/20, 5-Why, 3W1H)
+    - Strict Role-Based Access Control (RBAC) & Dashboard Boundary enforcement
     - Knowledge Repository RAG integration for historical root causes and solutions
     """
 
@@ -39,12 +40,20 @@ class QualityAIAssistant:
             }
 
         role_name = (user.role.name if user.role else "Team Member").strip()
+        role_lower = role_name.lower()
         clean_query = query.strip()
         lower_query = clean_query.lower()
 
+        is_super_admin = (
+            getattr(user, 'is_super_admin', False)
+            or 'super' in role_lower
+            or (getattr(user, 'org_id', None) == 1 and role_name in ['Super Admin', 'SuperAdmin'])
+        )
+        is_admin = is_super_admin or role_name in ['Admin', 'Administrator', 'Corporate Admin', 'Org Admin']
+        is_ceo = any(w in role_lower for w in ['ceo', 'exec', 'director', 'managing'])
+
         # 1. RBAC Check: Restrict sensitive financial / admin data for lower-tier roles
-        is_admin_or_ceo = role_name in ['Super Admin', 'Admin', 'CEO', 'SuperAdmin', 'Corporate Admin']
-        if not is_admin_or_ceo:
+        if not (is_admin or is_ceo):
             for kw in cls.RESTRICTED_KEYWORDS_EMPLOYEE:
                 if kw in lower_query:
                     return {
@@ -61,33 +70,319 @@ class QualityAIAssistant:
                         "sources": []
                     }
 
-        # 2. Dynamic Live Organization Data Query Router
-        dynamic_answer = cls._handle_dynamic_org_queries(lower_query, clean_query, user, role_name, is_admin_or_ceo)
+        # 2. Super Admin 21 Use Cases Router (Evaluates Super Admin features & enforces role boundaries)
+        sa_answer = cls._handle_super_admin_cases(lower_query, is_super_admin, role_name)
+        if sa_answer:
+            return sa_answer
+
+        # 3. Dynamic Live Organization Data Query Router
+        dynamic_answer = cls._handle_dynamic_org_queries(lower_query, clean_query, user, role_name, is_admin or is_ceo)
         if dynamic_answer:
             return dynamic_answer
 
-        # 2. System How-To, Configuration & Navigation Manual Router (Checked first for actionable instructions)
-        how_to_answer = cls._handle_how_to_queries(lower_query, role_name, is_admin_or_ceo)
+        # 4. System How-To, Configuration & Navigation Manual Router (Checked for actionable instructions)
+        how_to_answer = cls._handle_how_to_queries(lower_query, role_name, is_admin, is_super_admin)
         if how_to_answer:
             return how_to_answer
 
-        # 3. 8-Stage QC Methodology & Quality Tools Knowledge Router
+        # 5. 8-Stage QC Methodology & Quality Tools Knowledge Router
         qc_methodology_answer = cls._handle_qc_methodology_queries(lower_query)
         if qc_methodology_answer:
             return qc_methodology_answer
 
-        # 4. Dynamic Live Organization Data Query Router
-        dynamic_answer = cls._handle_dynamic_org_queries(lower_query, clean_query, user, role_name, is_admin_or_ceo)
-        if dynamic_answer:
-            return dynamic_answer
-
-        # 5. Historical Knowledge Repository RAG Lookup (Archived Projects & Root Causes)
+        # 6. Historical Knowledge Repository RAG Lookup (Archived Projects & Root Causes)
         rag_answer = cls._handle_knowledge_repository_lookup(clean_query, org_id)
         if rag_answer:
             return rag_answer
 
-        # 6. Comprehensive Fallback Assistant Response
-        return cls._generate_smart_fallback(clean_query, role_name, user)
+        # 7. Comprehensive Fallback Assistant Response
+        return cls._generate_smart_fallback(clean_query, role_name, user, is_super_admin, is_admin)
+
+    @classmethod
+    def _handle_super_admin_cases(cls, lq: str, is_super_admin: bool, role_name: str):
+        """
+        Covers the 21 Super Administrator Standard Operating Procedures (SOPs).
+        Enforces strict role boundary when non-super-admins ask about platform governance.
+        """
+        # Define the 21 Cases with intent matching
+        cases_map = [
+            # Case 1: Fetch/Modify Organization data
+            {
+                "keys": ['modify organisation', 'modify organization', 'fetch organisation', 'fetch organization', 'edit profile of org', 'reset password org', 'pause org', 'delete org', 'manage organization', 'organisation data', 'organization data', 'extend trail org'],
+                "case_num": 1,
+                "title": "To Fetch / Modify Organization Data",
+                "steps": [
+                    "Step 1: Go to **Organization** (`/admin/super-admin-orgs.html`) from the Super Admin sidebar.",
+                    "Step 2: Click on **Action Button** (⋮) next to the target organization row.",
+                    "Step 3: Click on **View Details / Edit Profile / Extend Trial / Reset Password / Pause / Delete Org** as required."
+                ]
+            },
+            # Case 2: Download the Overall Organization
+            {
+                "keys": ['download overall organisation', 'download overall organization', 'export organization csv', 'export org csv', 'download all organizations', 'export organizations'],
+                "case_num": 2,
+                "title": "To Download Overall Organization Directory",
+                "steps": [
+                    "Step 1: Go to **Organization** (`/admin/super-admin-orgs.html`).",
+                    "Step 2: Click on **Export CSV Button** in the top action toolbar."
+                ]
+            },
+            # Case 3: Create New Plan
+            {
+                "keys": ['create new plan', 'create plan', 'add plan', 'new plan button', 'create subscription plan'],
+                "case_num": 3,
+                "title": "To Create New Subscription Plan",
+                "steps": [
+                    "Step 1: Go to **Plans** (`/admin/super-admin-plans.html`).",
+                    "Step 2: Click on **New Plan Button**.",
+                    "Step 3: Enter the plan Details (Plan Name, Pricing, User Quota, Plant Limit, Storage).",
+                    "Step 4: Click **Next** and click the **Save** button."
+                ]
+            },
+            # Case 4: Dispatch All Pay As You Go
+            {
+                "keys": ['pay as you go', 'dispatch bills', 'metered rules', 'generate & send invoices', 'generate and send invoices', 'dispatch all the pay as you go'],
+                "case_num": 4,
+                "title": "To Dispatch All Pay-As-You-Go Metered Bills",
+                "steps": [
+                    "Step 1: Go to **Plans** (`/admin/super-admin-plans.html`).",
+                    "Step 2: Click on **Pay As You Go** tab.",
+                    "Step 3: Click on **Set the Metered Rules** button to define per-unit rates.",
+                    "Step 4: Click **Dispatch Bills Button**.",
+                    "Step 5: Click on **Generate & Send Invoices** to dispatch metered invoices."
+                ]
+            },
+            # Case 5: View/Edit the plan
+            {
+                "keys": ['view the plan', 'edit the plan', 'modify plan', 'view plan', 'edit plan'],
+                "case_num": 5,
+                "title": "To View / Edit Existing Subscription Plan",
+                "steps": [
+                    "Step 1: Go to **Plans** (`/admin/super-admin-plans.html`).",
+                    "Step 2: Click on **Action Button** on the target plan tier.",
+                    "Step 3: To view click on **View**.",
+                    "Step 4: To edit click on **Edit**."
+                ]
+            },
+            # Case 6: Extend Trial
+            {
+                "keys": ['extend trail', 'extend trial', 'extend organization trial', 'grant trial days'],
+                "case_num": 6,
+                "title": "To Extend Organization Trial",
+                "steps": [
+                    "Step 1: Go to **Support Tickets** (`/admin/super-admin-tickets.html`).",
+                    "Step 2: Under Action, Click on **Extend Trial Button**."
+                ]
+            },
+            # Case 7: Create Ticket
+            {
+                "keys": ['create ticket', 'new support ticket', 'open ticket', 'create support ticket'],
+                "case_num": 7,
+                "title": "To Create Support Ticket",
+                "steps": [
+                    "Step 1: Go to **Support Tickets** (`/admin/super-admin-tickets.html`).",
+                    "Step 2: Click on **Create Ticket**.",
+                    "Step 3: Enter the details (Target Org, Category, Priority, Subject).",
+                    "Step 4: Review the content.",
+                    "Step 5: Click on **Create Ticket**."
+                ]
+            },
+            # Case 8: Define New SMS/Email Template
+            {
+                "keys": ['define new sms', 'define new email template', 'set sms/email notification', 'set sms email notification', 'save notification rule', 'sms template config', 'email notification rule'],
+                "case_num": 8,
+                "title": "To Define New SMS / Email Notification Template",
+                "steps": [
+                    "Step 1: Go to **Announcements** (`/admin/super-admin-announcements.html`).",
+                    "Step 2: Click on **Set SMS / Email Notification**.",
+                    "Step 3: Click on **Set SMS / Email Notification Button**.",
+                    "Step 4: Define New Rule (Event Trigger, DLT Template ID, PE ID, Sender ID, Email/SMS Body).",
+                    "Step 5: Click on **Save Notification Rule Button**."
+                ]
+            },
+            # Case 9: Create New Announcement
+            {
+                "keys": ['create new announcement', 'compose broadcast', 'publish announcement', 'send announcement', 'broadcast announcement'],
+                "case_num": 9,
+                "title": "To Create New Announcement Broadcast",
+                "steps": [
+                    "Step 1: Go to **Announcements** (`/admin/super-admin-announcements.html`).",
+                    "Step 2: Click on **Compose Broadcast**.",
+                    "Step 3: Enter the details (Title, Message, Category).",
+                    "Step 4: Select the Target Audience (All Organizations, Specific Tenants, Admins).",
+                    "Step 5: Click on **Send**."
+                ]
+            },
+            # Case 10: View Billing Details
+            {
+                "keys": ['view the billing details', 'view billing details', 'view invoice details', 'super admin billing', 'payment receipt details'],
+                "case_num": 10,
+                "title": "To View Organization Billing Details & Invoices",
+                "steps": [
+                    "Step 1: Go to **Billings** (`/admin/super-admin-billing.html`).",
+                    "Step 2: Click on **Action Button** (⋮) on the invoice record.",
+                    "Step 3: Click on **View Details**."
+                ]
+            },
+            # Case 11: Delete / Purge Audit Logs
+            {
+                "keys": ['delete the audit logs', 'delete audit logs', 'purge audit logs', 'purge logs', 'clean audit trail'],
+                "case_num": 11,
+                "title": "To Delete / Purge Security Audit Logs",
+                "steps": [
+                    "Step 1: Go to **Audit Logs** (`/admin/super-admin-audit-logs.html`).",
+                    "Step 2: Click on **Purge Audit Logs**.",
+                    "Step 3: Select the option from the Dropdown (Older than 30/90 days, All Logs).",
+                    "Step 4: Click on **Confirm & Purge Logs**."
+                ]
+            },
+            # Case 12: Update Platform & Company Details
+            {
+                "keys": ['update the platform & company details', 'update platform details', 'doc identity & branding', 'doc identity', 'save platform identity', 'watermark settings'],
+                "case_num": 12,
+                "title": "To Update Platform & Company Identity Details",
+                "steps": [
+                    "Step 1: Go to **Doc Identity & Branding** (`/admin/super-admin-doc-identity.html`).",
+                    "Step 2: Enter the details (Software Name, Support Email, Watermarks, Headers).",
+                    "Step 3: Click on **Save Platform Identity Button**."
+                ]
+            },
+            # Case 13: View Storage Used by Individual Organization
+            {
+                "keys": ['view storage used by individual organization', 'adjust storage limit', 'storage analytics', 'organization storage limit', 'tenant storage'],
+                "case_num": 13,
+                "title": "To View & Adjust Storage Used by Individual Organization",
+                "steps": [
+                    "Step 1: Click on **Storage Analytics** (`/admin/super-admin-storage-analytics.html`).",
+                    "Step 2: Click on **Details Button** next to the target organization.",
+                    "Step 3: Click on **Adjust Storage Limit**.",
+                    "Step 4: Set new Limit (in GB).",
+                    "Step 5: Click on **Save Button**."
+                ]
+            },
+            # Case 14: Update Global 8 Stage Template
+            {
+                "keys": ['update global 8 stage template', 'global stage template', 'add new stage', 'add columns under the any stages', 'save templates button', 'reset to default button'],
+                "case_num": 14,
+                "title": "To Update Global 8-Stage Master Template",
+                "steps": [
+                    "Step 1: Go to **Global Stage Template** (`/admin/super-admin-stage-template.html`).",
+                    "Step 2: Click on **Add New Stage Button** to add new Stage.",
+                    "Step 3: To add New Columns in existing Stages, click on **Add Columns** under any stage.",
+                    "Step 4: Click on **Save Templates Button**.",
+                    "Step 5: To keep default template settings, click on **Reset to Default Button**."
+                ]
+            },
+            # Case 15: Delete Organization Permanently
+            {
+                "keys": ['delete the organization permanently', 'delete org permanently', 'empty recycle bin', 'permanently delete organization'],
+                "case_num": 15,
+                "title": "To Delete Organization Permanently",
+                "steps": [
+                    "Step 1: Go to **Recycle Bin** (`/admin/super-admin-recycle-bin.html`).",
+                    "Step 2: Click on the **Empty Recycle Bin Button**.",
+                    "Step 3: Click **OK**."
+                ]
+            },
+            # Case 16: Recover Organization from Recycle Bin
+            {
+                "keys": ['recover the organization from recycle bin', 'recover organization', 'recover org from recycle bin', 'restore organization'],
+                "case_num": 16,
+                "title": "To Recover Organization from Recycle Bin",
+                "steps": [
+                    "Step 1: Go to **Recycle Bin** (`/admin/super-admin-recycle-bin.html`).",
+                    "Step 2: Click on **Recover Button** next to the soft-deleted organization.",
+                    "Step 3: Click **OK**."
+                ]
+            },
+            # Case 17: General Settings (Self-Service, Email OTP, Phone OTP, Maintenance)
+            {
+                "keys": ['self-service sign-up', 'self service sign up', 'email otp verification', 'phone otp verification', 'maintenance mode', 'general settings', 'all four options are available'],
+                "case_num": 17,
+                "title": "To Configure General Platform Settings (Self-Service, Email OTP, Phone OTP, Maintenance)",
+                "steps": [
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
+                    "Step 2: Under **General**, all four options are available (*Self-Service Sign-up, Email OTP Verification, Phone OTP Verification, Maintenance Mode*).",
+                    "Step 3: Turn On / Off the Button switches.",
+                    "Step 4: Click on **Save**."
+                ]
+            },
+            # Case 18: Upload Logo & Branding
+            {
+                "keys": ['upload the logo', 'upload logo', 'upload dark logo', 'upload favicon', 'upload background graphic', 'upload splash image', 'save branding button'],
+                "case_num": 18,
+                "title": "To Upload Platform Logos & Branding Assets",
+                "steps": [
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
+                    "Step 2: Under **Branding**, upload Logo, Dark Logo, Favicon, Background Graphic, and Splash Image.",
+                    "Step 3: Click on **Save Branding Button**."
+                ]
+            },
+            # Case 19: Update Super Admin Password
+            {
+                "keys": ['update super admin password', 'change super admin password', 'super admin logins enter new password', 'update my credentials button'],
+                "case_num": 19,
+                "title": "To Update Super Admin Password",
+                "steps": [
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
+                    "Step 2: Under **Super Admin Logins**, enter New Password.",
+                    "Step 3: Click on **Update My Credentials Button**."
+                ]
+            },
+            # Case 20: Add New Super Admin
+            {
+                "keys": ['add new super admin', 'add super admin', 'create super admin account', 'create super admin account button'],
+                "case_num": 20,
+                "title": "To Add New Super Admin Account",
+                "steps": [
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
+                    "Step 2: Under **Super Admin Logins**, click on **Add Super Admin**.",
+                    "Step 3: Enter the details (Name, Email, Username, Password).",
+                    "Step 4: Click on **Create Super Admin Account Button**."
+                ]
+            },
+            # Case 21: Modify Landing Page
+            {
+                "keys": ['modify landing page', 'landing cms', 'publish landing page', 'use default template button', 'edit landing page'],
+                "case_num": 21,
+                "title": "To Modify Platform Landing Page",
+                "steps": [
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
+                    "Step 2: Under **Landing CMS**, enter the details (Hero Headline, Subtitle, Features, CTA labels).",
+                    "Step 3: Click on **Publish Landing Page / Use Default Template Button**."
+                ]
+            }
+        ]
+
+        # Check for matching case
+        for c in cases_map:
+            if any(k in lq for k in c['keys']):
+                # Role boundary enforcement
+                if not is_super_admin:
+                    return {
+                        "answer": (
+                            f"🔒 **Administrative Role Notice**\n\n"
+                            f"The procedure **'{c['title']}'** is a **Super Administrator** feature and is managed inside the Super Admin Console (`/admin/super-admin.html`).\n\n"
+                            f"As a **{role_name}**, your dashboard provides access to:\n"
+                            f"- Quality Circle project workflows & stage progress (Stages 1 to 8)\n"
+                            f"- Quality problem-solving tools (Fishbone 6M, Pareto 80/20, 5-Why Analysis)\n"
+                            f"- Task assignments, idea submissions, and reward leaderboard rankings.\n\n"
+                            f"If you need changes to platform subscriptions, global templates, or tenant settings, please contact your Super Administrator."
+                        ),
+                        "sources": []
+                    }
+
+                # If Super Admin, return the exact step-by-step SOP
+                lines = [
+                    f"### 🛡️ Super Admin SOP — Case {c['case_num']}: {c['title']}\n",
+                    "Follow these standard operating steps:\n"
+                ]
+                for step in c['steps']:
+                    lines.append(f"- {step}")
+                lines.append("\n*Tip: All Super Admin procedures can also be viewed in the [Super Admin User Manual](/resources/user-manual.html).*")
+                return {"answer": "\n".join(lines), "sources": []}
+
+        return None
 
     @classmethod
     def _handle_dynamic_org_queries(cls, lq: str, query: str, user: User, role_name: str, is_admin_or_ceo: bool):
@@ -251,7 +546,7 @@ class QualityAIAssistant:
 
         # E. Leaderboard & Rewards Query
         if any(p in lq for p in ['leaderboard', 'top employee', 'points rank', 'rewards', 'who has highest point']):
-            from app.infrastructure.database.models.models import EmployeePoints, EmployeeLeaderboard
+            from app.infrastructure.database.models.models import EmployeeLeaderboard
             leaderboard = (
                 db.session.query(User.name, User.username, Department.name.label('dept_name'), EmployeeLeaderboard.total_points, EmployeeLeaderboard.badge)
                 .join(EmployeeLeaderboard, EmployeeLeaderboard.user_id == User.id)
@@ -274,32 +569,35 @@ class QualityAIAssistant:
         return None
 
     @classmethod
-    def _handle_how_to_queries(cls, lq: str, role_name: str, is_admin_or_ceo: bool):
+    def _handle_how_to_queries(cls, lq: str, role_name: str, is_admin: bool, is_super_admin: bool):
         # 1. How to manage / add Users / Employees, Bulk Import, Bulk Export & Custom Fields
         is_employee_query = any(w in lq for w in ['employee', 'user', 'member', 'stakeholder', 'person', 'staff', 'people'])
         is_add_action = any(w in lq for w in ['add', 'create', 'register', 'new', 'invite', 'provision', 'import', 'export', 'custom field', 'configure field', 'manage'])
         if (is_employee_query and is_add_action) or any(p in lq for p in ['how to add employee', 'how to add an employee', 'add employee', 'add user', 'add member', 'bulk import', 'bulk export', 'export user', 'configure field', 'custom field', 'manage users', 'user management']):
+            if not is_admin:
+                return {
+                    "answer": (
+                        f"🔒 **Admin Privilege Required**: Managing employee accounts, bulk imports, and custom fields requires **Organization Admin** privileges.\n\n"
+                        f"As a **{role_name}**, you can view your team members inside your active projects on the **Project Details > Team** tab."
+                    ),
+                    "sources": []
+                }
             return {
                 "answer": (
-                    "### 👥 How to Add & Manage Organization Employees\n\n"
+                    "### 👥 How to Add & Manage Organization Employees (Org Admin)\n\n"
                     "Follow these steps to register members, bulk import/export, or customize user attributes:\n\n"
                     "1. **Navigate to User Management**:\n"
-                    "   - Open the left sidebar and click **User Management** under **Administration** (or visit `/admin/users.html`).\n\n"
+                    "   - Open the left sidebar and click **User Management** (`/admin/users.html`).\n\n"
                     "2. **Add an Individual Employee / Member**:\n"
                     "   - Click the purple **`+ Add Member`** button in the top right.\n"
-                    "   - **Full Name**: Enter the employee's name.\n"
-                    "   - **Email Address**: Enter corporate email (used for notifications & login).\n"
-                    "   - **Username**: Assign a unique username.\n"
-                    "   - **Role Assignment**: Choose *Admin, Facilitator, Reviewer, Team Leader, or Team Member*.\n"
-                    "   - **Plant & Department**: Select their assigned operational plant facility and department.\n"
+                    "   - Fill in Full Name, Corporate Email, Username, Role (*Admin, Facilitator, Reviewer, Team Leader, Team Member*), Plant, and Department.\n"
                     "   - Click **Save Member**.\n\n"
                     "3. **Bulk Import from Excel / CSV (Batch Provisioning)**:\n"
-                    "   - Click **`Bulk Import`** in the top action bar.\n"
-                    "   - Download the pre-formatted CSV template, paste your organization's roster, and upload to create hundreds of employees simultaneously.\n\n"
+                    "   - Click **`Bulk Import`** in the action bar, download the template, paste your roster, and upload.\n\n"
                     "4. **Bulk Export Directory**:\n"
-                    "   - Click **`Bulk Export`** to download your full workforce directory with roles and plant mappings.\n\n"
+                    "   - Click **`Bulk Export`** to download your full workforce directory.\n\n"
                     "5. **Configure Custom Employee Fields**:\n"
-                    "   - Click **`Configure Fields`** to add custom columns such as *Employee ID, Grade, Cost Center, Shift, or Mobile Number*."
+                    "   - Click **`Configure Fields`** to add custom columns like Employee ID, Grade, or Shift."
                 ),
                 "sources": []
             }
@@ -308,21 +606,20 @@ class QualityAIAssistant:
         is_plant_query = any(w in lq for w in ['plant', 'location', 'facility', 'site', 'factory', 'branch'])
         is_plant_action = any(w in lq for w in ['add', 'create', 'configure', 'setup', 'new', 'change', 'manage', 'how to'])
         if (is_plant_query and is_plant_action) or any(p in lq for p in ['plant location', 'configure plant', 'add plant', 'create plant']):
+            if not is_admin:
+                return {
+                    "answer": f"🔒 **Admin Privilege Required**: Configuring plant locations requires **Organization Admin** privileges.",
+                    "sources": []
+                }
             return {
                 "answer": (
                     "### 🏭 How to Configure & Manage Plant Locations\n\n"
-                    "Follow these steps to set up or update manufacturing facilities and operating sites:\n\n"
                     "1. **Navigate to Plant Locations**:\n"
-                    "   - Open the left sidebar and click **Plant Locations** under the **Administration** menu (or visit `/admin/plants.html`).\n\n"
+                    "   - Click **Plant Locations** (`/admin/plants.html`) under Administration.\n\n"
                     "2. **Add a New Plant**:\n"
-                    "   - Click the purple **`+ Add Plant Location`** button in the top right.\n"
-                    "   - **Plant Name** (Required): e.g. `Pune Manufacturing Plant`.\n"
-                    "   - **Plant Code** (Optional): e.g. `PN-01`.\n"
-                    "   - **Location / Address**: Enter the physical facility address.\n"
-                    "   - Click **Save Plant Location**.\n\n"
-                    "3. **Edit, Map or Reassign**:\n"
-                    "   - Click **`Edit`** on any row to modify details.\n"
-                    "   - When deleting a plant, the smart wizard allows you to automatically reassign all existing departments and employees to an alternate facility."
+                    "   - Click **`+ Add Plant Location`**.\n"
+                    "   - Enter Plant Name, Plant Code, and Address.\n"
+                    "   - Click **Save Plant Location**."
                 ),
                 "sources": []
             }
@@ -331,126 +628,70 @@ class QualityAIAssistant:
         is_dept_query = any(w in lq for w in ['department', 'dept', 'unit', 'division'])
         is_dept_action = any(w in lq for w in ['add', 'create', 'configure', 'setup', 'new', 'change', 'manage', 'how to'])
         if (is_dept_query and is_dept_action) or any(p in lq for p in ['add department', 'create department', 'configure department']):
+            if not is_admin:
+                return {
+                    "answer": f"🔒 **Admin Privilege Required**: Configuring departments requires **Organization Admin** privileges.",
+                    "sources": []
+                }
             return {
                 "answer": (
                     "### 🏢 How to Configure & Manage Organization Departments\n\n"
-                    "Follow these steps to create or reassign operational units:\n\n"
-                    "1. **Navigate to Departments**:\n"
-                    "   - In the left sidebar under **Administration**, click **Departments** (or visit `/admin/departments.html`).\n\n"
-                    "2. **Create Department**:\n"
-                    "   - Click the **`+ Add Department`** button.\n"
-                    "   - **Plant Location**: Select which plant facility this department belongs to (or choose *Organization-Wide / All Plants*).\n"
-                    "   - **Department Name**: Enter the title (e.g. `Quality Assurance`, `Maintenance`, `Assembly Line 1`).\n"
-                    "   - Click **Save**.\n\n"
-                    "3. **Filtering & Actions**:\n"
-                    "   - Use the **Filter Plant** dropdown to filter departments by facility.\n"
-                    "   - Use the **Actions (⋮)** menu on any row to edit name, reassign to another plant, or delete."
+                    "1. **Navigate to Departments** (`/admin/departments.html`).\n"
+                    "2. **Select Parent Plant** from the dropdown filter.\n"
+                    "3. Click **`+ Add Department`**, enter Department Name and Code, then click **Save**."
                 ),
                 "sources": []
             }
 
-        # 4. How to configure the 8 stages / stage template / weightages / methodology content
-        is_8stage_word = any(p in lq for p in ['8 stage', '8-stage', '8stage', 'eight stage', 'stage template', 'stages template', 'stage configuration', 'configure stage', 'configure the 8', 'stage content', 'what are the stages', 'stages of qc', 'tell me the stages', 'explain the stages'])
-        is_8stage_config = any(w in lq for w in ['configure', 'template', 'setup', 'set up', 'explain', 'tell me', 'what are', 'understand', 'overview', 'describe'])
-        if is_8stage_word or (is_8stage_config and any(w in lq for w in ['stage', 'stages'])):
-            return {
-                "answer": (
-                    "### ⚙️ The 8-Stage QCMS Project Template — What Each Stage Contains\n\n"
-                    "Each Quality Circle project follows a structured **8-Stage methodology**. Here's how to navigate and configure each stage:\n\n"
-                    "**Stage 1 — Problem Definition & Project Initiation**\n"
-                    "- Configure the 5W2H Project Charter (What, Where, When, Who, Why, How, How Much).\n"
-                    "- Set the baseline KPI metric (defect rate, cost, downtime, etc.).\n"
-                    "- Assign Team Leader, QCC Facilitator, Reviewer, and cross-functional team.\n\n"
-                    "**Stage 2 — Observation & Data Collection**\n"
-                    "- Fill Check Sheet entries and stratify data by 4M (Man, Machine, Material, Method).\n"
-                    "- Build the Pareto Chart to identify the vital few defect categories.\n\n"
-                    "**Stage 3 — Cause Identification (Fishbone)**\n"
-                    "- Construct the Ishikawa Fishbone Diagram using the 6M branches.\n"
-                    "- Brainstorm and link causes to the main problem.\n\n"
-                    "**Stage 4 — Root Cause Analysis & Verification**\n"
-                    "- Run the 5-Why analysis on selected causes.\n"
-                    "- Perform Good vs Bad comparison tests; isolate verified root causes.\n\n"
-                    "**Stage 5 — Countermeasure Planning**\n"
-                    "- Create the 3W1H Action Plan (What, Who, Where, How).\n"
-                    "- Evaluate countermeasure feasibility and expected impact.\n\n"
-                    "**Stage 6 — Implementation**\n"
-                    "- Log implementation tasks with owner, due date, and evidence upload.\n"
-                    "- Conduct operator training and track completion.\n\n"
-                    "**Stage 7 — Performance Verification**\n"
-                    "- Compare Before vs After KPI metrics.\n"
-                    "- Record tangible cost savings and ROI realization.\n\n"
-                    "**Stage 8 — Standardization & Closure**\n"
-                    "- Finalize and attach Standard Operating Procedures (SOPs).\n"
-                    "- Collect Section 9 digital sign-offs from all hierarchy signatories.\n"
-                    "- Mark project as **Completed & Standardized**.\n\n"
-                    "*Tip: Navigate each stage tab inside your project on **Project Repository** (`/project-details.html?id=<ID>`). Stage weightages can be adjusted at **Administration > Settings > Stage Weightages**.*"
-                ),
-                "sources": []
-            }
-
-        # 5. How to create or start a new QC Project
+        # 4. How to create or start a new QC Project (Available to Team Leader, Member, Admin)
         is_proj_word = any(w in lq for w in ['project', 'qcms', 'quality circle', 'qc story'])
         is_proj_start = any(w in lq for w in ['start', 'create', 'launch', 'new', 'initiate', 'begin', 'execute'])
         if (is_proj_word and is_proj_start) or any(p in lq for p in ['create project', 'start project', 'new project', 'how to create a project', 'how to start a project', 'how to start and execute']):
             return {
                 "answer": (
                     "### 🚀 How to Start & Execute an 8-Stage QCMS Project\n\n"
-                    "1. **Launch Project Creator**:\n"
-                    "   - Click **Project Repository** in the sidebar and click **`+ New Project`** (or go to `/projects.html`).\n\n"
-                    "2. **Fill Project Initiation Charter**:\n"
-                    "   - **Project Title & Pillar**: Define problem title and category (*Quality, Cost, Delivery, Safety, Morale, Environment, Productivity*).\n"
-                    "   - **Assign Leadership**: Choose **Team Leader**, **QCC Facilitator**, and **Reviewer**.\n"
-                    "   - **Select Team Members**: Add cross-functional members from your organization directory.\n"
-                    "   - **Plant & Department**: Map the operational facility.\n"
-                    "   - **Target Deadline & Milestone Schedule**.\n\n"
-                    "3. **Progress Through the 8 Stages**:\n"
-                    "   - **Stage 1**: Problem Definition (5W2H charter & baseline metric)\n"
-                    "   - **Stage 2**: Observation & Check Sheets (Pareto analysis)\n"
-                    "   - **Stage 3**: Cause Brainstorming (Ishikawa Fishbone 6M)\n"
-                    "   - **Stage 4**: Root Cause Verification (5-Why analysis & hypothesis testing)\n"
-                    "   - **Stage 5**: Countermeasure Action Plan (3W1H matrix)\n"
-                    "   - **Stage 6**: Implementation & Operator Training\n"
-                    "   - **Stage 7**: Performance Verification (Before vs After KPI & Cost Savings)\n"
-                    "   - **Stage 8**: Standardization (SOP deployment & Section 9 Sign-offs)"
+                    "1. **Open Project Repository**:\n"
+                    "   - In the sidebar, click **Project Repository** (`/projects/projects-repository.html`).\n\n"
+                    "2. **Launch Project Creator**:\n"
+                    "   - Click the primary **`+ Create New Project`** button in the top right.\n\n"
+                    "3. **Fill Project Initiation Charter**:\n"
+                    "   - **Title & Problem Statement**: Define the quality problem clearly.\n"
+                    "   - **Plant & Department**: Select operational unit.\n"
+                    "   - **Assign Leadership**: Select Team Leader, Facilitator, and Reviewer.\n"
+                    "   - **Select Team Members**: Pick team contributors.\n\n"
+                    "4. Click **Create & Go to Stage 1** to initialize the project."
                 ),
                 "sources": []
             }
 
-        # 5. How to configure Sign-Off Hierarchy
-        if any(w in lq for w in ['sign-off', 'sign off', 'hierarchy', 'signature', 'signatory', 'signatories', 'closure approval']):
+        # 5. How to submit Kaizen ideas or earn rewards
+        if any(w in lq for w in ['idea', 'kaizen', 'submit idea', 'earn points', 'reward points', 'badge']):
             return {
                 "answer": (
-                    "### ✍️ How to Configure Sign-Off Hierarchy for QC Story Reports\n\n"
-                    "Customize corporate signatories (HR, Finance, Plant Head, Quality Director) for Section 9 closure sign-offs:\n\n"
-                    "1. **Access Hierarchy Settings**:\n"
-                    "   - Open **Administration > Settings** (or visit `/admin/settings.html#pane-signoff-hierarchy`).\n"
-                    "   - Open the **Sign-Off Hierarchy** tab.\n\n"
-                    "2. **Configure Signatory Roles**:\n"
-                    "   - Standard roles (**Team Leader**, **QCC Facilitator**, **Project Reviewer**) are included automatically.\n"
-                    "   - Click **`+ Add Hierarchy Role`** to add organizational approvals (e.g. `HR Head`, `Finance Controller`, `Plant Head`, `General Manager`).\n"
-                    "   - Use the up/down arrows to adjust the sign-off sequence.\n"
-                    "   - Click **Save Sign-Off Hierarchy**.\n\n"
-                    "3. **Generated PDF Output**:\n"
-                    "   - When downloading the QC Storyboard Report PDF, Section 9 will render clear signature boxes and approval dates for all configured signatories."
+                    "### 💡 How to Submit Ideas & Earn Reward Points\n\n"
+                    "1. **Submit Kaizen Ideas**:\n"
+                    "   - Navigate to **Ideas Hub** in the sidebar.\n"
+                    "   - Click **`+ Submit New Idea`**, describe your improvement proposal and projected impact.\n"
+                    "   - Earn instant reward points upon submission and bonus points upon approval.\n\n"
+                    "2. **Earn Points from Projects**:\n"
+                    "   - Complete assigned Stage tasks, log 5-Why root cause findings, and standardize SOPs in Stage 8 to climb the organization leaderboard!"
                 ),
                 "sources": []
             }
 
         # 6. How to configure Stage Weightages
         if any(w in lq for w in ['weightage', 'weight slider', 'rca heavy', 'stage weight', 'stage percentage']):
+            if not is_admin:
+                return {
+                    "answer": f"🔒 **Admin Privilege Required**: Configuring 8-stage progress weightages requires **Organization Admin** privileges.",
+                    "sources": []
+                }
             return {
                 "answer": (
-                    "### ⚖️ How to Configure 8-Stage Progress Weightages\n\n"
-                    "1. **Access Weightage Manager**:\n"
-                    "   - Go to Super Admin / Admin console under **Stage Weightages** (`/admin/settings.html`).\n\n"
-                    "2. **Adjust Weight Allocation**:\n"
-                    "   - Move individual sliders or type numeric percentages for Stage 1 through Stage 8.\n"
-                    "   - Ensure total allocation equals **100%** (visualized with a live progress indicator).\n\n"
-                    "3. **Apply 1-Click Presets**:\n"
-                    "   - **Equal Weightage**: 12.5% per stage across all 8 stages.\n"
-                    "   - **RCA Heavy**: Emphasizes root cause analysis (higher weight on S3 & S4).\n"
-                    "   - **Execution Heavy**: Emphasizes countermeasure deployment (higher weight on S5 & S6).\n\n"
-                    "4. Click **Save Configuration** to persist org-wide."
+                    "### ⚖️ How to Configure 8-Stage Progress Weightages (Org Admin)\n\n"
+                    "1. Go to **Administration > Stage Templates / Settings** (`/admin/settings.html`).\n"
+                    "2. Move individual sliders or type numeric percentages for Stage 1 through Stage 8 (sum = 100%).\n"
+                    "3. Apply presets (*Equal Weightage, RCA Heavy, or Execution Heavy*) and click **Save Weightages**."
                 ),
                 "sources": []
             }
@@ -472,47 +713,10 @@ class QualityAIAssistant:
                 "sources": []
             }
 
-        # 8. How to access Dashboards
-        if any(p in lq for p in ['how to access dashboard', 'access this dashboard', 'switch dashboard', 'open dashboard', 'how to change this options', 'change options', 'dashboards']):
-            return {
-                "answer": (
-                    "### 📊 How to Access & Switch Dashboards\n\n"
-                    "Depending on your corporate role, you can access dedicated specialized workspaces:\n\n"
-                    "- **Main Overview / Project Dashboard**: Click **Overview** in the sidebar (`/dashboard.html`).\n"
-                    "- **Executive / CEO Dashboard**: Switch workspace or visit `/ceo/dashboard.html` for high-level quality index, plant benchmarks, and ROI.\n"
-                    "- **Facilitator Desk**: Visit `/facilitator/dashboard.html` to monitor team velocity, stage checkpoints, and assistance requests.\n"
-                    "- **Reviewer Quality Gate**: Visit `/reviewer/dashboard.html` to review, approve, or request revisions on stage submissions.\n"
-                    "- **Admin Console**: Access `/admin/users.html`, `/admin/plants.html`, and `/admin/settings.html` from the Administration menu."
-                ),
-                "sources": []
-            }
-
         return None
 
     @classmethod
     def _handle_qc_methodology_queries(cls, lq: str):
-        # Root Causes & Corrective Actions
-        if any(w in lq for w in ['root cause', 'root causes', 'rca', 'corrective action', 'corrective actions', 'countermeasure', 'countermeasures', 'causes']):
-            return {
-                "answer": (
-                    "### 🔍 Common Root Causes & Corrective Action Frameworks in QCMS\n\n"
-                    "Across industrial Quality Circle methodologies, root causes generally fall into four key operational categories:\n\n"
-                    "1. **Procedural & Standard Work Deficiencies** (42% of occurrences):\n"
-                    "   - *Root Cause*: Ambiguous or outdated SOPs, lack of standardized visual work instructions.\n"
-                    "   - *Corrective Action*: Standardize 1-Point Lessons (OPL), revise SOPs, and deploy digital checklist gates.\n\n"
-                    "2. **Machine Calibration & Tool Wear** (28% of occurrences):\n"
-                    "   - *Root Cause*: Uneven tool wear, sensor drift, delayed autonomous maintenance.\n"
-                    "   - *Corrective Action*: Implement poke-yoke (mistake-proofing) jigs, automated sensor limits, and preventive calibration intervals.\n\n"
-                    "3. **Material Inconsistency & Hardness Variance** (18% of occurrences):\n"
-                    "   - *Root Cause*: Supplier batch variance, incoming QA sampling gaps, temperature/humidity sensitivity.\n"
-                    "   - *Corrective Action*: Tighten supplier incoming AQL, environmental climate control, and material hardness inspection protocols.\n\n"
-                    "4. **Manpower & Training Gaps** (12% of occurrences):\n"
-                    "   - *Root Cause*: Multi-skill matrix gaps, lack of standard training verification.\n"
-                    "   - *Corrective Action*: Skill matrix matrix upskilling, cross-operator verification, and visual error-proofing."
-                ),
-                "sources": []
-            }
-
         # 8 Stages overview
         if any(p in lq for p in ['8 stage', 'eight stage', 'methodology', 'stages of qc', 'qc story', '8 stages']):
             return {
@@ -531,7 +735,7 @@ class QualityAIAssistant:
             }
 
         # Quality Tools (Fishbone, Pareto, 5-Why, Stratification)
-        if any(p in lq for p in ['fishbone', 'ishikawa', 'cause and effect', '6m']):
+        if any(p in lq for p in ['fishbone', 'ishikawa', 'cause and effect', '6m', 'cause identification']):
             return {
                 "answer": (
                     "### 🐟 Fishbone (Ishikawa / Cause-and-Effect) Diagram\n\n"
@@ -618,25 +822,40 @@ class QualityAIAssistant:
             return None
 
     @classmethod
-    def _generate_smart_fallback(cls, query: str, role_name: str, user: User):
-        return {
-            "answer": (
-                f"I'm your **Quality AI Assistant**. Here is what I can help you with based on your role as **{role_name}**:\n\n"
-                f"1. **Live Workforce & Plant Data**:\n"
-                f"   - *'How many employees are working here?'*\n"
-                f"   - *'How many employees are working in Quality Circle projects?'*\n"
-                f"   - *'Show active plant locations and department mappings.'*\n\n"
-                f"2. **Project Portfolio & Growth**:\n"
-                f"   - *'What is the growth and status of our QC projects?'*\n"
-                f"   - *'Show projects by stage distribution (S1 to S8).'* \n\n"
-                f"3. **How-To & Step-by-Step Configuration**:\n"
-                f"   - *'How to configure plant locations or departments?'*\n"
-                f"   - *'How to add employees, bulk import or bulk export CSV?'*\n"
-                f"   - *'How to configure the sign-off hierarchy for PDF reports?'*\n"
-                f"   - *'How to adjust stage weightages?'*\n\n"
-                f"4. **8-Stage QC Methodology & Quality Tools**:\n"
-                f"   - Ask how to build a **Fishbone Diagram (6M)**, **Pareto Chart (80/20)**, **5-Why Analysis**, or **3W1H Action Plan**.\n\n"
-                f"Feel free to ask any specific question above!"
-            ),
-            "sources": []
-        }
+    def _generate_smart_fallback(cls, query: str, role_name: str, user: User, is_super_admin: bool, is_admin: bool):
+        if is_super_admin:
+            return {
+                "answer": (
+                    f"Hello Super Administrator! Here are quick guides for your console:\n\n"
+                    f"1. **Tenant Governance**: *'How to modify organization data?'* or *'How to download overall organization CSV?'*\n"
+                    f"2. **Plans & Billing**: *'How to create a new plan?'* or *'How to dispatch pay-as-you-go bills?'*\n"
+                    f"3. **Support & Notifications**: *'How to extend trial?'*, *'How to create support ticket?'*, or *'How to set SMS/Email notification rules?'*\n"
+                    f"4. **System Security & CMS**: *'How to purge audit logs?'*, *'How to upload logo?'*, or *'How to modify landing page?'*\n\n"
+                    f"Ask any question for instant step-by-step SOP guidance!"
+                ),
+                "sources": []
+            }
+        elif is_admin:
+            return {
+                "answer": (
+                    f"Hello **{role_name}**! Here is what you can configure in your Organization Admin console:\n\n"
+                    f"1. **Organization Hierarchy**: *'How to add plant locations or departments?'*\n"
+                    f"2. **Workforce Management**: *'How to add employees, bulk import CSV, or configure custom fields?'*\n"
+                    f"3. **QC Customization**: *'How to configure stage weightages or sign-off hierarchy?'*\n"
+                    f"4. **Integrations & Branding**: *'How to set up email/SMS providers or document branding?'*\n\n"
+                    f"Feel free to ask any question above!"
+                ),
+                "sources": []
+            }
+        else:
+            return {
+                "answer": (
+                    f"Hello **{role_name}**! Here is what I can help you with in your workspace:\n\n"
+                    f"1. **Quality Circle Projects**: *'How to create a project?'* or *'What is the 8-stage methodology?'*\n"
+                    f"2. **Quality Tools**: *'How to build a Fishbone Diagram (6M)?'*, *'How to run Pareto Analysis?'*, or *'How to do 5-Why RCA?'*\n"
+                    f"3. **Workforce & Leaderboards**: *'How many employees are in QC projects?'* or *'Show rewards leaderboard rankings.'*\n"
+                    f"4. **Kaizen Ideas**: *'How to submit Kaizen ideas and earn points?'*\n\n"
+                    f"Ask any question about your active project or quality tools!"
+                ),
+                "sources": []
+            }
